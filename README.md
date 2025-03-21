@@ -11,13 +11,19 @@ $ cd backend
 
 $ pip install -r requirements.txt
 
-$ flask db upgrade
 
-Create a admin user with 
+# How to
 
-$ python add_admin.py
+### Step 1: Delete Existing Migrations and Database
+rm -rf migrations
+rm database.db  # Delete SQLite database (if using SQLite)
+
+### Step 2: Initialize Migrations Again
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrad
 
 
-## Web Interface 
+### Web Interface 
 http://127.0.0.1:5000
 
