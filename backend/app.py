@@ -3,33 +3,127 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import bcrypt
-import config
 import uuid
 import qrcode
 import io
 import base64
 from utils import send_email
+ 
+from werkzeug.utils import secure_filename
+from models import db, Admin, Pass, Redemption, Setting  
+
+import os  # ✅ Add this import
+
+from config import Config
 
 
 
-# ✅ Import models after initializing Flask
-from models import db, Admin, Pass, Redemption  
 
 app = Flask(__name__)
-app.config.from_object("config.Config")
+app.config.from_object(Config)
 
-# ✅ Initialize db and Flask-Migrate in correct order
+# ✅ Initialize database
 db.init_app(app)
-migrate = Migrate(app, db)  # ✅ Initialize Flask-Migrate AFTER db.init_app(app)
+migrate = Migrate(app, db)
+
+
+UPLOAD_FOLDER = "static/uploads"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
 
+
+# ✅ Load settings only if the database is ready
+with app.app_context():
+    app.config["MAIL_SERVER"] = Config.get_setting(app, "MAIL_SERVER", "smtp.gmail.com")
+    app.config["MAIL_PORT"] = int(Config.get_setting(app, "MAIL_PORT", 587))
+    app.config["MAIL_USE_TLS"] = Config.get_setting(app, "MAIL_USE_TLS", "True") == "True"
+    app.config["MAIL_USERNAME"] = Config.get_setting(app, "MAIL_USERNAME", "")
+    app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
+    app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
+
+
+
+
+
+
+"""
 # ✅ Ensure database is created within an app context ONLY if needed
 with app.app_context():
     try:
         db.create_all()  # Only needed for the first-time setup
     except Exception as e:
         print(f"Database error: {e}")
+
+"""
+
+
+
+
+@app.before_request
+def check_first_run():
+    if request.endpoint != 'setup' and not Admin.query.first():
+        return redirect(url_for('setup'))
+
+
+
+
+
+@app.route("/setup", methods=["GET", "POST"])
+def setup():
+    if request.method == "POST":
+        # Get admin details
+        admin_email = request.form["admin_email"]
+        admin_password = request.form["admin_password"]
+        hashed_password = bcrypt.hashpw(admin_password.encode(), bcrypt.gensalt())
+
+        # ✅ Check if admin already exists
+        existing_admin = Admin.query.filter_by(email=admin_email).first()
+        if not existing_admin:
+            new_admin = Admin(email=admin_email, password_hash=hashed_password)
+            db.session.add(new_admin)
+
+        # ✅ Get email settings from form
+        email_settings = {
+            "MAIL_SERVER": request.form["mail_server"],
+            "MAIL_PORT": request.form["mail_port"],
+            "MAIL_USE_TLS": "mail_use_tls" in request.form,
+            "MAIL_USERNAME": request.form["mail_username"],
+            "MAIL_PASSWORD": request.form["mail_password"],
+            "MAIL_DEFAULT_SENDER": request.form["mail_default_sender"]
+        }
+
+        # ✅ Save settings in the Setting table
+        for key, value in email_settings.items():
+            setting = Setting.query.filter_by(key=key).first()
+            if setting:
+                setting.value = str(value)  # ✅ Update existing setting
+            else:
+                db.session.add(Setting(key=key, value=str(value)))  # ✅ Insert new setting
+
+        # ✅ Ensure Upload Folder Exists
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+        # ✅ Handle logo upload
+        if "logo" in request.files:
+            logo_file = request.files["logo"]
+            if logo_file and logo_file.filename:
+                filename = secure_filename(logo_file.filename)
+                logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                logo_file.save(logo_path)
+                flash("✅ Logo uploaded successfully!", "success")
+
+        db.session.commit()  # ✅ Save all changes
+        flash("✅ Setup completed successfully!", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template("setup.html")
+
+
+
+
+
+
 
 
 
@@ -45,15 +139,18 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        with app.app_context():  # ✅ Ensure query runs inside app context
+        with app.app_context():
             admin = Admin.query.filter_by(email=email).first()
 
-        if admin and bcrypt.checkpw(password.encode(), admin.password_hash.encode()):
+        if admin and bcrypt.checkpw(password.encode(), admin.password_hash):  # ✅ FIXED
             session["admin"] = email
             return redirect(url_for("dashboard"))
 
-        return "Invalid login", 401
+        flash("Invalid login!", "error")
+        return redirect(url_for("login"))
+
     return render_template("login.html")
+
 
 
 
@@ -64,10 +161,13 @@ def dashboard():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    # ✅ Filter passes with games_remaining > 0
-    passes = Pass.query.filter(Pass.games_remaining > 0).all()
+    # ✅ Show passes that are either ACTIVE or UNPAID
+    passes = Pass.query.filter(
+        (Pass.games_remaining > 0) | (Pass.paid_ind == 0)
+    ).all()
 
     return render_template("dashboard.html", passes=passes)
+
 
 
 
@@ -96,9 +196,8 @@ def create_pass():
         db.session.add(new_pass)
         db.session.commit()
 
-
         # ✅ Send confirmation email with QR code
-        send_email(
+        email_sent = send_email(
             user_email=user_email,
             subject="🎟️ Your Hockey Pass is Ready!",
             user_name=user_name,
@@ -107,12 +206,15 @@ def create_pass():
             remaining_games=4
         )
 
-        flash("✅ Pass created successfully, and email sent!", "success")
+        if email_sent:
+            flash("✅ Pass created successfully, and email sent!", "success")
+        else:
+            flash("⚠️ Pass created, but email failed to send. Please check SMTP settings.", "error")
+
         return redirect(url_for("dashboard"))
 
-
-
     return render_template("create_pass.html")
+
 
 
 

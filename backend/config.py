@@ -1,4 +1,6 @@
-import os
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
 
 class Config:
     SECRET_KEY = "your_secret_key"
@@ -6,26 +8,16 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True  # ✅ Auto-commit changes
 
+    @staticmethod
+    def get_setting(app, key, default=None):
+        """ Fetch setting from database, but avoid querying if table does not exist """
+        with app.app_context():
+            from models import Setting  # ✅ Import inside function to avoid circular import
+            try:
+                if db.engine.dialect.has_table(db.engine, "setting"):  # ✅ Check if table exists
+                    setting = Setting.query.filter_by(key=key).first()
+                    return setting.value if setting else default
+            except Exception:
+                pass  # ✅ Ignore errors if table does not exist yet
 
-
-
-    """
-    # ✅ Email Configuration (Replace with your Gmail details)
-    MAIL_SERVER = "smtp.gmail.com"
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
-    MAIL_USERNAME = "kdresdell@gmail.com"
-    MAIL_PASSWORD = "exnx kkcm giar nkwl"  # Use Google App Password (not personal password)
-    MAIL_DEFAULT_SENDER = "kdresdell@gmail.com"
-    """
-
-
-    # ✅ Use internal corporate SMTP relay (no TLS, no login)
-    MAIL_SERVER = "142.168.84.83"
-    MAIL_PORT = 25
-    MAIL_USE_TLS = False
-    MAIL_USERNAME = None
-    MAIL_PASSWORD = None
-    MAIL_DEFAULT_SENDER = "no-reply@dpm.com"  # Optional
-
-
+        return default  # ✅ Use default value if settings table is unavailable

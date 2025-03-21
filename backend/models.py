@@ -37,4 +37,9 @@ class Redemption(db.Model):
     date_used = db.Column(db.DateTime, default=datetime.utcnow)
     redeemed_by = db.Column(db.String(100), nullable=True)  # ✅ Allow NULL initially
 
+ 
 
+class Setting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=True)
