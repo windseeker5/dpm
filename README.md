@@ -13,6 +13,6 @@ $ pip install -r requirements.txt
 
 $ flask db upgrade
 
-\\ Create a admin user with 
+Create a admin user with 
 
 $ python add_admin.py
