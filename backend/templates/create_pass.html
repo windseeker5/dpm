@@ -9,6 +9,8 @@
 
 <h3>Create a new pass </h3>
 
+<br>
+
     <form action="{{ url_for('create_pass') }}" method="POST">
         <div>
             <label for="user_name">User Name:</label>
@@ -25,12 +27,14 @@
             <input type="number" name="sold_amt" id="sold_amt" value="50" min="0" step="0.01">
         </div>
 
+
         <div>
-            <label for="paid_ind">Paid:</label>
-            <input type="checkbox" name="paid_ind" id="paid_ind" value="1">
+            <label for="sessionsQt">Sessions number:</label>
+            <input type="number" name="" id="qt" value="4" min="1" step="1">
         </div>
 
-<br>
+
+        <br>
 
         <div>
             <button type="submit">Create Pass</button>

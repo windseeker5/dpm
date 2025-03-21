@@ -4,11 +4,16 @@
 
 {% block content %}
 <div class="container">
-    <h2>Initial Admin Setup</h2>
+
+    <h1>Initial Admin Setup</h1>
+
+    <br>
 
     <form method="POST" enctype="multipart/form-data">
         <!-- Admin Account Setup -->
         <h4>Admin Account</h4>
+        <br>
+
         <div class="input-field">
             <input type="email" id="admin_email" name="admin_email" required>
             <label for="admin_email">Admin Email</label>
@@ -17,6 +22,8 @@
             <input type="password" id="admin_password" name="admin_password" required>
             <label for="admin_password">Password</label>
         </div>
+
+        <br>
 
         <!-- Email Settings -->
         <h4>Email Settings</h4>
@@ -47,6 +54,8 @@
             <label for="mail_default_sender">Default Sender Email</label>
         </div>
 
+        <br>
+
         <!-- Upload Logo -->
         <h4>Upload Logo</h4>
         <div class="file-field input-field">
@@ -58,6 +67,40 @@
                 <input class="file-path validate" type="text" placeholder="Upload logo">
             </div>
         </div>
+
+
+
+
+
+        <!-- App Defaults -->
+        <br>
+        <h4>App Defaults</h4>
+
+        <div class="input-field">
+            <input type="number" id="default_pass_amount" name="default_pass_amount" value="50" step="0.01" min="0">
+            <label for="default_pass_amount">Default Pass Amount ($)</label>
+        </div>
+
+        <div class="input-field">
+            <input type="number" id="default_session_qt" name="default_session_qt" value="4" min="1" step="1">
+            <label for="default_session_qt">Default Number of Sessions</label>
+        </div>
+
+        <div class="input-field">
+            <textarea id="email_info_text" name="email_info_text" class="materialize-textarea"></textarea>
+            <label for="email_info_text">Email Info Text (e.g. how to pay)</label>
+        </div>
+
+        <div class="input-field">
+            <textarea id="email_footer_text" name="email_footer_text" class="materialize-textarea"></textarea>
+            <label for="email_footer_text">Email Footer Text</label>
+        </div>
+
+
+
+
+
+        <br>
 
         <button type="submit" class="btn waves-effect waves-light">Save Settings</button>
     </form>

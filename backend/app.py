@@ -7,15 +7,15 @@ import uuid
 import qrcode
 import io
 import base64
-from utils import send_email
- 
+from utils import send_email, send_email_async
+
+
 from werkzeug.utils import secure_filename
 from models import db, Admin, Pass, Redemption, Setting  
-
 import os  # ✅ Add this import
-
 from config import Config
 
+from flask import current_app
 
 
 
@@ -31,8 +31,6 @@ UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
-
-
 # ✅ Load settings only if the database is ready
 with app.app_context():
     app.config["MAIL_SERVER"] = Config.get_setting(app, "MAIL_SERVER", "smtp.gmail.com")
@@ -43,19 +41,6 @@ with app.app_context():
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
 
 
-
-
-
-
-"""
-# ✅ Ensure database is created within an app context ONLY if needed
-with app.app_context():
-    try:
-        db.create_all()  # Only needed for the first-time setup
-    except Exception as e:
-        print(f"Database error: {e}")
-
-"""
 
 
 
@@ -101,6 +86,21 @@ def setup():
             else:
                 db.session.add(Setting(key=key, value=str(value)))  # ✅ Insert new setting
 
+
+
+        extra_settings = {
+            "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50"),
+            "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4"),
+            "EMAIL_INFO_TEXT": request.form.get("email_info_text", "").strip(),
+            "EMAIL_FOOTER_TEXT": request.form.get("email_footer_text", "").strip()
+        }
+        for key, value in extra_settings.items():
+            save_setting(key, value)
+
+
+
+
+
         # ✅ Ensure Upload Folder Exists
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -130,6 +130,7 @@ def setup():
 @app.route("/")
 def home():
     return "Flask app is running!"
+
 
 
 
@@ -178,10 +179,12 @@ def create_pass():
     if "admin" not in session:
         return redirect(url_for("login"))
 
+
     if request.method == "POST":
         user_name = request.form["user_name"]
         user_email = request.form["user_email"]
         sold_amt = float(request.form.get("sold_amt", 50))
+        sessions_qt = int(request.form.get("sessionsQt", 4))  # ✅ Capture sessions input
         paid_ind = 1 if "paid_ind" in request.form else 0
         pass_code = str(uuid.uuid4())[:16]
 
@@ -190,32 +193,32 @@ def create_pass():
             user_name=user_name,
             user_email=user_email,
             sold_amt=sold_amt,
+            games_remaining=sessions_qt,  # ✅ Store sessions in `games_remaining`
             paid_ind=bool(paid_ind)
         )
 
         db.session.add(new_pass)
         db.session.commit()
 
-        # ✅ Send confirmation email with QR code
-        email_sent = send_email(
+        # ✅ Send confirmation email asynchronously
+        send_email_async(
+            current_app._get_current_object(),  # pass real Flask app
             user_email=user_email,
             subject="🎟️ Your Hockey Pass is Ready!",
             user_name=user_name,
             pass_code=pass_code,
             created_date=new_pass.pass_created_dt.strftime('%Y-%m-%d'),
-            remaining_games=4
+            remaining_games=new_pass.games_remaining
         )
 
-        if email_sent:
-            flash("✅ Pass created successfully, and email sent!", "success")
-        else:
-            flash("⚠️ Pass created, but email failed to send. Please check SMTP settings.", "error")
+
+        flash("Pass created successfully! ASYNC Email sent.", "success")
 
         return redirect(url_for("dashboard"))
 
+
+
     return render_template("create_pass.html")
-
-
 
 
 
@@ -246,6 +249,7 @@ def show_pass(pass_code):
 # Store recent redemptions to prevent duplicate scans
 recent_redemptions = {}
 
+
 @app.route("/redeem/<pass_code>", methods=["GET", "POST"])
 def redeem_pass(pass_code):
     get_flashed_messages()  # Clear flash queue
@@ -273,30 +277,29 @@ def redeem_pass(pass_code):
 
             db.session.commit()
 
-
             # ✅ Prepare special message if the pass is now empty
             special_message = ""
             if hockey_pass.games_remaining == 0:
                 special_message = "⚠️ Your pass is now empty and inactive!"
 
-            # ✅ Send email with updated games remaining
-            send_email(
+            # ✅ Send confirmation email asynchronously
+            send_email_async(
+                current_app._get_current_object(),  # Required for background context
                 user_email=hockey_pass.user_email,
                 subject="🏒 Game Redeemed - Pass Update",
                 user_name=hockey_pass.user_name,
-                pass_code=pass_code,
+                pass_code=hockey_pass.pass_code,
                 created_date=hockey_pass.pass_created_dt.strftime('%Y-%m-%d'),
                 remaining_games=hockey_pass.games_remaining,
                 special_message=special_message
             )
 
-
-            flash(f"Game redeemed! {hockey_pass.games_remaining} games left.", "success")
+            flash(f"Game redeemed! {hockey_pass.games_remaining} games left. ASYNC Email sent.", "success")
         else:
-            flash("❌ No games left on this pass!", "error")
-
+            flash("No games left on this pass!", "error")
 
     return redirect(url_for("dashboard"))
+
 
 
 
@@ -334,5 +337,7 @@ def logout():
     return redirect(url_for("login"))
 
 
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=8000)  # Change 8080 to any port you want
