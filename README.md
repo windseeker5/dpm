@@ -16,3 +16,8 @@ $ flask db upgrade
 Create a admin user with 
 
 $ python add_admin.py
+
+
+## Web Interface 
+http://127.0.0.1:5000
+
