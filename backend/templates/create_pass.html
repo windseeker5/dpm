@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Pass{% endblock %}
+
+{% block header %}Create New Pass{% endblock %}
+
+{% block content %}
+
+
+<h3>Create a new pass </h3>
+
+    <form action="{{ url_for('create_pass') }}" method="POST">
+        <div>
+            <label for="user_name">User Name:</label>
+            <input type="text" name="user_name" id="user_name" required>
+        </div>
+
+        <div>
+            <label for="user_email">User Email:</label>
+            <input type="email" name="user_email" id="user_email" required>
+        </div>
+
+        <div>
+            <label for="sold_amt">Sold Amount ($):</label>
+            <input type="number" name="sold_amt" id="sold_amt" value="50" min="0" step="0.01">
+        </div>
+
+        <div>
+            <label for="paid_ind">Paid:</label>
+            <input type="checkbox" name="paid_ind" id="paid_ind" value="1">
+        </div>
+
+<br>
+
+        <div>
+            <button type="submit">Create Pass</button>
+        </div>
+    </form>
+
+
+
+{% endblock %}

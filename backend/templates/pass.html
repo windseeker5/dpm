@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head><title>Pass Details</title></head>
+<body>
+    <h2>Pass Details</h2>
+    <p><strong>Pass Code:</strong> {{ hockey_pass.pass_code }}</p>
+    <p><strong>User Name:</strong> {{ hockey_pass.user_name }}</p>
+    <p><strong>Games Remaining:</strong> {{ hockey_pass.games_remaining }}</p>
+
+    <h3>QR Code:</h3>
+    <img src="data:image/png;base64,{{ qr_data }}" alt="Pass QR Code">
+
+    <br><br>
+    <a href="/dashboard">Back to Dashboard</a>
+</body>
+</html>
