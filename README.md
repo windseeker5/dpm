@@ -16,11 +16,14 @@ $ pip install -r requirements.txt
 
 ### Step 1: Delete Existing Migrations and Database
 rm -rf migrations
+
 rm database.db  # Delete SQLite database (if using SQLite)
 
 ### Step 2: Initialize Migrations Again
 flask db init
+
 flask db migrate -m "Initial migration"
+
 flask db upgrad
 
 
