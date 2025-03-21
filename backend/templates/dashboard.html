@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block header %}Admin Dashboard{% endblock %}
+
+{% block content %}
+    <p>Welcome, {{ session['admin'] }}!</p>
+
+
+    <br>
+
+    <a href="{{ url_for('create_pass') }}"><button>Create New Pass</button></a>
+    <a href="{{ url_for('scan_qr') }}"><button>Scan QR</button></a>
+
+    <br> 
+
+    <h3>Active Pass List</h3>
+
+    <!-- 🔍 Search Input Field -->
+    <input type="text" id="searchInput" class="search-box" placeholder="Search by User Name..." onkeyup="filterTable()">
+    
+    <div class="table-container">
+        <table class="pass-table" id="passTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User Name</th>
+                    <th>Created At</th>
+                    <th>Sold Amount</th>
+                    <th>Games Remaining</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pass in passes %}
+                <tr>
+                    <td>{{ pass.id }}</td>
+                    <td class="user-name">{{ pass.user_name }}</td>
+                    <td>{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
+                    <td>${{ "%.2f"|format(pass.sold_amt) }}</td>
+                    <td>{{ pass.games_remaining }}</td>
+                    <td>
+                        {% if not pass.paid_ind %}
+                        <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="icon-button" title="Mark as Paid">
+                                <i class="ri-money-dollar-box-fill"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                        
+                        {% if pass.games_remaining > 0 %}
+                        <form action="{{ url_for('redeem_pass', pass_code=pass.pass_code) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="icon-button redeem-button" title="Redeem One Game">
+                                <i class="ri-archive-2-fill"></i>
+                            </button>
+                        </form>
+                        {% else %}
+                        <i class="ri-close-circle-line" title="No games left" style="color: red;"></i>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <script>
+        function filterTable() {
+            let input = document.getElementById("searchInput");
+            let filter = input.value.toLowerCase();
+            let table = document.getElementById("passTable");
+            let rows = table.getElementsByTagName("tr");
+        
+            for (let i = 1; i < rows.length; i++) {  // Start at 1 to skip the header row
+                let userNameCell = rows[i].getElementsByClassName("user-name")[0];
+                if (userNameCell) {
+                    let txtValue = userNameCell.textContent || userNameCell.innerText;
+                    if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                        rows[i].style.display = "";  // Show row
+                    } else {
+                        rows[i].style.display = "none";  // Hide row
+                    }
+                }
+            }
+        }
+    </script>
+        
+
+
+{% endblock %}
