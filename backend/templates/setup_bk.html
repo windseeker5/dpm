@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Initial Admin Setup{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <h1>Initial Admin Setup</h1>
+  
+    <br>
+
+    <form method="POST" enctype="multipart/form-data">
+        <!-- Admin Account Setup -->
+        <h4>Admin Accounts</h4>
+        <div id="admin-list">
+            {% for admin in admins %}
+            <div class="admin-block row">
+                <div class="input-field col s5">
+                    <input type="email" name="admin_email[]" value="{{ admin.email }}" required>
+                    <label>Email</label>
+                </div>
+                <div class="input-field col s5">
+
+                    <input type="password" name="admin_password[]" placeholder="Leave blank to keep existing" class="validate">
+
+                    <label>Password</label>
+                </div>
+                <div class="col s2" style="margin-top: 25px;">
+                    <a class="btn-small red lighten-1 remove-admin-btn" onclick="removeAdmin(this)">❌</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <a class="btn blue lighten-2" onclick="addAdmin()">+ Add Admin</a>
+
+        <br><br>
+
+        <!-- Email Settings -->
+        <h4>Email Settings</h4>
+        <div class="input-field">
+            <input type="text" id="mail_server" name="mail_server" value="{{ settings.MAIL_SERVER or '' }}" required>
+            <label for="mail_server">Mail Server</label>
+        </div>
+        <div class="input-field">
+            <input type="number" id="mail_port" name="mail_port" value="{{ settings.MAIL_PORT or '587' }}" required>
+            <label for="mail_port">Mail Port</label>
+        </div>
+
+        <p>
+            <label>
+                <input type="checkbox" name="mail_use_tls" {% if settings.MAIL_USE_TLS == 'True' %}checked{% endif %}/>
+                <span>Use TLS</span>
+            </label>
+        </p>
+
+        <div class="input-field">
+            <input type="email" id="mail_username" name="mail_username" value="{{ settings.MAIL_USERNAME or '' }}" required>
+            <label for="mail_username">Email Username</label>
+        </div>
+
+
+        <div class="input-field">
+
+            <input type="password" id="mail_password" name="mail_password" class="validate" placeholder="Leave blank to keep existing">
+
+            <label for="mail_password">Your APP Password</label>
+        </div>
+        
+
+        <div class="input-field">
+            <input type="email" id="mail_default_sender" name="mail_default_sender" value="{{ settings.MAIL_DEFAULT_SENDER or '' }}" required>
+            <label for="mail_default_sender">Default Sender Email</label>
+        </div>
+
+        <br>
+
+        <!-- Upload Logo -->
+        <h4>Upload Logo</h4>
+        <div class="file-field input-field">
+            <div class="btn">
+                <span>Upload</span>
+                <input type="file" name="logo" accept="image/*">
+            </div>
+            <div class="file-path-wrapper">
+                <input class="file-path validate" type="text" placeholder="Upload logo">
+            </div>
+        </div>
+
+        {% if settings.LOGO_FILENAME %}
+            <p><strong>Current Logo:</strong></p>
+            <img id="logo-preview" src="{{ url_for('static', filename='uploads/' ~ settings.LOGO_FILENAME) }}" alt="Logo" style="max-height: 80px;">
+        {% else %}
+            <img id="logo-preview" src="#" alt="No Logo Yet" style="display: none; max-height: 80px;">
+        {% endif %}
+
+
+        <script>
+            document.querySelector('input[type="file"][name="logo"]').addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        const img = document.getElementById('logo-preview');
+                        img.src = evt.target.result;
+                        img.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        </script>
+            
+
+
+        <br>
+        <h4>Digital Pass Defaults</h4>
+
+        <div class="input-field">
+            <input type="number" id="default_pass_amount" name="default_pass_amount" value="{{ settings.DEFAULT_PASS_AMOUNT or 50 }}" step="0.01" min="0">
+            <label for="default_pass_amount">Default Pass Amount ($)</label>
+        </div>
+
+        <div class="input-field">
+            <input type="number" id="default_session_qt" name="default_session_qt" value="{{ settings.DEFAULT_SESSION_QT or 4 }}" min="1" step="1">
+            <label for="default_session_qt">Default Number of Sessions</label>
+        </div>
+
+
+        <br>
+        <h4>Digital Pass Defaults</h4>
+
+
+        <div class="input-field">
+            <textarea id="email_info_text" name="email_info_text" class="materialize-textarea">{{ settings.EMAIL_INFO_TEXT or '' }}</textarea>
+            <label for="email_info_text">Email Info Text (e.g. how to pay)</label>
+        </div>
+
+        <div class="input-field">
+            <textarea id="email_footer_text" name="email_footer_text" class="materialize-textarea">{{ settings.EMAIL_FOOTER_TEXT or '' }}</textarea>
+            <label for="email_footer_text">Email Footer Text</label>
+        </div>
+
+        <br>
+
+        <button type="submit" class="btn waves-effect waves-light">Save Settings</button>
+    </form>
+</div>
+
+<script>
+function addAdmin() {
+    const adminList = document.getElementById('admin-list');
+    const newBlock = document.createElement('div');
+    newBlock.className = 'admin-block row';
+    newBlock.innerHTML = `
+        <div class="input-field col s5">
+            <input type="email" name="admin_email[]" required>
+            <label>Email</label>
+        </div>
+
+        <div class="input-field col s5">
+            <input type="password" name="admin_password[]" class="validate" placeholder="Leave blank to keep existing">
+            <label>Password (optional)</label>
+        </div>
+
+        <div class="col s2" style="margin-top: 25px;">
+            <a class="btn-small red lighten-1 remove-admin-btn" onclick="removeAdmin(this)">❌</a>
+        </div>
+    `;
+    adminList.appendChild(newBlock);
+}
+
+function removeAdmin(button) {
+    const block = button.closest(".admin-block");
+    block.remove();
+}
+</script>
+
+{% endblock %}

@@ -7,7 +7,7 @@ import uuid
 import qrcode
 import io
 import base64
-from utils import send_email, send_email_async
+from utils import send_email, send_email_async, get_setting
 
 
 from werkzeug.utils import secure_filename
@@ -53,73 +53,91 @@ def check_first_run():
 
 
 
-
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
     if request.method == "POST":
-        # Get admin details
-        admin_email = request.form["admin_email"]
-        admin_password = request.form["admin_password"]
-        hashed_password = bcrypt.hashpw(admin_password.encode(), bcrypt.gensalt())
+        # ✅ Handle multiple admin accounts
+        admin_emails = request.form.getlist("admin_email[]")
+        admin_passwords = request.form.getlist("admin_password[]")
 
-        # ✅ Check if admin already exists
-        existing_admin = Admin.query.filter_by(email=admin_email).first()
-        if not existing_admin:
-            new_admin = Admin(email=admin_email, password_hash=hashed_password)
-            db.session.add(new_admin)
+        for email, password in zip(admin_emails, admin_passwords):
+            email = email.strip()
+            if not email:
+                continue  # Skip blank entries
 
-        # ✅ Get email settings from form
+            existing = Admin.query.filter_by(email=email).first()
+            if existing:
+                if password.strip():  # Only update password if provided
+                    existing.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+            else:
+                if password.strip():  # Only add new if password is given
+                    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+                    db.session.add(Admin(email=email, password_hash=hashed))
+
+        # ✅ Email settings
         email_settings = {
-            "MAIL_SERVER": request.form["mail_server"],
-            "MAIL_PORT": request.form["mail_port"],
+            "MAIL_SERVER": request.form.get("mail_server", "").strip(),
+            "MAIL_PORT": request.form.get("mail_port", "587").strip(),
             "MAIL_USE_TLS": "mail_use_tls" in request.form,
-            "MAIL_USERNAME": request.form["mail_username"],
-            "MAIL_PASSWORD": request.form["mail_password"],
-            "MAIL_DEFAULT_SENDER": request.form["mail_default_sender"]
+            "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
+            "MAIL_PASSWORD": request.form.get("mail_password", "").strip(),
+            "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip()
         }
 
-        # ✅ Save settings in the Setting table
         for key, value in email_settings.items():
+            if key == "MAIL_PASSWORD" and not value:
+                continue  # ✅ Do not overwrite password with blank
             setting = Setting.query.filter_by(key=key).first()
             if setting:
-                setting.value = str(value)  # ✅ Update existing setting
+                setting.value = str(value)
             else:
-                db.session.add(Setting(key=key, value=str(value)))  # ✅ Insert new setting
+                db.session.add(Setting(key=key, value=str(value)))
 
-
-
+        # ✅ App-level settings
         extra_settings = {
-            "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50"),
-            "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4"),
+            "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50").strip(),
+            "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4").strip(),
             "EMAIL_INFO_TEXT": request.form.get("email_info_text", "").strip(),
             "EMAIL_FOOTER_TEXT": request.form.get("email_footer_text", "").strip()
         }
+
         for key, value in extra_settings.items():
-            save_setting(key, value)
-
-
-
-
-
-        # ✅ Ensure Upload Folder Exists
-        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+            existing = Setting.query.filter_by(key=key).first()
+            if existing:
+                existing.value = value
+            else:
+                db.session.add(Setting(key=key, value=value))
 
         # ✅ Handle logo upload
-        if "logo" in request.files:
-            logo_file = request.files["logo"]
-            if logo_file and logo_file.filename:
-                filename = secure_filename(logo_file.filename)
-                logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-                logo_file.save(logo_path)
-                flash("✅ Logo uploaded successfully!", "success")
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+        logo_file = request.files.get("logo")
+        if logo_file and logo_file.filename:
+            filename = secure_filename(logo_file.filename)
+            logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            logo_file.save(logo_path)
 
-        db.session.commit()  # ✅ Save all changes
+            # Save the logo filename in settings
+            existing = Setting.query.filter_by(key="LOGO_FILENAME").first()
+            if existing:
+                existing.value = filename
+            else:
+                db.session.add(Setting(key="LOGO_FILENAME", value=filename))
+
+            flash("✅ Logo uploaded successfully!", "success")
+
+        db.session.commit()
+
+        # ✅ Optional debug info
+        print("[SETUP] Admins configured:", admin_emails)
+        print("[SETUP] Settings saved:", list(email_settings.keys()) + list(extra_settings.keys()))
+
         flash("✅ Setup completed successfully!", "success")
         return redirect(url_for("dashboard"))
 
-    return render_template("setup.html")
-
-
+    # GET request
+    settings = {s.key: s.value for s in Setting.query.all()}
+    admins = Admin.query.all()
+    return render_template("setup.html", settings=settings, admins=admins)
 
 
 
@@ -179,12 +197,11 @@ def create_pass():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-
     if request.method == "POST":
         user_name = request.form["user_name"]
         user_email = request.form["user_email"]
         sold_amt = float(request.form.get("sold_amt", 50))
-        sessions_qt = int(request.form.get("sessionsQt", 4))  # ✅ Capture sessions input
+        sessions_qt = int(request.form.get("sessionsQt", 4))
         paid_ind = 1 if "paid_ind" in request.form else 0
         pass_code = str(uuid.uuid4())[:16]
 
@@ -193,16 +210,15 @@ def create_pass():
             user_name=user_name,
             user_email=user_email,
             sold_amt=sold_amt,
-            games_remaining=sessions_qt,  # ✅ Store sessions in `games_remaining`
+            games_remaining=sessions_qt,
             paid_ind=bool(paid_ind)
         )
 
         db.session.add(new_pass)
         db.session.commit()
 
-        # ✅ Send confirmation email asynchronously
         send_email_async(
-            current_app._get_current_object(),  # pass real Flask app
+            current_app._get_current_object(),
             user_email=user_email,
             subject="🎟️ Your Hockey Pass is Ready!",
             user_name=user_name,
@@ -211,15 +227,14 @@ def create_pass():
             remaining_games=new_pass.games_remaining
         )
 
-
         flash("Pass created successfully! ASYNC Email sent.", "success")
-
         return redirect(url_for("dashboard"))
 
+    # ✅ This part is new — it loads defaults for the form
+    default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
+    default_qt = get_setting("DEFAULT_SESSION_QT", "4")
 
-
-    return render_template("create_pass.html")
-
+    return render_template("create_pass.html", default_amt=default_amt, default_qt=default_qt)
 
 
 

@@ -4,59 +4,73 @@
 
 {% block content %}
 <div class="container">
-
     <h1>Initial Admin Setup</h1>
-
     <br>
 
     <form method="POST" enctype="multipart/form-data">
-        <!-- Admin Account Setup -->
-        <h4>Admin Account</h4>
-        <br>
-
-        <div class="input-field">
-            <input type="email" id="admin_email" name="admin_email" required>
-            <label for="admin_email">Admin Email</label>
+        <!-- 🔐 Admin Accounts -->
+        <h4>Admin Accounts</h4>
+        <div id="admin-list">
+            {% for admin in admins %}
+            <div class="admin-block row">
+                <div class="input-field col s5">
+                    <input type="email" name="admin_email[]" value="{{ admin.email }}" class="validate" required>
+                    <label class="active">Email</label>
+                </div>
+                <div class="input-field col s5">
+                    <input type="password" name="admin_password[]"
+                           value="********"
+                           class="validate"
+                           data-is-placeholder="true"
+                           data-real-value="true">
+                    <label class="active">Password</label>
+                </div>
+                <div class="col s2" style="margin-top: 25px;">
+                    <a class="btn-small red lighten-1 remove-admin-btn" onclick="removeAdmin(this)">❌</a>
+                </div>
+            </div>
+            {% endfor %}
         </div>
-        <div class="input-field">
-            <input type="password" id="admin_password" name="admin_password" required>
-            <label for="admin_password">Password</label>
-        </div>
+        <a class="btn blue lighten-2" onclick="addAdmin()">+ Add Admin</a>
 
-        <br>
+        <br><br>
 
-        <!-- Email Settings -->
+        <!-- ✉️ Email Settings -->
         <h4>Email Settings</h4>
         <div class="input-field">
-            <input type="text" id="mail_server" name="mail_server" required>
-            <label for="mail_server">Mail Server</label>
+            <input type="text" id="mail_server" name="mail_server" value="{{ settings.MAIL_SERVER or '' }}" class="validate" required>
+            <label for="mail_server" class="active">Mail Server</label>
         </div>
         <div class="input-field">
-            <input type="number" id="mail_port" name="mail_port" required>
-            <label for="mail_port">Mail Port</label>
+            <input type="number" id="mail_port" name="mail_port" value="{{ settings.MAIL_PORT or '587' }}" class="validate" required>
+            <label for="mail_port" class="active">Mail Port</label>
         </div>
         <p>
             <label>
-                <input type="checkbox" name="mail_use_tls" />
+                <input type="checkbox" name="mail_use_tls" {% if settings.MAIL_USE_TLS == 'True' %}checked{% endif %}/>
                 <span>Use TLS</span>
             </label>
         </p>
         <div class="input-field">
-            <input type="email" id="mail_username" name="mail_username" required>
-            <label for="mail_username">Email Username</label>
+            <input type="email" id="mail_username" name="mail_username" value="{{ settings.MAIL_USERNAME or '' }}" class="validate" required>
+            <label for="mail_username" class="active">Email Username</label>
         </div>
         <div class="input-field">
-            <input type="password" id="mail_password" name="mail_password">
-            <label for="mail_password">Email Password</label>
+            <input type="password" id="mail_password" name="mail_password"
+                   value="********"
+                   class="validate"
+                   data-is-placeholder="true"
+                   data-real-value="true">
+            <label for="mail_password" class="active">Email Password</label>
         </div>
         <div class="input-field">
-            <input type="email" id="mail_default_sender" name="mail_default_sender" required>
-            <label for="mail_default_sender">Default Sender Email</label>
+            <input type="email" id="mail_default_sender" name="mail_default_sender" value="{{ settings.MAIL_DEFAULT_SENDER or '' }}" class="validate" required>
+            <label for="mail_default_sender" class="active">Default Sender Email</label>
         </div>
 
         <br>
 
-        <!-- Upload Logo -->
+        <!-- 🖼 Logo Upload -->
         <h4>Upload Logo</h4>
         <div class="file-field input-field">
             <div class="btn">
@@ -68,41 +82,104 @@
             </div>
         </div>
 
-
-
-
-
-        <!-- App Defaults -->
-        <br>
-        <h4>App Defaults</h4>
-
-        <div class="input-field">
-            <input type="number" id="default_pass_amount" name="default_pass_amount" value="50" step="0.01" min="0">
-            <label for="default_pass_amount">Default Pass Amount ($)</label>
-        </div>
-
-        <div class="input-field">
-            <input type="number" id="default_session_qt" name="default_session_qt" value="4" min="1" step="1">
-            <label for="default_session_qt">Default Number of Sessions</label>
-        </div>
-
-        <div class="input-field">
-            <textarea id="email_info_text" name="email_info_text" class="materialize-textarea"></textarea>
-            <label for="email_info_text">Email Info Text (e.g. how to pay)</label>
-        </div>
-
-        <div class="input-field">
-            <textarea id="email_footer_text" name="email_footer_text" class="materialize-textarea"></textarea>
-            <label for="email_footer_text">Email Footer Text</label>
-        </div>
-
-
-
-
+        {% if settings.LOGO_FILENAME %}
+        <p><strong>Current Logo:</strong></p>
+        <img id="logo-preview" src="{{ url_for('static', filename='uploads/' ~ settings.LOGO_FILENAME) }}" alt="Logo" style="max-height: 80px;">
+        {% else %}
+        <img id="logo-preview" src="#" alt="No Logo Yet" style="display: none; max-height: 80px;">
+        {% endif %}
 
         <br>
 
+        <!-- 🧾 Pass Defaults -->
+        <h4>Digital Pass Defaults</h4>
+        <div class="input-field">
+            <input type="number" id="default_pass_amount" name="default_pass_amount" value="{{ settings.DEFAULT_PASS_AMOUNT or 50 }}" class="validate" step="0.01" min="0">
+            <label for="default_pass_amount" class="active">Default Pass Amount ($)</label>
+        </div>
+        <div class="input-field">
+            <input type="number" id="default_session_qt" name="default_session_qt" value="{{ settings.DEFAULT_SESSION_QT or 4 }}" class="validate" min="1" step="1">
+            <label for="default_session_qt" class="active">Default Number of Sessions</label>
+        </div>
+
+        <!-- 📧 Email Template -->
+        <h4>Email Template Text</h4>
+        <div class="input-field">
+            <textarea id="email_info_text" name="email_info_text" class="materialize-textarea validate">{{ settings.EMAIL_INFO_TEXT or '' }}</textarea>
+            <label for="email_info_text" class="active">Email Info Text (e.g. how to pay)</label>
+        </div>
+        <div class="input-field">
+            <textarea id="email_footer_text" name="email_footer_text" class="materialize-textarea validate">{{ settings.EMAIL_FOOTER_TEXT or '' }}</textarea>
+            <label for="email_footer_text" class="active">Email Footer Text</label>
+        </div>
+
+        <br>
         <button type="submit" class="btn waves-effect waves-light">Save Settings</button>
     </form>
 </div>
+
+<!-- 🧠 JS Enhancements -->
+<script>
+    function addAdmin() {
+        const adminList = document.getElementById('admin-list');
+        const newBlock = document.createElement('div');
+        newBlock.className = 'admin-block row';
+        newBlock.innerHTML = `
+            <div class="input-field col s5">
+                <input type="email" name="admin_email[]" class="validate" required>
+                <label class="active">Email</label>
+            </div>
+            <div class="input-field col s5">
+                <input type="password" name="admin_password[]" value="********" class="validate" data-is-placeholder="true" data-real-value="true">
+                <label class="active">Password</label>
+            </div>
+            <div class="col s2" style="margin-top: 25px;">
+                <a class="btn-small red lighten-1 remove-admin-btn" onclick="removeAdmin(this)">❌</a>
+            </div>
+        `;
+        adminList.appendChild(newBlock);
+        M.updateTextFields();
+    }
+
+    function removeAdmin(button) {
+        const block = button.closest(".admin-block");
+        block.remove();
+    }
+
+    // Remove placeholder value on submit
+    document.querySelector("form").addEventListener("submit", function () {
+        document.querySelectorAll('input[type="password"]').forEach(input => {
+            if (input.value === "********" && input.dataset.isPlaceholder === "true") {
+                input.value = "";
+            }
+        });
+    });
+
+    // Logo preview
+    document.querySelector('input[type="file"][name="logo"]').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                const img = document.getElementById('logo-preview');
+                img.src = evt.target.result;
+                img.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Fix labels on load
+    document.addEventListener('DOMContentLoaded', function () {
+        M.updateTextFields();
+    });
+</script>
+
+<style>
+    input:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+        box-shadow: 0 0 0px 1000px white inset !important;
+    }
+</style>
+
 {% endblock %}
