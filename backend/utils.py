@@ -77,7 +77,7 @@ def generate_qr_code_image(pass_code):
 ## === EMAIL ===
 ##
 
-def send_email(user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=""):
+def send_email_good(user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=""):
     try:
         # ✅ Generate QR code image as base64 string
         qr_image_bytes_io = generate_qr_code_image(pass_code)  # Returns BytesIO
@@ -225,6 +225,153 @@ def send_email(user_email, subject, user_name, pass_code, created_date, remainin
         return False
 
 
+
+def send_email(user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=""):
+    try:
+        from utils import get_setting  # ✅ Just to be safe if reused from another module
+
+        # ✅ Generate QR code image
+        qr_image_bytes_io = generate_qr_code_image(pass_code)
+        qr_image_bytes_io.seek(0)
+        qr_image_bytes = qr_image_bytes_io.read()  # Use binary directly
+
+        # ✅ Fetch dynamic settings
+        email_info = get_setting("EMAIL_INFO_TEXT", "")
+        email_footer = get_setting("EMAIL_FOOTER_TEXT", "")
+        sender_email = get_setting("MAIL_DEFAULT_SENDER") or "no-reply@example.com"
+
+        # ✅ Email Template
+        email_html = f"""<html>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    background-color: #f9f9f9;
+                    margin: 0;
+                    padding: 0;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 20px auto;
+                    background-color: #ffffff;
+                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                }}
+                .header {{
+                    text-align: center;
+                    font-size: 20px;
+                    font-weight: bold;
+                    color: #333;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #ddd;
+                }}
+                .content {{
+                    padding: 20px;
+                    text-align: center;
+                    color: #555;
+                }}
+                .qr-container {{
+                    background-color: #f2f2f2;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin: 20px auto;
+                    width: 200px;
+                    text-align: center;
+                }}
+                .qr-container img {{
+                    width: 150px;
+                    height: 150px;
+                }}
+                .info-box {{
+                    margin-top: 20px;
+                    background-color: #eef5ff;
+                    padding: 10px;
+                    border-radius: 6px;
+                    font-size: 14px;
+                }}
+                .footer {{
+                    font-size: 12px;
+                    color: #777;
+                    text-align: center;
+                    margin-top: 20px;
+                    padding-top: 10px;
+                    border-top: 1px solid #ddd;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">🏒 Your Hockey Pass</div>
+                <div class="content">
+                    <p><strong>Hello, {user_name}!</strong></p>
+                    <p>Your pass was created on <strong>{created_date}</strong>.</p>
+                    <p>You have <strong>{remaining_games}</strong> games remaining.</p>
+                    <div class="qr-container">
+                        <img src="cid:qr_code" alt="QR Code">
+                    </div>
+                    <p>Scan this QR code at the entrance.</p>
+
+                    {f'<p style="color: red; font-weight: bold;">{special_message}</p>' if special_message else ''}
+
+                    <div class="info-box">{email_info}</div>
+                </div>
+                <div class="footer">
+                    {email_footer}
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        # ✅ Build Email
+        msg = MIMEMultipart("related")
+        msg["From"] = sender_email
+        msg["To"] = user_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(email_html, "html"))
+
+        # ✅ Attach QR code image
+        qr_image = MIMEImage(qr_image_bytes, _subtype="png")
+        qr_image.add_header("Content-ID", "<qr_code>")
+        qr_image.add_header("Content-Disposition", "inline", filename="qr_code.png")
+        msg.attach(qr_image)
+
+        # ✅ Load SMTP Settings
+        smtp_server = get_setting("MAIL_SERVER")
+        smtp_port = int(get_setting("MAIL_PORT", "587"))
+        smtp_user = get_setting("MAIL_USERNAME")
+        smtp_pass = get_setting("MAIL_PASSWORD")
+        use_tls = get_setting("MAIL_USE_TLS", "True").lower() == "true"
+        use_proxy = smtp_port == 25 and not use_tls
+
+        print("📬 Sending email with the following settings:")
+        print(f"  SERVER: {smtp_server}")
+        print(f"  PORT: {smtp_port}")
+        print(f"  USER: {smtp_user}")
+        print(f"  USE_TLS: {use_tls}")
+        print(f"  DETECTED MODE: {'PROXY' if use_proxy else 'GMAIL'}")
+
+        # ✅ Connect and send
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.set_debuglevel(0)
+        server.ehlo()
+        if not use_proxy and use_tls:
+            server.starttls()
+            server.ehlo()
+        if not use_proxy and smtp_user and smtp_pass:
+            server.login(smtp_user, smtp_pass)
+
+        server.sendmail(sender_email, [user_email], msg.as_string())
+        server.quit()
+
+        print(f"✅ Email sent to {user_email}")
+        return True
+
+    except Exception as e:
+        print("❌ Error sending email:")
+        traceback.print_exc()
+        return False
 
 
 
