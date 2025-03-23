@@ -1,5 +1,7 @@
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages
+from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages, jsonify
+
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import bcrypt
@@ -152,6 +154,23 @@ def home():
 
 
 
+
+@app.route("/users.json")
+def users_json():
+    users = db.session.query(Pass.user_name, Pass.user_email, Pass.phone_number).distinct().all()
+
+    result = [
+        {"name": u[0], "email": u[1], "phone": u[2]}
+        for u in users if u[0]  # Filter out empty names
+    ]
+
+    print("📦 Sending user cache JSON:", result)  # Debug print in terminal
+    return jsonify(result)
+
+
+
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -197,22 +216,31 @@ def create_pass():
     if "admin" not in session:
         return redirect(url_for("login"))
 
+
     if request.method == "POST":
         user_name = request.form["user_name"]
         user_email = request.form["user_email"]
+        phone_number = request.form.get("mobile_phone", "")
         sold_amt = float(request.form.get("sold_amt", 50))
         sessions_qt = int(request.form.get("sessionsQt", 4))
         paid_ind = 1 if "paid_ind" in request.form else 0
         pass_code = str(uuid.uuid4())[:16]
 
+
+        # ✅ Get current admin ID
+        current_admin = Admin.query.filter_by(email=session["admin"]).first()
+
         new_pass = Pass(
             pass_code=pass_code,
             user_name=user_name,
             user_email=user_email,
+            phone_number=phone_number,
             sold_amt=sold_amt,
             games_remaining=sessions_qt,
-            paid_ind=bool(paid_ind)
+            paid_ind=bool(paid_ind),
+            created_by=current_admin.id if current_admin else None
         )
+
 
         db.session.add(new_pass)
         db.session.commit()
