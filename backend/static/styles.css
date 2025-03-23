@@ -197,3 +197,13 @@ p {
 .clear-icon:hover {
     color: black;
 }
+
+
+
+.suggestion-box li {
+    padding: 8px;
+    cursor: pointer;
+}
+.suggestion-box li:hover {
+    background-color: #f0f0f0;
+}

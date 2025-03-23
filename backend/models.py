@@ -15,18 +15,23 @@ class Admin(db.Model):
 
 
 
+
+
 class Pass(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    pass_code = db.Column(db.String(16), unique=True, nullable=False, default=lambda: str(uuid.uuid4())[:16])  # ✅ More secure pass_code
-    user_name = db.Column(db.String(100), nullable=True)
-    user_email = db.Column(db.String(100), nullable=True)  # ✅ Replaced user_contact
+    pass_code = db.Column(db.String(16), unique=True, nullable=False)
+    user_name = db.Column(db.String(100), nullable=False)
+    user_email = db.Column(db.String(100), nullable=False)
+    sold_amt = db.Column(db.Float, default=50)
     games_remaining = db.Column(db.Integer, default=4)
-    sold_amt = db.Column(db.Float, default=50.0)  # ✅ Added sold amount
-    pass_created_dt = db.Column(db.DateTime, default=datetime.utcnow)  # ✅ Added creation date
-    paid_ind = db.Column(db.Boolean, default=False)  # ✅ 0 = unpaid, 1 = paid
+    phone_number = db.Column(db.String(20), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))  # 👈 Admin ID
+    pass_created_dt = db.Column(db.DateTime, default=datetime.utcnow)
+    paid_ind = db.Column(db.Boolean, default=False)
 
-    # ✅ Relationship to Redemption table
-    redemptions = db.relationship("Redemption", backref="pass", lazy=True)
+
+
+
 
 
 
