@@ -384,7 +384,7 @@ footer {
   }
 
   .nav-center {
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     text-align: left;
     width: 100%;
     margin: 8px 0;
@@ -437,9 +437,16 @@ footer {
 
   /* === BUTTON SIZE === */
   .center-buttons .btn {
-    font-size: 12px;
-    padding: 6px 10px;
+    font-size: 14px;
+    padding: 2px 12px;
   }
+
+  .center-buttons .btn i.material-icons {
+    font-size: 18px;
+  }
+
+
+
 
   /* === WRAP TABLE ON OVERFLOW === */
   .responsive-table {
