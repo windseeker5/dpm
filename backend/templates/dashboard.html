@@ -5,17 +5,13 @@
 {% block header %}Admin Dashboard{% endblock %}
 
 {% block content %}
-    <p>Welcome, {{ session['admin'] }}!</p>
-
-
-    <br>
 
     <a href="{{ url_for('create_pass') }}"><button>Create New Pass</button></a>
     <a href="{{ url_for('scan_qr') }}"><button>Scan QR</button></a>
 
     <br> 
 
-    <h3>Active Pass & unpaid Pass List</h3>
+    <h2>Active Pass & unpaid Pass List</h2>
 
     <br>
 
@@ -61,14 +57,13 @@
                         {% endif %}
                         
                         {% if pass.games_remaining > 0 %}
-                        <form action="{{ url_for('redeem_pass', pass_code=pass.pass_code) }}" method="POST" style="display:inline;">
-                            <button type="submit" class="icon-button redeem-button" title="Redeem One Game">
-                                <i class="ri-archive-2-fill"></i>
-                            </button>
-                        </form>
+                        <a href="{{ url_for('show_pass', pass_code=pass.pass_code) }}" class="icon-button redeem-button" title="View & Redeem Pass">
+                            <i class="ri-archive-2-fill"></i>
+                        </a>
                         {% else %}
                         <i class="ri-close-circle-line" title="No games left" style="color: red;"></i>
                         {% endif %}
+                        
                     </td>
                 </tr>
                 {% endfor %}

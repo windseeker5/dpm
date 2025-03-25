@@ -1,0 +1,209 @@
+/* General page styling */
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f4f4f4;
+    padding: 20px;
+}
+
+/* Title styling */
+h2 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+/* Scanner container */
+.scanner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 500px;
+    margin: 0 auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Video frame */
+video {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    border: 2px solid #333;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+/* Dropdown for camera selection */
+select {
+    margin-top: 10px;
+    padding: 5px;
+    font-size: 16px;
+}
+
+/* Result text */
+p {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #333;
+}
+
+
+
+
+
+/* Flash Messages */
+.flash-container {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+}
+
+.flash-message {
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    display: inline-block;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.success {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.error {
+    background-color: #f44336;
+    color: white;
+}
+
+/* Auto-hide flash messages */
+.flash-message {
+    animation: fadeOut 3s ease-in-out 3s forwards;
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+
+
+
+/* Center the table */
+.table-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Table styling */
+.pass-table {
+    width: 80%;
+    border-collapse: collapse;
+    margin: auto;
+}
+
+.pass-table th, .pass-table td {
+    padding: 10px;
+    border: 1px solid #ccc;
+    text-align: center;
+}
+
+.pass-table th {
+    background-color: #f2f2f2;
+}
+
+/* Icon button */
+.icon-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+/* Paid button (💰) */
+.icon-button i.ri-money-dollar-box-fill {
+    color: green;
+}
+
+.icon-button i.ri-money-dollar-box-fill:hover {
+    color: darkgreen;
+}
+
+/* Redeem button (📦) */
+.icon-button i.ri-archive-2-fill {
+    color: blue;
+}
+
+.icon-button i.ri-archive-2-fill:hover {
+    color: darkblue;
+}
+
+/* Disabled icon */
+.ri-close-circle-line {
+    color: red;
+}
+
+
+
+
+
+
+.search-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    position: relative;
+}
+
+.search-box {
+    width: 100%;
+    padding: 12px 40px 12px 15px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    outline: none;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.search-box:focus {
+    border-color: #4285F4;
+    box-shadow: 0 4px 8px rgba(66, 133, 244, 0.2);
+}
+
+.clear-icon {
+    position: absolute;
+    right: 15px;
+    font-size: 20px;
+    color: gray;
+    cursor: pointer;
+    display: none; /* Hidden initially */
+}
+
+.clear-icon:hover {
+    color: black;
+}
+
+
+
+.suggestion-box li {
+    padding: 8px;
+    cursor: pointer;
+}
+.suggestion-box li:hover {
+    background-color: #f0f0f0;
+}

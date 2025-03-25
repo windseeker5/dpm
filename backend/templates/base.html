@@ -1,34 +1,88 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}App{% endblock %}</title>
-    
-    <!-- Materialize CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>{% block title %}Digital Pass Manager{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <!-- Materialize + Icons + Fonts -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
+  <script>
+    // Auto-fade flash messages
+    document.addEventListener("DOMContentLoaded", function () {
+      const flash = document.querySelector(".flash-message");
+      if (flash) {
+        setTimeout(() => flash.style.opacity = "0", 3000);
+      }
+    });
+  </script>
 </head>
 <body>
 
-    <div class="container">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=True) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }} card-panel">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+<!-- 🎨 Stripe-Style Diagonal Band Background -->
+<div class="stripe-band">
+  <svg viewBox="0 0 1440 420" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="gradientStripe" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ff7eb9" />
+        <stop offset="30%" stop-color="#ffb86c" />
+        <stop offset="65%" stop-color="#8be9fd" />
+        <stop offset="100%" stop-color="#cba6f7" />
+      </linearGradient>
+    </defs>
+    <path fill="url(#gradientStripe)" fill-opacity="1" d="M0,0 L0,300 Q720,420 1440,180 L1440,0 Z"></path>
+  </svg>
+</div>
 
-        {% block content %}{% endblock %}
+<!-- ✅ Flash Message Above Nav -->
+{% with messages = get_flashed_messages(with_categories=True) %}
+{% if messages %}
+  <div class="flash-container">
+    {% for category, message in messages %}
+      <div class="flash-message {{ category }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endwith %}
+
+<!-- 🚀 Navigation -->
+<nav>
+  <div class="nav-flex-container">
+    <div class="nav-left">
+      <img src="{{ url_for('static', filename='logo1.png') }}" alt="Logo" class="nav-logo">
     </div>
+    <div class="nav-center">
+      Ligue hockey Gagnon Image
+    </div>
+    <div class="nav-right">
+      {% if session.get('admin') %}
+        <span class="admin-email">{{ session['admin'] }}</span>
+        <a href="{{ url_for('setup') }}">Setup</a>
+        <a href="{{ url_for('logout') }}">Logout</a>
+      {% else %}
+        <a href="{{ url_for('login') }}">Login</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
 
-    <!-- Materialize JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<!-- Main Content -->
+<div class="main-wrapper">
+  {% block content %}{% endblock %}
+</div>
+
+<!-- 🦶 Footer -->
+<footer>
+  &copy; {{ now.year }} Digital Pass Manager — All rights reserved.
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

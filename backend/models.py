@@ -16,7 +16,6 @@ class Admin(db.Model):
 
 
 
-
 class Pass(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pass_code = db.Column(db.String(16), unique=True, nullable=False)
@@ -32,10 +31,6 @@ class Pass(db.Model):
 
 
 
-
-
-
-
 class Redemption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pass_id = db.Column(db.Integer, db.ForeignKey("pass.id"), nullable=False)
@@ -43,6 +38,8 @@ class Redemption(db.Model):
     redeemed_by = db.Column(db.String(100), nullable=True)  # ✅ Allow NULL initially
 
  
+
+
 
 class Setting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
