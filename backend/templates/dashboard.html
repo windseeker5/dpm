@@ -6,36 +6,41 @@
 
 {% block content %}
 
-    <a href="{{ url_for('create_pass') }}"><button>Create New Pass</button></a>
-    <a href="{{ url_for('scan_qr') }}"><button>Scan QR</button></a>
 
-    <br> 
-
-    <h2>Active Pass & unpaid Pass List</h2>
-
-    <br>
-
-    <!-- 🔍 Search Input Field -->
  
-    <div class="search-container">
-        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search by User Name...">
-        <i class="ri-close-circle-fill clear-icon" id="clearSearch" onclick="clearSearch()"></i>
+    <div class="center-buttons">
+        <a href="{{ url_for('create_pass') }}" class="btn waves-effect">New</a>
+        <a href="{{ url_for('scan_qr') }}" class="btn waves-effect">Scan</a>
     </div>
-    
+      
 
-
+    <h2>Active & unpaid</h2>
 
 
     <div class="table-container">
+
+        <!-- 🔍 Search Input Field -->
+      
+        <div class="search-container">
+            <i class="material-icons search-icon">search</i>
+            <input type="text" id="searchInput" class="search-box" placeholder="Search by User Name...">
+            <i class="material-icons clear-icon" id="clearSearch" onclick="clearSearch()">close</i>
+          </div>
+          
+          
+      
+
+
+
         <table class="pass-table" id="passTable">
 
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>User Name</th>
-                    <th>Created At</th>
-                    <th>Sold Amount</th>
-                    <th>Games Remaining</th>
+                    <th>Name</th>
+                    <th>Created</th>
+                    <th>Amount</th>
+                    <th>Remaining</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -50,26 +55,28 @@
                     <td>
                         {% if not pass.paid_ind %}
                         <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" style="display:inline;">
-                            <button type="submit" class="icon-button" title="Mark as Paid">
-                                <i class="ri-money-dollar-box-fill"></i>
-                            </button>
+                          <button type="submit" class="icon-button tooltipped" title="Mark as Paid" style="border: none; background: none; padding: 0; cursor: pointer;">
+                            <i class="material-icons" style="font-size: 28px; color: #b15300;">attach_money</i>
+                          </button>
                         </form>
                         {% endif %}
-                        
+                      
                         {% if pass.games_remaining > 0 %}
-                        <a href="{{ url_for('show_pass', pass_code=pass.pass_code) }}" class="icon-button redeem-button" title="View & Redeem Pass">
-                            <i class="ri-archive-2-fill"></i>
+                        <a href="{{ url_for('show_pass', pass_code=pass.pass_code) }}" class="tooltipped" title="Redeem Pass" style="margin-left: 8px;">
+                          <i class="material-icons" style="font-size: 28px; color: #004f4f;">assignment_turned_in</i>
                         </a>
                         {% else %}
-                        <i class="ri-close-circle-line" title="No games left" style="color: red;"></i>
+                        <i class="material-icons" style="font-size: 28px; color: red;" title="No games left">cancel</i>
                         {% endif %}
-                        
-                    </td>
+                      </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+
     </div>
+      
+
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {

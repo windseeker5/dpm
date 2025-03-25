@@ -7,15 +7,30 @@ body {
   }
   
   h1, h2, h3, h4 {
-    color: #333;
-    font-weight: 500;
-    margin-bottom: 20px;
+    color: #a319889f;
+    font-family: 'Roboto Slab', 'Montserrat', 'Helvetica', 'sans-serif';
+    margin: 0;
+    font-weight: 300; /* globally lighter */
   }
   
+  h2 {
+    font-size: 2.2em;
+    text-align: center;
+    font-weight: 200;  /* lighter, slimmer look */
+    line-height: 1.3;
+    margin-top: 30px;
+    margin-bottom: 30px;
+  }
+  
+
+
+
   p {
-    color: #555;
+    color: #444444;
   }
   
+
+
   /* Stripe Gradient Background */
   .stripe-band {
     position: absolute;
@@ -53,9 +68,9 @@ body {
     transition: opacity 0.6s ease-in-out;
   }
   .flash-message.success {
-    background-color: #d4edda;
-    border-color: #c3e6cb;
-    color: #155724;
+    background-color: #2f9647;
+    border-color: #268b3e;
+    color: #ffffff;
   }
   .flash-message.error,
   .flash-message.danger {
@@ -91,8 +106,9 @@ body {
     align-items: center;
   }
   .nav-logo {
-    height: 42px;
-    margin-left: 10px;
+    height: 150px;
+    margin-top: 20px;
+    margin-left: 0px;
   }
   .nav-center {
     position: absolute;
@@ -153,35 +169,83 @@ body {
     font-size: 14px;
     color: #666;
     padding: 20px 0;
-    margin-top: 40px;
+    margin-top: 100px;
   }
   
+
+
+
   /* Search */
-  .search-container {
-    width: 100%;
-    margin-bottom: 15px;
+/* Search container */
+.search-container {
     position: relative;
+    max-width: 500px;
+    margin: 0 auto 20px auto;
   }
+  
+ 
+
   .search-box {
     width: 100%;
-    padding: 8px 16px;
+    padding: 12px 40px 12px 48px;  /* ⬅️ Increased left padding */
+    font-size: 16px;
     border: 1px solid #ccc;
-    border-radius: 8px;
+    border-radius: 24px;
+    outline: none;
+    background-color: white;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    appearance: none;
   }
+  
+
+
+
+  .search-box:focus {
+    border-color: #4285f4;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+  }
+  
+  /* Search icon (left) */
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+    font-size: 20px;
+    pointer-events: none;
+  }
+  
+  /* Clear icon (right) */
   .clear-icon {
     position: absolute;
-    right: 10px;
-    top: 10px;
-    font-size: 20px;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
     color: #888;
+    font-size: 20px;
     cursor: pointer;
     display: none;
   }
   
-  /* Table */
-  .table-container {
-    width: 100%;
+  .clear-icon:hover {
+    color: #333;
   }
+  
+  
+
+
+
+
+.table-container {
+    width: 100%;
+    padding-left: 20px;
+    padding-right: 20px;
+    box-sizing: border-box; /* ensures padding doesn't overflow */
+  }
+
+
   table.pass-table {
     width: 100%;
     border-collapse: collapse;
@@ -203,8 +267,35 @@ body {
     background-color: #f9f9f9;
   }
   
+
+
+
+  .center-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  
+
+
+
+
+
+
+
+
+
+
   /* Mobile tweaks */
   @media (max-width: 768px) {
+    .table-container {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+ 
+
+ 
     .main-wrapper {
       margin: 15px;
       padding: 15px;
