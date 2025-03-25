@@ -91,6 +91,23 @@
 
         <br>
 
+
+        <div class="row">
+
+            <div class="input-field ">
+              <input id="org_name" name="org_name" type="text" value="{{ settings.get('ORG_NAME', '') }}">
+              <label for="org_name" class="active">Organization Name</label>
+            </div>
+
+            <div class="input-field">
+              <input id="call_back_days" name="call_back_days" type="number" min="0" value="{{ settings.get('CALL_BACK_DAYS', '0') }}">
+              <label for="call_back_days" class="active">Call-Back Delay (days) in unpaid </label>
+            </div>
+
+        </div>
+          
+
+
         <!-- 🧾 Pass Defaults -->
         <h4>Digital Pass Defaults</h4>
         <div class="input-field">

@@ -33,9 +33,6 @@ UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
-# 🔐 Set your secret key (move to config or settings later)
-stripe.api_key = "sk_test_51IPFwuGrhkirXbsPv1A0AXD0QUp7WQJ1EyAarZngPje3w9vPPpqpCAm8nNJj4x5dGldbHqwfYJKZzM9dWpj5sh9100W8kXUFqlY"
-
 
 
 # ✅ Load settings only if the database is ready
@@ -51,10 +48,11 @@ with app.app_context():
 
 
 @app.context_processor
-def inject_now():
-    return {'now': datetime.now()}
-
-
+def inject_globals():
+    return {
+        'now': datetime.now(),
+        'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image")
+    }
 
 
 @app.route("/create-checkout-session/<int:pass_id>", methods=["POST"])
@@ -148,6 +146,8 @@ def setup():
             "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip()
         }
 
+
+   
         for key, value in email_settings.items():
             if key == "MAIL_PASSWORD" and not value:
                 continue  # ✅ Do not overwrite password with blank
@@ -157,13 +157,22 @@ def setup():
             else:
                 db.session.add(Setting(key=key, value=str(value)))
 
-        # ✅ App-level settings
+
+
+        # ✅ App-level settings (including ORG_NAME and CALL_BACK_DAYS)
         extra_settings = {
             "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50").strip(),
             "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4").strip(),
             "EMAIL_INFO_TEXT": request.form.get("email_info_text", "").strip(),
-            "EMAIL_FOOTER_TEXT": request.form.get("email_footer_text", "").strip()
+            "EMAIL_FOOTER_TEXT": request.form.get("email_footer_text", "").strip(),
+            "ORG_NAME": request.form.get("org_name", "").strip(),
+            "CALL_BACK_DAYS": request.form.get("call_back_days", "0").strip()
         }
+
+
+
+
+
 
         for key, value in extra_settings.items():
             existing = Setting.query.filter_by(key=key).first()
@@ -465,4 +474,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8000)  # Change 8080 to any port you want
+    app.run(debug=True, port=8888)  # Change 8080 to any port you want
