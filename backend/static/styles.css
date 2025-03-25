@@ -227,6 +227,25 @@ nav {
    MAIN TABLE STYLE
 -------------------------------------------------- */
 
+/* ID column: minimal width */
+.pass-table .col-id {
+  width: 40px;
+  text-align: center;
+}
+
+/* Name column: take more space */
+.pass-table .col-name {
+  width: 30%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Created column: fixed width (optional) */
+.pass-table .col-created {
+  width: 120px;
+}
+
+
 .pass-table {
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -364,10 +383,18 @@ footer {
 }
 
 
+
 /* -------------------------------------------------
    📱 MOBILE RESPONSIVE TWEAKS
 -------------------------------------------------- */
 @media (max-width: 768px) {
+
+  h1 {
+    font-size: 22px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+
   /* === NAVIGATION BAR === */
   .nav-flex-container {
     flex-direction: column;
@@ -415,13 +442,6 @@ footer {
     display: flex;
   }
 
-  /* === DASHBOARD HEADLINE === */
-  h1 {
-    font-size: 26px;
-    line-height: 1.2;
-    margin-bottom: 6px;
-  }
-
   /* === TABLE FONT & PADDING === */
   .pass-table th,
   .pass-table td {
@@ -429,37 +449,43 @@ footer {
     padding: 6px 8px;
   }
 
+
+  /* Make Name column take most of the row */
+  .pass-table .col-name {
+    width: 60%;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* Keep other columns compact */
+  .pass-table .col-amount {
+    width: 30%;
+    text-align: right;
+  }
+
+  .pass-table .col-remain {
+    width: 20%;
+    text-align: center;
+  }
+
+  .pass-table td:last-child,
+  .pass-table th:last-child {
+    width: 50px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+
   /* === SEARCH BOX === */
-  .emoji-search-box {
+  .emoji-search-box,
+  .search-input {
     font-size: 13px;
     padding: 8px 12px;
   }
 
-  /* === BUTTON SIZE === */
-  .center-buttons .btn {
-    font-size: 14px;
-    padding: 2px 12px;
-  }
-
-  .center-buttons .btn i.material-icons {
-    font-size: 18px;
-  }
-
-
-
-
-  /* === WRAP TABLE ON OVERFLOW === */
-  .responsive-table {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
   .search-bar-container {
     padding: 6px 10px;
-  }
-
-  .search-input {
-    font-size: 14px;
   }
 
   .search-icon,
@@ -467,10 +493,34 @@ footer {
     font-size: 18px;
   }
 
+  /* === BUTTON SIZE & ICONS === */
+  .center-buttons .btn {
+    font-size: 14px;
+    padding: 2px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
 
+  .center-buttons .btn i.material-icons {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* === WRAP TABLE ON OVERFLOW === */
+  .responsive-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  footer, .footer {
+    font-size: 12px;
+    padding: 8px 12px;
+    text-align: center;
+  }
 
 
 
 }
-
 

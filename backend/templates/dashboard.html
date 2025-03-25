@@ -42,8 +42,6 @@
     </div>
       
 
-
-
     <div class="table-container">
 
         <div class="responsive-table">
@@ -52,22 +50,22 @@
 
                 <thead>
                     <tr>
-                        <th class="hide-mobile">ID</th>
-                        <th>Name</th>
+                        <th class="col-id hide-mobile">ID</th>
+                        <th class="col-name">Name</th>
                         <th class="hide-mobile">Created</th>
-                        <th>Amount</th>
-                        <th>Remaining</th>
+                        <th class="col-amount">Amount</th>
+                        <th class="col-remain">QT</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for pass in passes %}
                     <tr>
-                        <td class="hide-mobile">{{ pass.id }}</td>
-                        <td class="user-name">{{ pass.user_name }}</td>
+                        <td class="col-id hide-mobile">{{ pass.id }}</td>
+                        <td class="col-name user-name">{{ pass.user_name }}</td>
                         <td class="hide-mobile">{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
-                        <td>${{ "%.2f"|format(pass.sold_amt) }}</td>
-                        <td>{{ pass.games_remaining }}</td>
+                        <td class="col-amount">${{ "%.2f"|format(pass.sold_amt) }}</td>
+                        <td class="col-remain">{{ pass.games_remaining }}</td>
                         <td>
                             {% if not pass.paid_ind %}
                             <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" style="display:inline;">
