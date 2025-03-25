@@ -7,10 +7,15 @@
 {% block content %}
 
 
- 
     <div class="center-buttons">
-        <a href="{{ url_for('create_pass') }}" class="btn waves-effect">New</a>
-        <a href="{{ url_for('scan_qr') }}" class="btn waves-effect">Scan</a>
+        <a href="{{ url_for('create_pass') }}" class="btn waves-effect">
+          <i class="material-icons left">add_box</i>
+          NEW
+        </a>
+        <a href="{{ url_for('scan_qr') }}" class="btn waves-effect">
+          <i class="material-icons left">fingerprint</i>
+          SCAN
+        </a>
     </div>
       
 
