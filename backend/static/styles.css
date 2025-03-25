@@ -264,12 +264,41 @@ a.tooltipped:hover i {
 
 
 
+/* ======================== */
+/* 🎯 Search Bar Styling    */
+/* ======================== */
+.search-bar-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 40px 0 40px; /* ⬅️ more breathing room above and below */
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #f6f1ac;
+  padding: 6px 12px;
+  box-shadow: 0 1px 2px rgba(255, 94, 94, 0.05);
+}
 
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  padding: 8px 10px;
+  background: transparent;
+}
 
+.search-icon,
+.clear-icon {
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+  user-select: none;
+}
 
-
-
-
+.clear-icon {
+  display: none; /* Will be toggled via JS */
+}
 
 
 
@@ -403,4 +432,24 @@ footer {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  .search-bar-container {
+    padding: 6px 10px;
+  }
+
+  .search-input {
+    font-size: 14px;
+  }
+
+  .search-icon,
+  .clear-icon {
+    font-size: 18px;
+  }
+
+
+
+
+
 }
+
+
