@@ -61,32 +61,88 @@
 {% endif %}
 {% endwith %}
 
+
+
+<!-- 🚀 Navigation -->
 <!-- 🚀 Navigation -->
 <nav>
   <div class="nav-flex-container">
-    <div class="nav-left">
 
+    <!-- Left: Logo (desktop only) -->
+    <div class="nav-left">
       <a href="{{ url_for('dashboard') }}">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="nav-logo">
       </a>
-
     </div>
-    
+
+    <!-- Center: ORG_NAME -->
     <div class="nav-center anton-regular">
       {{ ORG_NAME }}
     </div>
 
+    <!-- Right: Nav links & hamburger -->
     <div class="nav-right">
       {% if session.get('admin') %}
         <span class="admin-email">{{ session['admin'] }}</span>
-        <a href="{{ url_for('setup') }}">Setup</a>
+        <a href="{{ url_for('dashboard') }}">Home</a>
+        <a href="#">Marketing</a>
+        <a href="{{ url_for('setup') }}">Settings</a>
         <a href="{{ url_for('logout') }}">Logout</a>
       {% else %}
         <a href="{{ url_for('login') }}">Login</a>
       {% endif %}
+
+      <!-- Hamburger icon (mobile only) -->
+      <a href="#" class="hamburger" onclick="toggleMobileMenu()">
+        <i class="material-icons">menu</i>
+      </a>
     </div>
   </div>
+
+  <!-- Mobile dropdown -->
+  <div class="mobile-menu" id="mobileMenu">
+    {% if session.get('admin') %}
+      <a href="{{ url_for('dashboard') }}">Home</a>
+      <a href="#">Reports</a>
+      <a href="#">Marketing</a>
+      <a href="{{ url_for('setup') }}">Settings</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Login</a>
+    {% endif %}
+  </div>
 </nav>
+
+ 
+
+
+
+<script>
+  // Toggle mobile dropdown menu
+  function toggleMobileMenu() {
+    const menu = document.getElementById("mobileMenu");
+    menu.classList.toggle("show");
+  }
+
+  document.querySelectorAll('.mobile-menu a').forEach(link => {
+  link.addEventListener('click', () => {
+    document.getElementById('mobileMenu').classList.remove('show');
+  });
+});
+
+
+
+</script>
+
+
+
+
+
+
+
+
+
+
 
 <!-- Main Content -->
 <div class="main-wrapper">
@@ -95,7 +151,7 @@
 
 <!-- 🦶 Footer -->
 <footer>
-  &copy; {{ now.year }} Digital Pass Manager — All rights reserved.
+  &copy; {{ now.year }} minipass.me - A Digital Pass Manager — All rights reserved.
 </footer>
 
 <!-- Scripts -->
