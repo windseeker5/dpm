@@ -1,16 +1,92 @@
-<!DOCTYPE html>
-<html>
-<head><title>Pass Details</title></head>
-<body>
-    <h2>Pass Details</h2>
-    <p><strong>Pass Code:</strong> {{ hockey_pass.pass_code }}</p>
-    <p><strong>User Name:</strong> {{ hockey_pass.user_name }}</p>
-    <p><strong>Games Remaining:</strong> {{ hockey_pass.games_remaining }}</p>
+{% extends "base.html" %}
+{% block title %}Pass {{ hockey_pass.pass_code }}{% endblock %}
 
-    <h3>QR Code:</h3>
-    <img src="data:image/png;base64,{{ qr_data }}" alt="Pass QR Code">
+{% block content %}
 
-    <br><br>
-    <a href="/dashboard">Back to Dashboard</a>
-</body>
-</html>
+<style>
+    body {
+        background-color: white;
+    }
+</style>
+
+<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+
+    <h2 style="text-align: center;">{{ hockey_pass.user_name }}</h2>
+    <p style="text-align: center; font-size: 16px;">
+        <strong>Games Remaining:</strong> {{ hockey_pass.games_remaining }}
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <img src="data:image/png;base64,{{ qr_data }}" alt="QR Code"
+             style="width: 500px; height: 500px; border: 1px solid #ccc; padding: 8px; border-radius: 8px;">
+    </div>
+
+    <!-- Pass History -->
+    <h3 style="margin-top: 30px;">📜 Numeric Pass History</h3>
+
+    <table style="
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        overflow: hidden;
+        text-align: left;
+    ">
+        <thead>
+        <tr style="background-color: #f2f2f2;">
+            <th style="padding: 8px 12px;">Event</th>
+            <th style="padding: 8px 12px;">Date</th>
+        </tr>
+        </thead>
+        <tbody>
+            <tr><td style="padding: 8px 12px;">Created</td><td style="padding: 8px 12px;">{{ history.created }}</td></tr>
+            <tr><td style="padding: 8px 12px;">Paid</td><td style="padding: 8px 12px;">{{ history.paid or '❌ Not Paid' }}</td></tr>
+            {% for date in history.redemptions %}
+                <tr><td style="padding: 8px 12px;">Redeem #{{ loop.index }}</td><td style="padding: 8px 12px;">{{ date }}</td></tr>
+            {% endfor %}
+            {% if history.expired %}
+                <tr><td style="padding: 8px 12px;">Expired</td><td style="padding: 8px 12px;">{{ history.expired }}</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+
+
+    {% if is_admin and hockey_pass.games_remaining > 0 %}
+        <form action="{{ url_for('redeem_pass', pass_code=hockey_pass.pass_code) }}" method="POST" style="margin-top: 30px; text-align: center;">
+            <button type="submit" style="
+                padding: 12px 24px;
+                font-size: 16px;
+                background-color: #28a745;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+            ">
+                Redeem A Game
+            </button>
+        </form>
+    {% endif %}
+
+
+    {% if not hockey_pass.paid_ind %}
+    <div style="background-color: #fffbe6; padding: 15px; border-radius: 6px; border: 1px solid #e0c97f; margin-bottom: 20px; text-align: center;">
+        <p style="color: #c0392b; font-weight: bold; margin: 0;">❗ This pass is not paid yet.</p>
+        <p style="margin: 5px 0;">Send an Interac e-Transfer to: <strong>email@gmail.com</strong></p>
+
+        <form action="{{ url_for('create_checkout_session', pass_id=hockey_pass.id) }}" method="POST" style="margin-top: 10px;">
+            <button type="submit" style="background-color: #635bff; color: white; padding: 10px 20px; border-radius: 5px; border: none;">
+                💳 Pay with Credit Card
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+
+
+</div>
+{% endblock %}

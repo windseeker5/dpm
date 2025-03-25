@@ -1,7 +1,6 @@
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages, jsonify
 
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import bcrypt
@@ -9,8 +8,7 @@ import uuid
 import qrcode
 import io
 import base64
-from utils import send_email, send_email_async, get_setting
-
+from utils import send_email, send_email_async, get_setting, generate_qr_code_image, get_pass_history_data
 
 from werkzeug.utils import secure_filename
 from models import db, Admin, Pass, Redemption, Setting  
@@ -18,6 +16,8 @@ import os  # ✅ Add this import
 from config import Config
 
 from flask import current_app
+import stripe
+
 
 
 
@@ -33,6 +33,11 @@ UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
+# 🔐 Set your secret key (move to config or settings later)
+stripe.api_key = "sk_test_51IPFwuGrhkirXbsPv1A0AXD0QUp7WQJ1EyAarZngPje3w9vPPpqpCAm8nNJj4x5dGldbHqwfYJKZzM9dWpj5sh9100W8kXUFqlY"
+
+
+
 # ✅ Load settings only if the database is ready
 with app.app_context():
     app.config["MAIL_SERVER"] = Config.get_setting(app, "MAIL_SERVER", "smtp.gmail.com")
@@ -41,6 +46,63 @@ with app.app_context():
     app.config["MAIL_USERNAME"] = Config.get_setting(app, "MAIL_USERNAME", "")
     app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
+
+
+
+
+@app.context_processor
+def inject_now():
+    return {'now': datetime.now()}
+
+
+
+
+@app.route("/create-checkout-session/<int:pass_id>", methods=["POST"])
+def create_checkout_session(pass_id):
+    hockey_pass = Pass.query.get(pass_id)
+    if not hockey_pass:
+        return "Invalid pass", 404
+
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "unit_amount": int(hockey_pass.sold_amt * 100),
+                "product_data": {
+                    "name": f"Hockey Pass for {hockey_pass.user_name}",
+                    "description": f"Pass ID: {hockey_pass.pass_code}",
+                },
+            },
+            "quantity": 1,
+        }],
+        mode="payment",
+        success_url=url_for("payment_success", pass_id=hockey_pass.id, _external=True),
+        cancel_url=url_for("show_pass", pass_code=hockey_pass.pass_code, _external=True),
+    )
+
+    return redirect(session.url, code=303)
+
+
+
+@app.route("/payment-success/<int:pass_id>")
+def payment_success(pass_id):
+    hockey_pass = Pass.query.get(pass_id)
+    if hockey_pass:
+        hockey_pass.paid_ind = True
+        db.session.commit()
+        flash("✅ Payment received! Thank you.", "success")
+    return redirect(url_for("show_pass", pass_code=hockey_pass.pass_code))
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -220,7 +282,7 @@ def create_pass():
     if request.method == "POST":
         user_name = request.form["user_name"]
         user_email = request.form["user_email"]
-        phone_number = request.form.get("mobile_phone", "")
+        phone_number = request.form.get("phone_number", "(581)222-3333")
         sold_amt = float(request.form.get("sold_amt", 50))
         sessions_qt = int(request.form.get("sessionsQt", 4))
         paid_ind = 1 if "paid_ind" in request.form else 0
@@ -268,21 +330,26 @@ def create_pass():
 
 
 
+
+
 @app.route("/pass/<pass_code>")
 def show_pass(pass_code):
-    with app.app_context():
-        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
-
+    hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
     if not hockey_pass:
         return "Pass not found", 404
 
-    # Generate QR code
-    qr = qrcode.make(pass_code)
-    buffer = io.BytesIO()
-    qr.save(buffer, format="PNG")
-    qr_data = base64.b64encode(buffer.getvalue()).decode()
+    qr_image_io = generate_qr_code_image(pass_code)
+    qr_data = base64.b64encode(qr_image_io.read()).decode()
 
-    return render_template("pass.html", hockey_pass=hockey_pass, qr_data=qr_data)
+    history = get_pass_history_data(pass_code)
+    is_admin = "admin" in session
+
+    return render_template("pass.html", hockey_pass=hockey_pass, qr_data=qr_data, history=history, is_admin=is_admin)
+
+
+
+
+
 
 
 
@@ -347,7 +414,6 @@ def redeem_pass(pass_code):
 
 
 
-
 @app.route("/mark-paid/<int:pass_id>", methods=["POST"])
 def mark_paid(pass_id):
     if "admin" not in session:
@@ -357,9 +423,25 @@ def mark_paid(pass_id):
     if hockey_pass:
         hockey_pass.paid_ind = True
         db.session.commit()
-        flash(f"Pass {hockey_pass.id} marked as paid.", "success")
+
+        # ✅ Send confirmation email
+        send_email_async(
+            current_app._get_current_object(),
+            user_email=hockey_pass.user_email,
+            subject="✅ Payment Received for Your Hockey Pass",
+            user_name=hockey_pass.user_name,
+            pass_code=hockey_pass.pass_code,
+            created_date=hockey_pass.pass_created_dt.strftime('%Y-%m-%d'),
+            remaining_games=hockey_pass.games_remaining,
+            special_message="We've received your payment. Your pass is now active. Thank you!"
+        )
+
+        flash(f"Pass {hockey_pass.id} marked as paid. Email sent.", "success")
+    else:
+        flash("Pass not found!", "error")
 
     return redirect(url_for("dashboard"))
+
 
 
 
