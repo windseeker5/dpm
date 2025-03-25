@@ -5,4 +5,5 @@ bcrypt
 flask_mail 
 qrcode 
 pillow
+stripe
 qrcode[pil]

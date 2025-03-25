@@ -12,6 +12,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed&display=swap" rel="stylesheet">
+
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;500;600&family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;400;500&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
   <script>
     // Auto-fade flash messages
     document.addEventListener("DOMContentLoaded", function () {
@@ -54,7 +65,11 @@
 <nav>
   <div class="nav-flex-container">
     <div class="nav-left">
-      <img src="{{ url_for('static', filename='logo1.png') }}" alt="Logo" class="nav-logo">
+
+      <a href="{{ url_for('dashboard') }}">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="nav-logo">
+      </a>
+
     </div>
     <div class="nav-center">
       Ligue hockey Gagnon Image
