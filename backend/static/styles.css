@@ -24,7 +24,6 @@ body {
   
 
 
-
   p {
     color: #444444;
   }
@@ -89,6 +88,18 @@ body {
     color: #0c5460;
   }
   
+
+
+  .anton-regular {
+    font-family: "Anton", sans-serif !important ;
+    font-weight: 400 !important;
+    font-size: 2em !important;
+    color: #fef6d9 !important;
+    font-style: normal !important;
+  }
+  
+
+
   /* Navbar */
   nav {
     background-color: transparent !important;

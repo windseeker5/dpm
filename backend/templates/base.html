@@ -14,7 +14,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed&display=swap" rel="stylesheet">
 
@@ -71,9 +71,11 @@
       </a>
 
     </div>
-    <div class="nav-center">
-      Ligue hockey Gagnon Image
+    
+    <div class="nav-center anton-regular">
+      {{ ORG_NAME }}
     </div>
+
     <div class="nav-right">
       {% if session.get('admin') %}
         <span class="admin-email">{{ session['admin'] }}</span>
