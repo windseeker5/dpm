@@ -14,14 +14,11 @@
     </div>
       
 
-    <h1>Active & Unpaid Passes</h1>
 
+    <div class="dashboard-header">
 
-    <div class="table-container">
-
-        <!-- 🔍 Search Input Field -->
-         
         <div class="search-wrapper">
+
             <input
               type="text"
               id="searchInput"
@@ -29,56 +26,64 @@
               placeholder="🔍 Search by User Name..."
             />
             <span class="clear-icon" id="clearSearch" onclick="clearSearch()">❌</span>
-          </div>
-          
-          
-          
-          
+
+        </div>
+
+        <h1>Active & Unpaid Passes</h1>
+
+    </div>
       
 
 
 
-        <table class="pass-table" id="passTable">
+    <div class="table-container">
 
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Created</th>
-                    <th>Amount</th>
-                    <th>Remaining</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for pass in passes %}
-                <tr>
-                    <td>{{ pass.id }}</td>
-                    <td class="user-name">{{ pass.user_name }}</td>
-                    <td>{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
-                    <td>${{ "%.2f"|format(pass.sold_amt) }}</td>
-                    <td>{{ pass.games_remaining }}</td>
-                    <td>
-                        {% if not pass.paid_ind %}
-                        <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" style="display:inline;">
-                          <button type="submit" class="icon-button tooltipped" title="Mark as Paid" style="border: none; background: none; padding: 0; cursor: pointer;">
-                            <i class="material-icons" style="font-size: 28px; color: #b15300;">attach_money</i>
-                          </button>
-                        </form>
-                        {% endif %}
-                      
-                        {% if pass.games_remaining > 0 %}
-                        <a href="{{ url_for('show_pass', pass_code=pass.pass_code) }}" class="tooltipped" title="Redeem Pass" style="margin-left: 8px;">
-                          <i class="material-icons" style="font-size: 28px; color: #004f4f;">assignment_turned_in</i>
-                        </a>
-                        {% else %}
-                        <i class="material-icons" style="font-size: 28px; color: red;" title="No games left">cancel</i>
-                        {% endif %}
-                      </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="responsive-table">
+
+            <table class="pass-table" id="passTable">
+
+                <thead>
+                    <tr>
+                        <th class="hide-mobile">ID</th>
+                        <th>Name</th>
+                        <th class="hide-mobile">Created</th>
+                        <th>Amount</th>
+                        <th>Remaining</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pass in passes %}
+                    <tr>
+                        <td class="hide-mobile">{{ pass.id }}</td>
+                        <td class="user-name">{{ pass.user_name }}</td>
+                        <td class="hide-mobile">{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
+                        <td>${{ "%.2f"|format(pass.sold_amt) }}</td>
+                        <td>{{ pass.games_remaining }}</td>
+                        <td>
+                            {% if not pass.paid_ind %}
+                            <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="icon-button tooltipped" title="Mark as Paid" style="border: none; background: none; padding: 0; cursor: pointer;">
+                                <i class="material-icons" style="font-size: 28px; color: #b15300;">attach_money</i>
+                            </button>
+                            </form>
+                            {% endif %}
+                        
+                            {% if pass.games_remaining > 0 %}
+                            <a href="{{ url_for('show_pass', pass_code=pass.pass_code) }}" class="tooltipped" title="Redeem Pass" style="margin-left: 8px;">
+                            <i class="material-icons" style="font-size: 28px; color: #004f4f;">assignment_turned_in</i>
+                            </a>
+                            {% else %}
+                            <i class="material-icons" style="font-size: 28px; color: red;" title="No games left">cancel</i>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+          
 
     </div>
       
