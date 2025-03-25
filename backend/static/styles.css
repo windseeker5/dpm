@@ -124,9 +124,13 @@ nav {
 }
 
 .nav-logo {
-  height: 130px;
-  margin-top: 15px;
+  height: 25px;              /* Adjust based on desired logo size */
+  margin-top: 40px;
+  margin-left: 30px;
+  margin-bottom: 8px;
+  object-fit: contain;       /* Ensures image doesn't get distorted */
 }
+
 
 .nav-center {
   position: absolute;
