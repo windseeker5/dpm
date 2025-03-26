@@ -10,7 +10,20 @@
         <img src="data:image/png;base64,{{ qr_data }}" alt="QR Code" class="qr-image" />
     </div>
       
+
+    <!-- Admin Redeem Form -->
+    {% if is_admin and hockey_pass.games_remaining > 0 %}
+    <div class="center-align" style="margin-top: 30px;">
+        <form action="{{ url_for('redeem_pass', pass_code=hockey_pass.pass_code) }}" method="POST">
+            <button type="submit" class="btn waves-effect">
+              Redeem A Game
+            </button>
+        </form>
+    </div>
+    {% endif %}
     
+
+<br><br>
 
     <div class="pass-history-wrapper">
 
@@ -42,36 +55,38 @@
 
 
 
-    <!-- Admin Redeem Form -->
-    {% if is_admin and hockey_pass.games_remaining > 0 %}
-    <div class="center-align" style="margin-top: 30px;">
-        <form action="{{ url_for('redeem_pass', pass_code=hockey_pass.pass_code) }}" method="POST">
-            <button type="submit" class="btn waves-effect">
-              Redeem A Game
-            </button>
-        </form>
-    </div>
-    {% endif %}
-
-
-
 
     <!-- Unpaid Banner -->
     {% if not hockey_pass.paid_ind %}
-
-    <div class="unpaid-warning z-depth-1">
-        <p class="warning-title">❗ This pass is <strong>not paid yet</strong></p>
-        <p class="warning-info">Send an Interac e-Transfer to: <strong>email@gmail.com</strong></p>
-      
-        <form action="{{ url_for('create_checkout_session', pass_id=hockey_pass.id) }}" method="POST" style="margin-top: 10px;">
-          <button class="btn pay-btn waves-effect waves-light" type="submit">
-            💳 Pay with Credit Card
-          </button>
-        </form>
+    <!-- Divider -->
+    <div class="section-divider">
+      <span>🤖 About This Pass</span>
+    </div>
+  
+    <!-- Info Card -->
+    <div class="info-card z-depth-1">
+      <p>Bonjour {{ hockey_pass.user_name }} ( {{ hockey_pass.user_email }}), votre passe 
+        électronique ( #{{ hockey_pass.pass_code }}) donnant accès aux matchs 
+        de la Ligue de hockey Gagnon Image n’a pas été payée.</p>
+  
+      <p>Merci de bien vouloir effectuer un virement bancaire à l’adresse suivante :  
+        <strong>lhgi@jfgoulet.com</strong>
+      </p>
+  
+      <p>🔔 Tous les montants récoltés servent à financer la <strong>Fondation de la ligue de hockey Gagnon Image</strong>.</p>
+  
+      <p>Pour en savoir plus, consultez notre page Facebook :
+        <a href="https://www.facebook.com/profile.php?id=61554658763800" target="_blank">📘 Voir la page</a>
+      </p>
+  
+      <p>🙏 Merci à nos généreux commanditaires :</p>
+  
+      <div class="sponsors">
+        <img src="/static/img/sponsor1.png" alt="Sponsor 1" />
+        <img src="/static/img/sponsor2.png" alt="Sponsor 2" />
       </div>
-      
-    {% endif %}
-    
-
+    </div>
+  {% endif %}
+  
  
 {% endblock %}
