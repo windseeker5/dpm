@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages, jsonify
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, get_flashed_messages, jsonify
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -91,16 +91,6 @@ def payment_success(pass_id):
         db.session.commit()
         flash("✅ Payment received! Thank you.", "success")
     return redirect(url_for("show_pass", pass_code=hockey_pass.pass_code))
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -353,13 +343,24 @@ def show_pass(pass_code):
     history = get_pass_history_data(pass_code)
     is_admin = "admin" in session
 
-    return render_template("pass.html", hockey_pass=hockey_pass, qr_data=qr_data, history=history, is_admin=is_admin)
+
+    # ✅ Load all settings as a dict
+    settings_raw = {s.key: s.value for s in Setting.query.all()}
+
+    email_info_rendered = render_template_string(
+        settings_raw.get("EMAIL_INFO_TEXT", ""),
+        hockey_pass=hockey_pass
+    )
+    
 
 
-
-
-
-
+    return render_template("pass.html", 
+                           hockey_pass=hockey_pass, 
+                           qr_data=qr_data, 
+                           history=history, 
+                           is_admin=is_admin,
+                           settings=settings_raw,
+                           email_info=email_info_rendered  )
 
 
 
@@ -413,7 +414,7 @@ def redeem_pass(pass_code):
                 special_message=special_message
             )
 
-            flash(f"Game redeemed! {hockey_pass.games_remaining} games left. ASYNC Email sent.", "success")
+            flash(f"Game redeemed! {hockey_pass.games_remaining} games left.Email sent.", "success")
         else:
             flash("No games left on this pass!", "error")
 

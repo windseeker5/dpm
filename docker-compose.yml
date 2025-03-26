@@ -4,13 +4,13 @@ services:
   backend:
     build: ./backend
     ports:
-      - "5000:5000"
+      - "8889:8889"
     restart: always
 
   nginx:
     build: ./nginx
     ports:
-      - "80:80"
+      - "8080:8080"
     depends_on:
       - backend
     restart: always

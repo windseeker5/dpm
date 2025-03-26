@@ -13,7 +13,7 @@
 
     <!-- Admin Redeem Form -->
     {% if is_admin and hockey_pass.games_remaining > 0 %}
-    <div class="center-align" style="margin-top: 30px;">
+    <div class="center-align">
         <form action="{{ url_for('redeem_pass', pass_code=hockey_pass.pass_code) }}" method="POST">
             <button type="submit" class="btn waves-effect">
               Redeem A Game
@@ -23,11 +23,11 @@
     {% endif %}
     
 
-<br><br>
+    <br>
 
     <div class="pass-history-wrapper">
 
-        <h3 class="center-align">History</h3>
+        <h3 class="center-align">Pass History</h3>
       
         <div class="history-table-container">
           <table class="highlight centered history-table">
@@ -58,34 +58,28 @@
 
     <!-- Unpaid Banner -->
     {% if not hockey_pass.paid_ind %}
-    <!-- Divider -->
-    <div class="section-divider">
-      <span>🤖 About This Pass</span>
+
+    <div class="info-container">
+
+        <!-- Divider -->
+        <div class="custom-divider">
+          <div class="line"></div>
+          <img src="{{ url_for('static', filename='uploads/logo.jpg') }}" alt="Logo" class="divider-logo" />
+          <div class="line"></div>
+        </div>
+      
+        <!-- Text Section -->
+        <div class="info-section">
+
+            {{ email_info | safe }}
+   
+        </div>
+ 
     </div>
-  
-    <!-- Info Card -->
-    <div class="info-card z-depth-1">
-      <p>Bonjour {{ hockey_pass.user_name }} ( {{ hockey_pass.user_email }}), votre passe 
-        électronique ( #{{ hockey_pass.pass_code }}) donnant accès aux matchs 
-        de la Ligue de hockey Gagnon Image n’a pas été payée.</p>
-  
-      <p>Merci de bien vouloir effectuer un virement bancaire à l’adresse suivante :  
-        <strong>lhgi@jfgoulet.com</strong>
-      </p>
-  
-      <p>🔔 Tous les montants récoltés servent à financer la <strong>Fondation de la ligue de hockey Gagnon Image</strong>.</p>
-  
-      <p>Pour en savoir plus, consultez notre page Facebook :
-        <a href="https://www.facebook.com/profile.php?id=61554658763800" target="_blank">📘 Voir la page</a>
-      </p>
-  
-      <p>🙏 Merci à nos généreux commanditaires :</p>
-  
-      <div class="sponsors">
-        <img src="/static/img/sponsor1.png" alt="Sponsor 1" />
-        <img src="/static/img/sponsor2.png" alt="Sponsor 2" />
-      </div>
-    </div>
+
+
+    
+
   {% endif %}
   
  
