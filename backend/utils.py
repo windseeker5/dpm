@@ -392,14 +392,12 @@ def send_email(user_email, subject, user_name, pass_code, created_date, remainin
         email_info = render_template_string(email_info_template, hockey_pass=hockey_pass)
 
 
-        with open("static/uploads/logo.jpg", "rb") as logo_file:
+        with open("static/uploads/logo.png", "rb") as logo_file:
             logo_bytes = logo_file.read()
             logo_url = "cid:logo_image"
 
 
 
-
-        # Then render the email
         email_html = render_template(
             "email_pass.html",
             user_name=user_name,
@@ -409,7 +407,8 @@ def send_email(user_email, subject, user_name, pass_code, created_date, remainin
             history=history_data,
             logo_url=logo_url,
             email_info=email_info,
-            email_footer=email_footer
+            email_footer=email_footer,
+            hockey_pass=hockey_pass  # ✅ Needed for the owner card section
         )
 
     
