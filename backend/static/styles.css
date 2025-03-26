@@ -224,7 +224,12 @@ nav {
   vertical-align: middle;
 }
 
-
+.center-buttons {
+  display: flex;
+  gap: 30px; /* or 10px, as needed */
+  justify-content: left;
+  flex-wrap: wrap;
+}
 
 
 /* -------------------------------------------------
@@ -388,11 +393,6 @@ a.tooltipped:hover i {
 
 
 
-
-
-
-
-
 footer {
   width: 100%;
   text-align: center;
@@ -432,8 +432,6 @@ footer {
   z-index: 10;
 }
 
-
-
 /* -------------------------------------------------
    📱 MOBILE RESPONSIVE TWEAKS
 -------------------------------------------------- */
@@ -468,6 +466,7 @@ footer {
     word-break: break-word;
   }
 
+  
   .hamburger {
     display: block;
     font-size: 26px;
@@ -492,18 +491,16 @@ footer {
     display: flex;
   }
 
-  /* === TABLE FONT & PADDING === */
+  /* === TABLE STYLING === */
   .pass-table th,
   .pass-table td {
     font-size: 13px;
     padding: 4px 6px;
+    vertical-align: middle;
   }
 
-
-  /* Make Name column take most of the row */
   .pass-table .col-name {
     width: 50%;
-    max-width: 100%;
     white-space: normal;
     word-break: break-word;
   }
@@ -513,13 +510,47 @@ footer {
     text-align: center;
   }
 
-  .pass-table td:last-child,
-  .pass-table th:last-child {
+  .pass-table th:last-child,
+  .pass-table td:last-child {
     width: 50px;
     text-align: center;
+    vertical-align: middle;
     white-space: nowrap;
   }
 
+  /* === ACTION ICONS === */
+  .pass-table td:last-child {
+    white-space: nowrap;
+  }
+
+  .inline-form,
+  .redeem-link {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0;
+    padding: 0;
+  }
+
+  .icon-button {
+    padding: 0;
+    margin: 0 2px 0 0;
+    border: none;
+    background: none;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .pass-table .material-icons {
+    font-size: 20px;
+    line-height: 1;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .pass-table .cancel-icon {
+    padding: 0;
+    margin: 0;
+  }
 
   /* === SEARCH BOX === */
   .emoji-search-box,
@@ -541,10 +572,11 @@ footer {
   .center-buttons .btn {
     font-size: 14px;
     padding: 2px 12px;
+    margin-right: 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+
   }
 
   .center-buttons .btn i.material-icons {
@@ -563,8 +595,4 @@ footer {
     padding: 8px 12px;
     text-align: center;
   }
-
-
-
 }
-
