@@ -281,6 +281,48 @@ nav {
 }
 
 
+/* === Button + Form Layout === */
+.inline-form {
+  display: inline;
+}
+
+.icon-button {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* === Icon Colors and Sizes === */
+.money-icon,
+.redeem-icon,
+.cancel-icon {
+  font-size: 28px;
+}
+
+.unpaid-brown {
+  color: #6be827;
+}
+
+.unpaid-red {
+  color: red;
+}
+
+.redeem-link {
+  margin-left: 8px;
+}
+
+.redeem-icon {
+  color: #004f4f;
+}
+
+.cancel-icon {
+  color: red;
+}
+
+
+
+
 
 
 .icon-button i,
@@ -337,7 +379,11 @@ a.tooltipped:hover i {
   display: none; /* Will be toggled via JS */
 }
 
-
+  /* Keep other columns compact */
+  .pass-table .col-amount {
+    width: 30%;
+    text-align: right;
+  }
 
 
 
@@ -394,7 +440,7 @@ footer {
 @media (max-width: 768px) {
 
   h1 {
-    font-size: 22px;
+    font-size: 24px;
     line-height: 1.2;
     margin-bottom: 10px;
   }
@@ -418,7 +464,7 @@ footer {
     font-size: 1.4rem;
     text-align: left;
     width: 100%;
-    margin: 8px 0;
+    margin: 8px 10px;
     word-break: break-word;
   }
 
@@ -450,22 +496,16 @@ footer {
   .pass-table th,
   .pass-table td {
     font-size: 13px;
-    padding: 6px 8px;
+    padding: 4px 6px;
   }
 
 
   /* Make Name column take most of the row */
   .pass-table .col-name {
-    width: 60%;
+    width: 50%;
     max-width: 100%;
     white-space: normal;
     word-break: break-word;
-  }
-
-  /* Keep other columns compact */
-  .pass-table .col-amount {
-    width: 30%;
-    text-align: right;
   }
 
   .pass-table .col-remain {
