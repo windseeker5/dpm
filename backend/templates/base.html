@@ -64,7 +64,6 @@
 
 
 <!-- 🚀 Navigation -->
-<!-- 🚀 Navigation -->
 <nav>
   <div class="nav-flex-container">
 
@@ -83,11 +82,12 @@
     <!-- Right: Nav links & hamburger -->
     <div class="nav-right">
       {% if session.get('admin') %}
-        <span class="admin-email">{{ session['admin'] }}</span>
+
         <a href="{{ url_for('dashboard') }}">Home</a>
         <a href="#">Marketing</a>
         <a href="{{ url_for('setup') }}">Settings</a>
         <a href="{{ url_for('logout') }}">Logout</a>
+
       {% else %}
         <a href="{{ url_for('login') }}">Login</a>
       {% endif %}

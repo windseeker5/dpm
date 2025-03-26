@@ -368,7 +368,7 @@ nav {
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   padding: 12px 16px;
-  background: linear-gradient(to right, #fffef0, #bff6ff); /* ⬅️ white to light yellow */
+  background-color: #eeffea;
 }
 
 .pass-info-left {
