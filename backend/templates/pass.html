@@ -4,66 +4,74 @@
 {% block content %}
 
 
-    <h2 style="text-align: center;">{{ hockey_pass.user_name }}</h2>
-    <p style="text-align: center; font-size: 16px;">
-        <strong>Games Remaining:</strong> {{ hockey_pass.games_remaining }}
-    </p>
-
-    <div style="text-align: center; margin: 30px 0;">
-        <img src="data:image/png;base64,{{ qr_data }}" alt="QR Code"
-             style="width: 500px; height: 500px; border: 1px solid #ccc; padding: 8px; border-radius: 8px;">
+    <!-- QR Code Display -->
+ 
+    <div class="qr-wrapper">
+        <img src="data:image/png;base64,{{ qr_data }}" alt="QR Code" class="qr-image" />
     </div>
+      
+    
+
+    <div class="pass-history-wrapper">
+
+        <h3 class="center-align">History</h3>
+      
+        <div class="history-table-container">
+          <table class="highlight centered history-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Created</td><td>{{ history.created }}</td></tr>
+              <tr><td>Paid</td><td>{{ history.paid or '❌ Not Paid' }}</td></tr>
+              {% for date in history.redemptions %}
+                <tr><td>Redeem #{{ loop.index }}</td><td>{{ date }}</td></tr>
+              {% endfor %}
+              {% if history.expired %}
+                <tr><td>Expired</td><td>{{ history.expired }}</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      
 
 
-    <table style="
-        width: 100%;
-        max-width: 600px;
-        margin: 0 auto;
-        border-collapse: separate;
-        border-spacing: 0;
-        font-size: 13px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        overflow: hidden;
-        text-align: left;
-    ">
-        <thead>
-        <tr style="background-color: #f2f2f2;">
-            <th style="padding: 8px 12px;">Event</th>
-            <th style="padding: 8px 12px;">Date</th>
-        </tr>
-        </thead>
-        <tbody>
-            <tr><td style="padding: 8px 12px;">Created</td><td style="padding: 8px 12px;">{{ history.created }}</td></tr>
-            <tr><td style="padding: 8px 12px;">Paid</td><td style="padding: 8px 12px;">{{ history.paid or '❌ Not Paid' }}</td></tr>
-            {% for date in history.redemptions %}
-                <tr><td style="padding: 8px 12px;">Redeem #{{ loop.index }}</td><td style="padding: 8px 12px;">{{ date }}</td></tr>
-            {% endfor %}
-            {% if history.expired %}
-                <tr><td style="padding: 8px 12px;">Expired</td><td style="padding: 8px 12px;">{{ history.expired }}</td></tr>
-            {% endif %}
-        </tbody>
-    </table>
 
-
-
+    <!-- Admin Redeem Form -->
     {% if is_admin and hockey_pass.games_remaining > 0 %}
-        <form action="{{ url_for('redeem_pass', pass_code=hockey_pass.pass_code) }}" method="POST" style="margin-top: 30px; text-align: center;">
-            <button type="submit" style="
-                padding: 12px 24px;
-                font-size: 16px;
-                background-color: #28a745;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-            ">
-                Redeem A Game
+    <div class="center-align" style="margin-top: 30px;">
+        <form action="{{ url_for('redeem_pass', pass_code=hockey_pass.pass_code) }}" method="POST">
+            <button type="submit" class="btn waves-effect">
+              Redeem A Game
             </button>
         </form>
+    </div>
     {% endif %}
 
 
 
 
+    <!-- Unpaid Banner -->
+    {% if not hockey_pass.paid_ind %}
+
+    <div class="unpaid-warning z-depth-1">
+        <p class="warning-title">❗ This pass is <strong>not paid yet</strong></p>
+        <p class="warning-info">Send an Interac e-Transfer to: <strong>email@gmail.com</strong></p>
+      
+        <form action="{{ url_for('create_checkout_session', pass_id=hockey_pass.id) }}" method="POST" style="margin-top: 10px;">
+          <button class="btn pay-btn waves-effect waves-light" type="submit">
+            💳 Pay with Credit Card
+          </button>
+        </form>
+      </div>
+      
+    {% endif %}
+    
+
+ 
 {% endblock %}
