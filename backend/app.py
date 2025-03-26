@@ -474,4 +474,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8888)  # Change 8080 to any port you want
+    app.run(debug=True, port=8889)  # Change 8080 to any port you want
