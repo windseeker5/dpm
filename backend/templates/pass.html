@@ -3,13 +3,6 @@
 
 {% block content %}
 
-<style>
-    body {
-        background-color: white;
-    }
-</style>
-
-<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
 
     <h2 style="text-align: center;">{{ hockey_pass.user_name }}</h2>
     <p style="text-align: center; font-size: 16px;">
@@ -21,8 +14,6 @@
              style="width: 500px; height: 500px; border: 1px solid #ccc; padding: 8px; border-radius: 8px;">
     </div>
 
-    <!-- Pass History -->
-    <h3 style="margin-top: 30px;">📜 Numeric Pass History</h3>
 
     <table style="
         width: 100%;
@@ -73,20 +64,6 @@
     {% endif %}
 
 
-    {% if not hockey_pass.paid_ind %}
-    <div style="background-color: #fffbe6; padding: 15px; border-radius: 6px; border: 1px solid #e0c97f; margin-bottom: 20px; text-align: center;">
-        <p style="color: #c0392b; font-weight: bold; margin: 0;">❗ This pass is not paid yet.</p>
-        <p style="margin: 5px 0;">Send an Interac e-Transfer to: <strong>email@gmail.com</strong></p>
-
-        <form action="{{ url_for('create_checkout_session', pass_id=hockey_pass.id) }}" method="POST" style="margin-top: 10px;">
-            <button type="submit" style="background-color: #635bff; color: white; padding: 10px 20px; border-radius: 5px; border: none;">
-                💳 Pay with Credit Card
-            </button>
-        </form>
-    </div>
-    {% endif %}
 
 
-
-</div>
 {% endblock %}
