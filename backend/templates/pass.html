@@ -25,9 +25,33 @@
 
     <br>
 
+
+    <h3 class="center-align">Owner</h3>
+
+    <div class="pass-info-wrapper">
+      <div class="pass-info-box">
+        <div class="pass-info-left">
+          <div class="user-info">
+            {{ hockey_pass.user_name }}<br>
+            {{ hockey_pass.user_email }}<br>
+            {{ hockey_pass.phone_number }}
+          </div>
+        </div>
+        <div class="pass-info-right">
+          <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Logo" class="owner-logo" />
+          <div class="pass-amount">
+            ${{ "%.2f"|format(hockey_pass.sold_amt) }}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+
+    <br>
+
     <div class="pass-history-wrapper">
 
-        <h3 class="center-align">Pass History</h3>
+        <h3 class="center-align">History</h3>
       
         <div class="history-table-container">
           <table class="highlight centered history-table">
@@ -52,8 +76,6 @@
       </div>
       
       
-
-
 
 
     <!-- Unpaid Banner -->

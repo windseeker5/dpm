@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Your Hockey Pass</title>
+  <style>
+    body {
+      background-color: #f9f9f9;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .main-wrapper {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    h2 {
+      color: #074961;
+      font-weight: 300;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .qr-container {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .qr-container img {
+      width: 400px;
+      height: 400px;
+    }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    .history-table thead {
+      background-color: #f2f2f2;
+    }
+    .history-table th,
+    .history-table td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .info-section {
+      background-color: #f5faff;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 30px;
+      font-size: 14px;
+      color: #333;
+      line-height: 1.5;
+    }
+    .custom-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 30px 0 20px;
+    }
+    .custom-divider .line {
+      flex: 1;
+      height: 1px;
+      background-color: #16c733;
+    }
+    .divider-logo {
+      height: 100px;
+      border-radius: 50%;
+      background-color: white;
+      padding: 4px;
+      margin: 0 16px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #777;
+      text-align: center;
+      border-top: 1px solid #eee;
+      padding-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-wrapper">
+
+    <div class="qr-container">
+      <img src="cid:qr_code" alt="Your QR Code">
+    </div>
+
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Created</td><td>{{ history.created }}</td></tr>
+        <tr><td>Paid</td><td>{{ history.paid or '❌ Not Paid' }}</td></tr>
+        {% for date in history.redemptions %}
+        <tr><td>Redeem #{{ loop.index }}</td><td>{{ date }}</td></tr>
+        {% endfor %}
+        {% if history.expired %}
+        <tr><td>Expired</td><td>{{ history.expired }}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    {% if special_message %}
+      <p style="color: #b30000; font-weight: bold; text-align: center; margin-top: 20px;">
+        {{ special_message }}
+      </p>
+    {% endif %}
+
+
+    <div class="info-section">
+      {{ email_info | safe }}
+    </div>
+
+    <div class="footer">
+      {{ email_footer | safe }}
+    </div>
+  </div>
+
+</body>
+</html>
