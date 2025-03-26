@@ -120,11 +120,19 @@
         </div>
 
         <!-- 📧 Email Template -->
-        <h4>Email Template Text</h4>
+
+        <h4>HTML Information Text (for pass and email)</h4>
         <div class="input-field">
-            <textarea id="email_info_text" name="email_info_text" class="materialize-textarea validate">{{ settings.EMAIL_INFO_TEXT or '' }}</textarea>
-            <label for="email_info_text" class="active">Email Info Text (e.g. how to pay)</label>
+          <label for="email_info_text" class="active">Email Info Text (e.g. how to pay)</label>
+          <textarea
+            id="email_info_text"
+            name="email_info_text"
+            class="materialize-textarea validate"
+            style="min-height: 300px; font-family: monospace;"
+          >{{ settings.EMAIL_INFO_TEXT or '' }}</textarea>
         </div>
+        
+
         <div class="input-field">
             <textarea id="email_footer_text" name="email_footer_text" class="materialize-textarea validate">{{ settings.EMAIL_FOOTER_TEXT or '' }}</textarea>
             <label for="email_footer_text" class="active">Email Footer Text</label>
