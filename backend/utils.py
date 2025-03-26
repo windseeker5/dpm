@@ -8,13 +8,13 @@ import traceback
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-from flask import current_app
+
 from models import Setting, db, Pass, Redemption
 import threading
 import logging
 from datetime import datetime
-
-
+ 
+from flask import render_template, render_template_string, url_for, current_app
 
 
 ##
@@ -79,7 +79,7 @@ def generate_qr_code_image(pass_code):
 ##
 
 
-def send_email(user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=""):
+def send_email_bk(user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=""):
     try:
         from utils import get_setting  # ✅ Just to be safe if reused from another module
 
@@ -361,3 +361,112 @@ def get_pass_history_data(pass_code: str) -> dict:
             history["expired"] = redemptions[-1].date_used.strftime(DATETIME_FORMAT)
 
         return history
+
+
+
+
+def send_email(user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=""):
+    try:
+        from utils import get_setting  # ✅ Just to be safe if reused from another module
+
+        # ✅ Generate QR code image
+        qr_image_bytes_io = generate_qr_code_image(pass_code)
+        qr_image_bytes_io.seek(0)
+        qr_image_bytes = qr_image_bytes_io.read()  # Use binary directly
+
+
+        # ✅ Fetch dynamic settings
+        email_info = get_setting("EMAIL_INFO_TEXT", "")
+        email_footer = get_setting("EMAIL_FOOTER_TEXT", "")
+        sender_email = get_setting("MAIL_DEFAULT_SENDER") or "no-reply@example.com"
+
+
+
+        history_data = get_pass_history_data(pass_code)
+
+        # Load the hockey_pass object
+        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+
+        # Render email_info with access to hockey_pass
+        email_info_template = get_setting("EMAIL_INFO_TEXT", "")
+        email_info = render_template_string(email_info_template, hockey_pass=hockey_pass)
+
+
+        with open("static/uploads/logo.jpg", "rb") as logo_file:
+            logo_bytes = logo_file.read()
+            logo_url = "cid:logo_image"
+
+
+
+
+        # Then render the email
+        email_html = render_template(
+            "email_pass.html",
+            user_name=user_name,
+            created_date=created_date,
+            remaining_games=remaining_games,
+            special_message=special_message,
+            history=history_data,
+            logo_url=logo_url,
+            email_info=email_info,
+            email_footer=email_footer
+        )
+
+    
+
+        # ✅ Build Email
+        msg = MIMEMultipart("related")
+        msg["From"] = sender_email
+        msg["To"] = user_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(email_html, "html"))
+
+        # ✅ Attach QR code image
+        qr_image = MIMEImage(qr_image_bytes, _subtype="png")
+        qr_image.add_header("Content-ID", "<qr_code>")
+        qr_image.add_header("Content-Disposition", "inline", filename="qr_code.png")
+        msg.attach(qr_image)
+
+        # ✅ Attach logo image
+        logo_image = MIMEImage(logo_bytes, _subtype="jpeg")
+        logo_image.add_header("Content-ID", "<logo_image>")
+        logo_image.add_header("Content-Disposition", "inline", filename="logo.jpg")
+        msg.attach(logo_image)
+
+
+        # ✅ Load SMTP Settings
+        smtp_server = get_setting("MAIL_SERVER")
+        smtp_port = int(get_setting("MAIL_PORT", "587"))
+        smtp_user = get_setting("MAIL_USERNAME")
+        smtp_pass = get_setting("MAIL_PASSWORD")
+        use_tls = get_setting("MAIL_USE_TLS", "True").lower() == "true"
+        use_proxy = smtp_port == 25 and not use_tls
+
+        print("📬 Sending email with the following settings:")
+        print(f"  SERVER: {smtp_server}")
+        print(f"  PORT: {smtp_port}")
+        print(f"  USER: {smtp_user}")
+        print(f"  USE_TLS: {use_tls}")
+        print(f"  DETECTED MODE: {'PROXY' if use_proxy else 'GMAIL'}")
+
+        # ✅ Connect and send
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.set_debuglevel(0)
+        server.ehlo()
+        if not use_proxy and use_tls:
+            server.starttls()
+            server.ehlo()
+        if not use_proxy and smtp_user and smtp_pass:
+            server.login(smtp_user, smtp_pass)
+
+        server.sendmail(sender_email, [user_email], msg.as_string())
+        server.quit()
+
+        print(f"✅ Email sent to {user_email}")
+        return True
+
+    except Exception as e:
+        print("❌ Error sending email:")
+        traceback.print_exc()
+        return False
+
