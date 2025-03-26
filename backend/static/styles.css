@@ -314,6 +314,58 @@ nav {
   color: #333;
 }
 
+.section-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 40px auto 20px;
+  width: 500px;
+  color: #888;
+  font-size: 14px;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #ccc;
+}
+
+.section-divider:not(:empty)::before {
+  margin-right: .75em;
+}
+
+.section-divider:not(:empty)::after {
+  margin-left: .75em;
+}
+
+.info-card {
+  max-width: 500px;
+  margin: 20px auto 40px;
+  background-color: #fff9f0;
+  padding: 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #444;
+  text-align: left;
+}
+
+.info-card a {
+  color: #4a148c;
+  text-decoration: underline;
+}
+
+.sponsors {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.sponsors img {
+  height: 40px;
+  object-fit: contain;
+}
 
 
 
