@@ -146,7 +146,9 @@
 
 
 <!-- Main Content -->
-<div class="main-wrapper">
+<div class="{% if not no_wrapper %}main-wrapper{% endif %}">
+
+
   {% block content %}{% endblock %}
 </div>
 
