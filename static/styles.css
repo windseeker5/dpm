@@ -518,6 +518,18 @@ nav {
 }
 
 
+
+.btn {
+  background-color: #29a225 !important;  /* Bootstrap green */
+  color: white;
+}
+
+.btn:hover {
+  background-color: #02848b !important;  /* Slightly darker on hover */
+}
+
+
+
 /* -------------------------------------------------
    MAIN TABLE STYLE
 -------------------------------------------------- */
@@ -644,7 +656,7 @@ a.tooltipped:hover i {
   margin: 40px 0 40px; /* ⬅️ more breathing room above and below */
   background: white;
   border-radius: 8px;
-  border: 1px solid #f6f1ac;
+  border: 1px solid #f0a869;
   padding: 6px 12px;
   box-shadow: 0 1px 2px rgba(255, 94, 94, 0.05);
 }
