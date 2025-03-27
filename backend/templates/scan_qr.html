@@ -5,85 +5,115 @@
 {% block header %}Scan QR Code to Redeem a Game{% endblock %}
 
 {% block content %}
-    <div class="scanner-container">
-        <label for="camera-select">Select Camera:</label>
-        <select id="camera-select"></select>
 
-        <video id="qr-video" autoplay></video>
-        <canvas id="qr-canvas" hidden></canvas>
-        <p id="qr-result">Waiting for scan...</p>
+<div class="scanner-wrapper center-align">
+    <!-- Back Button -->
+    <div class="scanner-top">
+        <a href="{{ url_for('dashboard') }}" class="btn waves-effect">
+            <i class="material-icons left">arrow_back</i> Back to Dashboard
+        </a>
     </div>
 
-    <script src="https://unpkg.com/jsqr"></script>
-    <script>
-        const video = document.getElementById("qr-video");
-        const canvas = document.getElementById("qr-canvas");
-        const canvasContext = canvas.getContext("2d");
-        const qrResult = document.getElementById("qr-result");
-        const cameraSelect = document.getElementById("camera-select");
+    <!-- Camera Selection -->
+    <div class="scanner-controls">
+        <label for="camera-select" class="scanner-label">Select Camera:</label>
+        <select id="camera-select" class="browser-default"></select>
+    </div>
 
-        let lastScanned = ""; // Store last scanned QR code
+    <!-- Video + Canvas Preview -->
+    <div class="scanner-preview">
+        <video id="qr-video" autoplay playsinline class="qr-video-preview"></video>
+        <canvas id="qr-canvas" hidden></canvas>
+    </div>
 
-        async function listCameras() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === "videoinput");
+    <!-- Scan Result -->
+    <p id="qr-result">Waiting for scan...</p>
 
-            cameraSelect.innerHTML = ""; // Clear previous options
+    <!-- Beep -->
+    <audio id="beep-sound" src="{{ url_for('static', filename='beep.wav') }}"></audio>
+</div>
 
-            videoDevices.forEach((device, index) => {
-                const option = document.createElement("option");
-                option.value = device.deviceId;
-                option.text = device.label || `Camera ${index + 1}`;
-                cameraSelect.appendChild(option);
-            });
 
-            if (videoDevices.length > 0) {
-                startQRScanner(videoDevices[0].deviceId);
-            }
-        }
+<script src="https://unpkg.com/jsqr"></script>
+<script>
+    const video = document.getElementById("qr-video");
+    const canvas = document.getElementById("qr-canvas");
+    const canvasContext = canvas.getContext("2d");
+    const qrResult = document.getElementById("qr-result");
+    const cameraSelect = document.getElementById("camera-select");
+    const beepSound = document.getElementById("beep-sound");
 
-        async function startQRScanner(deviceId) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { deviceId: { exact: deviceId } }
-                });
+    let lastScanned = "";
+    let scanning = false;
 
-                video.srcObject = stream;
-                video.setAttribute("playsinline", true);
-                video.play();
-                scanQRCode();
-            } catch (error) {
-                console.error("❌ Camera access denied:", error);
-                qrResult.innerText = "Camera access denied. Please allow camera permissions.";
-            }
-        }
+    async function listCameras() {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === "videoinput");
 
-        function scanQRCode() {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+        cameraSelect.innerHTML = ""; // Clear previous options
 
-                const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-                if (code) {
-                    if (lastScanned !== code.data) { // ✅ Prevent multiple scans
-                        lastScanned = code.data;
-                        qrResult.innerText = `✅ Pass Scanned: ${code.data}`;
-                        console.log("QR Code:", code.data);
-                        window.location.href = `/redeem/${code.data}`;
-                    }
-                }
-            }
-            requestAnimationFrame(scanQRCode);
-        }
-
-        cameraSelect.addEventListener("change", () => {
-            const selectedCamera = cameraSelect.value;
-            startQRScanner(selectedCamera);
+        videoDevices.forEach((device, index) => {
+            const option = document.createElement("option");
+            option.value = device.deviceId;
+            option.text = device.label || `Camera ${index + 1}`;
+            cameraSelect.appendChild(option);
         });
 
-        listCameras();
-    </script>
+        if (videoDevices.length > 0) {
+            startQRScanner(videoDevices[0].deviceId);
+        }
+    }
+
+    async function startQRScanner(deviceId = null) {
+        try {
+            const constraints = deviceId
+                ? { video: { deviceId: { exact: deviceId } } }
+                : { video: { facingMode: "environment" } }; // iOS fallback
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+            video.srcObject = stream;
+            video.play();
+            scanning = true;
+            requestAnimationFrame(scanQRCode);
+        } catch (error) {
+            console.error("❌ Camera access denied:", error);
+            qrResult.innerText = "Camera access denied. Please allow camera permissions.";
+        }
+    }
+
+    function scanQRCode() {
+        if (!scanning) return;
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            if (code && lastScanned !== code.data) {
+                lastScanned = code.data;
+                qrResult.innerText = `✅ Pass Scanned: ${code.data}`;
+                console.log("QR Code:", code.data);
+
+                beepSound.play();
+                scanning = false;
+
+                setTimeout(() => {
+                    window.location.href = `/pass/${code.data}`;
+                }, 500);
+            }
+        }
+        requestAnimationFrame(scanQRCode);
+    }
+
+    cameraSelect.addEventListener("change", () => {
+        const selectedCamera = cameraSelect.value;
+        startQRScanner(selectedCamera);
+    });
+
+    document.addEventListener("DOMContentLoaded", listCameras);
+</script>
 {% endblock %}
