@@ -39,12 +39,20 @@ h2 {
 
 h3 {
   color: #4b474a;
-  font-size: 1.5em;
-  text-align: left;
+  font-size: 1.2em;
+  text-align: center;
   font-weight: 200;
   line-height: 1.3;
   margin: 5px 0;
 }
+
+h4 {
+  color: #444;
+  font-weight: 400;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
 
 
 p {
@@ -530,8 +538,32 @@ nav {
 }
 
 .btn:hover {
-  background-color: #02848b !important;  /* Slightly darker on hover */
+  background-color: #e07f00 !important;  /* Slightly darker on hover */
 }
+
+
+.btn-paid {
+  background-color: #850187 !important; /* Custom green */
+}
+.btn-paid:hover {
+  background-color: #30043d !important;
+}
+
+
+
+.button-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.button-row form {
+  display: inline-flex;  /* ✅ This keeps the forms inline side-by-side */
+  margin: 0;
+}
+
+
 
 
 
