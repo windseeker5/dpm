@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Pass {{ hockey_pass.pass_code }}</title>
   <style>
+    /* === GENERAL LAYOUT === */
     body {
       background-color: #f9f9f9;
       font-family: 'Segoe UI', Roboto, sans-serif;
@@ -27,7 +28,7 @@
       margin-bottom: 16px;
     }
 
-    /* QR Code */
+    /* === QR CODE SECTION === */
     .qr-wrapper {
       text-align: center;
       margin-bottom: 30px;
@@ -38,102 +39,43 @@
       height: 360px;
     }
 
-    /* Owner Card */
-    .pass-info-wrapper {
+    /* === OWNER INFO (Card) === */
+    .owner-card {
       width: 360px;
       margin: 0 auto 30px;
-    }
-
-    .pass-info-box {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       border-radius: 12px;
       background: linear-gradient(to right, #fef8e1, #d6faff);
-      padding: 10px;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      padding: 16px;
     }
 
-    .pass-info-left {
-      flex: 1;
+    .owner-left {
+      padding: 16px;
       font-size: 14px;
       color: #333;
       line-height: 1.6;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+      vertical-align: middle;
     }
 
-    .pass-info-right {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-left: 10px;
+    .owner-right {
+      padding: 16px;
+      text-align: center;
+      vertical-align: middle;
     }
 
     .owner-logo {
-      height: 100px;
       border-radius: 8px;
       margin-bottom: 8px;
+      display: block;
     }
 
     .pass-amount {
       font-size: 16px;
       font-weight: 500;
-      color: #004877;
+      color: #142743;
     }
 
-
-
-
-
-.pass-info-box {
-  display: flex;
-  justify-content: space-between;
-  border-radius: 12px;
-  background: linear-gradient(to right, #fdf6e3, #d5faff);
-  padding: 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
-
-.pass-info-left {
-  flex: 1;
-  font-size: 14px;
-  color: #333;
-  line-height: 1.6;
-}
-
-.pass-info-right {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center; /* ✅ Center logo and price vertically */
-  margin-left: 20px;
-}
-
-.owner-logo {
-  height: 80px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.pass-amount {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-}
-
-
-
-
-
-
-
-
-
-
-
-    /* History Table */
+    /* === HISTORY TABLE === */
     .history-table-container {
       width: 360px;
       margin: 0 auto 30px;
@@ -160,12 +102,22 @@
       background-color: #f2f2f2;
     }
 
-    /* Payment Info */
+    /* === PAYMENT INFO REMINDER === */
     .info-container {
       width: 360px;
       margin: 0 auto 30px;
     }
 
+    .info-section {
+      background-color: #f5faff;
+      padding: 16px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #333;
+      line-height: 1.5;
+    }
+
+    /* === (Optional) Divider for visual separation === */
     .custom-divider {
       display: flex;
       align-items: center;
@@ -183,60 +135,53 @@
       height: 60px;
       margin: 0 16px;
     }
-
-    .info-section {
-      background-color: #f5faff;
-      padding: 16px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      color: #333;
-      line-height: 1.5;
-    }
   </style>
 </head>
 <body>
 
   <div class="main-wrapper">
 
-    <!-- QR Code Display -->
+
+    <h3>LHGI – Digital Pass</h3>
+
+    <!-- ✅ QR Code -->
     <div class="qr-wrapper">
       <img src="cid:qr_code" alt="QR Code" class="qr-image" />
     </div>
 
-    <h3 style="text-align: center;">Owner</h3>
-
-    <table align="center" cellpadding="0" cellspacing="0" width="360" style="border-radius: 12px; background: linear-gradient(to right, #fef8e1, #d6faff); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); padding: 16px;">
+    <!-- ✅ Owner Card -->
+    <h3>Owner</h3>
+    <table class="owner-card" cellpadding="0" cellspacing="0">
       <tr>
-        <!-- Left Side: User Info -->
-        <td style="padding: 16px; font-size: 14px; color: #333; line-height: 1.6; vertical-align: middle;">
+        <td class="owner-left">
 
-          <b style="color: #1a1e48;">{{ hockey_pass.user_name }}</b><br>
+          <b style="
+          color: #460b41;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: inline-block;
+          max-width: 200px;
+        ">{{ hockey_pass.user_name }}</b>
+        
+
           {{ hockey_pass.user_email }}<br>
-          {{ hockey_pass.phone_number }}<br>
-          <br>
+          {{ hockey_pass.phone_number }}<br><br>
           Remaining >_ {{ hockey_pass.games_remaining }}
-
-
         </td>
-    
-        <!-- Right Side: Logo and Price -->
-        <td align="center" style="padding: 16px; vertical-align: middle;">
-          <img src="cid:logo_image" alt="Logo" width="120" style="border-radius: 8px; display: block; margin-bottom: 8px;" />
-          <div style="font-size: 16px; font-weight: 500; color: #142743;">${{ "%.2f"|format(hockey_pass.sold_amt) }}</div>
+        <td class="owner-right">
+          <img src="cid:logo_image" alt="Logo" width="120" class="owner-logo" />
+          <div class="pass-amount">${{ "%.2f"|format(hockey_pass.sold_amt) }}</div>
         </td>
       </tr>
     </table>
-    
 
-    <!-- Pass History -->
+    <!-- ✅ History Table -->
     <h3>History</h3>
     <div class="history-table-container">
-      <table class="highlight centered history-table">
+      <table class="history-table">
         <thead>
-          <tr>
-            <th>Event</th>
-            <th>Date</th>
-          </tr>
+          <tr><th>Event</th><th>Date</th></tr>
         </thead>
         <tbody>
           <tr><td>Created</td><td>{{ history.created }}</td></tr>
@@ -251,10 +196,9 @@
       </table>
     </div>
 
-    <!-- Payment Reminder (if unpaid) -->
+    <!-- ✅ Payment Info Reminder -->
     {% if not hockey_pass.paid_ind %}
     <div class="info-container">
-
       <div class="info-section">
         {{ email_info | safe }}
       </div>
