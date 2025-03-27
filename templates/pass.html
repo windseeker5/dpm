@@ -32,7 +32,10 @@
           <div class="user-info">
             <b style="color: #1a1e48;">{{ hockey_pass.user_name }}</b><br>
             {{ hockey_pass.user_email }}<br>
-            {{ hockey_pass.phone_number }}
+            {{ hockey_pass.phone_number }} <br>
+            <br>
+            Remaining >_ {{ hockey_pass.games_remaining }}
+
           </div>
         </div>
         <div class="pass-info-right">
@@ -73,7 +76,7 @@
       </div>
       
       
-
+<br>
 
     <!-- Unpaid Banner -->
     {% if not hockey_pass.paid_ind %}
@@ -83,10 +86,9 @@
         <!-- Divider -->
         <div class="custom-divider">
           <div class="line"></div>
-          <img src="{{ url_for('static', filename='uploads/logo.jpg') }}" alt="Logo" class="divider-logo" />
-          <div class="line"></div>
         </div>
-      
+
+        <br>
         <!-- Text Section -->
         <div class="info-section">
 
