@@ -209,14 +209,15 @@
       <tr>
         <!-- Left Side: User Info -->
         <td style="padding: 16px; font-size: 14px; color: #333; line-height: 1.6; vertical-align: middle;">
-          {{ hockey_pass.user_name }}<br>
+
+          <b style="color: #1a1e48;">{{ hockey_pass.user_name }}</b><br>
           {{ hockey_pass.user_email }}<br>
           {{ hockey_pass.phone_number }}
         </td>
     
         <!-- Right Side: Logo and Price -->
         <td align="center" style="padding: 16px; vertical-align: middle;">
-          <img src="cid:logo_image" alt="Logo" width="80" style="border-radius: 8px; display: block; margin-bottom: 8px;" />
+          <img src="cid:logo_image" alt="Logo" width="110" style="border-radius: 8px; display: block; margin-bottom: 8px;" />
           <div style="font-size: 14px; font-weight: 500; color: #333;">${{ "%.2f"|format(hockey_pass.sold_amt) }}</div>
         </td>
       </tr>
@@ -249,11 +250,7 @@
     <!-- Payment Reminder (if unpaid) -->
     {% if not hockey_pass.paid_ind %}
     <div class="info-container">
-      <div class="custom-divider">
-        <div class="line"></div>
-        <img src="cid:logo_image" alt="Logo" class="divider-logo" />
-        <div class="line"></div>
-      </div>
+
       <div class="info-section">
         {{ email_info | safe }}
       </div>
