@@ -311,7 +311,7 @@ def create_pass():
         send_email_async(
             current_app._get_current_object(),
             user_email=user_email,
-            subject="🎟️ Your Hockey Pass is Ready!",
+            subject="LHGI 🎟️ Your Digital Pass is Ready",
             user_name=user_name,
             pass_code=pass_code,
             created_date=new_pass.pass_created_dt.strftime('%Y-%m-%d'),
@@ -408,7 +408,7 @@ def redeem_pass(pass_code):
             send_email_async(
                 current_app._get_current_object(),  # Required for background context
                 user_email=hockey_pass.user_email,
-                subject="🏒 Game Redeemed - Pass Update",
+                subject="LHGI 🏒 Game Redeemed!",
                 user_name=hockey_pass.user_name,
                 pass_code=hockey_pass.pass_code,
                 created_date=hockey_pass.pass_created_dt.strftime('%Y-%m-%d'),
@@ -441,7 +441,7 @@ def mark_paid(pass_id):
         send_email_async(
             current_app._get_current_object(),
             user_email=hockey_pass.user_email,
-            subject="✅ Payment Received for Your Hockey Pass",
+            subject="LHGI ✅ Payment Received",
             user_name=hockey_pass.user_name,
             pass_code=hockey_pass.pass_code,
             created_date=hockey_pass.pass_created_dt.strftime('%Y-%m-%d'),

@@ -67,21 +67,28 @@
                         <td class="col-amount hide-mobile">${{ "%.2f"|format(pass.sold_amt) }}</td>
                         <td class="col-remain">{{ pass.games_remaining }}</td>
 
-                        <td>
-                            {% if not pass.paid_ind %}
-                              <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" class="inline-form">
-                                <button type="submit" class="icon-button tooltipped" title="Mark as Paid">
-                                  <i class="material-icons {% if pass.games_remaining == 0 %}unpaid-red{% else %}unpaid-brown{% endif %}">attach_money</i>
-                                </button>
-                              </form><!--
-                           -->{% endif %}{% if pass.games_remaining > 0 %}
-                              <a href="{{ url_for('show_pass', pass_code=pass.pass_code) }}" class="tooltipped redeem-link" title="Redeem Pass">
-                                <i class="material-icons redeem-icon">assignment_turned_in</i>
-                              </a>
-                            {% elif pass.paid_ind %}
-                              <i class="material-icons cancel-icon" title="No games left">cancel</i>
-                            {% endif %}
-                        </td>                
+                        <td class="action-cell">
+
+                          {% if not pass.paid_ind %}
+                            <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" class="inline-form hide-on-small">
+                              <button type="submit" class="icon-button tooltipped" title="Mark as Paid">
+                                <i class="material-icons {% if pass.games_remaining == 0 %}unpaid-red{% else %}unpaid-brown{% endif %}">attach_money</i>
+                              </button>
+                            </form>
+                          {% endif %}
+                        
+
+                          {% if pass.games_remaining > 0 %}
+                          <a href="{{ url_for('show_pass', pass_code=pass.pass_code) }}" class="tooltipped redeem-link" title="Redeem Pass">
+                            <i class="material-icons redeem-icon">assignment_turned_in</i>
+                          </a>
+                          {% endif %}
+
+                        
+                        </td>
+                        
+                        
+                                      
                         
                     </tr>
                     {% endfor %}
