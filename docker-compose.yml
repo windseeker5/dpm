@@ -1,16 +1,6 @@
-version: "3.8"
-
 services:
   backend:
     build: ./backend
     ports:
-      - "8889:8889"
-    restart: always
-
-  nginx:
-    build: ./nginx
-    ports:
-      - "8080:8080"
-    depends_on:
-      - backend
+      - "80:8889"  # Host port 80 mapped to container port 8889
     restart: always
