@@ -2,6 +2,8 @@ from datetime import datetime
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, get_flashed_messages, jsonify
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import extract, func, case
+
 from flask_migrate import Migrate
 import bcrypt
 import uuid
@@ -299,7 +301,9 @@ def create_pass():
             sold_amt=sold_amt,
             games_remaining=sessions_qt,
             paid_ind=bool(paid_ind),
-            created_by=current_admin.id if current_admin else None
+            created_by=current_admin.id if current_admin else None,
+            pass_created_dt=datetime.now(),  # ✅ Set actual creation datetime
+            paid_date=datetime.now() if paid_ind else None  # ✅ Set paid date only if paid now
         )
 
 
@@ -422,8 +426,6 @@ def redeem_pass(pass_code):
 
 
 
-
-
 @app.route("/mark-paid/<int:pass_id>", methods=["POST"])
 def mark_paid(pass_id):
     if "admin" not in session:
@@ -431,7 +433,10 @@ def mark_paid(pass_id):
 
     hockey_pass = Pass.query.get(pass_id)
     if hockey_pass:
+
         hockey_pass.paid_ind = True
+        hockey_pass.paid_date = datetime.now()
+
         db.session.commit()
 
         # ✅ Send confirmation email
@@ -455,10 +460,6 @@ def mark_paid(pass_id):
 
 
 
-
-
-
-
 @app.route("/scan-qr")
 def scan_qr():
     return render_template("scan_qr.html")
@@ -470,6 +471,109 @@ def scan_qr():
 def logout():
     session.pop("admin", None)
     return redirect(url_for("login"))
+
+
+
+
+@app.route("/reports")
+def reports():
+    from sqlalchemy import extract, func
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+
+    monthly_data = db.session.query(
+        extract('year', Pass.pass_created_dt).label('year'),
+        extract('month', Pass.pass_created_dt).label('month'),
+        func.sum(Pass.sold_amt).label('billed'),
+        func.sum(case((Pass.paid_ind == True, Pass.sold_amt), else_=0)).label('earned')
+    ).group_by('year', 'month').order_by('year', 'month').all()
+
+
+    chart_data = [
+        {
+            "label": f"{int(row.month)}/{int(row.year)}",
+            "billed": float(row.billed),
+            "earned": float(row.earned)
+        } for row in monthly_data
+    ]
+
+
+
+
+    # Query: count of passes per admin per month
+    creation_data = db.session.query(
+        extract('year', Pass.pass_created_dt).label('year'),
+        extract('month', Pass.pass_created_dt).label('month'),
+        Admin.email,
+        func.count(Pass.id)
+    ).join(Admin, Admin.id == Pass.created_by)\
+    .group_by('year', 'month', Admin.email)\
+    .order_by('year', 'month').all()
+
+    # Reorganize data into nested dict: { "Mar 2025": { "admin1@email": count, ... } }
+    from collections import defaultdict
+
+    creation_summary = defaultdict(lambda: defaultdict(int))
+
+    for row in creation_data:
+        month_str = f"{int(row.month)}/{int(row.year)}"
+        creation_summary[month_str][row.email] = row[3]
+
+    # Convert into chart format
+    admin_emails = sorted({email for data in creation_summary.values() for email in data})
+    creation_chart_data = {
+        "labels": sorted(creation_summary.keys(), key=lambda x: (int(x.split("/")[1]), int(x.split("/")[0]))),
+        "admins": admin_emails,
+        "datasets": [
+            {
+                "label": email,
+                "data": [creation_summary[month].get(email, 0) for month in sorted(creation_summary.keys())],
+            } for email in admin_emails
+        ]
+    }
+
+
+    # Redemption count per admin per month
+    redemption_data = db.session.query(
+        extract('year', Redemption.date_used).label('year'),
+        extract('month', Redemption.date_used).label('month'),
+        Redemption.redeemed_by,
+        func.count(Redemption.id)
+    ).group_by('year', 'month', Redemption.redeemed_by)\
+    .order_by('year', 'month').all()
+
+    # Reorganize into: { "Mar 2025": { "admin@email": count } }
+    from collections import defaultdict
+
+    redemption_summary = defaultdict(lambda: defaultdict(int))
+    for row in redemption_data:
+        month_str = f"{int(row.month)}/{int(row.year)}"
+        redemption_summary[month_str][row.redeemed_by] = row[3]
+
+    # Structure for chart
+    redeem_admins = sorted({email for data in redemption_summary.values() for email in data})
+    redemption_chart_data = {
+        "labels": sorted(redemption_summary.keys(), key=lambda x: (int(x.split("/")[1]), int(x.split("/")[0]))),
+        "admins": redeem_admins,
+        "datasets": [
+            {
+                "label": email,
+                "data": [redemption_summary[month].get(email, 0) for month in sorted(redemption_summary.keys())],
+            } for email in redeem_admins
+        ]
+    }
+
+
+
+    return render_template(
+        "reports.html",
+        chart_data=chart_data,
+        creation_chart_data=creation_chart_data,
+        redemption_chart_data=redemption_chart_data
+    )
+
+
 
 
 
