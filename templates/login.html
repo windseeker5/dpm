@@ -1,12 +1,44 @@
-<!DOCTYPE html>
-<html>
-<head><title>Admin Login</title></head>
-<body>
-    <h2>Admin Login</h2>
-    <form method="POST">
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-    </form>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% set no_wrapper = True %}
+
+
+{% block title %}Admin Login{% endblock %}
+
+{% block content %}
+<div class="container login-container">
+  <div class="card z-depth-2 login-card">
+    <div class="card-content">
+
+      <h4 class="login-header">
+        <span class="login-title-icon">
+          <i class="material-icons">admin_panel_settings</i>
+        </span>
+        <span class="login-title-text">Admin Login</span>
+      </h4>
+      
+
+      <br>
+
+      <form method="POST" autocomplete="on">
+        <div class="input-field">
+          <input id="email" name="email" type="email" inputmode="email" class="validate" required autocomplete="email">
+          <label for="email">Email</label>
+        </div>
+
+        <div class="input-field">
+          <input id="password" name="password" type="password" class="validate" required autocomplete="current-password">
+          <label for="password">Password</label>
+        </div>
+
+        <div class="center-align login-btn">
+          <button type="submit" class="btn waves-effect">
+            <i class="material-icons left">login</i>
+            Login
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

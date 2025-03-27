@@ -435,12 +435,65 @@ nav {
 .qr-video-preview {
   width: 100%;
   max-width: 100%;
-  border: 2px solid rgb(171, 0, 176);
-  border-radius: 40px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+ /* border: 2px solid rgb(171, 0, 176); */
+  border-radius: 30px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
 
+/* ================================
+   📲 LOGIN PAGE STYLES (CLEANED)
+================================ */
+
+/* Main login page container */
+.login-container {
+  max-width: 420px;
+  margin: 150px auto;
+}
+
+/* Card appearance */
+.login-card {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+}
+
+.login-card .card-content {
+  padding: 30px 24px;
+}
+
+/* Header with icon and title aligned */
+.login-header {
+  display: flex;
+  align-items: center;       /* Vertically centers icon and text */
+  justify-content: center;   /* Horizontally centers the whole row */
+  gap: 10px;                 /* Space between icon and text */
+  color: #333;
+  font-weight: 300;
+  margin-bottom: 24px;
+}
+
+/* Icon style inside the title */
+.login-title-icon {
+  display: flex;
+  align-items: center;
+}
+
+.login-title-icon i {
+  font-size: 28px;
+  color: #333;
+}
+
+/* Title text style */
+.login-title-text {
+  font-size: 1.8rem;
+  font-family: 'Roboto Slab', serif;
+  line-height: 1.2;
+}
+
+/* Login button container */
+.login-btn {
+  margin-top: 30px;
+}
 
 
 

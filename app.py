@@ -207,12 +207,10 @@ def setup():
 
 
 
-
-
-
 @app.route("/")
 def home():
-    return "Flask app is running!"
+    return redirect(url_for("login"))
+
 
 
 
