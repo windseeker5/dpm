@@ -76,7 +76,9 @@
 
     <!-- Center: ORG_NAME -->
     <div class="nav-center anton-regular">
-      {{ ORG_NAME }}
+      <a href="{{ url_for('dashboard') }}" style="color: inherit; text-decoration: none;">
+        {{ ORG_NAME }}
+      </a>
     </div>
 
     <!-- Right: Nav links & hamburger -->
@@ -84,7 +86,7 @@
       {% if session.get('admin') %}
 
         <a href="{{ url_for('dashboard') }}">Home</a>
-        <a href="#">Marketing</a>
+        <a href="{{ url_for('reports') }}">Reporting</a>
         <a href="{{ url_for('setup') }}">Settings</a>
         <a href="{{ url_for('logout') }}">Logout</a>
 

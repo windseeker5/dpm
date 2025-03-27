@@ -350,9 +350,9 @@ def get_pass_history_data(pass_code: str) -> dict:
             "expired": None
         }
 
-        if hockey_pass.paid_ind:
-            # Optional: infer from earliest redemption or fallback to creation
-            history["paid"] = hockey_pass.pass_created_dt.strftime(DATETIME_FORMAT)
+        if hockey_pass.paid_date:
+            history["paid"] = hockey_pass.paid_date.strftime(DATETIME_FORMAT)
+
 
         for redemption in redemptions:
             history["redemptions"].append(redemption.date_used.strftime(DATETIME_FORMAT))
