@@ -105,8 +105,7 @@
   <div class="mobile-menu" id="mobileMenu">
     {% if session.get('admin') %}
       <a href="{{ url_for('dashboard') }}">Home</a>
-      <a href="#">Reports</a>
-      <a href="#">Marketing</a>
+      <a href="{{ url_for('reports') }}">Reporting</a>
       <a href="{{ url_for('setup') }}">Settings</a>
       <a href="{{ url_for('logout') }}">Logout</a>
     {% else %}
