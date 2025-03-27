@@ -134,13 +134,18 @@ nav {
   z-index: 5;
 }
 
+
+
 .nav-logo {
-  height: 20px;              /* Adjust based on desired logo size */
-  margin-top: 40px;
-  margin-left: 30px;
-  margin-bottom: 8px;
-  object-fit: contain;       /* Ensures image doesn't get distorted */
+  height: 20px;
+  margin-top: 25px;
+  margin-left: 20px;
+  margin-bottom: 0;
+  object-fit: contain;
 }
+
+
+
 
 
 .nav-center {
@@ -547,11 +552,12 @@ nav {
   word-break: break-word;
 }
 
-/* Created column: fixed width (optional) */
+
+
 .pass-table .col-created {
   width: 120px;
+  white-space: nowrap;
 }
-
 
 .pass-table {
   border: 1px solid #ddd;
@@ -730,41 +736,25 @@ footer {
   z-index: 10;
 }
 
+ 
+
+
+
 /* -------------------------------------------------
-   📱 MOBILE RESPONSIVE TWEAKS
+   📱 TABLET BREAKPOINT – NAVIGATION MENU ONLY
 -------------------------------------------------- */
-@media (max-width: 768px) {
+ 
 
-  h1 {
-    font-size: 24px;
-    line-height: 1.2;
-    margin-bottom: 10px;
-  }
-
-  /* === NAVIGATION BAR === */
+@media (max-width: 1000px) {
   .nav-flex-container {
     flex-direction: column;
     align-items: flex-start;
     padding: 10px 16px;
   }
 
-  .hide-mobile {
-    display: none !important;
-  }
+  /* ✅ Keep logo (nav-left) and title (nav-center) visible */
+  /* REMOVE this: .nav-left { display: none; } */
 
-  .nav-left {
-    display: none;
-  }
-
-  .nav-center {
-    font-size: 1.4rem;
-    text-align: left;
-    width: 100%;
-    margin: 8px 10px;
-    word-break: break-word;
-  }
-
-  
   .hamburger {
     display: block;
     font-size: 26px;
@@ -788,8 +778,22 @@ footer {
   .mobile-menu.show {
     display: flex;
   }
+}
+  
 
-  /* === TABLE STYLING === */
+
+/* -------------------------------------------------
+   📱 MOBILE – UI AND FONT TWEAKS
+-------------------------------------------------- */
+@media (max-width: 768px) {
+
+  h1 {
+    font-size: 24px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+
+  /* === TABLE & BUTTON STYLES === */
   .pass-table th,
   .pass-table td {
     font-size: 13px;
@@ -808,6 +812,25 @@ footer {
     text-align: center;
   }
 
+
+ 
+    .nav-left {
+      display: none !important;
+    }
+  
+    .nav-center {
+      font-size: 1.3rem;
+      text-align: center;
+      margin: 8px 10px;
+    }
+  
+    .hide-mobile {
+      display: none !important;
+    }
+ 
+  
+
+
   .pass-table th:last-child,
   .pass-table td:last-child {
     width: 50px;
@@ -816,41 +839,17 @@ footer {
     white-space: nowrap;
   }
 
-  /* === ACTION ICONS === */
-  .pass-table td:last-child {
-    white-space: nowrap;
-  }
-
-  .inline-form,
-  .redeem-link {
-    display: inline-block;
-    vertical-align: middle;
-    margin: 0;
-    padding: 0;
-  }
-
   .icon-button {
     padding: 0;
     margin: 0 2px 0 0;
     border: none;
     background: none;
-    display: inline-block;
-    vertical-align: middle;
   }
 
   .pass-table .material-icons {
     font-size: 20px;
-    line-height: 1;
-    display: inline-block;
-    vertical-align: middle;
   }
 
-  .pass-table .cancel-icon {
-    padding: 0;
-    margin: 0;
-  }
-
-  /* === SEARCH BOX === */
   .emoji-search-box,
   .search-input {
     font-size: 13px;
@@ -866,23 +865,15 @@ footer {
     font-size: 18px;
   }
 
-  /* === BUTTON SIZE & ICONS === */
   .center-buttons .btn {
     font-size: 14px;
     padding: 2px 12px;
-    margin-right: 5px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
   }
 
   .center-buttons .btn i.material-icons {
     font-size: 18px;
-    line-height: 1;
   }
 
-  /* === WRAP TABLE ON OVERFLOW === */
   .responsive-table {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

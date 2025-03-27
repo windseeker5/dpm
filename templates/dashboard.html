@@ -50,7 +50,7 @@
 
                 <thead>
                     <tr>
-                        <th class="col-id hide-mobile">ID</th>
+                   
                         <th class="col-name">Name</th>
                         <th class="hide-mobile">Created</th>
                         <th class="col-amount hide-mobile">Amount</th>
@@ -61,7 +61,7 @@
                 <tbody>
                     {% for pass in passes %}
                     <tr>
-                        <td class="col-id hide-mobile">{{ pass.id }}</td>
+                      
                         <td class="col-name user-name">{{ pass.user_name }}</td>
                         <td class="hide-mobile">{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
                         <td class="col-amount hide-mobile">${{ "%.2f"|format(pass.sold_amt) }}</td>
@@ -110,7 +110,7 @@
                 clearIcon.style.display = searchText ? "block" : "none";
         
                 tableRows.forEach(row => {
-                    const userName = row.cells[1].textContent.toLowerCase(); // 2nd column: User Name
+                    const userName = row.cells[0].textContent.toLowerCase(); // 2nd column: User Name
                     row.style.display = userName.includes(searchText) ? "" : "none";
                 });
             });
@@ -122,7 +122,7 @@
                 tableRows.forEach(row => row.style.display = ""); // Show all rows again
             };
         });
-        </script>
+    </script>
         
         
 
