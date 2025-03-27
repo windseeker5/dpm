@@ -675,7 +675,15 @@ a.tooltipped:hover i {
   transform: scale(1.2);
 }
 
+.action-cell {
+  white-space: nowrap;
+  vertical-align: middle;
+}
 
+.inline-form {
+  display: inline-block;
+  margin: 0;
+}
 
 
 
@@ -911,9 +919,24 @@ footer {
     -webkit-overflow-scrolling: touch;
   }
 
+  .show-only-on-small {
+    display: none !important;
+  }
+
   footer, .footer {
     font-size: 12px;
     padding: 8px 12px;
     text-align: center;
   }
 }
+
+
+@media (max-width: 767px) {
+  .hide-on-small {
+    display: none !important;
+  }
+  .show-only-on-small {
+    display: inline-block !important;
+  }
+}
+
