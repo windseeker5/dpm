@@ -3,6 +3,7 @@
 
 {% block content %}
 
+    <h3>LHGI – Digital Pass</h3>
 
     <!-- QR Code Display -->
  
@@ -11,20 +12,36 @@
     </div>
       
 
-    <!-- Admin Redeem Form -->
-    {% if is_admin and hockey_pass.games_remaining > 0 %}
+
+    {% if is_admin %}
     <div class="center-align">
+      <div class="button-row">
+    
+        {% if hockey_pass.games_remaining > 0 %}
         <form action="{{ url_for('redeem_pass', pass_code=hockey_pass.pass_code) }}" method="POST">
-            <button type="submit" class="btn waves-effect">
-              Redeem A Game
-            </button>
+          <button type="submit" class="btn waves-effect">
+            Redeem A Game
+          </button>
         </form>
+        {% endif %}
+    
+        {% if not hockey_pass.paid_ind %}
+        <form action="{{ url_for('mark_paid', pass_id=hockey_pass.id) }}" method="POST">
+          <button type="submit" class="btn waves-effect btn-paid">
+            Mark as Paid
+          </button>
+        </form>
+        {% endif %}
+    
+      </div>
     </div>
     {% endif %}
+    
     
 
     <br><br>
 
+    <h3>Owner</h3>
 
     <div class="pass-info-wrapper">
       <div class="pass-info-box">
@@ -52,7 +69,8 @@
 
     <div class="pass-history-wrapper">
 
-      
+        <h3>History</h3>
+
         <div class="history-table-container">
           <table class="highlight centered history-table">
             <thead>
