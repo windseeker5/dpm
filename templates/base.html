@@ -6,6 +6,16 @@
   <title>{% block title %}Digital Pass Manager{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Modern browsers (desktop + Android) -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+
+  <!-- Fallback PNG (optional for Safari, Android, legacy) -->
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+
+  <!-- Apple Touch Icon (iPhone/iPad home screen icon) -->
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+
+
   <!-- Materialize + Icons + Fonts -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
