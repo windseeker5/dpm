@@ -72,24 +72,61 @@
         <h3>History</h3>
 
         <div class="history-table-container">
+        
           <table class="highlight centered history-table">
             <thead>
               <tr>
-                <th>Event</th>
+                <th>Action</th>
                 <th>Date</th>
+                <th>Par</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>Created</td><td>{{ history.created }}</td></tr>
-              <tr><td>Paid</td><td>{{ history.paid or '❌ Not Paid' }}</td></tr>
-              {% for date in history.redemptions %}
-                <tr><td>Redeem #{{ loop.index }}</td><td>{{ date }}</td></tr>
+          
+              <!-- Created -->
+              <tr>
+              
+                <td>Created</td>
+                <td>{{ history.created }}</td>
+                <td>{{ history.created_by | trim_email }}</td>
+
+              </tr>
+          
+              <!-- Paid -->
+              <tr>
+                <td>Paid</td>
+                <td>{{ history.paid or '❌ Not Paid' }}</td>
+                <td>{{ history.paid_by | trim_email }}</td>
+
+
+              </tr>
+          
+              <!-- Redemptions -->
+              {% for r in history.redemptions %}
+              <tr>
+
+                <td>Redeem #{{ loop.index }}</td>
+                <td>{{ r.date }}</td>
+                <td>{{ r.by | trim_email }}</td>
+
+
+              </tr>
               {% endfor %}
+          
+              <!-- Expired -->
               {% if history.expired %}
-                <tr><td>Expired</td><td>{{ history.expired }}</td></tr>
+              <tr>
+                <td>Expired</td>
+                <td>{{ history.expired }}</td>
+                <td>-</td>
+              </tr>
               {% endif %}
+          
             </tbody>
           </table>
+          
+        
+        
         </div>
       </div>
       

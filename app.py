@@ -77,6 +77,14 @@ def check_first_run():
 
 
 
+@app.template_filter("trim_email")
+def trim_email(email):
+    if not email:
+        return "-"
+    return email.split("@")[0]
+
+
+
 
 
 @app.route("/export-epayments.csv")

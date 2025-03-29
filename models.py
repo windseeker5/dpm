@@ -31,6 +31,8 @@ class Pass(db.Model):
 
 
 
+
+
 class Redemption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pass_id = db.Column(db.Integer, db.ForeignKey("pass.id"), nullable=False)
