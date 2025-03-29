@@ -23,6 +23,7 @@ class Pass(db.Model):
     pass_created_dt = db.Column(db.DateTime, default=datetime.utcnow)
     paid_ind = db.Column(db.Boolean, default=False)
     paid_date = db.Column(db.DateTime, nullable=True)  # ✅ NEW FIELD
+    activity = db.Column(db.String(100), nullable=True)  # ✅ Type of activity (e.g. Hockey, Soccer)
 
 class Redemption(db.Model):
     id = db.Column(db.Integer, primary_key=True)

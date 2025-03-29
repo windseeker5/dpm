@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, get_flashed_messages, jsonify
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import extract, func, case
+from sqlalchemy import extract, func, case, desc
 
 from flask_migrate import Migrate
 import bcrypt
@@ -19,7 +19,7 @@ from config import Config
 
 from flask import current_app
 import stripe
-
+import json
 
 
 
@@ -163,15 +163,46 @@ def setup():
 
 
 
-
-
-
         for key, value in extra_settings.items():
             existing = Setting.query.filter_by(key=key).first()
             if existing:
                 existing.value = value
             else:
                 db.session.add(Setting(key=key, value=value))
+
+
+
+
+        activity_raw = request.form.get("activities", "").strip()
+
+        try:
+            # Parse Tagify format (array of {value: "..."} or just strings)
+            if activity_raw.startswith("["):
+                tag_objects = json.loads(activity_raw)
+
+                # Handle both objects and raw strings inside array
+                activity_list = [
+                    tag["value"].strip() if isinstance(tag, dict) and "value" in tag else str(tag).strip()
+                    for tag in tag_objects if str(tag).strip()
+                ]
+            else:
+                activity_list = [a.strip() for a in activity_raw.split(",") if a.strip()]
+
+            # ✅ Update or insert cleanly
+            setting = Setting.query.filter_by(key="ACTIVITY_LIST").first()
+            if setting:
+                setting.value = json.dumps(activity_list)
+            else:
+                db.session.add(Setting(key="ACTIVITY_LIST", value=json.dumps(activity_list)))
+
+        except Exception as e:
+            print("❌ Failed to parse/save activity list:", e)
+
+
+
+
+
+
 
         # ✅ Handle logo upload
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -261,9 +292,16 @@ def dashboard():
         return redirect(url_for("login"))
 
     # ✅ Show passes that are either ACTIVE or UNPAID
+    #passes = Pass.query.filter(
+    #    (Pass.games_remaining > 0) | (Pass.paid_ind == 0)
+    #).all()
+
     passes = Pass.query.filter(
         (Pass.games_remaining > 0) | (Pass.paid_ind == 0)
-    ).all()
+    ).order_by(desc(Pass.pass_created_dt)).all()
+
+
+
 
     return render_template("dashboard.html", passes=passes)
 
@@ -287,9 +325,12 @@ def create_pass():
         paid_ind = 1 if "paid_ind" in request.form else 0
         pass_code = str(uuid.uuid4())[:16]
 
-
         # ✅ Get current admin ID
         current_admin = Admin.query.filter_by(email=session["admin"]).first()
+        
+        activity = request.form.get("activity", "")
+        new_pass = Pass(..., activity=activity)
+
 
         new_pass = Pass(
             pass_code=pass_code,
@@ -325,7 +366,15 @@ def create_pass():
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
 
-    return render_template("create_pass.html", default_amt=default_amt, default_qt=default_qt)
+
+    activity_json = get_setting("ACTIVITY_LIST", "[]")
+    try:
+        activity_list = json.loads(activity_json)
+    except:
+        activity_list = []
+
+    return render_template("create_pass.html", default_amt=default_amt, default_qt=default_qt, activity_list=activity_list)
+
 
 
 

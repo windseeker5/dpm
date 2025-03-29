@@ -12,6 +12,23 @@
 <form action="{{ url_for('create_pass') }}" method="POST">
 
 
+
+
+    <!-- Activity Select -->
+    <div class="input-field">
+        <select name="activity" required>
+        {% for activity in activity_list %}
+            <option value="{{ activity }}">{{ activity }}</option>
+        {% endfor %}
+        </select>
+        <label>Activity</label>
+    </div>
+  
+
+
+
+
+
     <!-- User Name Input with Custom Suggestions -->
     <div class="form_row">
 

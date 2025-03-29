@@ -105,7 +105,55 @@
             </div>
 
         </div>
-          
+    
+        
+
+
+<h4>Define Activity list</h4>
+<!-- 🏷 Activities Setup -->
+
+
+<div class="input-field">
+  <input id="activities" name="activities"
+         value='{{ settings.ACTIVITY_LIST or "[]" }}'
+         placeholder="Add activity and hit Enter">
+  <label for="activities" class="active">Activity List</label>
+</div>
+
+
+<!-- 🏷 Tagify Support -->
+<script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" />
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("activities");
+    let tags = [];
+
+    try {
+      // Parse JSON stored in the value attribute (e.g. '["Hockey", "Soccer"]')
+      tags = JSON.parse(input.value);
+    } catch (e) {
+      console.warn("⚠️ Could not parse ACTIVITY_LIST JSON:", input.value);
+    }
+
+    input.value = ""; // Clear raw JSON string before initializing Tagify
+
+    const tagify = new Tagify(input, {
+      dropdown: {
+        enabled: 0 // disable suggestions dropdown
+      }
+    });
+
+    // Add existing tags (e.g. from DB)
+    if (Array.isArray(tags)) {
+      tagify.addTags(tags);
+    }
+  });
+</script>
+
+
+
 
 
         <!-- 🧾 Pass Defaults -->
