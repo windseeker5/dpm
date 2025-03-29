@@ -1,4 +1,3 @@
-from datetime import datetime
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, get_flashed_messages, jsonify
 
 from flask_sqlalchemy import SQLAlchemy
@@ -23,6 +22,10 @@ import json
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from utils import match_gmail_payments_to_passes
+
+from datetime import datetime, timezone
+
+
 
 
 app = Flask(__name__)
@@ -53,9 +56,6 @@ with app.app_context():
 #scheduler = BackgroundScheduler()
 #scheduler.add_job(func=match_gmail_payments_to_passes, trigger="interval", hours=1)
 #scheduler.start()
-
-
-
 
 
 
@@ -340,9 +340,6 @@ def dashboard():
 
 
     return render_template("dashboard.html", passes=passes)
-
-
-
 
 
 

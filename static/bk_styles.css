@@ -570,17 +570,35 @@ nav {
 /* -------------------------------------------------
    MAIN TABLE STYLE
 -------------------------------------------------- */
-/* -------------------------------------------------
-   MAIN TABLE STYLE (💡 Optimized for responsive UX)
--------------------------------------------------- */
+
+/* ID column: minimal width */
+.pass-table .col-id {
+  width: 40px;
+  text-align: center;
+}
+
+/* Name column: take more space */
+.pass-table .col-name {
+  width: 30%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+
+
+.pass-table .col-created {
+  width: 120px;
+  white-space: nowrap;
+}
 
 .pass-table {
-  width: 100%;
   border: 1px solid #ddd;
   border-radius: 8px;
+  overflow: hidden;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: auto; /* ✅ allow columns to grow as needed */
+  table-layout: fixed;
+  width: 100%;
 }
 
 .pass-table thead {
@@ -594,124 +612,23 @@ nav {
 .pass-table th,
 .pass-table td {
   padding: 10px 16px;
-  font-size: 15px;
-  vertical-align: middle;
-  text-align: left;
-  white-space: normal;       /* ✅ allow wrapping */
-  overflow: visible;         /* ✅ don't clip text */
-  text-overflow: unset;
-}
-
-
-
-/* Created: fit full YYYY-MM-DD */
-.pass-table .hide-mobile:nth-child(2) {
-  width: 120px;
-}
-
-
-
-
-
-/* Name column: slightly larger */
-.pass-table .col-name {
-  width: 30%;
-  white-space: normal;
-  word-break: break-word;
-}
-
-
-
-
-/* Activity column: same font/color as others */
-.pass-table .col-activity {
-  width: 48%;
-  font-size: 15px;             /* match default table font */
-  font-style: normal;          /* remove italic */
-  color: inherit;              /* use default text color */
-  text-align: left;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: break-word;
-}
-
-
-
-
-/* Amount */
-.pass-table .col-amount {
-  width: 100px;
-  text-align: right;
-}
-
-/* Remaining */
-.pass-table .col-remain {
-  width: 80px;
-  text-align: center;
-}
-
-/* Actions */
-.pass-table .action-cell {
-  width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pass-table td.user-name {
+  white-space: normal;
+}
+
+
+/* Style activity column (optional) */
+.pass-table .col-activity {
+  color: #555;
+  font-style: italic;
   text-align: center;
+  min-width: 140px;
 }
-
-
-
-/* === Responsive Behavior === */
-
-@media (max-width: 1000px) {
-  .hide-desktop {
-    display: none !important;
-  }
-}
-
-
-
-
-@media (max-width: 768px) {
-  .pass-table th,
-  .pass-table td {
-    font-size: 13px;
-    padding: 6px 8px;
-  }
-
-  .pass-table .col-name {
-    width: auto;
-  }
-
-  .pass-table .col-remain {
-    width: auto;
-    text-align: center;
-  }
-
-  .pass-table .col-amount {
-    text-align: right;
-  }
-
-  .pass-table .action-cell {
-    width: auto;
-    white-space: nowrap;
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
