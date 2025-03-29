@@ -17,6 +17,17 @@ from datetime import datetime
 from flask import render_template, render_template_string, url_for, current_app
 
 
+from pprint import pprint
+from email.utils import parsedate_to_datetime
+import imaplib
+import email
+import re
+
+from models import EbankPayment
+from rapidfuzz import fuzz
+
+
+
 ##
 ## === SETTINGS ===
 ##
@@ -77,245 +88,6 @@ def generate_qr_code_image(pass_code):
 ##
 ## === EMAIL ===
 ##
-
-
-def send_email_bk(user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=""):
-    try:
-        from utils import get_setting  # ✅ Just to be safe if reused from another module
-
-        # ✅ Generate QR code image
-        qr_image_bytes_io = generate_qr_code_image(pass_code)
-        qr_image_bytes_io.seek(0)
-        qr_image_bytes = qr_image_bytes_io.read()  # Use binary directly
-
-        # ✅ Fetch dynamic settings
-        email_info = get_setting("EMAIL_INFO_TEXT", "")
-        email_footer = get_setting("EMAIL_FOOTER_TEXT", "")
-        sender_email = get_setting("MAIL_DEFAULT_SENDER") or "no-reply@example.com"
-
-
-
-        history_data = get_pass_history_data(pass_code)
-
-        # Build the pass history table as HTML
-        history_html = """
-        <div style="text-align: center; width: 100%; margin-top: 10px;">
-        <table style="
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-            border-collapse: separate;
-            border-spacing: 0;
-            font-size: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            overflow: hidden;
-            text-align: left;
-        ">
-            <thead>
-            <tr style="background-color: #f2f2f2;">
-                <th style='text-align: left; padding: 8px 12px; border-bottom: 1px solid #ccc; font-weight: bold;'>Event</th>
-                <th style='text-align: left; padding: 8px 12px; border-bottom: 1px solid #ccc; font-weight: bold;'>Date</th>
-            </tr>
-            </thead>
-            <tbody>
-        """
-
-        # Add Created row
-        history_html += f"""
-        <tr>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Created</td>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">{history_data['created']}</td>
-        </tr>
-        """
-
-        # Add Paid row
-        if history_data["paid"]:
-            history_html += f"""
-        <tr>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Paid</td>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">{history_data['paid']}</td>
-        </tr>
-        """
-        else:
-            history_html += f"""
-        <tr>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Paid</td>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;"><span style="font-size: 16px;">❌</span> Not Paid</td>
-        </tr>
-        """
-
-        # Add Redemptions
-        for idx, date in enumerate(history_data["redemptions"], 1):
-            history_html += f"""
-        <tr>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">Redeem #{idx}</td>
-            <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">{date}</td>
-        </tr>
-        """
-
-        # Add Expired row
-        if history_data["expired"]:
-            history_html += f"""
-        <tr>
-            <td style="padding: 8px 12px;">Expired</td>
-            <td style="padding: 8px 12px;">{history_data['expired']}</td>
-        </tr>
-        """
-
-        # Close table
-        history_html += """
-            </tbody>
-        </table>
-        </div>
-        """
-
-
-
-
-
-
-        # ✅ Email Template
-        email_html = f"""<html>
-        <head>
-            <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    background-color: #f9f9f9;
-                    margin: 0;
-                    padding: 0;
-                }}
-                .container {{
-                    max-width: 600px;
-                    margin: 20px auto;
-                    background-color: #ffffff;
-                    padding: 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                }}
-                .header {{
-                    text-align: center;
-                    font-size: 20px;
-                    font-weight: bold;
-                    color: #333;
-                    padding-bottom: 10px;
-                    border-bottom: 1px solid #ddd;
-                }}
-                .content {{
-                    padding: 20px;
-                    text-align: center;
-                    color: #555;
-                }}
-                .qr-container {{
-                    background-color: #f2f2f2;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin: 20px auto;
-                    width: 200px;
-                    text-align: center;
-                }}
-                .qr-container img {{
-                    width: 150px;
-                    height: 150px;
-                }}
-                .info-box {{
-                    margin-top: 20px;
-                    background-color: #eef5ff;
-                    padding: 10px;
-                    border-radius: 6px;
-                    font-size: 14px;
-                }}
-                .footer {{
-                    font-size: 12px;
-                    color: #777;
-                    text-align: center;
-                    margin-top: 20px;
-                    padding-top: 10px;
-                    border-top: 1px solid #ddd;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">🏒 Your Hockey Pass</div>
-                <div class="content">
-                    <p><strong>Hello, {user_name}!</strong></p>
-                    <p>Your pass was created on <strong>{created_date}</strong>.</p>
-                    <p>You have <strong>{remaining_games}</strong> games remaining.</p>
-                
-                    <div class="qr-container">
-                        <img src="cid:qr_code" alt="QR Code">
-                    </div>
-
-                    <div class="history-box" style="margin-top: 20px;">
-                    <h4 style="font-size: 16px; color: #333;">📜 Pass History</h4>
-                    {history_html}
-                    </div>
-
-
-
-                    {f'<p style="color: red; font-weight: bold;">{special_message}</p>' if special_message else ''}
-
-                    <div class="info-box">{email_info}</div>
-                </div>
-                <div class="footer">
-                    {email_footer}
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-
-        # ✅ Build Email
-        msg = MIMEMultipart("related")
-        msg["From"] = sender_email
-        msg["To"] = user_email
-        msg["Subject"] = subject
-        msg.attach(MIMEText(email_html, "html"))
-
-        # ✅ Attach QR code image
-        qr_image = MIMEImage(qr_image_bytes, _subtype="png")
-        qr_image.add_header("Content-ID", "<qr_code>")
-        qr_image.add_header("Content-Disposition", "inline", filename="qr_code.png")
-        msg.attach(qr_image)
-
-        # ✅ Load SMTP Settings
-        smtp_server = get_setting("MAIL_SERVER")
-        smtp_port = int(get_setting("MAIL_PORT", "587"))
-        smtp_user = get_setting("MAIL_USERNAME")
-        smtp_pass = get_setting("MAIL_PASSWORD")
-        use_tls = get_setting("MAIL_USE_TLS", "True").lower() == "true"
-        use_proxy = smtp_port == 25 and not use_tls
-
-        print("📬 Sending email with the following settings:")
-        print(f"  SERVER: {smtp_server}")
-        print(f"  PORT: {smtp_port}")
-        print(f"  USER: {smtp_user}")
-        print(f"  USE_TLS: {use_tls}")
-        print(f"  DETECTED MODE: {'PROXY' if use_proxy else 'GMAIL'}")
-
-        # ✅ Connect and send
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.set_debuglevel(0)
-        server.ehlo()
-        if not use_proxy and use_tls:
-            server.starttls()
-            server.ehlo()
-        if not use_proxy and smtp_user and smtp_pass:
-            server.login(smtp_user, smtp_pass)
-
-        server.sendmail(sender_email, [user_email], msg.as_string())
-        server.quit()
-
-        print(f"✅ Email sent to {user_email}")
-        return True
-
-    except Exception as e:
-        print("❌ Error sending email:")
-        traceback.print_exc()
-        return False
-
-
 
 
 def send_email_async(app, *args, **kwargs):
@@ -468,4 +240,210 @@ def send_email(user_email, subject, user_name, pass_code, created_date, remainin
         print("❌ Error sending email:")
         traceback.print_exc()
         return False
+
+
+
+def extract_interac_transfers_OLD(gmail_user, gmail_password):
+    """
+    Connects to Gmail and looks for 'Virement Interac' subject lines.
+    Extracts name and amount from matching emails.
+    
+    Returns a list of dictionaries like:
+    [{"name": "FREDERIC MORIN", "amount": 15.00}]
+    """
+
+    results = []
+
+    try:
+        # Connect to Gmail IMAP
+        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        mail.login(gmail_user, gmail_password)
+        mail.select("inbox")
+
+        # Search for emails with the target subject pattern
+        status, data = mail.search(None, 'SUBJECT "Virement Interac :"')
+        if status != "OK":
+            print("No matching Interac emails found.")
+            return results
+
+        for num in data[0].split():
+            status, msg_data = mail.fetch(num, "(RFC822)")
+            if status != "OK":
+                continue
+
+            msg = email.message_from_bytes(msg_data[0][1])
+            subject = email.header.decode_header(msg["Subject"])[0][0]
+            if isinstance(subject, bytes):
+                subject = subject.decode()
+
+            # Match full subject pattern
+            if not subject.lower().startswith("virement interac"):
+                continue
+
+            # Extract amount and name
+            amount_match = re.search(r"reçu\s([\d,]+)\s*\$\s*de", subject)
+            name_match = re.search(r"de\s(.+?)\set ce montant", subject)
+
+            if amount_match and name_match:
+                amt_str = amount_match.group(1).replace(",", ".")
+                name = name_match.group(1).strip()
+                try:
+                    amount = float(amt_str)
+                except ValueError:
+                    continue
+
+                results.append({
+                    "bank_info_name": name,
+                    "bank_info_amt": amount,
+                    "subject": subject
+                })
+
+        mail.logout()
+
+    except Exception as e:
+        print(f"❌ Error reading Gmail: {e}")
+
+    return results
+
+
+
+
+
+def extract_interac_transfers(gmail_user, gmail_password):
+    results = []
+
+    try:
+        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        mail.login(gmail_user, gmail_password)
+        mail.select("inbox")
+
+        status, data = mail.search(None, 'SUBJECT "Virement Interac :"')
+        if status != "OK":
+            print("No matching Interac emails found.")
+            return results
+
+        for num in data[0].split():
+            status, msg_data = mail.fetch(num, "(RFC822)")
+            if status != "OK":
+                continue
+
+            msg = email.message_from_bytes(msg_data[0][1])
+            from_email = email.utils.parseaddr(msg.get("From"))[1]
+            subject_raw = msg["Subject"]
+            subject = email.header.decode_header(subject_raw)[0][0]
+            if isinstance(subject, bytes):
+                subject = subject.decode()
+
+            if not subject.lower().startswith("virement interac"):
+                continue
+
+            # ✅ Only allow trusted sender
+            if from_email.lower() != "notify@payments.interac.ca":
+                print(f"❌ Ignored email from: {from_email}")
+                continue
+
+            # Extract amount and name
+            amount_match = re.search(r"reçu\s([\d,]+)\s*\$\s*de", subject)
+            name_match = re.search(r"de\s(.+?)\set ce montant", subject)
+
+            if amount_match and name_match:
+                amt_str = amount_match.group(1).replace(",", ".")
+                name = name_match.group(1).strip()
+                try:
+                    amount = float(amt_str)
+                except ValueError:
+                    continue
+
+                results.append({
+                    "bank_info_name": name,
+                    "bank_info_amt": amount,
+                    "subject": subject,
+                    "from_email": from_email
+                })
+
+        mail.logout()
+
+    except Exception as e:
+        print(f"❌ Error reading Gmail: {e}")
+
+    return results
+
+
+
+
+
+
+
+def match_gmail_payments_to_passes():
+
+    FUZZY_NAME_MATCH_THRESHOLD = 85  # Or whatever score you want
+
+    with current_app.app_context():
+        user = get_setting("MAIL_USERNAME")
+        pwd = get_setting("MAIL_PASSWORD")
+        if not user or not pwd:
+            print("❌ MAIL_USERNAME or MAIL_PASSWORD is not set.")
+            return
+
+        print("📥 Starting Gmail payment fetch and match...")
+        matches = extract_interac_transfers(user, pwd)
+        print(f"📌 Found {len(matches)} email(s) to process")
+
+        for match in matches:
+            name = match["bank_info_name"]
+            amt = match["bank_info_amt"]
+            subject = match["subject"]
+
+            # Fuzzy search on unpaid passes
+            unpaid = Pass.query.filter_by(paid_ind=False).all()
+            best_score = 0
+            best_pass = None
+
+            for p in unpaid:
+                name_score = fuzz.partial_ratio(name.lower(), p.user_name.lower())
+                if name_score >= FUZZY_NAME_MATCH_THRESHOLD and abs(p.sold_amt - amt) < 1:
+                    if name_score > best_score:
+                        best_score = name_score
+                        best_pass = p
+
+            if best_pass:
+                best_pass.paid_ind = True
+                best_pass.paid_date = datetime.utcnow()
+                db.session.add(best_pass)
+
+                db.session.add(EbankPayment(
+                    from_email=match.get("from_email"),
+                    subject=subject,
+                    bank_info_name=name,
+                    bank_info_amt=amt,
+                    matched_pass_id=best_pass.id,
+                    matched_name=best_pass.user_name,
+                    matched_amt=best_pass.sold_amt,
+                    name_score=best_score,
+                    result="MATCHED",
+                    mark_as_paid=True,
+                    note=f"Fuzzy name score ≥ {FUZZY_NAME_MATCH_THRESHOLD}"
+                ))
+
+
+
+                print(f"✅ Marked as paid: {best_pass.user_name} (${best_pass.sold_amt})")
+            else:
+
+                db.session.add(EbankPayment(
+                    from_email=match.get("from_email"),
+                    subject=subject,
+                    bank_info_name=name,
+                    bank_info_amt=amt,
+                    name_score=0,
+                    result="NO_MATCH",
+                    mark_as_paid=False,
+                    note=f"No match found with threshold ≥ {FUZZY_NAME_MATCH_THRESHOLD}"
+                ))
+
+                print(f"⚠️ No match for: {name} - ${amt}")
+
+        db.session.commit()
+        print("📋 All actions committed to EbankPayment log.")
+
 
