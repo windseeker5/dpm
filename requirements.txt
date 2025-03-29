@@ -7,4 +7,6 @@ qrcode
 pillow
 stripe
 gunicorn
+apscheduler
+rapidfuzz
 qrcode[pil]

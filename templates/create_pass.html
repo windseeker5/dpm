@@ -12,19 +12,20 @@
 <form action="{{ url_for('create_pass') }}" method="POST">
 
 
-
-
-    <!-- Activity Select -->
-    <div class="input-field">
-        <select name="activity" required>
-        {% for activity in activity_list %}
-            <option value="{{ activity }}">{{ activity }}</option>
-        {% endfor %}
-        </select>
-        <label>Activity</label>
-    </div>
+<br>
+ 
   
-
+    <div class="form_row">
+        <div class="input-field">
+          <select name="activity" required>
+            {% for activity in activity_list %}
+              <option value="{{ activity }}">{{ activity }}</option>
+            {% endfor %}
+          </select>
+          <label>Activity</label>
+        </div>
+      </div>
+      
 
 
 
@@ -76,6 +77,39 @@
     </div>
 
 
+
+
+    <!-- 📝 Add Note Switch -->
+    <div class="form_row">
+        <div class="switch">
+        <label>
+            Off
+            <input type="checkbox" id="noteToggle" onclick="toggleNoteBox()">
+            <span class="lever"></span>
+            Add a Note
+        </label>
+        </div>
+    </div>
+  
+    
+    <!-- ✏️ Notes Input -->
+    <div class="form_row" id="noteBox" style="display: none;">
+        <label for="notes">Note:</label>
+        <textarea id="notes" name="notes" rows="4" placeholder="Type or use voice input..." class="materialize-textarea" style="resize: vertical;"></textarea>
+    </div>
+    
+    <script>
+        function toggleNoteBox() {
+          const box = document.getElementById("noteBox");
+          const toggle = document.getElementById("noteToggle");
+          box.style.display = toggle.checked ? "block" : "none";
+        }
+    </script>
+      
+
+
+<br>
+
  
     <div class="form_row">
 
@@ -94,64 +128,60 @@
 
 <!-- ✅ Working Auto-suggest & Autofill -->
 <script>
-    let userCache = [];
-
-    document.addEventListener("DOMContentLoaded", async () => {
-        const nameInput = document.getElementById("user_name");
-        const emailInput = document.getElementById("user_email");
-        const phoneInput = document.getElementById("mobile_phone");
-        const suggestionBox = document.getElementById("suggestions");
-
-        try {
-            const response = await fetch("/users.json");
-            if (!response.ok) throw new Error("Failed to load users");
-            userCache = await response.json();
-        } catch (err) {
-            console.error("❌ Failed to load user cache:", err);
-            return;
+    document.addEventListener("DOMContentLoaded", function () {
+      var elems = document.querySelectorAll('select');
+      M.FormSelect.init(elems);  // ✅ Fix for dropdown rendering
+  
+      // Existing auto-suggest logic
+      let userCache = [];
+  
+      const nameInput = document.getElementById("user_name");
+      const emailInput = document.getElementById("user_email");
+      const phoneInput = document.getElementById("mobile_phone");
+      const suggestionBox = document.getElementById("suggestions");
+  
+      fetch("/users.json")
+        .then(response => response.json())
+        .then(data => userCache = data)
+        .catch(err => console.error("❌ Failed to load user cache:", err));
+  
+      nameInput.addEventListener("input", () => {
+        const input = nameInput.value.trim().toLowerCase();
+        if (input.length < 2) return suggestionBox.style.display = "none";
+  
+        const matches = userCache.filter(user =>
+          user.name && user.name.toLowerCase().startsWith(input)
+        ).slice(0, 5);
+  
+        suggestionBox.innerHTML = "";
+        if (matches.length > 0) {
+          matches.forEach(user => {
+            const li = document.createElement("li");
+            li.textContent = user.name;
+            li.dataset.email = user.email;
+            li.dataset.phone = user.phone;
+            li.addEventListener("click", () => {
+              nameInput.value = user.name;
+              emailInput.value = user.email;
+              phoneInput.value = user.phone;
+              suggestionBox.style.display = "none";
+            });
+            suggestionBox.appendChild(li);
+          });
+          suggestionBox.style.display = "block";
+        } else {
+          suggestionBox.style.display = "none";
         }
-
-        nameInput.addEventListener("input", () => {
-            const input = nameInput.value.trim().toLowerCase();
-            if (input.length < 2) {
-                suggestionBox.style.display = "none";
-                return;
-            }
-
-            const matches = userCache.filter(user =>
-                user.name && user.name.toLowerCase().startsWith(input)
-            ).slice(0, 5);
-
-            suggestionBox.innerHTML = "";
-            if (matches.length > 0) {
-                matches.forEach(user => {
-                    const li = document.createElement("li");
-                    li.textContent = user.name;
-                    li.dataset.email = user.email;
-                    li.dataset.phone = user.phone;
-                    li.addEventListener("click", () => {
-                        nameInput.value = user.name;
-                        emailInput.value = user.email;
-                        phoneInput.value = user.phone;
-                        suggestionBox.style.display = "none";
-                    });
-                    suggestionBox.appendChild(li);
-                });
-                suggestionBox.style.display = "block";
-            } else {
-                suggestionBox.style.display = "none";
-            }
-        });
-
-        document.addEventListener("click", (e) => {
-            if (!suggestionBox.contains(e.target) && e.target !== nameInput) {
-                suggestionBox.style.display = "none";
-            }
-        });
+      });
+  
+      document.addEventListener("click", (e) => {
+        if (!suggestionBox.contains(e.target) && e.target !== nameInput) {
+          suggestionBox.style.display = "none";
+        }
+      });
     });
 </script>
-
-
+  
 
 
 

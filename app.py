@@ -10,7 +10,7 @@ import uuid
 import qrcode
 import io
 import base64
-from utils import send_email, send_email_async, get_setting, generate_qr_code_image, get_pass_history_data
+from utils import send_email_async, get_setting, generate_qr_code_image, get_pass_history_data
 
 from werkzeug.utils import secure_filename
 from models import db, Admin, Pass, Redemption, Setting  
@@ -21,6 +21,8 @@ from flask import current_app
 import stripe
 import json
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from utils import match_gmail_payments_to_passes
 
 
 app = Flask(__name__)
@@ -35,8 +37,6 @@ UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
-
-
 # ✅ Load settings only if the database is ready
 with app.app_context():
     app.config["MAIL_SERVER"] = Config.get_setting(app, "MAIL_SERVER", "smtp.gmail.com")
@@ -45,6 +45,16 @@ with app.app_context():
     app.config["MAIL_USERNAME"] = Config.get_setting(app, "MAIL_USERNAME", "")
     app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
+
+
+
+# ✅ Set scheduler for interact bot
+
+#scheduler = BackgroundScheduler()
+#scheduler.add_job(func=match_gmail_payments_to_passes, trigger="interval", hours=1)
+#scheduler.start()
+
+
 
 
 
@@ -57,52 +67,60 @@ def inject_globals():
     }
 
 
-@app.route("/create-checkout-session/<int:pass_id>", methods=["POST"])
-def create_checkout_session(pass_id):
-    hockey_pass = Pass.query.get(pass_id)
-    if not hockey_pass:
-        return "Invalid pass", 404
-
-    session = stripe.checkout.Session.create(
-        payment_method_types=["card"],
-        line_items=[{
-            "price_data": {
-                "currency": "usd",
-                "unit_amount": int(hockey_pass.sold_amt * 100),
-                "product_data": {
-                    "name": f"Hockey Pass for {hockey_pass.user_name}",
-                    "description": f"Pass ID: {hockey_pass.pass_code}",
-                },
-            },
-            "quantity": 1,
-        }],
-        mode="payment",
-        success_url=url_for("payment_success", pass_id=hockey_pass.id, _external=True),
-        cancel_url=url_for("show_pass", pass_code=hockey_pass.pass_code, _external=True),
-    )
-
-    return redirect(session.url, code=303)
-
-
-
-@app.route("/payment-success/<int:pass_id>")
-def payment_success(pass_id):
-    hockey_pass = Pass.query.get(pass_id)
-    if hockey_pass:
-        hockey_pass.paid_ind = True
-        db.session.commit()
-        flash("✅ Payment received! Thank you.", "success")
-    return redirect(url_for("show_pass", pass_code=hockey_pass.pass_code))
-
-
-
-
 
 
 @app.before_request
 def check_first_run():
     if request.endpoint != 'setup' and not Admin.query.first():
         return redirect(url_for('setup'))
+
+
+
+
+
+
+@app.route("/export-epayments.csv")
+def export_epayments_csv():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    import csv
+    from io import StringIO
+    from flask import Response
+    from models import EbankPayment
+
+    si = StringIO()
+    writer = csv.writer(si)
+    writer.writerow([
+        "Timestamp", "From", "Bank Name", "Bank Amt",
+        "Matched Name", "Matched Amt", "Score", "Paid", "Result", "Subject"
+    ])
+
+    for log in EbankPayment.query.order_by(EbankPayment.timestamp.desc()).all():
+        writer.writerow([
+            log.timestamp, log.from_email, log.bank_info_name, log.bank_info_amt,
+            log.matched_name, log.matched_amt, log.name_score,
+            "YES" if log.mark_as_paid else "NO", log.result, log.subject
+        ])
+
+    output = si.getvalue()
+    return Response(output, mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment;filename=ebank_logs.csv"})
+
+
+
+
+
+
+@app.route("/test-email-match")
+def test_email_match():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from utils import match_gmail_payments_to_passes
+    match_gmail_payments_to_passes()
+    flash("✅ Gmail payment match test executed. Check logs and DB.", "success")
+    return redirect(url_for("dashboard"))
+
 
 
 
@@ -283,6 +301,16 @@ def login():
 
 
 
+@app.route("/payments")
+def payments():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    from models import EbankPayment
+    logs = EbankPayment.query.order_by(EbankPayment.timestamp.desc()).all()
+    return render_template("payments.html", logs=logs)
+
+
+
 
 
 
@@ -310,28 +338,30 @@ def dashboard():
 
 
 
+
 @app.route("/create-pass", methods=["GET", "POST"])
 def create_pass():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-
     if request.method == "POST":
-        user_name = request.form["user_name"]
-        user_email = request.form["user_email"]
-        phone_number = request.form.get("phone_number", "(581)222-3333")
+        # 🔐 Admin
+        current_admin = Admin.query.filter_by(email=session["admin"]).first()
+
+        # 📋 Form Data
+        user_name = request.form.get("user_name", "").strip()
+        user_email = request.form.get("user_email", "").strip()
+        phone_number = request.form.get("phone_number", "(581)222-3333").strip()
         sold_amt = float(request.form.get("sold_amt", 50))
         sessions_qt = int(request.form.get("sessionsQt", 4))
         paid_ind = 1 if "paid_ind" in request.form else 0
+        activity = request.form.get("activity", "").strip()
         pass_code = str(uuid.uuid4())[:16]
-
-        # ✅ Get current admin ID
-        current_admin = Admin.query.filter_by(email=session["admin"]).first()
-        
-        activity = request.form.get("activity", "")
-        new_pass = Pass(..., activity=activity)
+        notes = request.form.get("notes", "").strip()
 
 
+
+        # 🎟️ Create Pass
         new_pass = Pass(
             pass_code=pass_code,
             user_name=user_name,
@@ -341,14 +371,16 @@ def create_pass():
             games_remaining=sessions_qt,
             paid_ind=bool(paid_ind),
             created_by=current_admin.id if current_admin else None,
-            pass_created_dt=datetime.now(),  # ✅ Set actual creation datetime
-            paid_date=datetime.now() if paid_ind else None  # ✅ Set paid date only if paid now
+            activity=activity,
+            notes=notes
+
         )
 
-
+        # 💾 Save to DB
         db.session.add(new_pass)
         db.session.commit()
 
+        # 📬 Send Pass Email
         send_email_async(
             current_app._get_current_object(),
             user_email=user_email,
@@ -362,22 +394,24 @@ def create_pass():
         flash("Pass created successfully! ASYNC Email sent.", "success")
         return redirect(url_for("dashboard"))
 
-    # ✅ This part is new — it loads defaults for the form
+    # 📥 GET Request — Render Form with Defaults
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
 
-
-    activity_json = get_setting("ACTIVITY_LIST", "[]")
+    # 🏷 Load Activities for Dropdown
+    activity_list = []
     try:
+        activity_json = get_setting("ACTIVITY_LIST", "[]")
         activity_list = json.loads(activity_json)
-    except:
-        activity_list = []
+    except Exception as e:
+        print("❌ Failed to load activity list:", e)
 
-    return render_template("create_pass.html", default_amt=default_amt, default_qt=default_qt, activity_list=activity_list)
-
-
-
-
+    return render_template(
+        "create_pass.html",
+        default_amt=default_amt,
+        default_qt=default_qt,
+        activity_list=activity_list
+    )
 
 
 
