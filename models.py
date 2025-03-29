@@ -5,14 +5,16 @@ from datetime import datetime
 
 
 
-
 # ✅ Define db here (not in app.py)
 db = SQLAlchemy()
+
 
 class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+
+
 
 class Pass(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -30,14 +32,12 @@ class Pass(db.Model):
     notes = db.Column(db.Text, nullable=True)
 
 
-
-
-
 class Redemption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pass_id = db.Column(db.Integer, db.ForeignKey("pass.id"), nullable=False)
     date_used = db.Column(db.DateTime, default=datetime.utcnow)
     redeemed_by = db.Column(db.String(100), nullable=True)
+
 
 class Setting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -59,5 +59,3 @@ class EbankPayment(db.Model):
     result = db.Column(db.String(50))
     mark_as_paid = db.Column(db.Boolean, default=False)  # ✅ NEW
     note = db.Column(db.Text, nullable=True)
-
-
