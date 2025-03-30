@@ -21,13 +21,12 @@ import stripe
 import json
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from utils import match_gmail_payments_to_passes
-
+from utils import match_gmail_payments_to_passes, utc_to_local
 from datetime import datetime, timezone
 
+ 
 
-
-
+ 
 app = Flask(__name__)
 app.config.from_object(Config)
 
@@ -62,7 +61,7 @@ with app.app_context():
 @app.context_processor
 def inject_globals():
     return {
-        'now': datetime.now(),
+        'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image")
     }
 
@@ -387,7 +386,7 @@ def create_pass():
 
         # 📬 Send Pass Email
         send_email_async(
-            current_app._get_current_object(),
+            current_app._get_current_object(),  # 👈 REQUIRED!
             user_email=user_email,
             subject="LHGI 🎟️ Your Digital Pass is Ready",
             user_name=user_name,
@@ -427,32 +426,34 @@ def show_pass(pass_code):
     if not hockey_pass:
         return "Pass not found", 404
 
+    # ✅ Generate QR code
     qr_image_io = generate_qr_code_image(pass_code)
     qr_data = base64.b64encode(qr_image_io.read()).decode()
 
-    history = get_pass_history_data(pass_code)
+    # ✅ Pass fallback admin email for correct "Par" display
+    history = get_pass_history_data(pass_code, fallback_admin_email=session.get("admin"))
+
+    # ✅ Check if admin is logged in
     is_admin = "admin" in session
 
-
-    # ✅ Load all settings as a dict
+    # ✅ Load system settings
     settings_raw = {s.key: s.value for s in Setting.query.all()}
 
+    # ✅ Render payment instructions with pass context
     email_info_rendered = render_template_string(
         settings_raw.get("EMAIL_INFO_TEXT", ""),
         hockey_pass=hockey_pass
     )
-    
 
-
-    return render_template("pass.html", 
-                           hockey_pass=hockey_pass, 
-                           qr_data=qr_data, 
-                           history=history, 
-                           is_admin=is_admin,
-                           settings=settings_raw,
-                           email_info=email_info_rendered  )
-
-
+    return render_template(
+        "pass.html", 
+        hockey_pass=hockey_pass, 
+        qr_data=qr_data, 
+        history=history, 
+        is_admin=is_admin,
+        settings=settings_raw,
+        email_info=email_info_rendered
+    )
 
 
 
@@ -471,7 +472,8 @@ def redeem_pass(pass_code):
             flash("❌ Pass not found!", "error")
             return redirect(url_for("dashboard"))
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
+
         if pass_code in recent_redemptions and (now - recent_redemptions[pass_code]).seconds < 5:
             flash("⚠️ This pass was already redeemed. Please wait before scanning again.", "warning")
             return redirect(url_for("dashboard"))
@@ -494,7 +496,7 @@ def redeem_pass(pass_code):
 
             # ✅ Send confirmation email asynchronously
             send_email_async(
-                current_app._get_current_object(),  # Required for background context
+                current_app._get_current_object(),  # 👈 REQUIRED!
                 user_email=hockey_pass.user_email,
                 subject="LHGI 🏒 Game Redeemed!",
                 user_name=hockey_pass.user_name,
@@ -521,20 +523,21 @@ def mark_paid(pass_id):
     if hockey_pass:
 
         hockey_pass.paid_ind = True
-        hockey_pass.paid_date = datetime.now()
+        hockey_pass.paid_date = datetime.now(timezone.utc)
 
         db.session.commit()
 
         # ✅ Send confirmation email
         send_email_async(
-            current_app._get_current_object(),
+            current_app._get_current_object(),  # 👈 REQUIRED!
             user_email=hockey_pass.user_email,
             subject="LHGI ✅ Payment Received",
             user_name=hockey_pass.user_name,
             pass_code=hockey_pass.pass_code,
             created_date=hockey_pass.pass_created_dt.strftime('%Y-%m-%d'),
             remaining_games=hockey_pass.games_remaining,
-            special_message="We've received your payment. Your pass is now active. Thank you!"
+            special_message="We've received your payment. Your pass is now active. Thank you!",
+            admin_email=session.get("admin") 
         )
 
         flash(f"Pass {hockey_pass.id} marked as paid. Email sent.", "success")

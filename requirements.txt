@@ -9,4 +9,5 @@ stripe
 gunicorn
 apscheduler
 rapidfuzz
+pytz
 qrcode[pil]
