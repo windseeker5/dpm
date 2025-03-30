@@ -21,8 +21,16 @@ import stripe
 import json
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from utils import match_gmail_payments_to_passes, utc_to_local
+from utils import match_gmail_payments_to_passes, utc_to_local, send_unpaid_reminders
+
 from datetime import datetime, timezone
+
+
+
+
+
+
+
 
 
  
@@ -49,12 +57,16 @@ with app.app_context():
 
 
 
-# ✅ Set scheduler for interact bot
+
+
+##
+##  All the Scheduler JOB 
+##
+
 
 #scheduler = BackgroundScheduler()
 #scheduler.add_job(func=match_gmail_payments_to_passes, trigger="interval", hours=1)
 #scheduler.start()
-
 
 
 scheduler = BackgroundScheduler()
@@ -72,6 +84,11 @@ with app.app_context():
         scheduler.start()
     else:
         print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
+
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=lambda: send_unpaid_reminders(app), trigger="interval", days=1)
+scheduler.start()
 
 
 
@@ -134,6 +151,19 @@ def export_epayments_csv():
     return Response(output, mimetype="text/csv",
                     headers={"Content-Disposition": "attachment;filename=ebank_logs.csv"})
 
+
+
+
+
+@app.route("/test-reminders")
+def test_reminders():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from utils import send_unpaid_reminders
+    send_unpaid_reminders(app)
+    flash("✅ Test run of send_unpaid_reminders() executed. Check logs and emails.", "success")
+    return redirect(url_for("dashboard"))
 
 
 

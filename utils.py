@@ -9,7 +9,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
-from models import Setting, db, Pass, Redemption, Admin, EbankPayment
+from models import Setting, db, Pass, Redemption, Admin, EbankPayment, ReminderLog
+
 import threading
 import logging
 from datetime import datetime
@@ -26,21 +27,24 @@ import re
 from rapidfuzz import fuzz
 import imaplib
 
-from pytz import timezone, utc
+
+from datetime import datetime, timedelta, timezone  # ✅ Keep this for datetime.timezone
+from pytz import timezone as pytz_timezone, utc      # ✅ This is for "America/Toronto"
+
+
 
 
 
 def utc_to_local(dt_utc):
-    """Converts UTC or naive datetime to local 'America/Toronto' time safely."""
     if not dt_utc:
         return None
-
     if dt_utc.tzinfo is None:
-        # 🛑 Naive datetime — assume it's UTC
         dt_utc = utc.localize(dt_utc)
 
-    eastern = timezone("America/Toronto")
+    eastern = pytz_timezone("America/Toronto")
     return dt_utc.astimezone(eastern)
+
+
 
 
 
@@ -716,3 +720,139 @@ def match_gmail_payments_to_passes():
         mail.expunge()
         mail.logout()
         print("🧹 Gmail cleanup complete.")
+
+
+
+
+def send_unpaid_remindersOLD(app):
+    """Send reminder emails for unpaid passes older than CALL_BACK_DAYS, only once every X days."""
+    with app.app_context():
+        try:
+            days_str = get_setting("CALL_BACK_DAYS", "15")
+            days = int(days_str)
+        except ValueError:
+            print("❌ Invalid CALL_BACK_DAYS value. Defaulting to 15.")
+            days = 15
+
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+
+        unpaid_passes = Pass.query.filter(
+            Pass.paid_ind == False,
+            Pass.pass_created_dt <= cutoff_date
+        ).all()
+
+        print(f"🔔 Found {len(unpaid_passes)} unpaid passes older than {days} days.")
+
+        for p in unpaid_passes:
+            # Skip if reminder was sent less than X days ago
+            recent_reminder = ReminderLog.query.filter_by(pass_id=p.id)\
+                .order_by(ReminderLog.reminder_sent_at.desc())\
+                .first()
+
+            if recent_reminder and recent_reminder.reminder_sent_at > datetime.now(timezone.utc) - timedelta(days=days):
+                continue  # Skip — recent reminder sent
+
+            # Send email
+            subject = "LHGI ⚠️ Your digital pass is still unpaid. Please complete your payment"
+
+            special_message = f"Your pass was created on {p.pass_created_dt.strftime('%Y-%m-%d')} and is still unpaid. Please complete your payment soon to use it."
+
+            send_email_async(
+                app,
+                user_email=p.user_email,
+                subject=subject,
+                user_name=p.user_name,
+                pass_code=p.pass_code,
+                created_date=p.pass_created_dt.strftime('%Y-%m-%d'),
+                remaining_games=p.games_remaining,
+                special_message=special_message,
+                admin_email="auto-reminder@system"
+            )
+
+
+            # Log reminder with explicit UTC timestamp
+            db.session.add(ReminderLog(
+                pass_id=p.id,
+                reminder_sent_at=datetime.now(timezone.utc)  # ✅ avoids naive datetime issues
+            ))
+            db.session.commit()
+
+
+
+
+
+        print("✅ Reminder emails sent (with logging).")
+
+
+
+def send_unpaid_reminders(app):
+    """
+    Sends reminder emails for unpaid passes older than CALL_BACK_DAYS.
+    Ensures a reminder is only sent once per pass per interval.
+    Logs all reminders into ReminderLog with a UTC-aware timestamp.
+    """
+    def ensure_utc_aware(dt):
+        """Ensures datetime is timezone-aware (UTC)."""
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    with app.app_context():
+        # 🛠 Get reminder delay (in days) from settings
+        try:
+            days = float(get_setting("CALL_BACK_DAYS", "15"))
+        except ValueError:
+            print("❌ Invalid CALL_BACK_DAYS value. Defaulting to 15.")
+            days = 15
+
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+
+        # 🔍 Find all unpaid passes older than cutoff
+        unpaid_passes = Pass.query.filter(
+            Pass.paid_ind == False,
+            Pass.pass_created_dt <= cutoff_date
+        ).all()
+
+        print(f"🔔 Found {len(unpaid_passes)} unpaid passes older than {days} days.")
+
+        for p in unpaid_passes:
+            # ⏩ Skip if a reminder was already sent within the interval
+            recent_reminder = ReminderLog.query.filter_by(pass_id=p.id)\
+                .order_by(ReminderLog.reminder_sent_at.desc())\
+                .first()
+
+            if recent_reminder and ensure_utc_aware(recent_reminder.reminder_sent_at) > datetime.now(timezone.utc) - timedelta(days=days):
+                print(f"⏩ Skipping {p.user_email} — reminded too recently.")
+                continue
+
+            # ✉️ Compose and send the reminder email
+            subject = "LHGI ⚠️ Your digital pass is still unpaid. Please complete your payment"
+            special_message = (
+                f"Your pass was created on {p.pass_created_dt.strftime('%Y-%m-%d')} and is still unpaid. "
+                f"Please complete your payment soon to use it."
+            )
+
+            send_email_async(
+                app,
+                user_email=p.user_email,
+                subject=subject,
+                user_name=p.user_name,
+                pass_code=p.pass_code,
+                created_date=p.pass_created_dt.strftime('%Y-%m-%d'),
+                remaining_games=p.games_remaining,
+                special_message=special_message,
+                admin_email="auto-reminder@system"
+            )
+
+            # 📝 Log the reminder with an explicit UTC timestamp
+            db.session.add(ReminderLog(
+                pass_id=p.id,
+                reminder_sent_at=datetime.now(timezone.utc)
+            ))
+            db.session.commit()
+
+            print(f"✅ Reminder sent to {p.user_email}")
+
+        print("📬 All eligible reminders processed.")
