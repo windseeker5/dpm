@@ -3,6 +3,9 @@ import uuid
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone  # ✅ Use timezone-aware datetime
 
+
+
+
 # ✅ Define db here (not in app.py)
 db = SQLAlchemy()
 
@@ -56,3 +59,11 @@ class EbankPayment(db.Model):
     result = db.Column(db.String(50))
     mark_as_paid = db.Column(db.Boolean, default=False)
     note = db.Column(db.Text, nullable=True)
+
+
+
+class ReminderLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pass_id = db.Column(db.Integer, db.ForeignKey("pass.id"), nullable=False)
+    reminder_sent_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
