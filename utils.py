@@ -50,6 +50,8 @@ def get_setting(key, default=""):
         return setting.value if setting else default
 
 
+
+
 def save_setting(key, value):
     with current_app.app_context():
         setting = Setting.query.filter_by(key=key).first()
@@ -356,7 +358,7 @@ def send_email(app, user_email, subject, user_name, pass_code, created_date, rem
 
 
 
-def extract_interac_transfers(gmail_user, gmail_password, mail=None):
+def extract_interac_transfers_OLD(gmail_user, gmail_password, mail=None):
     results = []
 
     try:
@@ -365,9 +367,15 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
             mail.login(gmail_user, gmail_password)
             mail.select("inbox")
 
-        status, data = mail.search(None, 'SUBJECT "Virement Interac :"')
+            # KEN ICI POUR TESTER SETTING ET PARSER -=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=--=-
+            subject_keyword = get_setting("BANK_EMAIL_SUBJECT", "Virement Interac :")
+            from_expected = get_setting("BANK_EMAIL_FROM", "notify@payments.interac.ca")
+
+
+        status, data = mail.search(None, f'SUBJECT "{subject_keyword}"')
+        #status, data = mail.search(None, 'SUBJECT "Virement Interac :"')
         if status != "OK":
-            print("No matching Interac emails found.")
+            print(f"No matching {subject_keyword} emails found.")
             return results
 
         for num in data[0].split():
@@ -388,9 +396,11 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
             if isinstance(subject, bytes):
                 subject = subject.decode()
 
-            if not subject.lower().startswith("virement interac"):
+            if not subject.lower().startswith(subject_keyword):
                 continue
-            if from_email.lower() != "notify@payments.interac.ca":
+
+            if from_email.lower() != from_expected.lower():
+            #if from_email.lower() != "notify@payments.interac.ca":
                 print(f"⚠️ Ignored email from: {from_email}")
                 continue
 
@@ -420,9 +430,80 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
 
 
 
+def extract_interac_transfers(gmail_user, gmail_password, mail=None):
+    results = []
+
+    try:
+        # ✅ Always load these settings — even when mail is reused
+        subject_keyword = get_setting("BANK_EMAIL_SUBJECT", "Virement Interac :")
+        from_expected = get_setting("BANK_EMAIL_FROM", "notify@payments.interac.ca")
+
+        if not mail:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(gmail_user, gmail_password)
+            mail.select("inbox")
+
+        status, data = mail.search(None, f'SUBJECT "{subject_keyword}"')
+        if status != "OK":
+            print(f"📭 No matching emails found for subject: {subject_keyword}")
+            return results
+
+        for num in data[0].split():
+            # 📥 Fetch email content & UID
+            status, msg_data = mail.fetch(num, "(BODY.PEEK[] UID)")
+            if status != "OK":
+                continue
+
+            raw_email = msg_data[0][1]
+            uid_line = msg_data[0][0].decode()
+            uid_match = re.search(r"UID (\d+)", uid_line)
+            uid = uid_match.group(1) if uid_match else None
+
+            # 📦 Parse email headers
+            msg = email.message_from_bytes(raw_email)
+            from_email = email.utils.parseaddr(msg.get("From"))[1]
+            subject_raw = msg["Subject"]
+            subject = email.header.decode_header(subject_raw)[0][0]
+            if isinstance(subject, bytes):
+                subject = subject.decode()
+
+            # 🛡️ Validate subject and sender
+            if not subject.lower().startswith(subject_keyword.lower()):
+                continue
+            if from_email.lower() != from_expected.lower():
+                print(f"⚠️ Ignored email from unexpected sender: {from_email}")
+                continue
+
+            # 💰 Extract name & amount
+            amount_match = re.search(r"reçu\s([\d,]+)\s*\$\s*de", subject)
+            name_match = re.search(r"de\s(.+?)\set ce montant", subject)
+
+            if amount_match and name_match:
+                amt_str = amount_match.group(1).replace(",", ".")
+                name = name_match.group(1).strip()
+
+                try:
+                    amount = float(amt_str)
+                except ValueError:
+                    continue
+
+                results.append({
+                    "bank_info_name": name,
+                    "bank_info_amt": amount,
+                    "subject": subject,
+                    "from_email": from_email,
+                    "uid": uid
+                })
+
+    except Exception as e:
+        print(f"❌ Error reading Gmail: {e}")
+
+    return results
 
 
-def match_gmail_payments_to_passes():
+
+
+def match_gmail_payments_to_passes_OLD():
     """
     Checks Gmail for Interac payment emails, matches them to unpaid passes,
     updates payment status, logs to EbankPayment, sends confirmation email,
@@ -504,6 +585,115 @@ def match_gmail_payments_to_passes():
                 if uid:
                     print(f"📂 Moving matched email UID {uid} to 'InteractProcessed'")
                     mail.uid("COPY", uid, "InteractProcessed")
+                    mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+
+            else:
+                # ❌ Log unmatched emails
+                db.session.add(EbankPayment(
+                    from_email=from_email,
+                    subject=subject,
+                    bank_info_name=name,
+                    bank_info_amt=amt,
+                    name_score=0,
+                    result="NO_MATCH",
+                    mark_as_paid=False,
+                    note=f"No match found with threshold ≥ {FUZZY_NAME_MATCH_THRESHOLD}"
+                ))
+                print(f"⚠️ No match for: {name} - ${amt}")
+
+        db.session.commit()
+        print("📋 All actions committed to EbankPayment log.")
+
+        mail.expunge()
+        mail.logout()
+        print("🧹 Gmail cleanup complete.")
+
+
+
+def match_gmail_payments_to_passes():
+    """
+    Checks Gmail for Interac payment emails, matches them to unpaid passes,
+    updates payment status, logs to EbankPayment, sends confirmation email,
+    and moves matched email to the configured Gmail label.
+    """
+    with current_app.app_context():
+        user = get_setting("MAIL_USERNAME")
+        pwd = get_setting("MAIL_PASSWORD")
+
+        if not user or not pwd:
+            print("❌ MAIL_USERNAME or MAIL_PASSWORD is not set.")
+            return
+
+        # 🧠 Load dynamic matching config
+        FUZZY_NAME_MATCH_THRESHOLD = int(get_setting("BANK_EMAIL_NAME_CONFIDANCE", "85"))
+        gmail_label = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "InteractProcessed")
+
+        print("📥 Connecting to Gmail...")
+        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        mail.login(user, pwd)
+        mail.select("inbox")
+
+        print("📬 Fetching Interac emails...")
+        matches = extract_interac_transfers(user, pwd, mail)
+        print(f"📌 Found {len(matches)} email(s) to process")
+
+        for match in matches:
+            name = match["bank_info_name"]
+            amt = match["bank_info_amt"]
+            subject = match["subject"]
+            from_email = match.get("from_email")
+            uid = match.get("uid")
+
+            best_score = 0
+            best_pass = None
+            unpaid_passes = Pass.query.filter_by(paid_ind=False).all()
+
+            for p in unpaid_passes:
+                name_score = fuzz.partial_ratio(name.lower(), p.user_name.lower())
+                if name_score >= FUZZY_NAME_MATCH_THRESHOLD and abs(p.sold_amt - amt) < 1:
+                    if name_score > best_score:
+                        best_score = name_score
+                        best_pass = p
+
+            if best_pass:
+                best_pass.paid_ind = True
+                best_pass.paid_date = datetime.utcnow()
+                db.session.add(best_pass)
+
+                db.session.add(EbankPayment(
+                    from_email=from_email,
+                    subject=subject,
+                    bank_info_name=name,
+                    bank_info_amt=amt,
+                    matched_pass_id=best_pass.id,
+                    matched_name=best_pass.user_name,
+                    matched_amt=best_pass.sold_amt,
+                    name_score=best_score,
+                    result="MATCHED",
+                    mark_as_paid=True,
+                    note=f"Fuzzy name score ≥ {FUZZY_NAME_MATCH_THRESHOLD}. Email moved to '{gmail_label}'." if uid else "No UID: email not moved."
+                ))
+
+                db.session.commit()
+                print(f"✅ Matched & marked as paid: {best_pass.user_name} (${best_pass.sold_amt})")
+
+                # ✅ Send confirmation email
+                print("✉️ Sending payment confirmation email...")
+                send_email_async(
+                    current_app._get_current_object(),  # 👈 REQUIRED!
+                    user_email=best_pass.user_email,
+                    subject="LHGI ✅ Payment Received",
+                    user_name=best_pass.user_name,
+                    pass_code=best_pass.pass_code,
+                    created_date=best_pass.pass_created_dt.strftime('%Y-%m-%d'),
+                    remaining_games=best_pass.games_remaining,
+                    special_message="We've received your payment. Your pass is now active. Thank you!"
+                )
+
+                # ✅ Move matched email to configured Gmail label
+                if uid:
+                    print(f"📂 Moving matched email UID {uid} to '{gmail_label}'")
+                    mail.uid("COPY", uid, gmail_label)
                     mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
 
             else:

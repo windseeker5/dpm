@@ -186,10 +186,116 @@
             <label for="email_footer_text" class="active">Email Footer Text</label>
         </div>
 
+
+
+
+
+        <br><br>
+
+        <h4>Email Parser Payment Bot</h4>
+
+        <div class="form_row">
+          <label class="tooltipped" data-position="right" data-tooltip="Enable automatic matching of payment emails from Gmail inbox.">
+            <strong>Enable Email Payment Bot</strong>
+          </label>
+        
+          <div class="switch">
+            <label>
+              Off
+              <input type="checkbox" name="enable_email_payment_bot" id="enable_email_payment_bot"
+                     {% if settings.ENABLE_EMAIL_PAYMENT_BOT == 'True' %}checked{% endif %}>
+              <span class="lever"></span>
+              On
+            </label>
+          </div>
+        </div>
+        
+        <!-- 🔧 Conditional Bot Config Section -->
+        <div id="email-bot-config" style="display: none;">
+            <div class="input-field">
+                <input type="text" id="bank_email_from" name="bank_email_from"
+                       placeholder="notify@yourbank"
+                       value="{{ settings.BANK_EMAIL_FROM or '' }}">
+                <label for="bank_email_from" class="active">Email Sender (e.g., notify@yourbank)</label>
+            </div>
+        
+            <div class="input-field">
+                <input type="text" id="bank_email_subject" name="bank_email_subject"
+                       value="{{ settings.BANK_EMAIL_SUBJECT or '' }}">
+                <label for="bank_email_subject" class="active">Email Subject to Match</label>
+            </div>
+        
+            <div class="input-field">
+                <input type="number" id="bank_email_name_confidance" name="bank_email_name_confidance"
+                       value="{{ settings.BANK_EMAIL_NAME_CONFIDANCE or '85' }}" min="0" max="100">
+                <label for="bank_email_name_confidance" class="active">Fuzzy Match Threshold</label>
+            </div>
+        
+            <div class="input-field">
+                <input type="text" id="gmail_label_folder_processed" name="gmail_label_folder_processed"
+                       value="{{ settings.GMAIL_LABEL_FOLDER_PROCESSED or 'InteractProcessed' }}">
+                <label for="gmail_label_folder_processed" class="active">Gmail Label for Processed</label>
+            </div>
+        </div>
+        
+
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+              const toggle = document.getElementById("enable_email_payment_bot");
+              const configSection = document.getElementById("email-bot-config");
+          
+              function updateVisibility() {
+                configSection.style.display = toggle.checked ? "block" : "none";
+              }
+          
+              toggle.addEventListener("change", updateVisibility);
+              updateVisibility(); // run on page load
+          
+              const elems = document.querySelectorAll('.tooltipped');
+              M.Tooltip.init(elems); // enable tooltip
+            });
+          </script>
+          
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         <br>
         <button type="submit" class="btn waves-effect waves-light">Save Settings</button>
     </form>
 </div>
+
+
+
+
+
+
+
+
+
+
+
 
 <!-- 🧠 JS Enhancements -->
 <script>

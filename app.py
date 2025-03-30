@@ -24,7 +24,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from utils import match_gmail_payments_to_passes, utc_to_local
 from datetime import datetime, timezone
 
- 
 
  
 app = Flask(__name__)
@@ -55,6 +54,28 @@ with app.app_context():
 #scheduler = BackgroundScheduler()
 #scheduler.add_job(func=match_gmail_payments_to_passes, trigger="interval", hours=1)
 #scheduler.start()
+
+
+
+scheduler = BackgroundScheduler()
+
+with app.app_context():
+    if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
+        print("🟢 Email Payment Bot is ENABLED. Scheduling job every 15 minutes.")
+
+        def run_payment_bot():
+            with app.app_context():
+                match_gmail_payments_to_passes()
+
+        scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
+
+        scheduler.start()
+    else:
+        print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
+
+
+
+
 
 
 
@@ -197,6 +218,28 @@ def setup():
 
 
 
+        # ✅ Email Payment Bot Settings
+        bot_settings = {
+            "ENABLE_EMAIL_PAYMENT_BOT": "enable_email_payment_bot" in request.form,
+            "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
+            "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
+            "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
+            "GMAIL_LABEL_FOLDER_PROCESSED": request.form.get("gmail_label_folder_processed", "InteractProcessed").strip()
+        }
+
+        for key, value in bot_settings.items():
+            existing = Setting.query.filter_by(key=key).first()
+            if existing:
+                existing.value = str(value)
+            else:
+                db.session.add(Setting(key=key, value=str(value)))
+
+
+
+
+
+
+
 
         activity_raw = request.form.get("activities", "").strip()
 
@@ -254,6 +297,11 @@ def setup():
 
         flash("✅ Setup completed successfully!", "success")
         return redirect(url_for("dashboard"))
+
+
+
+
+
 
     # GET request
     settings = {s.key: s.value for s in Setting.query.all()}
