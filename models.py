@@ -66,4 +66,14 @@ class ReminderLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pass_id = db.Column(db.Integer, db.ForeignKey("pass.id"), nullable=False)
     reminder_sent_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    
+
+class EmailLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    to_email = db.Column(db.String(150), nullable=False)
+    subject = db.Column(db.String(255), nullable=False)
+    pass_code = db.Column(db.String(16), nullable=True)
+    template_name = db.Column(db.String(100), nullable=True)
+    context_json = db.Column(db.Text)
+    result = db.Column(db.String(50))  # SENT or FAILED
+    error_message = db.Column(db.Text, nullable=True)
