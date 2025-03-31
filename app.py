@@ -58,6 +58,12 @@ with app.app_context():
 
 
 
+# Before accessing any settings
+if not os.path.exists("instance/database.db"):
+    print("❌ instance/database.db is missing!")
+    exit(1)
+
+
 
 ##
 ##  All the Scheduler JOB 🟢
@@ -144,11 +150,6 @@ def dev_reset_admin():
             return f"✅ Reset password for {email} to <strong>{new_password}</strong>"
         else:
             return f"❌ Admin with email {email} not found."
-
-
-
-
-
 
 
 
@@ -266,9 +267,30 @@ def edit_pass(pass_code):
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
     if request.method == "POST":
+
         # ✅ Handle multiple admin accounts
+   
         admin_emails = request.form.getlist("admin_email[]")
         admin_passwords = request.form.getlist("admin_password[]")
+
+        for email, password in zip(admin_emails, admin_passwords):
+            email = email.strip()
+            password = password.strip()
+
+            if not email:
+                continue  # Skip blank rows
+
+            existing = Admin.query.filter_by(email=email).first()
+
+            if existing:
+                # Only update password if a new real password is provided
+                if password and password != "********":
+                    existing.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+            else:
+                if password and password != "********":
+                    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+                    db.session.add(Admin(email=email, password_hash=hashed))
+
 
 
         # ✅ Delete removed admins
@@ -864,4 +886,5 @@ def reports():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8889)  # Change 8080 to any port you want
+    app.run(debug=True, port=8889)
+
