@@ -32,6 +32,17 @@
           </button>
         </form>
         {% endif %}
+
+
+
+        <form action="{{ url_for('edit_pass', pass_code=hockey_pass.pass_code) }}" method="GET">
+          <button type="submit" class="btn blue lighten-1">
+            ✏️ Edit Pass
+          </button>
+        </form>
+        
+
+
     
       </div>
     </div>

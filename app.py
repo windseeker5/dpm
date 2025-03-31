@@ -217,6 +217,52 @@ def test_email_match():
 
 
 
+
+
+@app.route("/edit-pass/<pass_code>", methods=["GET", "POST"])
+def edit_pass(pass_code):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+    if not hockey_pass:
+        flash("Pass not found", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        hockey_pass.user_name = request.form.get("user_name", "").strip()
+        hockey_pass.user_email = request.form.get("user_email", "").strip()
+        hockey_pass.phone_number = request.form.get("phone_number", "").strip()
+        hockey_pass.sold_amt = float(request.form.get("sold_amt", 50))
+        hockey_pass.games_remaining = int(request.form.get("games_remaining", 0))
+        hockey_pass.activity = request.form.get("activity", "").strip()
+        hockey_pass.notes = request.form.get("notes", "").strip()
+
+        db.session.commit()
+        flash("✅ Pass updated successfully!", "success")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    # Load activities
+    activity_list = []
+    try:
+        activity_json = get_setting("ACTIVITY_LIST", "[]")
+        activity_list = json.loads(activity_json)
+    except Exception as e:
+        print("❌ Failed to load activity list:", e)
+
+    return render_template("edit_pass.html", hockey_pass=hockey_pass, activity_list=activity_list)
+
+
+
+
+
+
+
+
+
+
+
+
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
     if request.method == "POST":
