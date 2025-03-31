@@ -124,6 +124,38 @@ def trim_email(email):
 
 
 
+
+
+
+@app.route("/dev-reset-admin")
+def dev_reset_admin():
+    # Only run this in dev mode! You can restrict it further if needed
+    email = "kdresdell@gmail.com"
+    new_password = "admin123"
+    hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt())
+
+    with app.app_context():
+        admin = Admin.query.filter_by(email=email).first()
+        if admin:
+            admin.password_hash = hashed.decode()
+            db.session.commit()
+            return f"✅ Reset password for {email} to <strong>{new_password}</strong>"
+        else:
+            return f"❌ Admin with email {email} not found."
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @app.route("/export-epayments.csv")
 def export_epayments_csv():
     if "admin" not in session:
@@ -366,23 +398,45 @@ def users_json():
 
 
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].strip().lower()
         password = request.form["password"]
+
+        print(f"📨 Login attempt for: {email}")
+        print(f"🔑 Password entered: {password}")
 
         with app.app_context():
             admin = Admin.query.filter_by(email=email).first()
 
-        if admin and bcrypt.checkpw(password.encode(), admin.password_hash):  # ✅ FIXED
-            session["admin"] = email
-            return redirect(url_for("dashboard"))
+        if not admin:
+            print("❌ No admin found with that email.")
+        else:
+            print(f"✅ Admin found: {admin.email}")
+            print(f"🔐 Stored hash (type): {type(admin.password_hash)}")
+            print(f"🔐 Stored hash (value): {admin.password_hash}")
+
+            try:
+                if bcrypt.checkpw(password.encode(), admin.password_hash.encode()):
+                    print("✅ Password matched.")
+                    session["admin"] = email
+                    return redirect(url_for("dashboard"))
+                else:
+                    print("❌ Password does NOT match.")
+            except Exception as e:
+                print("💥 Exception during bcrypt check:", e)
 
         flash("Invalid login!", "error")
         return redirect(url_for("login"))
 
     return render_template("login.html")
+3
+
+
+
+
 
 
 
