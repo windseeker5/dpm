@@ -270,6 +270,22 @@ def setup():
         admin_emails = request.form.getlist("admin_email[]")
         admin_passwords = request.form.getlist("admin_password[]")
 
+
+        # ✅ Delete removed admins
+        deleted_emails_raw = request.form.get("deleted_admins", "")
+        if deleted_emails_raw:
+            for email in deleted_emails_raw.split(","):
+                email = email.strip()
+                if email:
+                    admin_to_delete = Admin.query.filter_by(email=email).first()
+                    if admin_to_delete:
+                        db.session.delete(admin_to_delete)
+
+
+
+
+
+
         for email, password in zip(admin_emails, admin_passwords):
             email = email.strip()
             if not email:
