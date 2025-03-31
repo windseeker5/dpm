@@ -1,0 +1,37 @@
+<div style="width: 360px; margin: 0 auto 30px; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+    <thead style="background-color: #f2f2f2;">
+      <tr>
+        <th style="padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee;">Action</th>
+        <th style="padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee;">Date</th>
+        <th style="padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee;">Par</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Created</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ history.created }}</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ history.created_by | trim_email }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Paid</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ history.paid or '❌ Not Paid' }}</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ history.paid_by | trim_email }}</td>
+      </tr>
+      {% for r in history.redemptions %}
+      <tr>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Redeem #{{ loop.index }}</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ r.date }}</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ r.by | trim_email }}</td>
+      </tr>
+      {% endfor %}
+      {% if history.expired %}
+      <tr>
+        <td style="padding: 10px 14px;">Expired</td>
+        <td style="padding: 10px 14px;">{{ history.expired }}</td>
+        <td style="padding: 10px 14px;">-</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>

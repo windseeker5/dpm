@@ -149,93 +149,32 @@
       <img src="cid:qr_code" alt="QR Code" class="qr-image" />
     </div>
 
-    <!-- ✅ Owner Card -->
-    <h3>Owner</h3>
-    <table class="owner-card" cellpadding="0" cellspacing="0">
-      <tr>
-        <td class="owner-left">
-
-          <b style="
-          color: #460b41;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: inline-block;
-          max-width: 200px;
-        ">{{ hockey_pass.user_name }}</b>
-        
-
-          {{ hockey_pass.user_email }}<br>
-          {{ hockey_pass.phone_number }}<br><br>
-          Remaining >_ {{ hockey_pass.games_remaining }}
-        </td>
-        <td class="owner-right">
-          <img src="cid:logo_image" alt="Logo" width="120" class="owner-logo" />
-          <div class="pass-amount">${{ "%.2f"|format(hockey_pass.sold_amt) }}</div>
-        </td>
-      </tr>
-    </table>
 
 
 
-    <!-- ✅ History Table -->
-    <h3>History</h3>
-    <div class="history-table-container">
 
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>Action</th>
-            <th>Date</th>
-            <th>Par</th> <!-- "By" in French -->
-          </tr>
-        </thead>
-        <tbody>
-      
-          <!-- Created -->
-          <tr>
+<!-- ✅ Owner -->
+<h3>Owner</h3>
+{{ owner_html | safe }}
 
-              <td>Created</td>
-              <td>{{ history.created }}</td>
-              <td>{{ history.created_by | trim_email }}</td>
-
-          </tr>
-      
-          <!-- Paid -->
-          <tr>
-            <td>Paid</td>
-            <td>{{ history.paid or '❌ Not Paid' }}</td>
-            <td>{{ history.paid_by | trim_email }}</td>
-          </tr>
-      
-          <!-- Redemptions -->
-          {% for r in history.redemptions %}
-          <tr>
-            <td>Redeem #{{ loop.index }}</td>
-            <td>{{ r.date }}</td>
-            <td>{{ r.by | trim_email }}</td>
-            
-          </tr>
-          {% endfor %}
-      
-          <!-- Expired -->
-          {% if history.expired %}
-          <tr>
-            <td>Expired</td>
-            <td>{{ history.expired }}</td>
-            <td></td>
-          </tr>
-          {% endif %}
-      
-        </tbody>
-      </table>
-      
+<!-- ✅ History -->
+<h3>History</h3>
+{{ history_html | safe }}
 
 
 
 
 
-    </div>
+
+
+
+
+
+
+
+
+
+
 
     <!-- ✅ Payment Info Reminder -->
     {% if not hockey_pass.paid_ind %}

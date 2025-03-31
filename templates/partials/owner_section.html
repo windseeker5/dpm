@@ -1,0 +1,18 @@
+{% macro owner_card(hockey_pass, logo_src) %}
+<div class="pass-info-wrapper">
+  <div class="pass-info-box">
+    <div class="pass-info-left">
+      <div class="user-info">
+        <b style="color: #1a1e48;">{{ hockey_pass.user_name }}</b><br>
+        {{ hockey_pass.user_email }}<br>
+        {{ hockey_pass.phone_number }}<br><br>
+        Remaining >_ {{ hockey_pass.games_remaining }}
+      </div>
+    </div>
+    <div class="pass-info-right">
+      <img src="{{ logo_src }}" alt="Logo" class="owner-logo" />
+      <div class="pass-amount">${{ "%.2f"|format(hockey_pass.sold_amt) }}</div>
+    </div>
+  </div>
+</div>
+{% endmacro %}

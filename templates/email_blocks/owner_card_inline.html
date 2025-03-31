@@ -1,0 +1,16 @@
+<table style="width: 360px; margin: 0 auto 30px; border-radius: 12px; background: linear-gradient(to right, #fef8e1, #d6faff); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); padding: 16px;" cellpadding="0" cellspacing="0">
+  <tr>
+    <td style="padding: 16px; font-size: 14px; color: #333; line-height: 1.6; vertical-align: middle;">
+      <b style="color: #460b41; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; max-width: 200px;">{{ hockey_pass.user_name }}</b><br>
+      {{ hockey_pass.user_email }}<br>
+      {{ hockey_pass.phone_number }}<br><br>
+      Remaining >_ {{ hockey_pass.games_remaining }}
+    </td>
+    <td style="padding: 16px; text-align: center; vertical-align: middle;">
+      <img src="cid:logo_image" alt="Logo" width="120" style="border-radius: 8px; margin-bottom: 8px; display: block;" />
+      <div style="font-size: 16px; font-weight: 500; color: #142743;">
+        ${{ "%.2f"|format(hockey_pass.sold_amt) }}
+      </div>
+    </td>
+  </tr>
+</table>
