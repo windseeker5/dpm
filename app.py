@@ -260,40 +260,30 @@ def edit_pass(pass_code):
 
 
 
-
-
-
-
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
     if request.method == "POST":
-
-        # ✅ Handle multiple admin accounts
-   
+        # 🔐 Step 1: Admin accounts
         admin_emails = request.form.getlist("admin_email[]")
         admin_passwords = request.form.getlist("admin_password[]")
 
         for email, password in zip(admin_emails, admin_passwords):
             email = email.strip()
             password = password.strip()
-
             if not email:
-                continue  # Skip blank rows
+                continue
 
             existing = Admin.query.filter_by(email=email).first()
-
             if existing:
-                # Only update password if a new real password is provided
                 if password and password != "********":
+                    # ✅ Only update if real password provided
                     existing.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
             else:
                 if password and password != "********":
                     hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
                     db.session.add(Admin(email=email, password_hash=hashed))
 
-
-
-        # ✅ Delete removed admins
+        # 🗑️ Step 2: Remove deleted admins
         deleted_emails_raw = request.form.get("deleted_admins", "")
         if deleted_emails_raw:
             for email in deleted_emails_raw.split(","):
@@ -303,26 +293,7 @@ def setup():
                     if admin_to_delete:
                         db.session.delete(admin_to_delete)
 
-
-
-
-
-
-        for email, password in zip(admin_emails, admin_passwords):
-            email = email.strip()
-            if not email:
-                continue  # Skip blank entries
-
-            existing = Admin.query.filter_by(email=email).first()
-            if existing:
-                if password.strip():  # Only update password if provided
-                    existing.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-            else:
-                if password.strip():  # Only add new if password is given
-                    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-                    db.session.add(Admin(email=email, password_hash=hashed))
-
-        # ✅ Email settings
+        # 📧 Step 3: Email settings
         email_settings = {
             "MAIL_SERVER": request.form.get("mail_server", "").strip(),
             "MAIL_PORT": request.form.get("mail_port", "587").strip(),
@@ -332,20 +303,16 @@ def setup():
             "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip()
         }
 
-
-   
         for key, value in email_settings.items():
             if key == "MAIL_PASSWORD" and not value:
-                continue  # ✅ Do not overwrite password with blank
+                continue  # 🚫 Don't overwrite password with blank
             setting = Setting.query.filter_by(key=key).first()
             if setting:
                 setting.value = str(value)
             else:
                 db.session.add(Setting(key=key, value=str(value)))
 
-
-
-        # ✅ App-level settings (including ORG_NAME and CALL_BACK_DAYS)
+        # ⚙️ Step 4: App-level settings
         extra_settings = {
             "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50").strip(),
             "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4").strip(),
@@ -355,8 +322,6 @@ def setup():
             "CALL_BACK_DAYS": request.form.get("call_back_days", "0").strip()
         }
 
-
-
         for key, value in extra_settings.items():
             existing = Setting.query.filter_by(key=key).first()
             if existing:
@@ -364,9 +329,7 @@ def setup():
             else:
                 db.session.add(Setting(key=key, value=value))
 
-
-
-        # ✅ Email Payment Bot Settings
+        # 🤖 Step 5: Email Payment Bot Config
         bot_settings = {
             "ENABLE_EMAIL_PAYMENT_BOT": "enable_email_payment_bot" in request.form,
             "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
@@ -382,21 +345,11 @@ def setup():
             else:
                 db.session.add(Setting(key=key, value=str(value)))
 
-
-
-
-
-
-
-
+        # 🏷 Step 6: Activity Tags
         activity_raw = request.form.get("activities", "").strip()
-
         try:
-            # Parse Tagify format (array of {value: "..."} or just strings)
             if activity_raw.startswith("["):
                 tag_objects = json.loads(activity_raw)
-
-                # Handle both objects and raw strings inside array
                 activity_list = [
                     tag["value"].strip() if isinstance(tag, dict) and "value" in tag else str(tag).strip()
                     for tag in tag_objects if str(tag).strip()
@@ -404,23 +357,15 @@ def setup():
             else:
                 activity_list = [a.strip() for a in activity_raw.split(",") if a.strip()]
 
-            # ✅ Update or insert cleanly
             setting = Setting.query.filter_by(key="ACTIVITY_LIST").first()
             if setting:
                 setting.value = json.dumps(activity_list)
             else:
                 db.session.add(Setting(key="ACTIVITY_LIST", value=json.dumps(activity_list)))
-
         except Exception as e:
             print("❌ Failed to parse/save activity list:", e)
 
-
-
-
-
-
-
-        # ✅ Handle logo upload
+        # 🖼 Step 7: Logo Upload
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
         logo_file = request.files.get("logo")
         if logo_file and logo_file.filename:
@@ -428,33 +373,29 @@ def setup():
             logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             logo_file.save(logo_path)
 
-            # Save the logo filename in settings
-            existing = Setting.query.filter_by(key="LOGO_FILENAME").first()
-            if existing:
-                existing.value = filename
+            setting = Setting.query.filter_by(key="LOGO_FILENAME").first()
+            if setting:
+                setting.value = filename
             else:
                 db.session.add(Setting(key="LOGO_FILENAME", value=filename))
 
             flash("✅ Logo uploaded successfully!", "success")
 
+        # ✅ Finalize changes
         db.session.commit()
-
-        # ✅ Optional debug info
         print("[SETUP] Admins configured:", admin_emails)
         print("[SETUP] Settings saved:", list(email_settings.keys()) + list(extra_settings.keys()))
-
         flash("✅ Setup completed successfully!", "success")
         return redirect(url_for("dashboard"))
 
-
-
-
-
-
-    # GET request
+    # GET request — Load existing config
     settings = {s.key: s.value for s in Setting.query.all()}
     admins = Admin.query.all()
     return render_template("setup.html", settings=settings, admins=admins)
+
+
+
+
 
 
 
@@ -485,6 +426,11 @@ def users_json():
 
 
 
+
+
+
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -505,7 +451,11 @@ def login():
             print(f"🔐 Stored hash (value): {admin.password_hash}")
 
             try:
-                if bcrypt.checkpw(password.encode(), admin.password_hash.encode()):
+                stored_hash = admin.password_hash
+                if isinstance(stored_hash, bytes):
+                    stored_hash = stored_hash.decode()
+
+                if bcrypt.checkpw(password.encode(), stored_hash.encode()):
                     print("✅ Password matched.")
                     session["admin"] = email
                     return redirect(url_for("dashboard"))
@@ -518,7 +468,8 @@ def login():
         return redirect(url_for("login"))
 
     return render_template("login.html")
-3
+
+
 
 
 
