@@ -52,95 +52,16 @@
 
     <br><br>
 
+    {% import 'partials/owner_section.html' as owner %}
+    {% import 'partials/history_section.html' as hist %}
+    
     <h3>Owner</h3>
-
-    <div class="pass-info-wrapper">
-      <div class="pass-info-box">
-        <div class="pass-info-left">
-          <div class="user-info">
-            <b style="color: #1a1e48;">{{ hockey_pass.user_name }}</b><br>
-            {{ hockey_pass.user_email }}<br>
-            {{ hockey_pass.phone_number }} <br>
-            <br>
-            Remaining >_ {{ hockey_pass.games_remaining }}
-
-          </div>
-        </div>
-        <div class="pass-info-right">
-          <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Logo" class="owner-logo" />
-          <div class="pass-amount">
-            ${{ "%.2f"|format(hockey_pass.sold_amt) }}
-          </div>
-        </div>
-      </div>
-    </div>
+    {{ owner.owner_card(hockey_pass, url_for('static', filename='uploads/logo.png')) }}
+    
+    <h3>History</h3>
+    {{ hist.pass_history_table(history) }}
     
 
-    <br>
-
-    <div class="pass-history-wrapper">
-
-        <h3>History</h3>
-
-        <div class="history-table-container">
-        
-          <table class="highlight centered history-table">
-            <thead>
-              <tr>
-                <th>Action</th>
-                <th>Date</th>
-                <th>Par</th>
-              </tr>
-            </thead>
-            <tbody>
-          
-              <!-- Created -->
-              <tr>
-              
-                <td>Created</td>
-                <td>{{ history.created }}</td>
-                <td>{{ history.created_by | trim_email }}</td>
-
-              </tr>
-          
-              <!-- Paid -->
-              <tr>
-                <td>Paid</td>
-                <td>{{ history.paid or '❌ Not Paid' }}</td>
-                <td>{{ history.paid_by | trim_email }}</td>
-
-
-              </tr>
-          
-              <!-- Redemptions -->
-              {% for r in history.redemptions %}
-              <tr>
-
-                <td>Redeem #{{ loop.index }}</td>
-                <td>{{ r.date }}</td>
-                <td>{{ r.by | trim_email }}</td>
-
-
-              </tr>
-              {% endfor %}
-          
-              <!-- Expired -->
-              {% if history.expired %}
-              <tr>
-                <td>Expired</td>
-                <td>{{ history.expired }}</td>
-                <td>-</td>
-              </tr>
-              {% endif %}
-          
-            </tbody>
-          </table>
-          
-        
-        
-        </div>
-      </div>
-      
       
 <br>
 
