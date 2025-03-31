@@ -9,6 +9,8 @@
 
     <form method="POST" enctype="multipart/form-data">
         <!-- 🔐 Admin Accounts -->
+
+
         <h4>Admin Accounts</h4>
         <div id="admin-list">
             {% for admin in admins %}
@@ -33,7 +35,17 @@
         </div>
         <a class="btn blue lighten-2" onclick="addAdmin()">+ Add Admin</a>
 
+
+        <input type="hidden" name="deleted_admins" id="deleted_admins">
+
+
         <br><br>
+
+
+
+
+
+
 
         <!-- ✉️ Email Settings -->
         <h4>Email Settings</h4>
@@ -320,10 +332,24 @@
         M.updateTextFields();
     }
 
-    function removeAdmin(button) {
-        const block = button.closest(".admin-block");
-        block.remove();
+function removeAdmin(button) {
+    const block = button.closest(".admin-block");
+    const emailInput = block.querySelector('input[name="admin_email[]"]');
+    const email = emailInput?.value?.trim();
+
+    // Add to deleted list if it had an email
+    if (email) {
+        const deletedField = document.getElementById("deleted_admins");
+        let current = deletedField.value ? deletedField.value.split(",") : [];
+        if (!current.includes(email)) {
+            current.push(email);
+            deletedField.value = current.join(",");
+        }
     }
+
+    block.remove();
+}
+
 
     // Remove placeholder value on submit
     document.querySelector("form").addEventListener("submit", function () {
