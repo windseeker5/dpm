@@ -137,6 +137,62 @@ def trim_email(email):
 
 
 
+@app.route("/retry-failed-emails")
+def retry_failed_emails():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import EmailLog, Pass
+    from utils import send_email_async
+    from datetime import datetime
+
+    failed_logs = EmailLog.query.filter_by(result="FAILED").all()
+    retried = 0
+
+    # 🔁 Replace with your email for testing
+    override_email = "kdresdell@gmail.com"
+    #testing_mode = True
+    testing_mode = False
+
+    for log in failed_logs:
+        pass_obj = Pass.query.filter_by(pass_code=log.pass_code).first()
+        if not pass_obj:
+            continue  # Skip if no matching pass
+
+        try:
+            context = json.loads(log.context_json)
+        except:
+            continue
+
+        send_email_async(
+            current_app._get_current_object(),
+            user_email=override_email if testing_mode else log.to_email,
+            subject=f"[TEST] {log.subject}" if testing_mode else log.subject,
+            user_name=context.get("user_name", "User"),
+            pass_code=log.pass_code,
+            created_date=context.get("created_date", datetime.utcnow().strftime("%Y-%m-%d")),
+            remaining_games=context.get("remaining_games", 0),
+            special_message=context.get("special_message", None),
+            admin_email=session.get("admin")
+        )
+
+        retried += 1
+
+    flash(f"📤 Retried {retried} failed email(s) — sent to {override_email}.", "info")
+    return redirect(url_for("dashboard"))
+
+
+
+
+
+
+
+
+
+
+
+
+
 @app.route("/dev-reset-admin")
 def dev_reset_admin():
     # Only run this in dev mode! You can restrict it further if needed
