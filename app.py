@@ -60,7 +60,7 @@ with app.app_context():
 
 
 ##
-##  All the Scheduler JOB 
+##  All the Scheduler JOB 🟢
 ##
 
 
@@ -84,6 +84,8 @@ with app.app_context():
         scheduler.start()
     else:
         print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
+
+
 
 
 scheduler = BackgroundScheduler()

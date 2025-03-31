@@ -31,6 +31,9 @@ import imaplib
 from datetime import datetime, timedelta, timezone  # ✅ Keep this for datetime.timezone
 from pytz import timezone as pytz_timezone, utc      # ✅ This is for "America/Toronto"
 
+import json
+
+
 
 
 
@@ -253,7 +256,7 @@ def get_pass_history_data_OLD(pass_code: str) -> dict:
 
 
 
-def send_email(app, user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=None, admin_email=None):
+def send_email_OLD(app, user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=None, admin_email=None):
 
     try:
         from utils import get_setting  # ✅ Just to be safe if reused from another module
@@ -358,6 +361,119 @@ def send_email(app, user_email, subject, user_name, pass_code, created_date, rem
         print("❌ Error sending email:")
         traceback.print_exc()
         return False
+
+
+
+def send_email(app, user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=None, admin_email=None):
+    try:
+        from utils import get_setting
+        from models import EmailLog
+
+        qr_image_bytes_io = generate_qr_code_image(pass_code)
+        qr_image_bytes = qr_image_bytes_io.read()
+
+        sender_email = get_setting("MAIL_DEFAULT_SENDER") or "no-reply@example.com"
+        email_footer = get_setting("EMAIL_FOOTER_TEXT", "")
+        email_info_template = get_setting("EMAIL_INFO_TEXT", "")
+        history_data = get_pass_history_data(pass_code, fallback_admin_email=admin_email)
+
+        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+        email_info = render_template_string(email_info_template, hockey_pass=hockey_pass)
+
+        with open("static/uploads/logo.png", "rb") as logo_file:
+            logo_bytes = logo_file.read()
+
+        email_html = render_template(
+            "email_pass.html",
+            user_name=user_name,
+            created_date=created_date,
+            remaining_games=remaining_games,
+            special_message=special_message,
+            history=history_data,
+            logo_url="cid:logo_image",
+            email_info=email_info,
+            email_footer=email_footer,
+            hockey_pass=hockey_pass
+        )
+
+        msg = MIMEMultipart("related")
+        msg["From"] = sender_email
+        msg["To"] = user_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(email_html, "html"))
+
+        qr_image = MIMEImage(qr_image_bytes, _subtype="png")
+        qr_image.add_header("Content-ID", "<qr_code>")
+        qr_image.add_header("Content-Disposition", "inline", filename="qr_code.png")
+        msg.attach(qr_image)
+
+        logo_image = MIMEImage(logo_bytes, _subtype="jpeg")
+        logo_image.add_header("Content-ID", "<logo_image>")
+        logo_image.add_header("Content-Disposition", "inline", filename="logo.jpg")
+        msg.attach(logo_image)
+
+        smtp_server = get_setting("MAIL_SERVER")
+        smtp_port = int(get_setting("MAIL_PORT", "587"))
+        smtp_user = get_setting("MAIL_USERNAME")
+        smtp_pass = get_setting("MAIL_PASSWORD")
+        use_tls = get_setting("MAIL_USE_TLS", "True").lower() == "true"
+        use_proxy = smtp_port == 25 and not use_tls
+
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.ehlo()
+        if not use_proxy and use_tls:
+            server.starttls()
+            server.ehlo()
+        if not use_proxy and smtp_user and smtp_pass:
+            server.login(smtp_user, smtp_pass)
+
+        server.sendmail(sender_email, [user_email], msg.as_string())
+        server.quit()
+
+        print(f"✅ Email sent to {user_email}")
+
+        # ✅ Log success
+        db.session.add(EmailLog(
+            to_email=user_email,
+            subject=subject,
+            pass_code=pass_code,
+            template_name="email_pass.html",
+            context_json=json.dumps({
+                "user_name": user_name,
+                "created_date": created_date,
+                "remaining_games": remaining_games,
+                "special_message": special_message,
+                "history": history_data
+            }),
+            result="SENT"
+        ))
+        db.session.commit()
+
+        return True
+
+    except Exception as e:
+        print("❌ Error sending email:")
+        traceback.print_exc()
+
+        # ✅ Log failure
+        db.session.add(EmailLog(
+            to_email=user_email,
+            subject=subject,
+            pass_code=pass_code,
+            template_name="email_pass.html",
+            context_json=json.dumps({
+                "user_name": user_name,
+                "created_date": created_date,
+                "remaining_games": remaining_games,
+                "special_message": special_message
+            }),
+            result="FAILED",
+            error_message=str(e)
+        ))
+        db.session.commit()
+
+        return False
+
 
 
 
