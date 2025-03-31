@@ -12,7 +12,9 @@ import base64
 from utils import send_email_async, get_setting, generate_qr_code_image, get_pass_history_data
 
 from werkzeug.utils import secure_filename
-from models import db, Admin, Pass, Redemption, Setting  
+from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
+
+
 import os  # ✅ Add this import
 from config import Config
 
@@ -473,17 +475,21 @@ def login():
 
 
 
-
-
-
-
 @app.route("/payments")
 def payments():
     if "admin" not in session:
         return redirect(url_for("login"))
-    from models import EbankPayment
-    logs = EbankPayment.query.order_by(EbankPayment.timestamp.desc()).all()
-    return render_template("payments.html", logs=logs)
+
+    return render_template(
+        "log.html",
+        ebank_logs=EbankPayment.query.order_by(EbankPayment.timestamp.desc()).all(),
+        reminder_logs=ReminderLog.query.order_by(ReminderLog.reminder_sent_at.desc()).all(),
+        email_logs=EmailLog.query.order_by(EmailLog.timestamp.desc()).all(),
+        passes=Pass.query.order_by(Pass.pass_created_dt.desc()).all(),
+        redemptions=Redemption.query.order_by(Redemption.date_used.desc()).all()
+    )
+
+
 
 
 
