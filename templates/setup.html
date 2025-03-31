@@ -183,14 +183,20 @@
             <input type="email" id="mail_username" name="mail_username" value="{{ settings.MAIL_USERNAME or '' }}" class="validate" required>
             <label for="mail_username" class="active">Email Username</label>
         </div>
+
         <div class="input-field">
-            <input type="password" id="mail_password" name="mail_password"
-                   value="********"
-                   class="validate"
-                   data-is-placeholder="true"
-                   data-real-value="true">
+            <input type="text" id="mail_password" name="mail_password"
+                    value="********"
+                    class="validate"
+                    data-is-placeholder="true"
+                    data-real-value="true">
+
+
             <label for="mail_password" class="active">Email Password</label>
         </div>
+
+
+
         <div class="input-field">
             <input type="email" id="mail_default_sender" name="mail_default_sender" value="{{ settings.MAIL_DEFAULT_SENDER or '' }}" class="validate" required>
             <label for="mail_default_sender" class="active">Default Sender Email</label>

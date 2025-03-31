@@ -361,9 +361,15 @@ def setup():
             "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip()
         }
 
+        #for key, value in email_settings.items():
+        #    if key == "MAIL_PASSWORD" and not value:
+        #        continue  # 🚫 Don't overwrite password with blank
+
         for key, value in email_settings.items():
-            if key == "MAIL_PASSWORD" and not value:
-                continue  # 🚫 Don't overwrite password with blank
+            if key == "MAIL_PASSWORD" and (not value or value == "********"):
+                continue  # 🚫 Don't overwrite with blank or fake password
+
+
             setting = Setting.query.filter_by(key=key).first()
             if setting:
                 setting.value = str(value)
