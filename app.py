@@ -562,20 +562,34 @@ def login():
 
 
 
-@app.route("/payments")
-def payments():
+
+@app.route("/reporting")
+def reporting():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    return render_template(
-        "log.html",
-        ebank_logs=EbankPayment.query.order_by(EbankPayment.timestamp.desc()).all(),
-        reminder_logs=ReminderLog.query.order_by(ReminderLog.reminder_sent_at.desc()).all(),
-        email_logs=EmailLog.query.order_by(EmailLog.timestamp.desc()).all(),
-        passes=Pass.query.order_by(Pass.pass_created_dt.desc()).all(),
-        redemptions=Redemption.query.order_by(Redemption.date_used.desc()).all()
-    )
+    query = EbankPayment.query.filter(EbankPayment.mark_as_paid == True).order_by(EbankPayment.timestamp.desc()) # Filter for mark_as_paid = True FIRST
 
+    search = request.args.get("search")
+    if search:
+        like = f"%{search.lower()}%"
+        query = query.filter(
+            func.lower(EbankPayment.subject).like(like) |
+            func.lower(EbankPayment.bank_info_name).like(like) |
+            func.lower(EbankPayment.from_email).like(like)
+        )
+
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template(
+        "logs.html",
+        ebank_logs=pagination.items,
+        pagination=pagination,
+        search=search or "",
+        no_wrapper=True
+    )
 
 
 
@@ -935,6 +949,13 @@ def reports():
 
 
 
-if __name__ == "__main__":
-    app.run(debug=True, port=8889)
+#if __name__ == "__main__":
+#    app.run(debug=True, port=8889)
 
+ 
+
+if __name__ == "__main__":
+    env = os.environ.get("FLASK_ENV", "dev").lower()
+    port = 8889 if env == "prod" else 8890
+    print(f"🚀 Running on port {port} (env={env})")
+    app.run(debug=(env != "prod"), port=port)
