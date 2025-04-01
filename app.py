@@ -96,17 +96,17 @@ with app.app_context():
 
 
 scheduler = BackgroundScheduler()
+from utils import get_setting  # ✅ at the top of app.py
 
 with app.app_context():
-    if Config.get_setting(app,"ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
-        print("🟢 Email Payment Bot is ENABLED. Scheduling job every 15 minutes.")
+    if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
+        print("🟢 Email Payment Bot is ENABLED. Scheduling job every 30 minutes.")
 
         def run_payment_bot():
             with app.app_context():
                 match_gmail_payments_to_passes()
 
         scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
-
         scheduler.start()
     else:
         print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
@@ -120,16 +120,21 @@ scheduler.start()
 
 
 
-
-
-
+from flask import current_app
+from datetime import datetime, timezone
+from utils import get_setting
 
 @app.context_processor
 def inject_globals():
     return {
         'now': datetime.now(timezone.utc),
-        'ORG_NAME': Config.get_setting(app,"ORG_NAME", "Ligue hockey Gagnon Image")
+        'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image")
     }
+
+
+
+
+
 
 
 
@@ -645,7 +650,9 @@ def create_pass():
         send_email_async(
             current_app._get_current_object(),  # 👈 REQUIRED!
             user_email=user_email,
-            subject="LHGI 🎟️ Your Digital Pass is Ready",
+            #subject="LHGI 🎟️ Your Digital Pass is Ready",
+            subject="LHGI 🎟️ Votre Passe électronique est prête",
+
             user_name=user_name,
             pass_code=pass_code,
             created_date=new_pass.pass_created_dt.strftime('%Y-%m-%d'),
@@ -655,17 +662,21 @@ def create_pass():
         flash("Pass created successfully! ASYNC Email sent.", "success")
         return redirect(url_for("dashboard"))
 
+
     # 📥 GET Request — Render Form with Defaults
-    default_amt = Config.get_setting(app,"DEFAULT_PASS_AMOUNT", "50")
-    default_qt = Config.get_setting(app,"DEFAULT_SESSION_QT", "4")
+    default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
+    default_qt = get_setting("DEFAULT_SESSION_QT", "4")
 
     # 🏷 Load Activities for Dropdown
     activity_list = []
     try:
-        activity_json = Config.get_setting(app,"ACTIVITY_LIST", "[]")
+        activity_json = get_setting("ACTIVITY_LIST", "[]")
         activity_list = json.loads(activity_json)
     except Exception as e:
         print("❌ Failed to load activity list:", e)
+
+
+
 
     return render_template(
         "create_pass.html",

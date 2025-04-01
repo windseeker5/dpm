@@ -49,6 +49,8 @@ def utc_to_local(dt_utc):
 
 
 
+from flask import current_app
+from models import Setting
 
 def get_setting(key, default=""):
     with current_app.app_context():
@@ -56,6 +58,9 @@ def get_setting(key, default=""):
         if setting and setting.value not in [None, ""]:
             return setting.value
     return default
+
+
+
 
 
 

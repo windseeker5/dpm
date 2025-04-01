@@ -3,7 +3,7 @@
 
 {% block content %}
 
-    <h3>LHGI – Digital Pass</h3>
+    <h3>LHGI – Passe électronique</h3>
 
     <!-- QR Code Display -->
  
@@ -55,10 +55,10 @@
     {% import 'partials/owner_section.html' as owner %}
     {% import 'partials/history_section.html' as hist %}
     
-    <h3>Owner</h3>
+    <h3>Joueur</h3>
     {{ owner.owner_card(hockey_pass, url_for('static', filename='uploads/logo.png')) }}
     
-    <h3>History</h3>
+    <h3>Historique</h3>
     {{ hist.pass_history_table(history) }}
     
 
