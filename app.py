@@ -29,19 +29,42 @@ from datetime import datetime, timezone
 
 
 
+import os
+import socket
 
+hostname = socket.gethostname()
+is_dev = hostname == "archlinux" or "local" in hostname
 
+db_filename = "dev_database.db" if is_dev else "prod_database.db"
+db_path = os.path.join("instance", db_filename)
 
-
+print(f"📦 Using {'DEV' if is_dev else 'PROD'} database → {db_path}")
 
 
  
+
 app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 app.config.from_object(Config)
 
 # ✅ Initialize database
 db.init_app(app)
+
 migrate = Migrate(app, db)
+
+
+if not os.path.exists(db_path):
+    print(f"❌ {db_path} is missing!")
+    exit(1)
+
+
+
+
+print(f"📂 Connected DB path: {app.config['SQLALCHEMY_DATABASE_URI']}")
+
+
 
 
 UPLOAD_FOLDER = "static/uploads"
@@ -51,19 +74,14 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # ✅ Load settings only if the database is ready
 with app.app_context():
     app.config["MAIL_SERVER"] = Config.get_setting(app, "MAIL_SERVER", "smtp.gmail.com")
-    app.config["MAIL_PORT"] = int(Config.get_setting(app, "MAIL_PORT", 587))
+    #app.config["MAIL_PORT"] = int(Config.get_setting(app, "MAIL_PORT", 587))
+    app.config["MAIL_PORT"] = int(Config.get_setting(app, "MAIL_PORT", "587") or 587)
     app.config["MAIL_USE_TLS"] = Config.get_setting(app, "MAIL_USE_TLS", "True") == "True"
     app.config["MAIL_USERNAME"] = Config.get_setting(app, "MAIL_USERNAME", "")
     app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
 
 
-
-
-# Before accessing any settings
-if not os.path.exists("instance/database.db"):
-    print("❌ instance/database.db is missing!")
-    exit(1)
 
 
 
@@ -80,7 +98,7 @@ if not os.path.exists("instance/database.db"):
 scheduler = BackgroundScheduler()
 
 with app.app_context():
-    if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
+    if Config.get_setting(app,"ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
         print("🟢 Email Payment Bot is ENABLED. Scheduling job every 15 minutes.")
 
         def run_payment_bot():
@@ -110,7 +128,7 @@ scheduler.start()
 def inject_globals():
     return {
         'now': datetime.now(timezone.utc),
-        'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image")
+        'ORG_NAME': Config.get_setting(app,"ORG_NAME", "Ligue hockey Gagnon Image")
     }
 
 
@@ -304,7 +322,7 @@ def edit_pass(pass_code):
     # Load activities
     activity_list = []
     try:
-        activity_json = get_setting("ACTIVITY_LIST", "[]")
+        activity_json = Config.get_setting(app,"ACTIVITY_LIST", "[]")
         activity_list = json.loads(activity_json)
     except Exception as e:
         print("❌ Failed to load activity list:", e)
@@ -357,7 +375,9 @@ def setup():
             "MAIL_PORT": request.form.get("mail_port", "587").strip(),
             "MAIL_USE_TLS": "mail_use_tls" in request.form,
             "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
-            "MAIL_PASSWORD": request.form.get("mail_password", "").strip(),
+            #"MAIL_PASSWORD": request.form.get("mail_password", "").strip(),
+            "MAIL_PASSWORD": request.form.get("mail_password_raw", "").strip(),
+
             "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip()
         }
 
@@ -636,13 +656,13 @@ def create_pass():
         return redirect(url_for("dashboard"))
 
     # 📥 GET Request — Render Form with Defaults
-    default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
-    default_qt = get_setting("DEFAULT_SESSION_QT", "4")
+    default_amt = Config.get_setting(app,"DEFAULT_PASS_AMOUNT", "50")
+    default_qt = Config.get_setting(app,"DEFAULT_SESSION_QT", "4")
 
     # 🏷 Load Activities for Dropdown
     activity_list = []
     try:
-        activity_json = get_setting("ACTIVITY_LIST", "[]")
+        activity_json = Config.get_setting(app,"ACTIVITY_LIST", "[]")
         activity_list = json.loads(activity_json)
     except Exception as e:
         print("❌ Failed to load activity list:", e)
