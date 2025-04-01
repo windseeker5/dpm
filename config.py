@@ -1,23 +1,25 @@
+import os
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
 class Config:
     SECRET_KEY = "your_secret_key"
-    SQLALCHEMY_DATABASE_URI = "sqlite:///database.db"
+
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    db_env = os.environ.get("FLASK_ENV", "dev").lower()
+
+    if db_env == "prod":
+        db_file = "prod_database.db"
+    else:
+        db_file = "dev_database.db"
+
+    db_path = os.path.join(basedir, "instance", db_file)
+
+    SQLALCHEMY_DATABASE_URI = f"sqlite:///{db_path}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_COMMIT_ON_TEARDOWN = True  # ✅ Auto-commit changes
+    SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 
     @staticmethod
     def get_setting(app, key, default=None):
-        """ Fetch setting from database, but avoid querying if table does not exist """
-        with app.app_context():
-            from models import Setting  # ✅ Import inside function to avoid circular import
-            try:
-                if db.engine.dialect.has_table(db.engine, "setting"):  # ✅ Check if table exists
-                    setting = Setting.query.filter_by(key=key).first()
-                    return setting.value if setting else default
-            except Exception:
-                pass  # ✅ Ignore errors if table does not exist yet
-
-        return default  # ✅ Use default value if settings table is unavailable
+        ...

@@ -50,11 +50,12 @@ def utc_to_local(dt_utc):
 
 
 
-
 def get_setting(key, default=""):
     with current_app.app_context():
         setting = Setting.query.filter_by(key=key).first()
-        return setting.value if setting else default
+        if setting and setting.value not in [None, ""]:
+            return setting.value
+    return default
 
 
 

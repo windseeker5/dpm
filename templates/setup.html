@@ -184,16 +184,22 @@
             <label for="mail_username" class="active">Email Username</label>
         </div>
 
-        <div class="input-field">
-            <input type="text" id="mail_password" name="mail_password"
-                    value="********"
-                    class="validate"
-                    data-is-placeholder="true"
-                    data-real-value="true">
 
 
-            <label for="mail_password" class="active">Email Password</label>
-        </div>
+          
+          <div class="input-field">
+            <input type="text" 
+                   id="mail_password_raw" 
+                   name="mail_password_raw"
+                   value="{{ settings.get('MAIL_PASSWORD', '') }}"
+                   class="validate"
+                   autocomplete="off"
+                   autocorrect="off"
+                   spellcheck="false"
+                   style="font-family: monospace !important;">
+            <label for="mail_password_raw" class="active">Email Password (Dev Mode)</label>
+          </div>
+          
 
 
 
