@@ -95,9 +95,6 @@
     <div class="nav-right">
       {% if session.get('admin') %}
 
-        <a href="{{ url_for('reports') }}">Reports</a>
-  
-
         <a href="{{ url_for('reporting') }}">Logs</a>
         <a href="{{ url_for('setup') }}">Settings</a>
         <a href="{{ url_for('logout') }}">Logout</a>
@@ -117,7 +114,7 @@
   <div class="mobile-menu" id="mobileMenu">
     {% if session.get('admin') %}
       <a href="{{ url_for('dashboard') }}">Home</a>
-      <a href="{{ url_for('reports') }}">Reporting</a>
+      <a href="{{ url_for('reporting') }}">Logs</a>
       <a href="{{ url_for('setup') }}">Settings</a>
       <a href="{{ url_for('logout') }}">Logout</a>
     {% else %}
