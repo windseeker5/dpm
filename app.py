@@ -561,36 +561,143 @@ def login():
 
 
 
-
-
 @app.route("/reporting")
 def reporting():
+    from sqlalchemy import extract, func, case
+    from collections import defaultdict
+
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    query = EbankPayment.query.filter(EbankPayment.mark_as_paid == True).order_by(EbankPayment.timestamp.desc()) # Filter for mark_as_paid = True FIRST
+    # === SEARCH PARAMS ===
+    search_epay = request.args.get("search_epay", "").strip().lower()
+    search_pass = request.args.get("search_pass", "").strip().lower()
+    search_email = request.args.get("search_email", "").strip().lower()
 
-    search = request.args.get("search")
-    if search:
-        like = f"%{search.lower()}%"
-        query = query.filter(
-            func.lower(EbankPayment.subject).like(like) |
-            func.lower(EbankPayment.bank_info_name).like(like) |
-            func.lower(EbankPayment.from_email).like(like)
-        )
-
-    page = int(request.args.get("page", 1))
+    # === PAGINATION ===
     per_page = 10
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    page_epay = int(request.args.get("page_epay", 1))
+    page_pass = int(request.args.get("page_pass", 1))
+    page_email = int(request.args.get("page_email", 1))
+
+    # === 1. Matched E-Bank Payments ===
+    epay_query = EbankPayment.query.filter(EbankPayment.mark_as_paid == True)
+    if search_epay:
+        epay_query = epay_query.filter(
+            func.lower(EbankPayment.subject).like(f"%{search_epay}%") |
+            func.lower(EbankPayment.bank_info_name).like(f"%{search_epay}%") |
+            func.lower(EbankPayment.from_email).like(f"%{search_epay}%")
+        )
+    pagination_epay = epay_query.order_by(EbankPayment.timestamp.desc()).paginate(page=page_epay, per_page=per_page, error_out=False)
+
+    # === 2. Pass Log ===
+    pass_query = Pass.query
+    if search_pass:
+        pass_query = pass_query.filter(
+            func.lower(Pass.user_name).like(f"%{search_pass}%") |
+            func.lower(Pass.user_email).like(f"%{search_pass}%")
+        )
+    pagination_pass = pass_query.order_by(Pass.pass_created_dt.desc()).paginate(page=page_pass, per_page=per_page, error_out=False)
+
+    # === 3. Email Log ===
+    email_query = EmailLog.query
+    if search_email:
+        email_query = email_query.filter(
+            func.lower(EmailLog.to_email).like(f"%{search_email}%") |
+            func.lower(EmailLog.subject).like(f"%{search_email}%")
+        )
+    pagination_email = email_query.order_by(EmailLog.timestamp.desc()).paginate(page=page_email, per_page=per_page, error_out=False)
+
+    # === 4. Chart 1: Billed vs Earned ===
+    monthly_data = db.session.query(
+        extract('year', Pass.pass_created_dt).label('year'),
+        extract('month', Pass.pass_created_dt).label('month'),
+        func.sum(Pass.sold_amt).label('billed'),
+        func.sum(case((Pass.paid_ind == True, Pass.sold_amt), else_=0)).label('earned')
+    ).group_by('year', 'month').order_by('year', 'month').all()
+
+    chart_data = [
+        {
+            "label": f"{int(row.month)}/{int(row.year)}",
+            "billed": float(row.billed),
+            "earned": float(row.earned)
+        } for row in monthly_data
+    ]
+
+    # === 5. Chart 2: Passes Created per Admin ===
+    creation_data = db.session.query(
+        extract('year', Pass.pass_created_dt).label('year'),
+        extract('month', Pass.pass_created_dt).label('month'),
+        Admin.email,
+        func.count(Pass.id)
+    ).join(Admin, Admin.id == Pass.created_by)\
+     .group_by('year', 'month', Admin.email)\
+     .order_by('year', 'month').all()
+
+    creation_summary = defaultdict(lambda: defaultdict(int))
+    for row in creation_data:
+        month_str = f"{int(row.month)}/{int(row.year)}"
+        creation_summary[month_str][row.email] = row[3]
+
+    admin_emails = sorted({email for data in creation_summary.values() for email in data})
+    creation_chart_data = {
+        "labels": sorted(creation_summary.keys(), key=lambda x: (int(x.split("/")[1]), int(x.split("/")[0]))),
+        "admins": admin_emails,
+        "datasets": [
+            {
+                "label": email,
+                "data": [creation_summary[month].get(email, 0) for month in sorted(creation_summary.keys())],
+            } for email in admin_emails
+        ]
+    }
+
+    # === 6. Chart 3: Games Redeemed per Admin ===
+    redemption_data = db.session.query(
+        extract('year', Redemption.date_used).label('year'),
+        extract('month', Redemption.date_used).label('month'),
+        Redemption.redeemed_by,
+        func.count(Redemption.id)
+    ).group_by('year', 'month', Redemption.redeemed_by)\
+     .order_by('year', 'month').all()
+
+    redemption_summary = defaultdict(lambda: defaultdict(int))
+    for row in redemption_data:
+        month_str = f"{int(row.month)}/{int(row.year)}"
+        redemption_summary[month_str][row.redeemed_by] = row[3]
+
+    redeem_admins = sorted({email for data in redemption_summary.values() for email in data})
+    redemption_chart_data = {
+        "labels": sorted(redemption_summary.keys(), key=lambda x: (int(x.split("/")[1]), int(x.split("/")[0]))),
+        "admins": redeem_admins,
+        "datasets": [
+            {
+                "label": email,
+                "data": [redemption_summary[month].get(email, 0) for month in sorted(redemption_summary.keys())],
+            } for email in redeem_admins
+        ]
+    }
 
     return render_template(
         "logs.html",
-        ebank_logs=pagination.items,
-        pagination=pagination,
-        search=search or "",
+        ebank_logs=pagination_epay.items,
+        pagination_epay=pagination_epay,
+
+        passes=pagination_pass.items,
+        pagination_pass=pagination_pass,
+
+        email_logs=pagination_email.items,
+        pagination_email=pagination_email,
+
+        search_epay=search_epay,
+        search_pass=search_pass,
+        search_email=search_email,
+
+        chart_data=chart_data,
+        creation_chart_data=creation_chart_data,
+        redemption_chart_data=redemption_chart_data,
+
         no_wrapper=True
     )
-
 
 
 
@@ -842,107 +949,6 @@ def scan_qr():
 def logout():
     session.pop("admin", None)
     return redirect(url_for("login"))
-
-
-
-
-@app.route("/reports")
-def reports():
-    from sqlalchemy import extract, func
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-
-    monthly_data = db.session.query(
-        extract('year', Pass.pass_created_dt).label('year'),
-        extract('month', Pass.pass_created_dt).label('month'),
-        func.sum(Pass.sold_amt).label('billed'),
-        func.sum(case((Pass.paid_ind == True, Pass.sold_amt), else_=0)).label('earned')
-    ).group_by('year', 'month').order_by('year', 'month').all()
-
-
-    chart_data = [
-        {
-            "label": f"{int(row.month)}/{int(row.year)}",
-            "billed": float(row.billed),
-            "earned": float(row.earned)
-        } for row in monthly_data
-    ]
-
-
-
-
-    # Query: count of passes per admin per month
-    creation_data = db.session.query(
-        extract('year', Pass.pass_created_dt).label('year'),
-        extract('month', Pass.pass_created_dt).label('month'),
-        Admin.email,
-        func.count(Pass.id)
-    ).join(Admin, Admin.id == Pass.created_by)\
-    .group_by('year', 'month', Admin.email)\
-    .order_by('year', 'month').all()
-
-    # Reorganize data into nested dict: { "Mar 2025": { "admin1@email": count, ... } }
-    from collections import defaultdict
-
-    creation_summary = defaultdict(lambda: defaultdict(int))
-
-    for row in creation_data:
-        month_str = f"{int(row.month)}/{int(row.year)}"
-        creation_summary[month_str][row.email] = row[3]
-
-    # Convert into chart format
-    admin_emails = sorted({email for data in creation_summary.values() for email in data})
-    creation_chart_data = {
-        "labels": sorted(creation_summary.keys(), key=lambda x: (int(x.split("/")[1]), int(x.split("/")[0]))),
-        "admins": admin_emails,
-        "datasets": [
-            {
-                "label": email,
-                "data": [creation_summary[month].get(email, 0) for month in sorted(creation_summary.keys())],
-            } for email in admin_emails
-        ]
-    }
-
-
-    # Redemption count per admin per month
-    redemption_data = db.session.query(
-        extract('year', Redemption.date_used).label('year'),
-        extract('month', Redemption.date_used).label('month'),
-        Redemption.redeemed_by,
-        func.count(Redemption.id)
-    ).group_by('year', 'month', Redemption.redeemed_by)\
-    .order_by('year', 'month').all()
-
-    # Reorganize into: { "Mar 2025": { "admin@email": count } }
-    from collections import defaultdict
-
-    redemption_summary = defaultdict(lambda: defaultdict(int))
-    for row in redemption_data:
-        month_str = f"{int(row.month)}/{int(row.year)}"
-        redemption_summary[month_str][row.redeemed_by] = row[3]
-
-    # Structure for chart
-    redeem_admins = sorted({email for data in redemption_summary.values() for email in data})
-    redemption_chart_data = {
-        "labels": sorted(redemption_summary.keys(), key=lambda x: (int(x.split("/")[1]), int(x.split("/")[0]))),
-        "admins": redeem_admins,
-        "datasets": [
-            {
-                "label": email,
-                "data": [redemption_summary[month].get(email, 0) for month in sorted(redemption_summary.keys())],
-            } for email in redeem_admins
-        ]
-    }
-
-
-
-    return render_template(
-        "reports.html",
-        chart_data=chart_data,
-        creation_chart_data=creation_chart_data,
-        redemption_chart_data=redemption_chart_data
-    )
 
 
 

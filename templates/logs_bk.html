@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}E-Bank Reporting{% endblock %}
+
+{% block content %}
+<style>
+  /* 📱 Responsive hide for extra columns */
+  @media (max-width: 1399px) {
+    .pass-table th:nth-child(2), .pass-table td:nth-child(2), /* From */
+    .pass-table th:nth-child(5), .pass-table td:nth-child(5), /* Pass Name */
+    .pass-table th:nth-child(6), .pass-table td:nth-child(6), /* Pass ID */
+    .pass-table th:nth-child(7), .pass-table td:nth-child(7), /* Score */
+    .pass-table th:nth-child(8), .pass-table td:nth-child(8)  /* Result */
+    {
+      display: none;
+    }
+  }
+
+  /* 🔍 Search Bar Styles with Clear Icon */
+  .search-bar-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin: 40px 0 30px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #f0a869;
+    padding: 6px 12px;
+    box-shadow: 0 1px 2px rgba(255, 94, 94, 0.05);
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    padding: 8px 10px;
+    background: transparent;
+  }
+
+  .search-icon,
+  .clear-icon {
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .clear-icon {
+    display: none;
+    margin-left: -24px;
+  }
+
+  .search-bar-container input:not(:placeholder-shown) + .clear-icon {
+    display: block;
+  }
+</style>
+
+<div class="container z-depth-1" style="background: white; padding: 30px; border-radius: 20px; margin-top: 30px; margin-bottom: 30px;">
+
+  <!-- 🧾 Matched E-Payments -->
+  <h4 class="center-align">Matched E-Payments</h4>
+  <div class="search-bar-container">
+    <i class="material-icons search-icon">search</i>
+    <input type="text" class="search-input" placeholder="Search E-Payments..." oninput="handleSearch(this, 'epay-table')">
+    <i class="material-icons clear-icon" onclick="clearSearch(this)">close</i>
+  </div>
+  <div class="responsive-table">
+    <table class="pass-table" id="epay-table">
+      <thead>
+        <tr><th>Date</th><th>From</th><th>Bank Name</th><th>Amount</th><th>Pass Name</th><th>Pass ID</th><th>Score</th><th>Result</th><th>Paid?</th></tr>
+      </thead>
+      <tbody>
+        {% for log in ebank_logs %}
+        <tr>
+          <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>{{ log.from_email }}</td>
+          <td>{{ log.bank_info_name }}</td>
+          <td>${{ "%.2f"|format(log.bank_info_amt) }}</td>
+          <td>{{ log.matched_name }}</td>
+          <td>{{ log.matched_pass_id or '-' }}</td>
+          <td>{{ "%.2f"|format(log.name_score) }}</td>
+          <td>{{ log.result }}</td>
+          <td style="color: green; font-size: 20px;">✔️</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if pagination_epay.pages > 1 %}
+  <ul class="pagination center-align">
+    {% for p in range(1, pagination_epay.pages + 1) %}
+    <li class="waves-effect {% if pagination_epay.page == p %}active{% endif %}">
+      <a href="{{ url_for('reporting', page_epay=p, search=search) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <!-- 🎫 Pass Log -->
+  <h4 class="center-align" style="margin-top: 60px;">Pass Log</h4>
+  <div class="search-bar-container">
+    <i class="material-icons search-icon">search</i>
+    <input type="text" class="search-input" placeholder="Search Pass Log..." oninput="handleSearch(this, 'pass-log-table')">
+    <i class="material-icons clear-icon" onclick="clearSearch(this)">close</i>
+  </div>
+  <div class="responsive-table">
+    <table class="pass-table" id="pass-log-table">
+      <thead><tr><th>Date</th><th>User</th><th>Email</th><th>Amount</th><th>Games Left</th></tr></thead>
+      <tbody>
+        {% for p in passes %}
+        <tr>
+          <td>{{ p.pass_created_dt.strftime('%Y-%m-%d') }}</td>
+          <td>{{ p.user_name }}</td>
+          <td>{{ p.user_email }}</td>
+          <td>${{ "%.2f"|format(p.sold_amt) }}</td>
+          <td>{{ p.games_remaining }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if pagination_pass.pages > 1 %}
+  <ul class="pagination center-align">
+    {% for p in range(1, pagination_pass.pages + 1) %}
+    <li class="waves-effect {% if pagination_pass.page == p %}active{% endif %}">
+      <a href="{{ url_for('reporting', page_pass=p, search=search) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <!-- 📧 Email Log -->
+  <h4 class="center-align" style="margin-top: 60px;">Email Log</h4>
+  <div class="search-bar-container">
+    <i class="material-icons search-icon">search</i>
+    <input type="text" class="search-input" placeholder="Search Email Log..." oninput="handleSearch(this, 'email-log-table')">
+    <i class="material-icons clear-icon" onclick="clearSearch(this)">close</i>
+  </div>
+  <div class="responsive-table">
+    <table class="pass-table" id="email-log-table">
+      <thead><tr><th>Date</th><th>To</th><th>Subject</th><th>Pass Code</th><th>Result</th></tr></thead>
+      <tbody>
+        {% for e in email_logs %}
+        <tr>
+          <td>{{ e.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>{{ e.to_email }}</td>
+          <td>{{ e.subject }}</td>
+          <td>{{ e.pass_code or '-' }}</td>
+          <td>{{ e.result }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if pagination_email.pages > 1 %}
+  <ul class="pagination center-align">
+    {% for p in range(1, pagination_email.pages + 1) %}
+    <li class="waves-effect {% if pagination_email.page == p %}active{% endif %}">
+      <a href="{{ url_for('reporting', page_email=p, search=search) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+</div>
+
+<!-- 🔍 Search Filtering Script -->
+{% block scripts %}
+<script>
+  function filterTable(inputElem, tableId) {
+    const filter = inputElem.value.toLowerCase();
+    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+    rows.forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+    });
+  }
+
+  function handleSearch(input, tableId) {
+    filterTable(input, tableId);
+    const clearIcon = input.nextElementSibling;
+    clearIcon.style.display = input.value ? 'block' : 'none';
+  }
+
+  function clearSearch(icon) {
+    const input = icon.previousElementSibling;
+    input.value = '';
+    const table = icon.closest('.search-bar-container').nextElementSibling.querySelector('table');
+    filterTable(input, table.id);
+    icon.style.display = 'none';
+  }
+</script>
+{% endblock %}
+{% endblock %}
