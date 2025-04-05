@@ -32,7 +32,7 @@ from datetime import datetime, timedelta, timezone  # ✅ Keep this for datetime
 from pytz import timezone as pytz_timezone, utc      # ✅ This is for "America/Toronto"
 
 import json
-
+import os
 
 
 
@@ -193,6 +193,17 @@ def send_email(app, user_email, subject, user_name, pass_code, created_date, rem
         from utils import get_setting
         from models import EmailLog
         from flask import render_template_string, render_template, current_app
+
+
+        # 🧠 Redirect in dev mode
+        env = os.environ.get("FLASK_ENV", "prod").lower()
+        dev_redirect = os.environ.get("DEV_EMAIL_REDIRECT", None)
+
+        if env == "dev" and dev_redirect:
+            print(f"📨 [DEV MODE] Redirecting email originally to {user_email} → {dev_redirect}")
+            subject = f"[DEV] {subject}"
+            user_email = dev_redirect
+
 
         qr_image_bytes_io = generate_qr_code_image(pass_code)
         qr_image_bytes = qr_image_bytes_io.read()
@@ -456,7 +467,8 @@ def match_gmail_payments_to_passes():
                 send_email_async(
                     current_app._get_current_object(),  # 👈 REQUIRED!
                     user_email=best_pass.user_email,
-                    subject="LHGI ✅ Payment Received",
+                    #subject="LHGI ✅ Payment Received",
+                    subject="LHGI ✅ Paiement Confirmé",
                     user_name=best_pass.user_name,
                     pass_code=best_pass.pass_code,
                     created_date=best_pass.pass_created_dt.strftime('%Y-%m-%d'),
@@ -536,7 +548,9 @@ def send_unpaid_reminders(app):
                 continue
 
             # ✉️ Compose and send the reminder email
-            subject = "LHGI ⚠️ Your digital pass is still unpaid. Please complete your payment"
+            #subject = "LHGI ⚠️ Your digital pass is still unpaid. Please complete your payment"
+            subject = "LHGI ⚠️ Rappel - Vous avez une passe électronique en attente de paiement."
+       
             special_message = (
                 f"Your pass was created on {p.pass_created_dt.strftime('%Y-%m-%d')} and is still unpaid. "
                 f"Please complete your payment soon to use it."
