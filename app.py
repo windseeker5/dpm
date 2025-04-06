@@ -262,40 +262,12 @@ def dev_reset_admin():
 
 
 
+from flask import flash
 
-
-
-
-
-@app.route("/export-epayments.csv")
-def export_epayments_csv():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    import csv
-    from io import StringIO
-    from flask import Response
-    from models import EbankPayment
-
-    si = StringIO()
-    writer = csv.writer(si)
-    writer.writerow([
-        "Timestamp", "From", "Bank Name", "Bank Amt",
-        "Matched Name", "Matched Amt", "Score", "Paid", "Result", "Subject"
-    ])
-
-    for log in EbankPayment.query.order_by(EbankPayment.timestamp.desc()).all():
-        writer.writerow([
-            log.timestamp, log.from_email, log.bank_info_name, log.bank_info_amt,
-            log.matched_name, log.matched_amt, log.name_score,
-            "YES" if log.mark_as_paid else "NO", log.result, log.subject
-        ])
-
-    output = si.getvalue()
-    return Response(output, mimetype="text/csv",
-                    headers={"Content-Disposition": "attachment;filename=ebank_logs.csv"})
-
-
-
+@app.route("/test-alert")
+def test_alert():
+    flash("🎉 Flash system works!", "success")
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/test-reminders")
@@ -429,14 +401,17 @@ def setup():
                 db.session.add(Setting(key=key, value=str(value)))
 
         # ⚙️ Step 4: App-level settings
+
         extra_settings = {
             "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50").strip(),
             "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4").strip(),
             "EMAIL_INFO_TEXT": request.form.get("email_info_text", "").strip(),
             "EMAIL_FOOTER_TEXT": request.form.get("email_footer_text", "").strip(),
-            "ORG_NAME": request.form.get("org_name", "").strip(),
-            "CALL_BACK_DAYS": request.form.get("call_back_days", "0").strip()
+            "ORG_NAME": request.form.get("ORG_NAME", "").strip(),
+            "CALL_BACK_DAYS": request.form.get("CALL_BACK_DAYS", "0").strip()
         }
+
+
 
         for key, value in extra_settings.items():
             existing = Setting.query.filter_by(key=key).first()
@@ -481,9 +456,14 @@ def setup():
         except Exception as e:
             print("❌ Failed to parse/save activity list:", e)
 
+
+
+
         # 🖼 Step 7: Logo Upload
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-        logo_file = request.files.get("logo")
+        logo_file = request.files.get("ORG_LOGO_FILE")
+
+
         if logo_file and logo_file.filename:
             filename = secure_filename(logo_file.filename)
             logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
@@ -496,6 +476,8 @@ def setup():
                 db.session.add(Setting(key="LOGO_FILENAME", value=filename))
 
             flash("✅ Logo uploaded successfully!", "success")
+
+
 
         # ✅ Finalize changes
         db.session.commit()
