@@ -1,147 +1,143 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>{% block title %}Digital Pass Manager{% endblock %}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>{% block title %}Minipass Admin{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Modern browsers (desktop + Android) -->
+  <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-
-  <!-- Fallback PNG (optional for Safari, Android, legacy) -->
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
-
-  <!-- Apple Touch Icon (iPhone/iPad home screen icon) -->
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 
+  <!-- Tabler Core CSS -->
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='tabler/css/tabler-flags.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='tabler/css/tabler-vendors.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='tabler/css/demo.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
 
-  <!-- Materialize + Icons + Fonts -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
-
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed&display=swap" rel="stylesheet">
-
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;500;600&family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;400;500&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
-
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-  <script>
-    // Auto-fade flash messages
-    document.addEventListener("DOMContentLoaded", function () {
-      const flash = document.querySelector(".flash-message");
-      if (flash) {
-        setTimeout(() => flash.style.opacity = "0", 3000);
-      }
-    });
-  </script>
+  {% block head %}{% endblock %}
 </head>
 <body>
-
-<!-- 🎨 Stripe-Style Diagonal Band Background -->
-<div class="stripe-band">
-  <svg viewBox="0 0 1440 420" preserveAspectRatio="none">
-    <defs>
-      <linearGradient id="gradientStripe" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#ff7eb9" />
-        <stop offset="30%" stop-color="#ffb86c" />
-        <stop offset="65%" stop-color="#8be9fd" />
-        <stop offset="100%" stop-color="#cba6f7" />
-      </linearGradient>
-    </defs>
-    <path fill="url(#gradientStripe)" fill-opacity="1" d="M0,0 L0,300 Q720,420 1440,180 L1440,0 Z"></path>
-  </svg>
-</div>
-
-<!-- ✅ Flash Message Above Nav -->
-{% with messages = get_flashed_messages(with_categories=True) %}
-{% if messages %}
-  <div class="flash-container">
-    {% for category, message in messages %}
-      <div class="flash-message {{ category }}">{{ message }}</div>
-    {% endfor %}
-  </div>
-{% endif %}
-{% endwith %}
+<div class="page">
 
 
 
-<!-- 🚀 Navigation -->
-<nav>
-  <div class="nav-flex-container">
+  <!-- Simple Navigation Bar -->
+  <header class="navbar navbar-expand-md navbar-light bg-white border-bottom d-print-none">
+    <div class="container-xl">
 
-    <!-- Left: Logo (desktop only) -->
-    <div class="nav-left">
-      <a href="{{ url_for('dashboard') }}">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="nav-logo">
+
+      <!-- Logo -->
+      <a href="{{ url_for('dashboard') }}" class="navbar-brand d-flex align-items-center gap-2">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Minipass Logo" height="30" style="max-width: 120px;">
+        <span class="fw-bold text-dark d-none d-md-inline">{{ ORG_NAME }}</span>
       </a>
-    </div>
+      
 
-    <!-- Center: ORG_NAME -->
-    <div class="nav-center anton-regular">
-      <a href="{{ url_for('dashboard') }}" style="color: inherit; text-decoration: none;">
-        {{ ORG_NAME }}
-      </a>
-    </div>
 
-    <!-- Right: Nav links & hamburger -->
-    <div class="nav-right">
-      {% if session.get('admin') %}
+      
+      <!-- Admin Avatar & Name -->
+      {% if session.get("admin") %}
+      <div class="navbar-nav flex-row order-md-last align-items-center">
+      
+        <!-- Theme Toggle Button -->
+        <div class="nav-item px-2">
+          <a href="#" id="theme-toggle" class="nav-link px-0" title="Toggle dark mode" data-bs-toggle="tooltip">
+            <i class="ti ti-moon theme-icon theme-light-only"></i>
+            <i class="ti ti-sun theme-icon theme-dark-only" style="display: none;"></i>
+          </a>
+        </div>
 
-        <a href="{{ url_for('reporting') }}">Logs</a>
-        <a href="{{ url_for('setup') }}">Settings</a>
-        <a href="{{ url_for('logout') }}">Logout</a>
-
-      {% else %}
-        <a href="{{ url_for('login') }}">Login</a>
+      
+        <!-- Admin Avatar & Name -->
+        <div class="nav-item dropdown">
+          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+            <span class="avatar avatar-sm rounded-circle" style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')"></span>
+            <div class="d-none d-xl-block ps-2">
+              <div>{{ session['admin'] }}</div>
+              <div class="text-muted small">Admin</div>
+            </div>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+            <a href="{{ url_for('setup') }}" class="dropdown-item">
+              <i class="ti ti-settings me-2"></i>Settings
+            </a>
+            <div class="dropdown-divider"></div>
+            <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
+              <i class="ti ti-logout me-2"></i>Logout
+            </a>
+          </div>
+        </div>
+      </div>
       {% endif %}
+      
 
-      <!-- Hamburger icon (mobile only) -->
-      <a href="#" class="hamburger" onclick="toggleMobileMenu()">
-        <i class="material-icons">menu</i>
-      </a>
-    </div>
-  </div>
-
-  <!-- Mobile dropdown -->
-  <div class="mobile-menu" id="mobileMenu">
-    {% if session.get('admin') %}
-      <a href="{{ url_for('dashboard') }}">Home</a>
-      <a href="{{ url_for('reporting') }}">Logs</a>
-      <a href="{{ url_for('setup') }}">Settings</a>
-      <a href="{{ url_for('logout') }}">Logout</a>
-    {% else %}
-      <a href="{{ url_for('login') }}">Login</a>
-    {% endif %}
-  </div>
-</nav>
 
  
+    </div>
+  </header>
 
+  <!-- Page content -->
+  <div class="page-wrapper">
+    <div class="page-body">
+      <div class="container-xl">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible" role="alert">
+                <div class="d-flex">
+                  <div>{{ message }}</div>
+                  <a class="btn-close" data-bs-dismiss="alert" aria-label="Close"></a>
+                </div>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer footer-transparent d-print-none">
+      <div class="container-xl text-center text-muted py-3">
+        © 2025 <a href="https://minipass.me" class="text-muted">minipass.me</a> - All rights reserved.
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- Tabler Core JS -->
+<script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
 
 <script>
-  // Toggle mobile dropdown menu
-  function toggleMobileMenu() {
-    const menu = document.getElementById("mobileMenu");
-    menu.classList.toggle("show");
-  }
+  document.addEventListener("DOMContentLoaded", function () {
+    const toggleBtn = document.getElementById("theme-toggle");
 
-  document.querySelectorAll('.mobile-menu a').forEach(link => {
-  link.addEventListener('click', () => {
-    document.getElementById('mobileMenu').classList.remove('show');
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+
+        const body = document.body;
+        const isDark = body.classList.toggle("theme-dark");
+
+        // Toggle icon visibility
+        const moonIcon = toggleBtn.querySelector(".theme-light-only");
+        const sunIcon = toggleBtn.querySelector(".theme-dark-only");
+
+        if (isDark) {
+          moonIcon.style.display = "none";
+          sunIcon.style.display = "inline";
+        } else {
+          moonIcon.style.display = "inline";
+          sunIcon.style.display = "none";
+        }
+      });
+    }
   });
-});
-
-
-
 </script>
 
 
@@ -150,24 +146,6 @@
 
 
 
-
-
-
-
-<!-- Main Content -->
-<div class="{% if not no_wrapper %}main-wrapper{% endif %}">
-
-
-  {% block content %}{% endblock %}
-</div>
-
-<!-- 🦶 Footer -->
-<footer>
-  &copy; {{ now.year }} MINIPASS.ME - All rights reserved.
-</footer>
-
-<!-- Scripts -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

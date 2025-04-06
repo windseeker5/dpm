@@ -1,0 +1,22 @@
+<h3 class="mb-3">Admin Accounts</h3>
+
+<div class="card mb-4">
+  <div class="card-body">
+    {% for admin in admins %}
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <span>{{ admin.email }}</span>
+      <a href="{{ url_for('dev_reset_admin', admin_id=admin.id) }}" class="btn btn-sm btn-danger">Remove</a>
+    </div>
+    {% endfor %}
+
+    <div class="mt-4">
+      <label class="form-label">Add Admin Email</label>
+      <input type="email" name="new_admin_email" class="form-control" placeholder="email@example.com" />
+    </div>
+
+    <div class="mt-3">
+      <label class="form-label">New Admin Password</label>
+      <input type="password" name="new_admin_password" class="form-control" placeholder="password" />
+    </div>
+  </div>
+</div>

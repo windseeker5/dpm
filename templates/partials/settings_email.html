@@ -1,0 +1,37 @@
+<h3 class="mb-3">Email Settings</h3>
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="mb-3">
+      <label class="form-label">MAIL_SERVER</label>
+      <input type="text" name="MAIL_SERVER" class="form-control" value="{{ settings.MAIL_SERVER }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">MAIL_PORT</label>
+      <input type="number" name="MAIL_PORT" class="form-control" value="{{ settings.MAIL_PORT }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">MAIL_USE_TLS</label>
+      <select name="MAIL_USE_TLS" class="form-select">
+        <option value="1" {% if settings.MAIL_USE_TLS == '1' %}selected{% endif %}>Yes</option>
+        <option value="0" {% if settings.MAIL_USE_TLS == '0' %}selected{% endif %}>No</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">MAIL_USERNAME</label>
+      <input type="text" name="MAIL_USERNAME" class="form-control" value="{{ settings.MAIL_USERNAME }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">MAIL_PASSWORD</label>
+      <input type="password" name="MAIL_PASSWORD" class="form-control" value="{{ settings.MAIL_PASSWORD }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">MAIL_DEFAULT_SENDER</label>
+      <input type="email" name="MAIL_DEFAULT_SENDER" class="form-control" value="{{ settings.MAIL_DEFAULT_SENDER }}">
+    </div>
+  </div>
+</div>

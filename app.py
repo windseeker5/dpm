@@ -27,10 +27,18 @@ from utils import match_gmail_payments_to_passes, utc_to_local, send_unpaid_remi
 
 from datetime import datetime, timezone
 
-
-
 import os
 import socket
+
+import hashlib
+
+
+
+from flask import current_app
+from datetime import datetime, timezone
+from utils import get_setting
+
+
 
 hostname = socket.gethostname()
 is_dev = hostname == "archlinux" or "local" in hostname
@@ -122,9 +130,6 @@ scheduler.start()
 
 
 
-from flask import current_app
-from datetime import datetime, timezone
-from utils import get_setting
 
 @app.context_processor
 def inject_globals():
@@ -133,6 +138,13 @@ def inject_globals():
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image")
     }
 
+
+
+@app.template_filter('encode_md5')
+def encode_md5(s):
+    if not s:
+        return ''
+    return hashlib.md5(s.strip().lower().encode('utf-8')).hexdigest()
 
 
 
