@@ -1,190 +1,146 @@
 {% extends "base.html" %}
 
-{% block title %}Create New Pass{% endblock %}
-
-{% block header %}Create New Pass{% endblock %}
+{% block title %}Create Pass{% endblock %}
 
 {% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="col-lg-8">
+    <form method="POST" class="card">
+      <div class="card-header">
+        <h3 class="card-title">Create a New Digital Pass</h3>
+      </div>
+      <div class="card-body">
 
 
-<h2>Create a new pass 🎟️</h2>
+        <!-- User Name with Auto-Suggest -->
+        <div class="mb-3 position-relative">
+          <label class="form-label">User Name</label>
+          <input type="text" name="user_name" id="user_name" class="form-control" autocomplete="off" required />
+          <div id="suggestions" class="list-group position-absolute w-100 shadow bg-white border rounded" style="top: 100%; z-index: 10; display: none;"></div>
 
-<form action="{{ url_for('create_pass') }}" method="POST">
+        </div>
 
+        <!-- Email -->
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="user_email" id="user_email" class="form-control" required />
+        </div>
 
-<br>
- 
-  
-    <div class="form_row">
-        <div class="input-field">
-          <select name="activity" required>
+        <!-- Phone Number -->
+        <div class="mb-3">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" name="phone_number" id="mobile_phone" class="form-control" value="(581)222-3333" required />
+        </div>
+
+        <!-- Amount -->
+        <div class="mb-3">
+          <label class="form-label">Amount</label>
+          <input type="number" name="sold_amt" step="0.01" class="form-control" value="{{ default_amt }}" required />
+        </div>
+
+        <!-- Sessions Quantity -->
+        <div class="mb-3">
+          <label class="form-label">Number of Games</label>
+          <input type="number" name="sessionsQt" class="form-control" value="{{ default_qt }}" required />
+        </div>
+
+        <!-- Paid Checkbox -->
+        <div class="mb-3 form-check">
+          <input type="checkbox" class="form-check-input" name="paid_ind" id="paidCheck">
+          <label class="form-check-label" for="paidCheck">Mark as Paid</label>
+        </div>
+
+        <!-- Activity -->
+        <div class="mb-3">
+          <label class="form-label">Activity</label>
+          <select name="activity" class="form-select">
+            <option value="">-- Select Activity --</option>
             {% for activity in activity_list %}
               <option value="{{ activity }}">{{ activity }}</option>
             {% endfor %}
           </select>
-          <label>Activity</label>
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-3">
+          <textarea name="notes" id="notes" rows="3" class="form-control" style="display:none;"></textarea>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="noteToggle">
+            <label class="form-check-label" for="noteToggle">Add a Note</label>
+          </div>
         </div>
       </div>
-      
 
+      <div class="card-footer text-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="ti ti-ticket me-2"></i>Create Pass
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
 
-
-
-    <!-- User Name Input with Custom Suggestions -->
-    <div class="form_row">
-
-        <div class="input-field">
-        <input type="text" name="user_name" id="user_name" autocomplete="off" required>
-        <label for="user_name">User Name</label>
-        </div>
-    
-        <!-- Suggestions container -->
-        <ul id="suggestions" class="suggestion-box"></ul>
-
-    </div>
-
-
-
-    <div class="form_row">
-
-        <label for="user_email">User Email:</label>
-        <input type="email" name="user_email" id="user_email" required>
-
-    </div>
-
-
-    <div class="form_row">
-
-        <label for="mobile_phone">Mobile Phone:</label>
-        <input type="tel" name="phone_number" id="mobile_phone" placeholder="e.g. 123-456-7890">
-
-    </div>
-    
-
-
-    <div class="form_row">
-
-        <label for="sold_amt">Sold Amount ($):</label>
-        <input type="number" name="sold_amt" id="sold_amt" value="{{ default_amt }}" min="0" step="1">
-
-    </div>
-
-    <div class="form_row">
-
-        <label for="sessionsQt">Sessions number:</label>
-        <input type="number" name="sessionsQt" id="sessionsQt" value="{{ default_qt }}" min="1" step="1">
-    
-    </div>
-
-
-
-
-    <!-- 📝 Add Note Switch -->
-    <div class="form_row">
-        <div class="switch">
-        <label>
-            Off
-            <input type="checkbox" id="noteToggle" onclick="toggleNoteBox()">
-            <span class="lever"></span>
-            Add a Note
-        </label>
-        </div>
-    </div>
-  
-    
-    <!-- ✏️ Notes Input -->
-    <div class="form_row" id="noteBox" style="display: none;">
-        <label for="notes">Note:</label>
-        <textarea id="notes" name="notes" rows="4" placeholder="Type or use voice input..." class="materialize-textarea" style="resize: vertical;"></textarea>
-    </div>
-    
-    <script>
-        function toggleNoteBox() {
-          const box = document.getElementById("noteBox");
-          const toggle = document.getElementById("noteToggle");
-          box.style.display = toggle.checked ? "block" : "none";
-        }
-    </script>
-      
-
-
-<br>
-
- 
-    <div class="form_row">
-
-        <button type="submit" class="btn waves-effect">
-            Create Pass
-        </button>  
-          
-    </div>
-
-
-</form>
-
-
-
-
-
-<!-- ✅ Working Auto-suggest & Autofill -->
+{% block scripts %}
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      var elems = document.querySelectorAll('select');
-      M.FormSelect.init(elems);  // ✅ Fix for dropdown rendering
-  
-      // Existing auto-suggest logic
-      let userCache = [];
-  
-      const nameInput = document.getElementById("user_name");
-      const emailInput = document.getElementById("user_email");
-      const phoneInput = document.getElementById("mobile_phone");
-      const suggestionBox = document.getElementById("suggestions");
-  
-      fetch("/users.json")
-        .then(response => response.json())
-        .then(data => userCache = data)
-        .catch(err => console.error("❌ Failed to load user cache:", err));
-  
-      nameInput.addEventListener("input", () => {
-        const input = nameInput.value.trim().toLowerCase();
-        if (input.length < 2) return suggestionBox.style.display = "none";
-  
-        const matches = userCache.filter(user =>
-          user.name && user.name.toLowerCase().startsWith(input)
-        ).slice(0, 5);
-  
-        suggestionBox.innerHTML = "";
-        if (matches.length > 0) {
-          matches.forEach(user => {
-            const li = document.createElement("li");
-            li.textContent = user.name;
-            li.dataset.email = user.email;
-            li.dataset.phone = user.phone;
-            li.addEventListener("click", () => {
-              nameInput.value = user.name;
-              emailInput.value = user.email;
-              phoneInput.value = user.phone;
-              suggestionBox.style.display = "none";
-            });
-            suggestionBox.appendChild(li);
+  // Toggle Notes visibility
+  function toggleNoteBox() {
+    const box = document.getElementById("notes");
+    const toggle = document.getElementById("noteToggle");
+    box.style.display = toggle.checked ? "block" : "none";
+  }
+  document.getElementById("noteToggle").addEventListener("change", toggleNoteBox);
+
+  // Auto-suggest and auto-fill
+  document.addEventListener("DOMContentLoaded", function () {
+    let userCache = [];
+
+    const nameInput = document.getElementById("user_name");
+    const emailInput = document.getElementById("user_email");
+    const phoneInput = document.getElementById("mobile_phone");
+    const suggestionBox = document.getElementById("suggestions");
+
+    fetch("/users.json")
+      .then(response => response.json())
+      .then(data => userCache = data)
+      .catch(err => console.error("❌ Failed to load user cache:", err));
+
+    nameInput.addEventListener("input", () => {
+      const input = nameInput.value.trim().toLowerCase();
+      if (input.length < 2) return suggestionBox.style.display = "none";
+
+      const matches = userCache.filter(user =>
+        user.name && user.name.toLowerCase().startsWith(input)
+      ).slice(0, 5);
+
+      suggestionBox.innerHTML = "";
+      if (matches.length > 0) {
+        matches.forEach(user => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "list-group-item list-group-item-action text-start";
+          btn.textContent = user.name;
+          btn.dataset.email = user.email;
+          btn.dataset.phone = user.phone;
+          btn.addEventListener("click", () => {
+            nameInput.value = user.name;
+            emailInput.value = user.email;
+            phoneInput.value = user.phone;
+            suggestionBox.style.display = "none";
           });
-          suggestionBox.style.display = "block";
-        } else {
-          suggestionBox.style.display = "none";
-        }
-      });
-  
-      document.addEventListener("click", (e) => {
-        if (!suggestionBox.contains(e.target) && e.target !== nameInput) {
-          suggestionBox.style.display = "none";
-        }
-      });
+          suggestionBox.appendChild(btn);
+        });
+        suggestionBox.style.display = "block";
+      } else {
+        suggestionBox.style.display = "none";
+      }
     });
+
+    document.addEventListener("click", (e) => {
+      if (!suggestionBox.contains(e.target) && e.target !== nameInput) {
+        suggestionBox.style.display = "none";
+      }
+    });
+  });
 </script>
-  
-
-
-
-
-
 {% endblock %}

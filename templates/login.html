@@ -1,44 +1,38 @@
 {% extends "base.html" %}
 
-{% set no_wrapper = True %}
-
-
 {% block title %}Admin Login{% endblock %}
 
 {% block content %}
-<div class="container login-container">
-  <div class="card z-depth-2 login-card">
-    <div class="card-content">
+<div class="row justify-content-center mt-6">
+  <div class="col-md-6 col-lg-4">
+    <form method="POST" autocomplete="on" class="card">
+      <div class="card-body">
+        <h2 class="card-title text-center mb-4">
+          <i class="ti ti-lock"></i> Admin Login
+        </h2>
 
-      <h4 class="login-header">
-        <span class="login-title-icon">
-          <i class="material-icons">admin_panel_settings</i>
-        </span>
-        <span class="login-title-text">Admin Login</span>
-      </h4>
-      
-
-      <br>
-
-      <form method="POST" autocomplete="on">
-        <div class="input-field">
-          <input id="email" name="email" type="email" inputmode="email" class="validate" required autocomplete="email">
-          <label for="email">Email</label>
+        <!-- Email Input -->
+        <div class="mb-3">
+          <label class="form-label" for="email">Email</label>
+          <input id="email" name="email" type="email" inputmode="email"
+                 class="form-control" required autocomplete="email" />
         </div>
 
-        <div class="input-field">
-          <input id="password" name="password" type="password" class="validate" required autocomplete="current-password">
-          <label for="password">Password</label>
+        <!-- Password Input -->
+        <div class="mb-3">
+          <label class="form-label" for="password">Password</label>
+          <input id="password" name="password" type="password"
+                 class="form-control" required autocomplete="current-password" />
         </div>
 
-        <div class="center-align login-btn">
-          <button type="submit" class="btn waves-effect">
-            <i class="material-icons right">login</i>
-            Login
+        <!-- Submit Button -->
+        <div class="form-footer">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="ti ti-login me-2"></i> Login
           </button>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}
