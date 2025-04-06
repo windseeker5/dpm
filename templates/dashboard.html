@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
@@ -35,14 +34,16 @@
     <h3 class="card-title">Active | Unpaid Passes</h3>
   </div>
   <div class="table-responsive">
-    <table class="table card-table table-vcenter">
+    <table class="table card-table table-vcenter" id="passTable">
       <thead>
         <tr>
           <th>Name</th>
-          <th>Created</th>
-          <th class="d-none d-md-table-cell">Activity</th>
-          <th>Amount</th>
-          <th>Remain</th>
+          <th>Activity</th>
+          <th class="d-none d-md-table-cell">Created</th>
+
+          <th class="d-none d-md-table-cell">Amount</th>
+
+          <th class="d-none d-md-table-cell">Remain</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -59,10 +60,15 @@
               {{ pass.user_name }}
             </a>
           </td>
-          <td>{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
-          <td class="d-none d-md-table-cell">{{ pass.activity }}</td>
-          <td class="{% if not pass.paid_ind %}text-danger fw-bold{% endif %}">${{ '%.2f' % pass.sold_amt }}</td>
-          <td>{{ pass.games_remaining }}</td>
+          <td>{{ pass.activity }}</td>
+          <td class="d-none d-md-table-cell">{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
+
+          <td class="d-none d-md-table-cell {% if not pass.paid_ind %}text-danger fw-bold{% endif %}">
+            ${{ '%.2f' % pass.sold_amt }}
+          </td>
+          
+
+          <td class="d-none d-md-table-cell">{{ pass.games_remaining }}</td>
           <td>
             <div class="dropdown">
               <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
@@ -85,40 +91,80 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Pagination controls (pure client-side JS-based) -->
+  <div class="card-footer d-flex align-items-center">
+    <p class="m-0 text-muted">Showing <span id="showingCount">0</span> of {{ passes|length }}</p>
+    <ul class="pagination m-0 ms-auto" id="paginationControls"></ul>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const input = document.getElementById("searchBox");
-    const rows = document.querySelectorAll("table tbody tr");
+document.addEventListener("DOMContentLoaded", function () {
+  const input = document.getElementById("searchBox");
+  const rows = Array.from(document.querySelectorAll("#passTable tbody tr"));
+  const tableBody = document.querySelector("#passTable tbody");
 
-    input.addEventListener("input", function () {
-      const filter = input.value.toLowerCase();
-      rows.forEach(row => {
-        const name = row.children[0].textContent.toLowerCase();
-        row.style.display = name.includes(filter) ? "" : "none";
-      });
-    });
+  const rowsPerPage = 25;
+  let currentPage = 1;
 
-    document.querySelectorAll(".redeem-btn").forEach(button => {
-      button.addEventListener("click", function (e) {
+  function renderTable(filteredRows) {
+    const totalRows = filteredRows.length;
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pagedRows = filteredRows.slice(start, end);
+
+    tableBody.innerHTML = "";
+    pagedRows.forEach(row => tableBody.appendChild(row));
+    document.getElementById("showingCount").textContent = pagedRows.length;
+
+    renderPagination(totalRows);
+  }
+
+  function renderPagination(total) {
+    const pageCount = Math.ceil(total / rowsPerPage);
+    const pagination = document.getElementById("paginationControls");
+    pagination.innerHTML = "";
+
+    for (let i = 1; i <= pageCount; i++) {
+      const li = document.createElement("li");
+      li.className = `page-item ${i === currentPage ? "active" : ""}`;
+      li.innerHTML = `<a href="#" class="page-link">${i}</a>`;
+      li.addEventListener("click", function (e) {
         e.preventDefault();
-        const passCode = this.dataset.pass;
-        if (confirm(`Redeem 1 game from pass #${passCode}?`)) {
-          window.location.href = `/redeem/${passCode}`;
-        }
+        currentPage = i;
+        renderTable(filterRows());
       });
-    });
-
-    // Auto-dismiss flash alerts after 5 seconds
-    const alerts = document.querySelectorAll(".alert");
-    if (alerts.length) {
-      setTimeout(() => {
-        alerts.forEach(alert => alert.remove());
-      }, 5000);
+      pagination.appendChild(li);
     }
+  }
+
+  function filterRows() {
+    const filter = input.value.toLowerCase();
+    return rows.filter(row => {
+      const name = row.children[0].textContent.toLowerCase();
+      return name.includes(filter);
+    });
+  }
+
+  input.addEventListener("input", () => {
+    currentPage = 1;
+    renderTable(filterRows());
   });
+
+  document.querySelectorAll(".redeem-btn").forEach(button => {
+    button.addEventListener("click", function (e) {
+      e.preventDefault();
+      const passCode = this.dataset.pass;
+      if (confirm(`Redeem 1 game from pass #${passCode}?`)) {
+        window.location.href = `/redeem/${passCode}`;
+      }
+    });
+  });
+
+  renderTable(rows);
+});
 </script>
 {% endblock %}

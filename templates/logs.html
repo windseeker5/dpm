@@ -2,279 +2,81 @@
 {% block title %}E-Bank Reporting{% endblock %}
 
 {% block content %}
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-  .search-bar-container {
-    display: flex;
-    align-items: center;
-    margin: 30px 0 20px;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #f0a869;
-    padding: 6px 12px;
-    box-shadow: 0 1px 2px rgba(255, 94, 94, 0.05);
-  }
-  .search-input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: 15px;
-    padding: 8px 10px;
-    background: transparent;
-  }
-  .search-icon {
-    font-size: 20px;
-    color: #999;
-    margin-right: 10px;
-  }
-</style>
-
-<div class="container z-depth-1" style="background: white; padding: 30px; border-radius: 20px; margin-top: 30px; margin-bottom: 30px;">
+<div class="container-xl my-4">
+  <h2 class="mb-4 text-center">Basic Reporting</h2>
 
 
-
-
-
-<h4 class="center-align">Basic Reporting</h4>
-
-<!-- Shared functions & colors -->
-<script>
-  const vibrantColors = ['#8be9fd', '#cba6f7', '#94b9ff', '#adb5bd'];
-
-  function trimEmail(email) {
-    return email?.split("@")[0] || "";
-  }
-
-  function getVibrantColor(index) {
-    return vibrantColors[index % vibrantColors.length];
-  }
-</script>
-
-
-<!-- Chart 1: Billed vs Earned -->
-<div style="height: {{ 100 + chart_data|length * 40 }}px;">
-  <canvas id="billedEarnedChart"></canvas>
-</div>
-
-<script>
-  const chartData = {{ chart_data | tojson }};
-  const labels = chartData.map(d => {
-    const [month, year] = d.label.split("/");
-    return `${new Date(year, month - 1).toLocaleString('default', { month: 'short' })} ${year}`;
-  });
-  const billed = chartData.map(d => d.billed);
-  const earned = chartData.map(d => d.earned);
-
-  const ctx = document.getElementById('billedEarnedChart').getContext('2d');
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Billed ($)',
-          data: billed,
-          backgroundColor: '#ffb86c',
-          borderRadius: 5
-        },
-        {
-          label: 'Earned ($)',
-          data: earned,
-          backgroundColor: '#8be9fd',
-          borderRadius: 5
-        }
-      ]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        title: {
-          display: true,
-          text: 'Monthly Revenue: Billed vs Earned',
-          font: { size: 18 }
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: $${ctx.raw.toFixed(2)}`
-          }
-        },
-        legend: {
-          position: 'top',
-          labels: { font: { size: 12 } }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Revenue ($)',
-            font: { size: 13 }
-          },
-          ticks: { font: { size: 12 } }
-        },
-        y: {
-          title: {
-            display: true,
-            text: 'Month',
-            font: { size: 13 }
-          },
-          ticks: { font: { size: 12 } }
-        }
-      }
-    }
-  });
-</script>
-
-
-
-<!-- Chart 2: Passes Created per Admin -->
-<div style="height: {{ 100 + creation_chart_data.labels|length * 40 }}px;">
-  <canvas id="creationChart"></canvas>
-</div>
-
-<script>
-  const creationLabels = {{ creation_chart_data.labels | tojson }};
-  const creationDatasets = {{ creation_chart_data.datasets | tojson }};
-
-  const creationCtx = document.getElementById('creationChart').getContext('2d');
-  new Chart(creationCtx, {
-    type: 'bar',
-    data: {
-      labels: creationLabels.map(label => {
-        const [month, year] = label.split("/");
-        return `${new Date(year, month - 1).toLocaleString('default', { month: 'short' })} ${year}`;
-      }),
-      datasets: creationDatasets.map((ds, i) => ({
-        label: trimEmail(ds.label),
-        data: ds.data,
-        backgroundColor: getVibrantColor(i),
-        borderRadius: 5
-      }))
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: { font: { size: 12 } }
-        },
-        title: {
-          display: true,
-          text: 'Passes Created per Admin per Month',
-          font: { size: 16 }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          title: { display: true, text: 'Passes Created', font: { size: 13 } },
-          ticks: { font: { size: 12 } }
-        },
-        y: {
-          title: { display: true, text: 'Month', font: { size: 13 } },
-          ticks: { font: { size: 12 } }
-        }
-      }
-    }
-  });
-</script>
-
-
-
-<!-- Chart 3: Games Redeemed per Admin -->
-<div style="height: {{ 100 + redemption_chart_data.labels|length * 40 }}px;">
-  <canvas id="redemptionChart"></canvas>
-</div>
-
-<script>
-  const redemptionLabels = {{ redemption_chart_data.labels | tojson }};
-  const redemptionDatasets = {{ redemption_chart_data.datasets | tojson }};
-
-  if (Array.isArray(redemptionDatasets) && redemptionDatasets.length > 0 && Array.isArray(redemptionLabels)) {
-    const formattedLabels = redemptionLabels.map(label => {
-      const [month, year] = label.split("/");
-      return `${new Date(year, month - 1).toLocaleString('default', { month: 'short' })} ${year}`;
-    });
-
-    const formattedDatasets = redemptionDatasets.map((ds, i) => ({
-      label: trimEmail(ds.label),
-      data: ds.data,
-      backgroundColor: getVibrantColor(i),
-      borderRadius: 5
-    }));
-
-    const ctx = document.getElementById('redemptionChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: formattedLabels,
-        datasets: formattedDatasets
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'top',
-            labels: { font: { size: 12 } }
-          },
-          title: {
-            display: true,
-            text: 'Games Redeemed per Admin per Month',
-            font: { size: 16 }
-          }
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Games Redeemed',
-              font: { size: 13 }
-            },
-            ticks: { font: { size: 12 } }
-          },
-          y: {
-            title: {
-              display: true,
-              text: 'Month',
-              font: { size: 13 }
-            },
-            ticks: { font: { size: 12 } }
-          }
-        }
-      }
-    });
-  }
-</script>
-
-
-
-
-<br><br><br>
-
- 
-  <!-- 🧾 Matched E-Payments -->
-  <h4 class="center-align">Matched E-Payments</h4>
-  <form method="get" action="{{ url_for('reporting') }}">
-    <div class="search-bar-container">
-      <i class="material-icons search-icon">search</i>
-      <input type="text" class="search-input" name="search_epay" placeholder="Search E-Payments..." value="{{ search_epay }}">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Sales Over Time by Activity</h3>
     </div>
+    <div class="card-body">
+      <canvas id="activityChart" height="120"></canvas>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const ctx = document.getElementById('activityChart').getContext('2d');
+  
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: {{ activity_chart_data.labels | tojson }},
+          datasets: {{ activity_chart_data.datasets | tojson }}
+        },
+        options: {
+          responsive: true,
+          tension: 0.4,
+          interaction: {
+            intersect: false,
+            mode: 'index',
+          },
+          plugins: {
+            legend: {
+              labels: {
+                usePointStyle: true,
+              },
+            },
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Date'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Sold Amount ($)'
+              },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    });
+  </script>
+  
+
+
+
+
+
+
+
+  <!-- Matched E-Payments -->
+  <h3 class="mt-5">Matched E-Payments</h3>
+  <form method="get" action="{{ url_for('reporting') }}" class="mb-3">
+    <input type="text" class="form-control" name="search_epay" placeholder="Search E-Payments..." value="{{ search_epay }}">
   </form>
-  <div class="responsive-table">
-    <table class="pass-table">
-      <thead>
-        <tr><th>Date</th><th>From</th><th>Bank Name</th><th>Amount</th><th>Pass Name</th><th>Pass ID</th><th>Score</th><th>Result</th><th>Paid?</th></tr>
-      </thead>
+
+  <div class="card table-responsive mb-4">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th>Date</th><th>From</th><th>Bank</th><th>Amount</th><th>Name</th><th>Pass ID</th><th>Score</th><th>Result</th><th>Paid?</th></tr></thead>
       <tbody>
         {% for log in ebank_logs %}
         <tr>
@@ -286,46 +88,32 @@
           <td>{{ log.matched_pass_id or '-' }}</td>
           <td>{{ "%.2f"|format(log.name_score) }}</td>
           <td>{{ log.result }}</td>
-          <td style="color: green; font-size: 20px;">✔️</td>
+          <td><span class="text-success">✔️</span></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
   {% if pagination_epay.pages > 1 %}
-  <ul class="pagination center-align">
-    {% for p in range(1, pagination_epay.pages + 1) %}
-    <li class="waves-effect {% if pagination_epay.page == p %}active{% endif %}">
-      <a href="{{ url_for('reporting', page_epay=p, search_epay=search_epay) }}">{{ p }}</a>
-    </li>
-    {% endfor %}
-  </ul>
+  <div class="text-center">
+    <div class="pagination">
+      {% for p in range(1, pagination_epay.pages + 1) %}
+        <a href="{{ url_for('reporting', page_epay=p, search_epay=search_epay) }}"
+           class="page-link {% if pagination_epay.page == p %}active{% endif %}">{{ p }}</a>
+      {% endfor %}
+    </div>
+  </div>
   {% endif %}
 
-
-
-
-
-
-
-  <br><br><br>
-
-
-
-
-
-
-
-  <!-- 🎫 Pass Log -->
-  <h4 class="center-align" style="margin-top: 60px;">Pass Log</h4>
-  <form method="get" action="{{ url_for('reporting') }}">
-    <div class="search-bar-container">
-      <i class="material-icons search-icon">search</i>
-      <input type="text" class="search-input" name="search_pass" placeholder="Search Pass Log..." value="{{ search_pass }}">
-    </div>
+  <!-- Pass Log -->
+  <h3 class="mt-5">Pass Log</h3>
+  <form method="get" action="{{ url_for('reporting') }}" class="mb-3">
+    <input type="text" class="form-control" name="search_pass" placeholder="Search Pass Log..." value="{{ search_pass }}">
   </form>
-  <div class="responsive-table">
-    <table class="pass-table">
+
+  <div class="card table-responsive mb-4">
+    <table class="table table-vcenter card-table">
       <thead><tr><th>Date</th><th>User</th><th>Email</th><th>Amount</th><th>Games Left</th></tr></thead>
       <tbody>
         {% for p in passes %}
@@ -340,39 +128,26 @@
       </tbody>
     </table>
   </div>
+
   {% if pagination_pass.pages > 1 %}
-  <ul class="pagination center-align">
-    {% for p in range(1, pagination_pass.pages + 1) %}
-    <li class="waves-effect {% if pagination_pass.page == p %}active{% endif %}">
-      <a href="{{ url_for('reporting', page_pass=p, search_pass=search_pass) }}">{{ p }}</a>
-    </li>
-    {% endfor %}
-  </ul>
+  <div class="text-center">
+    <div class="pagination">
+      {% for p in range(1, pagination_pass.pages + 1) %}
+        <a href="{{ url_for('reporting', page_pass=p, search_pass=search_pass) }}"
+           class="page-link {% if pagination_pass.page == p %}active{% endif %}">{{ p }}</a>
+      {% endfor %}
+    </div>
+  </div>
   {% endif %}
 
-
-
-
-
-
-  <br><br><br>
-
-
-
-
-
-
-
-  <!-- 📧 Email Log -->
-  <h4 class="center-align" style="margin-top: 60px;">Email Log</h4>
-  <form method="get" action="{{ url_for('reporting') }}">
-    <div class="search-bar-container">
-      <i class="material-icons search-icon">search</i>
-      <input type="text" class="search-input" name="search_email" placeholder="Search Email Log..." value="{{ search_email }}">
-    </div>
+  <!-- Email Log -->
+  <h3 class="mt-5">Email Log</h3>
+  <form method="get" action="{{ url_for('reporting') }}" class="mb-3">
+    <input type="text" class="form-control" name="search_email" placeholder="Search Email Log..." value="{{ search_email }}">
   </form>
-  <div class="responsive-table">
-    <table class="pass-table">
+
+  <div class="card table-responsive mb-4">
+    <table class="table table-vcenter card-table">
       <thead><tr><th>Date</th><th>To</th><th>Subject</th><th>Pass Code</th><th>Result</th></tr></thead>
       <tbody>
         {% for e in email_logs %}
@@ -387,14 +162,18 @@
       </tbody>
     </table>
   </div>
+
   {% if pagination_email.pages > 1 %}
-  <ul class="pagination center-align">
-    {% for p in range(1, pagination_email.pages + 1) %}
-    <li class="waves-effect {% if pagination_email.page == p %}active{% endif %}">
-      <a href="{{ url_for('reporting', page_email=p, search_email=search_email) }}">{{ p }}</a>
-    </li>
-    {% endfor %}
-  </ul>
+  <div class="text-center">
+    <div class="pagination">
+      {% for p in range(1, pagination_email.pages + 1) %}
+        <a href="{{ url_for('reporting', page_email=p, search_email=search_email) }}"
+           class="page-link {% if pagination_email.page == p %}active{% endif %}">{{ p }}</a>
+      {% endfor %}
+    </div>
+  </div>
   {% endif %}
+
 </div>
+
 {% endblock %}
