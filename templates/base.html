@@ -10,6 +10,12 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+
+
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
   <link href="{{ url_for('static', filename='tabler/css/tabler-flags.min.css') }}" rel="stylesheet"/>
@@ -33,53 +39,71 @@
     <div class="container-xl d-flex justify-content-between align-items-center">
 
       <!-- Left: Logo + Org Name -->
-      <a href="{{ url_for('dashboard') }}" class="d-flex align-items-center text-white text-decoration-none">
+      <a href="https://minipass.me" class="d-flex align-items-center text-white text-decoration-none">
+        
         <img src="{{ url_for('static', filename='logo.png') }}"
         alt="Minipass Logo"
         class="d-none d-md-inline"
-        style="height: 20px; width: auto;">
+        style="height: 17px; width: auto;">
 
       </a>
     
 
       <span class="org-name-responsive ms-2">{{ ORG_NAME }}</span>
 
-      <!-- Right: Admin Profile -->
-      {% if session.get("admin") %}
-      <div class="navbar-nav flex-row align-items-center">
-        <div class="nav-item dropdown">
-          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
-            <span class="avatar avatar-sm rounded-circle"
-                  style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')"></span>
-            <div class="d-none d-xl-block ps-2">
-              <div class="text-white">{{ session['admin'] }}</div>
-              <div class="text-white small">Admin</div>
+        <!-- Right: Admin Profile -->
+        {% if session.get("admin") %}
+        <div class="navbar-nav flex-row align-items-center">
+          <div class="nav-item dropdown">
+            <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+              <span class="avatar avatar-sm rounded-circle"
+                    style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')"></span>
+              <div class="d-none d-xl-block ps-2">
+                <div class="text-white">{{ session['admin'] }}</div>
+                <div class="text-white small">Admin</div>
+              </div>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+              <a href="{{ url_for('setup') }}" class="dropdown-item">
+                <i class="ti ti-settings me-2"></i>Settings
+              </a>
+              <a href="{{ url_for('reporting') }}" class="dropdown-item">
+                <i class="ti ti-chart-bar me-2"></i>Logs
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
+                <i class="ti ti-logout me-2"></i>Logout
+              </a>
             </div>
-          </a>
-          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-            <a href="{{ url_for('setup') }}" class="dropdown-item">
-              <i class="ti ti-settings me-2"></i>Settings
-            </a>
-            <div class="dropdown-divider"></div>
-            <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
-              <i class="ti ti-logout me-2"></i>Logout
-            </a>
           </div>
         </div>
-      </div>
-      {% endif %}
+        {% endif %}
+
     
     </div>
     
 
   </header>
-
-
+ 
 
   <!-- White Second Navbar -->
-  <div class="navbar navbar-expand-md navbar-light bg-white border-bottom">
-    <div class="container-xl">
+<div class="navbar navbar-expand-md navbar-light bg-white border-bottom">
+  <div class="container-xl">
+    
+    <!-- Toggler for mobile -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-navbar" aria-controls="main-navbar" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Collapsible menu -->
+    <div class="collapse navbar-collapse" id="main-navbar">
       <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('dashboard') }}">
+            <i class="ti ti-home"></i>
+            <span>Home</span>
+          </a>
+        </li>
         <li class="nav-item">
           <a class="nav-link" href="#">
             <i class="ti ti-activity"></i>
@@ -99,18 +123,14 @@
           </a>
         </li>
       </ul>
-
-      <form class="ms-auto">
-        <div class="input-icon">
-          <span class="input-icon-addon">
-            <i class="ti ti-search"></i>
-          </span>
-          <input type="text" class="form-control" placeholder="Search..." />
-        </div>
-      </form>
     </div>
-  </div>
 
+  </div>
+</div>
+
+
+
+  
   <!-- Page content -->
   <div class="page-wrapper">
     <div class="page-body">

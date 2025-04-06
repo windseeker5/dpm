@@ -39,6 +39,19 @@ from datetime import datetime, timezone
 from utils import get_setting
 
 
+from collections import defaultdict
+ 
+
+
+
+
+
+
+
+
+
+
+
 
 hostname = socket.gethostname()
 is_dev = hostname == "archlinux" or "local" in hostname
@@ -575,9 +588,12 @@ def login():
 
 
 
+
+
+
 @app.route("/reporting")
 def reporting():
-    from sqlalchemy import extract, func, case
+    from sqlalchemy import func
     from collections import defaultdict
 
     if "admin" not in session:
@@ -622,72 +638,30 @@ def reporting():
         )
     pagination_email = email_query.order_by(EmailLog.timestamp.desc()).paginate(page=page_email, per_page=per_page, error_out=False)
 
-    # === 4. Chart 1: Billed vs Earned ===
-    monthly_data = db.session.query(
-        extract('year', Pass.pass_created_dt).label('year'),
-        extract('month', Pass.pass_created_dt).label('month'),
-        func.sum(Pass.sold_amt).label('billed'),
-        func.sum(case((Pass.paid_ind == True, Pass.sold_amt), else_=0)).label('earned')
-    ).group_by('year', 'month').order_by('year', 'month').all()
+    # === 4. NEW CHART: SOLD AMOUNT per ACTIVITY per DATE ===
+    raw_data = db.session.query(
+        Pass.activity,
+        func.date(Pass.pass_created_dt),  # extracts just YYYY-MM-DD
+        func.sum(Pass.sold_amt)
+    ).group_by(Pass.activity, func.date(Pass.pass_created_dt))\
+     .order_by(func.date(Pass.pass_created_dt)).all()
 
-    chart_data = [
-        {
-            "label": f"{int(row.month)}/{int(row.year)}",
-            "billed": float(row.billed),
-            "earned": float(row.earned)
-        } for row in monthly_data
-    ]
+    # Structure chart data
+    activity_grouped = defaultdict(lambda: defaultdict(float))
+    all_dates = set()
 
-    # === 5. Chart 2: Passes Created per Admin ===
-    creation_data = db.session.query(
-        extract('year', Pass.pass_created_dt).label('year'),
-        extract('month', Pass.pass_created_dt).label('month'),
-        Admin.email,
-        func.count(Pass.id)
-    ).join(Admin, Admin.id == Pass.created_by)\
-     .group_by('year', 'month', Admin.email)\
-     .order_by('year', 'month').all()
+    for activity, date_str, total in raw_data:
+        activity_grouped[activity][str(date_str)] += float(total or 0)
+        all_dates.add(str(date_str))
 
-    creation_summary = defaultdict(lambda: defaultdict(int))
-    for row in creation_data:
-        month_str = f"{int(row.month)}/{int(row.year)}"
-        creation_summary[month_str][row.email] = row[3]
-
-    admin_emails = sorted({email for data in creation_summary.values() for email in data})
-    creation_chart_data = {
-        "labels": sorted(creation_summary.keys(), key=lambda x: (int(x.split("/")[1]), int(x.split("/")[0]))),
-        "admins": admin_emails,
+    sorted_dates = sorted(all_dates)
+    activity_chart_data = {
+        "labels": sorted_dates,
         "datasets": [
             {
-                "label": email,
-                "data": [creation_summary[month].get(email, 0) for month in sorted(creation_summary.keys())],
-            } for email in admin_emails
-        ]
-    }
-
-    # === 6. Chart 3: Games Redeemed per Admin ===
-    redemption_data = db.session.query(
-        extract('year', Redemption.date_used).label('year'),
-        extract('month', Redemption.date_used).label('month'),
-        Redemption.redeemed_by,
-        func.count(Redemption.id)
-    ).group_by('year', 'month', Redemption.redeemed_by)\
-     .order_by('year', 'month').all()
-
-    redemption_summary = defaultdict(lambda: defaultdict(int))
-    for row in redemption_data:
-        month_str = f"{int(row.month)}/{int(row.year)}"
-        redemption_summary[month_str][row.redeemed_by] = row[3]
-
-    redeem_admins = sorted({email for data in redemption_summary.values() for email in data})
-    redemption_chart_data = {
-        "labels": sorted(redemption_summary.keys(), key=lambda x: (int(x.split("/")[1]), int(x.split("/")[0]))),
-        "admins": redeem_admins,
-        "datasets": [
-            {
-                "label": email,
-                "data": [redemption_summary[month].get(email, 0) for month in sorted(redemption_summary.keys())],
-            } for email in redeem_admins
+                "label": activity,
+                "data": [activity_grouped[activity].get(date, 0) for date in sorted_dates]
+            } for activity in activity_grouped
         ]
     }
 
@@ -706,14 +680,10 @@ def reporting():
         search_pass=search_pass,
         search_email=search_email,
 
-        chart_data=chart_data,
-        creation_chart_data=creation_chart_data,
-        redemption_chart_data=redemption_chart_data,
+        activity_chart_data=activity_chart_data,
 
         no_wrapper=True
     )
-
-
 
 
 

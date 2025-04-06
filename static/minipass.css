@@ -1,31 +1,27 @@
-/* ====== CUSTOMIZE NAVBAR BACKGROUND ====== */
-.navbar-primary {
-  background-color: #0e2627; /* Change this color to your preferred one */
-}
-
-/* ====== ORG_NAME Styling ====== */
+/* -------------------------------------------------
+   🏒 ORG TITLE 
+-------------------------------------------------- */
 .org-name-responsive {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-weight: 700;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
-  background: linear-gradient(90deg, #ffffff, #e0e0e0);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
-  white-space: nowrap;
-  font-size: 1.2rem; /* Default size on small screen */
-}
-
-/* Medium screens and up */
-@media (min-width: 768px) {
-  .org-name-responsive {
-    font-size: 1.6rem;
+    font-family: "Anton", sans-serif;
+    font-weight: 400;
+    font-size: 2em;
+    font-style: normal;
+  
+    background: linear-gradient(to right, #fffee9, #bc6ff1, #ed2988);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+  
+    text-shadow: 0 1px 1px rgba(153, 0, 0, 0.3);
   }
-}
+  
 
-/* Large screens and up */
-@media (min-width: 1200px) {
-  .org-name-responsive {
-    font-size: 2rem;
-  }
+
+/* 📱 Smaller size on small screens */
+@media (max-width: 576px) {
+    .org-name-responsive {
+        font-size: 1.4rem;
+        margin-left: 0.5rem;
+    }
 }
