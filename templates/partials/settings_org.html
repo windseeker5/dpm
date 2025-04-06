@@ -1,24 +1,143 @@
-<h3 class="mb-3">Organization Settings</h3>
+<!-- Organization Settings with Tabler.io -->
+
+
+
 <div class="card mb-4">
   <div class="card-body">
+
+    <!-- Organization Name -->
     <div class="mb-3">
       <label class="form-label">Organization Name</label>
-      <input type="text" name="ORG_NAME" class="form-control" value="{{ settings.ORG_NAME }}">
+      <input type="text" name="ORG_NAME" class="form-control" value="{{ settings.get('ORG_NAME', '') }}">
     </div>
 
+    <!-- Call-Back Days -->
+    <div class="mb-3">
+      <label class="form-label">Call-Back Delay (days) if unpaid</label>
+      <input type="number" name="CALL_BACK_DAYS" class="form-control" min="0" value="{{ settings.get('CALL_BACK_DAYS', '0') }}">
+    </div>
+
+
+
+    <!-- Logo Upload -->
     <div class="mb-3">
       <label class="form-label">Upload Logo</label>
-      {% if settings.ORG_LOGO_PATH %}
-        <div class="mb-2">
-          <img src="{{ url_for('static', filename=settings.ORG_LOGO_PATH) }}" height="60" alt="Org Logo">
-        </div>
-      {% endif %}
-      <input type="file" name="ORG_LOGO_FILE" class="form-control">
+    
+      <div class="mb-2">
+        <img id="logo-preview" 
+             src="{{ url_for('static', filename='uploads/' ~ settings.LOGO_FILENAME) if settings.LOGO_FILENAME else '' }}" 
+             alt="Logo Preview"
+             style="max-height: 80px; display: {{ 'block' if settings.LOGO_FILENAME else 'none' }};">
+      </div>
+    
+      <input type="file" name="ORG_LOGO_FILE" class="form-control" accept="image/*" id="logo-file-input">
+    </div>
+    
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const fileInput = document.getElementById("logo-file-input");
+        const preview = document.getElementById("logo-preview");
+      
+        if (fileInput && preview) {
+          fileInput.addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith("image/")) {
+              const reader = new FileReader();
+              reader.onload = function (e) {
+                preview.src = e.target.result;
+                preview.style.display = "block";
+              };
+              reader.readAsDataURL(file);
+            } else {
+              preview.src = "";
+              preview.style.display = "none";
+            }
+          });
+        }
+      });
+      </script>
+      
+
+
+
+    <!-- Activity List -->
+    <div class="mb-3">
+      <label class="form-label">Define Activity List</label>
+      <input id="activities" name="activities" value='{{ settings.ACTIVITY_LIST or "[]" }}' class="form-control" placeholder="Add activity and hit Enter">
+    </div>
+
+    <!-- Pass Defaults -->
+    <div class="mb-3">
+      <label class="form-label">Default Pass Amount ($)</label>
+      <input type="number" id="default_pass_amount" name="default_pass_amount" class="form-control" value="{{ settings.DEFAULT_PASS_AMOUNT or 50 }}" step="0.01" min="0">
     </div>
 
     <div class="mb-3">
-      <label class="form-label">Email Info Text (used for payment instructions)</label>
-      <textarea name="EMAIL_INFO_TEXT" class="form-control" rows="4">{{ settings.EMAIL_INFO_TEXT }}</textarea>
+      <label class="form-label">Default Number of Sessions</label>
+      <input type="number" id="default_session_qt" name="default_session_qt" class="form-control" value="{{ settings.DEFAULT_SESSION_QT or 4 }}" step="1" min="1">
     </div>
+
+
+
+
+    <div class="mb-3">
+      <label class="form-label">HTML Information Text (e.g. payment instructions)</label>
+      <input type="hidden" name="email_info_text" id="email_info_text">
+      <div id="quill-editor" style="height: 300px;">{{ settings.EMAIL_INFO_TEXT|safe }}</div>
+    </div>
+    
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const quill = new Quill("#quill-editor", {
+          theme: "snow",
+          modules: {
+            toolbar: [
+              ['bold', 'italic', 'underline'],
+              [{ list: 'ordered' }, { list: 'bullet' }],
+              ['link', 'code-block']
+            ]
+          }
+        });
+    
+        const hiddenInput = document.getElementById("email_info_text");
+    
+        // Populate hidden input on form submit
+        document.querySelector("form").addEventListener("submit", function () {
+          hiddenInput.value = quill.root.innerHTML;
+        });
+      });
+    </script>
+    
+
+
+
+
+
+
   </div>
 </div>
+
+<!-- 🏷 Tagify for Activity Input -->
+<script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" />
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("activities");
+    let tags = [];
+    try {
+      tags = JSON.parse(input.value);
+    } catch (e) {
+      console.warn("⚠️ Could not parse ACTIVITY_LIST JSON:", input.value);
+    }
+    input.value = "";
+    const tagify = new Tagify(input, {
+      dropdown: { enabled: 0 }
+    });
+    if (Array.isArray(tags)) {
+      tagify.addTags(tags);
+    }
+  });
+</script>
