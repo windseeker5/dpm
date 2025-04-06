@@ -17,6 +17,24 @@
   }
   
 
+  .alert {
+    z-index: 1055;
+  }
+
+  
+  .position-sticky.top-0 {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    background: white;
+    border-radius: 0.25rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+  
+
+
+
+
+
 
 /* 📱 Smaller size on small screens */
 @media (max-width: 576px) {
@@ -25,3 +43,5 @@
         margin-left: 0.5rem;
     }
 }
+
+

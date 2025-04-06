@@ -2,20 +2,43 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row mb-3 d-none d-md-flex">
-  <div class="col-auto">
-    <a href="{{ url_for('create_pass') }}" class="btn btn-primary">
-      <i class="ti ti-plus"></i> Add New
-    </a>
-  </div>
-  <div class="col-auto">
-    <a href="{{ url_for('scan_qr') }}" class="btn btn-secondary">
-      <i class="ti ti-scan"></i> Scan Pass
-    </a>
-  </div>
-  <div class="col-auto ms-auto">
-    <div class="input-group">
-      <input type="text" id="searchBox" class="form-control" placeholder="Search by User Name..." />
+<!-- Header card for controls -->
+<div class="card mb-3">
+  <div class="card-body">
+    <h3 class="card-title mb-3">
+      <i class="ti ti-filter me-2"></i>Manage Passes
+    </h3>
+    <div class="row g-2 align-items-center">
+      <!-- Action buttons -->
+      <div class="col-12 col-md-auto">
+        <a href="{{ url_for('create_pass') }}" class="btn btn-primary w-100 w-md-auto">
+          <i class="ti ti-plus"></i> Add New
+        </a>
+      </div>
+      <div class="col-12 col-md-auto">
+        <a href="{{ url_for('scan_qr') }}" class="btn btn-secondary w-100 w-md-auto">
+          <i class="ti ti-scan"></i> Scan Pass
+        </a>
+      </div>
+
+      <!-- Search (stacked under buttons on mobile) -->
+
+      <div class="col-12 col-md">
+        <div class="input-icon">
+          <span class="input-icon-addon">
+            <i class="ti ti-search"></i>
+          </span>
+          <input type="text"
+                 id="searchBox"
+                 class="form-control"
+                 placeholder="Search by User Name..." />
+        </div>
+      </div>
+      
+
+
+
+
     </div>
   </div>
 </div>
@@ -23,7 +46,10 @@
 <!-- Floating action button for mobile -->
 <div class="d-md-none">
   <div class="position-fixed bottom-0 end-0 m-4">
-    <a href="{{ url_for('create_pass') }}" class="btn btn-primary btn-lg rounded-circle shadow" title="Add New Pass">
+    <a href="{{ url_for('create_pass') }}"
+       class="btn btn-primary rounded-circle shadow d-flex justify-content-center align-items-center"
+       title="Add New Pass"
+       style="width: 56px; height: 56px;">
       <i class="ti ti-plus"></i>
     </a>
   </div>
@@ -40,9 +66,7 @@
           <th>Name</th>
           <th>Activity</th>
           <th class="d-none d-md-table-cell">Created</th>
-
           <th class="d-none d-md-table-cell">Amount</th>
-
           <th class="d-none d-md-table-cell">Remain</th>
           <th>Actions</th>
         </tr>
@@ -62,12 +86,9 @@
           </td>
           <td>{{ pass.activity }}</td>
           <td class="d-none d-md-table-cell">{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
-
           <td class="d-none d-md-table-cell {% if not pass.paid_ind %}text-danger fw-bold{% endif %}">
             ${{ '%.2f' % pass.sold_amt }}
           </td>
-          
-
           <td class="d-none d-md-table-cell">{{ pass.games_remaining }}</td>
           <td>
             <div class="dropdown">
@@ -92,7 +113,7 @@
     </table>
   </div>
 
-  <!-- Pagination controls (pure client-side JS-based) -->
+  <!-- Pagination controls -->
   <div class="card-footer d-flex align-items-center">
     <p class="m-0 text-muted">Showing <span id="showingCount">0</span> of {{ passes|length }}</p>
     <ul class="pagination m-0 ms-auto" id="paginationControls"></ul>
@@ -165,6 +186,11 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   renderTable(rows);
+
+  // Auto-focus search input on mobile
+  if (window.innerWidth < 768) {
+    input.focus();
+  }
 });
 </script>
 {% endblock %}

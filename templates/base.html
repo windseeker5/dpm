@@ -27,6 +27,8 @@
   {% block head %}{% endblock %}
 </head>
 <body>
+
+
 <div class="page">
   <!-- Top Navbar -->
   <header class="navbar navbar-expand-md navbar-dark bg-gray-800 d-print-none">
@@ -66,6 +68,41 @@
 
 
 
+<!-- ✅ Flash block goes here -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="position-fixed start-50 translate-middle-x" style="top: 1.5rem; width: 100%; max-width: 600px; z-index: 1055; pointer-events: none;">
+      {% for category, message in messages %}
+        <div class="alert alert-important alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show shadow-lg mx-auto"
+             role="alert"
+             style="background: #fff; pointer-events: auto; border: 1px solid rgba(0,0,0,0.1); border-left: 5px solid {% if category == 'success' %}#28a745{% else %}#dc3545{% endif %};">
+          <div class="d-flex align-items-center">
+            <i class="ti ti-info-circle me-2"></i>
+            <div class="flex-grow-1">{{ message }}</div>
+            <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const alerts = document.querySelectorAll(".alert");
+    alerts.forEach(alert => {
+      setTimeout(() => {
+        alert.classList.remove("show");
+        setTimeout(() => alert.remove(), 300); // match fade transition
+      }, 5000); // 5 seconds
+    });
+  });
+</script>
+
+
+
+
 
   <!-- Secondary Navbar -->
 <div class="navbar navbar-expand-md navbar-light bg-white border-bottom">
@@ -89,25 +126,7 @@
 </div>
 
 
-
-
-  <!-- Flash messages -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="container-xl mt-3" id="flash-container">
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm border-start border-5 border-{{ category }}" role="alert">
-            <div class="d-flex">
-              <div class="me-2"><i class="ti ti-info-circle"></i></div>
-              <div>{{ message|safe }}</div>
-              <a class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></a>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
-
+  
   <!-- Page content -->
   <div class="page-wrapper">
     <div class="page-body">
