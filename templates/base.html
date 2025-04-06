@@ -17,48 +17,43 @@
   <link href="{{ url_for('static', filename='tabler/css/demo.min.css') }}" rel="stylesheet"/>
   <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
 
+  <!-- Custom Styles (must come last) -->
+  <link href="{{ url_for('static', filename='minipass.css') }}" rel="stylesheet">
+
+
 
   {% block head %}{% endblock %}
 </head>
 <body>
 <div class="page">
 
+  <!-- Top Dark Blue Navbar -->
+  <header class="navbar navbar-expand-md navbar-dark bg-gray-800 d-print-none">
+ 
+    <div class="container-xl d-flex justify-content-between align-items-center">
 
+      <!-- Left: Logo + Org Name -->
+      <a href="{{ url_for('dashboard') }}" class="d-flex align-items-center text-white text-decoration-none">
+        <img src="{{ url_for('static', filename='logo.png') }}"
+        alt="Minipass Logo"
+        class="d-none d-md-inline"
+        style="height: 20px; width: auto;">
 
-  <!-- Simple Navigation Bar -->
-  <header class="navbar navbar-expand-md navbar-light bg-white border-bottom d-print-none">
-    <div class="container-xl">
-
-
-      <!-- Logo -->
-      <a href="{{ url_for('dashboard') }}" class="navbar-brand d-flex align-items-center gap-2">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Minipass Logo" height="30" style="max-width: 120px;">
-        <span class="fw-bold text-dark d-none d-md-inline">{{ ORG_NAME }}</span>
       </a>
-      
+    
 
+      <span class="org-name-responsive ms-2">{{ ORG_NAME }}</span>
 
-      
-      <!-- Admin Avatar & Name -->
+      <!-- Right: Admin Profile -->
       {% if session.get("admin") %}
-      <div class="navbar-nav flex-row order-md-last align-items-center">
-      
-        <!-- Theme Toggle Button -->
-        <div class="nav-item px-2">
-          <a href="#" id="theme-toggle" class="nav-link px-0" title="Toggle dark mode" data-bs-toggle="tooltip">
-            <i class="ti ti-moon theme-icon theme-light-only"></i>
-            <i class="ti ti-sun theme-icon theme-dark-only" style="display: none;"></i>
-          </a>
-        </div>
-
-      
-        <!-- Admin Avatar & Name -->
+      <div class="navbar-nav flex-row align-items-center">
         <div class="nav-item dropdown">
           <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
-            <span class="avatar avatar-sm rounded-circle" style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')"></span>
+            <span class="avatar avatar-sm rounded-circle"
+                  style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')"></span>
             <div class="d-none d-xl-block ps-2">
-              <div>{{ session['admin'] }}</div>
-              <div class="text-muted small">Admin</div>
+              <div class="text-white">{{ session['admin'] }}</div>
+              <div class="text-white small">Admin</div>
             </div>
           </a>
           <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
@@ -73,12 +68,48 @@
         </div>
       </div>
       {% endif %}
-      
-
-
- 
+    
     </div>
+    
+
   </header>
+
+
+
+  <!-- White Second Navbar -->
+  <div class="navbar navbar-expand-md navbar-light bg-white border-bottom">
+    <div class="container-xl">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" href="#">
+            <i class="ti ti-activity"></i>
+            <span>Activities</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">
+            <i class="ti ti-messages"></i>
+            <span>Communications</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">
+            <i class="ti ti-clipboard-list"></i>
+            <span>Surveys</span>
+          </a>
+        </li>
+      </ul>
+
+      <form class="ms-auto">
+        <div class="input-icon">
+          <span class="input-icon-addon">
+            <i class="ti ti-search"></i>
+          </span>
+          <input type="text" class="form-control" placeholder="Search..." />
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Page content -->
   <div class="page-wrapper">
@@ -112,40 +143,6 @@
 
 <!-- Tabler Core JS -->
 <script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const toggleBtn = document.getElementById("theme-toggle");
-
-    if (toggleBtn) {
-      toggleBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-
-        const body = document.body;
-        const isDark = body.classList.toggle("theme-dark");
-
-        // Toggle icon visibility
-        const moonIcon = toggleBtn.querySelector(".theme-light-only");
-        const sunIcon = toggleBtn.querySelector(".theme-dark-only");
-
-        if (isDark) {
-          moonIcon.style.display = "none";
-          sunIcon.style.display = "inline";
-        } else {
-          moonIcon.style.display = "inline";
-          sunIcon.style.display = "none";
-        }
-      });
-    }
-  });
-</script>
-
-
-
-
-
-
-
 {% block scripts %}{% endblock %}
 </body>
 </html>
