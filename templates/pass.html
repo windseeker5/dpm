@@ -1,47 +1,55 @@
 {% extends "base.html" %}
-
 {% block title %}Pass Details{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-4">
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h3 class="card-title">Digital Pass</h3>
-        <span class="badge bg-{{ 'success' if hockey_pass.paid_ind else 'danger' }}">
-          {{ 'Paid' if hockey_pass.paid_ind else 'Unpaid' }}
-        </span>
+<div class="container-xl mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+
+      <!-- ✅ QR Code Lightbox -->
+      <div class="text-center mb-4">
+        <a href="data:image/png;base64,{{ qr_data }}" data-bs-toggle="modal" data-bs-target="#qrModal">
+          <img src="data:image/png;base64,{{ qr_data }}" alt="QR Code" class="img-thumbnail" style="max-width: 180px;" />
+        </a>
+        <div class="small text-muted">Click to enlarge QR</div>
       </div>
-      <div class="card-body text-center">
-        <!-- QR Code -->
-        <img src="{{ url_for('static', filename='qrcodes/' + hockey_pass.pass_code + '.png') }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;" />
 
-        <h4 class="mb-1">{{ hockey_pass.user_name }}</h4>
-        <p class="text-muted mb-2">{{ hockey_pass.user_email }}</p>
+      <!-- ✅ Owner Card Block -->
+      {% include 'email_blocks/owner_card_inline.html' %}
 
-        <div class="mb-3">
-          <strong>Phone:</strong> {{ hockey_pass.phone_number }}<br>
-          <strong>Created:</strong> {{ hockey_pass.pass_created_dt.strftime('%Y-%m-%d') }}<br>
-          <strong>Activity:</strong> {{ hockey_pass.activity }}<br>
-          <strong>Amount:</strong> ${{ '%.2f' % hockey_pass.sold_amt }}<br>
-          <strong>Remaining Games:</strong> {{ hockey_pass.games_remaining }} / {{ hockey_pass.sessions_total }}<br>
+      <!-- ✅ Action Button (Admin only) -->
+      {% if is_admin %}
+        <div class="text-center my-3">
+          <a href="{{ url_for('edit_pass', pass_code=hockey_pass.pass_code) }}" class="btn btn-outline-secondary">
+            <i class="ti ti-pencil"></i> Edit
+          </a>
         </div>
+      {% endif %}
 
-        {% if hockey_pass.notes %}
-        <div class="alert alert-info text-start">
-          <strong>Note:</strong><br>
-          {{ hockey_pass.notes }}
+      <!-- ✅ History Table Block -->
+      {% if history %}
+        <div class="mt-4">
+          {% include 'email_blocks/history_table_inline.html' %}
         </div>
-        {% endif %}
+      {% endif %}
 
-        {% if not hockey_pass.paid_ind %}
-        <form method="POST" action="{{ url_for('mark_paid', pass_id=hockey_pass.id) }}" class="mt-3">
-          <button type="submit" class="btn btn-success">
-            <i class="ti ti-currency-dollar me-1"></i> Mark as Paid
-          </button>
-        </form>
-        {% endif %}
-      </div>
+      <!-- ✅ Additional Notes -->
+      {% if hockey_pass.notes %}
+        <div class="alert alert-info mt-4">
+          <strong>Note:</strong> {{ hockey_pass.notes }}
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Modal Lightbox -->
+<div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered text-center">
+    <div class="modal-content p-3">
+      <img src="data:image/png;base64,{{ qr_data }}" class="img-fluid" style="max-width: 400px;" />
+      <button type="button" class="btn-close position-absolute top-0 end-0 m-2" data-bs-dismiss="modal" aria-label="Close"></button>
     </div>
   </div>
 </div>
