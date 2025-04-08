@@ -493,6 +493,26 @@ def setup():
 
 
 
+@app.route("/erase-app-data", methods=["POST"])
+def erase_app_data():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        db.session.query(EbankPayment).delete()
+        db.session.query(EmailLog).delete()
+        db.session.query(Redemption).delete()
+        db.session.query(ReminderLog).delete()
+        db.session.query(Pass).delete()
+
+        db.session.commit()
+        flash("🧨 All app data erased successfully (passes, redemptions, emails, payments, reminders).", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error erasing data: {e}")
+        flash("An error occurred while erasing data.", "error")
+
+    return redirect(url_for("setup"))
 
 
 
