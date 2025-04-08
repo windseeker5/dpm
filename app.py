@@ -339,9 +339,13 @@ def edit_pass(pass_code):
 
 
 
-
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
+
+    ##
+    ##  POST REQUEST 
+    ##
+
     if request.method == "POST":
         # 🔐 Step 1: Admin accounts
         admin_emails = request.form.getlist("admin_email[]")
@@ -457,8 +461,6 @@ def setup():
             print("❌ Failed to parse/save activity list:", e)
 
 
-
-
         # 🖼 Step 7: Logo Upload
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
         logo_file = request.files.get("ORG_LOGO_FILE")
@@ -483,13 +485,42 @@ def setup():
         db.session.commit()
         print("[SETUP] Admins configured:", admin_emails)
         print("[SETUP] Settings saved:", list(email_settings.keys()) + list(extra_settings.keys()))
-        flash("✅ Setup completed successfully!", "success")
-        return redirect(url_for("dashboard"))
 
-    # GET request — Load existing config
+
+        #flash("✅ Setup completed successfully!", "success")
+        #return redirect(url_for("dashboard"))
+
+        flash("✅ Setup completed successfully!", "success")
+        return redirect(url_for("setup"))
+
+
+
+
+    ##
+    ##  GET request — Load existing config
+    ##
+
     settings = {s.key: s.value for s in Setting.query.all()}
     admins = Admin.query.all()
-    return render_template("setup.html", settings=settings, admins=admins)
+    backup_file = request.args.get("backup_file")  # 👈 required for link display
+
+    backup_dir = os.path.join("static", "backups")
+    backup_files = sorted(
+        [f for f in os.listdir(backup_dir) if f.endswith(".zip")],
+        reverse=True
+    ) if os.path.exists(backup_dir) else []
+
+
+    print("📥 Received backup_file from args:", backup_file)
+
+    return render_template(
+        "setup.html",
+        settings=settings,
+        admins=admins,
+        backup_file=backup_file,
+        backup_files=backup_files
+    )
+
 
 
 
@@ -513,6 +544,41 @@ def erase_app_data():
         flash("An error occurred while erasing data.", "error")
 
     return redirect(url_for("setup"))
+
+
+
+
+@app.route("/generate-backup")
+def generate_backup():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from zipfile import ZipFile
+    import tempfile
+    import shutil
+
+    env = os.environ.get("FLASK_ENV", "dev").lower()
+    db_filename = "dev_database.db" if env != "prod" else "prod_database.db"
+    db_path = os.path.join("instance", db_filename)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    zip_filename = f"minipass_backup_{timestamp}.zip"
+
+    # ✅ print AFTER defining zip_filename
+    print("📦 Generated backup_file:", zip_filename)
+
+    tmp_dir = tempfile.mkdtemp()
+    zip_path = os.path.join(tmp_dir, zip_filename)
+
+    with ZipFile(zip_path, "w") as zipf:
+        zipf.write(db_path, arcname=db_filename)
+
+    final_path = os.path.join("static", "backups", zip_filename)
+    os.makedirs(os.path.dirname(final_path), exist_ok=True)
+    shutil.move(zip_path, final_path)
+
+    flash(f"📦 Backup created successfully: {zip_filename}", "success")
+    return redirect(url_for("setup", backup_file=zip_filename))
 
 
 
