@@ -14,7 +14,6 @@ from utils import send_email_async, get_setting, generate_qr_code_image, get_pas
 from werkzeug.utils import secure_filename
 from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
 
-
 import os  # ✅ Add this import
 from config import Config
 
@@ -32,8 +31,6 @@ import socket
 
 import hashlib
 
-
-
 from flask import current_app
 from datetime import datetime, timezone
 from utils import get_setting
@@ -41,9 +38,6 @@ from utils import get_setting
 
 from collections import defaultdict
  
-
-
-
 
 
 
@@ -185,8 +179,6 @@ def trim_email(email):
 
 
 
-
-
 @app.route("/retry-failed-emails")
 def retry_failed_emails():
     if "admin" not in session:
@@ -230,11 +222,6 @@ def retry_failed_emails():
 
     flash(f"📤 Retried {retried} failed email(s) — sent to {override_email}.", "info")
     return redirect(url_for("dashboard"))
-
-
-
-
-
 
 
 
@@ -293,47 +280,6 @@ def test_email_match():
     match_gmail_payments_to_passes()
     flash("✅ Gmail payment match test executed. Check logs and DB.", "success")
     return redirect(url_for("dashboard"))
-
-
-
-
-
-
-
-@app.route("/edit-pass/<pass_code>", methods=["GET", "POST"])
-def edit_pass(pass_code):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
-    if not hockey_pass:
-        flash("Pass not found", "error")
-        return redirect(url_for("dashboard"))
-
-    if request.method == "POST":
-        hockey_pass.user_name = request.form.get("user_name", "").strip()
-        hockey_pass.user_email = request.form.get("user_email", "").strip()
-        hockey_pass.phone_number = request.form.get("phone_number", "").strip()
-        hockey_pass.sold_amt = float(request.form.get("sold_amt", 50))
-        hockey_pass.games_remaining = int(request.form.get("games_remaining", 0))
-        hockey_pass.activity = request.form.get("activity", "").strip()
-        hockey_pass.notes = request.form.get("notes", "").strip()
-
-        db.session.commit()
-        flash("✅ Pass updated successfully!", "success")
-        return redirect(url_for("show_pass", pass_code=pass_code))
-
-    # Load activities
-    activity_list = []
-    try:
-        activity_json = Config.get_setting(app,"ACTIVITY_LIST", "[]")
-        activity_list = json.loads(activity_json)
-    except Exception as e:
-        print("❌ Failed to load activity list:", e)
-
-    return render_template("edit_pass.html", hockey_pass=hockey_pass, activity_list=activity_list)
-
-
 
 
 
@@ -583,12 +529,9 @@ def generate_backup():
 
 
 
-
 @app.route("/")
 def home():
     return redirect(url_for("login"))
-
-
 
 
 
@@ -604,13 +547,6 @@ def users_json():
 
     print("📦 Sending user cache JSON:", result)  # Debug print in terminal
     return jsonify(result)
-
-
-
-
-
-
-
 
 
 
@@ -652,8 +588,6 @@ def login():
         return redirect(url_for("login"))
 
     return render_template("login.html")
-
-
 
 
 
@@ -784,23 +718,18 @@ def create_pass():
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        # 🔐 Admin
         current_admin = Admin.query.filter_by(email=session["admin"]).first()
 
-        # 📋 Form Data
         user_name = request.form.get("user_name", "").strip()
         user_email = request.form.get("user_email", "").strip()
-        phone_number = request.form.get("phone_number", "(581)222-3333").strip()
+        phone_number = request.form.get("phone_number", "").strip()
         sold_amt = float(request.form.get("sold_amt", 50))
-        sessions_qt = int(request.form.get("sessionsQt", 4))
+        sessions_qt = int(request.form.get("sessionsQt") or request.form.get("games_remaining") or 4)
         paid_ind = 1 if "paid_ind" in request.form else 0
         activity = request.form.get("activity", "").strip()
         pass_code = str(uuid.uuid4())[:16]
         notes = request.form.get("notes", "").strip()
 
-
-
-        # 🎟️ Create Pass
         new_pass = Pass(
             pass_code=pass_code,
             user_name=user_name,
@@ -812,47 +741,37 @@ def create_pass():
             created_by=current_admin.id if current_admin else None,
             activity=activity,
             notes=notes
-
         )
 
-        # 💾 Save to DB
         db.session.add(new_pass)
         db.session.commit()
 
-        # 📬 Send Pass Email
+        # Send email
         send_email_async(
-            current_app._get_current_object(),  # 👈 REQUIRED!
+            current_app._get_current_object(),
             user_email=user_email,
-            #subject="LHGI 🎟️ Your Digital Pass is Ready",
             subject="LHGI 🎟️ Votre Passe électronique est prête",
-
             user_name=user_name,
             pass_code=pass_code,
             created_date=new_pass.pass_created_dt.strftime('%Y-%m-%d'),
             remaining_games=new_pass.games_remaining
         )
 
-        flash("Pass created successfully! ASYNC Email sent.", "success")
+        flash("✅ Pass created and email sent.", "success")
         return redirect(url_for("dashboard"))
 
-
-    # 📥 GET Request — Render Form with Defaults
+    # GET request
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
 
-    # 🏷 Load Activities for Dropdown
-    activity_list = []
     try:
-        activity_json = get_setting("ACTIVITY_LIST", "[]")
-        activity_list = json.loads(activity_json)
-    except Exception as e:
-        print("❌ Failed to load activity list:", e)
-
-
-
+        activity_list = json.loads(get_setting("ACTIVITY_LIST", "[]"))
+    except:
+        activity_list = []
 
     return render_template(
-        "create_pass.html",
+        "pass_form.html",
+        hockey_pass=None,
         default_amt=default_amt,
         default_qt=default_qt,
         activity_list=activity_list
@@ -895,6 +814,49 @@ def show_pass(pass_code):
         settings=settings_raw,
         email_info=email_info_rendered
     )
+
+
+
+@app.route("/edit-pass/<pass_code>", methods=["GET", "POST"])
+def edit_pass(pass_code):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+    if not hockey_pass:
+        flash("❌ Pass not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        hockey_pass.user_name = request.form.get("user_name", "").strip()
+        hockey_pass.user_email = request.form.get("user_email", "").strip()
+        hockey_pass.phone_number = request.form.get("phone_number", "").strip()
+        hockey_pass.sold_amt = float(request.form.get("sold_amt", 50))
+        hockey_pass.games_remaining = int(request.form.get("games_remaining", 0))
+        hockey_pass.activity = request.form.get("activity", "").strip()
+        hockey_pass.notes = request.form.get("notes", "").strip()
+
+        db.session.commit()
+        flash("✅ Pass updated successfully!", "success")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    try:
+        activity_list = json.loads(get_setting("ACTIVITY_LIST", "[]"))
+    except:
+        activity_list = []
+
+    return render_template(
+        "pass_form.html",
+        hockey_pass=hockey_pass,
+        activity_list=activity_list,
+        default_amt=hockey_pass.sold_amt,
+        default_qt=hockey_pass.games_remaining
+    )
+
+
+
+
+
 
 
 
