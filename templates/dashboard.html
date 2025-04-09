@@ -2,6 +2,24 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
+
+<style>
+  .table-responsive {
+    overflow: visible !important;
+    position: relative;
+  }
+
+  .table-responsive .dropdown {
+    position: relative;
+  }
+
+  .table-responsive .dropdown-menu {
+    z-index: 1060;
+  }
+</style>
+
+
+
 <!-- Header card for controls -->
 <div class="card mb-3">
   <div class="card-body">
@@ -91,12 +109,22 @@
           </td>
           <td class="d-none d-md-table-cell">{{ pass.games_remaining }}</td>
           <td>
+
+
             <div class="dropdown">
               <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
-              <div class="dropdown-menu">
+               
+              <div class="dropdown-menu" style="z-index: 1050;">
+
                 <a class="dropdown-item text-primary redeem-btn" href="#" data-pass="{{ pass.pass_code }}">
                   <i class="ti ti-check me-2"></i>Redeem a Game
                 </a>
+
+                <a class="dropdown-item" href="{{ url_for('edit_pass', pass_code=pass.pass_code) }}">
+                  <i class="ti ti-pencil me-2"></i>Edit Pass
+                </a>
+
+
                 {% if not pass.paid_ind %}
                 <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" onsubmit="return confirm('Mark this pass as paid?');">
                   <button class="dropdown-item text-success" type="submit">
@@ -106,6 +134,9 @@
                 {% endif %}
               </div>
             </div>
+
+
+
           </td>
         </tr>
         {% endfor %}
