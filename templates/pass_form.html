@@ -1,22 +1,17 @@
 {% extends "base.html" %}
-
-{% block title %}Create Pass{% endblock %}
+{% block title %}{{ "Edit" if hockey_pass else "Create" }} Pass{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center mt-4">
   <div class="col-lg-8">
 
     <form method="POST" class="card shadow-sm border bg-white">
-
- 
-
       <div class="card-header d-flex align-items-center justify-content-between">
         <h3 class="card-title mb-0">
-          Create a New Digital Pass
+          {{ "Update Digital Pass" if hockey_pass else "Create a New Digital Pass" }}
         </h3>
         <i class="ti ti-user-square-rounded fs-1 text-muted"></i>
       </div>
-      
       
       <div class="card-body">
 
@@ -24,23 +19,26 @@
         <fieldset class="form-fieldset mb-4">
           <legend>User Information</legend>
 
-          <!-- User Name with Auto-Suggest -->
+          <!-- User Name -->
           <div class="mb-3 position-relative input-icon">
             <span class="input-icon-addon"><i class="ti ti-user"></i></span>
-            <input type="text" name="user_name" id="user_name" class="form-control" placeholder="Full Name" autocomplete="off" required />
+            <input type="text" name="user_name" id="user_name" class="form-control" placeholder="Full Name" autocomplete="off" required
+                   value="{{ hockey_pass.user_name if hockey_pass else '' }}" />
             <div id="suggestions" class="list-group position-absolute w-100 shadow bg-white border rounded" style="top: 100%; z-index: 10;"></div>
           </div>
 
           <!-- Email -->
           <div class="mb-3 input-icon">
             <span class="input-icon-addon"><i class="ti ti-mail"></i></span>
-            <input type="email" name="user_email" id="user_email" class="form-control" placeholder="Email" required />
+            <input type="email" name="user_email" id="user_email" class="form-control" placeholder="Email" required
+                   value="{{ hockey_pass.user_email if hockey_pass else '' }}" />
           </div>
 
           <!-- Phone Number -->
           <div class="mb-3 input-icon">
             <span class="input-icon-addon"><i class="ti ti-phone"></i></span>
-            <input type="tel" name="phone_number" id="mobile_phone" class="form-control" placeholder="Phone Number" value="" required />
+            <input type="tel" name="phone_number" id="mobile_phone" class="form-control" placeholder="Phone Number" required
+                   value="{{ hockey_pass.phone_number if hockey_pass else '' }}" />
           </div>
         </fieldset>
 
@@ -54,7 +52,8 @@
             <select name="activity" class="form-select" required>
               <option value="">-- Select Activity --</option>
               {% for activity in activity_list %}
-                <option value="{{ activity }}">{{ activity }}</option>
+                <option value="{{ activity }}"
+                  {% if hockey_pass and hockey_pass.activity == activity %}selected{% endif %}>{{ activity }}</option>
               {% endfor %}
             </select>
           </div>
@@ -62,34 +61,44 @@
           <!-- Amount -->
           <div class="mb-3 input-icon">
             <span class="input-icon-addon"><i class="ti ti-currency-dollar"></i></span>
-            <input type="number" name="sold_amt" step="0.01" class="form-control" placeholder="Amount" value="{{ default_amt }}" required />
+            <input type="number" name="sold_amt" step="0.01" class="form-control" placeholder="Amount" required
+                   value="{{ hockey_pass.sold_amt if hockey_pass else default_amt }}" />
           </div>
 
           <!-- Sessions Quantity -->
           <div class="mb-3 input-icon">
             <span class="input-icon-addon"><i class="ti ti-list-numbers"></i></span>
-            <input type="number" name="sessionsQt" class="form-control" placeholder="Number of Games" value="{{ default_qt }}" required />
+            <input type="number" name="games_remaining" class="form-control" placeholder="Number of Games" required
+                   value="{{ hockey_pass.games_remaining if hockey_pass else default_qt }}" />
           </div>
 
 
 
-          <!-- Paid Checkbox -->
-          <div class="mb-3 form-check">
-            <input type="checkbox" class="form-check-input" name="paid_ind" id="paidCheck">
-            <label class="form-check-label" for="paidCheck">Mark as Paid</label>
-          </div>
+        <!-- Paid Checkbox -->
+        <div class="mb-3 form-check">
+        <input type="checkbox"
+                class="form-check-input"
+                name="paid_ind"
+                id="paidCheck"
+                {% if hockey_pass and hockey_pass.paid_ind %}checked{% endif %}>
+        <label class="form-check-label" for="paidCheck">Mark as Paid</label>
+        </div>
+
+
+
+
 
           <!-- Notes -->
           <div class="mb-3">
             <label class="form-label">Notes</label>
-            <textarea name="notes" id="notes" rows="3" class="form-control"></textarea>
+            <textarea name="notes" id="notes" rows="3" class="form-control">{{ hockey_pass.notes if hockey_pass else '' }}</textarea>
           </div>
         </fieldset>
       </div>
 
       <div class="card-footer text-end">
         <button type="submit" class="btn btn-primary">
-          <i class="ti ti-ticket me-2"></i>Create Pass
+          <i class="ti ti-ticket me-2"></i>{{ "Update Pass" if hockey_pass else "Create Pass" }}
         </button>
       </div>
     </form>
