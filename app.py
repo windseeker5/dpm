@@ -458,6 +458,7 @@ def setup():
 
 
     print("📥 Received backup_file from args:", backup_file)
+    print("🗂️ Available backups in static/backups/:", os.listdir("static/backups"))
 
     return render_template(
         "setup.html",
@@ -494,6 +495,7 @@ def erase_app_data():
 
 
 
+
 @app.route("/generate-backup")
 def generate_backup():
     if "admin" not in session:
@@ -503,28 +505,40 @@ def generate_backup():
     import tempfile
     import shutil
 
-    env = os.environ.get("FLASK_ENV", "dev").lower()
-    db_filename = "dev_database.db" if env != "prod" else "prod_database.db"
-    db_path = os.path.join("instance", db_filename)
+    try:
+        env = os.environ.get("FLASK_ENV", "dev").lower()
+        db_filename = "dev_database.db" if env != "prod" else "prod_database.db"
+        db_path = os.path.join("instance", db_filename)
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    zip_filename = f"minipass_backup_{timestamp}.zip"
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        zip_filename = f"minipass_backup_{timestamp}.zip"
+        print("📦 Generating backup:", zip_filename)
 
-    # ✅ print AFTER defining zip_filename
-    print("📦 Generated backup_file:", zip_filename)
+        tmp_dir = tempfile.mkdtemp()
+        zip_path = os.path.join(tmp_dir, zip_filename)
 
-    tmp_dir = tempfile.mkdtemp()
-    zip_path = os.path.join(tmp_dir, zip_filename)
+        with ZipFile(zip_path, "w") as zipf:
+            zipf.write(db_path, arcname=db_filename)
 
-    with ZipFile(zip_path, "w") as zipf:
-        zipf.write(db_path, arcname=db_filename)
+        final_path = os.path.join("static", "backups", zip_filename)
+        os.makedirs(os.path.dirname(final_path), exist_ok=True)
+ 
 
-    final_path = os.path.join("static", "backups", zip_filename)
-    os.makedirs(os.path.dirname(final_path), exist_ok=True)
-    shutil.move(zip_path, final_path)
+        print(f"🛠 Moving zip from {zip_path} → {final_path}")
+        shutil.move(zip_path, final_path)
+        print(f"✅ Backup saved to: {final_path}")
 
-    flash(f"📦 Backup created successfully: {zip_filename}", "success")
+
+
+        print("✅ Backup saved to:", final_path)
+        flash(f"📦 Backup created: {zip_filename}", "success")
+    except Exception as e:
+        print("❌ Backup failed:", str(e))
+        flash("❌ Backup failed. Check logs.", "danger")
+
     return redirect(url_for("setup", backup_file=zip_filename))
+
+
 
 
 
