@@ -367,31 +367,46 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                 print(f"⚠️ Ignored email from unexpected sender: {from_email}")
                 continue
 
-            # 💰 Extract name & amount
+            # 💰 Extract name & amount — support multiple Interac subject formats
             amount_match = re.search(r"reçu\s([\d,]+)\s*\$\s*de", subject)
             name_match = re.search(r"de\s(.+?)\set ce montant", subject)
 
-            if amount_match and name_match:
-                amt_str = amount_match.group(1).replace(",", ".")
-                name = name_match.group(1).strip()
+            # 🔁 Fallback: e.g. "Remi Methot vous a envoyé 15,00 $"
+            if not amount_match:
+                amount_match = re.search(r"envoyé\s([\d,]+)\s*\$", subject)
+            if not name_match:
+                name_match = re.search(r":\s*(.*?)\svous a envoyé", subject)
 
-                try:
-                    amount = float(amt_str)
-                except ValueError:
-                    continue
+            # 🛡️ Skip if we still can't match
+            if not (amount_match and name_match):
+                print(f"❌ Skipped unmatched subject: {subject}")
+                continue
 
-                results.append({
-                    "bank_info_name": name,
-                    "bank_info_amt": amount,
-                    "subject": subject,
-                    "from_email": from_email,
-                    "uid": uid
-                })
+            # 💵 Final parsing
+            amt_str = amount_match.group(1).replace(",", ".")
+            name = name_match.group(1).strip()
+
+            try:
+                amount = float(amt_str)
+            except ValueError:
+                print(f"❌ Invalid amount format: {amt_str}")
+                continue
+
+            # ✅ Only append if parsing succeeded
+            results.append({
+                "bank_info_name": name,
+                "bank_info_amt": amount,
+                "subject": subject,
+                "from_email": from_email,
+                "uid": uid
+            })
 
     except Exception as e:
         print(f"❌ Error reading Gmail: {e}")
 
     return results
+
+
 
 
 
@@ -578,3 +593,63 @@ def send_unpaid_reminders(app):
             print(f"✅ Reminder sent to {p.user_email}")
 
         print("📬 All eligible reminders processed.")
+
+
+
+def get_all_activity_logs():
+    from models import Pass, Redemption, EmailLog, EbankPayment, ReminderLog
+    from utils import utc_to_local
+    from flask import current_app
+
+    DATETIME_FORMAT = "%Y-%m-%d %H:%M"
+    logs = []
+
+    with current_app.app_context():
+        # Pass Creation
+        for p in Pass.query.all():
+            logs.append({
+                "timestamp": utc_to_local(p.pass_created_dt).strftime(DATETIME_FORMAT),
+                "type": "Pass Created",
+                "user": p.user_name,
+                "details": f"Email: {p.user_email}, Code: {p.pass_code}"
+            })
+
+        # Redemption
+        for r in Redemption.query.all():
+            logs.append({
+                "timestamp": utc_to_local(r.date_used).strftime(DATETIME_FORMAT),
+                "type": "Pass Redeemed",
+                "user": r.redeemed_by,
+                "details": f"Pass ID: {r.pass_id}"
+            })
+
+        # Email Sent
+        for e in EmailLog.query.all():
+            logs.append({
+                "timestamp": utc_to_local(e.timestamp).strftime(DATETIME_FORMAT),
+                "type": f"Email {e.result}",
+                "user": e.to_email,
+                "details": f"Subject: {e.subject}, Pass: {e.pass_code or 'N/A'}"
+            })
+
+        # Payments
+        for p in EbankPayment.query.all():
+            logs.append({
+                "timestamp": utc_to_local(p.timestamp).strftime(DATETIME_FORMAT),
+                "type": f"Payment {p.result}",
+                "user": p.from_email,
+                "details": f"Name: {p.bank_info_name}, Amount: {p.bank_info_amt}"
+            })
+
+        # Reminders
+        for r in ReminderLog.query.all():
+            logs.append({
+                "timestamp": utc_to_local(r.reminder_sent_at).strftime(DATETIME_FORMAT),
+                "type": "Reminder Sent",
+                "user": "-",
+                "details": f"Pass ID: {r.pass_id}"
+            })
+
+    # Sort by timestamp descending
+    logs.sort(key=lambda x: x["timestamp"], reverse=True)
+    return logs
