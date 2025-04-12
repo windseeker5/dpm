@@ -188,14 +188,13 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
 
 
 
+
 def send_email(app, user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=None, admin_email=None):
     try:
         from utils import get_setting
         from models import EmailLog
         from flask import render_template_string, render_template, current_app
 
-
-        # 🧠 Redirect in dev mode
         env = os.environ.get("FLASK_ENV", "prod").lower()
         dev_redirect = os.environ.get("DEV_EMAIL_REDIRECT", None)
 
@@ -204,26 +203,24 @@ def send_email(app, user_email, subject, user_name, pass_code, created_date, rem
             subject = f"[DEV] {subject}"
             user_email = dev_redirect
 
-
         qr_image_bytes_io = generate_qr_code_image(pass_code)
         qr_image_bytes = qr_image_bytes_io.read()
 
         sender_email = get_setting("MAIL_DEFAULT_SENDER") or "no-reply@example.com"
         email_footer = get_setting("EMAIL_FOOTER_TEXT", "")
         email_info_template = get_setting("EMAIL_INFO_TEXT", "")
-        history_data = get_pass_history_data(pass_code, fallback_admin_email=admin_email)
 
         hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+        db.session.refresh(hockey_pass)
         email_info = render_template_string(email_info_template, hockey_pass=hockey_pass)
+        history_data = get_pass_history_data(pass_code, fallback_admin_email=admin_email)
 
-        # ✅ Render partials to string
         owner_html = render_template("partials/owner_section.html", hockey_pass=hockey_pass, logo_src="cid:logo_image")
         history_html = render_template("partials/history_section.html", history=history_data)
 
         with open("static/uploads/logo.png", "rb") as logo_file:
             logo_bytes = logo_file.read()
 
-        # ✅ Main email body
         email_html = render_template(
             "email_pass.html",
             user_name=user_name,
@@ -235,13 +232,10 @@ def send_email(app, user_email, subject, user_name, pass_code, created_date, rem
             email_info=email_info,
             email_footer=email_footer,
             hockey_pass=hockey_pass,
- 
-            owner_html = render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
-            history_html = render_template("email_blocks/history_table_inline.html", history=history_data)
-
+            owner_html=owner_html,
+            history_html=history_html
         )
 
-        # ✅ Build message
         msg = MIMEMultipart("related")
         msg["From"] = sender_email
         msg["To"] = user_email
@@ -279,19 +273,25 @@ def send_email(app, user_email, subject, user_name, pass_code, created_date, rem
 
         print(f"✅ Email sent to {user_email}")
 
-        # ✅ Log success
+        # ✅ Log success with consistent timestamp
         db.session.add(EmailLog(
             to_email=user_email,
             subject=subject,
             pass_code=pass_code,
             template_name="email_pass.html",
+
             context_json=json.dumps({
                 "user_name": user_name,
-                "created_date": created_date,
+                "created_date": created_date.strftime("%Y-%m-%d %H:%M:%S"),
                 "remaining_games": remaining_games,
                 "special_message": special_message,
                 "history": history_data
             }),
+
+
+            #timestamp=datetime.strptime(created_date, "%Y-%m-%d %H:%M:%S"),
+            timestamp=created_date,  # ⏱ full datetime with microseconds
+
             result="SENT"
         ))
         db.session.commit()
@@ -302,24 +302,28 @@ def send_email(app, user_email, subject, user_name, pass_code, created_date, rem
         print("❌ Error sending email:")
         traceback.print_exc()
 
-        # ✅ Log failure
         db.session.add(EmailLog(
             to_email=user_email,
             subject=subject,
             pass_code=pass_code,
             template_name="email_pass.html",
+
             context_json=json.dumps({
                 "user_name": user_name,
-                "created_date": created_date,
+                "created_date": created_date.strftime("%Y-%m-%d %H:%M:%S"),
                 "remaining_games": remaining_games,
-                "special_message": special_message
+                "special_message": special_message,
+                "history": history_data
             }),
+
+
             result="FAILED",
             error_message=str(e)
         ))
         db.session.commit()
 
         return False
+
 
 
 

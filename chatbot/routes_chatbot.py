@@ -74,6 +74,9 @@ def call_ollama(question, model="dolphin-mistral:latest"):
     except ValueError:
         return "-- Invalid response from LLM --"
 
+
+
+
 def sanitize_sql(raw_sql):
     sql = raw_sql.strip()
 
@@ -104,6 +107,9 @@ def sanitize_sql(raw_sql):
         return None, "Only SELECT statements are allowed."
 
     return sql, None
+
+
+
 
 def run_sql_query(sql):
     sql, error = sanitize_sql(sql)
@@ -140,6 +146,9 @@ def parse_chart_data(result):
     labels = [str(row[0]) for row in rows]
     values = [row[1] for row in rows]
     return {"labels": labels, "values": values}
+
+
+
 
 @chat_bp.route("/chat", methods=["GET", "POST"])
 def chat():

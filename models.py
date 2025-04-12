@@ -1,9 +1,8 @@
 # models.py (UPDATED - TIMEZONE AWARE)
 import uuid
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timezone  # ✅ Use timezone-aware datetime
-
-
+from datetime import datetime, timezone   
+ 
 
 
 # ✅ Define db here (not in app.py)
@@ -25,11 +24,29 @@ class Pass(db.Model):
     games_remaining = db.Column(db.Integer, default=4)
     phone_number = db.Column(db.String(20), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
-    pass_created_dt = db.Column(db.DateTime, default=datetime.now(timezone.utc))  # ✅ UTC-aware
+    # pass_created_dt = db.Column(db.DateTime, default=datetime.now(timezone.utc))  # ✅ UTC-aware
+
+    pass_created_dt = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc)  # ✅ FIXED!
+    )
+
     paid_ind = db.Column(db.Boolean, default=False)
     paid_date = db.Column(db.DateTime, nullable=True)  # ✅ manually set with UTC
     activity = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+
+    # in models.py (Pass model)
+    marked_paid_by = db.Column(db.String(120), nullable=True)
+
+ 
+
+
+
+
+
+
+
 
 
 class Redemption(db.Model):
