@@ -1,45 +1,58 @@
-from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, get_flashed_messages, jsonify
+# 📦 Core Python Modules
+import os
+import io
+import uuid
+import json
+import base64
+import socket
+import hashlib
+import bcrypt
+import stripe
+import qrcode
+from datetime import datetime, timezone
 
+# 🌐 Flask Core
+from flask import (
+    Flask, render_template, render_template_string, request, redirect,
+    url_for, session, flash, get_flashed_messages, jsonify, current_app
+)
+
+# 🛠 Flask Extensions
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+
+# 🧱 SQLAlchemy Extras
 from sqlalchemy import extract, func, case, desc
 
-from flask_migrate import Migrate
-import bcrypt
-import uuid
-import qrcode
-import io
-import base64
-from utils import send_email_async, get_setting, generate_qr_code_image, get_pass_history_data
-
+# 📎 File Handling
 from werkzeug.utils import secure_filename
+
+# 🧠 Models
 from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
 
-import os  # ✅ Add this import
+# ⚙️ Config
 from config import Config
 
-from flask import current_app
-import stripe
-import json
-
+# 🔁 Background Jobs
 from apscheduler.schedulers.background import BackgroundScheduler
-from utils import match_gmail_payments_to_passes, utc_to_local, send_unpaid_reminders
 
-from datetime import datetime, timezone
+# 🧰 App Utilities
+from utils import (
+    send_email_async,
+    get_setting,
+    generate_qr_code_image,
+    get_pass_history_data,
+    get_all_activity_logs,
+    match_gmail_payments_to_passes,
+    utc_to_local,
+    send_unpaid_reminders
+)
 
-import os
-import socket
-
-import hashlib
-
-from flask import current_app
-from datetime import datetime, timezone
-from utils import get_setting
-
-
+# 🧠 Data Tools
 from collections import defaultdict
- 
 
 
+from chatbot.routes_chatbot import chat_bp
 
 
 
@@ -96,6 +109,10 @@ with app.app_context():
     app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
 
+
+
+
+app.register_blueprint(chat_bp)             # 👈 Register it
 
 
 
@@ -282,6 +299,8 @@ def test_email_match():
     return redirect(url_for("dashboard"))
 
 
+
+ 
 
 
 
@@ -981,6 +1000,13 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/activity-log")
+def activity_log():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    logs = get_all_activity_logs()
+    return render_template("activity_log.html", logs=logs)
 
 
 
