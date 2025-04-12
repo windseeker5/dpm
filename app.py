@@ -45,8 +45,11 @@ from utils import (
     get_all_activity_logs,
     match_gmail_payments_to_passes,
     utc_to_local,
-    send_unpaid_reminders
+    send_unpaid_reminders,
+    get_kpi_stats
 )
+
+
 
 # 🧠 Data Tools
 from collections import defaultdict
@@ -741,8 +744,10 @@ def dashboard():
 
 
 
+    kpi_data = get_kpi_stats()
+    return render_template("dashboard.html", passes=passes, kpi_data=kpi_data)
 
-    return render_template("dashboard.html", passes=passes)
+
 
 
 
