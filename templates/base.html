@@ -49,9 +49,16 @@
             </div>
           </a>
           <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+
+
+            <a href="{{ url_for('activity_log') }}" class="dropdown-item">
+              <i class="ti ti-history me-2"></i>Activity Log
+            </a>
             <a href="{{ url_for('reporting') }}" class="dropdown-item">
               <i class="ti ti-chart-bar me-2"></i>Reporting
             </a>
+
+
             <a href="{{ url_for('setup') }}" class="dropdown-item">
               <i class="ti ti-settings me-2"></i>Settings
             </a>
@@ -121,14 +128,12 @@
         <li class="nav-item"><a class="nav-link" href="#"><i class="ti ti-messages"></i> Communications</a></li>
         <li class="nav-item"><a class="nav-link" href="#"><i class="ti ti-clipboard-list"></i> Surveys</a></li>
 
-
         <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('activity_log') }}">
-            <i class="ti ti-history me-1"></i> Activity Log
-          </a>
+          <a class="nav-link" href="{{ url_for('chat.chat') }}">
+            <i class="ti ti-message-chatbot me-1"></i> AI Bot Analytic
+          </a>          
         </li>
-
-
+        
 
       </ul>
     </div>

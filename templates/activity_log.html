@@ -1,27 +1,156 @@
 {% extends "base.html" %}
-{% block title %}Activity Log{% endblock %}
+{% block title %}Transaction Historique{% endblock %}
+
 {% block content %}
 <div class="container-xl">
-  <h2 class="mb-4">📜 Activity Log</h2>
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>📅 Date/Time</th>
-        <th>📝 Type</th>
-        <th>👤 User</th>
-        <th>🔍 Details</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for entry in logs %}
-      <tr>
-        <td>{{ entry.timestamp }}</td>
-        <td>{{ entry.type }}</td>
-        <td>{{ entry.user }}</td>
-        <td>{{ entry.details }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+
+  <!-- 🔹 Title -->
+  <div class="mb-4">
+    <div class="text-uppercase text-muted fw-bold lh-1" style="font-size: 0.75rem;">TRANSACTION</div>
+    <h2 class="page-title">HISTORIQUE</h2>
+  </div>
+
+  <!-- 🔹 Search + Filter Controls -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-center">
+        <!-- Dropdown Filter -->
+        <div class="col-md-3">
+          <select id="filterType" class="form-select">
+            <option value="">All Types</option>
+            <option value="Pass Created">Pass Created</option>
+            <option value="Pass Redeemed">Pass Redeemed</option>
+            <option value="Email Sent">Email Sent</option>
+            <option value="Payment Matched">Payment Matched</option>
+            <option value="Marked Paid">Marked Paid</option>
+          </select>
+        </div>
+
+        <!-- Search Input -->
+        <div class="col-md">
+          <div class="input-icon">
+            <span class="input-icon-addon">
+              <i class="ti ti-search"></i>
+            </span>
+            <input type="text" id="searchBox" class="form-control" placeholder="Search logs...">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔹 Table -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Last Transactions</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="table card-table table-vcenter" id="logTable">
+        <thead>
+          <tr>
+            <th scope="col" class="text-muted">Date/Time</th>
+            <th scope="col" class="text-muted">Type</th>
+            <th scope="col" class="text-muted">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
+            <td data-type="{{ log.type }}">
+              {% if log.type == 'Pass Redeemed' %}
+                <i class="ti ti-ticket text-primary"></i>
+              {% elif log.type == 'Email Sent' %}
+                <i class="ti ti-mail text-info"></i>
+              {% elif log.type == 'Pass Created' %}
+                <i class="ti ti-user-plus text-success"></i>
+              {% elif log.type == 'Payment Matched' %}
+                <i class="ti ti-currency-dollar text-green"></i>
+              {% elif log.type == 'Marked Paid' %}
+                <i class="ti ti-check text-yellow"></i>
+              {% endif %}
+              {{ log.type }}
+            </td>
+            <td>{{ log.details }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="card-footer d-flex align-items-center">
+      <p class="m-0 text-muted">Showing <span id="showingCount">0</span> of {{ logs|length }}</p>
+      <ul class="pagination m-0 ms-auto" id="paginationControls"></ul>
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const searchInput = document.getElementById("searchBox");
+  const typeFilter = document.getElementById("filterType");
+  const rows = Array.from(document.querySelectorAll("#logTable tbody tr"));
+  const tableBody = document.querySelector("#logTable tbody");
+  const showingCount = document.getElementById("showingCount");
+
+  const rowsPerPage = 50;
+  let currentPage = 1;
+
+  function renderTable(filteredRows) {
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageRows = filteredRows.slice(start, end);
+
+    tableBody.innerHTML = "";
+    pageRows.forEach(row => tableBody.appendChild(row));
+    showingCount.textContent = filteredRows.length;
+
+    renderPagination(filteredRows.length);
+  }
+
+  function renderPagination(total) {
+    const pageCount = Math.ceil(total / rowsPerPage);
+    const pagination = document.getElementById("paginationControls");
+    pagination.innerHTML = "";
+
+    for (let i = 1; i <= pageCount; i++) {
+      const li = document.createElement("li");
+      li.className = `page-item ${i === currentPage ? "active" : ""}`;
+      li.innerHTML = `<a href="#" class="page-link">${i}</a>`;
+      li.addEventListener("click", function (e) {
+        e.preventDefault();
+        currentPage = i;
+        renderTable(filterRows());
+      });
+      pagination.appendChild(li);
+    }
+  }
+
+  function filterRows() {
+    const search = searchInput.value.toLowerCase();
+    const type = typeFilter.value.toLowerCase();
+
+    return rows.filter(row => {
+      const rowType = row.children[1].textContent.toLowerCase();
+      const text = row.textContent.toLowerCase();
+      return (!type || rowType.includes(type)) && text.includes(search);
+    });
+  }
+
+  searchInput.addEventListener("input", () => {
+    currentPage = 1;
+    renderTable(filterRows());
+  });
+
+  typeFilter.addEventListener("change", () => {
+    currentPage = 1;
+    renderTable(filterRows());
+  });
+
+  renderTable(rows);
+});
+</script>
 {% endblock %}

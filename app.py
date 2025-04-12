@@ -172,6 +172,9 @@ def encode_md5(s):
 
 
 
+@app.template_filter("datetimeformat")
+def datetimeformat(value, format="%Y-%m-%d %H:%M"):
+    return value.strftime(format) if value else ""
 
 
 
@@ -300,7 +303,6 @@ def test_email_match():
 
 
 
- 
 
 
 
@@ -744,6 +746,9 @@ def dashboard():
 
 
 
+ 
+
+
 
 @app.route("/create-pass", methods=["GET", "POST"])
 def create_pass():
@@ -779,21 +784,20 @@ def create_pass():
         db.session.add(new_pass)
         db.session.commit()
 
-        # Send email
+        # ✅ Pass the full datetime object
         send_email_async(
             current_app._get_current_object(),
             user_email=user_email,
             subject="LHGI 🎟️ Votre Passe électronique est prête",
             user_name=user_name,
             pass_code=pass_code,
-            created_date=new_pass.pass_created_dt.strftime('%Y-%m-%d'),
+            created_date=new_pass.pass_created_dt,  # ⏱ not a string
             remaining_games=new_pass.games_remaining
         )
 
         flash("✅ Pass created and email sent.", "success")
         return redirect(url_for("dashboard"))
 
-    # GET request
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
 
@@ -809,6 +813,9 @@ def create_pass():
         default_qt=default_qt,
         activity_list=activity_list
     )
+
+ 
+
 
 
 
@@ -918,36 +925,35 @@ def redeem_pass(pass_code):
             hockey_pass.games_remaining -= 1
             db.session.add(hockey_pass)
 
-            # ✅ Capture admin email from session and store it
             admin_email = session.get("admin", "unknown")
             redemption = Redemption(pass_id=hockey_pass.id, date_used=now, redeemed_by=admin_email)
             db.session.add(redemption)
-
             db.session.commit()
 
-            # ✅ Prepare special message if the pass is now empty
+            recent_redemptions[pass_code] = now
+
             special_message = ""
             if hockey_pass.games_remaining == 0:
                 special_message = "⚠️ Your pass is now empty and inactive!"
 
-            # ✅ Send confirmation email asynchronously
             send_email_async(
-                current_app._get_current_object(),  # 👈 REQUIRED!
+                current_app._get_current_object(),
                 user_email=hockey_pass.user_email,
-                #subject="LHGI 🏒 Game Redeemed!",
                 subject="LHGI 🏒 Activité confirmée!",
                 user_name=hockey_pass.user_name,
                 pass_code=hockey_pass.pass_code,
-                created_date=hockey_pass.pass_created_dt.strftime('%Y-%m-%d'),
+                created_date=now,
                 remaining_games=hockey_pass.games_remaining,
                 special_message=special_message
             )
 
-            flash(f"Game redeemed! {hockey_pass.games_remaining} games left.Email sent.", "success")
+            flash(f"Game redeemed! {hockey_pass.games_remaining} games left. Email sent.", "success")
         else:
             flash("No games left on this pass!", "error")
 
     return redirect(url_for("dashboard"))
+
+
 
 
 
@@ -958,24 +964,23 @@ def mark_paid(pass_id):
 
     hockey_pass = Pass.query.get(pass_id)
     if hockey_pass:
-
+        paid_now = datetime.now(timezone.utc)
         hockey_pass.paid_ind = True
-        hockey_pass.paid_date = datetime.now(timezone.utc)
-
+        hockey_pass.paid_date = paid_now
+        hockey_pass.marked_paid_by = session.get("admin", "unknown")
         db.session.commit()
 
-        # ✅ Send confirmation email
+        # ✅ Pass full datetime
         send_email_async(
-            current_app._get_current_object(),  # 👈 REQUIRED!
+            current_app._get_current_object(),
             user_email=hockey_pass.user_email,
-            #subject="LHGI ✅ Payment Received",
             subject="LHGI ✅ Paiement Confirmé",
             user_name=hockey_pass.user_name,
             pass_code=hockey_pass.pass_code,
-            created_date=hockey_pass.pass_created_dt.strftime('%Y-%m-%d'),
+            created_date=paid_now,
             remaining_games=hockey_pass.games_remaining,
             special_message="We've received your payment. Your pass is now active. Thank you!",
-            admin_email=session.get("admin") 
+            admin_email=hockey_pass.marked_paid_by
         )
 
         flash(f"Pass {hockey_pass.id} marked as paid. Email sent.", "success")
@@ -983,6 +988,11 @@ def mark_paid(pass_id):
         flash("Pass not found!", "error")
 
     return redirect(url_for("dashboard"))
+
+
+
+ 
+
 
 
 
@@ -1000,19 +1010,100 @@ def logout():
     return redirect(url_for("login"))
 
 
+
+
+
+
 @app.route("/activity-log")
 def activity_log():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    logs = get_all_activity_logs()
-    return render_template("activity_log.html", logs=logs)
+    all_logs = []
+    from datetime import timedelta
+
+    offset_step = timedelta(microseconds=1)
+
+    # 1. Pass Created Logs
+    created_passes = Pass.query.all()
+    for p in created_passes:
+        admin = db.session.get(Admin, p.created_by) if p.created_by else None
+        all_logs.append({
+            "timestamp": p.pass_created_dt + (offset_step * 1),
+            "type": "Pass Created",
+            "details": f"Created for {p.user_name} by {admin.email if admin else 'Unknown'}"
+        })
+
+    # 2. Redemptions
+    redemptions = Redemption.query.all()
+    for r in redemptions:
+        p = db.session.get(Pass, r.pass_id)
+        if p:
+            all_logs.append({
+                "timestamp": r.date_used + (offset_step * 3),
+                "type": "Pass Redeemed",
+                "details": f"{p.user_name} used 1 activity ({p.activity}) by {r.redeemed_by or 'Unknown'}"
+            })
+
+    # 3. Matched Payments
+    matched_payments = EbankPayment.query.filter_by(mark_as_paid=True).all()
+    for pay in matched_payments:
+        p = db.session.get(Pass, pay.matched_pass_id)
+        all_logs.append({
+            "timestamp": pay.timestamp + (offset_step * 2),
+            "type": "Payment Matched",
+            "details": f"${pay.bank_info_amt:.2f} matched to {pay.matched_name} ({p.activity if p else 'N/A'})"
+        })
+
+    # 4. Manual Paid (Paid with no Ebank match)
+    manually_marked_paid = Pass.query.filter(
+        Pass.paid_ind == True,
+        Pass.paid_date.isnot(None)
+    ).all()
+    paid_ids = {p.matched_pass_id for p in matched_payments if p.matched_pass_id}
+    for p in manually_marked_paid:
+        if p.id not in paid_ids:
+            admin_email = p.marked_paid_by or "Unknown"
+            all_logs.append({
+                "timestamp": p.paid_date + (offset_step * 4),
+                "type": "Marked Paid",
+                "details": f"{p.user_name} marked paid by {admin_email} ({p.activity})"
+            })
+
+    # 5. Emails Sent (offset based on subject meaning)
+    email_logs = EmailLog.query.all()
+    for e in email_logs:
+        p = Pass.query.filter_by(pass_code=e.pass_code).first()
+
+        if "Paiement Confirmé" in e.subject:
+            offset = 5  # after Marked Paid
+        elif "Activité confirmée" in e.subject:
+            offset = 4  # after Redemption
+        elif "est prête" in e.subject:
+            offset = 2  # after Creation
+        else:
+            offset = 3  # fallback
+
+        all_logs.append({
+            "timestamp": e.timestamp + (offset_step * offset),
+            "type": "Email Sent",
+            "details": f"To {e.to_email} — \"{e.subject}\" ({p.activity if p else 'N/A'})"
+        })
+
+    # ✅ Sort by timestamp DESCENDING (latest first)
+    all_logs.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    return render_template("activity_log.html", logs=all_logs)
 
 
 
 
-#if __name__ == "__main__":
-#    app.run(debug=True, port=8889)
+
+@app.template_filter("utc_to_local")
+def jinja_utc_to_local_filter(dt):
+    from utils import utc_to_local
+    return utc_to_local(dt)
+
 
  
 
