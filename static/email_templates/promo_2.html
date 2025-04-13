@@ -1,0 +1,81 @@
+{% set logo_url = logo_url or 'cid:logo_image' %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Welcome Email</title>
+    <style>
+      body {
+        background-color: #f9fafb;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        font-size: 15px;
+        color: #4b5563;
+      }
+      .main {
+        max-width: 640px;
+        margin: auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e8ebee;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        padding: 48px;
+        text-align: center;
+      }
+      h1 {
+        font-size: 30px;
+        font-weight: 700;
+        color: #111827;
+        margin: 16px 0;
+      }
+      p {
+        margin: 16px 0;
+      }
+      .btn {
+        display: inline-block;
+        background-color: #066FD1;
+        color: #ffffff;
+        padding: 12px 32px;
+        font-weight: 500;
+        border-radius: 8px;
+        text-decoration: none;
+        margin-top: 24px;
+      }
+      .footer {
+        font-size: 13px;
+        color: #8491a1;
+        margin-top: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main">
+      <img src="{{ logo_url }}" width="114" height="32" alt="Logo" style="margin-bottom: 24px;" />
+
+      <h1>Bienvenue {{ user_name }}</h1>
+
+      <p>Votre passe est maintenant prête à être utilisée.</p>
+
+      {% if pass_code %}
+      <p><strong>Code de la passe:</strong> {{ pass_code }}</p>
+      {% endif %}
+
+      <p><strong>Créé le:</strong> {{ created_date }}</p>
+      <p><strong>Activité:</strong> {{ hockey_pass.activity }}</p>
+      <p><strong>Sessions restantes:</strong> {{ remaining_games }}</p>
+
+      {% if special_message %}
+      <div style="background-color: #e6f1fa; padding: 16px; border-radius: 8px; margin-top: 24px;">
+        {{ special_message }}
+      </div>
+      {% endif %}
+
+      <a href="{{ url_for('show_pass', pass_code=pass_code, _external=True) }}" class="btn">Afficher ma passe</a>
+
+      <div class="footer">
+        {{ email_footer | safe }}
+      </div>
+    </div>
+  </body>
+</html>

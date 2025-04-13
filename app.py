@@ -62,14 +62,12 @@ from chatbot.routes_chatbot import chat_bp
 
 
 
+env = os.environ.get("FLASK_ENV", "prod").lower()
+db_filename = "dev_database.db" if env == "dev" else "prod_database.db"
 
-hostname = socket.gethostname()
-is_dev = hostname == "archlinux" or "local" in hostname
-
-db_filename = "dev_database.db" if is_dev else "prod_database.db"
 db_path = os.path.join("instance", db_filename)
+print(f"📦 Using {'DEV' if env == 'dev' else 'PROD'} database → {db_path}")
 
-print(f"📦 Using {'DEV' if is_dev else 'PROD'} database → {db_path}")
 
 
  
@@ -115,7 +113,7 @@ with app.app_context():
 
 
 
-app.register_blueprint(chat_bp)             # 👈 Register it
+app.register_blueprint(chat_bp)         
 
 
 
