@@ -167,6 +167,67 @@ def send_email_async(app, subject, to_email, template_name, context=None, inline
 
 
 
+def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
+    """
+    Unified helper to send confirmation emails for:
+    - 'created'
+    - 'paid'
+    - 'redeemed'
+
+    Automatically builds context, subject, intro text, and sends via send_email_async.
+    """
+    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
+    from flask import render_template, render_template_string, url_for
+    from datetime import datetime, timezone
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+
+    # ✅ Determine subject and intro text
+    if event_type == "created":
+        subject = "LHGI 🎟️ Confirmation de votre passe"
+        intro = f"Bonjour {hockey_pass.user_name},<br><br>Merci pour votre inscription à <strong>{hockey_pass.activity}</strong>.<br>Ce message confirme la création de votre passe numérique."
+    elif event_type == "paid":
+        subject = "LHGI ✅ Paiement Confirmé"
+        intro = f"Bonjour {hockey_pass.user_name},<br><br>Votre paiement a été reçu pour <strong>{hockey_pass.activity}</strong>. Votre passe est maintenant active. Merci!"
+    elif event_type == "redeemed":
+        subject = "🏒 Activité confirmée - Minipass"
+        remaining = hockey_pass.games_remaining
+        special = "⚠️ Votre passe est maintenant vide et inactive." if remaining == 0 else ""
+        intro = f"Bonjour {hockey_pass.user_name},<br><br>Votre présence à <strong>{hockey_pass.activity}</strong> a été enregistrée.<br>Il vous reste <strong>{remaining}</strong> activité(s) sur votre passe." + (f"<br><br>{special}" if special else "")
+    else:
+        raise ValueError(f"Unknown event_type: {event_type}")
+
+    # ✅ Build full context
+    history = get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=admin_email)
+    qr_img_io = generate_qr_code_image(hockey_pass.pass_code)
+    qr_data = qr_img_io.read()
+    email_info_html = render_template_string(get_setting("EMAIL_INFO_TEXT", ""), hockey_pass=hockey_pass)
+
+    context = {
+        "hockey_pass": hockey_pass,
+        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
+        "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+        "email_info": email_info_html,
+        "logo_url": url_for("static", filename="uploads/logo.png"),
+        "special_message": "⚠️ Votre passe est maintenant vide et inactive." if event_type == "redeemed" and hockey_pass.games_remaining == 0 else ""
+    }
+
+    inline_images = {
+        "qr_code": qr_data,
+        "logo_image": open("static/uploads/logo.png", "rb").read()
+    }
+
+    # ✅ Send the email
+    send_email_async(
+        app,
+        subject=subject,
+        to_email=hockey_pass.user_email,
+        template_name="confirmation.html",
+        context=context,
+        inline_images=inline_images,
+        intro_text=intro,
+        timestamp_override=timestamp
+    )
 
 
 
@@ -245,6 +306,9 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
             history["expired"] = utc_to_local(redemptions[-1].date_used).strftime(DATETIME_FORMAT)
 
         return history
+
+
+
 
 
 
