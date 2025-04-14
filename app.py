@@ -49,16 +49,14 @@ from utils import (
     get_kpi_stats
 )
 
-
-
 # 🧠 Data Tools
 from collections import defaultdict
-
-
 from chatbot.routes_chatbot import chat_bp
 
 
-
+# ✅ Pass the full datetime object
+from utils import send_email, generate_qr_code_image, get_pass_history_data, get_setting
+from flask import render_template, render_template_string, url_for
 
 
 
@@ -69,8 +67,6 @@ db_path = os.path.join("instance", db_filename)
 print(f"📦 Using {'DEV' if env == 'dev' else 'PROD'} database → {db_path}")
 
 
-
- 
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
@@ -89,11 +85,7 @@ if not os.path.exists(db_path):
     exit(1)
 
 
-
-
 print(f"📂 Connected DB path: {app.config['SQLALCHEMY_DATABASE_URI']}")
-
-
 
 
 UPLOAD_FOLDER = "static/uploads"
@@ -112,10 +104,7 @@ with app.app_context():
 
 
 
-
 app.register_blueprint(chat_bp)         
-
-
 
 
 ##
@@ -198,8 +187,6 @@ def trim_email(email):
 
 
 
-
-
 @app.route("/retry-failed-emails")
 def retry_failed_emails():
     if "admin" not in session:
@@ -246,8 +233,47 @@ def retry_failed_emails():
 
 
 
+@app.route("/preview-email")
+def preview_email():
+    from flask import render_template, url_for
+    import types
 
+    # Fake data (replace with real if needed)
+    hockey_pass = types.SimpleNamespace(
+        user_name="Eddy Vedder",
+        user_email="vedder@example.com",
+        phone_number="514-555-1990",
+        activity="Hockey du midi – Saison 2024-2025",
+        sold_amt=50.00,
+        games_remaining=2,
+        pass_code="PREVIEW123",
+        paid_ind=True
+    )
 
+    history = {
+        "created": "2025-04-01 10:00",
+        "created_by": "admin",
+        "paid": "2025-04-02 11:00",
+        "paid_by": "admin",
+        "redemptions": [
+            {"date": "2025-04-03 12:00", "by": "admin"},
+            {"date": "2025-04-05 12:00", "by": "admin"}
+        ],
+        "expired": None
+    }
+
+    return render_template(
+        "email_templates/confirmation.html",
+        user_name=hockey_pass.user_name,
+        created_date="2025-04-01",
+        pass_code=hockey_pass.pass_code,
+        remaining_games=hockey_pass.games_remaining,
+        special_message="🎉 Votre passe est maintenant active. Merci pour votre paiement!",
+        hockey_pass=hockey_pass,
+        history_html=render_template("email_blocks/history_table_inline.html", history=history),
+        owner_html=render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
+        email_footer="© 2025 Ligue Hockey Gagnon Image — Tous droits réservés."
+    )
 
 
 
@@ -748,81 +774,6 @@ def dashboard():
 
 
 
-
- 
-
-
-
-@app.route("/create-pass", methods=["GET", "POST"])
-def create_pass():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    if request.method == "POST":
-        current_admin = Admin.query.filter_by(email=session["admin"]).first()
-
-        user_name = request.form.get("user_name", "").strip()
-        user_email = request.form.get("user_email", "").strip()
-        phone_number = request.form.get("phone_number", "").strip()
-        sold_amt = float(request.form.get("sold_amt", 50))
-        sessions_qt = int(request.form.get("sessionsQt") or request.form.get("games_remaining") or 4)
-        paid_ind = 1 if "paid_ind" in request.form else 0
-        activity = request.form.get("activity", "").strip()
-        pass_code = str(uuid.uuid4())[:16]
-        notes = request.form.get("notes", "").strip()
-
-        new_pass = Pass(
-            pass_code=pass_code,
-            user_name=user_name,
-            user_email=user_email,
-            phone_number=phone_number,
-            sold_amt=sold_amt,
-            games_remaining=sessions_qt,
-            paid_ind=bool(paid_ind),
-            created_by=current_admin.id if current_admin else None,
-            activity=activity,
-            notes=notes
-        )
-
-        db.session.add(new_pass)
-        db.session.commit()
-
-        # ✅ Pass the full datetime object
-        send_email_async(
-            current_app._get_current_object(),
-            user_email=user_email,
-            subject="LHGI 🎟️ Votre Passe électronique est prête",
-            user_name=user_name,
-            pass_code=pass_code,
-            created_date=new_pass.pass_created_dt,  # ⏱ not a string
-            remaining_games=new_pass.games_remaining
-        )
-
-        flash("✅ Pass created and email sent.", "success")
-        return redirect(url_for("dashboard"))
-
-    default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
-    default_qt = get_setting("DEFAULT_SESSION_QT", "4")
-
-    try:
-        activity_list = json.loads(get_setting("ACTIVITY_LIST", "[]"))
-    except:
-        activity_list = []
-
-    return render_template(
-        "pass_form.html",
-        hockey_pass=None,
-        default_amt=default_amt,
-        default_qt=default_qt,
-        activity_list=activity_list
-    )
-
- 
-
-
-
-
-
 @app.route("/pass/<pass_code>")
 def show_pass(pass_code):
     hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
@@ -899,107 +850,6 @@ def edit_pass(pass_code):
 
 
 
-
-
-
-
-# Store recent redemptions to prevent duplicate scans
-recent_redemptions = {}
-
-
-@app.route("/redeem/<pass_code>", methods=["GET", "POST"])
-def redeem_pass(pass_code):
-    get_flashed_messages()  # Clear flash queue
-
-    with app.app_context():
-        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
-
-        if not hockey_pass:
-            flash("❌ Pass not found!", "error")
-            return redirect(url_for("dashboard"))
-
-        now = datetime.now(timezone.utc)
-
-        if pass_code in recent_redemptions and (now - recent_redemptions[pass_code]).seconds < 5:
-            flash("⚠️ This pass was already redeemed. Please wait before scanning again.", "warning")
-            return redirect(url_for("dashboard"))
-
-        if hockey_pass.games_remaining > 0:
-            hockey_pass.games_remaining -= 1
-            db.session.add(hockey_pass)
-
-            admin_email = session.get("admin", "unknown")
-            redemption = Redemption(pass_id=hockey_pass.id, date_used=now, redeemed_by=admin_email)
-            db.session.add(redemption)
-            db.session.commit()
-
-            recent_redemptions[pass_code] = now
-
-            special_message = ""
-            if hockey_pass.games_remaining == 0:
-                special_message = "⚠️ Your pass is now empty and inactive!"
-
-            send_email_async(
-                current_app._get_current_object(),
-                user_email=hockey_pass.user_email,
-                subject="LHGI 🏒 Activité confirmée!",
-                user_name=hockey_pass.user_name,
-                pass_code=hockey_pass.pass_code,
-                created_date=now,
-                remaining_games=hockey_pass.games_remaining,
-                special_message=special_message
-            )
-
-            flash(f"Game redeemed! {hockey_pass.games_remaining} games left. Email sent.", "success")
-        else:
-            flash("No games left on this pass!", "error")
-
-    return redirect(url_for("dashboard"))
-
-
-
-
-
-@app.route("/mark-paid/<int:pass_id>", methods=["POST"])
-def mark_paid(pass_id):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    hockey_pass = Pass.query.get(pass_id)
-    if hockey_pass:
-        paid_now = datetime.now(timezone.utc)
-        hockey_pass.paid_ind = True
-        hockey_pass.paid_date = paid_now
-        hockey_pass.marked_paid_by = session.get("admin", "unknown")
-        db.session.commit()
-
-        # ✅ Pass full datetime
-        send_email_async(
-            current_app._get_current_object(),
-            user_email=hockey_pass.user_email,
-            subject="LHGI ✅ Paiement Confirmé",
-            user_name=hockey_pass.user_name,
-            pass_code=hockey_pass.pass_code,
-            created_date=paid_now,
-            remaining_games=hockey_pass.games_remaining,
-            special_message="We've received your payment. Your pass is now active. Thank you!",
-            admin_email=hockey_pass.marked_paid_by
-        )
-
-        flash(f"Pass {hockey_pass.id} marked as paid. Email sent.", "success")
-    else:
-        flash("Pass not found!", "error")
-
-    return redirect(url_for("dashboard"))
-
-
-
- 
-
-
-
-
-
 @app.route("/scan-qr")
 def scan_qr():
     return render_template("scan_qr.html")
@@ -1011,8 +861,6 @@ def scan_qr():
 def logout():
     session.pop("admin", None)
     return redirect(url_for("login"))
-
-
 
 
 
@@ -1101,11 +949,239 @@ def activity_log():
 
 
 
-
 @app.template_filter("utc_to_local")
 def jinja_utc_to_local_filter(dt):
     from utils import utc_to_local
     return utc_to_local(dt)
+
+
+
+
+
+##
+## - = - = - = - = - = - = - = - = - = - = - = - = - =
+##
+##    ROUTES THAT USING SEND_EMAIL FUNCTION
+##
+## - = - = - = - = - = - = - = - = - = - = - = - = - =
+##
+
+
+@app.route("/create-pass", methods=["GET", "POST"])
+def create_pass():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        current_admin = Admin.query.filter_by(email=session["admin"]).first()
+
+        user_name = request.form.get("user_name", "").strip()
+        user_email = request.form.get("user_email", "").strip()
+        phone_number = request.form.get("phone_number", "").strip()
+        sold_amt = float(request.form.get("sold_amt", 50))
+        sessions_qt = int(request.form.get("sessionsQt") or request.form.get("games_remaining") or 4)
+        paid_ind = 1 if "paid_ind" in request.form else 0
+        activity = request.form.get("activity", "").strip()
+        pass_code = str(uuid.uuid4())[:16]
+        notes = request.form.get("notes", "").strip()
+
+        now_utc = datetime.now(timezone.utc)  # ✅ shared timestamp for both pass and email log
+
+        new_pass = Pass(
+            pass_code=pass_code,
+            user_name=user_name,
+            user_email=user_email,
+            phone_number=phone_number,
+            sold_amt=sold_amt,
+            games_remaining=sessions_qt,
+            paid_ind=bool(paid_ind),
+            created_by=current_admin.id if current_admin else None,
+            activity=activity,
+            notes=notes,
+            pass_created_dt=now_utc  # ✅ explicit timestamp
+        )
+
+        db.session.add(new_pass)
+        db.session.commit()
+
+        # Prepare email context
+        hockey_pass = new_pass
+        history = get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=session.get("admin"))
+        qr_img_io = generate_qr_code_image(hockey_pass.pass_code)
+        qr_data = qr_img_io.read()
+
+        email_info_html = render_template_string(get_setting("EMAIL_INFO_TEXT", ""), hockey_pass=hockey_pass)
+
+        # ✅ Send confirmation email asynchronously using the same timestamp
+        send_email_async(
+            current_app._get_current_object(),
+            subject="LHGI 🎟️ Confirmation de votre passe",
+            to_email=hockey_pass.user_email,
+            template_name="confirmation.html",
+            context={
+                "hockey_pass": hockey_pass,
+                "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
+                "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+                "email_info": email_info_html,
+                "logo_url": url_for("static", filename="uploads/logo.png")
+            },
+            inline_images={
+                "qr_code": qr_data,
+                "logo_image": open("static/uploads/logo.png", "rb").read()
+            },
+            intro_text=f"Bonjour {hockey_pass.user_name},<br><br>Merci pour votre inscription à <strong>{hockey_pass.activity}</strong>.<br>Ce message confirme la création de votre passe numérique.",
+            timestamp_override=now_utc  # ✅ shared timestamp passed to the logger
+        )
+
+        flash("✅ Pass created and email sent.", "success")
+        return redirect(url_for("dashboard"))
+
+    # GET Method defaults
+    default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
+    default_qt = get_setting("DEFAULT_SESSION_QT", "4")
+
+    try:
+        activity_list = json.loads(get_setting("ACTIVITY_LIST", "[]"))
+    except:
+        activity_list = []
+
+    return render_template(
+        "pass_form.html",
+        hockey_pass=None,
+        default_amt=default_amt,
+        default_qt=default_qt,
+        activity_list=activity_list
+    )
+
+
+
+
+
+
+
+# Store recent redemptions to prevent duplicate scans
+recent_redemptions = {}
+
+
+@app.route("/redeem/<pass_code>", methods=["GET", "POST"])
+def redeem_pass(pass_code):
+    get_flashed_messages()  # Clear flash queue
+
+    with app.app_context():
+        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+
+        if not hockey_pass:
+            flash("❌ Pass not found!", "error")
+            return redirect(url_for("dashboard"))
+
+        now = datetime.now(timezone.utc)
+
+        if pass_code in recent_redemptions and (now - recent_redemptions[pass_code]).seconds < 5:
+            flash("⚠️ This pass was already redeemed. Please wait before scanning again.", "warning")
+            return redirect(url_for("dashboard"))
+
+        if hockey_pass.games_remaining > 0:
+            hockey_pass.games_remaining -= 1
+            db.session.add(hockey_pass)
+
+            admin_email = session.get("admin", "unknown")
+            redemption = Redemption(pass_id=hockey_pass.id, date_used=now, redeemed_by=admin_email)
+            db.session.add(redemption)
+            db.session.commit()
+
+            recent_redemptions[pass_code] = now
+
+            special_message = ""
+            if hockey_pass.games_remaining == 0:
+                special_message = "⚠️ Your pass is now empty and inactive!"
+
+            # 🟢 New flexible email call
+            from utils import send_email, generate_qr_code_image, get_pass_history_data, get_setting
+            from flask import render_template, render_template_string, url_for
+
+            history = get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=session.get("admin"))
+            qr_img_io = generate_qr_code_image(hockey_pass.pass_code)
+            qr_data = qr_img_io.read()
+
+            email_info_html = render_template_string(get_setting("EMAIL_INFO_TEXT", ""), hockey_pass=hockey_pass)
+
+            send_email(
+                subject="🏒 Activité confirmée - Minipass",
+                to_email=hockey_pass.user_email,
+                template_name="confirmation.html",
+                context={
+                    "hockey_pass": hockey_pass,
+                    "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
+                    "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+                    "email_info": email_info_html,
+                    "logo_url": url_for("static", filename="uploads/logo.png")
+                },
+                inline_images={
+                    "qr_code": qr_data,
+                    "logo_image": open("static/uploads/logo.png", "rb").read()
+                },
+                intro_text=f"Bonjour {hockey_pass.user_name},<br><br>Votre présence à <strong>{hockey_pass.activity}</strong> a été enregistrée.<br>Il vous reste <strong>{hockey_pass.games_remaining}</strong> activité(s) sur votre passe." + (f"<br><br>{special_message}" if special_message else "")
+            )
+
+            flash(f"Game redeemed! {hockey_pass.games_remaining} games left. Email sent.", "success")
+        else:
+            flash("No games left on this pass!", "error")
+
+    return redirect(url_for("dashboard"))
+
+
+
+
+
+@app.route("/mark-paid/<int:pass_id>", methods=["POST"])
+def mark_paid(pass_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    hockey_pass = Pass.query.get(pass_id)
+    if hockey_pass:
+        paid_now = datetime.now(timezone.utc)
+        hockey_pass.paid_ind = True
+        hockey_pass.paid_date = paid_now
+        hockey_pass.marked_paid_by = session.get("admin", "unknown")
+        db.session.commit()
+
+        # ✅ New flexible email call
+        from utils import send_email, generate_qr_code_image, get_pass_history_data, get_setting
+        from flask import render_template, render_template_string, url_for
+
+        history = get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=session.get("admin"))
+        qr_img_io = generate_qr_code_image(hockey_pass.pass_code)
+        qr_data = qr_img_io.read()
+
+        email_info_html = render_template_string(get_setting("EMAIL_INFO_TEXT", ""), hockey_pass=hockey_pass)
+
+        send_email(
+            subject="✅ Paiement confirmé - Minipass",
+            to_email=hockey_pass.user_email,
+            template_name="confirmation.html",
+            context={
+                "hockey_pass": hockey_pass,
+                "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
+                "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+                "email_info": email_info_html,
+                "logo_url": url_for("static", filename="uploads/logo.png")
+            },
+            inline_images={
+                "qr_code": qr_data,
+                "logo_image": open("static/uploads/logo.png", "rb").read()
+            },
+            intro_text=f"Bonjour {hockey_pass.user_name},<br><br>Nous avons bien reçu votre paiement pour <strong>{hockey_pass.activity}</strong>.<br>Votre passe est maintenant active. Merci beaucoup !"
+        )
+
+        flash(f"Pass {hockey_pass.id} marked as paid. Email sent.", "success")
+    else:
+        flash("Pass not found!", "error")
+
+    return redirect(url_for("dashboard"))
+
+
+
 
 
  
