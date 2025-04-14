@@ -28,3 +28,4 @@ faker
 # 🧠 LLM / Chatbot
 ollama  # Python client for your Ollama server
 
+premailer

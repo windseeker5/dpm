@@ -101,12 +101,73 @@ def generate_qr_code_image(pass_code):
 
 
 
-def send_email_async(app, *args, **kwargs):
+def send_email_async_OLD_BK(app, *args, **kwargs):
     def run_in_context():
         with app.app_context():
             send_email(app, *args, **kwargs)  # ✅ FIXED
     thread = threading.Thread(target=run_in_context)
     thread.start()
+
+
+
+
+
+def send_email_async(app, subject, to_email, template_name, context=None, inline_images=None, intro_text=None, timestamp_override=None):
+    def send_in_thread():
+        with app.app_context():
+            try:
+                send_email(
+                    subject=subject,
+                    to_email=to_email,
+                    template_name=template_name,
+                    context=context,
+                    inline_images=inline_images,
+                    intro_text=intro_text
+                )
+
+                # ✅ Log success
+                from models import EmailLog
+                db.session.add(EmailLog(
+                    to_email=to_email,
+                    subject=subject,
+                    pass_code=context.get("hockey_pass").pass_code if context and context.get("hockey_pass") else None,
+                    template_name=template_name,
+                    context_json=json.dumps({
+                        "user_name": context.get("hockey_pass").user_name,
+                        "created_date": context.get("hockey_pass").pass_created_dt.strftime('%Y-%m-%d'),
+                        "remaining_games": context.get("hockey_pass").games_remaining,
+                        "special_message": context.get("special_message", "")
+                    }),
+                    result="SENT",
+                    timestamp=timestamp_override or datetime.now(timezone.utc)  # ✅ HERE
+                ))
+                db.session.commit()
+
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+
+                from models import EmailLog
+                db.session.add(EmailLog(
+                    to_email=to_email,
+                    subject=subject,
+                    pass_code=context.get("hockey_pass").pass_code if context and context.get("hockey_pass") else None,
+                    template_name=template_name,
+                    context_json=json.dumps(context or {}),
+                    result="FAILED",
+                    error_message=str(e),
+                    timestamp=timestamp_override or datetime.now(timezone.utc)  # ✅ AND HERE
+                ))
+                db.session.commit()
+
+    thread = threading.Thread(target=send_in_thread)
+    thread.start()
+
+
+
+
+
+
 
 
 
@@ -189,7 +250,8 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
 
 
 
-def send_email(app, user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=None, admin_email=None):
+
+def send_email_bk_kd(app, user_email, subject, user_name, pass_code, created_date, remaining_games, special_message=None, admin_email=None):
     try:
         from utils import get_setting
         from models import EmailLog
@@ -708,3 +770,111 @@ def get_kpi_stats():
 
         return kpis
 
+
+
+
+
+
+
+from flask import render_template
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+import smtplib
+from utils import get_setting
+import traceback
+from premailer import transform
+import os
+import re
+
+
+def strip_html_tags(html):
+    return re.sub('<[^<]+?>', '', html)
+
+
+
+
+
+def send_email(subject, to_email, template_name, context=None, inline_images=None, intro_text=None):
+    from flask import current_app, render_template
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.image import MIMEImage
+    from email.utils import formataddr
+    from premailer import transform
+    import logging
+    from utils import get_setting
+
+    context = context or {}
+    inline_images = inline_images or {}
+    msg = MIMEMultipart("related")
+
+    # ✅ Use sender from DB setting
+    from_name = "Minipass"
+    from_email = get_setting("MAIL_DEFAULT_SENDER") or "noreply@minipass.me"
+    msg["From"] = formataddr((from_name, from_email))
+    msg["Subject"] = subject
+    msg["To"] = to_email
+
+    html_body = render_template(f"email_templates/{template_name}", intro_text=intro_text, **context)
+
+    # 🧼 Add padding to info blocks for better layout
+    html_body = html_body.replace('<div class="info-section">', '<div class="info-section" style="padding-left: 24px; padding-right: 24px;">')
+    html_body = html_body.replace('<div class="intro-section">', '<div class="intro-section" style="padding-left: 24px; padding-right: 24px;">')
+
+    html_body = transform(html_body)
+    plain_text = "Merci pour votre inscription. Votre passe est confirmée."
+
+    msg_alt = MIMEMultipart("alternative")
+    msg.attach(msg_alt)
+    msg_alt.attach(MIMEText(plain_text, "plain"))
+    msg_alt.attach(MIMEText(html_body, "html"))
+
+    images = {
+        "qr_code": inline_images.get("qr_code"),
+        "logo_image": inline_images.get("logo_image"),
+        "check_icon": open("static/email_templates/confirmation/assets/icons-white-check.png", "rb").read(),
+        "icon_facebook": open("static/email_templates/confirmation/assets/facebook-box-fill.png", "rb").read(),
+        "icon_instagram": open("static/email_templates/confirmation/assets/instagram-line.png", "rb").read(),
+    }
+
+    for cid, img_data in images.items():
+        if img_data:
+            part = MIMEImage(img_data)
+            part.add_header("Content-ID", f"<{cid}>")
+            part.add_header("Content-Disposition", "inline", filename=f"{cid}.png")
+            msg.attach(part)
+
+    try:
+        smtp_host = get_setting("MAIL_SERVER")
+        smtp_port = int(get_setting("MAIL_PORT", 587))
+        smtp_user = get_setting("MAIL_USERNAME")
+        smtp_pass = get_setting("MAIL_PASSWORD")
+        use_tls = str(get_setting("MAIL_USE_TLS") or "true").lower() == "true"
+        use_proxy = smtp_port == 25 and not use_tls
+
+        debug_info = {
+            "MAIL_SERVER": smtp_host,
+            "MAIL_PORT": smtp_port,
+            "MAIL_USERNAME": smtp_user,
+            "MAIL_USE_TLS": use_tls,
+            "MAIL_DEFAULT_SENDER": from_email
+        }
+        print("📬 Mail settings:", debug_info)
+
+        server = smtplib.SMTP(smtp_host, smtp_port)
+        server.ehlo()
+        if not use_proxy and use_tls:
+            server.starttls()
+            server.ehlo()
+        if not use_proxy and smtp_user and smtp_pass:
+            server.login(smtp_user, smtp_pass)
+
+        server.sendmail(from_email, [to_email], msg.as_string())
+        server.quit()
+        logging.info(f"✅ Email sent to {to_email} with subject '{subject}'")
+        print(f"✅ Email sent to {to_email} with subject '{subject}'")
+
+    except Exception as e:
+        logging.exception(f"❌ Failed to send email to {to_email}: {e}")
