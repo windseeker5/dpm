@@ -21,6 +21,9 @@ from flask import (
 # 🛠 Flask Extensions
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_wtf import CSRFProtect
+
+
 
 # 🧱 SQLAlchemy Extras
 from sqlalchemy import extract, func, case, desc
@@ -93,6 +96,9 @@ print(f"📂 Connected DB path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
+csrf = CSRFProtect(app)
+app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
+
 
 # ✅ Load settings only if the database is ready
 with app.app_context():
@@ -147,13 +153,15 @@ scheduler.start()
 
 
 
+
 @app.context_processor
-def inject_globals():
+def inject_globals_and_csrf():
+    from flask_wtf.csrf import generate_csrf
     return {
         'now': datetime.now(timezone.utc),
-        'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image")
+        'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
+        'csrf_token': generate_csrf  # returns the raw CSRF token
     }
-
 
 
 @app.template_filter('encode_md5')
@@ -385,8 +393,6 @@ def home():
 
 
 
-
-
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
 
@@ -535,11 +541,28 @@ def setup():
         print("[SETUP] Settings saved:", list(email_settings.keys()) + list(extra_settings.keys()))
 
 
-        #flash("✅ Setup completed successfully!", "success")
-        #return redirect(url_for("dashboard"))
 
-        flash("✅ Setup completed successfully!", "success")
+        # ✅ Step 8: Save email notification templates
+        for event in ["pass_created", "pass_redeemed", "payment_received", "payment_late"]:
+            for key in ["SUBJECT", "TITLE", "INTRO", "CONCLUSION", "THEME"]:
+                full_key = f"{key}_{event}"
+                value = request.form.get(full_key, "").strip()
+                if value:
+                    existing = Setting.query.filter_by(key=full_key).first()
+                    if existing:
+                        existing.value = value
+                    else:
+                        db.session.add(Setting(key=full_key, value=value))
+
+        # ✅ Finalize changes
+        db.session.commit()
+        print("[SETUP] Admins configured:", admin_emails)
+        print("[SETUP] Settings saved:", list(email_settings.keys()) + list(extra_settings.keys()))
+
+
+        flash("Setup completed successfully!", "success")
         return redirect(url_for("setup"))
+
 
 
 
@@ -1062,28 +1085,7 @@ def create_pass():
 
         email_info_html = render_template_string(get_setting("EMAIL_INFO_TEXT", ""), hockey_pass=hockey_pass)
 
-        # ✅ Send confirmation email asynchronously using the same timestamp
-        #send_email_async(
-        #    current_app._get_current_object(),
-        #    subject="LHGI 🎟️ Confirmation de votre passe",
-        #    to_email=hockey_pass.user_email,
-        #    template_name="confirmation.html",
-        #    context={
-        #        "hockey_pass": hockey_pass,
-        #        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
-        #        "history_html": render_template("email_blocks/history_table_inline.html", history=history),
-        #        "email_info": email_info_html,
-        #        "logo_url": url_for("static", filename="uploads/logo.png")
-        #    },
-        #    inline_images={
-        #        "qr_code": qr_data,
-        #        "logo_image": open("static/uploads/logo.png", "rb").read()
-        #    },
-        #    intro_text=f"Bonjour {hockey_pass.user_name},<br><br>Merci pour votre inscription à <strong>{hockey_pass.activity}</strong>.<br>Ce message confirme la création de votre passe numérique.",
-        #    timestamp_override=now_utc  # ✅ shared timestamp passed to the logger
-        #)
-
-
+  
         # ✅ Send confirmation email asynchronously using the same timestamp
         # 🔁 In /create-pass (after db.session.commit)
         now_utc = datetime.now(timezone.utc)
