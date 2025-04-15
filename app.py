@@ -204,6 +204,71 @@ def trim_email(email):
 ##
 
 
+
+@app.route("/admin/email-preview", methods=["GET"])
+def email_preview():
+    from utils import get_setting, get_pass_history_data, generate_qr_code_image
+    from flask import render_template, render_template_string
+    from models import Pass
+    import base64
+
+    event = request.args.get("event", "pass_created")
+    pass_code = request.args.get("pass_code", "").strip()
+
+    html_preview = None
+    if pass_code:
+        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+        if not hockey_pass:
+            flash(f"⚠️ No pass found for code: {pass_code}", "danger")
+        else:
+            # Safe pass object
+            safe_pass = {
+                "pass_code": hockey_pass.pass_code,
+                "user_name": hockey_pass.user_name,
+                "activity": hockey_pass.activity,
+                "games_remaining": hockey_pass.games_remaining,
+                "sold_amt": hockey_pass.sold_amt,
+                "user_email": hockey_pass.user_email,
+                "phone_number": hockey_pass.phone_number,
+                "pass_created_dt": hockey_pass.pass_created_dt,
+            }
+
+            subject = get_setting(f"SUBJECT_{event}", f"[Minipass] {event.title()} Notification")
+            title = get_setting(f"TITLE_{event}", event.title())
+            intro = get_setting(f"INTRO_{event}", "")
+            conclusion = get_setting(f"CONCLUSION_{event}", "")
+            theme = get_setting(f"THEME_{event}", "confirmation.html")
+
+            history = get_pass_history_data(hockey_pass.pass_code)
+            qr_img_io = generate_qr_code_image(hockey_pass.pass_code)
+            qr_base64 = base64.b64encode(qr_img_io.read()).decode()
+
+            context = {
+                "hockey_pass": safe_pass,
+                "title": title,
+                "intro_text": intro,
+                "conclusion_text": conclusion,
+                "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=safe_pass),
+                "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+                "email_info": "",  # we no longer use this
+                "logo_url": url_for("static", filename="uploads/logo.png"),
+            }
+
+            rendered = render_template(f"email_templates/{theme}", **context)
+            # Replace inline image refs with base64 dummy images for preview
+            rendered = rendered.replace("cid:qr_code", f"data:image/png;base64,{qr_base64}")
+            rendered = rendered.replace("cid:check_icon", url_for("static", filename="email_templates/confirmation/assets/icons-white-check.png"))
+            rendered = rendered.replace("cid:icon_facebook", url_for("static", filename="email_templates/confirmation/assets/facebook-box-fill.png"))
+            rendered = rendered.replace("cid:icon_instagram", url_for("static", filename="email_templates/confirmation/assets/instagram-line.png"))
+            rendered = rendered.replace("cid:logo_image", url_for("static", filename="uploads/logo.png"))
+
+            html_preview = rendered
+
+    return render_template("email_preview_ui.html", selected_event=event, pass_code=pass_code, html_preview=html_preview)
+
+
+
+
 @app.route("/retry-failed-emails")
 def retry_failed_emails():
     if "admin" not in session:
@@ -1039,7 +1104,6 @@ def jinja_utc_to_local_filter(dt):
 ##
 
 
-
 @app.route("/create-pass", methods=["GET", "POST"])
 def create_pass():
     if "admin" not in session:
@@ -1048,6 +1112,7 @@ def create_pass():
     if request.method == "POST":
         current_admin = Admin.query.filter_by(email=session["admin"]).first()
 
+        # ✅ Gather form data
         user_name = request.form.get("user_name", "").strip()
         user_email = request.form.get("user_email", "").strip()
         phone_number = request.form.get("phone_number", "").strip()
@@ -1058,8 +1123,9 @@ def create_pass():
         pass_code = str(uuid.uuid4())[:16]
         notes = request.form.get("notes", "").strip()
 
-        now_utc = datetime.now(timezone.utc)  # ✅ shared timestamp for both pass and email log
+        now_utc = datetime.now(timezone.utc)
 
+        # ✅ Create pass object
         new_pass = Pass(
             pass_code=pass_code,
             user_name=user_name,
@@ -1071,37 +1137,31 @@ def create_pass():
             created_by=current_admin.id if current_admin else None,
             activity=activity,
             notes=notes,
-            pass_created_dt=now_utc  # ✅ explicit timestamp
+            pass_created_dt=now_utc
         )
 
         db.session.add(new_pass)
-        db.session.commit()
+        db.session.commit()  # ✅ Save pass first before sending email
 
-        # Prepare email context
-        hockey_pass = new_pass
-        history = get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=session.get("admin"))
-        qr_img_io = generate_qr_code_image(hockey_pass.pass_code)
-        qr_data = qr_img_io.read()
+        # ✅ Reload settings in case they were changed just before
+        db.session.expire_all()
 
-        email_info_html = render_template_string(get_setting("EMAIL_INFO_TEXT", ""), hockey_pass=hockey_pass)
-
-  
-        # ✅ Send confirmation email asynchronously using the same timestamp
-        # 🔁 In /create-pass (after db.session.commit)
-        now_utc = datetime.now(timezone.utc)
+        # ✅ Send confirmation email
         notify_pass_event(
             app=current_app._get_current_object(),
-            event_type="created",
+            event_type="pass_created", 
             hockey_pass=new_pass,
             admin_email=session.get("admin"),
             timestamp=now_utc
         )
 
 
-        flash("Pass created and email sent.", "success")
+
+
+        flash("✅ Pass created and confirmation email sent.", "success")
         return redirect(url_for("dashboard"))
 
-    # GET Method defaults
+    # 👉 GET METHOD: show form
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
 
@@ -1121,6 +1181,11 @@ def create_pass():
 
 # Store recent redemptions to prevent duplicate scans
 recent_redemptions = {}
+
+
+
+
+
 
 
 @app.route("/redeem/<pass_code>", methods=["GET", "POST"])
@@ -1151,64 +1216,20 @@ def redeem_pass(pass_code):
 
             recent_redemptions[pass_code] = now_utc
 
-            # 🟢 Email content rendering (unchanged)
-            from utils import send_email_async, generate_qr_code_image, get_pass_history_data, get_setting
-            from flask import render_template, render_template_string, url_for
-
-            history = get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=session.get("admin"))
-            qr_img_io = generate_qr_code_image(hockey_pass.pass_code)
-            qr_data = qr_img_io.read()
-
-            email_info_html = render_template_string(get_setting("EMAIL_INFO_TEXT", ""), hockey_pass=hockey_pass)
-
-            special_message = ""
-            if hockey_pass.games_remaining == 0:
-                special_message = "⚠️ Your pass is now empty and inactive!"
-
-            # ✅ Use async email with timestamp override
-            #send_email_async(
-            #    current_app._get_current_object(),
-            #    subject="🏒 Activité confirmée - Minipass",
-            #    to_email=hockey_pass.user_email,
-            #    template_name="confirmation.html",
-            #    context={
-            #        "hockey_pass": hockey_pass,
-            #        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
-            #        "history_html": render_template("email_blocks/history_table_inline.html", history=history),
-            #        "email_info": email_info_html,
-            #        "logo_url": url_for("static", filename="uploads/logo.png"),
-            #        "special_message": special_message
-            #    },
-            #    inline_images={
-            #        "qr_code": qr_data,
-            #        "logo_image": open("static/uploads/logo.png", "rb").read()
-            #    },
-            #    intro_text=f"Bonjour {hockey_pass.user_name},<br><br>Votre présence à <strong>{hockey_pass.activity}</strong> a été enregistrée.<br>Il vous reste <strong>{hockey_pass.games_remaining}</strong> activité(s) sur votre passe." + (f"<br><br>{special_message}" if special_message else ""),
-            #    timestamp_override=now_utc  # ✅ log timing matches redemption
-            #)
-
-
-            # ✅ Use async email with timestamp override
-            # 🔁 In /redeem/<pass_code> (after db.session.commit)
-            now_utc = datetime.now(timezone.utc)
+            # ✅ Send smart email using DB settings
             notify_pass_event(
                 app=current_app._get_current_object(),
-                event_type="redeemed",
+                event_type="pass_redeemed",
                 hockey_pass=hockey_pass,
                 admin_email=session.get("admin"),
                 timestamp=now_utc
             )
 
-
-
-
-
-            flash(f"Game redeemed! {hockey_pass.games_remaining} games left. Email sent.", "success")
+            flash(f"✅ Game redeemed! {hockey_pass.games_remaining} games left. Email sent.", "success")
         else:
-            flash("No games left on this pass!", "error")
+            flash("❌ No games left on this pass!", "error")
 
     return redirect(url_for("dashboard"))
-
 
 
 
@@ -1229,38 +1250,16 @@ def mark_paid(pass_id):
         db.session.commit()
 
         # ✅ Send confirmation email with synced timestamp
-        #send_email_async(
-        #    current_app._get_current_object(),
-        #    subject="LHGI ✅ Paiement Confirmé",
-        #    to_email=hockey_pass.user_email,  # ✅ correct param name
-        #    template_name="confirmation.html",
-        #    context={
-        #        "hockey_pass": hockey_pass,
-        #        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
-        #        "history_html": render_template("email_blocks/history_table_inline.html", history=get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=session.get("admin"))),
-        #        "email_info": render_template_string(get_setting("EMAIL_INFO_TEXT", ""), hockey_pass=hockey_pass),
-        #        "logo_url": url_for("static", filename="uploads/logo.png")
-        #    },
-        #    inline_images={
-        #        "qr_code": generate_qr_code_image(hockey_pass.pass_code).read(),
-        #        "logo_image": open("static/uploads/logo.png", "rb").read()
-        #    },
-        #    intro_text=f"Bonjour {hockey_pass.user_name},<br><br>Votre paiement a été reçu pour <strong>{hockey_pass.activity}</strong>. Votre passe est maintenant active. Merci!",
-        #    timestamp_override=now_utc
-        #)
-
-        # ✅ Send confirmation email with synced timestamp
         # 🔁 In /mark-paid/<pass_id> (after db.session.commit)
         now_utc = datetime.now(timezone.utc)
+
         notify_pass_event(
             app=current_app._get_current_object(),
-            event_type="paid",
+            event_type="payment_received",
             hockey_pass=hockey_pass,
             admin_email=session.get("admin"),
             timestamp=now_utc
         )
-
-
 
 
         flash(f"Pass {hockey_pass.id} marked as paid. Email sent.", "success")
@@ -1270,7 +1269,12 @@ def mark_paid(pass_id):
     return redirect(url_for("dashboard"))
 
 
- 
+
+
+
+
+
+
 
 if __name__ == "__main__":
     env = os.environ.get("FLASK_ENV", "dev").lower()

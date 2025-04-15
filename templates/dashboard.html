@@ -198,28 +198,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!-- Header card for controls -->
 <div class="card mb-3">
   <div class="card-body">
@@ -324,11 +302,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 {% if not pass.paid_ind %}
                 <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" onsubmit="return confirm('Mark this pass as paid?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="dropdown-item text-success" type="submit">
                     <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
                   </button>
                 </form>
                 {% endif %}
+
+
+
+
               </div>
             </div>
 
@@ -421,12 +404,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 </script>
-
-
-
-
-
-
 
 
 
