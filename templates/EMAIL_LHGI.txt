@@ -72,3 +72,14 @@ Bonjour {{ hockey_pass.user_name }},
 Vous avez une passe numérique en attente de paiement!
 
 Pour activer votre accès aux activités, merci de compléter le virement de {{ "%.2f"|format(hockey_pass.sold_amt) }} $ à l’adresse suivante : lhgi@jfgoulet.com
+
+
+
+
+[  SIMULATING AN IINTERACT PAYMENT ]
+
+from : kdresdell@gmail.com  # Set this in the from of setup section
+
+Send an email to kdresdell@gmail.com with this subject :
+
+Virement Interac : Vous avez reçu 50,00 $ de PHILIPPE DRESDELL et ce montant a été déposé automatiquement.
