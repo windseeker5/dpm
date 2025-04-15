@@ -20,13 +20,14 @@
             </td>
           </tr>
 
-          <!-- ✅ Title -->
+          <!-- ✅ Dynamic Title -->
+          {% if title %}
           <tr>
             <td align="center" style="font-size: 20px; font-weight: bold; color: #1e293b; padding-bottom: 16px;">
-              Confirmation de votre passe
+              {{ title }}
             </td>
           </tr>
-
+          {% endif %}
 
           <br>
 
@@ -60,11 +61,11 @@
             </td>
           </tr>
 
-          <!-- ✅ Email Info Block -->
-          {% if email_info %}
+          <!-- ✅ Conclusion Text (replaces email_info) -->
+          {% if conclusion_text %}
           <tr>
             <td style="padding: 0 40px 40px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
-              {{ email_info | safe }}
+              {{ conclusion_text | safe }}
             </td>
           </tr>
           {% endif %}
