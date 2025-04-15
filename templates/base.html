@@ -29,6 +29,28 @@
 <body>
 
 
+  <!-- THIS CODE IS REQUIRED FOR TINYMCE EDITOR FROM TABLER.IO -->
+  <script src="{{ url_for('static', filename='tinymce/tinymce.min.js') }}"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (document.querySelector('textarea.tinymce')) {
+        tinymce.init({
+          selector: 'textarea.tinymce',
+          height: 200,
+          plugins: 'link lists code preview',
+          toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | code preview',
+          menubar: false,
+          branding: false,
+          skin: "oxide",
+          content_css: "default"
+        });
+      }
+    });
+  </script>
+  
+
+
+
 <div class="page">
   <!-- Top Navbar -->
   <header class="navbar navbar-expand-md navbar-dark bg-gray-800 d-print-none">
