@@ -85,11 +85,20 @@
                       </div>
                       <div class="mb-3">
                         <label class="form-label">Theme (Template Name)</label>
+                        
+
+
                         <select name="THEME_{{ event }}" class="form-select">
-                          {% for tpl in ['confirmation.html'] %}
-                            <option value="{{ tpl }}" {% if settings['THEME_' ~ event] == tpl %}selected{% endif %}>{{ tpl }}</option>
+                          {% for tpl in email_templates %}
+                            <option value="{{ tpl }}" {% if settings['THEME_' ~ event] == tpl %}selected{% endif %}>
+                              {{ tpl.replace('.html', '') }}
+                            </option>
                           {% endfor %}
                         </select>
+                        
+
+
+
                       </div>
                     </div>
                   {% endfor %}

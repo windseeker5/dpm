@@ -13,11 +13,10 @@
         <!-- ✅ Outer Card Container -->
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius: 8px; overflow:hidden; margin: 40px auto;">
 
-          
 
           <!-- ✅ Check Icon -->
           <tr>
-            <td align="center" style="padding: 720px 0 16px;">
+            <td align="center" style="padding:80px 0 16px;">
               <img src="cid:icons-white-check" alt="Check" width="48" style="background:#066FD1; border-radius:50%; padding:8px;">
 
             </td>
@@ -36,7 +35,7 @@
           <!-- ✅ Intro Text -->
           {% if intro_text %}
           <tr>
-            <td style="padding: 50px 65px 32px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
+            <td style="padding: 30px 75px 32px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
               {{ intro_text | safe }}
             </td>
           </tr>
@@ -50,6 +49,7 @@
           </tr>
 
           <!-- ✅ Owner Card -->
+
           <tr>
             <td style="padding: 0 40px 24px;">
               {{ owner_html | safe }}
@@ -65,29 +65,48 @@
 
           <!-- ✅ Conclusion Text (replaces email_info) -->
           {% if conclusion_text %}
+
           <tr>
-            <td style="padding: 0 65px 40px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
+            <td style="padding: 0 75px 50px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
               {{ conclusion_text | safe }}
             </td>
           </tr>
+          
+
           {% endif %}
 
+
+
         </table>
+
+
+
 
         <!-- ✅ Footer Icons with Facebook and Instagram only -->
-        <table width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 7px;">
           <tr>
-            <td align="center" style="padding: 16px 0;">
-              <a href="https://www.facebook.com/profile.php?id=61554658763800">
-                <img src="cid:facebook-gray" alt="Facebook" width="24" style="margin: 0 8px;">
 
+
+            <td align="center" style="padding: 7px 0; font-size:0;">
+              <a href="https://www.facebook.com/profile.php?id=61554658763800">
+                <img src="cid:facebook" alt="Facebook" width="30" style="margin: 0 8px;">
               </a>
               <a href="#">
-                 <img src="cid:instagram-gray" alt="Instagram" width="24" style="margin: 0 8px;">
-               </a>
+                <img src="cid:instagram" alt="Instagram" width="30" style="margin: 0 8px;">
+              </a>
             </td>
+            
+
           </tr>
         </table>
+
+
+
+
+
+
+
+
 
         <!-- ✅ Footer Text -->
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">

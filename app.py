@@ -203,68 +203,27 @@ def trim_email(email):
 ## - = - = - = - = - = - = - = - = - = - = - = - = - =
 ##
 
-
-
-@app.route("/admin/email-preview", methods=["GET"])
-def email_preview():
-    from utils import get_setting, get_pass_history_data, generate_qr_code_image
-    from flask import render_template, render_template_string
+  
+@app.route("/preview-email/<event>")
+def preview_email(event):
+    from utils import notify_pass_event
     from models import Pass
-    import base64
+    from flask import current_app
 
-    event = request.args.get("event", "pass_created")
-    pass_code = request.args.get("pass_code", "").strip()
+    sample_pass = Pass.query.filter(Pass.user_email.isnot(None)).order_by(Pass.id.desc()).first()
 
-    html_preview = None
-    if pass_code:
-        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
-        if not hockey_pass:
-            flash(f"⚠️ No pass found for code: {pass_code}", "danger")
-        else:
-            # Safe pass object
-            safe_pass = {
-                "pass_code": hockey_pass.pass_code,
-                "user_name": hockey_pass.user_name,
-                "activity": hockey_pass.activity,
-                "games_remaining": hockey_pass.games_remaining,
-                "sold_amt": hockey_pass.sold_amt,
-                "user_email": hockey_pass.user_email,
-                "phone_number": hockey_pass.phone_number,
-                "pass_created_dt": hockey_pass.pass_created_dt,
-            }
+    if not sample_pass:
+        return "❌ No sample pass with email found in DB.", 404
 
-            subject = get_setting(f"SUBJECT_{event}", f"[Minipass] {event.title()} Notification")
-            title = get_setting(f"TITLE_{event}", event.title())
-            intro = get_setting(f"INTRO_{event}", "")
-            conclusion = get_setting(f"CONCLUSION_{event}", "")
-            theme = get_setting(f"THEME_{event}", "confirmation.html")
+    notify_pass_event(
+        app=current_app._get_current_object(),
+        event_type=event,
+        hockey_pass=sample_pass,
+        admin_email="preview@test",
+    )
 
-            history = get_pass_history_data(hockey_pass.pass_code)
-            qr_img_io = generate_qr_code_image(hockey_pass.pass_code)
-            qr_base64 = base64.b64encode(qr_img_io.read()).decode()
+    return f"✅ Preview email sent using event type: {event}"
 
-            context = {
-                "hockey_pass": safe_pass,
-                "title": title,
-                "intro_text": intro,
-                "conclusion_text": conclusion,
-                "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=safe_pass),
-                "history_html": render_template("email_blocks/history_table_inline.html", history=history),
-                "email_info": "",  # we no longer use this
-                "logo_url": url_for("static", filename="uploads/logo.png"),
-            }
-
-            rendered = render_template(f"email_templates/{theme}", **context)
-            # Replace inline image refs with base64 dummy images for preview
-            rendered = rendered.replace("cid:qr_code", f"data:image/png;base64,{qr_base64}")
-            rendered = rendered.replace("cid:check_icon", url_for("static", filename="email_templates/confirmation/assets/icons-white-check.png"))
-            rendered = rendered.replace("cid:icon_facebook", url_for("static", filename="email_templates/confirmation/assets/facebook-box-fill.png"))
-            rendered = rendered.replace("cid:icon_instagram", url_for("static", filename="email_templates/confirmation/assets/instagram-line.png"))
-            rendered = rendered.replace("cid:logo_image", url_for("static", filename="uploads/logo.png"))
-
-            html_preview = rendered
-
-    return render_template("email_preview_ui.html", selected_event=event, pass_code=pass_code, html_preview=html_preview)
 
 
 
@@ -314,48 +273,6 @@ def retry_failed_emails():
     return redirect(url_for("dashboard"))
 
 
-
-@app.route("/preview-email")
-def preview_email():
-    from flask import render_template, url_for
-    import types
-
-    # Fake data (replace with real if needed)
-    hockey_pass = types.SimpleNamespace(
-        user_name="Eddy Vedder",
-        user_email="vedder@example.com",
-        phone_number="514-555-1990",
-        activity="Hockey du midi – Saison 2024-2025",
-        sold_amt=50.00,
-        games_remaining=2,
-        pass_code="PREVIEW123",
-        paid_ind=True
-    )
-
-    history = {
-        "created": "2025-04-01 10:00",
-        "created_by": "admin",
-        "paid": "2025-04-02 11:00",
-        "paid_by": "admin",
-        "redemptions": [
-            {"date": "2025-04-03 12:00", "by": "admin"},
-            {"date": "2025-04-05 12:00", "by": "admin"}
-        ],
-        "expired": None
-    }
-
-    return render_template(
-        "email_templates/confirmation.html",
-        user_name=hockey_pass.user_name,
-        created_date="2025-04-01",
-        pass_code=hockey_pass.pass_code,
-        remaining_games=hockey_pass.games_remaining,
-        special_message="🎉 Votre passe est maintenant active. Merci pour votre paiement!",
-        hockey_pass=hockey_pass,
-        history_html=render_template("email_blocks/history_table_inline.html", history=history),
-        owner_html=render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
-        email_footer="© 2025 Ligue Hockey Gagnon Image — Tous droits réservés."
-    )
 
 
 
@@ -650,14 +567,36 @@ def setup():
     print("📥 Received backup_file from args:", backup_file)
     print("🗂️ Available backups in static/backups/:", os.listdir("static/backups"))
 
+
+    # ✅ Detect available email templates (both .html files and _compiled folders)
+    template_base = os.path.join("templates", "email_templates")
+    email_templates = []
+
+    for entry in os.listdir(template_base):
+        full_path = os.path.join(template_base, entry)
+
+        # 📄 Add simple HTML files
+        if entry.endswith(".html") and os.path.isfile(full_path):
+            email_templates.append(entry)
+
+        # 📁 Add compiled folders with index.html
+        elif entry.endswith("_compiled") and os.path.isdir(full_path):
+            index_path = os.path.join(full_path, "index.html")
+            if os.path.exists(index_path):
+                email_templates.append(entry.replace("_compiled", "") + ".html")  # add as test.html
+
+    # Sort alphabetically
+    email_templates.sort()
+ 
+    
     return render_template(
         "setup.html",
         settings=settings,
         admins=admins,
         backup_file=backup_file,
-        backup_files=backup_files
+        backup_files=backup_files,
+        email_templates=email_templates   
     )
-
 
 
 

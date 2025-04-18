@@ -2,6 +2,8 @@ import os
 import re
 import json
 import base64
+import sys
+
 
 def compile_email_template_to_folder(template_name: str):
     source_dir = os.path.abspath(template_name)
@@ -46,7 +48,9 @@ def compile_email_template_to_folder(template_name: str):
 
 
 
-# 🟢 Run with "test" folder by default
+
+# 🟢 Run with folder argument or fallback to "test"
 if __name__ == "__main__":
-    print("> Compiling email template....")
-    compile_email_template_to_folder("test")
+    folder = sys.argv[1] if len(sys.argv) > 1 else "test"
+    print(f"> Compiling email template from folder: {folder}")
+    compile_email_template_to_folder(folder)
