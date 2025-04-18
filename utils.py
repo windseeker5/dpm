@@ -102,7 +102,76 @@ def generate_qr_code_image(pass_code):
 
 
 
-def send_email_async(app, subject, to_email, template_name, context=None, inline_images=None, intro_text=None, conclusion_text=None, timestamp_override=None):
+def send_email_async(app, **kwargs):
+    def send_in_thread():
+        with app.app_context():
+            try:
+                from utils import send_email
+
+                subject = kwargs.get("subject")
+                to_email = kwargs.get("to_email")
+                template_name = kwargs.get("template_name")
+                context = kwargs.get("context", {})
+                inline_images = kwargs.get("inline_images", {})
+                intro_text = kwargs.get("intro_text")
+                conclusion_text = kwargs.get("conclusion_text")
+                html_body = kwargs.get("html_body")
+                timestamp_override = kwargs.get("timestamp_override")
+
+                send_email(
+                    subject=subject,
+                    to_email=to_email,
+                    template_name=template_name,
+                    context=context,
+                    inline_images=inline_images,
+                    intro_text=intro_text,
+                    conclusion_text=conclusion_text,
+                    html_body=html_body  # 🆕 New support
+                )
+
+                from models import EmailLog
+                def format_dt(dt):
+                    return dt.strftime('%Y-%m-%d %H:%M') if isinstance(dt, datetime) else dt
+
+                db.session.add(EmailLog(
+                    to_email=to_email,
+                    subject=subject,
+                    pass_code=context.get("hockey_pass", {}).get("pass_code"),
+                    template_name=template_name,
+                    context_json=json.dumps({
+                        "user_name": context.get("hockey_pass", {}).get("user_name"),
+                        "created_date": format_dt(context.get("hockey_pass", {}).get("pass_created_dt")),
+                        "remaining_games": context.get("hockey_pass", {}).get("games_remaining"),
+                        "special_message": context.get("special_message", "")
+                    }),
+                    result="SENT",
+                    timestamp=timestamp_override or datetime.now(timezone.utc)
+                ))
+                db.session.commit()
+
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                from models import EmailLog
+                db.session.add(EmailLog(
+                    to_email=kwargs.get("to_email"),
+                    subject=kwargs.get("subject"),
+                    pass_code=kwargs.get("context", {}).get("hockey_pass", {}).get("pass_code"),
+                    template_name=kwargs.get("template_name"),
+                    context_json=json.dumps({"error": str(e)}),
+                    result="FAILED",
+                    error_message=str(e),
+                    timestamp=kwargs.get("timestamp_override") or datetime.now(timezone.utc)
+                ))
+                db.session.commit()
+
+    thread = threading.Thread(target=send_in_thread)
+    thread.start()
+
+
+
+
+def send_email_async222222222222(app, subject, to_email, template_name, context=None, inline_images=None, intro_text=None, conclusion_text=None, timestamp_override=None):
     def send_in_thread():
         with app.app_context():
             try:
@@ -160,16 +229,25 @@ def send_email_async(app, subject, to_email, template_name, context=None, inline
 
 
 
-
-def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
+def notify_pass_event33333333333333(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
     from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
     from flask import render_template, render_template_string, url_for
     from datetime import datetime, timezone
+    import json, base64, os
 
     timestamp = timestamp or datetime.now(timezone.utc)
-    event_key = event_type.lower().replace(" ", "_")
 
-    # ✅ Build safe version of pass data
+    # 🗺 Map short event types to DB keys
+    event_key_map = {
+        "created": "pass_created",
+        "redeemed": "pass_redeemed",
+        "paid": "payment_received",
+        "late": "payment_late"
+    }
+    event_key = event_key_map.get(event_type.lower(), event_type.lower())
+    print("🧪 Raw get_setting theme key: THEME_" + event_key)
+
+    # ✅ Build safe pass object
     safe_pass = {
         "pass_code": hockey_pass.pass_code,
         "user_name": hockey_pass.user_name,
@@ -179,35 +257,28 @@ def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timesta
         "user_email": hockey_pass.user_email,
         "phone_number": hockey_pass.phone_number,
         "pass_created_dt": hockey_pass.pass_created_dt,
-        "paid_ind": bool(hockey_pass.paid_ind)  # 👈 ADD THIS LINE
+        "paid_ind": hockey_pass.paid_ind
     }
 
-
-
-
-
-
-    # ✅ Load customized content from DB and render template strings
+    # 📥 Load settings
     subject = get_setting(f"SUBJECT_{event_key}", f"[Minipass] {event_type.title()} Notification")
     title = get_setting(f"TITLE_{event_key}", f"{event_type.title()} Confirmation")
-
     intro_raw = get_setting(f"INTRO_{event_key}", "")
     conclusion_raw = get_setting(f"CONCLUSION_{event_key}", "")
-
-    intro = render_template_string(intro_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
-    conclusion = render_template_string(conclusion_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
-
     theme = get_setting(f"THEME_{event_key}", "confirmation.html")
 
+    print("🧪 theme value from DB:", theme)
     print("🔔 Email debug - subject:", subject)
     print("🔔 Email debug - title:", title)
-    print("🔔 Email debug - theme:", theme)
+
+    # 🧠 Render dynamic fields
+    intro = render_template_string(intro_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
+    conclusion = render_template_string(conclusion_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
     print("🔔 Email debug - intro:", intro[:80])
 
-    # ✅ Prepare content blocks
+    # 🧱 Build context blocks
     history = get_pass_history_data(safe_pass["pass_code"], fallback_admin_email=admin_email)
-    qr_img_io = generate_qr_code_image(safe_pass["pass_code"])
-    qr_data = qr_img_io.read()
+    qr_data = generate_qr_code_image(safe_pass["pass_code"]).read()
 
     context = {
         "hockey_pass": safe_pass,
@@ -221,22 +292,358 @@ def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timesta
         "special_message": ""
     }
 
-    inline_images = {
-        "qr_code": qr_data,
-        "logo_image": open("static/uploads/logo.png", "rb").read()
-    }
+    # 🔍 Try compiled version
+    compiled_name = theme.replace(".html", "_compiled")
+    compiled_path = os.path.join("templates/email_templates", compiled_name)
+    compiled_index_path = os.path.join(compiled_path, "index.html")
+    compiled_json_path = os.path.join(compiled_path, "inline_images.json")
 
+    use_compiled = os.path.exists(compiled_index_path) and os.path.exists(compiled_json_path)
+
+    inline_images = {}
+
+    if use_compiled:
+        with open(compiled_json_path, "r") as f:
+            inline_images = {cid: base64.b64decode(data) for cid, data in json.load(f).items()}
+        inline_images["qr_code"] = qr_data
+        template_name = compiled_index_path  # will be used as filepath
+    else:
+        inline_images = {
+            "qr_code": qr_data,
+            "logo_image": open("static/uploads/logo.png", "rb").read()
+        }
+        template_name = f"email_templates/{theme}"  # Jinja2 template path
+
+    # 📤 Send
     send_email_async(
         app,
         subject=subject,
         to_email=safe_pass["user_email"],
-        template_name=theme,
+        template_name=template_name,
         context=context,
         inline_images=inline_images,
         intro_text=intro,
         conclusion_text=conclusion,
         timestamp_override=timestamp
     )
+
+
+
+def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
+    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
+    from flask import render_template, render_template_string, url_for
+    from datetime import datetime, timezone
+    import json
+    import base64
+    import os
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+    event_key = event_type.lower().replace(" ", "_")
+
+    # ✅ Safe pass object
+    safe_pass = {
+        "pass_code": hockey_pass.pass_code,
+        "user_name": hockey_pass.user_name,
+        "activity": hockey_pass.activity,
+        "games_remaining": hockey_pass.games_remaining,
+        "sold_amt": hockey_pass.sold_amt,
+        "user_email": hockey_pass.user_email,
+        "phone_number": hockey_pass.phone_number,
+        "pass_created_dt": hockey_pass.pass_created_dt,
+        "paid_ind": hockey_pass.paid_ind
+    }
+
+    # ✅ Load DB template settings
+    theme_key = f"THEME_pass_{event_key}" if not event_key.startswith("payment") else f"THEME_payment_{event_key.split('_')[-1]}"
+    theme = get_setting(theme_key, "confirmation.html")
+    print("🧪 Raw get_setting theme key:", theme_key)
+    print("🧪 theme value from DB:", theme)
+
+    subject = get_setting(f"SUBJECT_pass_{event_key}", f"[Minipass] {event_type.title()} Notification")
+    title = get_setting(f"TITLE_pass_{event_key}", f"{event_type.title()} Confirmation")
+    intro_raw = get_setting(f"INTRO_pass_{event_key}", "")
+    conclusion_raw = get_setting(f"CONCLUSION_pass_{event_key}", "")
+
+    # ✅ Render intro/conclusion Jinja strings
+    intro = render_template_string(intro_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
+    conclusion = render_template_string(conclusion_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
+
+    print("🔔 Email debug - subject:", subject)
+    print("🔔 Email debug - title:", title)
+    print("🔔 Email debug - intro:", intro[:80])
+
+    # ✅ Generate blocks and QR
+    history = get_pass_history_data(safe_pass["pass_code"], fallback_admin_email=admin_email)
+    qr_data = generate_qr_code_image(safe_pass["pass_code"]).read()
+
+    context = {
+        "hockey_pass": safe_pass,
+        "title": title,
+        "intro_text": intro,
+        "conclusion_text": conclusion,
+        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=safe_pass),
+        "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+        "email_info": "",
+        "logo_url": url_for("static", filename="uploads/logo.png"),
+        "special_message": ""
+    }
+
+    compiled_folder = os.path.join("templates/email_templates", theme.replace(".html", "_compiled"))
+    index_path = os.path.join(compiled_folder, "index.html")
+    json_path = os.path.join(compiled_folder, "inline_images.json")
+
+    use_compiled = os.path.exists(index_path) and os.path.exists(json_path)
+
+    if use_compiled:
+        with open(index_path, "r") as f:
+            raw_html = f.read()
+        html_body = render_template_string(raw_html, **context)
+
+        with open(json_path, "r") as f:
+            inline_images = {cid: base64.b64decode(data) for cid, data in json.load(f).items()}
+
+        # ✅ Always include runtime-required images
+        inline_images["qr_code"] = qr_data
+
+        # ✅ Inject logo.png manually if cid:logo is used in inline blocks
+        embedded_logo_path = os.path.join(compiled_folder.replace("_compiled", ""), "logo.png")
+        if os.path.exists(embedded_logo_path):
+            with open(embedded_logo_path, "rb") as logo_file:
+                inline_images["logo"] = logo_file.read()
+        else:
+            print("⚠️ logo.png not found in template folder.")
+
+        send_email_async(
+            app,
+            subject=subject,
+            to_email=safe_pass["user_email"],
+            html_body=html_body,
+            inline_images=inline_images,
+            timestamp_override=timestamp
+        )
+    else:
+        inline_images = {
+            "qr_code": qr_data,
+            "logo_image": open("static/uploads/logo.png", "rb").read()
+        }
+
+        send_email_async(
+            app,
+            subject=subject,
+            to_email=safe_pass["user_email"],
+            template_name=theme,
+            context=context,
+            inline_images=inline_images,
+            timestamp_override=timestamp
+        )
+
+
+def notify_pass_event44444444444444(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
+    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
+    from flask import render_template, render_template_string, url_for
+    from datetime import datetime, timezone
+    import json
+    import base64
+    import os
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+    event_key = event_type.lower().replace(" ", "_")
+
+    # ✅ Safe pass object
+    safe_pass = {
+        "pass_code": hockey_pass.pass_code,
+        "user_name": hockey_pass.user_name,
+        "activity": hockey_pass.activity,
+        "games_remaining": hockey_pass.games_remaining,
+        "sold_amt": hockey_pass.sold_amt,
+        "user_email": hockey_pass.user_email,
+        "phone_number": hockey_pass.phone_number,
+        "pass_created_dt": hockey_pass.pass_created_dt,
+        "paid_ind": hockey_pass.paid_ind
+    }
+
+    # ✅ Load DB template settings
+    setting_key = f"THEME_{event_key}"
+    theme = get_setting(setting_key, "confirmation.html")
+    print("🧪 Raw get_setting theme key:", setting_key)
+    print("🧪 theme value from DB:", theme)
+
+    subject = get_setting(f"SUBJECT_{event_key}", f"[Minipass] {event_type.title()} Notification")
+    title = get_setting(f"TITLE_{event_key}", f"{event_type.title()} Confirmation")
+    intro_raw = get_setting(f"INTRO_{event_key}", "")
+    conclusion_raw = get_setting(f"CONCLUSION_{event_key}", "")
+
+    # ✅ Render intro/conclusion Jinja strings
+    intro = render_template_string(intro_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
+    conclusion = render_template_string(conclusion_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
+
+    print("🔔 Email debug - subject:", subject)
+    print("🔔 Email debug - title:", title)
+    print("🔔 Email debug - intro:", intro[:80])
+
+    # ✅ Generate blocks and QR
+    history = get_pass_history_data(safe_pass["pass_code"], fallback_admin_email=admin_email)
+    qr_data = generate_qr_code_image(safe_pass["pass_code"]).read()
+
+    context = {
+        "hockey_pass": safe_pass,
+        "title": title,
+        "intro_text": intro,
+        "conclusion_text": conclusion,
+        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=safe_pass),
+        "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+        "email_info": "",
+        "logo_url": url_for("static", filename="uploads/logo.png"),
+        "special_message": ""
+    }
+
+    # ✅ Check for compiled template
+    compiled_folder = os.path.join("templates/email_templates", theme.replace(".html", "_compiled"))
+    index_path = os.path.join(compiled_folder, "index.html")
+    json_path = os.path.join(compiled_folder, "inline_images.json")
+
+    use_compiled = os.path.exists(index_path) and os.path.exists(json_path)
+
+    if use_compiled:
+        with open(index_path, "r") as f:
+            raw_html = f.read()
+        html_body = render_template_string(raw_html, **context)
+
+        with open(json_path, "r") as f:
+            inline_images = {cid: base64.b64decode(data) for cid, data in json.load(f).items()}
+        inline_images["qr_code"] = qr_data
+
+        send_email_async(
+            app,
+            subject=subject,
+            to_email=safe_pass["user_email"],
+            html_body=html_body,
+            inline_images=inline_images,
+            timestamp_override=timestamp
+        )
+    else:
+        inline_images = {
+            "qr_code": qr_data,
+            "logo_image": open("static/uploads/logo.png", "rb").read()
+        }
+
+        send_email_async(
+            app,
+            subject=subject,
+            to_email=safe_pass["user_email"],
+            template_name=theme,
+            context=context,
+            inline_images=inline_images,
+            intro_text=intro,
+            conclusion_text=conclusion,
+            timestamp_override=timestamp
+        )
+
+
+
+
+def notify_pass_event2222222(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
+    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
+    from flask import render_template, render_template_string, url_for
+    from datetime import datetime, timezone
+    import json
+    import base64
+    import os
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+    event_key = event_type.lower().replace(" ", "_")
+
+    # ✅ Safe pass object
+    safe_pass = {
+        "pass_code": hockey_pass.pass_code,
+        "user_name": hockey_pass.user_name,
+        "activity": hockey_pass.activity,
+        "games_remaining": hockey_pass.games_remaining,
+        "sold_amt": hockey_pass.sold_amt,
+        "user_email": hockey_pass.user_email,
+        "phone_number": hockey_pass.phone_number,
+        "pass_created_dt": hockey_pass.pass_created_dt,
+        "paid_ind": hockey_pass.paid_ind
+    }
+
+    # ✅ Load DB template settings
+    subject = get_setting(f"SUBJECT_{event_key}", f"[Minipass] {event_type.title()} Notification")
+    title = get_setting(f"TITLE_{event_key}", f"{event_type.title()} Confirmation")
+    intro_raw = get_setting(f"INTRO_{event_key}", "")
+    conclusion_raw = get_setting(f"CONCLUSION_{event_key}", "")
+    
+    print("🧪 Raw get_setting theme key:", f"THEME_{event_key}")
+ 
+    theme = get_setting(f"THEME_{event_key}", "confirmation.html")
+
+    print("🧪 theme value from DB:", theme)
+
+
+    # ✅ Compile dynamic intro/conclusion
+    intro = render_template_string(intro_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
+    conclusion = render_template_string(conclusion_raw, hockey_pass=safe_pass, default_qt=safe_pass["games_remaining"], activity_list=safe_pass["activity"])
+
+    print("🔔 Email debug - subject:", subject)
+    print("🔔 Email debug - title:", title)
+    print("🔔 Email debug - theme:", theme)
+    print("🔔 Email debug - intro:", intro[:80])
+
+    # ✅ Email content blocks
+    history = get_pass_history_data(safe_pass["pass_code"], fallback_admin_email=admin_email)
+    qr_data = generate_qr_code_image(safe_pass["pass_code"]).read()
+
+    context = {
+        "hockey_pass": safe_pass,
+        "title": title,
+        "intro_text": intro,
+        "conclusion_text": conclusion,
+        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=safe_pass),
+        "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+        "email_info": "",  # legacy fallback
+        "logo_url": url_for("static", filename="uploads/logo.png"),
+        "special_message": ""
+    }
+
+    # ✅ Detect compiled template
+    compiled_path = os.path.join("templates/email_templates", theme.replace(".html", "_compiled"))
+    compiled_index_path = os.path.join(compiled_path, "index.html")
+    compiled_json_path = os.path.join(compiled_path, "inline_images.json")
+
+    use_compiled = os.path.exists(compiled_index_path) and os.path.exists(compiled_json_path)
+
+    inline_images = {}
+
+
+
+    if use_compiled:
+        with open(compiled_json_path, "r") as f:
+            inline_images = {cid: base64.b64decode(data) for cid, data in json.load(f).items()}
+        inline_images["qr_code"] = qr_data
+        template_name = f"email_templates/{theme.replace('.html', '_compiled')}/index.html"
+    else:
+        inline_images = {
+            "qr_code": qr_data,
+            "logo_image": open("static/uploads/logo.png", "rb").read()
+        }
+        template_name = f"email_templates/{theme}"
+
+
+
+
+    # ✅ Send async email
+    send_email_async(
+        app,
+        subject=subject,
+        to_email=safe_pass["user_email"],
+        template_name=template_name,
+        context=context,
+        inline_images=inline_images,
+        intro_text=intro,
+        conclusion_text=conclusion,
+        timestamp_override=timestamp
+    )
+
+
 
 
 
@@ -523,7 +930,7 @@ def strip_html_tags(html):
 
 
 
-def send_email(subject, to_email, template_name, context=None, inline_images=None, intro_text=None, conclusion_text=None):
+def send_email_bk(subject, to_email, template_name, context=None, inline_images=None, intro_text=None, conclusion_text=None):
     from flask import current_app, render_template
     import smtplib
     from email.mime.multipart import MIMEMultipart
@@ -612,6 +1019,165 @@ def send_email(subject, to_email, template_name, context=None, inline_images=Non
         server.quit()
         logging.info(f"✅ Email sent to {to_email} with subject '{subject}'")
         print(f"✅ Email sent to {to_email} with subject '{subject}'")
+
+    except Exception as e:
+        logging.exception(f"❌ Failed to send email to {to_email}: {e}")
+
+
+
+def send_email333333333(subject, to_email, template_name, context=None, inline_images=None, intro_text=None, conclusion_text=None):
+    from flask import current_app, render_template
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.image import MIMEImage
+    from email.utils import formataddr
+    from premailer import transform
+    import logging
+    import os
+
+    context = context or {}
+    inline_images = inline_images or {}
+
+    msg = MIMEMultipart("related")
+    from_name = "Minipass"
+    from_email = get_setting("MAIL_DEFAULT_SENDER") or "noreply@minipass.me"
+
+    msg["From"] = formataddr((from_name, from_email))
+    msg["To"] = to_email
+    msg["Subject"] = subject
+
+    # ✅ Render HTML (compiled or Jinja2)
+    if os.path.exists(template_name):  # If path like test_compiled/index.html
+        with open(template_name, "r", encoding="utf-8") as f:
+            html_body = f.read()
+    else:  # Jinja2 classic rendering
+        html_body = render_template(f"email_templates/{template_name}", **context)
+
+    # Add padding to standard blocks
+    html_body = html_body.replace('<div class="info-section">', '<div class="info-section" style="padding-left: 24px; padding-right: 24px;">')
+    html_body = html_body.replace('<div class="intro-section">', '<div class="intro-section" style="padding-left: 24px; padding-right: 24px;">')
+
+    # Inline CSS
+    html_body = transform(html_body)
+
+    # 📨 Fallback plain text
+    plain_text = "Merci pour votre inscription. Votre passe est confirmée."
+
+    # Attach both plain and HTML parts
+    msg_alt = MIMEMultipart("alternative")
+    msg.attach(msg_alt)
+    msg_alt.attach(MIMEText(plain_text, "plain"))
+    msg_alt.attach(MIMEText(html_body, "html"))
+
+    # ✅ Attach inline images
+    for cid, img_data in inline_images.items():
+        if img_data:
+            part = MIMEImage(img_data)
+            part.add_header("Content-ID", f"<{cid}>")
+            part.add_header("Content-Disposition", "inline", filename=f"{cid}.png")
+            msg.attach(part)
+
+    # ✅ SMTP sending
+    try:
+        smtp_host = get_setting("MAIL_SERVER")
+        smtp_port = int(get_setting("MAIL_PORT", 587))
+        smtp_user = get_setting("MAIL_USERNAME")
+        smtp_pass = get_setting("MAIL_PASSWORD")
+        use_tls = str(get_setting("MAIL_USE_TLS") or "true").lower() == "true"
+        use_proxy = smtp_port == 25 and not use_tls
+
+        print("📬 Mail settings:", {
+            "MAIL_SERVER": smtp_host,
+            "MAIL_PORT": smtp_port,
+            "MAIL_USERNAME": smtp_user,
+            "MAIL_USE_TLS": use_tls,
+            "MAIL_DEFAULT_SENDER": from_email
+        })
+
+        server = smtplib.SMTP(smtp_host, smtp_port)
+        server.ehlo()
+        if not use_proxy and use_tls:
+            server.starttls()
+            server.ehlo()
+        if not use_proxy and smtp_user and smtp_pass:
+            server.login(smtp_user, smtp_pass)
+
+        server.sendmail(from_email, [to_email], msg.as_string())
+        server.quit()
+        logging.info(f"✅ Email sent to {to_email} with subject '{subject}'")
+        print(f"✅ Email sent to {to_email} with subject '{subject}'")
+
+    except Exception as e:
+        logging.exception(f"❌ Failed to send email to {to_email}: {e}")
+        print("❌ Email error:", e)
+
+
+
+
+
+def send_email(subject, to_email, template_name=None, context=None, inline_images=None, intro_text=None, conclusion_text=None, html_body=None, timestamp_override=None):
+    from flask import current_app, render_template
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.image import MIMEImage
+    from email.utils import formataddr
+    from premailer import transform
+    import logging
+    from utils import get_setting
+
+    msg = MIMEMultipart("related")
+    msg["Subject"] = subject
+    msg["To"] = to_email
+
+    from_email = get_setting("MAIL_DEFAULT_SENDER") or "noreply@minipass.me"
+    msg["From"] = formataddr(("Minipass", from_email))
+
+    context = context or {}
+    inline_images = inline_images or {}
+
+    # 🧪 Determine whether to use rendered HTML or template rendering
+    if html_body:
+        final_html = html_body
+    else:
+        final_html = render_template(f"email_templates/{template_name}", intro_text=intro_text, conclusion_text=conclusion_text, **context)
+
+    final_html = transform(final_html)
+    plain_text = "Votre passe numérique est prête."
+
+    alt_part = MIMEMultipart("alternative")
+    alt_part.attach(MIMEText(plain_text, "plain"))
+    alt_part.attach(MIMEText(final_html, "html"))
+    msg.attach(alt_part)
+
+    for cid, img_data in inline_images.items():
+        if img_data:
+            try:
+                part = MIMEImage(img_data)
+                part.add_header("Content-ID", f"<{cid}>")
+                part.add_header("Content-Disposition", "inline", filename=f"{cid}.png")
+                msg.attach(part)
+            except Exception as e:
+                logging.error(f"❌ Image embed error for {cid}: {e}")
+
+    try:
+        smtp_host = get_setting("MAIL_SERVER")
+        smtp_port = int(get_setting("MAIL_PORT", 587))
+        smtp_user = get_setting("MAIL_USERNAME")
+        smtp_pass = get_setting("MAIL_PASSWORD")
+        use_tls = str(get_setting("MAIL_USE_TLS") or "true").lower() == "true"
+
+        server = smtplib.SMTP(smtp_host, smtp_port)
+        server.ehlo()
+        if use_tls:
+            server.starttls()
+        if smtp_user and smtp_pass:
+            server.login(smtp_user, smtp_pass)
+
+        server.sendmail(from_email, [to_email], msg.as_string())
+        server.quit()
+        logging.info(f"✅ Email sent to {to_email} with subject '{subject}'")
 
     except Exception as e:
         logging.exception(f"❌ Failed to send email to {to_email}: {e}")
