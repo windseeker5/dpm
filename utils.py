@@ -329,7 +329,7 @@ def notify_pass_event33333333333333(app, *, event_type, hockey_pass, admin_email
 
 
 
-def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
+def notify_pass_event444444(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
     from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
     from flask import render_template, render_template_string, url_for
     from datetime import datetime, timezone
@@ -436,6 +436,119 @@ def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timesta
             inline_images=inline_images,
             timestamp_override=timestamp
         )
+
+
+def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
+    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
+    from flask import render_template, render_template_string, url_for
+    from datetime import datetime, timezone
+    import json
+    import base64
+    import os
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+    event_key = event_type.lower().replace(" ", "_")
+
+    # ✅ Normalize theme_key prefix based on event type
+    if event_key in ["pass_created", "pass_redeemed", "payment_received", "payment_late"]:
+        theme_key = f"THEME_{event_key}"
+        subject_key = f"SUBJECT_{event_key}"
+        title_key = f"TITLE_{event_key}"
+        intro_key = f"INTRO_{event_key}"
+        conclusion_key = f"CONCLUSION_{event_key}"
+    else:
+        theme_key = f"THEME_pass_{event_key}"
+        subject_key = f"SUBJECT_pass_{event_key}"
+        title_key = f"TITLE_pass_{event_key}"
+        intro_key = f"INTRO_pass_{event_key}"
+        conclusion_key = f"CONCLUSION_pass_{event_key}"
+
+    theme = get_setting(theme_key, "confirmation.html")
+    print("🧪 Raw get_setting theme key:", theme_key)
+    print("🧪 theme value from DB:", theme)
+
+    subject = get_setting(subject_key, f"[Minipass] {event_type.title()} Notification")
+    title = get_setting(title_key, f"{event_type.title()} Confirmation")
+    intro_raw = get_setting(intro_key, "")
+    conclusion_raw = get_setting(conclusion_key, "")
+
+    intro = render_template_string(intro_raw, hockey_pass=hockey_pass, default_qt=hockey_pass.games_remaining, activity_list=hockey_pass.activity)
+    conclusion = render_template_string(conclusion_raw, hockey_pass=hockey_pass, default_qt=hockey_pass.games_remaining, activity_list=hockey_pass.activity)
+
+    print("🔔 Email debug - subject:", subject)
+    print("🔔 Email debug - title:", title)
+    print("🔔 Email debug - intro:", intro[:80])
+
+    qr_data = generate_qr_code_image(hockey_pass.pass_code).read()
+    history = get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=admin_email)
+
+    context = {
+        "hockey_pass": {
+            "pass_code": hockey_pass.pass_code,
+            "user_name": hockey_pass.user_name,
+            "activity": hockey_pass.activity,
+            "games_remaining": hockey_pass.games_remaining,
+            "sold_amt": hockey_pass.sold_amt,
+            "user_email": hockey_pass.user_email,
+            "phone_number": hockey_pass.phone_number,
+            "pass_created_dt": hockey_pass.pass_created_dt,
+            "paid_ind": hockey_pass.paid_ind
+        },
+        "title": title,
+        "intro_text": intro,
+        "conclusion_text": conclusion,
+        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
+        "history_html": render_template("email_blocks/history_table_inline.html", history=history),
+        "email_info": "",
+        "logo_url": url_for("static", filename="uploads/logo.png"),
+        "special_message": ""
+    }
+
+    compiled_folder = os.path.join("templates/email_templates", theme.replace(".html", "_compiled"))
+    index_path = os.path.join(compiled_folder, "index.html")
+    json_path = os.path.join(compiled_folder, "inline_images.json")
+    use_compiled = os.path.exists(index_path) and os.path.exists(json_path)
+
+    if use_compiled:
+        with open(index_path, "r") as f:
+            raw_html = f.read()
+        html_body = render_template_string(raw_html, **context)
+
+        with open(json_path, "r") as f:
+            inline_images = {cid: base64.b64decode(data) for cid, data in json.load(f).items()}
+        inline_images["qr_code"] = qr_data
+
+        logo_path = os.path.join(compiled_folder.replace("_compiled", ""), "logo.png")
+        if os.path.exists(logo_path):
+            with open(logo_path, "rb") as logo_file:
+                inline_images["logo"] = logo_file.read()
+        else:
+            print("⚠️ logo.png not found in template folder.")
+
+        send_email_async(
+            app,
+            subject=subject,
+            to_email=hockey_pass.user_email,
+            html_body=html_body,
+            inline_images=inline_images,
+            timestamp_override=timestamp
+        )
+    else:
+        inline_images = {
+            "qr_code": qr_data,
+            "logo_image": open("static/uploads/logo.png", "rb").read()
+        }
+
+        send_email_async(
+            app,
+            subject=subject,
+            to_email=hockey_pass.user_email,
+            template_name=theme,
+            context=context,
+            inline_images=inline_images,
+            timestamp_override=timestamp
+        )
+
 
 
 def notify_pass_event44444444444444(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
