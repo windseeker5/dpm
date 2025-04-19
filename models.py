@@ -15,6 +15,14 @@ class Admin(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
 
+class AdminActionLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    admin_email = db.Column(db.String(150))
+    action = db.Column(db.Text)
+
+
+
 class Pass(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pass_code = db.Column(db.String(16), unique=True, nullable=False)
@@ -44,6 +52,65 @@ class Pass(db.Model):
 
 
 
+# ✅ Generalized SaaS models (non-conflicting with current Pass logic)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True)
+    phone_number = db.Column(db.String(20))
+
+    signups = db.relationship("Signup", backref="user", lazy=True)
+    passports = db.relationship("Passport", backref="user", lazy=True)
+
+
+class Activity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    type = db.Column(db.String(50))  # e.g. "hockey", "yoga"
+    description = db.Column(db.Text)
+    sessions_included = db.Column(db.Integer, default=1)
+    price_per_user = db.Column(db.Float, default=0.0)
+    goal_users = db.Column(db.Integer, default=0)
+    goal_revenue = db.Column(db.Float, default=0.0)
+    cost_to_run = db.Column(db.Float, default=0.0)
+    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    status = db.Column(db.String(50), default="active")
+    payment_instructions = db.Column(db.Text)
+    signups = db.relationship("Signup", backref="activity", lazy=True)
+    passports = db.relationship("Passport", backref="activity", lazy=True)
+
+
+class Signup(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    subject = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    form_url = db.Column(db.String(500))
+    form_data = db.Column(db.Text)  # JSON string
+    signed_up_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    paid = db.Column(db.Boolean, default=False)
+    paid_at = db.Column(db.DateTime)
+    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"))
+
+
+class Passport(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pass_code = db.Column(db.String(16), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    sold_amt = db.Column(db.Float, default=0.0)
+    uses_remaining = db.Column(db.Integer, default=0)
+    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    paid = db.Column(db.Boolean, default=False)
+    paid_date = db.Column(db.DateTime)
+    marked_paid_by = db.Column(db.String(120))
+    notes = db.Column(db.Text)
+
+    signups = db.relationship("Signup", backref="passport", lazy=True)
 
 
 
