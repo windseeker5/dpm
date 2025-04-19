@@ -33,6 +33,8 @@ from werkzeug.utils import secure_filename
 
 # 🧠 Models
 from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
+from models import Activity, User, Signup, Passport, AdminActionLog
+
 
 # ⚙️ Config
 from config import Config
@@ -63,6 +65,13 @@ from chatbot.routes_chatbot import chat_bp
 from utils import send_email, generate_qr_code_image, get_pass_history_data, get_setting
 from flask import render_template, render_template_string, url_for
 
+from flask import render_template, request, redirect, url_for, session, flash
+from datetime import datetime
+from models import Signup, Activity, User, db
+
+
+
+
 
 
 env = os.environ.get("FLASK_ENV", "prod").lower()
@@ -77,6 +86,8 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+
+
 app.config.from_object(Config)
 
 # ✅ Initialize database
@@ -85,9 +96,9 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 
-if not os.path.exists(db_path):
-    print(f"❌ {db_path} is missing!")
-    exit(1)
+#if not os.path.exists(db_path):
+#    print(f"❌ {db_path} is missing!")
+#    exit(1)
 
 
 print(f"📂 Connected DB path: {app.config['SQLALCHEMY_DATABASE_URI']}")
@@ -98,6 +109,8 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 csrf = CSRFProtect(app)
 app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
+
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
 
 # ✅ Load settings only if the database is ready
@@ -127,19 +140,25 @@ app.register_blueprint(chat_bp)
 
 scheduler = BackgroundScheduler()
 from utils import get_setting  # ✅ at the top of app.py
+from sqlalchemy.exc import OperationalError
+
 
 with app.app_context():
-    if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
-        print("🟢 Email Payment Bot is ENABLED. Scheduling job every 30 minutes.")
+    try:
+        if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
+            print("🟢 Email Payment Bot is ENABLED. Scheduling job every 30 minutes.")
+            def run_payment_bot():
+                with app.app_context():
+                    match_gmail_payments_to_passes()
 
-        def run_payment_bot():
-            with app.app_context():
-                match_gmail_payments_to_passes()
+            scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
+            scheduler.start()
+        else:
+            print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
+    except OperationalError as e:
+        print("⚠️ DB not ready yet (probably during initial setup), skipping email bot setup.")
 
-        scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
-        scheduler.start()
-    else:
-        print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
+
 
 
 
@@ -343,6 +362,236 @@ def home():
 
 
 
+
+
+
+
+
+
+@app.route("/admin/signup/mark-paid/<int:signup_id>", methods=["POST"])
+def mark_signup_paid(signup_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    signup = db.session.get(Signup, signup_id)
+    if not signup:
+        flash("❌ Signup not found.", "error")
+        return redirect(url_for("admin_signups"))
+
+    signup.paid = True
+    signup.paid_at = datetime.utcnow()
+    db.session.commit()
+
+    flash(f"✅ Marked {signup.user.name}'s signup as paid.", "success")
+    return redirect(url_for("admin_signups"))
+
+
+
+@app.route("/admin/signups")
+def admin_signups():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    signups = Signup.query.order_by(Signup.signed_up_at.desc()).all()
+    return render_template("admin_signups.html", signups=signups)
+
+
+
+@app.route("/admin/signup/create-pass/<int:signup_id>")
+def create_pass_from_signup(signup_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    signup = db.session.get(Signup, signup_id)
+    if not signup:
+        flash("❌ Signup not found.", "error")
+        return redirect(url_for("admin_signups"))
+
+    from models import Passport
+
+    # Check if a passport already exists
+    existing_passport = Passport.query.filter_by(user_id=signup.user_id, activity_id=signup.activity_id).first()
+    if existing_passport:
+        flash("⚠️ A passport for this user and activity already exists.", "warning")
+        return redirect(url_for("admin_signups"))
+
+    # Create new passport
+    new_passport = Passport(
+        pass_code=f"MP{datetime.utcnow().timestamp():.0f}",
+        user_id=signup.user_id,
+        activity_id=signup.activity_id,
+        sold_amt=signup.activity.price_per_user,
+        uses_remaining=signup.activity.sessions_included,
+        created_dt=datetime.utcnow(),
+        paid=signup.paid,
+        notes=f"Created from signup {signup.id}"
+    )
+    db.session.add(new_passport)
+    db.session.commit()
+
+    flash("✅ Passport created from signup!", "success")
+    return redirect(url_for("admin_signups"))
+
+
+
+@app.route("/admin/signup/edit/<int:signup_id>", methods=["GET", "POST"])
+def edit_signup(signup_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    signup = db.session.get(Signup, signup_id)
+    if not signup:
+        flash("❌ Signup not found.", "error")
+        return redirect(url_for("admin_signups"))
+
+    if request.method == "POST":
+        signup.subject = request.form.get("subject", "").strip()
+        signup.description = request.form.get("description", "").strip()
+        db.session.commit()
+        flash("✅ Signup updated.", "success")
+        return redirect(url_for("admin_signups"))
+
+    return render_template("edit_signup.html", signup=signup)
+
+
+
+
+
+@app.route("/create-activity", methods=["GET", "POST"])
+def create_activity():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        from models import Activity, db
+
+        name = request.form.get("name", "").strip()
+        activity_type = request.form.get("type", "").strip()
+        description = request.form.get("description", "").strip()
+        sessions_included = int(request.form.get("sessions_included", 1))
+        price_per_user = float(request.form.get("price_per_user", 0.0))
+        goal_users = int(request.form.get("goal_users", 0))
+        goal_revenue = float(request.form.get("goal_revenue", 0.0))
+        cost_to_run = float(request.form.get("cost_to_run", 0.0))
+        payment_instructions = request.form.get("payment_instructions", "").strip()
+
+ 
+        new_activity = Activity(
+            name=name,
+            type=activity_type,
+            description=description,
+            sessions_included=sessions_included,
+            price_per_user=price_per_user,
+            goal_users=goal_users,
+            goal_revenue=goal_revenue,
+            cost_to_run=cost_to_run,
+            payment_instructions=payment_instructions,
+            created_by=session.get("admin"),
+        )
+
+        db.session.add(new_activity)
+        db.session.commit()
+
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin_email", "unknown"),
+            action=f"Activity Created: {new_activity.name}"
+        ))
+        db.session.commit()
+
+        flash("✅ Activity created successfully!", "success")
+        return redirect(url_for("create_activity"))
+
+
+
+
+@app.route("/edit-activity/<int:activity_id>", methods=["GET", "POST"])
+def edit_activity(activity_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    #activity = Activity.query.get(activity_id)
+    activity = db.session.get(Activity, activity_id)
+
+    if not activity:
+        flash("❌ Activity not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        activity.name = request.form.get("name", "").strip()
+        activity.type = request.form.get("type", "").strip()
+        activity.description = request.form.get("description", "").strip()
+        activity.sessions_included = int(request.form.get("sessions_included", 1))
+        activity.price_per_user = float(request.form.get("price_per_user", 0.0))
+        activity.goal_users = int(request.form.get("goal_users", 0))
+        activity.goal_revenue = float(request.form.get("goal_revenue", 0.0))
+        activity.cost_to_run = float(request.form.get("cost_to_run", 0.0))
+        activity.payment_instructions = request.form.get("payment_instructions", "").strip()
+
+        db.session.commit()
+
+        # ✅ Log the admin action
+        from models import AdminActionLog
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin_email", "unknown"),
+            action=f"Activity Updated: {activity.name}"
+        ))
+        db.session.commit()
+
+        flash("✅ Activity updated successfully!", "success")
+        return redirect(url_for("edit_activity", activity_id=activity.id))
+
+    return render_template("activity_form.html", activity=activity)
+
+
+
+
+@app.route("/signup/<int:activity_id>", methods=["GET", "POST"])
+def signup(activity_id):
+    #activity = Activity.query.get(activity_id)
+    activity = db.session.get(Activity, activity_id)
+    if not activity:
+        flash("❌ Activity not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        phone = request.form.get("phone", "").strip()
+
+        # Create or get user
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            user = User(name=name, email=email, phone_number=phone)
+            db.session.add(user)
+            db.session.flush()  # assign user.id
+
+        signup = Signup(
+            user_id=user.id,
+            activity_id=activity.id,
+            subject=f"Signup for {activity.name}",
+            description=request.form.get("notes", "").strip(),
+            form_data="",  # or JSON later
+        )
+        db.session.add(signup)
+        db.session.commit()
+
+        print("📤 notify_signup_event() called")
+        print("👤 User:", user.name, "| 📧", user.email)
+        print("📌 Activity:", activity.name)
+
+        from utils import notify_signup_event
+        notify_signup_event(app, signup=signup, activity=activity)
+
+        flash("✅ Signup submitted!", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template("signup_form.html", activity=activity)
+
+
+
+
+
+
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
 
@@ -364,7 +613,6 @@ def setup():
             existing = Admin.query.filter_by(email=email).first()
             if existing:
                 if password and password != "********":
-                    # ✅ Only update if real password provided
                     existing.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
             else:
                 if password and password != "********":
@@ -387,21 +635,13 @@ def setup():
             "MAIL_PORT": request.form.get("mail_port", "587").strip(),
             "MAIL_USE_TLS": "mail_use_tls" in request.form,
             "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
-            #"MAIL_PASSWORD": request.form.get("mail_password", "").strip(),
             "MAIL_PASSWORD": request.form.get("mail_password_raw", "").strip(),
-
             "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip()
         }
 
-        #for key, value in email_settings.items():
-        #    if key == "MAIL_PASSWORD" and not value:
-        #        continue  # 🚫 Don't overwrite password with blank
-
         for key, value in email_settings.items():
             if key == "MAIL_PASSWORD" and (not value or value == "********"):
-                continue  # 🚫 Don't overwrite with blank or fake password
-
-
+                continue
             setting = Setting.query.filter_by(key=key).first()
             if setting:
                 setting.value = str(value)
@@ -409,7 +649,6 @@ def setup():
                 db.session.add(Setting(key=key, value=str(value)))
 
         # ⚙️ Step 4: App-level settings
-
         extra_settings = {
             "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50").strip(),
             "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4").strip(),
@@ -418,8 +657,6 @@ def setup():
             "ORG_NAME": request.form.get("ORG_NAME", "").strip(),
             "CALL_BACK_DAYS": request.form.get("CALL_BACK_DAYS", "0").strip()
         }
-
-
 
         for key, value in extra_settings.items():
             existing = Setting.query.filter_by(key=key).first()
@@ -464,11 +701,9 @@ def setup():
         except Exception as e:
             print("❌ Failed to parse/save activity list:", e)
 
-
         # 🖼 Step 7: Logo Upload
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
         logo_file = request.files.get("ORG_LOGO_FILE")
-
 
         if logo_file and logo_file.filename:
             filename = secure_filename(logo_file.filename)
@@ -483,17 +718,8 @@ def setup():
 
             flash("✅ Logo uploaded successfully!", "success")
 
-
-
-        # ✅ Finalize changes
-        db.session.commit()
-        print("[SETUP] Admins configured:", admin_emails)
-        print("[SETUP] Settings saved:", list(email_settings.keys()) + list(extra_settings.keys()))
-
-
-
-        # ✅ Step 8: Save email notification templates
-        for event in ["pass_created", "pass_redeemed", "payment_received", "payment_late"]:
+        # ✅ Step 8: Save email notification templates (including signup)
+        for event in ["pass_created", "pass_redeemed", "payment_received", "payment_late", "signup"]:
             for key in ["SUBJECT", "TITLE", "INTRO", "CONCLUSION", "THEME"]:
                 full_key = f"{key}_{event}"
                 value = request.form.get(full_key, "").strip()
@@ -504,18 +730,12 @@ def setup():
                     else:
                         db.session.add(Setting(key=full_key, value=value))
 
-        # ✅ Finalize changes
         db.session.commit()
         print("[SETUP] Admins configured:", admin_emails)
         print("[SETUP] Settings saved:", list(email_settings.keys()) + list(extra_settings.keys()))
 
-
         flash("Setup completed successfully!", "success")
         return redirect(url_for("setup"))
-
-
-
-
 
     ##
     ##  GET request — Load existing config
@@ -523,7 +743,7 @@ def setup():
 
     settings = {s.key: s.value for s in Setting.query.all()}
     admins = Admin.query.all()
-    backup_file = request.args.get("backup_file")  # 👈 required for link display
+    backup_file = request.args.get("backup_file")
 
     backup_dir = os.path.join("static", "backups")
     backup_files = sorted(
@@ -531,39 +751,31 @@ def setup():
         reverse=True
     ) if os.path.exists(backup_dir) else []
 
-
     print("📥 Received backup_file from args:", backup_file)
     print("🗂️ Available backups in static/backups/:", os.listdir("static/backups"))
 
-
-    # ✅ Detect available email templates (both .html files and _compiled folders)
     template_base = os.path.join("templates", "email_templates")
     email_templates = []
 
     for entry in os.listdir(template_base):
         full_path = os.path.join(template_base, entry)
 
-        # 📄 Add simple HTML files
         if entry.endswith(".html") and os.path.isfile(full_path):
             email_templates.append(entry)
-
-        # 📁 Add compiled folders with index.html
         elif entry.endswith("_compiled") and os.path.isdir(full_path):
             index_path = os.path.join(full_path, "index.html")
             if os.path.exists(index_path):
-                email_templates.append(entry.replace("_compiled", "") + ".html")  # add as test.html
+                email_templates.append(entry.replace("_compiled", "") + ".html")
 
-    # Sort alphabetically
     email_templates.sort()
- 
-    
+
     return render_template(
         "setup.html",
         settings=settings,
         admins=admins,
         backup_file=backup_file,
         backup_files=backup_files,
-        email_templates=email_templates   
+        email_templates=email_templates
     )
 
 
@@ -1076,7 +1288,155 @@ def mark_paid(pass_id):
     return redirect(url_for("dashboard"))
 
 
+from models import Admin, Activity, Passport, User, db
+from utils import get_setting, notify_pass_event
 
+@app.route("/create-passport", methods=["GET", "POST"])
+def create_passport():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        current_admin = Admin.query.filter_by(email=session["admin"]).first()
+
+        # ✅ Gather form data
+        user_name = request.form.get("user_name", "").strip()
+        user_email = request.form.get("user_email", "").strip()
+        phone_number = request.form.get("phone_number", "").strip()
+        sold_amt = float(request.form.get("sold_amt", 50))
+        sessions_qt = int(request.form.get("sessionsQt") or request.form.get("uses_remaining") or 4)
+        paid = True if "paid_ind" in request.form else False
+        activity_id = int(request.form.get("activity_id", 0))
+        pass_code = str(uuid.uuid4())[:16]
+        notes = request.form.get("notes", "").strip()
+
+        now_utc = datetime.now(timezone.utc)
+
+        # ✅ Create or fetch user
+        user = User.query.filter_by(email=user_email).first()
+        if not user:
+            user = User(name=user_name, email=user_email, phone_number=phone_number)
+            db.session.add(user)
+            db.session.flush()  # get user.id
+
+        # ✅ Create Passport object
+        passport = Passport(
+            pass_code=pass_code,
+            user_id=user.id,
+            activity_id=activity_id,
+            sold_amt=sold_amt,
+            uses_remaining=sessions_qt,
+            created_dt=now_utc,
+            paid=paid,
+            notes=notes
+        )
+
+        db.session.add(passport)
+        db.session.commit()
+        db.session.expire_all()
+
+        # ✅ Send confirmation email
+
+        notify_pass_event(
+            app=current_app._get_current_object(),
+            event_type="pass_created",
+            hockey_pass=passport,  # still valid
+            admin_email=session.get("admin"),
+            timestamp=now_utc
+        )
+
+
+
+
+        flash("✅ Passport created and confirmation email sent.", "success")
+        return redirect(url_for("dashboard"))
+
+    # 📥 GET request
+    default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
+    default_qt = get_setting("DEFAULT_SESSION_QT", "4")
+
+    activity_list = Activity.query.order_by(Activity.name).all()
+
+    return render_template(
+        "passport_form.html",
+        passport=None,
+        default_amt=default_amt,
+        default_qt=default_qt,
+        activity_list=activity_list
+    )
+
+
+@app.route("/redeem-passport/<pass_code>", methods=["GET", "POST"])
+def redeem_passport(pass_code):
+    get_flashed_messages()
+
+    with app.app_context():
+        passport = Passport.query.filter_by(pass_code=pass_code).first()
+
+        if not passport:
+            flash("❌ Passport not found!", "error")
+            return redirect(url_for("dashboard"))
+
+        now_utc = datetime.now(timezone.utc)
+
+        if pass_code in recent_redemptions and (now_utc - recent_redemptions[pass_code]).seconds < 5:
+            flash("⚠️ This passport was already redeemed. Please wait before scanning again.", "warning")
+            return redirect(url_for("dashboard"))
+
+        if passport.uses_remaining > 0:
+            passport.uses_remaining -= 1
+            db.session.add(passport)
+
+            admin_email = session.get("admin", "unknown")
+            redemption = Redemption(pass_id=passport.id, date_used=now_utc, redeemed_by=admin_email)
+            db.session.add(redemption)
+            db.session.commit()
+
+            recent_redemptions[pass_code] = now_utc
+
+            notify_pass_event(
+                app=current_app._get_current_object(),
+                event_type="pass_redeemed",
+                hockey_pass=passport,
+                admin_email=session.get("admin"),
+                timestamp=now_utc
+            )
+
+            flash(f"✅ Session redeemed! {passport.uses_remaining} remaining. Email sent.", "success")
+        else:
+            flash("❌ No sessions left on this passport!", "error")
+
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/mark-passport-paid/<int:passport_id>", methods=["POST"])
+def mark_passport_paid(passport_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    passport = db.session.get(Passport, passport_id)
+    if passport:
+        now_utc = datetime.now(timezone.utc)
+
+        passport.paid = True
+        passport.paid_date = now_utc
+        passport.marked_paid_by = session.get("admin", "unknown")
+
+        db.session.commit()
+
+        notify_pass_event(
+            app=current_app._get_current_object(),
+            event_type="payment_received",
+            hockey_pass=passport,
+            admin_email=session.get("admin"),
+            timestamp=now_utc
+        )
+
+        flash(f"✅ Passport {passport.pass_code} marked as paid. Email sent.", "success")
+    else:
+        flash("❌ Passport not found!", "error")
+
+    return redirect(url_for("dashboard"))
 
 
 

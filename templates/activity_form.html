@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}
+  {{ "Edit Activity" if activity else "Create New Activity" }}
+{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+      <form method="POST" class="card shadow-sm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="ti ti-calendar-event me-2"></i>
+            {{ "Edit Activity" if activity else "Create New Activity" }}
+          </h3>
+        </div>
+        <div class="card-body">
+
+          <!-- Activity Name -->
+          <div class="mb-3">
+            <label class="form-label">Activity Name</label>
+            <input type="text" class="form-control" name="name"
+                   value="{{ activity.name if activity else '' }}" required>
+          </div>
+
+          <!-- Activity Type -->
+          <div class="mb-3">
+            <label class="form-label">Activity Type</label>
+            <input type="text" class="form-control" name="type"
+                   value="{{ activity.type if activity else '' }}">
+          </div>
+
+          <!-- Description -->
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" name="description" rows="3">{{ activity.description if activity else '' }}</textarea>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <!-- Sessions Included -->
+              <div class="mb-3">
+                <label class="form-label">Sessions Included</label>
+                <input type="number" class="form-control" name="sessions_included" min="1"
+                       value="{{ activity.sessions_included if activity else 4 }}">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <!-- Price per User -->
+              <div class="mb-3">
+                <label class="form-label">Price per User ($)</label>
+                <input type="number" step="0.01" class="form-control" name="price_per_user"
+                       value="{{ activity.price_per_user if activity else 50.00 }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <!-- Target Users -->
+              <div class="mb-3">
+                <label class="form-label">Target Users</label>
+                <input type="number" class="form-control" name="goal_users"
+                       value="{{ activity.goal_users if activity else 0 }}">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <!-- Target Revenue -->
+              <div class="mb-3">
+                <label class="form-label">Target Revenue ($)</label>
+                <input type="number" step="0.01" class="form-control" name="goal_revenue"
+                       value="{{ activity.goal_revenue if activity else 0.00 }}">
+              </div>
+            </div>
+          </div>
+
+          <!-- Business Cost -->
+          <div class="mb-3">
+            <label class="form-label">Business Cost ($)</label>
+            <input type="number" step="0.01" class="form-control" name="cost_to_run"
+                   value="{{ activity.cost_to_run if activity else 0.00 }}">
+          </div>
+
+
+        <!-- Payment Instructions -->
+        <div class="mb-3">
+            <label class="form-label">Payment Instructions</label>
+            <textarea class="form-control" name="payment_instructions" rows="3" placeholder="e.g. Send $50 to email@domain.com or pay using the form below">{{ activity.payment_instructions if activity else '' }}</textarea>
+        </div>
+        
+
+
+
+        </div>
+        <div class="card-footer text-end">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="ti ti-check me-1"></i>
+            {{ "Update Activity" if activity else "Create Activity" }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

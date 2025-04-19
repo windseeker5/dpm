@@ -55,7 +55,7 @@
               <div class="tab-pane fade" id="tab-email-templates">
                 <h3 class="mb-4">📧 Email Notification Templates</h3>
                 <ul class="nav nav-tabs mb-3" role="tablist">
-                  {% for event in ['pass_created', 'pass_redeemed', 'payment_received', 'payment_late'] %}
+                  {% for event in ['pass_created', 'pass_redeemed', 'payment_received', 'payment_late', 'signup'] %}
                     <li class="nav-item" role="presentation">
                       <a href="#tab-{{ event }}" class="nav-link {% if loop.first %}active{% endif %}" data-bs-toggle="tab" role="tab">
                         {{ event.replace('_', ' ').title() }}
@@ -65,7 +65,7 @@
                 </ul>
 
                 <div class="tab-content">
-                  {% for event in ['pass_created', 'pass_redeemed', 'payment_received', 'payment_late'] %}
+                  {% for event in ['pass_created', 'pass_redeemed', 'payment_received', 'payment_late', 'signup'] %}
                     <div class="tab-pane {% if loop.first %}active show{% endif %}" id="tab-{{ event }}" role="tabpanel">
                       <div class="mb-3 mt-3">
                         <label class="form-label">Subject</label>
@@ -85,9 +85,6 @@
                       </div>
                       <div class="mb-3">
                         <label class="form-label">Theme (Template Name)</label>
-                        
-
-
                         <select name="THEME_{{ event }}" class="form-select">
                           {% for tpl in email_templates %}
                             <option value="{{ tpl }}" {% if settings['THEME_' ~ event] == tpl %}selected{% endif %}>
@@ -95,10 +92,6 @@
                             </option>
                           {% endfor %}
                         </select>
-                        
-
-
-
                       </div>
                     </div>
                   {% endfor %}

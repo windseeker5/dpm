@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Signup for {{ activity.name }}{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+      <form method="POST" class="card shadow-sm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="ti ti-user-plus me-2"></i>
+            Signup for {{ activity.name }}
+          </h3>
+        </div>
+
+        <div class="card-body">
+
+<!-- 📘 Activity Info Box -->
+<div class="bg-blue-lt text-blue border rounded p-3 mb-4 d-flex align-items-center">
+    <i class="ti ti-info-circle me-3 fs-2"></i>
+    <div>
+      <strong>{{ activity.name }}</strong><br>
+      {{ activity.description or "No description provided." }}<br>
+      <div class="mt-2 small">
+        💰 Cost: <strong>${{ "%.2f"|format(activity.price_per_user or 0) }}</strong><br>
+        🎟️ Includes: <strong>{{ activity.sessions_included }}</strong> {{ "session" if activity.sessions_included == 1 else "sessions" }}
+      </div>
+    </div>
+  </div>
+  
+  
+
+  {% if activity.payment_instructions %}
+  <div class="alert alert-warning d-flex align-items-start mt-4">
+    <span class="alert-icon text-yellow me-3">
+      <i class="ti ti-currency-dollar"></i>
+    </span>
+    <div>
+      <strong>Payment Instructions</strong><br>
+      {{ activity.payment_instructions | safe }}
+    </div>
+  </div>
+  {% endif %}
+
+
+          <!-- Name -->
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input type="text" name="name" class="form-control" required placeholder="John Doe">
+          </div>
+
+          <!-- Email -->
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" required placeholder="john@example.com">
+          </div>
+
+          <!-- Phone -->
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="text" name="phone" class="form-control" placeholder="+1 (514) 123-4567">
+          </div>
+
+          <!-- Notes or Comments -->
+          <div class="mb-3">
+            <label class="form-label">Optional Notes</label>
+            <textarea name="notes" class="form-control" rows="3" placeholder="Any special request or comment..."></textarea>
+          </div>
+
+
+          <div class="card-footer text-end">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success">
+              <i class="ti ti-currency-dollar me-1"></i>
+              I Paid (Fake for now)
+            </button>
+          </div>
+          
+        
+
+
+
+        </div>
+
+        <div class="card-footer text-end">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="ti ti-check me-1"></i>
+            Submit Signup
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
