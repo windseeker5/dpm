@@ -294,10 +294,6 @@ def dev_reset_admin():
 
 
 
-@app.route("/test-alert")
-def test_alert():
-    flash("🎉 Flash system works!", "success")
-    return redirect(url_for("dashboard"))
 
 
 @app.route("/test-reminders")
@@ -322,34 +318,6 @@ def test_email_match():
     flash("✅ Gmail payment match test executed. Check logs and DB.", "success")
     return redirect(url_for("dashboard"))
 
-
-
-
-@app.route("/test-notify/<event_type>/<pass_code>")
-def test_notify(event_type, pass_code):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
-    if not hockey_pass:
-        flash("Pass not found.", "error")
-        return redirect(url_for("dashboard"))
-
-    from utils import notify_pass_event
-    from datetime import datetime, timezone
-
-    now_utc = datetime.now(timezone.utc)
-
-    notify_pass_event(
-        app=current_app._get_current_object(),
-        event_type=event_type,
-        hockey_pass=hockey_pass,
-        admin_email=session.get("admin"),
-        timestamp=now_utc
-    )
-
-    flash(f"Test notification sent for event type: {event_type}", "success")
-    return redirect(url_for("dashboard"))
 
 
 
@@ -728,102 +696,6 @@ def login():
 
 
 
-@app.route("/reporting")
-def reporting():
-    from sqlalchemy import func
-    from collections import defaultdict
-
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    # === SEARCH PARAMS ===
-    search_epay = request.args.get("search_epay", "").strip().lower()
-    search_pass = request.args.get("search_pass", "").strip().lower()
-    search_email = request.args.get("search_email", "").strip().lower()
-
-    # === PAGINATION ===
-    per_page = 10
-    page_epay = int(request.args.get("page_epay", 1))
-    page_pass = int(request.args.get("page_pass", 1))
-    page_email = int(request.args.get("page_email", 1))
-
-    # === 1. Matched E-Bank Payments ===
-    epay_query = EbankPayment.query.filter(EbankPayment.mark_as_paid == True)
-    if search_epay:
-        epay_query = epay_query.filter(
-            func.lower(EbankPayment.subject).like(f"%{search_epay}%") |
-            func.lower(EbankPayment.bank_info_name).like(f"%{search_epay}%") |
-            func.lower(EbankPayment.from_email).like(f"%{search_epay}%")
-        )
-    pagination_epay = epay_query.order_by(EbankPayment.timestamp.desc()).paginate(page=page_epay, per_page=per_page, error_out=False)
-
-    # === 2. Pass Log ===
-    pass_query = Pass.query
-    if search_pass:
-        pass_query = pass_query.filter(
-            func.lower(Pass.user_name).like(f"%{search_pass}%") |
-            func.lower(Pass.user_email).like(f"%{search_pass}%")
-        )
-    pagination_pass = pass_query.order_by(Pass.pass_created_dt.desc()).paginate(page=page_pass, per_page=per_page, error_out=False)
-
-    # === 3. Email Log ===
-    email_query = EmailLog.query
-    if search_email:
-        email_query = email_query.filter(
-            func.lower(EmailLog.to_email).like(f"%{search_email}%") |
-            func.lower(EmailLog.subject).like(f"%{search_email}%")
-        )
-    pagination_email = email_query.order_by(EmailLog.timestamp.desc()).paginate(page=page_email, per_page=per_page, error_out=False)
-
-    # === 4. NEW CHART: SOLD AMOUNT per ACTIVITY per DATE ===
-    raw_data = db.session.query(
-        Pass.activity,
-        func.date(Pass.pass_created_dt),  # extracts just YYYY-MM-DD
-        func.sum(Pass.sold_amt)
-    ).group_by(Pass.activity, func.date(Pass.pass_created_dt))\
-     .order_by(func.date(Pass.pass_created_dt)).all()
-
-    # Structure chart data
-    activity_grouped = defaultdict(lambda: defaultdict(float))
-    all_dates = set()
-
-    for activity, date_str, total in raw_data:
-        activity_grouped[activity][str(date_str)] += float(total or 0)
-        all_dates.add(str(date_str))
-
-    sorted_dates = sorted(all_dates)
-    activity_chart_data = {
-        "labels": sorted_dates,
-        "datasets": [
-            {
-                "label": activity,
-                "data": [activity_grouped[activity].get(date, 0) for date in sorted_dates]
-            } for activity in activity_grouped
-        ]
-    }
-
-    return render_template(
-        "logs.html",
-        ebank_logs=pagination_epay.items,
-        pagination_epay=pagination_epay,
-
-        passes=pagination_pass.items,
-        pagination_pass=pagination_pass,
-
-        email_logs=pagination_email.items,
-        pagination_email=pagination_email,
-
-        search_epay=search_epay,
-        search_pass=search_pass,
-        search_email=search_email,
-
-        activity_chart_data=activity_chart_data,
-
-        no_wrapper=True
-    )
-
-
-
 
 @app.route("/dashboard")
 def dashboard():
@@ -843,7 +715,6 @@ def dashboard():
 
     kpi_data = get_kpi_stats()
     return render_template("dashboard.html", passes=passes, kpi_data=kpi_data)
-
 
 
 
@@ -1118,13 +989,10 @@ def create_pass():
     )
 
 
+
+
 # Store recent redemptions to prevent duplicate scans
 recent_redemptions = {}
-
-
-
-
-
 
 
 @app.route("/redeem/<pass_code>", methods=["GET", "POST"])
