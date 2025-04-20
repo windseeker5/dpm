@@ -112,6 +112,15 @@ app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
+import hashlib
+
+@app.template_filter("hashlib_md5")
+def hashlib_md5(s):
+    return hashlib.md5(s.encode()).hexdigest()
+
+
+
+
 
 # ✅ Load settings only if the database is ready
 with app.app_context():
@@ -357,14 +366,40 @@ def test_email_match():
 
 @app.route("/")
 def home():
-    return redirect(url_for("login"))
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    return render_template("index.html")
 
 
+@app.route("/dashboard2")
+def dashboard2():
+    if "admin" not in session:
+        return redirect(url_for("login"))
 
+    from models import Activity, Signup, Passport, db
+    from sqlalchemy.sql import func
 
+    # Gather activity performance
+    activities = db.session.query(Activity).all()
+    activity_cards = []
 
+    for a in activities:
+        signups = Signup.query.filter_by(activity_id=a.id).count()
+        passports = Passport.query.filter_by(activity_id=a.id).count()
+        paid_passports = Passport.query.filter_by(activity_id=a.id, paid=True).count()
+        revenue = db.session.query(func.sum(Passport.sold_amt)).filter_by(activity_id=a.id, paid=True).scalar() or 0
 
+        activity_cards.append({
+            "id": a.id,
+            "name": a.name,
+            "sessions_included": a.sessions_included,
+            "signups": signups,
+            "passports": passports,
+            "paid_passports": paid_passports,
+            "revenue": revenue
+        })
 
+    return render_template("dashboard2.html", activities=activity_cards)
 
 
 
@@ -1004,6 +1039,40 @@ def edit_pass(pass_code):
 
 
 
+@app.route("/edit-passport/<int:passport_id>", methods=["GET", "POST"])
+def edit_passport(passport_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    passport = db.session.get(Passport, passport_id)
+    if not passport:
+        flash("❌ Passport not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        passport.sold_amt = float(request.form.get("sold_amt", 50))
+        passport.uses_remaining = int(request.form.get("uses_remaining", 4))
+        passport.paid = "paid_ind" in request.form
+        passport.notes = request.form.get("notes", "").strip()
+        db.session.commit()
+        flash("✅ Passport updated.", "success")
+        return redirect(url_for("edit_passport", passport_id=passport.id))
+
+    return render_template("passport_form.html", passport=passport)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @app.route("/scan-qr")
 def scan_qr():
@@ -1100,6 +1169,62 @@ def activity_log():
     all_logs.sort(key=lambda x: x["timestamp"], reverse=True)
 
     return render_template("activity_log.html", logs=all_logs)
+
+
+
+
+
+
+@app.route("/activity-dashboard/<int:activity_id>")
+def activity_dashboard(activity_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Activity, Signup, Passport
+    from sqlalchemy.orm import joinedload
+    from collections import defaultdict
+
+    activity = Activity.query.get(activity_id)
+    if not activity:
+        flash("❌ Activity not found", "error")
+        return redirect(url_for("dashboard2"))
+
+    # Load related signups
+    signups = Signup.query.filter_by(activity_id=activity_id).all()
+
+    # Load passports with related user + activity (eager loading to avoid N+1)
+    passports = (
+        Passport.query
+        .options(joinedload(Passport.user), joinedload(Passport.activity))
+        .filter_by(activity_id=activity_id)
+        .all()
+    )
+
+    # Summary data
+    total_revenue = sum(p.sold_amt for p in passports if p.paid)
+    active_passports = sum(1 for p in passports if p.uses_remaining > 0 or not p.paid)
+    total_pass_created = len(passports)
+    active_users = len(set(p.user_id for p in passports if p.uses_remaining > 0))
+
+    # Simulated trend data for the chart (replace with real metrics later)
+    #kpi_data = defaultdict(dict)
+    #for period in ["7d", "30d", "90d", "all"]:
+    #    kpi_data[period]["revenue"] = total_revenue
+    #    kpi_data[period]["revenue_prev"] = total_revenue * 0.8  # simulate 20% growth
+    #    kpi_data[period]["pass_created"] = total_pass_created
+    #    kpi_data[period]["pass_created_prev"] = max(1, total_pass_created - 3)
+    #    kpi_data[period]["active_users"] = active_users
+    #    kpi_data[period]["active_users_prev"] = max(1, active_users - 2)
+
+    return render_template(
+        "activity_dashboard.html",  # You are rendering dashboard.html (not activity_dashboard.html)
+        activity=activity,
+        signups=signups,
+        passes=passports # Passports list reused as 'passes' in the template
+        #kpi_data=kpi_data
+    )
+
+
 
 
 
@@ -1283,6 +1408,8 @@ def mark_paid(pass_id):
         flash("Pass not found!", "error")
 
     return redirect(url_for("dashboard"))
+
+
 
 
 from models import Admin, Activity, Passport, User, db

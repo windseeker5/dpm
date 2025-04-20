@@ -20,172 +20,6 @@
 
 
 
-<div class="container-xl">
-  <div class="row g-3 mb-4">
-
-    <!-- Revenue -->
-    <div class="col-md-4">
-      <div class="card card-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Revenue</div>
-              <div class="h2 mb-1" id="revenue-value">$0</div>
-              <div class="small" id="revenue-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <span id="revenue-period">Last 7 days</span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item revenue-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item revenue-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item revenue-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item revenue-option" data-period="all">All time</a>
-              </div>
-            </div>
-          </div>
-          <div class="mt-2">
-            <canvas id="revenue-sparkline" height="30"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Passes Created -->
-    <div class="col-md-4">
-      <div class="card card-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Passes Created</div>
-              <div class="h2 mb-1" id="passes-value">0</div>
-              <div class="small" id="passes-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-outline-green btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <span id="passes-period">Last 7 days</span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item passes-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item passes-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item passes-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item passes-option" data-period="all">All time</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Active Users -->
-    <div class="col-md-4">
-      <div class="card card-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Active Users</div>
-              <div class="h2 mb-1" id="users-value">0</div>
-              <div class="small" id="users-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-outline-yellow btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <span id="users-period">Last 7 days</span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item users-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item users-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item users-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item users-option" data-period="all">All time</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const kpiData = {{ kpi_data | tojson }};
-  const ctx = document.getElementById("revenue-sparkline").getContext("2d");
-
-  // Sparkline chart for revenue
-  const revenueChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: Array(15).fill(""),
-      datasets: [{
-        data: [],
-        borderColor: "#206bc4",
-        backgroundColor: "rgba(32,107,196,0.08)",
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { x: { display: false }, y: { display: false } }
-    }
-  });
-
-  function updateCard(id, metric, period) {
-    const current = kpiData[period][metric];
-    const previous = kpiData[period][`${metric}_prev`];
-    const percent = previous > 0 ? ((current - previous) / previous * 100).toFixed(1) : "0.0";
-
-    const val = metric === "revenue" ? `$${current.toLocaleString()}` : current;
-    const trend = `
-      <span class="${percent >= 0 ? 'text-green' : 'text-red'}">
-        ${percent}% ${percent >= 0 ? '↑' : '↓'}
-      </span>`;
-
-    document.getElementById(`${id}-value`).textContent = val;
-    document.getElementById(`${id}-trend`).innerHTML = trend;
-
-    const labelMap = {
-      "7d": "Last 7 days",
-      "30d": "Last 30 days",
-      "90d": "Last 90 days",
-      "all": "All time"
-    };
-    document.getElementById(`${id}-period`).textContent = labelMap[period];
-
-    if (id === "revenue") {
-      revenueChart.data.datasets[0].data = Array.from({ length: 15 }, () => Math.random() * current);
-      revenueChart.update();
-    }
-  }
-
-  // Dropdown handlers
-  document.querySelectorAll(".revenue-option").forEach(el =>
-    el.addEventListener("click", () => updateCard("revenue", "revenue", el.dataset.period)));
-
-  document.querySelectorAll(".passes-option").forEach(el =>
-    el.addEventListener("click", () => updateCard("passes", "pass_created", el.dataset.period)));
-
-  document.querySelectorAll(".users-option").forEach(el =>
-    el.addEventListener("click", () => updateCard("users", "active_users", el.dataset.period)));
-
-  // Init all 3
-  updateCard("revenue", "revenue", "7d");
-  updateCard("passes", "pass_created", "7d");
-  updateCard("users", "active_users", "7d");
-});
-</script>
-
-
-
-
-
-
 
 
 
@@ -227,6 +61,9 @@ document.addEventListener("DOMContentLoaded", function () {
   </div>
 </div>
 
+
+
+
 <!-- Floating action button for mobile -->
 <div class="d-md-none">
   <div class="position-fixed bottom-0 end-0 m-4">
@@ -238,6 +75,8 @@ document.addEventListener("DOMContentLoaded", function () {
     </a>
   </div>
 </div>
+
+
 
 <div class="card">
   <div class="card-header">
@@ -269,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
             </a>
           </td>
           <td>{{ pass.activity }}</td>
-          <td class="d-none d-md-table-cell">{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
+          <td class="d-none d-md-table-cell">{{ pass.created_dt.strftime('%Y-%m-%d') }}</td>
           <td class="d-none d-md-table-cell {% if not pass.paid_ind %}text-danger fw-bold{% endif %}">
             ${{ '%.2f' % pass.sold_amt }}
           </td>
@@ -301,11 +140,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 {% endif %}
 
 
-
-
               </div>
             </div>
-
 
 
           </td>
@@ -395,8 +231,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 </script>
-
-
 
 
 
