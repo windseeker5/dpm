@@ -456,7 +456,6 @@ def edit_signup(signup_id):
 
 
 
-
 @app.route("/create-activity", methods=["GET", "POST"])
 def create_activity():
     if "admin" not in session:
@@ -475,7 +474,6 @@ def create_activity():
         cost_to_run = float(request.form.get("cost_to_run", 0.0))
         payment_instructions = request.form.get("payment_instructions", "").strip()
 
- 
         new_activity = Activity(
             name=name,
             type=activity_type,
@@ -500,6 +498,9 @@ def create_activity():
 
         flash("✅ Activity created successfully!", "success")
         return redirect(url_for("create_activity"))
+
+    # ✅ Add this line to handle GET request
+    return render_template("activity_form.html")
 
 
 
@@ -779,29 +780,29 @@ def setup():
     )
 
 
-
 @app.route("/erase-app-data", methods=["POST"])
 def erase_app_data():
     if "admin" not in session:
         return redirect(url_for("login"))
 
     try:
-        db.session.query(EbankPayment).delete()
-        db.session.query(EmailLog).delete()
-        db.session.query(Redemption).delete()
-        db.session.query(ReminderLog).delete()
-        db.session.query(Pass).delete()
+        # 📛 List of tables to exclude
+        protected_tables = ["Admin", "Setting"]
+
+        # 🧨 Dynamically delete data from all tables except Admin and Setting
+        from models import db
+        for table in db.metadata.sorted_tables:
+            if table.name not in [t.lower() for t in protected_tables]:
+                db.session.execute(table.delete())
 
         db.session.commit()
-        flash("🧨 All app data erased successfully (passes, redemptions, emails, payments, reminders).", "success")
+        flash("🧨 All app data erased successfully, except Admins and Settings.", "success")
     except Exception as e:
         db.session.rollback()
         print(f"❌ Error erasing data: {e}")
         flash("An error occurred while erasing data.", "error")
 
     return redirect(url_for("setup"))
-
-
 
 
 
@@ -815,9 +816,10 @@ def generate_backup():
     import shutil
 
     try:
-        env = os.environ.get("FLASK_ENV", "dev").lower()
-        db_filename = "dev_database.db" if env != "prod" else "prod_database.db"
-        db_path = os.path.join("instance", db_filename)
+        # ✅ Use real DB path from config
+        db_uri = app.config["SQLALCHEMY_DATABASE_URI"]
+        db_path = db_uri.replace("sqlite:///", "")
+        db_filename = os.path.basename(db_path)
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         zip_filename = f"minipass_backup_{timestamp}.zip"
@@ -831,22 +833,17 @@ def generate_backup():
 
         final_path = os.path.join("static", "backups", zip_filename)
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
- 
 
         print(f"🛠 Moving zip from {zip_path} → {final_path}")
         shutil.move(zip_path, final_path)
         print(f"✅ Backup saved to: {final_path}")
 
-
-
-        print("✅ Backup saved to:", final_path)
         flash(f"📦 Backup created: {zip_filename}", "success")
     except Exception as e:
         print("❌ Backup failed:", str(e))
         flash("❌ Backup failed. Check logs.", "danger")
 
     return redirect(url_for("setup", backup_file=zip_filename))
-
 
 
 

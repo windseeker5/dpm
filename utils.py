@@ -62,7 +62,6 @@ def utc_to_local(dt_utc):
 
 
 
-
 def get_setting(key, default=""):
     with current_app.app_context():
         setting = Setting.query.filter_by(key=key).first()
@@ -84,13 +83,13 @@ def save_setting(key, value):
 
 
 
-
 def generate_qr_code(pass_code):
     qr = qrcode.make(pass_code)
     img_bytes = io.BytesIO()
     qr.save(img_bytes, format="PNG")
     img_bytes.seek(0)
     return base64.b64encode(img_bytes.read()).decode()
+
 
 
 def generate_qr_code_image(pass_code):
@@ -167,125 +166,6 @@ def send_email_async(app, **kwargs):
 
     thread = threading.Thread(target=send_in_thread)
     thread.start()
-
-
-
-def notify_pass_event3333333333333(app, *, event_type, hockey_pass, admin_email=None, timestamp=None):
-    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
-    from flask import render_template, render_template_string, url_for
-    from datetime import datetime, timezone
-    import json
-    import base64
-    import os
-
-    timestamp = timestamp or datetime.now(timezone.utc)
-    event_key = event_type.lower().replace(" ", "_")
-
-    # ✅ Normalize theme_key prefix based on event type
-    if event_key in ["pass_created", "pass_redeemed", "payment_received", "payment_late"]:
-        theme_key = f"THEME_{event_key}"
-        subject_key = f"SUBJECT_{event_key}"
-        title_key = f"TITLE_{event_key}"
-        intro_key = f"INTRO_{event_key}"
-        conclusion_key = f"CONCLUSION_{event_key}"
-    else:
-        theme_key = f"THEME_pass_{event_key}"
-        subject_key = f"SUBJECT_pass_{event_key}"
-        title_key = f"TITLE_pass_{event_key}"
-        intro_key = f"INTRO_pass_{event_key}"
-        conclusion_key = f"CONCLUSION_pass_{event_key}"
-
-    theme = get_setting(theme_key, "confirmation.html")
-    print("🧪 Raw get_setting theme key:", theme_key)
-    print("🧪 theme value from DB:", theme)
-
-    subject = get_setting(subject_key, f"[Minipass] {event_type.title()} Notification")
-    title = get_setting(title_key, f"{event_type.title()} Confirmation")
-    intro_raw = get_setting(intro_key, "")
-    conclusion_raw = get_setting(conclusion_key, "")
-
-    # ✅ Normalize cross-model values
-    games_remaining = getattr(hockey_pass, "games_remaining", None) or getattr(hockey_pass, "uses_remaining", 0)
-    activity_display = getattr(hockey_pass, "activity", "")
-    if hasattr(activity_display, "name"):
-        activity_display = activity_display.name
-
-    intro = render_template_string(intro_raw, hockey_pass=hockey_pass, default_qt=games_remaining, activity_list=activity_display)
-    conclusion = render_template_string(conclusion_raw, hockey_pass=hockey_pass, default_qt=games_remaining, activity_list=activity_display)
-
-    print("🔔 Email debug - subject:", subject)
-    print("🔔 Email debug - title:", title)
-    print("🔔 Email debug - intro:", intro[:80])
-
-    qr_data = generate_qr_code_image(hockey_pass.pass_code).read()
-    history = get_pass_history_data(hockey_pass.pass_code, fallback_admin_email=admin_email)
-
-    context = {
-        "hockey_pass": {
-            "pass_code": hockey_pass.pass_code,
-            "user_name": hockey_pass.user_name,
-            "activity": activity_display,
-            "games_remaining": games_remaining,
-            "sold_amt": hockey_pass.sold_amt,
-            "user_email": hockey_pass.user_email,
-            "phone_number": hockey_pass.phone_number,
-            "pass_created_dt": getattr(hockey_pass, "pass_created_dt", getattr(hockey_pass, "created_dt", None)),
-            "paid_ind": getattr(hockey_pass, "paid_ind", getattr(hockey_pass, "paid", False))
-        },
-        "title": title,
-        "intro_text": intro,
-        "conclusion_text": conclusion,
-        "owner_html": render_template("email_blocks/owner_card_inline.html", hockey_pass=hockey_pass),
-        "history_html": render_template("email_blocks/history_table_inline.html", history=history),
-        "email_info": "",
-        "logo_url": url_for("static", filename="uploads/logo.png"),
-        "special_message": ""
-    }
-
-    compiled_folder = os.path.join("templates/email_templates", theme.replace(".html", "_compiled"))
-    index_path = os.path.join(compiled_folder, "index.html")
-    json_path = os.path.join(compiled_folder, "inline_images.json")
-    use_compiled = os.path.exists(index_path) and os.path.exists(json_path)
-
-    if use_compiled:
-        with open(index_path, "r") as f:
-            raw_html = f.read()
-        html_body = render_template_string(raw_html, **context)
-
-        with open(json_path, "r") as f:
-            inline_images = {cid: base64.b64decode(data) for cid, data in json.load(f).items()}
-        inline_images["qr_code"] = qr_data
-
-        logo_path = os.path.join(compiled_folder.replace("_compiled", ""), "logo.png")
-        if os.path.exists(logo_path):
-            with open(logo_path, "rb") as logo_file:
-                inline_images["logo"] = logo_file.read()
-        else:
-            print("⚠️ logo.png not found in template folder.")
-
-        send_email_async(
-            app,
-            subject=subject,
-            to_email=hockey_pass.user_email,
-            html_body=html_body,
-            inline_images=inline_images,
-            timestamp_override=timestamp
-        )
-    else:
-        inline_images = {
-            "qr_code": qr_data,
-            "logo_image": open("static/uploads/logo.png", "rb").read()
-        }
-
-        send_email_async(
-            app,
-            subject=subject,
-            to_email=hockey_pass.user_email,
-            template_name=theme,
-            context=context,
-            inline_images=inline_images,
-            timestamp_override=timestamp
-        )
 
 
 
@@ -409,13 +289,7 @@ def notify_pass_event(app, *, event_type, hockey_pass, admin_email=None, timesta
 
 
 
-
-
-
-
-
-
-def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
+def get_pass_history_data333333333333333(pass_code: str, fallback_admin_email=None) -> dict:
     """
     Builds the history log for a digital pass, converting UTC timestamps to local time (America/Toronto).
     Returns a dictionary including: created, paid, redemptions, expired, and who performed each action.
@@ -488,6 +362,98 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
             history["expired"] = utc_to_local(redemptions[-1].date_used).strftime(DATETIME_FORMAT)
 
         return history
+
+
+def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
+    """
+    Builds the history log for a digital pass, converting UTC timestamps to local time (America/Toronto).
+    Returns a dictionary including: created, paid, redemptions, expired, and who performed each action.
+
+    Accepts fallback_admin_email for use in background tasks (outside of request context).
+    """
+    with current_app.app_context():
+        from models import Admin, EbankPayment, Redemption, Pass, Passport
+        DATETIME_FORMAT = "%Y-%m-%d %H:%M"
+
+        # 🔍 Try both models
+        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+        passport_mode = False
+        if not hockey_pass:
+            hockey_pass = Passport.query.filter_by(pass_code=pass_code).first()
+            passport_mode = True
+
+        if not hockey_pass:
+            return {"error": "Pass not found."}
+
+        # 🔁 Fetch redemptions if using Pass
+        redemptions = []
+        if not passport_mode:
+            redemptions = (
+                Redemption.query
+                .filter_by(pass_id=hockey_pass.id)
+                .order_by(Redemption.date_used.asc())
+                .all()
+            )
+
+        # 📦 Initialize history structure
+        history = {
+            "created": None,
+            "created_by": None,
+            "paid": None,
+            "paid_by": None,
+            "redemptions": [],
+            "expired": None
+        }
+
+        # 📅 Created
+        created_dt = getattr(hockey_pass, "pass_created_dt", None) or getattr(hockey_pass, "created_dt", None)
+        if created_dt:
+            history["created"] = utc_to_local(created_dt).strftime(DATETIME_FORMAT)
+
+        # 👤 Created by
+        created_by = getattr(hockey_pass, "created_by", None)
+        if created_by:
+            admin = Admin.query.get(created_by)
+            history["created_by"] = admin.email if admin else "-"
+
+        # 💵 Payment info
+        paid = getattr(hockey_pass, "paid_ind", None) if not passport_mode else getattr(hockey_pass, "paid", False)
+        paid_date = getattr(hockey_pass, "paid_date", None) if not passport_mode else None
+        if paid and (paid_date or not passport_mode):
+            paid_dt = utc_to_local(paid_date) if paid_date else created_dt  # fallback to created_dt for Passport
+            history["paid"] = paid_dt.strftime(DATETIME_FORMAT)
+
+            if not passport_mode:
+                ebank = (
+                    EbankPayment.query
+                    .filter_by(matched_pass_id=hockey_pass.id, mark_as_paid=True)
+                    .order_by(EbankPayment.timestamp.desc())
+                    .first()
+                )
+
+                if ebank:
+                    history["paid_by"] = ebank.from_email
+                else:
+                    email = fallback_admin_email or "admin panel"
+                    history["paid_by"] = email.split("@")[0] if "@" in email else email
+            else:
+                history["paid_by"] = fallback_admin_email or "admin"
+
+        # 🎮 Redemptions
+        for r in redemptions:
+            local_used = utc_to_local(r.date_used)
+            history["redemptions"].append({
+                "date": local_used.strftime(DATETIME_FORMAT),
+                "by": r.redeemed_by or "-"
+            })
+
+        # ❌ Expired if no games remaining
+        games_remaining = getattr(hockey_pass, "games_remaining", None) or getattr(hockey_pass, "uses_remaining", None)
+        if games_remaining == 0 and redemptions:
+            history["expired"] = utc_to_local(redemptions[-1].date_used).strftime(DATETIME_FORMAT)
+
+        return history
+
 
 
 
@@ -575,66 +541,6 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
 
     return results
 
-
-
-
-def get_all_activity_logs33333333():
-    from models import Pass, Redemption, EmailLog, EbankPayment, ReminderLog
-    from utils import utc_to_local
-    from flask import current_app
-
-    DATETIME_FORMAT = "%Y-%m-%d %H:%M"
-    logs = []
-
-    with current_app.app_context():
-        # Pass Creation
-        for p in Pass.query.all():
-            logs.append({
-                "timestamp": utc_to_local(p.pass_created_dt).strftime(DATETIME_FORMAT),
-                "type": "Pass Created",
-                "user": p.user_name,
-                "details": f"Email: {p.user_email}, Code: {p.pass_code}"
-            })
-
-        # Redemption
-        for r in Redemption.query.all():
-            logs.append({
-                "timestamp": utc_to_local(r.date_used).strftime(DATETIME_FORMAT),
-                "type": "Pass Redeemed",
-                "user": r.redeemed_by,
-                "details": f"Pass ID: {r.pass_id}"
-            })
-
-        # Email Sent
-        for e in EmailLog.query.all():
-            logs.append({
-                "timestamp": utc_to_local(e.timestamp).strftime(DATETIME_FORMAT),
-                "type": f"Email {e.result}",
-                "user": e.to_email,
-                "details": f"Subject: {e.subject}, Pass: {e.pass_code or 'N/A'}"
-            })
-
-        # Payments
-        for p in EbankPayment.query.all():
-            logs.append({
-                "timestamp": utc_to_local(p.timestamp).strftime(DATETIME_FORMAT),
-                "type": f"Payment {p.result}",
-                "user": p.from_email,
-                "details": f"Name: {p.bank_info_name}, Amount: {p.bank_info_amt}"
-            })
-
-        # Reminders
-        for r in ReminderLog.query.all():
-            logs.append({
-                "timestamp": utc_to_local(r.reminder_sent_at).strftime(DATETIME_FORMAT),
-                "type": "Reminder Sent",
-                "user": "-",
-                "details": f"Pass ID: {r.pass_id}"
-            })
-
-    # Sort by timestamp descending
-    logs.sort(key=lambda x: x["timestamp"], reverse=True)
-    return logs
 
 
 

@@ -8,16 +8,29 @@
       </tr>
     </thead>
     <tbody>
+      <!-- Creation -->
       <tr>
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Création</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ history.created }}</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ history.created_by | trim_email }}</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">
+          {{ history.created or "—" }}
+        </td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">
+          {{ history.created_by | trim_email if history.created_by else "—" }}
+        </td>
       </tr>
+
+      <!-- Payment -->
       <tr>
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Paiement</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ history.paid or '❌ Non payé' }}</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ history.paid_by | trim_email }}</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">
+          {{ history.paid if history.paid else '❌ Non payé' }}
+        </td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">
+          {{ history.paid_by | trim_email if history.paid_by else "—" }}
+        </td>
       </tr>
+
+      <!-- Redemptions -->
       {% for r in history.redemptions %}
       <tr>
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Activité #{{ loop.index }}</td>
@@ -25,11 +38,13 @@
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ r.by | trim_email }}</td>
       </tr>
       {% endfor %}
+
+      <!-- Expired -->
       {% if history.expired %}
       <tr>
         <td style="padding: 10px 14px;">Expiré</td>
         <td style="padding: 10px 14px;">{{ history.expired }}</td>
-        <td style="padding: 10px 14px;">-</td>
+        <td style="padding: 10px 14px;">—</td>
       </tr>
       {% endif %}
     </tbody>
