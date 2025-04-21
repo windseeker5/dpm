@@ -93,6 +93,9 @@ app.config.from_object(Config)
 # ✅ Initialize database
 db.init_app(app)
 
+
+
+
 migrate = Migrate(app, db)
 
 
@@ -302,23 +305,25 @@ def retry_failed_emails():
 
 
 
-
-
 @app.route("/dev-reset-admin")
 def dev_reset_admin():
-    # Only run this in dev mode! You can restrict it further if needed
+    print(" - = - = - - = - = - =- - =- =- = - =- =- =-  =- =- =- =-  =- =- =- ")
     email = "kdresdell@gmail.com"
-    new_password = "admin123"
-    hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt())
+    password = "admin123"
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
-    with app.app_context():
-        admin = Admin.query.filter_by(email=email).first()
-        if admin:
-            admin.password_hash = hashed.decode()
-            db.session.commit()
-            return f"✅ Reset password for {email} to <strong>{new_password}</strong>"
-        else:
-            return f"❌ Admin with email {email} not found."
+    admin = Admin.query.filter_by(email=email).first()
+    if not admin:
+        admin = Admin(email=email, password_hash=hashed)
+        db.session.add(admin)
+        message = "✅ Created new admin"
+    else:
+        admin.password_hash = hashed
+        message = "✅ Updated existing admin"
+
+    db.session.commit()
+    return f"{message}: {email} / {password}"
+
 
 
 
