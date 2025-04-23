@@ -1179,7 +1179,6 @@ def activity_log():
 
 
 
-
 @app.route("/activity-dashboard/<int:activity_id>")
 def activity_dashboard(activity_id):
     if "admin" not in session:
@@ -1187,17 +1186,22 @@ def activity_dashboard(activity_id):
 
     from models import Activity, Signup, Passport
     from sqlalchemy.orm import joinedload
-    from collections import defaultdict
 
     activity = Activity.query.get(activity_id)
     if not activity:
         flash("❌ Activity not found", "error")
         return redirect(url_for("dashboard2"))
 
-    # Load related signups
-    signups = Signup.query.filter_by(activity_id=activity_id).all()
+    # Load all related signups with user eager-loaded
+    signups = (
+        Signup.query
+        .options(joinedload(Signup.user))
+        .filter_by(activity_id=activity_id)
+        .order_by(Signup.signed_up_at.desc())
+        .all()
+    )
 
-    # Load passports with related user + activity (eager loading to avoid N+1)
+    # Load passports with eager user/activity loading
     passports = (
         Passport.query
         .options(joinedload(Passport.user), joinedload(Passport.activity))
@@ -1205,28 +1209,11 @@ def activity_dashboard(activity_id):
         .all()
     )
 
-    # Summary data
-    total_revenue = sum(p.sold_amt for p in passports if p.paid)
-    active_passports = sum(1 for p in passports if p.uses_remaining > 0 or not p.paid)
-    total_pass_created = len(passports)
-    active_users = len(set(p.user_id for p in passports if p.uses_remaining > 0))
-
-    # Simulated trend data for the chart (replace with real metrics later)
-    #kpi_data = defaultdict(dict)
-    #for period in ["7d", "30d", "90d", "all"]:
-    #    kpi_data[period]["revenue"] = total_revenue
-    #    kpi_data[period]["revenue_prev"] = total_revenue * 0.8  # simulate 20% growth
-    #    kpi_data[period]["pass_created"] = total_pass_created
-    #    kpi_data[period]["pass_created_prev"] = max(1, total_pass_created - 3)
-    #    kpi_data[period]["active_users"] = active_users
-    #    kpi_data[period]["active_users_prev"] = max(1, active_users - 2)
-
     return render_template(
-        "activity_dashboard.html",  # You are rendering dashboard.html (not activity_dashboard.html)
+        "activity_dashboard.html",
         activity=activity,
         signups=signups,
-        passes=passports # Passports list reused as 'passes' in the template
-        #kpi_data=kpi_data
+        passes=passports
     )
 
 
