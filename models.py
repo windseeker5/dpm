@@ -80,6 +80,7 @@ class Activity(db.Model):
     payment_instructions = db.Column(db.Text)
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
+    status = db.Column(db.String(50), default="active")
 
 
 class Signup(db.Model):
@@ -94,7 +95,7 @@ class Signup(db.Model):
     paid = db.Column(db.Boolean, default=False)
     paid_at = db.Column(db.DateTime)
     passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"))
-
+    status = db.Column(db.String(50), default="pending")
 
 class Passport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -111,8 +112,6 @@ class Passport(db.Model):
     notes = db.Column(db.Text)
 
     signups = db.relationship("Signup", backref="passport", lazy=True)
-
-
 
 
 
@@ -161,3 +160,7 @@ class EmailLog(db.Model):
     context_json = db.Column(db.Text)
     result = db.Column(db.String(50))  # SENT or FAILED
     error_message = db.Column(db.Text, nullable=True)
+
+
+# ✅ Place index right after the model class
+db.Index('ix_signup_status', Signup.status)
