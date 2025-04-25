@@ -20,7 +20,6 @@
 
 
 
-
 <!--                          -->
 <!-- 🔵 Activity Title Card   -->
 <!--                          --> 
@@ -42,10 +41,6 @@
     </div>
   </div>
 </div>
-
-
-
-
 
 
 
@@ -86,7 +81,6 @@
               </div>
             </td>
             
-
             
             <td>{{ activity.name }}</td>
             <td class="d-none d-md-table-cell">{{ s.user.email }}</td>
@@ -99,12 +93,36 @@
                 <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                   Actions
                 </a>
+
+
+
                 <div class="dropdown-menu">
-                  <a class="dropdown-item" href="#"><i class="ti ti-pencil me-2"></i>Edit</a>
-                  <a class="dropdown-item text-success" href="#"><i class="ti ti-check me-2"></i>Approve</a>
-                  <a class="dropdown-item text-danger" href="#"><i class="ti ti-trash me-2"></i>Delete</a>
+
+                  <!-- ✅ Approve & Create Pass -->
+                  <a class="dropdown-item text-success" href="{{ url_for('approve_and_create_pass', signup_id=s.id) }}">
+                    <i class="ti ti-check me-2"></i>Approved & Create Pass
+                  </a>
+                
+                  <!-- ❌ Reject Signup -->
+                  <form method="POST" action="{{ url_for('update_signup_status', signup_id=s.id) }}">
+                    <input type="hidden" name="status" value="rejected">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="dropdown-item text-danger" type="submit">
+                      <i class="ti ti-x me-2"></i>Rejected
+                    </button>
+                  </form>
+                
+                  <!-- 🚫 Cancel Signup -->
+                  <form method="POST" action="{{ url_for('update_signup_status', signup_id=s.id) }}">
+                    <input type="hidden" name="status" value="cancelled">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="dropdown-item text-warning" type="submit">
+                      <i class="ti ti-ban me-2"></i>Cancelled
+                    </button>
+                  </form>
+                
                 </div>
-              </div>
+                
 
             </td>
           </tr>
@@ -115,6 +133,7 @@
     </div>
   </div>
 
+
   <div class="card-footer d-flex align-items-center">
     <p class="m-0 text-muted">
       Showing <span id="showingCountSignup">0</span> of {{ signups|length }}
@@ -122,6 +141,10 @@
     <ul class="pagination m-0 ms-auto" id="paginationSignup"></ul>
   </div>
 </div>
+
+
+
+
 
 
 
@@ -138,8 +161,8 @@
     <div class="row g-2 align-items-center">
       <!-- Action buttons -->
       <div class="col-12 col-md-auto">
-        <a href="{{ url_for('create_pass') }}" class="btn btn-primary w-100 w-md-auto">
-          <i class="ti ti-plus"></i> Add New
+        <a href="{{ url_for('create_passport') }}" class="btn btn-primary w-100 w-md-auto">
+          <i class="ti ti-plus"></i> Add New2
         </a>
       </div>
       <div class="col-12 col-md-auto">
@@ -181,11 +204,6 @@
     </a>
   </div>
 </div>
-
-
-
-
-
 
 
 

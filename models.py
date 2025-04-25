@@ -57,7 +57,9 @@ class Pass(db.Model):
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True)
+    email = db.Column(db.String(100))
+    # email = db.Column(db.String(100), unique=True)
+
     phone_number = db.Column(db.String(20))
 
     signups = db.relationship("Signup", backref="user", lazy=True)

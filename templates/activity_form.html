@@ -90,6 +90,41 @@
         </div>
         
 
+        <!-- Signup link  -->
+        {% if activity %}
+        <!-- Public Signup Link -->
+        <div class="mb-3">
+          <label class="form-label">Signup Link (Share with User)</label>
+          <div class="input-group">
+            <input type="text" class="form-control" readonly
+                   value="{{ url_for('signup', activity_id=activity.id, _external=True) }}">
+            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this)">
+              <i class="ti ti-copy"></i>
+            </button>
+          </div>
+          <small class="form-hint">This is the public signup link for this activity. Copy and send it to your user.</small>
+        </div>
+        {% endif %}
+        
+
+        <script>
+          function copyToClipboard(button) {
+            const input = button.closest('.input-group').querySelector('input');
+            input.select();
+            input.setSelectionRange(0, 99999); // For mobile
+            document.execCommand("copy");
+          
+            // Visual feedback
+            button.innerHTML = '<i class="ti ti-check"></i>';
+            setTimeout(() => {
+              button.innerHTML = '<i class="ti ti-copy"></i>';
+            }, 1500);
+          }
+          </script>
+          
+
+
+
 
 
         </div>
