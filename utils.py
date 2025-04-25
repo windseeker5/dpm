@@ -364,6 +364,8 @@ def get_pass_history_data333333333333333(pass_code: str, fallback_admin_email=No
         return history
 
 
+
+
 def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
     """
     Builds the history log for a digital pass, converting UTC timestamps to local time (America/Toronto).
@@ -988,3 +990,17 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         context_extra=context_extra,
         timestamp=timestamp
     )
+
+
+
+
+# ✅ Log admin action centrally
+def log_admin_action(action: str):
+    from models import AdminActionLog, db
+    from flask import session
+
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin", "unknown"),
+        action=action
+    ))
+    db.session.commit()

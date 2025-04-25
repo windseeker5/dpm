@@ -496,6 +496,59 @@ def edit_signup(signup_id):
 
 
 
+
+@app.route("/signup/status/<int:signup_id>", methods=["POST"])
+def update_signup_status(signup_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    signup = db.session.get(Signup, signup_id)
+    if not signup:
+        flash("❌ Signup not found.", "error")
+        return redirect(url_for("admin_signups"))
+
+    status = request.form.get("status")
+    if status in ["rejected", "cancelled"]:
+        signup.status = status
+        db.session.commit()
+
+        from utils import log_admin_action
+        log_admin_action(f"Signup ID {signup.id} marked as {status}")
+
+        flash(f"✅ Signup marked as {status}.", "success")
+    else:
+        flash("❌ Invalid status.", "error")
+
+    return redirect(url_for("admin_signups"))
+
+
+
+
+@app.route("/signup/approve-create-pass/<int:signup_id>")
+def approve_and_create_pass(signup_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    signup = db.session.get(Signup, signup_id)
+    if not signup:
+        flash("❌ Signup not found.", "error")
+        return redirect(url_for("admin_signups"))
+
+    signup.status = "approved"
+    db.session.commit()
+
+    from utils import log_admin_action
+    log_admin_action(f"Signup ID {signup.id} approved and redirected to create pass")
+
+    return redirect(url_for("create_pass_from_signup", signup_id=signup_id))
+
+
+
+
+
+
+
+
 @app.route("/create-activity", methods=["GET", "POST"])
 def create_activity():
     if "admin" not in session:
@@ -585,10 +638,8 @@ def edit_activity(activity_id):
 
 
 
-
 @app.route("/signup/<int:activity_id>", methods=["GET", "POST"])
 def signup(activity_id):
-    #activity = Activity.query.get(activity_id)
     activity = db.session.get(Activity, activity_id)
     if not activity:
         flash("❌ Activity not found.", "error")
@@ -599,19 +650,18 @@ def signup(activity_id):
         email = request.form.get("email", "").strip()
         phone = request.form.get("phone", "").strip()
 
-        # Create or get user
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            user = User(name=name, email=email, phone_number=phone)
-            db.session.add(user)
-            db.session.flush()  # assign user.id
+        # ✅ Always create a new user (even with same email)
+        user = User(name=name, email=email, phone_number=phone)
+        db.session.add(user)
+        db.session.flush()  # Assign user.id without committing
 
+        # ✅ Create Signup
         signup = Signup(
             user_id=user.id,
             activity_id=activity.id,
             subject=f"Signup for {activity.name}",
             description=request.form.get("notes", "").strip(),
-            form_data="",  # or JSON later
+            form_data="",  # You can extend this later for JSON forms
         )
         db.session.add(signup)
         db.session.commit()
@@ -627,7 +677,6 @@ def signup(activity_id):
         return redirect(url_for("dashboard"))
 
     return render_template("signup_form.html", activity=activity)
-
 
 
 
@@ -1407,13 +1456,16 @@ def mark_paid(pass_id):
 from models import Admin, Activity, Passport, User, db
 from utils import get_setting, notify_pass_event
 
+
+
 @app.route("/create-passport", methods=["GET", "POST"])
 def create_passport():
     if "admin" not in session:
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        current_admin = Admin.query.filter_by(email=session["admin"]).first()
+        # ✅ Get current admin
+        current_admin = Admin.query.filter_by(email=session.get("admin")).first()
 
         # ✅ Gather form data
         user_name = request.form.get("user_name", "").strip()
@@ -1421,19 +1473,16 @@ def create_passport():
         phone_number = request.form.get("phone_number", "").strip()
         sold_amt = float(request.form.get("sold_amt", 50))
         sessions_qt = int(request.form.get("sessionsQt") or request.form.get("uses_remaining") or 4)
-        paid = True if "paid_ind" in request.form else False
+        paid = "paid_ind" in request.form
         activity_id = int(request.form.get("activity_id", 0))
         pass_code = str(uuid.uuid4())[:16]
         notes = request.form.get("notes", "").strip()
-
         now_utc = datetime.now(timezone.utc)
 
-        # ✅ Create or fetch user
-        user = User.query.filter_by(email=user_email).first()
-        if not user:
-            user = User(name=user_name, email=user_email, phone_number=phone_number)
-            db.session.add(user)
-            db.session.flush()  # get user.id
+        # ✅ Always create a new user (even if same email is reused)
+        user = User(name=user_name, email=user_email, phone_number=phone_number)
+        db.session.add(user)
+        db.session.flush()  # Assign user.id
 
         # ✅ Create Passport object
         passport = Passport(
@@ -1442,6 +1491,7 @@ def create_passport():
             activity_id=activity_id,
             sold_amt=sold_amt,
             uses_remaining=sessions_qt,
+            created_by=current_admin.id if current_admin else None,
             created_dt=now_utc,
             paid=paid,
             notes=notes
@@ -1452,25 +1502,20 @@ def create_passport():
         db.session.expire_all()
 
         # ✅ Send confirmation email
-
         notify_pass_event(
             app=current_app._get_current_object(),
             event_type="pass_created",
-            hockey_pass=passport,  # still valid
+            hockey_pass=passport,
             admin_email=session.get("admin"),
             timestamp=now_utc
         )
 
-
-
-
         flash("✅ Passport created and confirmation email sent.", "success")
         return redirect(url_for("dashboard"))
 
-    # 📥 GET request
+    # 👉 GET METHOD: show form
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
-
     activity_list = Activity.query.order_by(Activity.name).all()
 
     return render_template(
