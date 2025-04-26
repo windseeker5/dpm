@@ -106,6 +106,8 @@
 </div>
 {% endif %}
 
+
+
 <!-- 🔎 Search + Add New -->
 <div class="card mb-3">
   <div class="card-body">
@@ -130,6 +132,9 @@
     </div>
   </div>
 </div>
+
+
+
 
 {# ------------------------------ #}
 {# 🛂 Passport Table (refactored) #}
@@ -224,7 +229,93 @@
 {% endblock %}
 
 {% block scripts %}
+
+ 
 <script>
-  // Your existing search & pagination JS…
+document.addEventListener('DOMContentLoaded', function() {
+    const searchBox = document.getElementById('searchBox');
+    const passportTable = document.getElementById('passportTable').getElementsByTagName('tbody')[0];
+
+    searchBox.addEventListener('input', function() {
+        const filter = searchBox.value.toLowerCase();
+        const rows = passportTable.getElementsByTagName('tr');
+
+        Array.from(rows).forEach(function(row) {
+            const username = row.querySelector('td').innerText.toLowerCase();
+            if (username.includes(filter)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    const rowsPerPage = 10;
+    let currentPage = 1;
+
+    function paginateTable(tableBody) {
+        const rows = tableBody.getElementsByTagName('tr');
+        const totalPages = Math.ceil(rows.length / rowsPerPage);
+
+        function renderPage(page) {
+            Array.from(rows).forEach((row, index) => {
+                if (index >= (page - 1) * rowsPerPage && index < page * rowsPerPage) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function createPaginationControls() {
+            const card = tableBody.closest('.card');
+            const cardFooter = document.createElement('div');
+            cardFooter.className = 'card-footer d-flex align-items-center';
+
+            const paginationContainer = document.createElement('ul');
+            paginationContainer.className = 'pagination m-0 ms-auto';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (i === currentPage ? ' active' : '');
+
+                const button = document.createElement('a');
+                button.className = 'page-link';
+                button.href = '#';
+                button.textContent = i;
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    currentPage = i;
+                    updatePagination();
+                });
+
+                li.appendChild(button);
+                paginationContainer.appendChild(li);
+            }
+
+            cardFooter.appendChild(paginationContainer);
+            card.appendChild(cardFooter);
+        }
+
+        function updatePagination() {
+            renderPage(currentPage);
+            const paginationButtons = document.querySelectorAll('.pagination .page-item');
+            paginationButtons.forEach((item, index) => {
+                item.classList.toggle('active', index === currentPage - 1);
+            });
+        }
+
+        renderPage(currentPage);
+        createPaginationControls();
+    }
+
+    paginateTable(passportTable);
+});
 </script>
+ 
+
+
+
+
+
 {% endblock %}
