@@ -1,408 +1,61 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Activity Performance | Dashboard{% endblock %}
 
 {% block content %}
-
-<style>
-  .table-responsive {
-    overflow: visible !important;
-    position: relative;
-  }
-
-  .table-responsive .dropdown {
-    position: relative;
-  }
-
-  .table-responsive .dropdown-menu {
-    z-index: 1060;
-  }
-</style>
-
-
-
-<div class="container-xl">
-  <div class="row g-3 mb-4">
-
-    <!-- Revenue -->
-    <div class="col-md-4">
-      <div class="card card-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Revenue</div>
-              <div class="h2 mb-1" id="revenue-value">$0</div>
-              <div class="small" id="revenue-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <span id="revenue-period">Last 7 days</span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item revenue-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item revenue-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item revenue-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item revenue-option" data-period="all">All time</a>
-              </div>
-            </div>
-          </div>
-          <div class="mt-2">
-            <canvas id="revenue-sparkline" height="30"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Passes Created -->
-    <div class="col-md-4">
-      <div class="card card-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Passes Created</div>
-              <div class="h2 mb-1" id="passes-value">0</div>
-              <div class="small" id="passes-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-outline-green btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <span id="passes-period">Last 7 days</span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item passes-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item passes-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item passes-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item passes-option" data-period="all">All time</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Active Users -->
-    <div class="col-md-4">
-      <div class="card card-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Active Users</div>
-              <div class="h2 mb-1" id="users-value">0</div>
-              <div class="small" id="users-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-outline-yellow btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <span id="users-period">Last 7 days</span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item users-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item users-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item users-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item users-option" data-period="all">All time</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const kpiData = {{ kpi_data | tojson }};
-  const ctx = document.getElementById("revenue-sparkline").getContext("2d");
-
-  // Sparkline chart for revenue
-  const revenueChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: Array(15).fill(""),
-      datasets: [{
-        data: [],
-        borderColor: "#206bc4",
-        backgroundColor: "rgba(32,107,196,0.08)",
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { x: { display: false }, y: { display: false } }
-    }
-  });
-
-  function updateCard(id, metric, period) {
-    const current = kpiData[period][metric];
-    const previous = kpiData[period][`${metric}_prev`];
-    const percent = previous > 0 ? ((current - previous) / previous * 100).toFixed(1) : "0.0";
-
-    const val = metric === "revenue" ? `$${current.toLocaleString()}` : current;
-    const trend = `
-      <span class="${percent >= 0 ? 'text-green' : 'text-red'}">
-        ${percent}% ${percent >= 0 ? '↑' : '↓'}
-      </span>`;
-
-    document.getElementById(`${id}-value`).textContent = val;
-    document.getElementById(`${id}-trend`).innerHTML = trend;
-
-    const labelMap = {
-      "7d": "Last 7 days",
-      "30d": "Last 30 days",
-      "90d": "Last 90 days",
-      "all": "All time"
-    };
-    document.getElementById(`${id}-period`).textContent = labelMap[period];
-
-    if (id === "revenue") {
-      revenueChart.data.datasets[0].data = Array.from({ length: 15 }, () => Math.random() * current);
-      revenueChart.update();
-    }
-  }
-
-  // Dropdown handlers
-  document.querySelectorAll(".revenue-option").forEach(el =>
-    el.addEventListener("click", () => updateCard("revenue", "revenue", el.dataset.period)));
-
-  document.querySelectorAll(".passes-option").forEach(el =>
-    el.addEventListener("click", () => updateCard("passes", "pass_created", el.dataset.period)));
-
-  document.querySelectorAll(".users-option").forEach(el =>
-    el.addEventListener("click", () => updateCard("users", "active_users", el.dataset.period)));
-
-  // Init all 3
-  updateCard("revenue", "revenue", "7d");
-  updateCard("passes", "pass_created", "7d");
-  updateCard("users", "active_users", "7d");
-});
-</script>
-
-
-
-
-
-
-
-
-
-<!-- Header card for controls -->
-<div class="card mb-3">
-  <div class="card-body">
-    <h3 class="card-title mb-3">
-      <i class="ti ti-filter me-2"></i>Manage Passes
-    </h3>
-    <div class="row g-2 align-items-center">
-      <!-- Action buttons -->
-      <div class="col-12 col-md-auto">
-        <a href="{{ url_for('create_pass') }}" class="btn btn-primary w-100 w-md-auto">
-          <i class="ti ti-plus"></i> Add New
-        </a>
-      </div>
-      <div class="col-12 col-md-auto">
-        <a href="{{ url_for('scan_qr') }}" class="btn btn-secondary w-100 w-md-auto">
-          <i class="ti ti-scan"></i> Scan Pass
-        </a>
-      </div>
-
-      <!-- Search (stacked under buttons on mobile) -->
-
-      <div class="col-12 col-md">
-        <div class="input-icon">
-          <span class="input-icon-addon">
-            <i class="ti ti-search"></i>
-          </span>
-          <input type="text"
-                 id="searchBox"
-                 class="form-control"
-                 placeholder="Search by User Name..." />
-        </div>
-      </div>
+<div class="container-xl mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+     
+    <h2 class="mb-0">
+        <i class="ti ti-chart-bar text-primary me-2"></i> Activity Performance
+      </h2>
       
 
+    <div>
+      <a href="{{ url_for('create_passport') }}" class="btn btn-outline-primary me-2">
+        <i class="ti ti-plus"></i> Create Passport
+      </a>
+      <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
+        <i class="ti ti-scan"></i> Scan Passport
+      </a>
     </div>
   </div>
-</div>
 
-<!-- Floating action button for mobile -->
-<div class="d-md-none">
-  <div class="position-fixed bottom-0 end-0 m-4">
-    <a href="{{ url_for('create_pass') }}"
-       class="btn btn-primary rounded-circle shadow d-flex justify-content-center align-items-center"
-       title="Add New Pass"
-       style="width: 56px; height: 56px;">
-      <i class="ti ti-plus"></i>
-    </a>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">Active Passes</h3>
-  </div>
-  <div class="table-responsive">
-    <table class="table card-table table-vcenter" id="passTable">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Activity</th>
-          <th class="d-none d-md-table-cell">Created</th>
-          <th class="d-none d-md-table-cell">Amount</th>
-          <th class="d-none d-md-table-cell">Remain</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for pass in passes %}
-        <tr>
-          <td>
-            <a href="{{ url_for('show_pass', pass_code=pass.pass_code) }}"
-               class="d-flex align-items-center text-reset text-decoration-none"
-               title="{{ pass.user_email }} (Pass ID: {{ pass.id }})">
-              <span class="avatar me-2 rounded"
-                    style="background-image: url('https://www.gravatar.com/avatar/{{ pass.user_email|lower|trim|encode_md5 }}?d=identicon')">
-              </span>
-              {{ pass.user_name }}
-            </a>
-          </td>
-          <td>{{ pass.activity }}</td>
-          <td class="d-none d-md-table-cell">{{ pass.pass_created_dt.strftime('%Y-%m-%d') }}</td>
-          <td class="d-none d-md-table-cell {% if not pass.paid_ind %}text-danger fw-bold{% endif %}">
-            ${{ '%.2f' % pass.sold_amt }}
-          </td>
-          <td class="d-none d-md-table-cell">{{ pass.games_remaining }}</td>
-          <td>
-
-
-            <div class="dropdown">
-              <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
-               
-              <div class="dropdown-menu" style="z-index: 1050;">
-
-                <a class="dropdown-item text-primary redeem-btn" href="#" data-pass="{{ pass.pass_code }}">
-                  <i class="ti ti-check me-2"></i>Redeem a Game
-                </a>
-
-                <a class="dropdown-item" href="{{ url_for('edit_pass', pass_code=pass.pass_code) }}">
-                  <i class="ti ti-pencil me-2"></i>Edit Pass
-                </a>
-
-
-                {% if not pass.paid_ind %}
-                <form action="{{ url_for('mark_paid', pass_id=pass.id) }}" method="POST" onsubmit="return confirm('Mark this pass as paid?');">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="dropdown-item text-success" type="submit">
-                    <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-                  </button>
-                </form>
-                {% endif %}
-
-
-
-
-              </div>
+  <div class="row">
+    {% for a in activities %}
+      <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0">
+              <i class="ti ti-calendar-event text-primary me-2"></i>{{ a.name }}
+            </h3>
+            <span class="badge bg-blue">{{ a.sessions_included }} sessions</span>
+          </div>
+          <div class="card-body">
+            <div class="mb-2">
+              <i class="ti ti-user-check text-muted me-1"></i>
+              <strong>{{ a.signups }}</strong> signups
             </div>
-
-
-
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Pagination controls -->
-  <div class="card-footer d-flex align-items-center">
-    <p class="m-0 text-muted">Showing <span id="showingCount">0</span> of {{ passes|length }}</p>
-    <ul class="pagination m-0 ms-auto" id="paginationControls"></ul>
+            <div class="mb-2">
+              <i class="ti ti-ticket text-muted me-1"></i>
+              <strong>{{ a.passports }}</strong> passports created
+            </div>
+            <div class="mb-2">
+              <i class="ti ti-currency-dollar text-muted me-1"></i>
+              <strong>{{ a.paid_passports }}</strong> paid
+            </div>
+            <div class="mb-2">
+              <i class="ti ti-coin text-muted me-1"></i>
+              Revenue: <strong>${{ "%.2f"|format(a.revenue) }}</strong>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{{ url_for('activity_dashboard', activity_id=a.id) }}" class="btn btn-sm btn-outline-dark">
+              <i class="ti ti-eye"></i> View Details
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const input = document.getElementById("searchBox");
-  const rows = Array.from(document.querySelectorAll("#passTable tbody tr"));
-  const tableBody = document.querySelector("#passTable tbody");
-
-  const rowsPerPage = 25;
-  let currentPage = 1;
-
-  function renderTable(filteredRows) {
-    const totalRows = filteredRows.length;
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    const pagedRows = filteredRows.slice(start, end);
-
-    tableBody.innerHTML = "";
-    pagedRows.forEach(row => tableBody.appendChild(row));
-    document.getElementById("showingCount").textContent = pagedRows.length;
-
-    renderPagination(totalRows);
-  }
-
-  function renderPagination(total) {
-    const pageCount = Math.ceil(total / rowsPerPage);
-    const pagination = document.getElementById("paginationControls");
-    pagination.innerHTML = "";
-
-    for (let i = 1; i <= pageCount; i++) {
-      const li = document.createElement("li");
-      li.className = `page-item ${i === currentPage ? "active" : ""}`;
-      li.innerHTML = `<a href="#" class="page-link">${i}</a>`;
-      li.addEventListener("click", function (e) {
-        e.preventDefault();
-        currentPage = i;
-        renderTable(filterRows());
-      });
-      pagination.appendChild(li);
-    }
-  }
-
-  function filterRows() {
-    const filter = input.value.toLowerCase();
-    return rows.filter(row => {
-      const name = row.children[0].textContent.toLowerCase();
-      return name.includes(filter);
-    });
-  }
-
-  input.addEventListener("input", () => {
-    currentPage = 1;
-    renderTable(filterRows());
-  });
-
-  document.querySelectorAll(".redeem-btn").forEach(button => {
-    button.addEventListener("click", function (e) {
-      e.preventDefault();
-      const passCode = this.dataset.pass;
-      if (confirm(`Redeem 1 game from pass #${passCode}?`)) {
-        window.location.href = `/redeem/${passCode}`;
-      }
-    });
-  });
-
-  renderTable(rows);
-
-  // Auto-focus search input on mobile
-  if (window.innerWidth < 768) {
-    input.focus();
-  }
-});
-</script>
-
-
-
-
-
-
-
-
-
-
 {% endblock %}

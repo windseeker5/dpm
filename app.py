@@ -70,6 +70,9 @@ from datetime import datetime
 from models import Signup, Activity, User, db
 
 
+from models import Admin, Activity, Passport, User, db
+from utils import get_setting, notify_pass_event
+
 
 
 
@@ -257,8 +260,6 @@ def preview_email(event):
 
 
 
-
-
 @app.route("/retry-failed-emails")
 def retry_failed_emails():
     if "admin" not in session:
@@ -302,30 +303,6 @@ def retry_failed_emails():
 
     flash(f"📤 Retried {retried} failed email(s) — sent to {override_email}.", "info")
     return redirect(url_for("dashboard"))
-
-
-
-@app.route("/dev-reset-admin")
-def dev_reset_admin():
-    print(" - = - = - - = - = - =- - =- =- = - =- =- =-  =- =- =- =-  =- =- =- ")
-    email = "kdresdell@gmail.com"
-    password = "admin123"
-    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
-    admin = Admin.query.filter_by(email=email).first()
-    if not admin:
-        admin = Admin(email=email, password_hash=hashed)
-        db.session.add(admin)
-        message = "✅ Created new admin"
-    else:
-        admin.password_hash = hashed
-        message = "✅ Updated existing admin"
-
-    db.session.commit()
-    return f"{message}: {email} / {password}"
-
-
-
 
 
 
@@ -376,8 +353,10 @@ def home():
     return render_template("index.html")
 
 
-@app.route("/dashboard2")
-def dashboard2():
+
+
+@app.route("/dashboard")
+def dashboard():
     if "admin" not in session:
         return redirect(url_for("login"))
 
@@ -404,7 +383,7 @@ def dashboard2():
             "revenue": revenue
         })
 
-    return render_template("dashboard2.html", activities=activity_cards)
+    return render_template("dashboard.html", activities=activity_cards)
 
 
 
@@ -495,8 +474,6 @@ def edit_signup(signup_id):
 
 
 
-
-
 @app.route("/signup/status/<int:signup_id>", methods=["POST"])
 def update_signup_status(signup_id):
     if "admin" not in session:
@@ -541,10 +518,6 @@ def approve_and_create_pass(signup_id):
     log_admin_action(f"Signup ID {signup.id} approved and redirected to create pass")
 
     return redirect(url_for("create_pass_from_signup", signup_id=signup_id))
-
-
-
-
 
 
 
@@ -995,27 +968,6 @@ def login():
 
 
 
-@app.route("/dashboard")
-def dashboard():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    # ✅ Show passes that are either ACTIVE or UNPAID
-    #passes = Pass.query.filter(
-    #    (Pass.games_remaining > 0) | (Pass.paid_ind == 0)
-    #).all()
-
-    passes = Pass.query.filter(
-        (Pass.games_remaining > 0) | (Pass.paid_ind == 0)
-    ).order_by(desc(Pass.pass_created_dt)).all()
-
-
-
-    kpi_data = get_kpi_stats()
-    return render_template("dashboard.html", passes=passes, kpi_data=kpi_data)
-
-
-
 
 @app.route("/pass/<pass_code>")
 def show_pass(pass_code):
@@ -1055,44 +1007,6 @@ def show_pass(pass_code):
 
 
 
-@app.route("/edit-pass/<pass_code>", methods=["GET", "POST"])
-def edit_pass(pass_code):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
-    if not hockey_pass:
-        flash("❌ Pass not found.", "error")
-        return redirect(url_for("dashboard"))
-
-    if request.method == "POST":
-        hockey_pass.user_name = request.form.get("user_name", "").strip()
-        hockey_pass.user_email = request.form.get("user_email", "").strip()
-        hockey_pass.phone_number = request.form.get("phone_number", "").strip()
-        hockey_pass.sold_amt = float(request.form.get("sold_amt", 50))
-        hockey_pass.games_remaining = int(request.form.get("games_remaining", 0))
-        hockey_pass.activity = request.form.get("activity", "").strip()
-        hockey_pass.notes = request.form.get("notes", "").strip()
-
-        db.session.commit()
-        flash("✅ Pass updated successfully!", "success")
-        return redirect(url_for("show_pass", pass_code=pass_code))
-
-    try:
-        activity_list = json.loads(get_setting("ACTIVITY_LIST", "[]"))
-    except:
-        activity_list = []
-
-    return render_template(
-        "pass_form.html",
-        hockey_pass=hockey_pass,
-        activity_list=activity_list,
-        default_amt=hockey_pass.sold_amt,
-        default_qt=hockey_pass.games_remaining
-    )
-
-
-
 
 
 @app.route("/edit-passport/<int:passport_id>", methods=["GET", "POST"])
@@ -1118,12 +1032,6 @@ def edit_passport(passport_id):
         return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
     return render_template("passport_form.html", passport=passport)
-
-
-
-
-
-
 
 
 
@@ -1318,125 +1226,10 @@ def jinja_utc_to_local_filter(dt):
 ##
 
 
-@app.route("/create-pass", methods=["GET", "POST"])
-def create_pass():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    if request.method == "POST":
-        current_admin = Admin.query.filter_by(email=session["admin"]).first()
-
-        # ✅ Gather form data
-        user_name = request.form.get("user_name", "").strip()
-        user_email = request.form.get("user_email", "").strip()
-        phone_number = request.form.get("phone_number", "").strip()
-        sold_amt = float(request.form.get("sold_amt", 50))
-        sessions_qt = int(request.form.get("sessionsQt") or request.form.get("games_remaining") or 4)
-        paid_ind = 1 if "paid_ind" in request.form else 0
-        activity = request.form.get("activity", "").strip()
-        pass_code = str(uuid.uuid4())[:16]
-        notes = request.form.get("notes", "").strip()
-
-        now_utc = datetime.now(timezone.utc)
-
-        # ✅ Create pass object
-        new_pass = Pass(
-            pass_code=pass_code,
-            user_name=user_name,
-            user_email=user_email,
-            phone_number=phone_number,
-            sold_amt=sold_amt,
-            games_remaining=sessions_qt,
-            paid_ind=bool(paid_ind),
-            created_by=current_admin.id if current_admin else None,
-            activity=activity,
-            notes=notes,
-            pass_created_dt=now_utc
-        )
-
-        db.session.add(new_pass)
-        db.session.commit()  # ✅ Save pass first before sending email
-
-        # ✅ Reload settings in case they were changed just before
-        db.session.expire_all()
-
-        # ✅ Send confirmation email
-        notify_pass_event(
-            app=current_app._get_current_object(),
-            event_type="pass_created", 
-            hockey_pass=new_pass,
-            admin_email=session.get("admin"),
-            timestamp=now_utc
-        )
 
 
 
 
-        flash("✅ Pass created and confirmation email sent.", "success")
-        return redirect(url_for("dashboard"))
-
-    # 👉 GET METHOD: show form
-    default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
-    default_qt = get_setting("DEFAULT_SESSION_QT", "4")
-
-    try:
-        activity_list = json.loads(get_setting("ACTIVITY_LIST", "[]"))
-    except:
-        activity_list = []
-
-    return render_template(
-        "pass_form.html",
-        hockey_pass=None,
-        default_amt=default_amt,
-        default_qt=default_qt,
-        activity_list=activity_list
-    )
-
-
-
-
-
-
-
-@app.route("/mark-paid/<int:pass_id>", methods=["POST"])
-def mark_paid(pass_id):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    hockey_pass = Pass.query.get(pass_id)
-    if hockey_pass:
-        now_utc = datetime.now(timezone.utc)
-
-        hockey_pass.paid_ind = True
-        hockey_pass.paid_date = now_utc
-        hockey_pass.marked_paid_by = session.get("admin", "unknown")
-
-        db.session.commit()
-
-        # ✅ Send confirmation email with synced timestamp
-        # 🔁 In /mark-paid/<pass_id> (after db.session.commit)
-        now_utc = datetime.now(timezone.utc)
-
-        notify_pass_event(
-            app=current_app._get_current_object(),
-            event_type="payment_received",
-            hockey_pass=hockey_pass,
-            admin_email=session.get("admin"),
-            timestamp=now_utc
-        )
-
-
-        flash(f"Pass {hockey_pass.id} marked as paid. Email sent.", "success")
-    else:
-        flash("Pass not found!", "error")
-
-    return redirect(url_for("dashboard"))
-
-
-
-
-from models import Admin, Activity, Passport, User, db
-from utils import get_setting, notify_pass_event
 
 
 
@@ -1570,9 +1363,8 @@ def redeem_passport(pass_code):
     else:
         flash("❌ No uses left on this passport!", "error")
 
-    return redirect(url_for("dashboard"))
-
-
+    # return redirect(url_for("dashboard"))
+    return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
 
 
@@ -1616,9 +1408,6 @@ def mark_passport_paid(passport_id):
 
     flash(f"✅ Passport {passport.pass_code} marked as paid. Email sent.", "success")
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
-
-
-
 
 
 
