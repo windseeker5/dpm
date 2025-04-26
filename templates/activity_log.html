@@ -57,6 +57,7 @@
           {% for log in logs %}
           <tr>
             <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
+
             <td data-type="{{ log.type }}">
               {% if log.type == 'Pass Redeemed' %}
                 <i class="ti ti-ticket text-primary"></i>
@@ -64,6 +65,8 @@
                 <i class="ti ti-mail text-info"></i>
               {% elif log.type == 'Pass Created' %}
                 <i class="ti ti-user-plus text-success"></i>
+              {% elif log.type == 'Passport Created' %}
+                <i class="ti ti-id text-lime"></i>  {# ✅ New icon #}
               {% elif log.type == 'Payment Matched' %}
                 <i class="ti ti-currency-dollar text-green"></i>
               {% elif log.type == 'Marked Paid' %}
@@ -71,6 +74,8 @@
               {% endif %}
               {{ log.type }}
             </td>
+            
+
             <td>{{ log.details }}</td>
           </tr>
           {% endfor %}
@@ -134,7 +139,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const type = typeFilter.value.toLowerCase();
 
     return rows.filter(row => {
-      const rowType = row.children[1].textContent.toLowerCase();
+      const rowType = row.children[1].getAttribute("data-type").toLowerCase();
+
       const text = row.textContent.toLowerCase();
       return (!type || rowType.includes(type)) && text.includes(search);
     });

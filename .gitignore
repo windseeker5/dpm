@@ -20,7 +20,4 @@ uploads/
 
 
 # SQLite database
-database.db
-instance/database.db
-*.sqlite3
-*.db
+instance/prod_database.db
