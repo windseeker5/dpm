@@ -17,7 +17,7 @@ db.init_app(app)
 with app.app_context():
     print("📂 Using DB:", db_path)
 
-    email = "admin@minipass.me"
+    email = "kdresdell@gmail.com"
     password = "admin123"
     hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 

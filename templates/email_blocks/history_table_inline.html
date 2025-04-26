@@ -8,7 +8,7 @@
       </tr>
     </thead>
     <tbody>
-      <!-- Creation -->
+      <!-- Création -->
       <tr>
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Création</td>
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">
@@ -19,11 +19,11 @@
         </td>
       </tr>
 
-      <!-- Payment -->
+      <!-- Paiement -->
       <tr>
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Paiement</td>
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">
-          {{ history.paid if history.paid else '❌ Non payé' }}
+          {{ history.paid or '❌ Non payé' }}
         </td>
         <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">
           {{ history.paid_by | trim_email if history.paid_by else "—" }}
@@ -31,15 +31,17 @@
       </tr>
 
       <!-- Redemptions -->
-      {% for r in history.redemptions %}
-      <tr>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Activité #{{ loop.index }}</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ r.date }}</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ r.by | trim_email }}</td>
-      </tr>
-      {% endfor %}
+      {% if history.redemptions %}
+        {% for r in history.redemptions %}
+        <tr>
+          <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">Activité #{{ loop.index }}</td>
+          <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ r.date }}</td>
+          <td style="padding: 10px 14px; border-bottom: 1px solid #eee;">{{ r.by | trim_email }}</td>
+        </tr>
+        {% endfor %}
+      {% endif %}
 
-      <!-- Expired -->
+      <!-- Expiré -->
       {% if history.expired %}
       <tr>
         <td style="padding: 10px 14px;">Expiré</td>

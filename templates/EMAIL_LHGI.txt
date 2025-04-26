@@ -6,27 +6,38 @@ title : Votre passe numérique est prête !
 intro :
 
 
-Bonjour {{ hockey_pass.user_name }},
+Bonjour {{ pass_data.user.name }},
 
-Bonne nouvelle ! Votre passe numérique vient tout juste d’être créée !
+Bonne nouvelle !  Votre passe numérique vient tout juste d’être créée !
 
-Elle vous donne droit à {default_qt} participations à {activity_list} – il ne vous reste plus qu’à en profiter !
+Elle vous donne droit à  {{ pass_data.uses_remaining }}  participations à {{ pass_data.activity.name }}   – il ne vous reste plus qu’à en profiter !
+
 
 
 Conlcusion ( si non-payé ) :
 
-💡 Petit rappel amical :
+{% if not pass_data.paid %}
+
+Petit rappel amical :
 
 Votre passe n’a pas encore été payée 🥺
 
-Merci de faire un virement de {{ "%.2f"|format(hockey_pass.sold_amt) }} $ à lhgi@jfgoulet.com afin d’activer votre accès.
+Merci de faire un virement de {{ "%.2f"|format(pass_data.sold_amt) }} $ à lhgi@jfgoulet.com afin d’activer votre accès.
+
+{% endif %}
+
+
 
 💖 Tous les fonds amassés soutiennent directement la Fondation de la Ligue de Hockey Gagnon Image.
 
 Un énorme merci de faire partie de notre belle communauté!
+
+
 À très bientôt sur la glace 🏒
 
 — L’équipe de la LHGI
+
+
 
 
 [ REDEEM ACTIVITY ]
@@ -38,9 +49,10 @@ Titre : Une activité a été utilisée sur votre passe numérique.
 
 Intro :
 
-Bonjour {{ hockey_pass.user_name }},
+Bonjour {{ pass_data.user.name }},
 
-Nous vous confirmons qu’une participation a été utilisée sur votre passe numérique pour l’activité suivante : {{ activity_name }} 
+Nous vous confirmons qu’une participation a été utilisée sur votre passe numérique pour l’activité suivante : {{ pass_data.activity.name }}
+
 
 
 [ PAYMENT RECIEVED ]
@@ -50,9 +62,11 @@ Titre : Votre passe numérique est maintenant active !
 
 Intro :
 
-Bonjour {{ hockey_pass.user_name }},
+Bonjour {{ pass_data.user.name }},
 
-Merci ! Nous avons bien reçu votre paiement de {{ "%.2f"|format(hockey_pass.sold_amt) }} $.
+Merci !  Nous avons bien reçu votre paiement de {{ "%.2f"|format(pass_data.sold_amt) }} $.
+
+
 Votre passe numérique est maintenant active et prête à être utilisée pour vos prochaines activités avec la Ligue de Hockey Gagnon Image 🏒
 
 
@@ -72,6 +86,37 @@ Bonjour {{ hockey_pass.user_name }},
 Vous avez une passe numérique en attente de paiement!
 
 Pour activer votre accès aux activités, merci de compléter le virement de {{ "%.2f"|format(hockey_pass.sold_amt) }} $ à l’adresse suivante : lhgi@jfgoulet.com
+
+
+
+[ SIGNUP ]
+
+subject = LHGI 🏒 Votre Inscription est confirmée
+
+
+Titre : Votre Inscription est confirmée
+
+Intro :
+
+Bonjour {{ pass_data.user.name }},
+
+Merci de vous être inscrit à {{ pass_data.activity.name }} 
+
+Dès réception de votre paiement, votre inscription sera confirmée et un passe numérique vous sera envoyé.
+
+
+CONCLUSION 
+
+💖 Tous les fonds amassés soutiennent directement la Fondation de la Ligue de Hockey Gagnon Image.
+
+Un énorme merci de faire partie de notre belle communauté!
+
+
+À très bientôt sur la glace 🏒
+
+— L’équipe de la LHGI
+
+
 
 
 
