@@ -53,7 +53,8 @@ from utils import (
     utc_to_local,
     send_unpaid_reminders,
     get_kpi_stats,
-    notify_pass_event
+    notify_pass_event,
+    generate_pass_code
 )
 
 # 🧠 Data Tools
@@ -501,6 +502,7 @@ def update_signup_status(signup_id):
 
 
 
+
 @app.route("/signup/approve-create-pass/<int:signup_id>")
 def approve_and_create_pass(signup_id):
     if "admin" not in session:
@@ -511,13 +513,55 @@ def approve_and_create_pass(signup_id):
         flash("❌ Signup not found.", "error")
         return redirect(url_for("admin_signups"))
 
+    from models import Passport, AdminActionLog, Admin
+    from utils import notify_pass_event, generate_pass_code  # 🆕 Import generate_pass_code
+    from datetime import datetime, timezone
+
+    now_utc = datetime.now(timezone.utc)
+
+    # ✅ Step 1: Approve the signup
     signup.status = "approved"
     db.session.commit()
 
-    from utils import log_admin_action
-    log_admin_action(f"Signup ID {signup.id} approved and redirected to create pass")
+    # ✅ Step 2: Get current Admin info
+    current_admin = Admin.query.filter_by(email=session.get("admin")).first()
 
-    return redirect(url_for("create_pass_from_signup", signup_id=signup_id))
+    # ✅ Step 3: Create Passport immediately
+    passport = Passport(
+        pass_code=generate_pass_code(),  # 🛠 Use the secure random code generator
+        user_id=signup.user_id,
+        activity_id=signup.activity_id,
+        sold_amt=signup.activity.price_per_user,
+        uses_remaining=signup.activity.sessions_included,
+        created_by=current_admin.id if current_admin else None,
+        created_dt=now_utc,
+        paid=signup.paid,
+        notes=f"Created automatically from signup {signup.id}"
+    )
+    db.session.add(passport)
+    db.session.commit()
+    db.session.expire_all()
+
+    # ✅ Step 4: Send confirmation email
+    notify_pass_event(
+        app=current_app._get_current_object(),
+        event_type="pass_created",
+        pass_data=passport,
+        admin_email=session.get("admin"),
+        timestamp=now_utc
+    )
+
+    # ✅ Step 5: Log admin action
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin", "unknown"),
+        action=f"Passport created from signup for {signup.user.name} (Code: {passport.pass_code})"
+    ))
+    db.session.commit()
+
+    flash("✅ Signup approved and passport created! Email sent to user.", "success")
+    return redirect(url_for("activity_dashboard", activity_id=signup.activity_id))
+
+
 
 
 
@@ -912,15 +956,31 @@ def generate_backup():
 
 @app.route("/users.json")
 def users_json():
-    users = db.session.query(Pass.user_name, Pass.user_email, Pass.phone_number).distinct().all()
+    from models import User
+
+    users = (
+        db.session.query(User.name, User.email, User.phone_number)
+        .distinct()
+        .all()
+    )
 
     result = [
         {"name": u[0], "email": u[1], "phone": u[2]}
-        for u in users if u[0]  # Filter out empty names
+        for u in users if u[0]  # ✅ Filter out empty names
     ]
 
-    print("📦 Sending user cache JSON:", result)  # Debug print in terminal
+    print("📦 Sending user cache JSON:", result)
     return jsonify(result)
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1008,13 +1068,12 @@ def show_pass(pass_code):
 
 
 
-
 @app.route("/edit-passport/<int:passport_id>", methods=["GET", "POST"])
 def edit_passport(passport_id):
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from models import Passport
+    from models import Passport, Activity
 
     passport = db.session.get(Passport, passport_id)
     if not passport:
@@ -1031,9 +1090,14 @@ def edit_passport(passport_id):
         flash("✅ Passport updated successfully.", "success")
         return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
-    return render_template("passport_form.html", passport=passport)
+    # 🟢 FIX: fetch activities and pass to template
+    activity_list = Activity.query.order_by(Activity.name).all()
 
-
+    return render_template(
+        "passport_form.html",
+        passport=passport,
+        activity_list=activity_list  # 🛠️ Add this
+    )
 
 
 
@@ -1250,7 +1314,10 @@ def create_passport():
         sessions_qt = int(request.form.get("sessionsQt") or request.form.get("uses_remaining") or 4)
         paid = "paid_ind" in request.form
         activity_id = int(request.form.get("activity_id", 0))
-        pass_code = str(uuid.uuid4())[:16]
+
+        # pass_code = str(uuid.uuid4())[:16]
+        pass_code = generate_pass_code()
+
         notes = request.form.get("notes", "").strip()
         now_utc = datetime.now(timezone.utc)
 

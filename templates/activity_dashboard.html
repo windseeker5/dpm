@@ -34,6 +34,10 @@
   </div>
 </div>
 
+
+
+
+
 <!-- 🟢 Signups Table (pending only) -->
 {% set pending_signups = signups | selectattr('status', 'equalto', 'pending') | list %}
 {% if pending_signups %}
@@ -45,15 +49,20 @@
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table card-table table-vcenter" id="signupTable">
+
+
         <thead>
           <tr>
             <th>Name</th>
-            <th>Activity</th>
+            <th class="d-none d-md-table-cell">Activity</th>
             <th class="d-none d-md-table-cell">Email</th>
             <th class="d-none d-md-table-cell">Signup Date</th>
+            <th class="d-none d-md-table-cell">Status</th>
             <th>Actions</th>
           </tr>
         </thead>
+        
+
         <tbody>
           {% for s in pending_signups %}
           <tr>
@@ -65,9 +74,22 @@
                 {{ s.user.name }}
               </div>
             </td>
-            <td>{{ s.activity.name if s.activity else '-' }}</td>
+            <td class="d-none d-md-table-cell">{{ s.activity.name if s.activity else '-' }}</td>
+
             <td class="d-none d-md-table-cell">{{ s.user.email }}</td>
             <td class="d-none d-md-table-cell">{{ s.signed_up_at.strftime('%Y-%m-%d') }}</td>
+
+          
+            <td class="d-none d-md-table-cell">
+              {% if s.paid %}
+                <span class="badge bg-green-lt">Paid</span>
+              {% else %}
+                <span class="badge bg-red-lt">Unpaid</span>
+              {% endif %}
+            </td>
+
+
+
             <td>
               <div class="dropdown">
                 <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
@@ -105,6 +127,7 @@
   </div>
 </div>
 {% endif %}
+
 
 
 
@@ -161,15 +184,20 @@
       {% endmacro %}
 
       <table class="table card-table table-vcenter" id="passportTable">
+
+        
         <thead>
           <tr>
             <th>User</th>
-            <th>Activity</th>
+            <th class="d-none d-md-table-cell">Activity</th>
             <th class="d-none d-md-table-cell">Created</th>
             <th class="d-none d-md-table-cell">Remaining</th>
+            <th class="d-none d-md-table-cell">Status</th>
             <th>Actions</th>
           </tr>
         </thead>
+               
+        
         <tbody>
           {% for p in passes %}
           <tr>
@@ -181,9 +209,23 @@
                 {{ p.user.name }}
               </div>
             </td>
-            <td>{{ p.activity.name if p.activity else '-' }}</td>
+            <td class="d-none d-md-table-cell">{{ p.activity.name if p.activity else '-' }}</td>
+
             <td class="d-none d-md-table-cell">{{ p.created_dt.strftime('%Y-%m-%d') }}</td>
             <td class="d-none d-md-table-cell">{{ p.uses_remaining }}</td>
+
+            
+            <td class="d-none d-md-table-cell">
+              {% if p.paid %}
+                <span class="badge bg-green-lt">Paid</span>
+              {% else %}
+                <span class="badge bg-red-lt">Unpaid</span>
+              {% endif %}
+            </td>
+
+
+
+
             <td>
               <div class="dropdown">
                 {# Toggle #}

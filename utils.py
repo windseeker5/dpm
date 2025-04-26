@@ -46,8 +46,7 @@ import os
 import re
 from flask import current_app
 from models import Setting
-
-
+import uuid
 
 
 
@@ -80,6 +79,19 @@ def save_setting(key, value):
             setting = Setting(key=key, value=value)
             db.session.add(setting)
         db.session.commit()
+
+
+
+
+def generate_pass_code():
+    """
+    Securely generates a random Pass Code for passports.
+    Example Output: MP-8ab94c7efb29
+    """
+    return f"MP-{str(uuid.uuid4()).replace('-', '')[:12]}"
+
+
+
 
 
 
@@ -516,6 +528,15 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
                 .order_by(Redemption.date_used.asc())
                 .all()
             )
+        else:
+            redemptions = (
+                Redemption.query
+                .filter_by(passport_id=hockey_pass.id)
+                .order_by(Redemption.date_used.asc())
+                .all()
+            )
+
+
 
         # 📦 Initialize history structure
         history = {
