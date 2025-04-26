@@ -14,6 +14,7 @@
         <i class="ti ti-ticket fs-1 text-muted"></i>
       </div>
 
+
       <div class="card-body">
 
         <!-- 🧑 User Info -->
@@ -44,8 +45,21 @@
         </fieldset>
 
         <!-- 🎟️ Passport Info -->
-        <fieldset class="form-fieldset mb-4">
-          <legend>Passport Details</legend>
+        <legend class="d-flex justify-content-between align-items-center">
+          Passport Details
+          {% if passport %}
+            {% if passport.paid %}
+              <span class="badge badge-sm bg-green text-white">Paid</span>
+            {% else %}
+              <span class="badge badge-sm bg-red text-white">Unpaid</span>
+            {% endif %}
+          {% endif %}
+        </legend>
+        
+        
+
+
+
 
           <!-- Activity -->
           <div class="mb-3">
