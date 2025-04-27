@@ -16,6 +16,9 @@
         </div>
 
         <div class="card-body">
+          <!-- Hidden CSRF token -->
+          <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+
           <!-- Camera Select -->
           <div class="mb-3">
             <label for="camera-select" class="form-label">Select Camera</label>
@@ -103,7 +106,25 @@
         resultDisplay.innerHTML = `<i class="ti ti-check me-2"></i>Pass Scanned: ${code.data}`;
 
         scanning = false;
-        setTimeout(() => window.location.href = `/pass/${code.data}`, 600);
+
+        // Show loading
+        resultDisplay.innerHTML += "<br><small>Processing...</small>";
+
+        setTimeout(() => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = `/redeem-qr/${code.data}`;
+
+          // Add CSRF token
+          const csrfInput = document.createElement('input');
+          csrfInput.type = 'hidden';
+          csrfInput.name = 'csrf_token';
+          csrfInput.value = document.getElementById('csrf_token').value;
+          form.appendChild(csrfInput);
+
+          document.body.appendChild(form);
+          form.submit();
+        }, 600);
       }
     }
     requestAnimationFrame(scanLoop);

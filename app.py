@@ -698,7 +698,6 @@ def signup(activity_id):
 
 
 
-
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
 
@@ -1026,12 +1025,13 @@ def login():
 
 
 
-
-
-
+# To delete 
 @app.route("/pass/<pass_code>")
 def show_pass(pass_code):
-    hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
+    from models import Passport
+
+    hockey_pass = Passport.query.filter_by(pass_code=pass_code).first()
+
     if not hockey_pass:
         return "Pass not found", 404
 
@@ -1048,21 +1048,74 @@ def show_pass(pass_code):
     # ✅ Load system settings
     settings_raw = {s.key: s.value for s in Setting.query.all()}
 
-    # ✅ Render payment instructions with pass context
+    # ✅ Render payment instructions
     email_info_rendered = render_template_string(
         settings_raw.get("EMAIL_INFO_TEXT", ""),
         hockey_pass=hockey_pass
     )
 
     return render_template(
-        "pass.html", 
-        hockey_pass=hockey_pass, 
-        qr_data=qr_data, 
-        history=history, 
+        "pass.html",
+        hockey_pass=hockey_pass,
+        qr_data=qr_data,
+        history=history,
         is_admin=is_admin,
         settings=settings_raw,
         email_info=email_info_rendered
     )
+
+
+
+
+
+@app.route("/redeem-qr/<pass_code>", methods=["POST"])
+def redeem_passport_qr(pass_code):
+    from models import Passport, Redemption, AdminActionLog
+    from utils import notify_pass_event
+    from datetime import datetime, timezone
+
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    now_utc = datetime.now(timezone.utc)
+
+    passport = Passport.query.filter_by(pass_code=pass_code).first()
+    if not passport:
+        flash("❌ Passport not found!", "error")
+        return redirect(url_for("dashboard"))
+
+    if passport.uses_remaining > 0:
+        passport.uses_remaining -= 1
+        db.session.add(passport)
+
+        redemption = Redemption(
+            passport_id=passport.id,
+            date_used=now_utc,
+            redeemed_by=session.get("admin", "unknown")  # ✅ admin email here
+        )
+        db.session.add(redemption)
+        db.session.commit()
+
+        notify_pass_event(
+            app=current_app._get_current_object(),
+            event_type="pass_redeemed",
+            pass_data=passport,
+            admin_email=session.get("admin"),
+            timestamp=now_utc
+        )
+
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Passport {passport.pass_code} redeemed by QR scan."
+        ))
+        db.session.commit()
+
+        flash(f"✅ Passport {passport.pass_code} redeemed via QR scan!", "success")
+    else:
+        flash("❌ No uses left on this passport!", "error")
+
+    return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+
 
 
 

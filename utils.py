@@ -1132,7 +1132,9 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     if html_body:
         final_html = html_body
     else:
-        final_html = render_template(f"email_templates/{template_name}", intro_text=intro_text, conclusion_text=conclusion_text, **context)
+        final_html = render_template(f"email_templates/{template_name}", **context)
+        #final_html = render_template(f"email_templates/{template_name}", intro_text=intro_text, conclusion_text=conclusion_text, **context)
+
 
     final_html = transform(final_html)
     plain_text = "Votre passe numérique est prête."
@@ -1331,7 +1333,7 @@ def match_gmail_payments_to_passes():
 
 
 
-def render_and_send_email(
+def render_and_send_email22222222222222(
     app,
     *,
     user,
@@ -1391,6 +1393,334 @@ def render_and_send_email(
         inline_images=inline_images,
         timestamp_override=timestamp
     )
+
+
+
+
+def render_and_send_email33333333333333333(
+    app,
+    *,
+    user,
+    subject_key,
+    title_key,
+    intro_key,
+    conclusion_key,
+    theme_key,
+    context_extra=None,
+    to_email=None,
+    timestamp=None
+):
+    from utils import get_setting, send_email_async
+    from flask import url_for
+    from datetime import datetime, timezone
+    import os
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+
+    subject = get_setting(subject_key)
+    title = get_setting(title_key)
+    intro = get_setting(intro_key)
+    conclusion = get_setting(conclusion_key)
+
+    template_name = get_setting(theme_key) or "confirmation.html"
+
+    # ✅ Convert 'signup.html' → 'signup_compiled/index.html'
+    if template_name.endswith(".html"):
+        template_name = template_name.replace(".html", "_compiled/index.html")
+
+    context = {
+        "user_name": user.name,
+        "user_email": user.email,
+        "title": title,
+        "intro_text": intro,
+        "conclusion_text": conclusion
+    }
+
+    # 🧠 If it's NOT a signup email, attach logo and logo_url
+    inline_images = {}
+
+    if not theme_key.lower().startswith("theme_signup"):
+        logo_path = "static/uploads/logo.png"
+        if os.path.exists(logo_path):
+            inline_images["logo_image"] = open(logo_path, "rb").read()
+            context["logo_url"] = url_for("static", filename="uploads/logo.png")
+
+    if context_extra:
+        context.update(context_extra)
+
+    send_email_async(
+        app,
+        subject=subject,
+        to_email=to_email or user.email,
+        template_name=template_name,
+        context=context,
+        inline_images=inline_images if inline_images else None,
+        timestamp_override=timestamp
+    )
+
+
+
+
+
+def render_and_send_email4444444444444444444(
+    app,
+    *,
+    user,
+    subject_key,
+    title_key,
+    intro_key,
+    conclusion_key,
+    theme_key,
+    context_extra=None,
+    to_email=None,
+    timestamp=None
+):
+    from utils import get_setting, send_email_async
+    from flask import url_for
+    from datetime import datetime, timezone
+    import os
+    import json
+    import base64
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+
+    subject = get_setting(subject_key)
+    title = get_setting(title_key)
+    intro = get_setting(intro_key)
+    conclusion = get_setting(conclusion_key)
+
+    template_name = get_setting(theme_key) or "confirmation.html"
+
+    # ✅ Convert 'signup.html' → 'signup_compiled/index.html'
+    if template_name.endswith(".html"):
+        template_name = template_name.replace(".html", "_compiled/index.html")
+
+    context = {
+        "user_name": user.name,
+        "user_email": user.email,
+        "title": title,
+        "intro_text": intro,
+        "conclusion_text": conclusion
+    }
+
+    inline_images = {}
+
+    # 🧠 Determine which compiled folder
+    compiled_folder = os.path.join("app", "templates", "email_templates", os.path.dirname(template_name))
+
+    inline_images_json_path = os.path.join(compiled_folder, "inline_images.json")
+
+    if os.path.exists(inline_images_json_path):
+        # ✅ New compiled system → load images from inline_images.json
+        with open(inline_images_json_path, "r") as f:
+            cid_map = json.load(f)
+
+        for cid, img_base64 in cid_map.items():
+            inline_images[cid] = base64.b64decode(img_base64)
+
+    else:
+        # ✅ Old system → manually add logo.png if exists
+        logo_path = os.path.join("static", "uploads", "logo.png")
+        if os.path.exists(logo_path):
+            inline_images["logo_image"] = open(logo_path, "rb").read()
+            context["logo_url"] = url_for("static", filename="uploads/logo.png")
+
+    if context_extra:
+        context.update(context_extra)
+
+    send_email_async(
+        app,
+        subject=subject,
+        to_email=to_email or user.email,
+        template_name=template_name,
+        context=context,
+        inline_images=inline_images if inline_images else None,
+        timestamp_override=timestamp
+    )
+
+
+
+
+
+
+def render_and_send_email5555555555555555(
+    app,
+    *,
+    user,
+    subject_key,
+    title_key,
+    intro_key,
+    conclusion_key,
+    theme_key,
+    context_extra=None,
+    to_email=None,
+    timestamp=None
+):
+    from utils import get_setting, send_email_async
+    from flask import url_for, render_template
+    from datetime import datetime, timezone
+    import os
+    import json
+    import base64
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+
+    subject = get_setting(subject_key)
+    title = get_setting(title_key)
+    intro = get_setting(intro_key)
+    conclusion = get_setting(conclusion_key)
+
+    template_name = get_setting(theme_key) or "confirmation.html"
+
+    # ✅ Convert 'signup.html' → 'signup_compiled/index.html'
+    if template_name.endswith(".html"):
+        template_name = template_name.replace(".html", "_compiled/index.html")
+
+    context = {
+        "user_name": user.name,
+        "user_email": user.email,
+        "title": title,
+        "intro_text": intro,
+        "conclusion_text": conclusion
+    }
+
+    if context_extra:
+        context.update(context_extra)
+
+    inline_images = {}
+
+    # 🧠 Determine which compiled folder
+    compiled_folder = os.path.join("app", "templates", "email_templates", os.path.dirname(template_name))
+
+    inline_images_json_path = os.path.join(compiled_folder, "inline_images.json")
+
+    if os.path.exists(inline_images_json_path):
+        # ✅ New compiled system → load images from inline_images.json
+        with open(inline_images_json_path, "r") as f:
+            cid_map = json.load(f)
+
+        for cid, img_base64 in cid_map.items():
+            inline_images[cid] = base64.b64decode(img_base64)
+
+    else:
+        # ✅ Old system → manually add logo.png if exists
+        logo_path = os.path.join("static", "uploads", "logo.png")
+        if os.path.exists(logo_path):
+            inline_images["logo_image"] = open(logo_path, "rb").read()
+            context["logo_url"] = url_for("static", filename="uploads/logo.png")
+
+    # 🧠 ✅ Render the FINAL HTML BODY using Flask
+    html_body = render_template(f"email_templates/{template_name}", **context)
+
+    send_email_async(
+        app,
+        subject=subject,
+        to_email=to_email or user.email,
+        html_body=html_body,
+        inline_images=inline_images if inline_images else None,
+        timestamp_override=timestamp
+    )
+
+
+
+
+
+def render_and_send_email(
+    app,
+    *,
+    user,
+    subject_key,
+    title_key,
+    intro_key,
+    conclusion_key,
+    theme_key,
+    context_extra=None,
+    to_email=None,
+    timestamp=None
+):
+    from utils import get_setting, send_email_async
+    from flask import url_for, render_template_string, render_template
+    from datetime import datetime, timezone
+    import os
+    import json
+    import base64
+
+    timestamp = timestamp or datetime.now(timezone.utc)
+
+    subject = get_setting(subject_key)
+    title = get_setting(title_key)
+    intro = get_setting(intro_key)
+    conclusion = get_setting(conclusion_key)
+
+    template_name = get_setting(theme_key) or "confirmation.html"
+
+    context = {
+        "user_name": user.name,
+        "user_email": user.email,
+        "title": title,
+        "intro_text": intro,
+        "conclusion_text": conclusion,
+    }
+
+    if context_extra:
+        context.update(context_extra)
+
+    inline_images = {}
+
+    if template_name.endswith(".html"):
+        compiled_folder = template_name.replace(".html", "_compiled")
+        compiled_index = os.path.join("app", "templates", "email_templates", compiled_folder, "index.html")
+        inline_json = os.path.join("app", "templates", "email_templates", compiled_folder, "inline_images.json")
+
+        if os.path.exists(compiled_index) and os.path.exists(inline_json):
+            # ✅ Read compiled HTML
+            with open(compiled_index, "r", encoding="utf-8") as f:
+                raw_html = f.read()
+
+            # ✅ Render with context
+            final_html = render_template_string(raw_html, **context)
+
+            # ✅ Attach all images from inline_images.json
+            with open(inline_json, "r", encoding="utf-8") as f:
+                cid_map = json.load(f)
+
+            for cid, img_base64 in cid_map.items():
+                inline_images[cid] = base64.b64decode(img_base64)
+
+            send_email_async(
+                app,
+                subject=subject,
+                to_email=to_email or user.email,
+                html_body=final_html,
+                inline_images=inline_images if inline_images else None,
+                timestamp_override=timestamp
+            )
+            return  # 🛑 IMPORTANT: exit early here if using compiled template
+
+    # ➡️ Otherwise fallback to classic non-compiled email
+    logo_path = os.path.join("static", "uploads", "logo.png")
+    if os.path.exists(logo_path):
+        inline_images["logo_image"] = open(logo_path, "rb").read()
+        context["logo_url"] = url_for("static", filename="uploads/logo.png")
+
+    send_email_async(
+        app,
+        subject=subject,
+        to_email=to_email or user.email,
+        template_name=os.path.join("email_templates", template_name),
+        context=context,
+        inline_images=inline_images if inline_images else None,
+        timestamp_override=timestamp
+    )
+
+
+
+
+
+
+
+
+
 
 
 
