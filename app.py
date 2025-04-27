@@ -74,6 +74,8 @@ from models import Signup, Activity, User, db
 from models import Admin, Activity, Passport, User, db
 from utils import get_setting, notify_pass_event
 
+from models import Passport, User, AdminActionLog, Activity
+import time
 
 
 
@@ -552,10 +554,12 @@ def approve_and_create_pass(signup_id):
     )
 
     # ✅ Step 5: Log admin action
+
     db.session.add(AdminActionLog(
         admin_email=session.get("admin", "unknown"),
         action=f"Passport created from signup for {signup.user.name} (Code: {passport.pass_code})"
     ))
+
     db.session.commit()
 
     flash("✅ Signup approved and passport created! Email sent to user.", "success")
@@ -601,9 +605,11 @@ def create_activity():
         db.session.commit()
 
         db.session.add(AdminActionLog(
-            admin_email=session.get("admin_email", "unknown"),
+            admin_email=session.get("admin", "unknown"),
             action=f"Activity Created: {new_activity.name}"
         ))
+
+
         db.session.commit()
 
         flash("✅ Activity created successfully!", "success")
@@ -642,10 +648,12 @@ def edit_activity(activity_id):
 
         # ✅ Log the admin action
         from models import AdminActionLog
+
         db.session.add(AdminActionLog(
-            admin_email=session.get("admin_email", "unknown"),
+            admin_email=session.get("admin", "unknown"),
             action=f"Activity Updated: {activity.name}"
         ))
+
         db.session.commit()
 
         flash("✅ Activity updated successfully!", "success")
@@ -1067,12 +1075,12 @@ def show_pass(pass_code):
 
 
 
-
 @app.route("/redeem-qr/<pass_code>", methods=["POST"])
 def redeem_passport_qr(pass_code):
     from models import Passport, Redemption, AdminActionLog
     from utils import notify_pass_event
     from datetime import datetime, timezone
+    import time
 
     if "admin" not in session:
         return redirect(url_for("login"))
@@ -1088,14 +1096,29 @@ def redeem_passport_qr(pass_code):
         passport.uses_remaining -= 1
         db.session.add(passport)
 
+        # ✅ Save Redemption
         redemption = Redemption(
             passport_id=passport.id,
             date_used=now_utc,
-            redeemed_by=session.get("admin", "unknown")  # ✅ admin email here
+            redeemed_by=session.get("admin", "unknown")
         )
         db.session.add(redemption)
         db.session.commit()
 
+        # ✅ Log Admin Action BEFORE sending email
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Passport {passport.pass_code} redeemed by QR scan."
+        ))
+        db.session.commit()
+
+        # ✅ Sleep 0.5 seconds for natural separation
+        time.sleep(0.5)
+
+        # ✅ Fresh now_utc after sleep
+        now_utc = datetime.now(timezone.utc)
+
+        # ✅ Send confirmation email AFTER admin log
         notify_pass_event(
             app=current_app._get_current_object(),
             event_type="pass_redeemed",
@@ -1103,12 +1126,6 @@ def redeem_passport_qr(pass_code):
             admin_email=session.get("admin"),
             timestamp=now_utc
         )
-
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Passport {passport.pass_code} redeemed by QR scan."
-        ))
-        db.session.commit()
 
         flash(f"✅ Passport {passport.pass_code} redeemed via QR scan!", "success")
     else:
@@ -1171,103 +1188,15 @@ def logout():
 
  
 
-
 @app.route("/activity-log")
 def activity_log():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    all_logs = []
-    from datetime import timedelta
-    from models import Pass, Passport, Redemption, EbankPayment, EmailLog, Admin
+    from utils import get_all_activity_logs
+    logs = get_all_activity_logs()
 
-    offset_step = timedelta(microseconds=1)
-
-    # 🔹 1. Legacy Pass Created
-    for p in Pass.query.all():
-        admin = db.session.get(Admin, p.created_by) if p.created_by else None
-        all_logs.append({
-            "timestamp": p.pass_created_dt + (offset_step * 1),
-            "type": "Pass Created",
-            "details": f"Created for {p.user_name} by {admin.email if admin else 'Unknown'}"
-        })
-
-    # 🔹 2. New Passport Created
-    for p in Passport.query.all():
-        admin = db.session.get(Admin, p.created_by) if p.created_by else None
-        all_logs.append({
-            "timestamp": p.created_dt + (offset_step * 1),
-            "type": "Passport Created",
-            "details": f"Created for {p.user.name if p.user else '-'} by {admin.email if admin else 'Unknown'}"
-        })
-
-    # 🔹 3. Redemption — still Pass-based for now
-    for r in Redemption.query.all():
-        p = db.session.get(Pass, r.pass_id)
-        if p:
-            all_logs.append({
-                "timestamp": r.date_used + (offset_step * 3),
-                "type": "Pass Redeemed",
-                "details": f"{p.user_name} used 1 activity ({p.activity}) by {r.redeemed_by or 'Unknown'}"
-            })
-
-    # 🔹 4. Matched Payments
-    matched_payments = EbankPayment.query.filter_by(mark_as_paid=True).all()
-    paid_ids = {p.matched_pass_id for p in matched_payments if p.matched_pass_id}
-    for pay in matched_payments:
-        p = db.session.get(Pass, pay.matched_pass_id)
-        all_logs.append({
-            "timestamp": pay.timestamp + (offset_step * 2),
-            "type": "Payment Matched",
-            "details": f"${pay.bank_info_amt:.2f} matched to {pay.matched_name} ({p.activity if p else 'N/A'})"
-        })
-
-    # 🔹 5. Manual Marked Paid — from Pass
-    for p in Pass.query.filter(Pass.paid_ind == True, Pass.paid_date.isnot(None)).all():
-        if p.id not in paid_ids:
-            all_logs.append({
-                "timestamp": p.paid_date + (offset_step * 4),
-                "type": "Marked Paid",
-                "details": f"{p.user_name} marked paid by {p.marked_paid_by or 'Unknown'} ({p.activity})"
-            })
-
-    # 🔹 6. Manual Marked Paid — from Passport
-    for p in Passport.query.filter_by(paid=True).all():
-        if p.paid_date:
-            all_logs.append({
-                "timestamp": p.paid_date + (offset_step * 4),
-                "type": "Marked Paid",
-                "details": f"{p.user.name if p.user else '-'} marked paid by {p.marked_paid_by or 'Unknown'} ({p.activity.name if p.activity else '-'})"
-            })
-
-    # 🔹 7. Email Logs — works for both Pass & Passport
-    for e in EmailLog.query.all():
-        pass_code = e.pass_code
-        p = Pass.query.filter_by(pass_code=pass_code).first()
-        passport = Passport.query.filter_by(pass_code=pass_code).first()
-
-        activity = p.activity if p else (passport.activity.name if passport and passport.activity else 'N/A')
-        subject = e.subject or '—'
-
-        if "Paiement confirmé" in subject:
-            offset = 5
-        elif "Activité confirmée" in subject:
-            offset = 4
-        elif "est prête" in subject:
-            offset = 2
-        else:
-            offset = 3
-
-        all_logs.append({
-            "timestamp": e.timestamp + (offset_step * offset),
-            "type": "Email Sent",
-            "details": f"To {e.to_email} — \"{subject}\" ({activity})"
-        })
-
-    # ✅ Sort logs by newest first
-    all_logs.sort(key=lambda x: x["timestamp"], reverse=True)
-
-    return render_template("activity_log.html", logs=all_logs)
+    return render_template("activity_log.html", logs=logs)
 
 
 
@@ -1346,12 +1275,11 @@ def jinja_utc_to_local_filter(dt):
 
 
 
-
-
-
-
 @app.route("/create-passport", methods=["GET", "POST"])
 def create_passport():
+    from models import Passport, User, AdminActionLog, Activity
+    import time
+
     if "admin" not in session:
         return redirect(url_for("login"))
 
@@ -1367,12 +1295,7 @@ def create_passport():
         sessions_qt = int(request.form.get("sessionsQt") or request.form.get("uses_remaining") or 4)
         paid = "paid_ind" in request.form
         activity_id = int(request.form.get("activity_id", 0))
-
-        # pass_code = str(uuid.uuid4())[:16]
-        pass_code = generate_pass_code()
-
         notes = request.form.get("notes", "").strip()
-        now_utc = datetime.now(timezone.utc)
 
         # ✅ Always create a new user (even if same email is reused)
         user = User(name=user_name, email=user_email, phone_number=phone_number)
@@ -1381,13 +1304,13 @@ def create_passport():
 
         # ✅ Create Passport object
         passport = Passport(
-            pass_code=pass_code,
+            pass_code=generate_pass_code(),
             user_id=user.id,
             activity_id=activity_id,
             sold_amt=sold_amt,
             uses_remaining=sessions_qt,
             created_by=current_admin.id if current_admin else None,
-            created_dt=now_utc,
+            created_dt=datetime.now(timezone.utc),  # fresh datetime
             paid=paid,
             notes=notes
         )
@@ -1395,6 +1318,21 @@ def create_passport():
         db.session.add(passport)
         db.session.commit()
         db.session.expire_all()
+
+        # ✅ Log Admin Action (passport creation)
+        activity_obj = db.session.get(Activity, activity_id)
+        activity_name = activity_obj.name if activity_obj else "-"
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Passport created for {user.name} for activity '{activity_name}' by {session.get('admin', 'unknown')}"
+        ))
+        db.session.commit()
+
+        # 💤 Small sleep to fix timestamp ordering
+        time.sleep(0.5)
+
+        # ✅ Refresh now_utc AFTER the passport and admin log are committed
+        now_utc = datetime.now(timezone.utc)
 
         # ✅ Send confirmation email
         notify_pass_event(
@@ -1405,19 +1343,10 @@ def create_passport():
             timestamp=now_utc
         )
 
-        # ✅ Loggin the admin action ???
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Passport created for {user.name} (Code: {passport.pass_code})"
-        ))
-        db.session.commit()
-
-
-
         flash("✅ Passport created and confirmation email sent.", "success")
         return redirect(url_for("dashboard"))
 
-    # 👉 GET METHOD: show form
+    # 👉 GET METHOD
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
     activity_list = Activity.query.order_by(Activity.name).all()
@@ -1433,7 +1362,6 @@ def create_passport():
 
 
 
-
 # Store recent redemptions to prevent duplicate scans
 recent_redemptions = {}
 
@@ -1442,6 +1370,7 @@ def redeem_passport(pass_code):
     from models import Passport, Redemption, AdminActionLog
     from utils import notify_pass_event
     from datetime import datetime, timezone
+    import time
 
     if "admin" not in session:
         return redirect(url_for("login"))
@@ -1457,14 +1386,30 @@ def redeem_passport(pass_code):
         passport.uses_remaining -= 1
         db.session.add(passport)
 
+        # ✅ Save Redemption for history tracking!
         redemption = Redemption(
-            passport_id=passport.id,  # 🛠️ FIXED LINE
+            passport_id=passport.id,
             date_used=now_utc,
             redeemed_by=session.get("admin", "unknown")
         )
         db.session.add(redemption)
+
         db.session.commit()
 
+        # ✅ Admin Action for activity_log
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Passport for {passport.user.name if passport.user else 'Unknown'} ({passport.pass_code}) was redeemed by {session.get('admin', 'unknown')}"
+        ))
+        db.session.commit()
+
+        # ✅ Sleep to fix timestamp natural order
+        time.sleep(0.5)
+
+        # ✅ Fresh now_utc for email timestamp
+        now_utc = datetime.now(timezone.utc)
+
+        # ✅ Send confirmation email
         notify_pass_event(
             app=current_app._get_current_object(),
             event_type="pass_redeemed",
@@ -1473,18 +1418,16 @@ def redeem_passport(pass_code):
             timestamp=now_utc
         )
 
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Passport for {passport.user.name if passport.user else 'Unknown'} ({passport.pass_code}) was redeemed."
-        ))
-        db.session.commit()
-
         flash(f"✅ Session redeemed! {passport.uses_remaining} uses left.", "success")
     else:
         flash("❌ No uses left on this passport!", "error")
 
-    # return redirect(url_for("dashboard"))
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+
+
+
+
+
 
 
 
@@ -1495,6 +1438,8 @@ def mark_passport_paid(passport_id):
         return redirect(url_for("login"))
 
     from models import Passport, AdminActionLog
+    import time
+    from datetime import datetime, timezone
 
     passport = db.session.get(Passport, passport_id)
     if not passport:
@@ -1503,21 +1448,26 @@ def mark_passport_paid(passport_id):
 
     now_utc = datetime.now(timezone.utc)
 
+    # ✅ Step 1: Mark Passport as Paid
     passport.paid = True
     passport.paid_date = now_utc
     passport.marked_paid_by = session.get("admin", "unknown")
-    db.session.commit()  # ✅ save passport update
+    db.session.commit()
 
-    # ✅ Log admin action (must commit again)
+    # ✅ Step 2: Log Admin Action
     db.session.add(AdminActionLog(
         admin_email=session.get("admin", "unknown"),
         action=f"Passport for {passport.user.name if passport.user else 'Unknown'} ({passport.pass_code}) marked as PAID by {session.get('admin', 'unknown')}"
     ))
     db.session.commit()
 
-    # ✅ Refresh object before email
-    db.session.refresh(passport)
+    # ✅ Step 3: Sleep to separate timestamps naturally
+    time.sleep(0.5)
 
+    # ✅ Step 4: Refresh now_utc AFTER sleep
+    now_utc = datetime.now(timezone.utc)
+
+    # ✅ Step 5: Send confirmation email
     notify_pass_event(
         app=current_app._get_current_object(),
         event_type="payment_received",
@@ -1528,7 +1478,6 @@ def mark_passport_paid(passport_id):
 
     flash(f"✅ Passport {passport.pass_code} marked as paid. Email sent.", "success")
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
-
 
 
 

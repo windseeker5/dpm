@@ -14,17 +14,29 @@
   <div class="card mb-3">
     <div class="card-body">
       <div class="row g-2 align-items-center">
+
+
         <!-- Dropdown Filter -->
         <div class="col-md-3">
           <select id="filterType" class="form-select">
             <option value="">All Types</option>
-            <option value="Pass Created">Pass Created</option>
-            <option value="Pass Redeemed">Pass Redeemed</option>
+            <option value="Passport Created">Passport Created</option>
+            <option value="Passport Redeemed">Passport Redeemed</option>
             <option value="Email Sent">Email Sent</option>
             <option value="Payment Matched">Payment Matched</option>
             <option value="Marked Paid">Marked Paid</option>
+            <option value="Reminder Sent">Reminder Sent</option>
+            <option value="Signup Submitted">Signup Submitted</option>
+            <option value="Signup Approved">Signup Approved</option>
+            <option value="Signup Rejected">Signup Rejected</option>
+            <option value="Activity Created">Activity Created</option>
+            <option value="Admin Action">Admin Action</option>
           </select>
         </div>
+
+
+
+
 
         <!-- Search Input -->
         <div class="col-md">
@@ -56,25 +68,42 @@
         <tbody>
           {% for log in logs %}
           <tr>
+      
             <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
 
+
+
             <td data-type="{{ log.type }}">
-              {% if log.type == 'Pass Redeemed' %}
-                <i class="ti ti-ticket text-primary"></i>
+              {% if log.type == 'Passport Redeemed' %}
+                <i class="ti ti-ticket text-danger"></i>
               {% elif log.type == 'Email Sent' %}
                 <i class="ti ti-mail text-info"></i>
-              {% elif log.type == 'Pass Created' %}
-                <i class="ti ti-user-plus text-success"></i>
               {% elif log.type == 'Passport Created' %}
-                <i class="ti ti-id text-lime"></i>  {# ✅ New icon #}
+                <i class="ti ti-id text-lime"></i>
               {% elif log.type == 'Payment Matched' %}
                 <i class="ti ti-currency-dollar text-green"></i>
               {% elif log.type == 'Marked Paid' %}
                 <i class="ti ti-check text-yellow"></i>
+              {% elif log.type == 'Reminder Sent' %}
+                <i class="ti ti-bell text-purple"></i>
+              {% elif log.type == 'Signup Submitted' %}
+                <i class="ti ti-user-plus text-success"></i>  
+              {% elif log.type == 'Signup Approved' %}
+                <i class="ti ti-user-check text-green"></i>
+              {% elif log.type == 'Signup Rejected' %}
+                <i class="ti ti-user-x text-danger"></i>
+              {% elif log.type == 'Activity Created' %}
+                <i class="ti ti-target text-orange"></i>
+              {% elif log.type == 'Admin Action' %}
+                <i class="ti ti-settings text-muted"></i>
               {% endif %}
               {{ log.type }}
             </td>
             
+
+
+
+
 
             <td>{{ log.details }}</td>
           </tr>
