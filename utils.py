@@ -301,101 +301,6 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
 
 
 
-def get_all_activity_logs():
-    from models import Passport, Redemption, EmailLog, EbankPayment, ReminderLog, AdminActionLog, Signup
-    from utils import utc_to_local
-    from flask import current_app
-
-    DATETIME_FORMAT = "%Y-%m-%d %H:%M"
-    logs = []
-
-    with current_app.app_context():
-        # 🟢 Passport Creation
-        for p in Passport.query.all():
-            logs.append({
-                "timestamp": utc_to_local(p.created_dt).strftime(DATETIME_FORMAT),
-                "type": "Passport Created",
-                "user": p.user.name if p.user else "-",
-                "details": (
-                    f"Email: {p.user.email if p.user else 'N/A'}, "
-                    f"Phone: {p.user.phone_number if p.user else 'N/A'}, "
-                    f"Code: {p.pass_code}"
-                )
-            })
-
-        # 🟡 Redemption
-        for r in Redemption.query.all():
-            logs.append({
-                "timestamp": utc_to_local(r.date_used).strftime(DATETIME_FORMAT),
-                "type": "Passport Redeemed",
-                "user": r.redeemed_by or "-",
-                "details": f"Passport ID: {r.pass_id}"
-            })
-
-        # 🟠 Email Sent
-        for e in EmailLog.query.all():
-            logs.append({
-                "timestamp": utc_to_local(e.timestamp).strftime(DATETIME_FORMAT),
-                "type": f"Email Sent",
-                "user": e.to_email,
-                "details": f"To {e.to_email} — \"{e.subject}\" (Code: {e.pass_code or 'N/A'})"
-            })
-
-        # 🔵 Payments
-        for p in EbankPayment.query.all():
-            logs.append({
-                "timestamp": utc_to_local(p.timestamp).strftime(DATETIME_FORMAT),
-                "type": f"Payment {p.result}",
-                "user": p.from_email or "-",
-                "details": f"Name: {p.bank_info_name}, Amount: {p.bank_info_amt}"
-            })
-
-        # 🟣 Reminders
-        for r in ReminderLog.query.all():
-            logs.append({
-                "timestamp": utc_to_local(r.reminder_sent_at).strftime(DATETIME_FORMAT),
-                "type": "Reminder Sent",
-                "user": "-",
-                "details": f"Passport ID: {r.pass_id}"
-            })
-
-        # 🟤 Admin Actions → intelligent type matching
-        for a in AdminActionLog.query.all():
-            action_text = a.action.lower()
-
-            if "marked" in action_text and "paid" in action_text:
-                log_type = "Marked Paid"
-            elif "approved" in action_text and "signup" in action_text:
-                log_type = "Signup Approved"
-            elif "rejected" in action_text and "signup" in action_text:
-                log_type = "Signup Rejected"
-            elif "activity created" in action_text:
-                log_type = "Activity Created"
-            elif "passport" in action_text and "created" in action_text:
-                log_type = "Passport Created"
-            else:
-                log_type = "Admin Action"
-
-            logs.append({
-                "timestamp": utc_to_local(a.timestamp).strftime(DATETIME_FORMAT),
-                "type": log_type,
-                "user": a.admin_email or "-",
-                "details": a.action
-            })
-
-        # 🧡 User Signups
-        for s in Signup.query.all():
-            logs.append({
-                "timestamp": utc_to_local(s.signed_up_at).strftime(DATETIME_FORMAT),
-                "type": "Signup Submitted",
-                "user": s.user.name if s.user else "-",
-                "details": f"Activity: {s.activity.name if s.activity else '-'}"
-            })
-
-    # 📈 Sort logs newest first
-    logs.sort(key=lambda x: x["timestamp"], reverse=True)
-    return logs
-
 
 
 def get_kpi_stats():
@@ -616,14 +521,197 @@ def log_admin_action(action: str):
     db.session.commit()
 
 
+def get_all_activity_logs222222():
+    from models import Passport, Redemption, EmailLog, EbankPayment, ReminderLog, AdminActionLog, Signup
+    from utils import utc_to_local
+    from flask import current_app
+
+    logs = []
+
+    with current_app.app_context():
+        # 🟢 Admin Actions (Passport Created, Activity Created, etc.)
+        for a in AdminActionLog.query.all():
+            action_text = a.action.lower()
+
+            if "passport created" in action_text:
+                log_type = "Passport Created"
+            elif "marked" in action_text and "paid" in action_text:
+                log_type = "Marked Paid"
+            elif "approved" in action_text and "signup" in action_text:
+                log_type = "Signup Approved"
+            elif "rejected" in action_text and "signup" in action_text:
+                log_type = "Signup Rejected"
+            elif "activity created" in action_text:
+                log_type = "Activity Created"
+            else:
+                log_type = "Admin Action"
+
+            # ✅ Add "by admin" only if not already in the text
+            if "by" not in a.action.lower():
+                details = f"{a.action} by {a.admin_email or '-'}"
+            else:
+                details = a.action
+
+            logs.append({
+                "timestamp": a.timestamp,
+                "type": log_type,
+                "user": a.admin_email or "-",
+                "details": details
+            })
+
+        # 🟡 Redemption
+        for r in Redemption.query.all():
+            logs.append({
+                "timestamp": r.date_used,
+                "type": "Passport Redeemed",
+                "user": r.redeemed_by or "-",
+                "details": f"Passport ID: {r.passport_id}"
+            })
+
+        # 🟠 Email Sent
+        for e in EmailLog.query.all():
+            pass_code_display = e.pass_code if e.pass_code else "App-Sent"
+            logs.append({
+                "timestamp": e.timestamp,
+                "type": "Email Sent",
+                "user": e.to_email,
+                "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display})"
+            })
+
+        # 🔵 Payments
+        for p in EbankPayment.query.all():
+            logs.append({
+                "timestamp": p.timestamp,
+                "type": f"Payment {p.result}",
+                "user": p.from_email or "-",
+                "details": f"Name: {p.bank_info_name}, Amount: {p.bank_info_amt}"
+            })
+
+        # 🟣 Reminders
+        for r in ReminderLog.query.all():
+            logs.append({
+                "timestamp": r.reminder_sent_at,
+                "type": "Reminder Sent",
+                "user": "-",
+                "details": f"Passport ID: {r.pass_id}"
+            })
+
+        # 🧡 User Signups
+        for s in Signup.query.all():
+            logs.append({
+                "timestamp": s.signed_up_at,
+                "type": "Signup Submitted",
+                "user": s.user.name if s.user else "-",
+                "details": f"Activity: {s.activity.name if s.activity else '-'}"
+            })
+
+    # 📈 Sort newest first
+    logs.sort(key=lambda x: x["timestamp"], reverse=True)
+    return logs
+
+
+def get_all_activity_logs():
+    from models import Passport, Redemption, EmailLog, EbankPayment, ReminderLog, AdminActionLog, Signup
+    from utils import utc_to_local
+    from flask import current_app
+
+    logs = []
+
+    with current_app.app_context():
+        # 🟢 Admin Actions (Passport Created, Activity Created, etc.)
+        for a in AdminActionLog.query.all():
+            action_text = a.action.lower()
+
+            if "passport created" in action_text:
+                log_type = "Passport Created"
+            elif "passport" in action_text and "redeemed" in action_text:
+                log_type = "Passport Redeemed"   # ✅ NEW RULE for Redemption logs
+            elif "marked" in action_text and "paid" in action_text:
+                log_type = "Marked Paid"
+            elif "approved" in action_text and "signup" in action_text:
+                log_type = "Signup Approved"
+            elif "rejected" in action_text and "signup" in action_text:
+                log_type = "Signup Rejected"
+            elif "activity created" in action_text:
+                log_type = "Activity Created"
+            else:
+                log_type = "Admin Action"
+
+            # ✅ Add "by admin" only if not already in the text
+            if "by" not in a.action.lower():
+                details = f"{a.action} by {a.admin_email or '-'}"
+            else:
+                details = a.action
+
+            logs.append({
+                "timestamp": a.timestamp,
+                "type": log_type,
+                "user": a.admin_email or "-",
+                "details": details
+            })
+
+        # ❌ REMOVE Redemption table entries → We only rely on AdminActionLog now
+        # 🛑 Delete this part:
+        # for r in Redemption.query.all():
+        #     logs.append({
+        #         "timestamp": r.date_used,
+        #         "type": "Passport Redeemed",
+        #         "user": r.redeemed_by or "-",
+        #         "details": f"Passport ID: {r.passport_id}"
+        #     })
+
+        # 🟠 Email Sent
+        for e in EmailLog.query.all():
+            pass_code_display = e.pass_code if e.pass_code else "App-Sent"
+            logs.append({
+                "timestamp": e.timestamp,
+                "type": "Email Sent",
+                "user": e.to_email,
+                "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display})"
+            })
+
+        # 🔵 Payments
+        for p in EbankPayment.query.all():
+            logs.append({
+                "timestamp": p.timestamp,
+                "type": f"Payment {p.result}",
+                "user": p.from_email or "-",
+                "details": f"Name: {p.bank_info_name}, Amount: {p.bank_info_amt}"
+            })
+
+        # 🟣 Reminders
+        for r in ReminderLog.query.all():
+            logs.append({
+                "timestamp": r.reminder_sent_at,
+                "type": "Reminder Sent",
+                "user": "-",
+                "details": f"Passport ID: {r.pass_id}"
+            })
+
+
+        # 🧡 User Signups
+        for s in Signup.query.all():
+            user_name = s.user.name if s.user else "-"
+            activity_name = s.activity.name if s.activity else "-"
+            logs.append({
+                "timestamp": s.signed_up_at,
+                "type": "Signup Submitted",
+                "user": user_name,
+                "details": f"User {user_name} signed up for Activity '{activity_name}' from online form"
+            })
+
+
+
+    # 📈 Sort newest first
+    logs.sort(key=lambda x: x["timestamp"], reverse=True)
+    return logs
+
 
 
 
 ##
-## EMAIL STULL
+## EMAIL STUFF
 ##
- 
-
 
 def safe_template(template_name: str) -> str:
     """
