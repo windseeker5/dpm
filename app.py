@@ -488,19 +488,25 @@ def update_signup_status(signup_id):
         return redirect(url_for("admin_signups"))
 
     status = request.form.get("status")
+
     if status in ["rejected", "cancelled"]:
         signup.status = status
         db.session.commit()
 
         from utils import log_admin_action
-        log_admin_action(f"Signup ID {signup.id} marked as {status}")
+
+        user_name = signup.user.name if signup.user else "-"
+        activity_name = signup.activity.name if signup.activity else "-"
+
+        log_admin_action(
+            f"Signup ID {signup.id}, {user_name}, for Activity '{activity_name}' was marked as {status}"
+        )
 
         flash(f"✅ Signup marked as {status}.", "success")
     else:
         flash("❌ Invalid status.", "error")
 
     return redirect(url_for("admin_signups"))
-
 
 
 
@@ -516,8 +522,9 @@ def approve_and_create_pass(signup_id):
         return redirect(url_for("admin_signups"))
 
     from models import Passport, AdminActionLog, Admin
-    from utils import notify_pass_event, generate_pass_code  # 🆕 Import generate_pass_code
+    from utils import notify_pass_event, generate_pass_code
     from datetime import datetime, timezone
+    import time
 
     now_utc = datetime.now(timezone.utc)
 
@@ -528,9 +535,9 @@ def approve_and_create_pass(signup_id):
     # ✅ Step 2: Get current Admin info
     current_admin = Admin.query.filter_by(email=session.get("admin")).first()
 
-    # ✅ Step 3: Create Passport immediately
+    # ✅ Step 3: Create Passport
     passport = Passport(
-        pass_code=generate_pass_code(),  # 🛠 Use the secure random code generator
+        pass_code=generate_pass_code(),
         user_id=signup.user_id,
         activity_id=signup.activity_id,
         sold_amt=signup.activity.price_per_user,
@@ -544,7 +551,20 @@ def approve_and_create_pass(signup_id):
     db.session.commit()
     db.session.expire_all()
 
-    # ✅ Step 4: Send confirmation email
+    # ✅ Step 4: Log admin action
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin", "unknown"),
+        action=f"Passport created from signup for {signup.user.name} (Code: {passport.pass_code}) by {session.get('admin', 'unknown')}"
+    ))
+    db.session.commit()
+
+    # ✅ Step 5: Sleep to ensure clean timestamps
+    time.sleep(0.5)
+
+    # ✅ Step 6: Refresh now_utc
+    now_utc = datetime.now(timezone.utc)
+
+    # ✅ Step 7: Send confirmation email
     notify_pass_event(
         app=current_app._get_current_object(),
         event_type="pass_created",
@@ -553,18 +573,8 @@ def approve_and_create_pass(signup_id):
         timestamp=now_utc
     )
 
-    # ✅ Step 5: Log admin action
-
-    db.session.add(AdminActionLog(
-        admin_email=session.get("admin", "unknown"),
-        action=f"Passport created from signup for {signup.user.name} (Code: {passport.pass_code})"
-    ))
-
-    db.session.commit()
-
     flash("✅ Signup approved and passport created! Email sent to user.", "success")
     return redirect(url_for("activity_dashboard", activity_id=signup.activity_id))
-
 
 
 
