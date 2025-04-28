@@ -351,7 +351,7 @@ def get_kpi_stats():
 
 
 
-def send_unpaid_reminders(app):
+def send_unpaid_reminders2222222222222(app):
     from utils import get_setting, notify_pass_event
     from models import ReminderLog, Pass, db
     from datetime import datetime, timedelta, timezone
@@ -407,9 +407,123 @@ def send_unpaid_reminders(app):
 
 
 
+def send_unpaid_reminders66666666666666666(app):
+    from utils import get_setting, notify_pass_event
+    from models import ReminderLog, Passport, db
+    from datetime import datetime, timedelta, timezone
+
+    def ensure_utc_aware(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    with app.app_context():
+        try:
+            days = float(get_setting("CALL_BACK_DAYS", "15"))
+        except ValueError:
+            print("❌ Invalid CALL_BACK_DAYS value. Defaulting to 15.")
+            days = 15
+
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        
+        unpaid_passports = Passport.query.filter(
+            Passport.paid == False,
+            Passport.created_dt <= cutoff_date
+        ).all()
+
+        for p in unpaid_passports:
+            recent_reminder = ReminderLog.query.filter_by(pass_id=p.id)\
+                .order_by(ReminderLog.reminder_sent_at.desc())\
+                .first()
+
+            if recent_reminder and ensure_utc_aware(recent_reminder.reminder_sent_at) > datetime.now(timezone.utc) - timedelta(days=days):
+                print(f"⏳ Skipping reminder: {p.user.name if p.user else '-'} (already reminded)")
+                continue
+
+            print(f"📬 Sending reminder to: {p.user.email if p.user else 'N/A'}")
+
+            # 📧 Notify using visual email
+            notify_pass_event(
+                app=app,
+                event_type="payment_late",
+                pass_data=p,  # ✅ renamed hockey_pass ➔ pass_data (new version)
+                admin_email="auto-reminder@system",
+                timestamp=datetime.now(timezone.utc)
+            )
+
+            db.session.add(ReminderLog(
+                pass_id=p.id,
+                reminder_sent_at=datetime.now(timezone.utc)
+            ))
+            db.session.commit()
+
+            print(f"✅ Logged reminder for: {p.user.name if p.user else '-'}")
+
+
+
+
+def send_unpaid_reminders(app):
+    from utils import get_setting, notify_pass_event
+    from models import ReminderLog, Passport, db
+    from datetime import datetime, timedelta, timezone
+
+    def ensure_utc_aware(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    with app.app_context():
+        try:
+            days = float(get_setting("CALL_BACK_DAYS", "15"))
+        except ValueError:
+            print("❌ Invalid CALL_BACK_DAYS value. Defaulting to 15.")
+            days = 15
+
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+
+        unpaid_passports = Passport.query.filter(
+            Passport.paid == False,
+            Passport.created_dt <= cutoff_date
+        ).all()
+
+        for p in unpaid_passports:
+            recent_reminder = ReminderLog.query.filter_by(pass_id=p.id)\
+                .order_by(ReminderLog.reminder_sent_at.desc())\
+                .first()
+
+            if recent_reminder and ensure_utc_aware(recent_reminder.reminder_sent_at) > datetime.now(timezone.utc) - timedelta(days=days):
+                print(f"⏳ Skipping reminder: {p.user.name if p.user else '-'} (already reminded)")
+                continue
+
+            # ✅ Log the reminder FIRST
+            db.session.add(ReminderLog(
+                pass_id=p.id,
+                reminder_sent_at=datetime.now(timezone.utc)
+            ))
+            db.session.commit()
+            print(f"✅ Logged late reminder for: {p.user.name if p.user else '-'}")
+
+            # ✅ THEN send reminder email
+            print(f"📬 Sending reminder to: {p.user.email if p.user else 'N/A'}")
+            notify_pass_event(
+                app=app,
+                event_type="payment_late",
+                pass_data=p,  # using new models
+                admin_email="auto-reminder@system",
+                timestamp=datetime.now(timezone.utc)
+            )
+
+
+
+
+
 def match_gmail_payments_to_passes():
     from utils import extract_interac_transfers, get_setting, notify_pass_event
-    from models import EbankPayment, Pass, db
+    from models import EbankPayment, Passport, db
     from datetime import datetime, timezone
     from flask import current_app
     from rapidfuzz import fuzz
@@ -440,48 +554,47 @@ def match_gmail_payments_to_passes():
             subject = match["subject"]
 
             best_score = 0
-            best_pass = None
-            unpaid_passes = Pass.query.filter_by(paid_ind=False).all()
+            best_passport = None
+            unpaid_passports = Passport.query.filter_by(paid=False).all()
 
-            for p in unpaid_passes:
-                score = fuzz.partial_ratio(name.lower(), p.user_name.lower())
+            for p in unpaid_passports:
+                if not p.user:
+                    continue  # Safety check
+                score = fuzz.partial_ratio(name.lower(), p.user.name.lower())
                 if score >= threshold and abs(p.sold_amt - amt) < 1:
                     if score > best_score:
                         best_score = score
-                        best_pass = p
+                        best_passport = p
 
-            if best_pass:
+            if best_passport:
                 now_utc = datetime.now(timezone.utc)
-                best_pass.paid_ind = True
-                best_pass.paid_date = now_utc
-                db.session.add(best_pass)
+                best_passport.paid = True
+                best_passport.paid_date = now_utc
+                db.session.add(best_passport)
 
                 db.session.add(EbankPayment(
                     from_email=from_email,
                     subject=subject,
                     bank_info_name=name,
                     bank_info_amt=amt,
-                    matched_pass_id=best_pass.id,
-                    matched_name=best_pass.user_name,
-                    matched_amt=best_pass.sold_amt,
+                    matched_pass_id=best_passport.id,
+                    matched_name=best_passport.user.name,
+                    matched_amt=best_passport.sold_amt,
                     name_score=best_score,
                     result="MATCHED",
                     mark_as_paid=True,
-                    note=f"Matched by Gmail Bot."
+                    note="Matched by Gmail Bot."
                 ))
 
                 db.session.commit()
 
-
                 notify_pass_event(
                     app=current_app._get_current_object(),
-                    event_type="payment_received",   
-                    hockey_pass=best_pass,
+                    event_type="payment_received",
+                    pass_data=best_passport,  # ✅ update keyword
                     admin_email="gmail-bot@system",
                     timestamp=now_utc
                 )
-
-
 
                 if uid:
                     mail.uid("COPY", uid, gmail_label)
@@ -495,12 +608,13 @@ def match_gmail_payments_to_passes():
                     name_score=0,
                     result="NO_MATCH",
                     mark_as_paid=False,
-                    note="No matching pass found."
+                    note="No matching passport found."
                 ))
 
         db.session.commit()
         mail.expunge()
         mail.logout()
+
 
 
 
@@ -521,93 +635,6 @@ def log_admin_action(action: str):
     db.session.commit()
 
 
-def get_all_activity_logs222222():
-    from models import Passport, Redemption, EmailLog, EbankPayment, ReminderLog, AdminActionLog, Signup
-    from utils import utc_to_local
-    from flask import current_app
-
-    logs = []
-
-    with current_app.app_context():
-        # 🟢 Admin Actions (Passport Created, Activity Created, etc.)
-        for a in AdminActionLog.query.all():
-            action_text = a.action.lower()
-
-            if "passport created" in action_text:
-                log_type = "Passport Created"
-            elif "marked" in action_text and "paid" in action_text:
-                log_type = "Marked Paid"
-            elif "approved" in action_text and "signup" in action_text:
-                log_type = "Signup Approved"
-            elif "rejected" in action_text and "signup" in action_text:
-                log_type = "Signup Rejected"
-            elif "activity created" in action_text:
-                log_type = "Activity Created"
-            else:
-                log_type = "Admin Action"
-
-            # ✅ Add "by admin" only if not already in the text
-            if "by" not in a.action.lower():
-                details = f"{a.action} by {a.admin_email or '-'}"
-            else:
-                details = a.action
-
-            logs.append({
-                "timestamp": a.timestamp,
-                "type": log_type,
-                "user": a.admin_email or "-",
-                "details": details
-            })
-
-        # 🟡 Redemption
-        for r in Redemption.query.all():
-            logs.append({
-                "timestamp": r.date_used,
-                "type": "Passport Redeemed",
-                "user": r.redeemed_by or "-",
-                "details": f"Passport ID: {r.passport_id}"
-            })
-
-        # 🟠 Email Sent
-        for e in EmailLog.query.all():
-            pass_code_display = e.pass_code if e.pass_code else "App-Sent"
-            logs.append({
-                "timestamp": e.timestamp,
-                "type": "Email Sent",
-                "user": e.to_email,
-                "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display})"
-            })
-
-        # 🔵 Payments
-        for p in EbankPayment.query.all():
-            logs.append({
-                "timestamp": p.timestamp,
-                "type": f"Payment {p.result}",
-                "user": p.from_email or "-",
-                "details": f"Name: {p.bank_info_name}, Amount: {p.bank_info_amt}"
-            })
-
-        # 🟣 Reminders
-        for r in ReminderLog.query.all():
-            logs.append({
-                "timestamp": r.reminder_sent_at,
-                "type": "Reminder Sent",
-                "user": "-",
-                "details": f"Passport ID: {r.pass_id}"
-            })
-
-        # 🧡 User Signups
-        for s in Signup.query.all():
-            logs.append({
-                "timestamp": s.signed_up_at,
-                "type": "Signup Submitted",
-                "user": s.user.name if s.user else "-",
-                "details": f"Activity: {s.activity.name if s.activity else '-'}"
-            })
-
-    # 📈 Sort newest first
-    logs.sort(key=lambda x: x["timestamp"], reverse=True)
-    return logs
 
 
 def get_all_activity_logs():
@@ -625,13 +652,15 @@ def get_all_activity_logs():
             if "passport created" in action_text:
                 log_type = "Passport Created"
             elif "passport" in action_text and "redeemed" in action_text:
-                log_type = "Passport Redeemed"   # ✅ NEW RULE for Redemption logs
+                log_type = "Passport Redeemed"
             elif "marked" in action_text and "paid" in action_text:
                 log_type = "Marked Paid"
             elif "approved" in action_text and "signup" in action_text:
                 log_type = "Signup Approved"
             elif "rejected" in action_text and "signup" in action_text:
                 log_type = "Signup Rejected"
+            elif "cancelled" in action_text and "signup" in action_text:
+                log_type = "Signup Cancelled"  # ✅ NEW detection for cancelled
             elif "activity created" in action_text:
                 log_type = "Activity Created"
             else:
@@ -650,16 +679,6 @@ def get_all_activity_logs():
                 "details": details
             })
 
-        # ❌ REMOVE Redemption table entries → We only rely on AdminActionLog now
-        # 🛑 Delete this part:
-        # for r in Redemption.query.all():
-        #     logs.append({
-        #         "timestamp": r.date_used,
-        #         "type": "Passport Redeemed",
-        #         "user": r.redeemed_by or "-",
-        #         "details": f"Passport ID: {r.passport_id}"
-        #     })
-
         # 🟠 Email Sent
         for e in EmailLog.query.all():
             pass_code_display = e.pass_code if e.pass_code else "App-Sent"
@@ -672,21 +691,36 @@ def get_all_activity_logs():
 
         # 🔵 Payments
         for p in EbankPayment.query.all():
+            if p.result == "MATCHED":
+                log_type = "Interact Payment"
+                details = f"From {p.matched_name}, Amount: {p.bank_info_amt:.2f}, Passport ID: {p.matched_pass_id}"
+            else:
+                log_type = "Payment No Match"
+                details = f"From {p.bank_info_name}, Amount: {p.bank_info_amt:.2f}"
+
             logs.append({
                 "timestamp": p.timestamp,
-                "type": f"Payment {p.result}",
+                "type": log_type,
                 "user": p.from_email or "-",
-                "details": f"Name: {p.bank_info_name}, Amount: {p.bank_info_amt}"
+                "details": details
             })
+
 
         # 🟣 Reminders
         for r in ReminderLog.query.all():
+            from models import Passport
+            passport = db.session.get(Passport, r.pass_id)
+
+            user_name = passport.user.name if passport and passport.user else "-"
+            activity_name = passport.activity.name if passport and passport.activity else "-"
+
             logs.append({
                 "timestamp": r.reminder_sent_at,
-                "type": "Reminder Sent",
-                "user": "-",
-                "details": f"Passport ID: {r.pass_id}"
+                "type": "Late Reminder Detected",
+                "user": "auto-reminder@system",
+                "details": f"Late payment detected for {user_name} for Activity '{activity_name}' by App Bot"
             })
+
 
 
         # 🧡 User Signups
@@ -700,11 +734,11 @@ def get_all_activity_logs():
                 "details": f"User {user_name} signed up for Activity '{activity_name}' from online form"
             })
 
-
-
     # 📈 Sort newest first
     logs.sort(key=lambda x: x["timestamp"], reverse=True)
     return logs
+
+
 
 
 

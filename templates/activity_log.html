@@ -71,8 +71,6 @@
       
             <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
 
-
-
             <td data-type="{{ log.type }}">
               {% if log.type == 'Passport Redeemed' %}
                 <i class="ti ti-ticket text-danger"></i>
@@ -80,10 +78,10 @@
                 <i class="ti ti-mail text-info"></i>
               {% elif log.type == 'Passport Created' %}
                 <i class="ti ti-id text-lime"></i>
-              {% elif log.type == 'Payment Matched' %}
-                <i class="ti ti-currency-dollar text-green"></i>
+              {% elif log.type == 'Interact Payment' %}
+                <i class="ti ti-currency-dollar text-success"></i>  
               {% elif log.type == 'Marked Paid' %}
-                <i class="ti ti-check text-yellow"></i>
+                <i class="ti ti-check text-green"></i>  
               {% elif log.type == 'Reminder Sent' %}
                 <i class="ti ti-bell text-purple"></i>
               {% elif log.type == 'Signup Submitted' %}
@@ -92,17 +90,18 @@
                 <i class="ti ti-user-check text-green"></i>
               {% elif log.type == 'Signup Rejected' %}
                 <i class="ti ti-user-x text-danger"></i>
+              {% elif log.type == 'Signup Cancelled' %}
+                <i class="ti ti-user-x text-danger"></i> <!-- ✅ NEW for Signup Cancelled -->
               {% elif log.type == 'Activity Created' %}
                 <i class="ti ti-target text-orange"></i>
               {% elif log.type == 'Admin Action' %}
                 <i class="ti ti-settings text-muted"></i>
+              {% else %}
+                <i class="ti ti-activity text-muted"></i>  
               {% endif %}
               {{ log.type }}
             </td>
             
-
-
-
 
 
             <td>{{ log.details }}</td>
