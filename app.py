@@ -66,6 +66,10 @@ from chatbot.routes_chatbot import chat_bp
 from utils import send_email, generate_qr_code_image, get_pass_history_data, get_setting
 from flask import render_template, render_template_string, url_for
 
+import requests
+from flask import send_from_directory
+
+
 from flask import render_template, request, redirect, url_for, session, flash
 from datetime import datetime
 from models import Signup, Activity, User, db
@@ -91,6 +95,13 @@ print(f"📦 Using {'DEV' if env == 'dev' else 'PROD'} database → {db_path}")
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB limit
+app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.jpeg', '.png', '.gif']
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads', 'activity_images')
+
+
 
 
 
@@ -333,6 +344,83 @@ def test_email_match():
 
 
 
+##
+## - = - = - = - = - = - = - = - = - = - = - = - = - =
+##
+##    EXTERNAL API TESTING ONLY
+##
+## - = - = - = - = - = - = - = - = - = - = - = - = - =
+##
+
+
+# 🔵 Unsplash Search API
+@app.route("/unsplash-search")
+def unsplash_search():
+    query = request.args.get("q", "")
+    if not query:
+        return jsonify([])
+
+    access_key = "DpPe0DZwUlYsEjrnZf-E5njVC0VLePUmHmRAhBELgWc"  # 🔥 Replace this with your real key
+    url = f"https://api.unsplash.com/search/photos?query={query}&per_page=9&client_id={access_key}"
+    
+    try:
+        resp = requests.get(url)
+        data = resp.json()
+
+        results = []
+        for result in data.get("results", []):
+            results.append({
+                "thumb": result["urls"]["small"],
+                "full": result["urls"]["full"]
+            })
+
+        return jsonify(results)
+    except Exception as e:
+        print("❌ Unsplash API error:", e)
+        return jsonify([])
+
+
+
+
+
+
+# 🔵 Download and Save Selected Unsplash Image
+@app.route("/download-unsplash-image")
+def download_unsplash_image():
+    image_url = request.args.get("url")
+    if not image_url:
+        return jsonify({"success": False})
+
+    try:
+        resp = requests.get(image_url)
+        if resp.status_code != 200:
+            return jsonify({"success": False})
+
+        # Save the file locally
+        os.makedirs("static/uploads/activity_images", exist_ok=True)
+        filename = f"activity_{uuid.uuid4().hex[:10]}.jpg"
+        filepath = os.path.join("static/uploads/activity_images", filename)
+
+        with open(filepath, "wb") as f:
+            f.write(resp.content)
+
+        return jsonify({"success": True, "filename": filename})
+    except Exception as e:
+        print("❌ Error downloading Unsplash image:", e)
+        return jsonify({"success": False})
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -348,12 +436,14 @@ def test_email_match():
 
 
 
-
 @app.route("/")
 def home():
     if "admin" not in session:
         return redirect(url_for("login"))
-    return render_template("index.html")
+
+    activities = Activity.query.all()
+    return render_template("index.html", activities=activities)
+
 
 
 
@@ -579,14 +669,21 @@ def approve_and_create_pass(signup_id):
 
 
 
-
 @app.route("/create-activity", methods=["GET", "POST"])
 def create_activity():
     if "admin" not in session:
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        from models import Activity, db
+        from models import Activity, AdminActionLog, db
+        import os
+        import uuid
+
+        start_date_raw = request.form.get("start_date")
+        end_date_raw = request.form.get("end_date")
+
+        start_date = datetime.strptime(start_date_raw, "%Y-%m-%d") if start_date_raw else None
+        end_date = datetime.strptime(end_date_raw, "%Y-%m-%d") if end_date_raw else None
 
         name = request.form.get("name", "").strip()
         activity_type = request.form.get("type", "").strip()
@@ -598,10 +695,32 @@ def create_activity():
         cost_to_run = float(request.form.get("cost_to_run", 0.0))
         payment_instructions = request.form.get("payment_instructions", "").strip()
 
+        # 🖼️ Handle image selection
+        uploaded_file = request.files.get('upload_image')
+        selected_image_filename = request.form.get("selected_image_filename", "").strip()
+
+        image_filename = None
+
+        if uploaded_file and uploaded_file.filename != '':
+            ext = os.path.splitext(uploaded_file.filename)[1].lower()
+            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+            if ext in allowed_extensions:
+                filename = f"upload_{uuid.uuid4().hex[:10]}{ext}"
+                upload_folder = os.path.join("static", "uploads", "activity_images")
+                os.makedirs(upload_folder, exist_ok=True)
+                filepath = os.path.join(upload_folder, filename)
+                uploaded_file.save(filepath)
+                image_filename = filename
+        elif selected_image_filename:
+            image_filename = selected_image_filename
+
+        # Create the activity
         new_activity = Activity(
             name=name,
             type=activity_type,
             description=description,
+            start_date=start_date,
+            end_date=end_date,
             sessions_included=sessions_included,
             price_per_user=price_per_user,
             goal_users=goal_users,
@@ -609,25 +728,24 @@ def create_activity():
             cost_to_run=cost_to_run,
             payment_instructions=payment_instructions,
             created_by=session.get("admin"),
+            image_filename=image_filename,  # ✅ Now supports upload or unsplash
         )
 
         db.session.add(new_activity)
         db.session.commit()
 
+        # Log the action
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
             action=f"Activity Created: {new_activity.name}"
         ))
-
-
         db.session.commit()
 
         flash("✅ Activity created successfully!", "success")
         return redirect(url_for("create_activity"))
 
-    # ✅ Add this line to handle GET request
+    # ✅ GET request
     return render_template("activity_form.html")
-
 
 
 
@@ -636,7 +754,6 @@ def edit_activity(activity_id):
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    #activity = Activity.query.get(activity_id)
     activity = db.session.get(Activity, activity_id)
 
     if not activity:
@@ -644,6 +761,9 @@ def edit_activity(activity_id):
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
+        import os
+        import uuid
+
         activity.name = request.form.get("name", "").strip()
         activity.type = request.form.get("type", "").strip()
         activity.description = request.form.get("description", "").strip()
@@ -654,22 +774,44 @@ def edit_activity(activity_id):
         activity.cost_to_run = float(request.form.get("cost_to_run", 0.0))
         activity.payment_instructions = request.form.get("payment_instructions", "").strip()
 
+        start_date_raw = request.form.get("start_date")
+        end_date_raw = request.form.get("end_date")
+
+        activity.start_date = datetime.strptime(start_date_raw, "%Y-%m-%d") if start_date_raw else None
+        activity.end_date = datetime.strptime(end_date_raw, "%Y-%m-%d") if end_date_raw else None
+
+        uploaded_file = request.files.get('upload_image')
+        selected_image_filename = request.form.get("selected_image_filename", "").strip()
+
+        if uploaded_file and uploaded_file.filename != '':
+            ext = os.path.splitext(uploaded_file.filename)[1].lower()
+            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+            if ext in allowed_extensions:
+                filename = f"upload_{uuid.uuid4().hex[:10]}{ext}"
+                upload_folder = os.path.join("static", "uploads", "activity_images")
+                os.makedirs(upload_folder, exist_ok=True)
+                filepath = os.path.join(upload_folder, filename)
+                uploaded_file.save(filepath)
+                activity.image_filename = filename
+        elif selected_image_filename:
+            activity.image_filename = selected_image_filename
+
         db.session.commit()
 
-        # ✅ Log the admin action
         from models import AdminActionLog
 
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
             action=f"Activity Updated: {activity.name}"
         ))
-
         db.session.commit()
 
         flash("✅ Activity updated successfully!", "success")
         return redirect(url_for("edit_activity", activity_id=activity.id))
 
     return render_template("activity_form.html", activity=activity)
+
+
 
 
 
@@ -680,30 +822,27 @@ def signup(activity_id):
         flash("❌ Activity not found.", "error")
         return redirect(url_for("dashboard"))
 
+    # ✅ Corrected settings loading
+    settings = {s.key: s.value for s in Setting.query.all()}
+
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
         phone = request.form.get("phone", "").strip()
 
-        # ✅ Always create a new user (even with same email)
         user = User(name=name, email=email, phone_number=phone)
         db.session.add(user)
-        db.session.flush()  # Assign user.id without committing
+        db.session.flush()
 
-        # ✅ Create Signup
         signup = Signup(
             user_id=user.id,
             activity_id=activity.id,
             subject=f"Signup for {activity.name}",
             description=request.form.get("notes", "").strip(),
-            form_data="",  # You can extend this later for JSON forms
+            form_data="",
         )
         db.session.add(signup)
         db.session.commit()
-
-        print("📤 notify_signup_event() called")
-        print("👤 User:", user.name, "| 📧", user.email)
-        print("📌 Activity:", activity.name)
 
         from utils import notify_signup_event
         notify_signup_event(app, signup=signup, activity=activity)
@@ -711,8 +850,7 @@ def signup(activity_id):
         flash("✅ Signup submitted!", "success")
         return redirect(url_for("dashboard"))
 
-    return render_template("signup_form.html", activity=activity)
-
+    return render_template("signup_form.html", activity=activity, settings=settings)
 
 
 

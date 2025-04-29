@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Welcome | Minipass{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+  <div class="text-center mb-4">
+    <h1 class="display-5 fw-bold">
+      <i class="ti ti-ticket"></i> Welcome to Minipass
+    </h1>
+    <p class="text-muted">Manage activities, signups, and digital passports with ease.</p>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <a href="/create-activity" class="card card-link card-border shadow-sm h-100">
+        <div class="card-body text-center">
+          <i class="ti ti-calendar-event text-blue fs-1 mb-2"></i>
+          <h3 class="card-title">Create Activity</h3>
+          <p class="text-muted">Set up a new event or activity with goals and pricing.</p>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-4">
+      <a href="/signup/1" class="card card-link card-border shadow-sm h-100">
+        <div class="card-body text-center">
+          <i class="ti ti-user-plus text-green fs-1 mb-2"></i>
+          <h3 class="card-title">User Signup</h3>
+          <p class="text-muted">Let users sign up for an activity.</p>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-4">
+      <a href="/create-passport" class="card card-link card-border shadow-sm h-100">
+        <div class="card-body text-center">
+          <i class="ti ti-ticket text-indigo fs-1 mb-2"></i>
+          <h3 class="card-title">Create Passport</h3>
+          <p class="text-muted">Manually issue a passport for a user and activity.</p>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-4">
+      <a href="/activity-log" class="card card-link card-border shadow-sm h-100">
+        <div class="card-body text-center">
+          <i class="ti ti-history text-orange fs-1 mb-2"></i>
+          <h3 class="card-title">Activity Log</h3>
+          <p class="text-muted">View recent activity history including signups and pass creation.</p>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-4">
+      <a href="/setup" class="card card-link card-border shadow-sm h-100">
+        <div class="card-body text-center">
+          <i class="ti ti-settings text-gray fs-1 mb-2"></i>
+          <h3 class="card-title">Setup & Settings</h3>
+          <p class="text-muted">Configure your organization, email templates, and more.</p>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-4">
+      <a href="/generate-backup" class="card card-link card-border shadow-sm h-100">
+        <div class="card-body text-center">
+          <i class="ti ti-database-export text-primary fs-1 mb-2"></i>
+          <h3 class="card-title">Generate Backup</h3>
+          <p class="text-muted">Create a ZIP backup of your database.</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

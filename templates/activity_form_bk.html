@@ -81,19 +81,19 @@
           <div id="uploadImageSection" style="display:none;">
             <div class="mb-3">
               <label class="form-label">Upload Image (Max 10MB)</label>
-              <input type="file" name="upload_image" class="form-control" id="uploadInput">
+              <input type="file" name="upload_image" class="form-control">
             </div>
           </div>
 
           <!-- Selected Image Preview -->
-          <div id="imagePreviewContainer" class="mt-4 text-start" style="{{ 'display:block;' if activity and activity.image_filename else 'display:none;' }}">
+          <div id="imagePreviewContainer" class="mt-4 text-center" style="{{ 'display:block;' if activity and activity.image_filename else 'display:none;' }}">
             <h4 class="mb-3">Selected Image Preview</h4>
             {% if activity and activity.image_filename %}
-              <img id="selectedImagePreview" src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}" class="img-fluid rounded shadow-sm mb-2" style="max-height:250px;">
+              <img id="selectedImagePreview" src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}" class="img-fluid rounded shadow-sm" style="max-height:250px;">
             {% else %}
-              <img id="selectedImagePreview" src="" class="img-fluid rounded shadow-sm mb-2" style="max-height:250px;">
+              <img id="selectedImagePreview" src="" class="img-fluid rounded shadow-sm" style="max-height:250px;">
             {% endif %}
-            <div>
+            <div class="mt-2">
               <button type="button" id="removeImageBtn" class="btn btn-outline-danger btn-sm">
                 <i class="ti ti-trash"></i> Remove Image
               </button>
@@ -206,7 +206,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const removeImageBtn = document.getElementById('removeImageBtn');
   const selectedImagePreview = document.getElementById('selectedImagePreview');
   const selectedImageFilename = document.getElementById('selectedImageFilename');
-  const uploadInput = document.getElementById('uploadInput');
   const imagePreviewContainer = document.getElementById('imagePreviewContainer');
 
   toggleOnline.addEventListener('change', () => {
@@ -224,21 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
   removeImageBtn.addEventListener('click', function() {
     selectedImagePreview.src = "";
     selectedImageFilename.value = "";
-    uploadInput.value = "";
     imagePreviewContainer.style.display = 'none';
-  });
-
-  uploadInput.addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        selectedImagePreview.src = e.target.result;
-        selectedImageFilename.value = "";
-        imagePreviewContainer.style.display = 'block';
-      }
-      reader.readAsDataURL(file);
-    }
   });
 
   const searchBtn = document.getElementById('searchImagesBtn');
@@ -278,7 +263,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.success) {
                   selectedImagePreview.src = `/static/uploads/activity_images/${result.filename}`;
                   selectedImageFilename.value = result.filename;
-                  uploadInput.value = "";
                   imagePreviewContainer.style.display = 'block';
                   unsplashModal.hide();
                 } else {
