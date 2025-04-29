@@ -31,3 +31,4 @@ faker
 ollama  # Python client for your Ollama server
 
 premailer
+requests

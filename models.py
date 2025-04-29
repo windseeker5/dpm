@@ -23,6 +23,7 @@ class AdminActionLog(db.Model):
 
 
 
+# This should be deleted ....
 class Pass(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pass_code = db.Column(db.String(16), unique=True, nullable=False)
@@ -51,7 +52,6 @@ class Pass(db.Model):
 
 
 
-
 # ✅ Generalized SaaS models (non-conflicting with current Pass logic)
 
 class User(db.Model):
@@ -66,11 +66,16 @@ class User(db.Model):
     passports = db.relationship("Passport", backref="user", lazy=True)
 
 
+
+
 class Activity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
-    type = db.Column(db.String(50))  # e.g. "hockey", "yoga"
+    type = db.Column(db.String(50))  # e.g., "hockey", "yoga"
     description = db.Column(db.Text)
+    start_date = db.Column(db.DateTime, nullable=True)
+    end_date = db.Column(db.DateTime, nullable=True)
+    image_filename = db.Column(db.String(255), nullable=True)  # 🆕 NEW FIELD
     sessions_included = db.Column(db.Integer, default=1)
     price_per_user = db.Column(db.Float, default=0.0)
     goal_users = db.Column(db.Integer, default=0)
@@ -82,7 +87,9 @@ class Activity(db.Model):
     payment_instructions = db.Column(db.Text)
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
-    status = db.Column(db.String(50), default="active")
+
+
+
 
 
 class Signup(db.Model):
@@ -98,6 +105,7 @@ class Signup(db.Model):
     paid_at = db.Column(db.DateTime)
     passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"))
     status = db.Column(db.String(50), default="pending")
+
 
 class Passport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -117,13 +125,11 @@ class Passport(db.Model):
 
 
 
-
 class Redemption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=False)  # 🟢 FIXED
     date_used = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     redeemed_by = db.Column(db.String(100), nullable=True)
-
 
 
 
