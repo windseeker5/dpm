@@ -455,28 +455,53 @@ def dashboard():
 
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
+    from datetime import datetime
 
     # Gather activity performance
     activities = db.session.query(Activity).all()
     activity_cards = []
 
     for a in activities:
+        # Basic KPIs
         signups = Signup.query.filter_by(activity_id=a.id).count()
         passports = Passport.query.filter_by(activity_id=a.id).count()
         paid_passports = Passport.query.filter_by(activity_id=a.id, paid=True).count()
         revenue = db.session.query(func.sum(Passport.sold_amt)).filter_by(activity_id=a.id, paid=True).scalar() or 0
 
+        # 🆕 Additional KPIs
+        pending_signups = Signup.query.filter_by(activity_id=a.id, status="pending").count()
+        active_passports = Passport.query.filter_by(activity_id=a.id, paid=True).count()
+        unpaid_passports = Passport.query.filter_by(activity_id=a.id, paid=False).count()
+
+        # 🆕 Days left calculation (safe)
+        if a.end_date:
+            days_left = (a.end_date - datetime.utcnow()).days
+            if days_left < 0:
+                days_left = 0
+        else:
+            days_left = "N/A"
+
+        # Build the final card dictionary
         activity_cards.append({
             "id": a.id,
             "name": a.name,
             "sessions_included": a.sessions_included,
             "signups": signups,
+            "pending_signups": pending_signups,
             "passports": passports,
+            "active_passports": active_passports,
+            "unpaid_passports": unpaid_passports,
             "paid_passports": paid_passports,
-            "revenue": revenue
+            "revenue": revenue,
+            "goal_revenue": a.goal_revenue,
+            "image_filename": a.image_filename,
+            "days_left": days_left
         })
 
     return render_template("dashboard.html", activities=activity_cards)
+
+
+
 
 
 

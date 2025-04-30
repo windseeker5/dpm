@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Activity Performance | Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+     
+    <h2 class="mb-0">
+        <i class="ti ti-chart-bar text-primary me-2"></i> Activity Performance
+      </h2>
+      
+
+    <div>
+      <a href="{{ url_for('create_passport') }}" class="btn btn-outline-primary me-2">
+        <i class="ti ti-plus"></i> Create Passport
+      </a>
+      <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
+        <i class="ti ti-scan"></i> Scan Passport
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    {% for a in activities %}
+      <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0">
+              <i class="ti ti-calendar-event text-primary me-2"></i>{{ a.name }}
+            </h3>
+            <span class="badge bg-blue">{{ a.sessions_included }} sessions</span>
+          </div>
+          <div class="card-body">
+            <div class="mb-2">
+              <i class="ti ti-user-check text-muted me-1"></i>
+              <strong>{{ a.signups }}</strong> signups
+            </div>
+            <div class="mb-2">
+              <i class="ti ti-ticket text-muted me-1"></i>
+              <strong>{{ a.passports }}</strong> passports created
+            </div>
+            <div class="mb-2">
+              <i class="ti ti-currency-dollar text-muted me-1"></i>
+              <strong>{{ a.paid_passports }}</strong> paid
+            </div>
+            <div class="mb-2">
+              <i class="ti ti-coin text-muted me-1"></i>
+              Revenue: <strong>${{ "%.2f"|format(a.revenue) }}</strong>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{{ url_for('activity_dashboard', activity_id=a.id) }}" class="btn btn-sm btn-outline-dark">
+              <i class="ti ti-eye"></i> View Details
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
