@@ -60,84 +60,9 @@
 
 
 
-    <!-- Activity List -->
-    <div class="mb-3">
-      <label class="form-label">Define Activity List</label>
-      <input id="activities" name="activities" value='{{ settings.ACTIVITY_LIST or "[]" }}' class="form-control" placeholder="Add activity and hit Enter">
-    </div>
-
-    <!-- Pass Defaults -->
-    <div class="mb-3">
-      <label class="form-label">Default Pass Amount ($)</label>
-      <input type="number" id="default_pass_amount" name="default_pass_amount" class="form-control" value="{{ settings.DEFAULT_PASS_AMOUNT or 50 }}" step="0.01" min="0">
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Default Number of Sessions</label>
-      <input type="number" id="default_session_qt" name="default_session_qt" class="form-control" value="{{ settings.DEFAULT_SESSION_QT or 4 }}" step="1" min="1">
-    </div>
-
-
-
-
-    <div class="mb-3">
-      <label class="form-label">HTML Information Text (e.g. payment instructions)</label>
-      <input type="hidden" name="email_info_text" id="email_info_text">
-      <div id="quill-editor" style="height: 300px;">{{ settings.EMAIL_INFO_TEXT|safe }}</div>
-    </div>
-    
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-    
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const quill = new Quill("#quill-editor", {
-          theme: "snow",
-          modules: {
-            toolbar: [
-              ['bold', 'italic', 'underline'],
-              [{ list: 'ordered' }, { list: 'bullet' }],
-              ['link', 'code-block']
-            ]
-          }
-        });
-    
-        const hiddenInput = document.getElementById("email_info_text");
-    
-        // Populate hidden input on form submit
-        document.querySelector("form").addEventListener("submit", function () {
-          hiddenInput.value = quill.root.innerHTML;
-        });
-      });
-    </script>
-    
-
-
-
 
 
 
   </div>
 </div>
 
-<!-- 🏷 Tagify for Activity Input -->
-<script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" />
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const input = document.getElementById("activities");
-    let tags = [];
-    try {
-      tags = JSON.parse(input.value);
-    } catch (e) {
-      console.warn("⚠️ Could not parse ACTIVITY_LIST JSON:", input.value);
-    }
-    input.value = "";
-    const tagify = new Tagify(input, {
-      dropdown: { enabled: 0 }
-    });
-    if (Array.isArray(tags)) {
-      tagify.addTags(tags);
-    }
-  });
-</script>

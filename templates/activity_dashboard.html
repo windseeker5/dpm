@@ -19,23 +19,82 @@
 
 
 
-<!-- 🔵 Activity Title Card -->
-<div class="card mb-4">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <h1 class="card-title mb-2">{{ activity.name }}</h1>
-        <p class="text-muted">{{ activity.description }}</p>
+<style>
+  /* 🔧 Resize + flush image */
+  .activity-img-container {
+    height: 160px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .activity-img-container img {
+    height: 100% !important;
+    width: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+  
+  /* Optional: constrain text container height */
+  .activity-info {
+    height: 160px !important;
+    overflow: hidden !important;
+  }
+  </style>
+  
+
+
+
+
+
+  <!-- 🧊 Compact Activity Card -->
+  <div class="card shadow-sm border mb-4 overflow-hidden">
+    <div class="row g-0 align-items-stretch" style="height: 160px;">
+      <!-- 📋 Left Side: Info -->
+      <div class="col-md-8 p-3 d-flex flex-column justify-content-between activity-info">
+        <div>
+
+          <h2 class="card-title mb-2 fs-2 fw-bold"> <i class="ti ti-rocket me-1"></i> {{ activity.name }}</h2>
+
+          <p class="text-muted mb-2 small">{{ activity.description or "No description provided." }}</p>
+  
+          <!-- 📊 KPIs -->
+          <div class="d-flex flex-wrap align-items-center text-body small gap-3 fw-medium">
+            {% if activity.start_date %}
+              <div>
+                <i class="ti ti-calendar-event me-1"></i>
+                {{ activity.start_date.strftime('%Y-%m-%d') }}
+                {% if activity.end_date %}@ {{ activity.end_date.strftime('%Y-%m-%d') }}{% endif %}
+              </div>
+            {% endif %}
+            <div><i class="ti ti-ticket me-1"></i>{{ passes | length }}</div>
+            {% set revenue = passes | selectattr('paid', 'equalto', True) | map(attribute='sold_amt') | sum %}
+            <div><i class="ti ti-currency-dollar me-1"></i>{{ revenue | round(2) }}</div>
+          </div>
+        </div>
       </div>
-      <div>
+  
+      <!-- 🖼 Right Side: Image + Edit -->
+      <div class="col-md-4 activity-img-container position-relative">
         <a href="{{ url_for('edit_activity', activity_id=activity.id) }}"
-           class="btn btn-outline-primary">
-          <i class="ti ti-pencil"></i> Edit Activity
+           class="btn btn-outline-primary position-absolute top-0 end-0 m-2 z-3">
+          <i class="ti ti-pencil"></i> Edit
         </a>
+        <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}"
+             alt="Activity Image">
       </div>
     </div>
+  
+    <!-- 📉 Bottom Progress Bar -->
+    {% set goal = activity.goal_revenue or 0 %}
+    {% set pct = ((revenue / goal) * 100) if goal > 0 else 0 %}
+    <div class="progress progress-xs" style="height: 4px !important;">
+      <div class="progress-bar bg-blue" style="width: {{ pct | round(1) }}% !important;"></div>
+    </div>
   </div>
-</div>
+  
 
 
 
