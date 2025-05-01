@@ -447,13 +447,12 @@ def home():
 
 
 
-
 @app.route("/dashboard")
 def dashboard():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from utils import get_kpi_stats  
+    from utils import get_kpi_stats, get_all_activity_logs
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
     from datetime import datetime
@@ -500,8 +499,16 @@ def dashboard():
             "days_left": days_left
         })
 
-    return render_template("dashboard.html", activities=activity_cards, kpi_data=kpi_data)
+    # ✅ Use working helper function
+    all_logs = get_all_activity_logs()
+    recent_logs = all_logs[:20]  # last 20 logs only
 
+    return render_template(
+        "dashboard.html",
+        activities=activity_cards,
+        kpi_data=kpi_data,
+        logs=recent_logs
+    )
 
 
 
