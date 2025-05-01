@@ -133,7 +133,6 @@
 
 <!-- Active Activities List -->
 
-
 <!-- Active Activities List -->
 <div class="row">
   {% for a in activities %}
@@ -142,29 +141,32 @@
         <!-- Header -->
         <div class="card-header d-flex align-items-center">
           <h3 class="card-title mb-0">
-            <i class="ti ti-activity text-pink me-2"></i>{{ a.name }}
+            <i class="ti ti-activity text-pink me-2 fs-4"></i>{{ a.name }}
           </h3>
         </div>
 
         <!-- Body -->
-        <div class="card-body">
-          <div class="mb-2">
-            <i class="ti ti-user-check text-muted me-1"></i>
-            <strong>{{ a.signups }}</strong> signups
-          </div>
-          <div class="mb-2">
-            <i class="ti ti-ticket text-muted me-1"></i>
-            <strong>{{ a.passports }}</strong> passports created
-          </div>
-          <div class="mb-2">
-            <i class="ti ti-currency-dollar text-muted me-1"></i>
-            <strong>{{ a.paid_passports }}</strong> paid
-          </div>
-          <div class="mb-2">
-            <i class="ti ti-coin text-muted me-1"></i>
-            Revenue: <strong>${{ "%.2f"|format(a.revenue) }}</strong>
-          </div>
-        </div>
+<!-- Body -->
+<div class="card-body">
+  <div class="mb-2 d-flex align-items-center">
+    <i class="ti ti-user text-muted me-2"></i>
+    <span class="fw-bold">{{ a.pending_signups }} / {{ a.signups }}</span>
+  </div>
+  <div class="mb-2 d-flex align-items-center">
+    <i class="ti ti-ticket text-muted me-2"></i>
+    <span class="fw-bold">{{ a.active_passports }} / {{ a.passports }}</span>
+  </div>
+  <div class="mb-2 d-flex align-items-center">
+    <i class="ti ti-currency-dollar text-muted me-2"></i>
+    <span class="fw-bold">{{ a.paid_passports }} / {{ a.unpaid_passports }}</span>
+  </div>
+  <div class="mb-2 d-flex align-items-center">
+    <i class="ti ti-coin text-muted me-2"></i>
+    <span class="fw-bold">${{ "%.2f"|format(a.paid_amount) }} / ${{ "%.2f"|format(a.unpaid_amount) }}</span>
+  </div>
+</div>
+
+
 
         <!-- Footer -->
         <div class="card-footer">

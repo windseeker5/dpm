@@ -453,58 +453,57 @@ def dashboard():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-
     from utils import get_kpi_stats  
-    kpi_data = get_kpi_stats()
-
-
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
     from datetime import datetime
 
-    # Gather activity performance
-    activities = db.session.query(Activity).all()
+    kpi_data = get_kpi_stats()
+    activities = db.session.query(Activity).filter_by(status='active').all()
     activity_cards = []
 
     for a in activities:
-        # Basic KPIs
-        signups = Signup.query.filter_by(activity_id=a.id).count()
-        passports = Passport.query.filter_by(activity_id=a.id).count()
-        paid_passports = Passport.query.filter_by(activity_id=a.id, paid=True).count()
-        revenue = db.session.query(func.sum(Passport.sold_amt)).filter_by(activity_id=a.id, paid=True).scalar() or 0
+        # Signups
+        all_signups = Signup.query.filter_by(activity_id=a.id).all()
+        pending_signups = [s for s in all_signups if s.status == 'pending']
 
-        # 🆕 Additional KPIs
-        pending_signups = Signup.query.filter_by(activity_id=a.id, status="pending").count()
-        active_passports = Passport.query.filter_by(activity_id=a.id, paid=True).count()
-        unpaid_passports = Passport.query.filter_by(activity_id=a.id, paid=False).count()
+        # Passports
+        all_passports = Passport.query.filter_by(activity_id=a.id).all()
+        paid_passports = [p for p in all_passports if p.paid]
+        unpaid_passports = [p for p in all_passports if not p.paid]
+        active_passports = [p for p in paid_passports if p.uses_remaining > 0]
 
-        # 🆕 Days left calculation (safe)
+        # Revenue
+        paid_amount = round(sum(p.sold_amt for p in paid_passports), 2)
+        unpaid_amount = round(sum(p.sold_amt for p in unpaid_passports), 2)
+
+        # Optional: Days left
         if a.end_date:
-            days_left = (a.end_date - datetime.utcnow()).days
-            if days_left < 0:
-                days_left = 0
+            days_left = max((a.end_date - datetime.utcnow()).days, 0)
         else:
             days_left = "N/A"
 
-        # Build the final card dictionary
         activity_cards.append({
             "id": a.id,
             "name": a.name,
             "sessions_included": a.sessions_included,
-            "signups": signups,
-            "pending_signups": pending_signups,
-            "passports": passports,
-            "active_passports": active_passports,
-            "unpaid_passports": unpaid_passports,
-            "paid_passports": paid_passports,
-            "revenue": revenue,
+            "signups": len(all_signups),
+            "pending_signups": len(pending_signups),
+            "passports": len(all_passports),
+            "active_passports": len(active_passports),
+            "unpaid_passports": len(unpaid_passports),
+            "paid_passports": len(paid_passports),
+            "paid_amount": paid_amount,
+            "unpaid_amount": unpaid_amount,
             "goal_revenue": a.goal_revenue,
             "image_filename": a.image_filename,
             "days_left": days_left
         })
 
-
     return render_template("dashboard.html", activities=activity_cards, kpi_data=kpi_data)
+
+
+
 
 
 
