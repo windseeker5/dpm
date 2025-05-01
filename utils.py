@@ -303,7 +303,7 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
 
 
 
-def get_kpi_stats():
+def get_kpi_stats222222222222222():
     from datetime import datetime, timedelta, timezone
     from models import Pass
     from flask import current_app
@@ -348,6 +348,72 @@ def get_kpi_stats():
             }
 
         return kpis
+
+
+
+
+def get_kpi_stats():
+    from datetime import datetime, timedelta, timezone
+    from models import Passport, Signup
+    from flask import current_app
+
+    with current_app.app_context():
+        now = datetime.now(timezone.utc)
+
+        def build_daily_series(model, date_attr, filter_fn=None, days=7):
+            trend = []
+            for i in reversed(range(days)):
+                start = now - timedelta(days=i+1)
+                end = now - timedelta(days=i)
+                query = model.query.filter(getattr(model, date_attr) >= start, getattr(model, date_attr) < end)
+                if filter_fn:
+                    query = query.filter(filter_fn)
+                trend.append(query.count())
+            return trend
+
+        ranges = {
+            "7d": (now - timedelta(days=7), now, 7),
+            "30d": (now - timedelta(days=30), now, 30),
+            "90d": (now - timedelta(days=90), now, 30),
+            "all": (datetime.min.replace(tzinfo=timezone.utc), now, 30),
+        }
+        previous_ranges = {
+            "7d": (now - timedelta(days=14), now - timedelta(days=7)),
+            "30d": (now - timedelta(days=60), now - timedelta(days=30)),
+            "90d": (now - timedelta(days=180), now - timedelta(days=90)),
+            "all": (datetime.min.replace(tzinfo=timezone.utc), now),
+        }
+
+        kpis = {}
+
+        for label, (start, end, trend_days) in ranges.items():
+            prev_start, prev_end = previous_ranges[label]
+
+            current_passports = Passport.query.filter(Passport.created_dt >= start, Passport.created_dt <= end).all()
+            previous_passports = Passport.query.filter(Passport.created_dt >= prev_start, Passport.created_dt <= prev_end).all()
+
+            def total(passports): return sum(p.sold_amt for p in passports if p.paid)
+            def created(passports): return len(passports)
+            def active(passports): return len([p for p in passports if p.uses_remaining > 0])
+            def pending_signups_count(): return Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= start, Signup.signed_up_at <= end).count()
+
+            kpis[label] = {
+                "revenue": round(total(current_passports), 2),
+                "revenue_prev": round(total(previous_passports), 2),
+                "pass_created": created(current_passports),
+                "pass_created_prev": created(previous_passports),
+                "active_users": active(current_passports),
+                "active_users_prev": active(previous_passports),
+                "pending_signups": pending_signups_count(),
+                # Real trend arrays
+                "revenue_trend": build_daily_series(Passport, "created_dt", lambda: Passport.paid == True, trend_days),
+                "active_users_trend": build_daily_series(Passport, "created_dt", lambda: Passport.uses_remaining > 0, trend_days),
+                "pass_created_trend": build_daily_series(Passport, "created_dt", None, trend_days),
+                "pending_signups_trend": build_daily_series(Signup, "signed_up_at", lambda: Signup.status == "pending", trend_days)
+            }
+
+        return kpis
+
 
 
 
