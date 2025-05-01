@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Activity Performance | Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">
+      <i class="ti ti-chart-bar text-primary me-2"></i> Activity Performance
+    </h2>
+
+    <div>
+      <a href="{{ url_for('create_passport') }}" class="btn btn-outline-primary me-2">
+        <i class="ti ti-plus"></i> Create Passport
+      </a>
+      <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
+        <i class="ti ti-scan"></i> Scan Passport
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    {% for a in activities %}
+    <div class="col-md-6 col-xl-4 mb-4">
+      <div class="card shadow-sm rounded-xl overflow-hidden h-100"
+           style="position: relative; background: url('{% if "image_filename" in a and a["image_filename"] %}{{ url_for('static', filename='uploads/activity_images/' + a["image_filename"]) }}{% else %}{{ url_for('static', filename='uploads/default_activity.jpg') }}{% endif %}') center/cover no-repeat;">
+        
+        <!-- Blur Overlay -->
+        <div class="d-flex flex-column justify-content-between h-100 w-100 p-4"
+             style="backdrop-filter: blur(6px); background-color: rgba(0, 0, 0, 0.3);">
+
+          <!-- KPI Info -->
+          <div class="text-white text-center">
+            <h2 class="mb-3">{{ a["name"] }}</h2>
+
+            <div class="row g-2 justify-content-center">
+              <!-- Signups -->
+              <div class="col-6">
+                <div class="card bg-transparent border-0 text-center">
+                  <div class="card-body p-2">
+                    <div class="text-white small">Signups</div>
+                    <div class="fw-bold fs-4">{{ a["pending_signups"] }}/{{ a["total_signups"] }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Passports -->
+              <div class="col-6">
+                <div class="card bg-transparent border-0 text-center">
+                  <div class="card-body p-2">
+                    <div class="text-white small">Passports</div>
+                    <div class="fw-bold fs-4">{{ a["active_passports"] }}/{{ a["total_passports"] }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Revenue -->
+              <div class="col-6">
+                <div class="card bg-transparent border-0 text-center">
+                  <div class="card-body p-2">
+                    <div class="text-white small">Revenue</div>
+                    <div class="fw-bold fs-4">
+                      ${{ "%.2f"|format(a["revenue"]) }}/
+                      ${{ "%.2f"|format(a["goal_revenue"]) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Days Left -->
+              <div class="col-6">
+                <div class="card bg-transparent border-0 text-center">
+                  <div class="card-body p-2">
+                    <div class="text-white small">Days Left</div>
+                    <div class="fw-bold fs-4">{{ a["days_left"] }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Unpaid Passports -->
+              <div class="col-12">
+                <div class="card bg-transparent border-0 text-center">
+                  <div class="card-body p-2">
+                    <div class="text-white small">Unpaid</div>
+                    <div class="fw-bold fs-4">{{ a["unpaid_passports"] }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- View Details Button -->
+          <div class="text-center mt-4">
+            <a href="{{ url_for('activity_dashboard', activity_id=a["id"]) }}" class="btn btn-outline-light w-100">
+              <i class="ti ti-eye"></i> View Details
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

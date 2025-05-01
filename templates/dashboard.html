@@ -1,104 +1,248 @@
 {% extends "base.html" %}
-{% block title %}Activity Performance | Dashboard{% endblock %}
+{% block title %}Dashboard | Activities Overview{% endblock %}
 
 {% block content %}
 <div class="container-xl mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">
-      <i class="ti ti-chart-bar text-primary me-2"></i> Activity Performance
-    </h2>
 
-    <div>
-      <a href="{{ url_for('create_passport') }}" class="btn btn-outline-primary me-2">
-        <i class="ti ti-plus"></i> Create Passport
-      </a>
-      <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
-        <i class="ti ti-scan"></i> Scan Passport
-      </a>
-    </div>
-  </div>
 
-  <div class="row">
-    {% for a in activities %}
-    <div class="col-md-6 col-xl-4 mb-4">
-      <div class="card shadow-sm rounded-xl overflow-hidden h-100"
-           style="position: relative; background: url('{% if "image_filename" in a and a["image_filename"] %}{{ url_for('static', filename='uploads/activity_images/' + a["image_filename"]) }}{% else %}{{ url_for('static', filename='uploads/default_activity.jpg') }}{% endif %}') center/cover no-repeat;">
-        
-        <!-- Blur Overlay -->
-        <div class="d-flex flex-column justify-content-between h-100 w-100 p-4"
-             style="backdrop-filter: blur(6px); background-color: rgba(0, 0, 0, 0.3);">
 
-          <!-- KPI Info -->
-          <div class="text-white text-center">
-            <h2 class="mb-3">{{ a["name"] }}</h2>
 
-            <div class="row g-2 justify-content-center">
-              <!-- Signups -->
-              <div class="col-6">
-                <div class="card bg-transparent border-0 text-center">
-                  <div class="card-body p-2">
-                    <div class="text-white small">Signups</div>
-                    <div class="fw-bold fs-4">{{ a["pending_signups"] }}/{{ a["total_signups"] }}</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Passports -->
-              <div class="col-6">
-                <div class="card bg-transparent border-0 text-center">
-                  <div class="card-body p-2">
-                    <div class="text-white small">Passports</div>
-                    <div class="fw-bold fs-4">{{ a["active_passports"] }}/{{ a["total_passports"] }}</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Revenue -->
-              <div class="col-6">
-                <div class="card bg-transparent border-0 text-center">
-                  <div class="card-body p-2">
-                    <div class="text-white small">Revenue</div>
-                    <div class="fw-bold fs-4">
-                      ${{ "%.2f"|format(a["revenue"]) }}/
-                      ${{ "%.2f"|format(a["goal_revenue"]) }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Days Left -->
-              <div class="col-6">
-                <div class="card bg-transparent border-0 text-center">
-                  <div class="card-body p-2">
-                    <div class="text-white small">Days Left</div>
-                    <div class="fw-bold fs-4">{{ a["days_left"] }}</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Unpaid Passports -->
-              <div class="col-12">
-                <div class="card bg-transparent border-0 text-center">
-                  <div class="card-body p-2">
-                    <div class="text-white small">Unpaid</div>
-                    <div class="fw-bold fs-4">{{ a["unpaid_passports"] }}</div>
-                  </div>
-                </div>
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4">
+    <!-- Revenue -->
+    <div class="col-md-3">
+      <div class="card card-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <div class="text-muted text-uppercase small">Revenue</div>
+              <div class="h2 mb-1" id="revenue-value">$0</div>
+              <div class="small" id="revenue-trend">0%</div>
+            </div>
+            <div class="dropdown">
+              <a class="dropdown-toggle text-secondary" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="revenue-period">Last 7 days</a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item revenue-option" data-period="7d">Last 7 days</a>
+                <a class="dropdown-item revenue-option" data-period="30d">Last 30 days</a>
+                <a class="dropdown-item revenue-option" data-period="90d">Last 90 days</a>
+                <a class="dropdown-item revenue-option" data-period="all">All time</a>
               </div>
             </div>
           </div>
-
-          <!-- View Details Button -->
-          <div class="text-center mt-4">
-            <a href="{{ url_for('activity_dashboard', activity_id=a["id"]) }}" class="btn btn-outline-light w-100">
-              <i class="ti ti-eye"></i> View Details
-            </a>
-          </div>
-
+          <canvas id="revenue-sparkline" height="30" class="mt-2 w-100"></canvas>
         </div>
       </div>
     </div>
-    {% endfor %}
+
+    <!-- Active Passports -->
+    <div class="col-md-3">
+      <div class="card card-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <div class="text-muted text-uppercase small">Active Passports</div>
+              <div class="h2 mb-1" id="users-value">0</div>
+              <div class="small" id="users-trend">0%</div>
+            </div>
+            <div class="dropdown">
+              <a class="dropdown-toggle text-secondary" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="users-period">Last 7 days</a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item users-option" data-period="7d">Last 7 days</a>
+                <a class="dropdown-item users-option" data-period="30d">Last 30 days</a>
+                <a class="dropdown-item users-option" data-period="90d">Last 90 days</a>
+                <a class="dropdown-item users-option" data-period="all">All time</a>
+              </div>
+            </div>
+          </div>
+          <canvas id="users-sparkline" height="30" class="mt-2 w-100"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Passports Created -->
+    <div class="col-md-3">
+      <div class="card card-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <div class="text-muted text-uppercase small">Passports Created</div>
+              <div class="h2 mb-1" id="passes-value">0</div>
+              <div class="small" id="passes-trend">0%</div>
+            </div>
+            <div class="dropdown">
+              <a class="dropdown-toggle text-secondary" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="passes-period">Last 7 days</a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item passes-option" data-period="7d">Last 7 days</a>
+                <a class="dropdown-item passes-option" data-period="30d">Last 30 days</a>
+                <a class="dropdown-item passes-option" data-period="90d">Last 90 days</a>
+                <a class="dropdown-item passes-option" data-period="all">All time</a>
+              </div>
+            </div>
+          </div>
+          <canvas id="passes-sparkline" height="30" class="mt-2 w-100"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Signups -->
+    <div class="col-md-3">
+      <div class="card card-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <div class="text-muted text-uppercase small">Pending Signups</div>
+              <div class="h2 mb-1" id="pending-value">0</div>
+              <div class="small" id="pending-trend">0%</div>
+            </div>
+            <div class="dropdown">
+              <a class="dropdown-toggle text-secondary" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="pending-period">Last 7 days</a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item pending-option" data-period="7d">Last 7 days</a>
+                <a class="dropdown-item pending-option" data-period="30d">Last 30 days</a>
+                <a class="dropdown-item pending-option" data-period="90d">Last 90 days</a>
+                <a class="dropdown-item pending-option" data-period="all">All time</a>
+              </div>
+            </div>
+          </div>
+          <canvas id="pending-sparkline" height="30" class="mt-2 w-100"></canvas>
+        </div>
+      </div>
+    </div>
   </div>
+
+
+
+
+
+
+  <!-- Title -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">
+      <i class="ti ti-dashboard text-primary me-2"></i> Activities Overview
+    </h2>
+  </div>
+
+
+
+
+
+
+<!-- Active Activities List -->
+<div class="row">
+  {% for a in activities %}
+    <div class="col-md-6 col-xl-4 mb-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3 class="card-title mb-0">
+            <i class="ti ti-calendar-event text-primary me-2"></i>{{ a.name }}
+          </h3>
+          <span class="badge bg-blue">{{ a.sessions_included }} sessions</span>
+        </div>
+        <div class="card-body">
+          <div class="mb-2">
+            <i class="ti ti-user-check text-muted me-1"></i>
+            <strong>{{ a.signups }}</strong> signups
+          </div>
+          <div class="mb-2">
+            <i class="ti ti-ticket text-muted me-1"></i>
+            <strong>{{ a.passports }}</strong> passports created
+          </div>
+          <div class="mb-2">
+            <i class="ti ti-currency-dollar text-muted me-1"></i>
+            <strong>{{ a.paid_passports }}</strong> paid
+          </div>
+          <div class="mb-2">
+            <i class="ti ti-coin text-muted me-1"></i>
+            Revenue: <strong>${{ "%.2f"|format(a.revenue) }}</strong>
+          </div>
+        </div>
+        <div class="card-footer text-end">
+          <a href="{{ url_for('activity_dashboard', activity_id=a.id) }}" class="btn btn-sm btn-outline-dark">
+            <i class="ti ti-eye"></i> View Details
+          </a>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
 </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const kpiData = {{ kpi_data | tojson }};
+
+  function createSparkline(ctxId, type, trendList) {
+    const ctx = document.getElementById(ctxId).getContext("2d");
+    new Chart(ctx, {
+      type: type,
+      data: {
+        labels: Array(trendList.length).fill(""),
+        datasets: [{
+          data: trendList,
+          backgroundColor: type === "bar" ? "#206bc4" : "rgba(32,107,196,0.08)",
+          borderColor: type === "line" ? "#206bc4" : undefined,
+          fill: type === "line",
+          tension: 0.4
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { x: { display: false }, y: { display: false } }
+      }
+    });
+  }
+
+  function updateCard(id, metric, period) {
+    const current = kpiData[period][metric];
+    const previous = kpiData[period][`${metric}_prev`] || 0;
+    const trendList = kpiData[period][`${metric}_trend`] || [];
+    const percent = previous > 0 ? ((current - previous) / previous * 100).toFixed(1) : "0.0";
+
+    const val = metric === "revenue" ? `$${current.toLocaleString()}` : current;
+    const trend = `<span class="${percent >= 0 ? 'text-green' : 'text-red'}">${percent}% ${percent >= 0 ? '↑' : '↓'}</span>`;
+
+    document.querySelector(`#${id}-value`).textContent = val;
+    document.querySelector(`#${id}-trend`).innerHTML = trend;
+    document.querySelector(`#${id}-period`).textContent = {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days",
+      "all": "All time"
+    }[period];
+
+    const chartType = id === "revenue" ? "line" : "bar";
+    createSparkline(`${id}-sparkline`, chartType, trendList);
+  }
+
+  [
+    { id: "revenue", metric: "revenue", selector: ".revenue-option" },
+    { id: "passes", metric: "pass_created", selector: ".passes-option" },
+    { id: "users", metric: "active_users", selector: ".users-option" },
+    { id: "pending", metric: "pending_signups", selector: ".pending-option" }
+  ].forEach(({ id, metric, selector }) => {
+    document.querySelectorAll(selector).forEach(el => {
+      el.addEventListener("click", () => updateCard(id, metric, el.dataset.period));
+    });
+    updateCard(id, metric, "7d");
+  });
+});
+</script>
 {% endblock %}
+
+
+
+

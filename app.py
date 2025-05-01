@@ -453,6 +453,11 @@ def dashboard():
     if "admin" not in session:
         return redirect(url_for("login"))
 
+
+    from utils import get_kpi_stats  
+    kpi_data = get_kpi_stats()
+
+
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
     from datetime import datetime
@@ -498,10 +503,8 @@ def dashboard():
             "days_left": days_left
         })
 
-    return render_template("dashboard.html", activities=activity_cards)
 
-
-
+    return render_template("dashboard.html", activities=activity_cards, kpi_data=kpi_data)
 
 
 
