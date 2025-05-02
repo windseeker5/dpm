@@ -108,10 +108,11 @@
 
 <!-- 🟢 Signups Table (pending only) -->
 
-<!-- 🟢 Signups Table (pending only) -->
 {% set pending_signups = signups | selectattr('status', 'equalto', 'pending') | list %}
 {% if pending_signups %}
-<div class="card mb-4">
+
+<div class="card mb-4 d-none d-md-block">  
+
   <div class="card-header d-flex justify-content-between align-items-center">
     <h3 class="card-title">Activity Signups (Pending)</h3>
     <span class="badge bg-yellow-lt">{{ pending_signups|length }} pending</span>
@@ -291,6 +292,9 @@
         <thead>
           <tr>
             <th>User</th>
+
+            <th class="d-table-cell d-md-none">State</th>
+
             <th class="d-none d-md-table-cell">Activity</th>
             <th class="d-none d-md-table-cell">Created</th>
             <th class="d-none d-md-table-cell">Remaining</th>
@@ -301,12 +305,28 @@
         <tbody>
           {% for p in passes %}
           <tr>
+
+
             <td>
               <div class="d-flex align-items-center">
-                <span class="avatar me-2 rounded" style="background-image: url('https://www.gravatar.com/avatar/{{ p.user.email|lower|trim|encode_md5 }}?d=identicon')"></span>
+                <span class="avatar me-2 rounded"
+                      style="width: 40px; height: 40px; min-width: 40px; flex-shrink: 0; background-size: cover; background-image: url('https://www.gravatar.com/avatar/{{ p.user.email|lower|trim|encode_md5 }}?d=identicon');"></span>
                 {{ p.user.name }}
               </div>
             </td>
+
+
+
+
+            <td class="d-table-cell d-md-none">
+              {% if p.paid %}
+                <span class="badge bg-green-lt">{{ p.uses_remaining }}</span>
+              {% else %}
+                <span class="badge bg-red-lt">{{ p.uses_remaining }}</span>
+              {% endif %}
+            </td>
+            
+
             <td class="d-none d-md-table-cell">{{ p.activity.name if p.activity else '-' }}</td>
             <td class="d-none d-md-table-cell">{{ p.created_dt.strftime('%Y-%m-%d') }}</td>
             <td class="d-none d-md-table-cell">{{ p.uses_remaining }}</td>
@@ -390,6 +410,19 @@
     No active or unpaid passports found for this activity.
   </div>
 {% endif %}
+
+
+
+
+<!-- 🔘 Floating Add Button (Mobile Only) -->
+<a href="{{ url_for('create_passport') }}"
+   class="btn btn-primary rounded-circle shadow d-md-none p-0 position-fixed"
+   id="mobileAddBtn"
+   style="bottom: 80px; right: 20px; z-index: 1055; width: 56px; height: 56px; display: none;">
+  <div class="d-flex justify-content-center align-items-center" style="width: 100%; height: 100%;">
+    <i class="ti ti-plus" style="font-size: 24px;"></i>
+  </div>
+</a>
 
 
 
@@ -488,6 +521,28 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
  
 
+
+
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    const mobileAddBtn = document.getElementById('mobileAddBtn');
+  
+    function toggleAddButton() {
+      if (window.scrollY > 150) {
+        mobileAddBtn.style.setProperty('display', 'block', 'important');
+      } else {
+        mobileAddBtn.style.setProperty('display', 'none', 'important');
+      }
+    }
+  
+    // Initial check
+    toggleAddButton();
+  
+    // Respond to scroll
+    window.addEventListener('scroll', toggleAddButton);
+  });
+  </script>
+  
 
 
 
