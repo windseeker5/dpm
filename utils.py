@@ -9,7 +9,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
-from models import Setting, db, Pass, Redemption, Admin, EbankPayment, ReminderLog
+# from models import Setting, db, Pass, Redemption, Admin, EbankPayment, ReminderLog
+from models import Setting, db, Passport, Redemption, Admin, EbankPayment, ReminderLog
+
+
+
 
 import threading
 import logging
@@ -300,54 +304,6 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
     return results
 
 
-
-
-
-def get_kpi_stats222222222222222():
-    from datetime import datetime, timedelta, timezone
-    from models import Pass
-    from flask import current_app
-
-    with current_app.app_context():
-        now = datetime.now(timezone.utc)
-
-        # Define current and previous ranges
-        ranges = {
-            "7d": (now - timedelta(days=7), now),
-            "30d": (now - timedelta(days=30), now),
-            "90d": (now - timedelta(days=90), now),
-            "all": (datetime.min.replace(tzinfo=timezone.utc), now),
-        }
-        previous_ranges = {
-            "7d": (now - timedelta(days=14), now - timedelta(days=7)),
-            "30d": (now - timedelta(days=60), now - timedelta(days=30)),
-            "90d": (now - timedelta(days=180), now - timedelta(days=90)),
-            "all": (datetime.min.replace(tzinfo=timezone.utc), now),  # same
-        }
-
-        kpis = {}
-
-        for label in ranges:
-            start, end = ranges[label]
-            prev_start, prev_end = previous_ranges[label]
-
-            current_passes = Pass.query.filter(Pass.pass_created_dt >= start, Pass.pass_created_dt <= end).all()
-            previous_passes = Pass.query.filter(Pass.pass_created_dt >= prev_start, Pass.pass_created_dt <= prev_end).all()
-
-            def total(passes): return sum(p.sold_amt for p in passes)
-            def created(passes): return len(passes)
-            def active(passes): return len([p for p in passes if p.games_remaining > 0])
-
-            kpis[label] = {
-                "revenue": round(total(current_passes), 2),
-                "revenue_prev": round(total(previous_passes), 2),
-                "pass_created": created(current_passes),
-                "pass_created_prev": created(previous_passes),
-                "active_users": active(current_passes),
-                "active_users_prev": active(previous_passes)
-            }
-
-        return kpis
 
 
 
