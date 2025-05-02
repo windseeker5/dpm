@@ -59,7 +59,10 @@ from utils import (
 
 # 🧠 Data Tools
 from collections import defaultdict
-from chatbot.routes_chatbot import chat_bp
+
+#from app.chatbot.to_delete_routes_chatbot import chat_bp
+#from chatbot.routes_chatbot import chat_bp
+from chatbot import chat_bp
 
 
 # ✅ Pass the full datetime object
@@ -151,6 +154,8 @@ with app.app_context():
     app.config["MAIL_USERNAME"] = Config.get_setting(app, "MAIL_USERNAME", "")
     app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
+
+
 
 
 
@@ -408,15 +413,6 @@ def download_unsplash_image():
     except Exception as e:
         print("❌ Error downloading Unsplash image:", e)
         return jsonify({"success": False})
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1447,8 +1443,6 @@ def jinja_utc_to_local_filter(dt):
 
 
 
-
-
 @app.route("/create-passport", methods=["GET", "POST"])
 def create_passport():
     from models import Passport, User, AdminActionLog, Activity
@@ -1652,6 +1646,8 @@ def mark_passport_paid(passport_id):
 
     flash(f"✅ Passport {passport.pass_code} marked as paid. Email sent.", "success")
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+
+
 
 
 
