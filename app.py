@@ -513,7 +513,6 @@ def dashboard():
 
 
 
-
 @app.route("/admin/signup/mark-paid/<int:signup_id>", methods=["POST"])
 def mark_signup_paid(signup_id):
     if "admin" not in session:
@@ -1167,13 +1166,6 @@ def users_json():
 
 
 
-
-
-
-
-
-
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -1215,7 +1207,7 @@ def login():
 
 
 
-# To delete 
+
 @app.route("/pass/<pass_code>")
 def show_pass(pass_code):
     from models import Passport
