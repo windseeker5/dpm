@@ -358,16 +358,19 @@ def test_email_match():
 ##
 
 
+
 # 🔵 Unsplash Search API
 @app.route("/unsplash-search")
 def unsplash_search():
     query = request.args.get("q", "")
+    page = int(request.args.get("page", 1))  # ✅ Get page from query string
+
     if not query:
         return jsonify([])
 
     access_key = "DpPe0DZwUlYsEjrnZf-E5njVC0VLePUmHmRAhBELgWc"  # 🔥 Replace this with your real key
-    url = f"https://api.unsplash.com/search/photos?query={query}&per_page=9&client_id={access_key}"
-    
+    url = f"https://api.unsplash.com/search/photos?query={query}&page={page}&per_page=9&client_id={access_key}"  # ✅ Add `page`
+
     try:
         resp = requests.get(url)
         data = resp.json()
@@ -692,7 +695,7 @@ def approve_and_create_pass(signup_id):
         timestamp=now_utc
     )
 
-    flash("✅ Signup approved and passport created! Email sent to user.", "success")
+    flash("Signup approved and passport created! Email sent to user.", "success")
     return redirect(url_for("activity_dashboard", activity_id=signup.activity_id))
 
 
@@ -723,6 +726,8 @@ def create_activity():
         goal_revenue = float(request.form.get("goal_revenue", 0.0))
         cost_to_run = float(request.form.get("cost_to_run", 0.0))
         payment_instructions = request.form.get("payment_instructions", "").strip()
+
+        status = request.form.get("status", "active")
 
         # 🖼️ Handle image selection
         uploaded_file = request.files.get('upload_image')
@@ -803,6 +808,8 @@ def edit_activity(activity_id):
         activity.cost_to_run = float(request.form.get("cost_to_run", 0.0))
         activity.payment_instructions = request.form.get("payment_instructions", "").strip()
 
+        activity.status = request.form.get("status", "active")
+
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
 
@@ -835,8 +842,9 @@ def edit_activity(activity_id):
         ))
         db.session.commit()
 
-        flash("✅ Activity updated successfully!", "success")
-        return redirect(url_for("edit_activity", activity_id=activity.id))
+        flash("Activity updated successfully!", "success")
+        #return redirect(url_for("edit_activity", activity_id=activity.id))
+        return redirect(url_for("activity_dashboard", activity_id=activity.id))
 
     return render_template("activity_form.html", activity=activity)
 
@@ -1327,7 +1335,7 @@ def edit_passport(passport_id):
         passport.notes = request.form.get("notes", passport.notes).strip()
 
         db.session.commit()
-        flash("✅ Passport updated successfully.", "success")
+        flash("Passport updated successfully.", "success")
         return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
     # 🟢 FIX: fetch activities and pass to template
@@ -1586,7 +1594,7 @@ def redeem_passport(pass_code):
             timestamp=now_utc
         )
 
-        flash(f"✅ Session redeemed! {passport.uses_remaining} uses left.", "success")
+        flash(f"Session redeemed! {passport.uses_remaining} uses left.", "success")
     else:
         flash("❌ No uses left on this passport!", "error")
 
@@ -1644,7 +1652,7 @@ def mark_passport_paid(passport_id):
         timestamp=now_utc
     )
 
-    flash(f"✅ Passport {passport.pass_code} marked as paid. Email sent.", "success")
+    flash(f" Passport {passport.pass_code} marked as paid. Email sent.", "success")
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
 
