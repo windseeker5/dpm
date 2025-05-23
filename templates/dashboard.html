@@ -149,11 +149,14 @@
         </div>
 
         <!-- Body -->
+ 
         <div class="card-body">
           <div class="mb-2 d-flex align-items-center">
             <i class="ti ti-user text-muted me-2"></i>
             <strong class="me-1">{{ a.pending_signups }}</strong>
-            <span class="text-muted small me-2">Pending |</span>
+            <span class="text-muted small me-2 d-flex align-items-center">
+              Pending <i class="ti ti-stack mx-1 text-muted" style="font-size: 14px;"></i>
+            </span>
             <strong class="me-1">{{ a.signups }}</strong>
             <span class="text-muted small">Total</span>
           </div>
@@ -161,7 +164,9 @@
           <div class="mb-2 d-flex align-items-center">
             <i class="ti ti-ticket text-muted me-2"></i>
             <strong class="me-1">{{ a.active_passports }}</strong>
-            <span class="text-muted small me-2">Active |</span>
+            <span class="text-muted small me-2 d-flex align-items-center">
+              Active <i class="ti ti-stack mx-1 text-muted" style="font-size: 14px;"></i>
+            </span>
             <strong class="me-1">{{ a.passports }}</strong>
             <span class="text-muted small">Created</span>
           </div>
@@ -169,7 +174,9 @@
           <div class="mb-2 d-flex align-items-center">
             <i class="ti ti-currency-dollar text-muted me-2"></i>
             <strong class="me-1">{{ a.paid_passports }}</strong>
-            <span class="text-muted small me-2">Paid |</span>
+            <span class="text-muted small me-2 d-flex align-items-center">
+              Paid <i class="ti ti-stack mx-1 text-muted" style="font-size: 14px;"></i>
+            </span>
             <strong class="me-1">{{ a.unpaid_passports }}</strong>
             <span class="text-muted small">Unpaid</span>
           </div>
@@ -177,11 +184,15 @@
           <div class="mb-2 d-flex align-items-center">
             <i class="ti ti-coin text-muted me-2"></i>
             <strong class="me-1">${{ "%.2f"|format(a.paid_amount) }}</strong>
-            <span class="text-muted small me-2">Paid |</span>
+            <span class="text-muted small me-2 d-flex align-items-center">
+              Paid <i class="ti ti-stack mx-1 text-muted" style="font-size: 14px;"></i>
+            </span>
             <strong class="me-1">${{ "%.2f"|format(a.unpaid_amount) }}</strong>
             <span class="text-muted small">Unpaid</span>
           </div>
         </div>
+
+
 
         <!-- Footer -->
         <div class="card-footer">
@@ -201,11 +212,11 @@
 
 
 
-<!-- 🔻 Last 20 Activity Transactions -->
+<!-- 🔻 Last 15 Redeem Transactions -->
 <div class="mt-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0" style="font-family: 'Poppins', sans-serif;">
-      <i class="ti ti-history text-orange me-2"></i> Last 20 Activity Transactions
+      <i class="ti ti-ticket text-pink me-2"></i> Last 15 Redeem Transactions
     </h2>
   </div>
 
@@ -220,38 +231,12 @@
           </tr>
         </thead>
         <tbody>
-          {% for log in logs %}
+          {% set redeem_logs = logs | selectattr("type", "equalto", "Passport Redeemed") | list %}
+          {% for log in redeem_logs[:15] %}
           <tr>
             <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
             <td data-type="{{ log.type }}">
-              {% if log.type == 'Passport Redeemed' %}
-                <i class="ti ti-ticket text-danger"></i>
-              {% elif log.type == 'Email Sent' %}
-                <i class="ti ti-mail text-info"></i>
-              {% elif log.type == 'Passport Created' %}
-                <i class="ti ti-id text-lime"></i>
-              {% elif log.type == 'Interact Payment' %}
-                <i class="ti ti-currency-dollar text-success"></i>
-              {% elif log.type == 'Marked Paid' %}
-                <i class="ti ti-check text-green"></i>
-              {% elif log.type == 'Reminder Sent' %}
-                <i class="ti ti-bell text-purple"></i>
-              {% elif log.type == 'Signup Submitted' %}
-                <i class="ti ti-user-plus text-success"></i>
-              {% elif log.type == 'Signup Approved' %}
-                <i class="ti ti-user-check text-green"></i>
-              {% elif log.type == 'Signup Rejected' %}
-                <i class="ti ti-user-x text-danger"></i>
-              {% elif log.type == 'Signup Cancelled' %}
-                <i class="ti ti-user-x text-danger"></i>
-              {% elif log.type == 'Activity Created' %}
-                <i class="ti ti-target text-orange"></i>
-              {% elif log.type == 'Admin Action' %}
-                <i class="ti ti-settings text-muted"></i>
-              {% else %}
-                <i class="ti ti-activity text-muted"></i>
-              {% endif %}
-              {{ log.type }}
+              <i class="ti ti-ticket text-danger"></i> {{ log.type }}
             </td>
             <td>{{ log.details }}</td>
           </tr>
@@ -261,6 +246,7 @@
     </div>
   </div>
 </div>
+
 
 
 
