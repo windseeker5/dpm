@@ -279,35 +279,45 @@
 </div>
 
 
-
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const kpiData = {{ kpi_data | tojson }};
 
-  function createSparkline(ctxId, type, trendList) {
+  function createSparkline(ctxId, chartType, trendList) {
     const ctx = document.getElementById(ctxId).getContext("2d");
     new Chart(ctx, {
-      type: type,
+      type: chartType,
       data: {
-        labels: Array(trendList.length).fill(""),
+        labels: trendList.map((_, i) => i + 1),
         datasets: [{
           data: trendList,
-          backgroundColor: type === "bar" ? "#206bc4" : "rgba(32,107,196,0.08)",
-          borderColor: type === "line" ? "#206bc4" : undefined,
-          fill: type === "line",
-          tension: 0.4
+          backgroundColor: chartType === "bar" ? "#206bc4" : "rgba(32,107,196,0.1)",
+          borderColor: chartType === "line" ? "#206bc4" : undefined,
+          fill: chartType === "line",
+          tension: 0.4,
+          borderWidth: chartType === "line" ? 2 : 0,
+          pointRadius: 0
         }]
       },
       options: {
-        plugins: { legend: { display: false } },
-        scales: { x: { display: false }, y: { display: false } }
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: { display: false },
+          y: { display: false }
+        },
+        elements: {
+          point: { radius: 0 } // No points on line chart
+        }
       }
     });
   }
 
-  function updateCard(id, metric, period) {
+  function updateCard(id, metric, period, chartType) {
     const current = kpiData[period][metric];
     const previous = kpiData[period][`${metric}_prev`] || 0;
     const trendList = kpiData[period][`${metric}_trend`] || [];
@@ -325,23 +335,23 @@ document.addEventListener("DOMContentLoaded", function () {
       "all": "All time"
     }[period];
 
-    const chartType = id === "revenue" ? "line" : "bar";
     createSparkline(`${id}-sparkline`, chartType, trendList);
   }
 
   [
-    { id: "revenue", metric: "revenue", selector: ".revenue-option" },
-    { id: "passes", metric: "pass_created", selector: ".passes-option" },
-    { id: "users", metric: "active_users", selector: ".users-option" },
-    { id: "pending", metric: "pending_signups", selector: ".pending-option" }
-  ].forEach(({ id, metric, selector }) => {
+    { id: "revenue", metric: "revenue", selector: ".revenue-option", chartType: "line" },
+    { id: "passes", metric: "pass_created", selector: ".passes-option", chartType: "bar" },
+    { id: "users", metric: "active_users", selector: ".users-option", chartType: "bar" },
+    { id: "pending", metric: "pending_signups", selector: ".pending-option", chartType: "bar" }
+  ].forEach(({ id, metric, selector, chartType }) => {
     document.querySelectorAll(selector).forEach(el => {
-      el.addEventListener("click", () => updateCard(id, metric, el.dataset.period));
+      el.addEventListener("click", () => updateCard(id, metric, el.dataset.period, chartType));
     });
-    updateCard(id, metric, "7d");
+    updateCard(id, metric, "7d", chartType);
   });
 });
 </script>
+
 
 
 {% endblock %}
