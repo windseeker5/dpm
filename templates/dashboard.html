@@ -152,81 +152,56 @@
 
 <!-- Active Activities List -->
 <div class="row">
+
   {% for a in activities %}
-    <div class="col-md-6 col-xl-4 mb-4">
-      <div class="card shadow-sm h-100">
+  <div class="col-md-6 col-xl-4 mb-4">
+    <div class="card activity-card h-100 shadow-sm rounded-2 overflow-hidden">
 
-        <!-- Image -->
-        {% if a.image_filename %}
-        <img src="{{ url_for('static', filename='uploads/activity_images/' ~ a.image_filename) }}"
-             class="card-img-top" alt="{{ a.name }}"
-             style="height: 120px; object-fit: cover;">
+      <!-- 🖼 Image -->
+      {% if a.image_filename %}
+      <img src="{{ url_for('static', filename='uploads/activity_images/' ~ a.image_filename) }}"
+           class="card-img-top" alt="{{ a.name }}"
+           style="height: 130px; object-fit: cover;">
+      {% endif %}
+
+      <!-- 🔹 Header -->
+      <div class="px-3 pt-3 pb-1 d-flex justify-content-between align-items-start">
+
+        <div class="fw-semibold text-dark fs-3">
+          <i class="ti ti-activity text-pink me-1"></i> {{ a.name }}
+        </div>
+
+        {% if a.days_left != "N/A" %}
+        <small class="text-muted">{{ a.days_left }}d left</small>
         {% endif %}
-      
-
-        <!-- Header -->
-        <div class="card-header d-flex align-items-center">
-          <h3 class="card-title mb-0">
-            <i class="ti ti-activity text-pink me-2"></i>{{ a.name }}
-          </h3>
-        </div>
-
-        <!-- Body -->
- 
-        <div class="card-body">
-          <div class="mb-2 d-flex align-items-center">
-            <i class="ti ti-user text-muted me-2"></i>
-            <strong class="me-1">{{ a.pending_signups }}</strong>
-            <span class="text-muted small me-2 d-flex align-items-center">
-              Pending <i class="ti ti-stack mx-1 text-muted" style="font-size: 14px;"></i>
-            </span>
-            <strong class="me-1">{{ a.signups }}</strong>
-            <span class="text-muted small">Total</span>
-          </div>
-
-          <div class="mb-2 d-flex align-items-center">
-            <i class="ti ti-ticket text-muted me-2"></i>
-            <strong class="me-1">{{ a.active_passports }}</strong>
-            <span class="text-muted small me-2 d-flex align-items-center">
-              Active <i class="ti ti-stack mx-1 text-muted" style="font-size: 14px;"></i>
-            </span>
-            <strong class="me-1">{{ a.passports }}</strong>
-            <span class="text-muted small">Created</span>
-          </div>
-
-          <div class="mb-2 d-flex align-items-center">
-            <i class="ti ti-currency-dollar text-muted me-2"></i>
-            <strong class="me-1">{{ a.paid_passports }}</strong>
-            <span class="text-muted small me-2 d-flex align-items-center">
-              Paid <i class="ti ti-stack mx-1 text-muted" style="font-size: 14px;"></i>
-            </span>
-            <strong class="me-1">{{ a.unpaid_passports }}</strong>
-            <span class="text-muted small">Unpaid</span>
-          </div>
-
-          <div class="mb-2 d-flex align-items-center">
-            <i class="ti ti-coin text-muted me-2"></i>
-            <strong class="me-1">${{ "%.2f"|format(a.paid_amount) }}</strong>
-            <span class="text-muted small me-2 d-flex align-items-center">
-              Paid <i class="ti ti-stack mx-1 text-muted" style="font-size: 14px;"></i>
-            </span>
-            <strong class="me-1">${{ "%.2f"|format(a.unpaid_amount) }}</strong>
-            <span class="text-muted small">Unpaid</span>
-          </div>
-        </div>
-
-
-
-        <!-- Footer -->
-        <div class="card-footer">
-          <a href="{{ url_for('activity_dashboard', activity_id=a.id) }}" class="btn btn-primary w-100">
-            <i class="ti ti-chevron-right me-1"></i> Open Activity
-          </a>
-        </div>
-
       </div>
+
+      <!-- 📊 Stats Body -->
+      <div class="card-body pt-2 pb-1 px-3">
+        <div class="row g-2 small text-muted">
+          <div class="col-6"><i class="ti ti-user me-1"></i> {{ a.pending_signups }} Pending</div>
+          <div class="col-6"><i class="ti ti-users me-1"></i> {{ a.signups }} Total</div>
+
+          <div class="col-6"><i class="ti ti-ticket me-1 text-success"></i> {{ a.active_passports }} Active</div>
+          <div class="col-6"><i class="ti ti-ticket me-1 text-muted"></i> {{ a.passports }} Created</div>
+
+          <div class="col-6"><i class="ti ti-currency-dollar me-1 text-green"></i> {{ "%.2f"|format(a.paid_amount) }} Paid</div>
+          <div class="col-6"><i class="ti ti-currency-dollar me-1 text-red"></i> {{ "%.2f"|format(a.unpaid_amount) }} Unpaid</div>
+        </div>
+      </div>
+
+      <!-- 🔘 Footer -->
+      <div class="card-footer border-0 pt-2 pb-3 bg-white">
+        <a href="{{ url_for('activity_dashboard', activity_id=a.id) }}" class="btn btn-outline-primary w-100">
+          <i class="ti ti-chevron-right me-1"></i> View Details
+        </a>
+      </div>
+
     </div>
-  {% endfor %}
+  </div>
+{% endfor %}
+
+
 </div>
 
 
