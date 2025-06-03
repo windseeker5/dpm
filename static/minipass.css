@@ -32,6 +32,14 @@
   
 
 
+/* Hover effect for activity cards */
+.card.activity-card {
+  transition: transform 0.2s ease-in-out;
+}
+.card.activity-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(32, 107, 196, 0.12);
+}
 
 
 
