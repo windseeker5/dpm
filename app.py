@@ -1379,6 +1379,41 @@ def activity_log():
 
 
 
+@app.route("/activities")
+def list_activities():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    q = request.args.get("q", "").strip().lower()
+    query = Activity.query.order_by(Activity.created_dt.desc())
+
+    if q:
+        query = query.filter(Activity.name.ilike(f"%{q}%"))
+
+    activities = query.all()
+    return render_template("activities.html", activities=activities)
+
+
+
+
+@app.route("/delete-activity/<int:activity_id>", methods=["POST"])
+def delete_activity(activity_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    activity = db.session.get(Activity, activity_id)
+    if not activity:
+        flash("❌ Activity not found.", "error")
+        return redirect(url_for("list_activities"))
+
+    db.session.delete(activity)
+    db.session.commit()
+    flash("✅ Activity deleted successfully.", "success")
+    return redirect(url_for("list_activities"))
+
+
+
+
 
 
 
@@ -1599,11 +1634,6 @@ def redeem_passport(pass_code):
         flash("❌ No uses left on this passport!", "error")
 
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
-
-
-
-
-
 
 
 
