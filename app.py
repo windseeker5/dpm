@@ -11,6 +11,7 @@ import stripe
 import qrcode
 from datetime import datetime, timezone
 
+
 # 🌐 Flask Core
 from flask import (
     Flask, render_template, render_template_string, request, redirect,
@@ -1392,6 +1393,193 @@ def list_activities():
 
     activities = query.all()
     return render_template("activities.html", activities=activities)
+
+
+
+
+@app.route("/admin/activity-expenses/<int:activity_id>", methods=["GET", "POST"])
+def activity_expenses(activity_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    activity = Activity.query.get(activity_id)
+    if not activity:
+        flash("❌ Activity not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    from models import Expense
+    import os
+    import uuid
+    from datetime import datetime as dt
+
+    # Handle new expense submission
+    if request.method == "POST":
+        category = request.form["category"].strip()
+        amount = float(request.form["amount"])
+        date = dt.strptime(request.form["date"], "%Y-%m-%d")
+        description = request.form.get("description", "").strip()
+        created_by = session.get("admin", "unknown")
+
+        # 🔧 Handle receipt upload
+        receipt_file = request.files.get("receipt")
+        receipt_filename = None
+
+        if receipt_file and receipt_file.filename:
+            ext = os.path.splitext(receipt_file.filename)[1].lower()
+            allowed_exts = [".jpg", ".jpeg", ".png", ".gif", ".pdf"]
+            if ext in allowed_exts:
+                upload_folder = os.path.join("static", "uploads", "receipts")
+                os.makedirs(upload_folder, exist_ok=True)
+                receipt_filename = f"receipt_{uuid.uuid4().hex[:10]}{ext}"
+                receipt_path = os.path.join(upload_folder, receipt_filename)
+                receipt_file.save(receipt_path)
+
+        # ✅ Save Expense
+        new_exp = Expense(
+            activity_id=activity.id,
+            category=category,
+            amount=amount,
+            date=date,
+            description=description,
+            created_by=created_by,
+            receipt_filename=receipt_filename
+        )
+        db.session.add(new_exp)
+        db.session.commit()
+        flash("✅ Expense added.", "success")
+
+    # Fetch expenses
+    expenses = Expense.query.filter_by(activity_id=activity.id).order_by(Expense.date.desc()).all()
+
+    # Summary logic
+    cogs = [e for e in expenses if "cost of goods sold" in e.category.lower()]
+    opex = [e for e in expenses if "cost of goods sold" not in e.category.lower()]
+
+
+
+    # ✅ Replace goal revenue with actual paid revenue
+    from models import Passport  # Make sure it's imported
+
+    paid_passports = Passport.query.filter_by(activity_id=activity.id, paid=True).all()
+    actual_revenue = round(sum(p.sold_amt for p in paid_passports), 2)
+
+    summary = {
+        "gross_revenue": actual_revenue,
+        "cogs_total": round(sum(e.amount for e in cogs), 2),
+        "opex_total": round(sum(e.amount for e in opex), 2),
+    }
+    summary["total_expenses"] = summary["cogs_total"] + summary["opex_total"]
+    summary["gross_profit"] = summary["gross_revenue"] - summary["cogs_total"]
+    summary["net_income"] = summary["gross_revenue"] - summary["total_expenses"]
+
+
+    categories = [
+        "Cost of Goods Sold",
+        "Advertising & Marketing",
+        "Bank & Payment Fees",
+        "Business Insurance",
+        "Contractor / Subcontractor Fees",
+        "Dues & Subscriptions",
+        "Equipment Rental",
+        "Event Supplies",
+        "Facility Rental",
+        "Food & Beverages",
+        "Licenses & Permits",
+        "Office Supplies",
+        "Payroll & Wages",
+        "Postage & Delivery",
+        "Printing",
+        "Professional Fees",
+        "Software & IT Services",
+        "Telephone & Internet",
+        "Transportation / Travel",
+        "Utilities",
+        "Other / Miscellaneous"
+    ]
+
+    return render_template(
+        "activity_expenses.html",
+        activity=activity,
+        expenses=expenses,
+        summary=summary,
+        categories=categories,
+        now=dt.now
+    )
+
+
+
+
+@app.route("/admin/expense/edit/<int:expense_id>", methods=["GET", "POST"])
+def edit_expense(expense_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Expense
+    import os
+    import uuid
+    from datetime import datetime as dt
+
+    expense = Expense.query.get(expense_id)
+    if not expense:
+        flash("❌ Expense not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        # Update fields
+        expense.category = request.form["category"].strip()
+        expense.amount = float(request.form["amount"])
+        expense.date = dt.strptime(request.form["date"], "%Y-%m-%d")
+        expense.description = request.form.get("description", "").strip()
+
+        # Handle receipt replacement
+        receipt_file = request.files.get("receipt")
+        if receipt_file and receipt_file.filename:
+            ext = os.path.splitext(receipt_file.filename)[1].lower()
+            allowed_exts = [".jpg", ".jpeg", ".png", ".gif", ".pdf"]
+            if ext in allowed_exts:
+                upload_folder = os.path.join("static", "uploads", "receipts")
+                os.makedirs(upload_folder, exist_ok=True)
+                new_filename = f"receipt_{uuid.uuid4().hex[:10]}{ext}"
+                new_filepath = os.path.join(upload_folder, new_filename)
+                receipt_file.save(new_filepath)
+
+                # ✅ Remove old file
+                if expense.receipt_filename:
+                    old_path = os.path.join(upload_folder, expense.receipt_filename)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+
+                expense.receipt_filename = new_filename
+
+        db.session.commit()
+        flash("✅ Expense updated.", "success")
+        return redirect(url_for("activity_expenses", activity_id=expense.activity_id))
+
+    categories = [
+        "Cost of Goods Sold",
+        "Advertising & Marketing",
+        "Bank & Payment Fees",
+        "Business Insurance",
+        "Contractor / Subcontractor Fees",
+        "Dues & Subscriptions",
+        "Equipment Rental",
+        "Event Supplies",
+        "Facility Rental",
+        "Food & Beverages",
+        "Licenses & Permits",
+        "Office Supplies",
+        "Payroll & Wages",
+        "Postage & Delivery",
+        "Printing",
+        "Professional Fees",
+        "Software & IT Services",
+        "Telephone & Internet",
+        "Transportation / Travel",
+        "Utilities",
+        "Other / Miscellaneous"
+    ]
+
+    return render_template("edit_expense.html", expense=expense, categories=categories)
 
 
 
