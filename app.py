@@ -87,6 +87,18 @@ import time
 
 
 
+from flask import render_template, request, redirect, url_for, flash
+from models import db, Activity, Income
+from datetime import datetime
+
+
+from models import Expense
+import os
+import uuid
+from datetime import datetime as dt
+
+
+
 
 env = os.environ.get("FLASK_ENV", "prod").lower()
 db_filename = "dev_database.db" if env == "dev" else "prod_database.db"
@@ -1397,189 +1409,180 @@ def list_activities():
 
 
 
-@app.route("/admin/activity-expenses/<int:activity_id>", methods=["GET", "POST"])
-def activity_expenses(activity_id):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    activity = Activity.query.get(activity_id)
-    if not activity:
-        flash("❌ Activity not found.", "error")
-        return redirect(url_for("dashboard"))
-
-    from models import Expense
-    import os
-    import uuid
-    from datetime import datetime as dt
-
-    # Handle new expense submission
-    if request.method == "POST":
-        category = request.form["category"].strip()
-        amount = float(request.form["amount"])
-        date = dt.strptime(request.form["date"], "%Y-%m-%d")
-        description = request.form.get("description", "").strip()
-        created_by = session.get("admin", "unknown")
-
-        # 🔧 Handle receipt upload
-        receipt_file = request.files.get("receipt")
-        receipt_filename = None
-
-        if receipt_file and receipt_file.filename:
-            ext = os.path.splitext(receipt_file.filename)[1].lower()
-            allowed_exts = [".jpg", ".jpeg", ".png", ".gif", ".pdf"]
-            if ext in allowed_exts:
-                upload_folder = os.path.join("static", "uploads", "receipts")
-                os.makedirs(upload_folder, exist_ok=True)
-                receipt_filename = f"receipt_{uuid.uuid4().hex[:10]}{ext}"
-                receipt_path = os.path.join(upload_folder, receipt_filename)
-                receipt_file.save(receipt_path)
-
-        # ✅ Save Expense
-        new_exp = Expense(
-            activity_id=activity.id,
-            category=category,
-            amount=amount,
-            date=date,
-            description=description,
-            created_by=created_by,
-            receipt_filename=receipt_filename
-        )
-        db.session.add(new_exp)
-        db.session.commit()
-        flash("✅ Expense added.", "success")
-
-    # Fetch expenses
-    expenses = Expense.query.filter_by(activity_id=activity.id).order_by(Expense.date.desc()).all()
-
-    # Summary logic
-    cogs = [e for e in expenses if "cost of goods sold" in e.category.lower()]
-    opex = [e for e in expenses if "cost of goods sold" not in e.category.lower()]
 
 
 
-    # ✅ Replace goal revenue with actual paid revenue
-    from models import Passport  # Make sure it's imported
-
-    paid_passports = Passport.query.filter_by(activity_id=activity.id, paid=True).all()
-    actual_revenue = round(sum(p.sold_amt for p in paid_passports), 2)
-
-    summary = {
-        "gross_revenue": actual_revenue,
-        "cogs_total": round(sum(e.amount for e in cogs), 2),
-        "opex_total": round(sum(e.amount for e in opex), 2),
-    }
-    summary["total_expenses"] = summary["cogs_total"] + summary["opex_total"]
-    summary["gross_profit"] = summary["gross_revenue"] - summary["cogs_total"]
-    summary["net_income"] = summary["gross_revenue"] - summary["total_expenses"]
 
 
-    categories = [
-        "Cost of Goods Sold",
-        "Advertising & Marketing",
-        "Bank & Payment Fees",
-        "Business Insurance",
-        "Contractor / Subcontractor Fees",
-        "Dues & Subscriptions",
-        "Equipment Rental",
-        "Event Supplies",
-        "Facility Rental",
-        "Food & Beverages",
-        "Licenses & Permits",
-        "Office Supplies",
-        "Payroll & Wages",
-        "Postage & Delivery",
-        "Printing",
-        "Professional Fees",
-        "Software & IT Services",
-        "Telephone & Internet",
-        "Transportation / Travel",
-        "Utilities",
-        "Other / Miscellaneous"
+
+@app.route("/admin/activity-income/<int:activity_id>", methods=["GET", "POST"])
+@app.route("/admin/activity-income/<int:activity_id>/edit/<int:income_id>", methods=["GET", "POST"])
+def activity_income(activity_id, income_id=None):
+    activity = Activity.query.get_or_404(activity_id)
+    income = Income.query.get(income_id) if income_id else None
+
+    income_categories = [
+        "Ticket Sales", "Sponsorship", "Donations",
+        "Vendor Fees", "Service Income", "Merchandise Sales", "Other"
     ]
 
-    return render_template(
-        "activity_expenses.html",
+    if request.method == "POST":
+        if income:
+            # Update existing income
+            income.category = request.form.get("category")
+            income.amount = request.form.get("amount", type=float)
+            income.note = request.form.get("note")
+            income.date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
+        else:
+            # Create new income
+            income = Income(
+                activity_id=activity.id,
+                category=request.form.get("category"),
+                amount=request.form.get("amount", type=float),
+                note=request.form.get("note"),
+                date=datetime.strptime(request.form.get("date"), "%Y-%m-%d"),
+                created_by="admin"
+            )
+            db.session.add(income)
+
+        # Handle file upload
+        receipt_file = request.files.get("receipt")
+        if receipt_file and receipt_file.filename:
+            ext = os.path.splitext(receipt_file.filename)[1]
+            filename = f"income_{uuid.uuid4().hex}{ext}"
+            path = os.path.join(app.static_folder, "uploads/receipts", filename)
+            receipt_file.save(path)
+            income.receipt_filename = filename
+
+        db.session.commit()
+        flash("Income saved.", "success")
+        return redirect(url_for("activity_income", activity_id=activity.id))
+
+    incomes = Income.query.filter_by(activity_id=activity.id).order_by(Income.date.desc()).all()
+    passport_income = sum(p.sold_amt for p in activity.passports if p.paid)
+    other_income = sum(i.amount for i in incomes)
+
+    summary = {
+        "passport_income": passport_income,
+        "other_income": other_income,
+        "total_income": passport_income + other_income
+    }
+
+    return render_template("activity_income.html",
         activity=activity,
-        expenses=expenses,
+        income=income,
+        incomes=incomes,
+        categories=income_categories,
         summary=summary,
-        categories=categories,
         now=dt.now
     )
 
 
 
 
-@app.route("/admin/expense/edit/<int:expense_id>", methods=["GET", "POST"])
-def edit_expense(expense_id):
-    if "admin" not in session:
-        return redirect(url_for("login"))
 
-    from models import Expense
-    import os
-    import uuid
-    from datetime import datetime as dt
 
-    expense = Expense.query.get(expense_id)
-    if not expense:
-        flash("❌ Expense not found.", "error")
-        return redirect(url_for("dashboard"))
 
-    if request.method == "POST":
-        # Update fields
-        expense.category = request.form["category"].strip()
-        expense.amount = float(request.form["amount"])
-        expense.date = dt.strptime(request.form["date"], "%Y-%m-%d")
-        expense.description = request.form.get("description", "").strip()
+@app.route("/admin/activity-expenses/<int:activity_id>", methods=["GET", "POST"])
+@app.route("/admin/activity-expenses/<int:activity_id>/edit/<int:expense_id>", methods=["GET", "POST"])
+def activity_expenses(activity_id, expense_id=None):
+    activity = Activity.query.get_or_404(activity_id)
+    expense = Expense.query.get(expense_id) if expense_id else None
 
-        # Handle receipt replacement
-        receipt_file = request.files.get("receipt")
-        if receipt_file and receipt_file.filename:
-            ext = os.path.splitext(receipt_file.filename)[1].lower()
-            allowed_exts = [".jpg", ".jpeg", ".png", ".gif", ".pdf"]
-            if ext in allowed_exts:
-                upload_folder = os.path.join("static", "uploads", "receipts")
-                os.makedirs(upload_folder, exist_ok=True)
-                new_filename = f"receipt_{uuid.uuid4().hex[:10]}{ext}"
-                new_filepath = os.path.join(upload_folder, new_filename)
-                receipt_file.save(new_filepath)
-
-                # ✅ Remove old file
-                if expense.receipt_filename:
-                    old_path = os.path.join(upload_folder, expense.receipt_filename)
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-
-                expense.receipt_filename = new_filename
-
-        db.session.commit()
-        flash("✅ Expense updated.", "success")
-        return redirect(url_for("activity_expenses", activity_id=expense.activity_id))
-
-    categories = [
-        "Cost of Goods Sold",
-        "Advertising & Marketing",
-        "Bank & Payment Fees",
-        "Business Insurance",
-        "Contractor / Subcontractor Fees",
-        "Dues & Subscriptions",
-        "Equipment Rental",
-        "Event Supplies",
-        "Facility Rental",
-        "Food & Beverages",
-        "Licenses & Permits",
-        "Office Supplies",
-        "Payroll & Wages",
-        "Postage & Delivery",
-        "Printing",
-        "Professional Fees",
-        "Software & IT Services",
-        "Telephone & Internet",
-        "Transportation / Travel",
-        "Utilities",
-        "Other / Miscellaneous"
+    expense_categories = [
+        "Cost of Goods Sold", "Staff", "Venue", "Equipment Rental",
+        "Insurance", "Marketing", "Travel", "Supplies", "Other"
     ]
 
-    return render_template("edit_expense.html", expense=expense, categories=categories)
+    if request.method == "POST":
+        if expense:
+            # Update
+            expense.category = request.form.get("category")
+            expense.amount = request.form.get("amount", type=float)
+            expense.description = request.form.get("description")
+            expense.date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
+        else:
+            # Create new
+            expense = Expense(
+                activity_id=activity.id,
+                category=request.form.get("category"),
+                amount=request.form.get("amount", type=float),
+                description=request.form.get("description"),
+                date=datetime.strptime(request.form.get("date"), "%Y-%m-%d"),
+                created_by="admin"
+            )
+            db.session.add(expense)
+
+        # Upload receipt
+        receipt_file = request.files.get("receipt")
+        if receipt_file and receipt_file.filename:
+            ext = os.path.splitext(receipt_file.filename)[1]
+            filename = f"expense_{uuid.uuid4().hex}{ext}"
+            path = os.path.join(app.static_folder, "uploads/receipts", filename)
+            receipt_file.save(path)
+            expense.receipt_filename = filename
+
+        db.session.commit()
+        flash("Expense saved.", "success")
+        return redirect(url_for("activity_expenses", activity_id=activity.id))
+
+    expenses = Expense.query.filter_by(activity_id=activity.id).order_by(Expense.date.desc()).all()
+
+    gross_revenue = sum(p.sold_amt for p in activity.passports if p.paid)
+    cogs_total = sum(e.amount for e in expenses if e.category == "Cost of Goods Sold")
+    opex_total = sum(e.amount for e in expenses if e.category != "Cost of Goods Sold")
+    gross_profit = gross_revenue - cogs_total
+    total_expenses = cogs_total + opex_total
+    net_income = gross_revenue - total_expenses
+
+    summary = {
+        "gross_revenue": gross_revenue,
+        "cogs_total": cogs_total,
+        "gross_profit": gross_profit,
+        "opex_total": opex_total,
+        "total_expenses": total_expenses,
+        "net_income": net_income
+    }
+
+    return render_template("activity_expenses.html",
+        activity=activity,
+        expense=expense,
+        expenses=expenses,
+        categories=expense_categories,
+        summary=summary,
+        now=dt.now
+    )
+
+
+
+
+
+@app.route("/admin/delete-income/<int:income_id>", methods=["POST"])
+def delete_income(income_id):
+    income = Income.query.get_or_404(income_id)
+    activity_id = income.activity_id
+    db.session.delete(income)
+    db.session.commit()
+    flash("Income deleted.", "success")
+    return redirect(url_for("activity_income", activity_id=activity_id))
+
+
+@app.route("/admin/delete-expense/<int:expense_id>", methods=["POST"])
+def delete_expense(expense_id):
+    expense = Expense.query.get_or_404(expense_id)
+    activity_id = expense.activity_id
+    db.session.delete(expense)
+    db.session.commit()
+    flash("Expense deleted.", "success")
+    return redirect(url_for("activity_expenses", activity_id=activity_id))
+
+
+
+
+
+
+
+
 
 
 
