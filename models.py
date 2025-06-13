@@ -104,6 +104,22 @@ class Expense(db.Model):
 
 
 
+class Income(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    category = db.Column(db.String(100), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    note = db.Column(db.Text)
+    created_by = db.Column(db.String(100))  # admin email or name
+
+    receipt_filename = db.Column(db.String(255), nullable=True)  # ✅ Add this
+
+    activity = db.relationship("Activity", backref="incomes")
+
+
+
+
 
 
 
