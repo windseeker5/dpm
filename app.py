@@ -795,7 +795,6 @@ def create_activity():
     return render_template("activity_form.html")
 
 
-
 @app.route("/edit-activity/<int:activity_id>", methods=["GET", "POST"])
 def edit_activity(activity_id):
     if "admin" not in session:
@@ -820,7 +819,6 @@ def edit_activity(activity_id):
         activity.goal_revenue = float(request.form.get("goal_revenue", 0.0))
         activity.cost_to_run = float(request.form.get("cost_to_run", 0.0))
         activity.payment_instructions = request.form.get("payment_instructions", "").strip()
-
         activity.status = request.form.get("status", "active")
 
         start_date_raw = request.form.get("start_date")
@@ -848,7 +846,6 @@ def edit_activity(activity_id):
         db.session.commit()
 
         from models import AdminActionLog
-
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
             action=f"Activity Updated: {activity.name}"
@@ -856,11 +853,26 @@ def edit_activity(activity_id):
         db.session.commit()
 
         flash("Activity updated successfully!", "success")
-        #return redirect(url_for("edit_activity", activity_id=activity.id))
         return redirect(url_for("activity_dashboard", activity_id=activity.id))
 
-    return render_template("activity_form.html", activity=activity)
+    # 🧮 Add financial summary data (shown at bottom of form)
+    passport_income = sum(p.sold_amt for p in activity.passports if p.paid)
+    other_income = sum(i.amount for i in activity.incomes)
+    total_income = passport_income + other_income
 
+    cogs = sum(e.amount for e in activity.expenses if e.category == "Cost of Goods Sold")
+    opex = sum(e.amount for e in activity.expenses if e.category != "Cost of Goods Sold")
+    total_expenses = cogs + opex
+    net_income = total_income - total_expenses
+
+    summary = {
+        "passport_income": passport_income,
+        "other_income": other_income,
+        "total_expenses": total_expenses,
+        "net_income": net_income
+    }
+
+    return render_template("activity_form.html", activity=activity, summary=summary)
 
 
 
