@@ -1579,6 +1579,79 @@ def delete_expense(expense_id):
 
 
 
+@app.route("/admin/activity", methods=["GET", "POST"])
+@app.route("/admin/activity/<int:activity_id>", methods=["GET", "POST"])
+def activity_form(activity_id=None):
+    activity = Activity.query.get(activity_id) if activity_id else None
+    is_edit = bool(activity)
+
+    if request.method == "POST":
+        if not activity:
+            activity = Activity(created_by=1)  # replace with session-based admin ID if available
+            db.session.add(activity)
+
+        activity.name = request.form.get("name")
+        activity.type = request.form.get("type")
+        activity.status = request.form.get("status")
+        activity.description = request.form.get("description")
+        activity.payment_instructions = request.form.get("payment_instructions")
+        activity.sessions_included = request.form.get("sessions_included", type=int)
+        activity.price_per_user = request.form.get("price_per_user", type=float)
+        activity.goal_users = request.form.get("goal_users", type=int)
+        activity.goal_revenue = request.form.get("goal_revenue", type=float)
+        activity.cost_to_run = request.form.get("cost_to_run", type=float)
+
+        # Dates
+        try:
+            activity.start_date = datetime.strptime(request.form.get("start_date"), "%Y-%m-%d")
+        except:
+            activity.start_date = None
+
+        try:
+            activity.end_date = datetime.strptime(request.form.get("end_date"), "%Y-%m-%d")
+        except:
+            activity.end_date = None
+
+        # Handle image upload
+        upload_file = request.files.get("upload_image")
+        if upload_file and upload_file.filename:
+            ext = os.path.splitext(upload_file.filename)[1]
+            filename = f"activity_{uuid.uuid4().hex}{ext}"
+            path = os.path.join(app.static_folder, "uploads/activity_images", filename)
+            upload_file.save(path)
+            activity.image_filename = filename
+
+        elif request.form.get("selected_image_filename"):
+            activity.image_filename = request.form.get("selected_image_filename")
+
+        db.session.commit()
+        flash("Activity saved.", "success")
+        return redirect(url_for("dashboard"))
+
+    # Financial summary
+    if activity:
+        passport_income = sum(p.sold_amt for p in activity.passports if p.paid)
+        other_income = sum(i.amount for i in activity.incomes)
+        total_income = passport_income + other_income
+
+        cogs = sum(e.amount for e in activity.expenses if e.category == "Cost of Goods Sold")
+        opex = sum(e.amount for e in activity.expenses if e.category != "Cost of Goods Sold")
+        total_expenses = cogs + opex
+        net_income = total_income - total_expenses
+
+        summary = {
+            "passport_income": passport_income,
+            "other_income": other_income,
+            "total_income": total_income,
+            "total_expenses": total_expenses,
+            "net_income": net_income
+        }
+    else:
+        summary = None
+
+    return render_template("activity_form_redesign.html",
+                           activity=activity,
+                           summary=summary)
 
 
 
