@@ -2,9 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Standard workflow 
+1. Think about the problem first, read the source code for the relevant files, and write a plan in projectplan.md. 
+2. This plan should contain a list of actions to be performed that you can tick as they are carried out. 
+3. Before you start, contact me to check the plan. 
+4. Then start working on the actions to be performed, marking them as completed as they go along. 
+5. Please provide me with a detailed explanation of the changes made at each stage. 
+6. Simplify each task and code modification as much as possible. We want to avoid massive or complex changes. Each change must have a minimal impact on the code. Simplicity is paramount. 
+7. Finally, add a revision section to the projectplan.md file with a summary of the changes made and any other relevant information.
+
+
 ## Project Overview
 
-"minipass" is a Digital Pass Manager system built with Flask that handles activity-based pass/ticket management, user signups, payments, and includes an AI-powered chatbot for analytics.
+Minipass is a mobile-first Activities and Digital Pass Management system built with Flask. It enables organizations to easily manage activities, digital passes or tickets, user signups, and payments—all in one place.
+
+Designed for non-technical users, Minipass offers an intuitive interface optimized for mobile devices, allowing users to manage everything on the go. The platform also features an AI-powered chatbot for real-time insights and activity analytics, making it easier to track engagement and make informed decisions.
 
 ## Tech Stack
 
@@ -50,15 +62,6 @@ flask db upgrade
 flask run
 # or
 python app.py
-
-# Production
-gunicorn --workers=2 --threads=4 --bind=0.0.0.0:5000 app:app
-```
-
-### Database Operations
-```bash
-flask db migrate -m "Description"
-flask db upgrade
 ```
 
 ## Key Patterns
