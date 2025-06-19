@@ -155,6 +155,71 @@ Maintain consistent button styles with proper sizing for all user interactions:
 - Use standard button sizes (no `btn-sm` unless specifically needed for space constraints)
 - Icons in buttons should use standard Tabler icon classes without custom sizing
 
+### Actions Column Standard (MANDATORY for all tables)
+
+**CRITICAL RULE**: In table Actions columns, use ONLY ONE dropdown button - never separate edit buttons.
+
+**Required Pattern for Table Actions:**
+```html
+<td>
+  <div class="dropdown">
+    <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+      Actions
+    </a>
+    <div class="dropdown-menu">
+      <a class="dropdown-item" href="{{ url_for('edit_item', item_id=item.id) }}">
+        <i class="ti ti-edit me-2"></i> Edit
+      </a>
+      <!-- Additional context-specific actions -->
+      <a class="dropdown-item" href="#">
+        <i class="ti ti-check me-2"></i> Mark as Paid
+      </a>
+      <a class="dropdown-item" href="#">
+        <i class="ti ti-thumb-up me-2"></i> Approve
+      </a>
+      <div class="dropdown-divider"></div>
+      <a class="dropdown-item text-danger" href="#" onclick="return confirm('Delete this item?')">
+        <i class="ti ti-trash me-2"></i> Delete
+      </a>
+    </div>
+  </div>
+</td>
+```
+
+**❌ NEVER DO THIS** (separate buttons):
+```html
+<!-- WRONG - Do not use separate edit button + actions dropdown -->
+<td>
+  <a href="#" class="btn btn-primary btn-sm">Edit</a>
+  <div class="dropdown">
+    <a href="#" class="btn btn-outline-secondary btn-sm dropdown-toggle">Actions</a>
+    <!-- ... -->
+  </div>
+</td>
+```
+
+**✅ ALWAYS DO THIS** (single dropdown with Edit as first item):
+```html
+<!-- CORRECT - Single Actions dropdown with Edit as first option -->
+<td>
+  <div class="dropdown">
+    <a href="#" class="btn btn-outline-secondary dropdown-toggle">Actions</a>
+    <div class="dropdown-menu">
+      <a class="dropdown-item" href="#"><i class="ti ti-edit me-2"></i> Edit</a>
+      <!-- Other actions... -->
+    </div>
+  </div>
+</td>
+```
+
+**Action Button Requirements:**
+- **Single dropdown only**: Never use separate edit buttons alongside action dropdowns
+- **Edit first**: Edit action must always be the first item in the dropdown
+- **Standard styling**: Always use `btn btn-outline-secondary dropdown-toggle`
+- **Icon spacing**: Use `me-2` for all icons in dropdown items
+- **Danger actions**: Use `text-danger` class and place after divider
+- **Confirmations**: Add `onclick="return confirm('...')"` for destructive actions
+
 **Examples:**
 ```html
 <!-- Standard Actions Dropdown (ALWAYS use this pattern) -->
@@ -164,10 +229,10 @@ Maintain consistent button styles with proper sizing for all user interactions:
     </a>
     <div class="dropdown-menu">
         <a class="dropdown-item" href="#">
-            <i class="ti ti-eye me-2"></i> View & Redeem
+            <i class="ti ti-edit me-2"></i> Edit
         </a>
         <a class="dropdown-item" href="#">
-            <i class="ti ti-edit me-2"></i> Edit
+            <i class="ti ti-eye me-2"></i> View Details
         </a>
         <div class="dropdown-divider"></div>
         <a class="dropdown-item text-danger" href="#">
@@ -176,23 +241,14 @@ Maintain consistent button styles with proper sizing for all user interactions:
     </div>
 </div>
 
-<!-- Primary Action Buttons -->
+<!-- Primary Action Buttons (for page headers) -->
 <a href="#" class="btn btn-primary">
-    <i class="ti ti-plus me-2"></i> Add Passport Type
+    <i class="ti ti-plus me-2"></i> Add New Item
 </a>
 
-<button class="btn btn-primary">
-    <i class="ti ti-device-floppy me-2"></i> Create Activity
-</button>
-
-<!-- Success Actions -->
+<!-- Success Actions (for confirmations) -->
 <button class="btn btn-success">
-    <i class="ti ti-check me-2"></i> Mark as Paid
-</button>
-
-<!-- Secondary Actions -->
-<button class="btn btn-secondary">
-    <i class="ti ti-x me-2"></i> Cancel
+    <i class="ti ti-check me-2"></i> Save Changes
 </button>
 ```
 
@@ -239,15 +295,81 @@ Maintain consistent button styles with proper sizing for all user interactions:
 </div>
 ```
 
+### Table Styling Standards
+
+**Standard Table Structure:**
+All data tables must follow this consistent pattern for visual uniformity:
+
+```html
+<!-- Desktop Table View -->
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="selectAll"></th>
+          <th>User</th>
+          <!-- Other headers -->
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Table rows -->
+      </tbody>
+    </table>
+  </div>
+</div>
+```
+
+**User Column Pattern (Required for all user tables):**
+```html
+<td>
+  <div class="d-flex align-items-center">
+    <span class="avatar avatar-sm me-3" style="background-image: url('https://www.gravatar.com/avatar/{{ (user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon')"></span>
+    <div>
+      <strong>{{ user.name or 'Anonymous' }}</strong>
+      <br>
+      <span class="text-muted small">{{ user.email or '-' }}</span>
+    </div>
+  </div>
+</td>
+```
+
+**Mobile Card Pattern (for responsive design):**
+```html
+<div class="mobile-cards">
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center">
+        <span class="avatar avatar-md me-3" style="background-image: url('https://www.gravatar.com/avatar/{{ (user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon')"></span>
+        <div>
+          <div class="fw-bold">{{ user.name or 'Anonymous' }}</div>
+          <div class="text-muted small">{{ user.email or '-' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+**Table Requirements:**
+- **Card wrapper**: Always wrap tables in `<div class="card">`
+- **Gravatar avatars**: Use for all user columns with `encode_md5` filter
+- **Avatar sizing**: `avatar-sm` for desktop tables, `avatar-md` for mobile cards
+- **Consistent spacing**: `me-3` for avatar margins, proper alignment with `d-flex align-items-center`
+- **Fallback values**: 'Anonymous' for names, '-' for emails, 'default@example.com' for Gravatar generation
+- **Hover effects**: Automatic with `table-vcenter card-table` classes
+
 ### Consistency Rules
 1. **Always use Tabler's standard color classes** - avoid custom CSS overrides
 2. **Action buttons are ALWAYS `btn btn-outline-secondary dropdown-toggle`** - no exceptions
-3. **Badges always use light backgrounds with matching darker text** - `bg-[color]-lt text-[color]`
-4. **Section headers use h4 with properly sized icons** - `style="font-size: 1.2em;"`
-5. **Page titles use h2 with larger icons** - `style="font-size: 1.3em;"`
-6. **Maintain semantic meaning** - green = success/paid, red = danger/unpaid, blue = informational
-7. **Icon + text patterns in all buttons and dropdowns** - use `me-2` for icon spacing
-8. **Follow established patterns** - reference these guidelines for all new implementations
+3. **Actions columns use SINGLE dropdown only** - never separate edit buttons, Edit must be first menu item
+4. **Badges always use light backgrounds with matching darker text** - `bg-[color]-lt text-[color]`
+5. **Section headers use h4 with properly sized icons** - `style="font-size: 1.2em;"`
+6. **Page titles use h2 with larger icons** - `style="font-size: 1.3em;"`
+7. **Tables must use card wrapper and Gravatar avatars** - follow table styling standards above
+8. **Maintain semantic meaning** - green = success/paid, red = danger/unpaid, blue = informational
+9. **Icon + text patterns in all buttons and dropdowns** - use `me-2` for icon spacing
+10. **Follow established patterns** - reference these guidelines for all new implementations
 
 ## Business Logic
 

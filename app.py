@@ -9,13 +9,13 @@ import hashlib
 import bcrypt
 import stripe
 import qrcode
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 # 🌐 Flask Core
 from flask import (
     Flask, render_template, render_template_string, request, redirect,
-    url_for, session, flash, get_flashed_messages, jsonify, current_app
+    url_for, session, flash, get_flashed_messages, jsonify, current_app, make_response
 )
 
 
@@ -55,6 +55,7 @@ from utils import (
     send_unpaid_reminders,
     get_kpi_stats,
     notify_pass_event,
+    notify_signup_event,
     generate_pass_code
 )
 
@@ -528,6 +529,21 @@ def dashboard():
         'pending_revenue': sum(p.sold_amt for p in all_passports if not p.paid),
     }
 
+    # ✅ Calculate global signup statistics
+    all_signups = Signup.query.all()
+    
+    # Calculate cutoff date for recent signups (7 days ago)
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    
+    signup_stats = {
+        'total_signups': len(all_signups),
+        'paid_signups': len([s for s in all_signups if s.paid]),
+        'unpaid_signups': len([s for s in all_signups if not s.paid]),
+        'pending_signups': len([s for s in all_signups if s.status == 'pending']),
+        'approved_signups': len([s for s in all_signups if s.status == 'approved']),
+        'recent_signups': len([s for s in all_signups if s.signed_up_at and s.signed_up_at.replace(tzinfo=timezone.utc) >= seven_days_ago]),
+    }
+
     # ✅ Use working helper function
     all_logs = get_all_activity_logs()
     recent_logs = all_logs[:20]  # last 20 logs only
@@ -537,6 +553,7 @@ def dashboard():
         activities=activity_cards,
         kpi_data=kpi_data,
         passport_stats=passport_stats,
+        signup_stats=signup_stats,
         logs=recent_logs
     )
 
@@ -569,6 +586,356 @@ def admin_signups():
 
     signups = Signup.query.order_by(Signup.signed_up_at.desc()).all()
     return render_template("admin_signups.html", signups=signups)
+
+
+@app.route("/signups")
+def list_signups():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Signup, User, Activity
+    
+    # Get filter parameters
+    q = request.args.get('q', '').strip()
+    activity_id = request.args.get('activity_id')
+    payment_status = request.args.get('payment_status')
+    signup_status = request.args.get('status')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    # Build query with eager loading for performance
+    query = Signup.query.options(
+        db.joinedload(Signup.user),
+        db.joinedload(Signup.activity)
+    ).order_by(Signup.signed_up_at.desc())
+    
+    # Apply text search filter
+    if q:
+        search_filter = db.or_(
+            User.name.ilike(f'%{q}%'),
+            User.email.ilike(f'%{q}%'),
+            Signup.subject.ilike(f'%{q}%'),
+            Signup.description.ilike(f'%{q}%'),
+            Activity.name.ilike(f'%{q}%')
+        )
+        query = query.join(User).join(Activity).filter(search_filter)
+    else:
+        query = query.join(User).join(Activity)
+    
+    # Apply activity filter
+    if activity_id:
+        try:
+            activity_id = int(activity_id)
+            query = query.filter(Signup.activity_id == activity_id)
+        except ValueError:
+            pass
+    
+    # Apply payment status filter
+    if payment_status == 'paid':
+        query = query.filter(Signup.paid == True)
+    elif payment_status == 'unpaid':
+        query = query.filter(Signup.paid == False)
+    
+    # Apply signup status filter
+    if signup_status:
+        query = query.filter(Signup.status == signup_status)
+    
+    # Apply date range filters
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Signup.signed_up_at >= start)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            end = end.replace(hour=23, minute=59, second=59)
+            query = query.filter(Signup.signed_up_at <= end)
+        except ValueError:
+            pass
+    
+    # Execute query
+    signups = query.all()
+    
+    # Calculate statistics
+    all_signups = Signup.query.count()
+    paid_signups = Signup.query.filter(Signup.paid == True).count()
+    unpaid_signups = Signup.query.filter(Signup.paid == False).count()
+    pending_signups = Signup.query.filter(Signup.status == 'pending').count()
+    approved_signups = Signup.query.filter(Signup.status == 'approved').count()
+    recent_signups = Signup.query.filter(
+        Signup.signed_up_at >= datetime.now(timezone.utc) - timedelta(days=7)
+    ).count()
+    
+    statistics = {
+        'total': all_signups,
+        'paid': paid_signups,
+        'unpaid': unpaid_signups,
+        'pending': pending_signups,
+        'approved': approved_signups,
+        'recent': recent_signups
+    }
+    
+    # Get all activities for filter dropdown
+    activities = Activity.query.order_by(Activity.name).all()
+    
+    # Get unique statuses for filter dropdown
+    statuses = db.session.query(Signup.status.distinct()).filter(Signup.status.isnot(None)).all()
+    statuses = [status[0] for status in statuses]
+    
+    return render_template('signups.html', 
+                         signups=signups, 
+                         activities=activities,
+                         statuses=statuses,
+                         statistics=statistics,
+                         current_filters={
+                             'q': q,
+                             'activity_id': activity_id,
+                             'payment_status': payment_status,
+                             'status': signup_status,
+                             'start_date': start_date,
+                             'end_date': end_date
+                         })
+
+
+@app.route("/signups/bulk-action", methods=["POST"])
+def bulk_signup_action():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Signup, User, Activity
+    
+    action = request.form.get('action')
+    selected_ids = request.form.getlist('selected_signups')
+    
+    if not selected_ids:
+        flash("❌ No signups selected.", "error")
+        return redirect(url_for("list_signups"))
+    
+    try:
+        selected_ids = [int(id) for id in selected_ids]
+        signups = Signup.query.filter(Signup.id.in_(selected_ids)).all()
+        
+        if not signups:
+            flash("❌ No valid signups found.", "error")
+            return redirect(url_for("list_signups"))
+        
+        admin_email = session.get("admin", "unknown")
+        
+        if action == 'mark_paid':
+            count = 0
+            for signup in signups:
+                if not signup.paid:
+                    signup.paid = True
+                    signup.paid_at = datetime.now(timezone.utc)
+                    count += 1
+            
+            db.session.commit()
+            
+            # Log admin action
+            db.session.add(AdminActionLog(
+                admin_email=admin_email,
+                action=f"Marked {count} signups as paid (bulk action)"
+            ))
+            db.session.commit()
+            
+            flash(f"✅ {count} signups marked as paid.", "success")
+            
+        elif action == 'send_reminders':
+            count = 0
+            for signup in signups:
+                if not signup.paid:
+                    try:
+                        # Send payment reminder email
+                        notify_signup_event(
+                            app=current_app._get_current_object(),
+                            event_type="payment_reminder",
+                            signup_data=signup,
+                            admin_email=admin_email,
+                            timestamp=datetime.now(timezone.utc)
+                        )
+                        count += 1
+                    except Exception as e:
+                        print(f"Failed to send reminder for signup {signup.id}: {e}")
+            
+            # Log admin action
+            db.session.add(AdminActionLog(
+                admin_email=admin_email,
+                action=f"Sent payment reminders to {count} unpaid signups (bulk action)"
+            ))
+            db.session.commit()
+            
+            flash(f"✅ Payment reminders sent to {count} signups.", "success")
+            
+        elif action == 'approve':
+            count = 0
+            for signup in signups:
+                if signup.status == 'pending':
+                    signup.status = 'approved'
+                    count += 1
+            
+            db.session.commit()
+            
+            # Log admin action
+            db.session.add(AdminActionLog(
+                admin_email=admin_email,
+                action=f"Approved {count} signups (bulk action)"
+            ))
+            db.session.commit()
+            
+            flash(f"✅ {count} signups approved.", "success")
+            
+        elif action == 'delete':
+            count = len(signups)
+            signup_info = [f"{s.user.name} - {s.activity.name}" for s in signups]
+            
+            for signup in signups:
+                db.session.delete(signup)
+            
+            db.session.commit()
+            
+            # Log admin action
+            db.session.add(AdminActionLog(
+                admin_email=admin_email,
+                action=f"Deleted {count} signups: {', '.join(signup_info[:5])}{'...' if len(signup_info) > 5 else ''}"
+            ))
+            db.session.commit()
+            
+            flash(f"✅ {count} signups deleted.", "success")
+            
+        else:
+            flash("❌ Invalid action.", "error")
+            
+    except Exception as e:
+        db.session.rollback()
+        flash(f"❌ Error processing bulk action: {str(e)}", "error")
+    
+    return redirect(url_for("list_signups"))
+
+
+@app.route("/signups/export")
+def export_signups():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Signup, User, Activity
+    import csv
+    from io import StringIO
+    
+    # Apply the same filters as the main list
+    q = request.args.get('q', '').strip()
+    activity_id = request.args.get('activity_id')
+    payment_status = request.args.get('payment_status')
+    signup_status = request.args.get('status')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    # Build the same query as list_signups
+    query = Signup.query.options(
+        db.joinedload(Signup.user),
+        db.joinedload(Signup.activity)
+    ).order_by(Signup.signed_up_at.desc())
+    
+    # Apply filters (same logic as list_signups)
+    if q:
+        search_filter = db.or_(
+            User.name.ilike(f'%{q}%'),
+            User.email.ilike(f'%{q}%'),
+            Signup.subject.ilike(f'%{q}%'),
+            Signup.description.ilike(f'%{q}%'),
+            Activity.name.ilike(f'%{q}%')
+        )
+        query = query.join(User).join(Activity).filter(search_filter)
+    else:
+        query = query.join(User).join(Activity)
+    
+    if activity_id:
+        try:
+            activity_id = int(activity_id)
+            query = query.filter(Signup.activity_id == activity_id)
+        except ValueError:
+            pass
+    
+    if payment_status == 'paid':
+        query = query.filter(Signup.paid == True)
+    elif payment_status == 'unpaid':
+        query = query.filter(Signup.paid == False)
+    
+    if signup_status:
+        query = query.filter(Signup.status == signup_status)
+    
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Signup.signed_up_at >= start)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            end = end.replace(hour=23, minute=59, second=59)
+            query = query.filter(Signup.signed_up_at <= end)
+        except ValueError:
+            pass
+    
+    signups = query.all()
+    
+    # Create CSV content
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write headers
+    writer.writerow([
+        'ID',
+        'User Name',
+        'User Email',
+        'Activity',
+        'Subject',
+        'Description',
+        'Status',
+        'Paid',
+        'Signup Date',
+        'Payment Date',
+        'Form Data'
+    ])
+    
+    # Write data rows
+    for signup in signups:
+        writer.writerow([
+            signup.id,
+            signup.user.name if signup.user else '',
+            signup.user.email if signup.user else '',
+            signup.activity.name if signup.activity else '',
+            signup.subject or '',
+            signup.description or '',
+            signup.status or '',
+            'Yes' if signup.paid else 'No',
+            signup.signed_up_at.strftime('%Y-%m-%d %H:%M') if signup.signed_up_at else '',
+            signup.paid_at.strftime('%Y-%m-%d %H:%M') if signup.paid_at else '',
+            signup.form_data or ''
+        ])
+    
+    # Log admin action
+    admin_email = session.get("admin", "unknown")
+    db.session.add(AdminActionLog(
+        admin_email=admin_email,
+        action=f"Exported {len(signups)} signups to CSV"
+    ))
+    db.session.commit()
+    
+    # Create response
+    output.seek(0)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'signups_export_{timestamp}.csv'
+    
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    
+    return response
 
 
 
@@ -680,7 +1047,7 @@ def approve_and_create_pass(signup_id):
 
     from models import Passport, AdminActionLog, Admin
     from utils import notify_pass_event, generate_pass_code
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     import time
 
     now_utc = datetime.now(timezone.utc)
@@ -1374,7 +1741,7 @@ def show_pass(pass_code):
 def redeem_passport_qr(pass_code):
     from models import Passport, Redemption, AdminActionLog
     from utils import notify_pass_event
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     import time
 
     if "admin" not in session:
@@ -2274,7 +2641,7 @@ recent_redemptions = {}
 def redeem_passport(pass_code):
     from models import Passport, Redemption, AdminActionLog
     from utils import notify_pass_event
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     import time
 
     if "admin" not in session:
@@ -2339,7 +2706,7 @@ def mark_passport_paid(passport_id):
 
     from models import Passport, AdminActionLog
     import time
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
 
     passport = db.session.get(Passport, passport_id)
     if not passport:

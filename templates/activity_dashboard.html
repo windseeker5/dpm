@@ -78,10 +78,24 @@
   
       <!-- 🖼 Right Side: Image + Edit -->
       <div class="col-md-4 activity-img-container position-relative">
-        <a href="{{ url_for('edit_activity', activity_id=activity.id) }}"
-           class="btn btn-outline-primary position-absolute top-0 end-0 m-2 z-3">
-          <i class="ti ti-pencil"></i> Edit
-        </a>
+        <div class="position-absolute top-0 end-0 m-2 z-3">
+          <div class="btn-group-vertical">
+            <a href="{{ url_for('edit_activity', activity_id=activity.id) }}"
+               class="btn btn-outline-primary btn-sm mb-1">
+              <i class="ti ti-pencil"></i> Edit
+            </a>
+            <a href="{{ url_for('list_signups') }}?activity_id={{ activity.id }}"
+               class="btn btn-outline-success btn-sm mb-1"
+               title="View signups for this activity">
+              <i class="ti ti-user-check"></i> Signups
+            </a>
+            <a href="{{ url_for('list_signups') }}?activity_id={{ activity.id }}&payment_status=unpaid"
+               class="btn btn-outline-warning btn-sm"
+               title="View unpaid signups">
+              <i class="ti ti-alert-circle"></i> Unpaid
+            </a>
+          </div>
+        </div>
         <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}"
              alt="Activity Image">
       </div>
