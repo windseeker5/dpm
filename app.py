@@ -1489,14 +1489,71 @@ def list_activities():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    q = request.args.get("q", "").strip().lower()
-    query = Activity.query.order_by(Activity.created_dt.desc())
+    # Get filter parameters
+    q = request.args.get("q", "").strip()
+    status = request.args.get("status", "")
+    activity_type = request.args.get("type", "")
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
+    
+    # Base query with eager loading for performance
+    query = Activity.query.options(
+        db.joinedload(Activity.passports),
+        db.joinedload(Activity.passport_types)
+    ).order_by(Activity.created_dt.desc())
 
+    # Apply filters
     if q:
-        query = query.filter(Activity.name.ilike(f"%{q}%"))
+        query = query.filter(
+            db.or_(
+                Activity.name.ilike(f"%{q}%"),
+                Activity.description.ilike(f"%{q}%"),
+                Activity.type.ilike(f"%{q}%")
+            )
+        )
+    
+    if status:
+        query = query.filter(Activity.status == status)
+    
+    if activity_type:
+        query = query.filter(Activity.type.ilike(f"%{activity_type}%"))
+    
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(Activity.start_date >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            query = query.filter(Activity.end_date <= end_dt)
+        except ValueError:
+            pass
 
     activities = query.all()
-    return render_template("activities.html", activities=activities)
+    
+    # Calculate statistics for each activity
+    for activity in activities:
+        activity.signup_count = len([p for p in activity.passports if p.paid])
+        activity.total_revenue = sum(p.sold_amt for p in activity.passports if p.paid)
+        activity.passport_types_count = len(activity.passport_types)
+    
+    # Get unique activity types for filter dropdown
+    activity_types = db.session.query(Activity.type).distinct().filter(Activity.type.isnot(None)).all()
+    activity_types = [t[0] for t in activity_types if t[0]]
+    
+    return render_template("activities.html", 
+                         activities=activities, 
+                         activity_types=activity_types,
+                         current_filters={
+                             'q': q,
+                             'status': status,
+                             'type': activity_type,
+                             'start_date': start_date,
+                             'end_date': end_date
+                         })
 
 
 

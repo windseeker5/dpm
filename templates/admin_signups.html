@@ -43,9 +43,9 @@
               <td>{{ s.activity.name if s.activity else '-' }}</td>
               <td>
                 {% if s.paid %}
-                  <span class="badge bg-success">Yes</span>
+                  <span class="badge bg-green-lt">Paid</span>
                 {% else %}
-                  <span class="badge bg-warning text-dark">No</span>
+                  <span class="badge bg-red-lt">Unpaid</span>
                 {% endif %}
               </td>
               <td>

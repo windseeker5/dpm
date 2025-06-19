@@ -1,5 +1,91 @@
 {% extends "base.html" %}
-{% block title %}All Activities{% endblock %}
+{% block title %}Activities Management{% endblock %}
+
+{% block head %}
+<style>
+.activity-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.activity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.activity-image {
+  height: 60px;
+  width: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.filter-panel {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stats-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.stat-item {
+  text-align: center;
+  padding: 0.5rem;
+}
+.stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  display: block;
+}
+.stat-label {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+.activity-actions {
+  opacity: 1 !important;
+  transition: opacity 0.2s ease;
+}
+.bulk-actions {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: none;
+}
+.bulk-actions.show {
+  display: block;
+}
+
+
+@media (max-width: 768px) {
+  .activity-table {
+    display: none;
+  }
+  .activity-cards {
+    display: block;
+  }
+  .filter-panel {
+    padding: 0.75rem;
+  }
+  .stats-card {
+    padding: 1rem;
+  }
+  .stat-number {
+    font-size: 1.5rem;
+  }
+}
+@media (min-width: 769px) {
+  .activity-table {
+    display: block;
+  }
+  .activity-cards {
+    display: none;
+  }
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-xl mt-4">
@@ -8,78 +94,446 @@
   <div class="page-header mb-4">
     <div class="row align-items-center">
       <div class="col">
-        <h2 class="page-pretitle text-muted text-uppercase mb-1">Manage</h2>
-        <h1 class="page-title mb-0">All Activities</h1>
+        <h2 class="page-pretitle text-muted text-uppercase mb-1">Management</h2>
+        <h1 class="page-title mb-0">Activities Dashboard</h1>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
+          <i class="ti ti-plus"></i> New Activity
+        </a>
       </div>
     </div>
   </div>
 
-  <!-- Search + Add -->
-  <div class="row mb-3">
-    <div class="col-md-6">
-      <form method="GET" class="d-flex">
-        <input type="text" name="q" class="form-control" placeholder="Search activities..." value="{{ request.args.get('q', '') }}">
-        <button type="submit" class="btn btn-light ms-2"><i class="ti ti-search"></i></button>
-      </form>
-    </div>
-    <div class="col text-end">
-      <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
-        <i class="ti ti-plus"></i> New Activity
-      </a>
+  <!-- Statistics Cards -->
+  <div class="stats-card">
+    <div class="row">
+      <div class="col-6 col-md-3">
+        <div class="stat-item">
+          <span class="stat-number">{{ activities|length }}</span>
+          <span class="stat-label">Total Activities</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-item">
+          <span class="stat-number">{{ activities|selectattr('status', 'equalto', 'active')|list|length }}</span>
+          <span class="stat-label">Active</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-item">
+          <span class="stat-number">${{ "{:,.0f}".format(activities|sum(attribute='total_revenue')|default(0)) }}</span>
+          <span class="stat-label">Total Revenue</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-item">
+          <span class="stat-number">{{ activities|sum(attribute='signup_count')|default(0) }}</span>
+          <span class="stat-label">Total Signups</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Table -->
-  <div class="card">
+  <!-- Enhanced Search and Filters -->
+  <div class="filter-panel">
+    <form method="GET" id="filterForm">
+      <div class="row g-3">
+        <!-- Search -->
+        <div class="col-md-4">
+          <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search activities..." 
+                   value="{{ current_filters.q }}" id="searchInput">
+            <button type="submit" class="btn btn-outline-secondary">
+              <i class="ti ti-search"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Status Filter -->
+        <div class="col-md-2">
+          <select name="status" class="form-select" onchange="document.getElementById('filterForm').submit();">
+            <option value="">All Status</option>
+            <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if current_filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+          </select>
+        </div>
+        
+        <!-- Type Filter -->
+        <div class="col-md-2">
+          <select name="type" class="form-select" onchange="document.getElementById('filterForm').submit();">
+            <option value="">All Types</option>
+            {% for type in activity_types %}
+            <option value="{{ type }}" {% if current_filters.type == type %}selected{% endif %}>{{ type }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Date Range -->
+        <div class="col-md-2">
+          <input type="date" name="start_date" class="form-control" placeholder="Start Date" 
+                 value="{{ current_filters.start_date }}" onchange="document.getElementById('filterForm').submit();">
+        </div>
+        <div class="col-md-2">
+          <input type="date" name="end_date" class="form-control" placeholder="End Date" 
+                 value="{{ current_filters.end_date }}" onchange="document.getElementById('filterForm').submit();">
+        </div>
+      </div>
+      
+      <!-- Clear Filters -->
+      {% if current_filters.q or current_filters.status or current_filters.type or current_filters.start_date or current_filters.end_date %}
+      <div class="row mt-2">
+        <div class="col">
+          <a href="{{ url_for('list_activities') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="ti ti-x"></i> Clear Filters
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Bulk Actions (Hidden by default) -->
+  <div class="bulk-actions" id="bulkActions">
+    <div class="row align-items-center">
+      <div class="col">
+        <span id="selectedCount">0</span> activities selected
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-sm btn-success me-2" onclick="bulkAction('activate')">
+          <i class="ti ti-check"></i> Activate
+        </button>
+        <button class="btn btn-sm btn-warning me-2" onclick="bulkAction('deactivate')">
+          <i class="ti ti-pause"></i> Deactivate
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="bulkAction('delete')">
+          <i class="ti ti-trash"></i> Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop Table View -->
+  <div class="card activity-table">
     <div class="table-responsive">
       <table class="table card-table table-hover table-vcenter">
         <thead>
           <tr>
-            <th>Name</th>
+            <th style="width: 40px;">
+              <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleAll()">
+            </th>
+            <th>Activity</th>
             <th>Status</th>
-            <th>Sessions</th>
-            <th>Price</th>
-            <th>Start</th>
-            <th>End</th>
+            <th>Passport Types</th>
+            <th>Signups</th>
+            <th>Revenue</th>
+            <th>Dates</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {% for a in activities %}
-          <tr>
+          {% for activity in activities %}
+          <tr class="activity-row">
             <td>
-              <strong>{{ a.name }}</strong><br>
-              <span class="text-muted small">{{ a.description|truncate(40) }}</span>
+              <input type="checkbox" class="form-check-input activity-checkbox" value="{{ activity.id }}" onchange="updateBulkActions()">
             </td>
             <td>
-              {% if a.status == 'active' %}
-              <span class="badge bg-green">Active</span>
+              <div class="d-flex align-items-center">
+                {% if activity.image_filename %}
+                <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}" 
+                     class="activity-image me-3" alt="{{ activity.name }}">
+                {% else %}
+                <div class="avatar avatar-md me-3" style="background-color: #{{ '%06x' % (activity.name|hash|abs % 16777215) }};">
+                  {{ activity.name[0]|upper }}
+                </div>
+                {% endif %}
+                <div>
+                  <strong>{{ activity.name }}</strong>
+                  {% if activity.type %}
+                  <span class="badge bg-secondary ms-2">{{ activity.type }}</span>
+                  {% endif %}
+                  <br>
+                  <span class="text-muted small">{{ activity.description|truncate(50) }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if activity.status == 'active' %}
+              <span class="badge bg-green-lt">Active</span>
               {% else %}
-              <span class="badge bg-gray">Inactive</span>
+              <span class="badge bg-red-lt">Inactive</span>
               {% endif %}
             </td>
-            <td>{{ a.sessions_included }}</td>
-            <td>${{ "%.2f"|format(a.price_per_user) }}</td>
-            <td>{{ a.start_date.strftime('%Y-%m-%d') if a.start_date else '-' }}</td>
-            <td>{{ a.end_date.strftime('%Y-%m-%d') if a.end_date else '-' }}</td>
-            <td class="text-end">
-              <a href="{{ url_for('edit_activity', activity_id=a.id) }}" class="btn btn-sm btn-outline-primary">
-                <i class="ti ti-pencil"></i>
-              </a>
-              <form method="POST" action="{{ url_for('delete_activity', activity_id=a.id) }}" class="d-inline-block" onsubmit="return confirm('Are you sure?');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-outline-danger">
-                  <i class="ti ti-trash"></i>
-                </button>
-              </form>
+            <td>
+              <span class="badge bg-blue-lt">{{ activity.passport_types_count or 0 }} Types</span>
+            </td>
+            <td>
+              <strong>{{ activity.signup_count or 0 }}</strong>
+            </td>
+            <td>
+              <strong>${{ "{:,.2f}".format(activity.total_revenue or 0) }}</strong>
+            </td>
+            <td>
+              <div class="small">
+                <div><strong>Start:</strong> {{ activity.start_date.strftime('%Y-%m-%d') if activity.start_date else '-' }}</div>
+                <div><strong>End:</strong> {{ activity.end_date.strftime('%Y-%m-%d') if activity.end_date else '-' }}</div>
+              </div>
+            </td>
+            <td>
+              <div class="activity-actions">
+                <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-sm btn-primary me-1" title="Edit Activity">
+                  <i class="ti ti-pencil"></i>
+                </a>
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="More Actions">
+                    <i class="ti ti-dots-vertical"></i>
+                  </button>
+                  <div class="dropdown-menu">
+                    <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
+                      <i class="ti ti-pencil me-2"></i>Edit Activity
+                    </a>
+                    <a class="dropdown-item" href="#">
+                      <i class="ti ti-chart-bar me-2"></i>View Statistics
+                    </a>
+                    <a class="dropdown-item" href="#">
+                      <i class="ti ti-copy me-2"></i>Duplicate
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ activity.id }}, '{{ activity.name }}')">
+                      <i class="ti ti-trash me-2"></i>Delete Activity
+                    </a>
+                  </div>
+                </div>
+              </div>
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="7" class="text-center text-muted">No activities found.</td></tr>
+          <tr>
+            <td colspan="8" class="text-center py-5">
+              <div class="empty">
+                <div class="empty-img">
+                  <i class="ti ti-activity" style="font-size: 4rem; color: #ccc;"></i>
+                </div>
+                <p class="empty-title">No activities found</p>
+                <p class="empty-subtitle text-muted">
+                  {% if current_filters.q or current_filters.status or current_filters.type %}
+                    Try adjusting your search filters or <a href="{{ url_for('list_activities') }}">clear all filters</a>
+                  {% else %}
+                    Get started by creating your first activity
+                  {% endif %}
+                </p>
+                <div class="empty-action">
+                  <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
+                    <i class="ti ti-plus"></i> Create Activity
+                  </a>
+                </div>
+              </div>
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+
+  <!-- Mobile Card View -->
+  <div class="activity-cards">
+    {% for activity in activities %}
+    <div class="card activity-card mb-3">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <input type="checkbox" class="form-check-input activity-checkbox" value="{{ activity.id }}" onchange="updateBulkActions()">
+          </div>
+          <div class="col-auto">
+            {% if activity.image_filename %}
+            <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}" 
+                 class="activity-image" alt="{{ activity.name }}">
+            {% else %}
+            <div class="avatar avatar-md" style="background-color: #{{ '%06x' % (activity.name|hash|abs % 16777215) }};">
+              {{ activity.name[0]|upper }}
+            </div>
+            {% endif %}
+          </div>
+          <div class="col">
+            <h4 class="card-title mb-1">{{ activity.name }}</h4>
+            <div class="mb-2">
+              {% if activity.status == 'active' %}
+              <span class="badge bg-green-lt">Active</span>
+              {% else %}
+              <span class="badge bg-red-lt">Inactive</span>
+              {% endif %}
+              {% if activity.type %}
+              <span class="badge bg-gray-lt">{{ activity.type }}</span>
+              {% endif %}
+              <span class="badge bg-blue-lt">{{ activity.passport_types_count or 0 }} Types</span>
+            </div>
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="stat-number small">{{ activity.signup_count or 0 }}</div>
+                <div class="stat-label">Signups</div>
+              </div>
+              <div class="col-4">
+                <div class="stat-number small">${{ "{:,.0f}".format(activity.total_revenue or 0) }}</div>
+                <div class="stat-label">Revenue</div>
+              </div>
+              <div class="col-4">
+                <div class="stat-number small">{{ activity.passport_types_count or 0 }}</div>
+                <div class="stat-label">Types</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-auto">
+            <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-primary btn-sm me-1" title="Edit Activity">
+              <i class="ti ti-pencil"></i>
+            </a>
+            <div class="dropdown d-inline-block">
+              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="ti ti-dots-vertical"></i>
+              </button>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
+                  <i class="ti ti-pencil me-2"></i>Edit Activity
+                </a>
+                <a class="dropdown-item" href="#">
+                  <i class="ti ti-chart-bar me-2"></i>View Statistics
+                </a>
+                <a class="dropdown-item" href="#">
+                  <i class="ti ti-copy me-2"></i>Duplicate
+                </a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ activity.id }}, '{{ activity.name }}')">
+                  <i class="ti ti-trash me-2"></i>Delete Activity
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty py-5">
+      <div class="empty-img">
+        <i class="ti ti-activity" style="font-size: 4rem; color: #ccc;"></i>
+      </div>
+      <p class="empty-title">No activities found</p>
+      <p class="empty-subtitle text-muted">
+        {% if current_filters.q or current_filters.status or current_filters.type %}
+          Try adjusting your search filters or <a href="{{ url_for('list_activities') }}">clear all filters</a>
+        {% else %}
+          Get started by creating your first activity
+        {% endif %}
+      </p>
+      <div class="empty-action">
+        <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
+          <i class="ti ti-plus"></i> Create Activity
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the activity <strong id="deleteActivityName"></strong>?</p>
+        <p class="text-muted">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" id="deleteForm" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger">Delete Activity</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Search only on Enter key press or button click (no real-time search)
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('filterForm').submit();
+  }
+});
+
+// Bulk selection functionality
+function toggleAll() {
+  const selectAll = document.getElementById('selectAll');
+  const checkboxes = document.querySelectorAll('.activity-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = selectAll.checked;
+  });
+  updateBulkActions();
+}
+
+function updateBulkActions() {
+  const checkboxes = document.querySelectorAll('.activity-checkbox:checked');
+  const bulkActions = document.getElementById('bulkActions');
+  const selectedCount = document.getElementById('selectedCount');
+  
+  if (checkboxes.length > 0) {
+    bulkActions.classList.add('show');
+    selectedCount.textContent = checkboxes.length;
+  } else {
+    bulkActions.classList.remove('show');
+  }
+  
+  // Update select all checkbox
+  const allCheckboxes = document.querySelectorAll('.activity-checkbox');
+  const selectAll = document.getElementById('selectAll');
+  selectAll.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
+  selectAll.checked = checkboxes.length === allCheckboxes.length;
+}
+
+// Bulk actions
+function bulkAction(action) {
+  const selectedIds = Array.from(document.querySelectorAll('.activity-checkbox:checked')).map(cb => cb.value);
+  if (selectedIds.length === 0) return;
+  
+  if (confirm(`Are you sure you want to ${action} ${selectedIds.length} activities?`)) {
+    // Here you would make an AJAX call to perform the bulk action
+    // For now, we'll just show an alert
+    alert(`Bulk ${action} functionality would be implemented here`);
+  }
+}
+
+// Delete confirmation
+function confirmDelete(activityId, activityName) {
+  document.getElementById('deleteActivityName').textContent = activityName;
+  document.getElementById('deleteForm').action = `/delete-activity/${activityId}`;
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Initialize tooltips and other Bootstrap components
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize tooltips
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+  
+  // Add better visual feedback for buttons
+  document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('mouseenter', function() {
+      this.style.transform = 'translateY(-1px)';
+    });
+    btn.addEventListener('mouseleave', function() {
+      this.style.transform = 'translateY(0)';
+    });
+  });
+});
+</script>
 {% endblock %}

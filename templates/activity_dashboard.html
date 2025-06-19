@@ -113,7 +113,7 @@
 
   <div class="card-header d-flex justify-content-between align-items-center">
     <h3 class="card-title">Activity Signups (Pending)</h3>
-    <span class="badge bg-yellow-lt">{{ pending_signups|length }} pending</span>
+    <span class="badge bg-warning">{{ pending_signups|length }} pending</span>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -142,9 +142,9 @@
             <td class="d-none d-md-table-cell">{{ s.signed_up_at.strftime('%Y-%m-%d') }}</td>
             <td class="d-none d-md-table-cell">
               {% if s.paid %}
-                <span class="badge bg-green-lt">Paid</span>
+                <span class="badge bg-success">Paid</span>
               {% else %}
-                <span class="badge bg-red-lt">Unpaid</span>
+                <span class="badge bg-danger">Unpaid</span>
               {% endif %}
             </td>
             <td>
@@ -280,7 +280,7 @@
   <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h3 class="card-title">Active or Unpaid Passports</h3>
-      <span class="badge bg-green-lt">{{ passes|length }} total</span>
+      <span class="badge bg-success">{{ passes|length }} total</span>
     </div>
     <div class="table-responsive">
       <table class="table card-table table-vcenter" id="passportTable">
@@ -315,9 +315,9 @@
 
             <td class="d-table-cell d-md-none">
               {% if p.paid %}
-                <span class="badge bg-green-lt">{{ p.uses_remaining }}</span>
+                <span class="badge bg-success">{{ p.uses_remaining }}</span>
               {% else %}
-                <span class="badge bg-red-lt">{{ p.uses_remaining }}</span>
+                <span class="badge bg-danger">{{ p.uses_remaining }}</span>
               {% endif %}
             </td>
             
@@ -326,8 +326,8 @@
             <td class="d-none d-md-table-cell">{{ p.created_dt.strftime('%Y-%m-%d') }}</td>
             <td class="d-none d-md-table-cell">{{ p.uses_remaining }}</td>
             <td class="d-none d-md-table-cell">
-              {% if p.paid %}<span class="badge bg-green-lt">Paid</span>
-              {% else %}<span class="badge bg-red-lt">Unpaid</span>
+              {% if p.paid %}<span class="badge bg-success">Paid</span>
+              {% else %}<span class="badge bg-danger">Unpaid</span>
               {% endif %}
             </td>
             <td>
