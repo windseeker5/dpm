@@ -839,7 +839,6 @@ def edit_activity(activity_id):
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        from models import PassportType
         import os
         import uuid
 
