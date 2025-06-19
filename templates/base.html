@@ -147,9 +147,8 @@
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="ti ti-home"></i> Home</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('list_activities') }}"><i class="ti ti-activity"></i> Activities</a></li>
-        <li class="nav-item"><a class="nav-link" href="#"><i class="ti ti-id-badge-2"></i> Passports</a></li>
-        <li class="nav-item"><a class="nav-link" href="#"><i class="ti ti-clipboard-list"></i> Surveys</a></li>
-        <li class="nav-item"><a class="nav-link" href="#"><i class="ti ti-chart-bar"></i> Reporting</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('list_passports') }}"><i class="ti ti-ticket"></i> Passports</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_signups') }}"><i class="ti ti-clipboard-list"></i> Signups</a></li>
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('chat.chat') }}">
             <i class="ti ti-message-chatbot"></i> AI Analytics

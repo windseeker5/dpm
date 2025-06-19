@@ -280,7 +280,12 @@
   <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h3 class="card-title">Active or Unpaid Passports</h3>
-      <span class="badge bg-success">{{ passes|length }} total</span>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-success">{{ passes|length }} total</span>
+        <a href="{{ url_for('list_passports', activity=activity.id) }}" class="btn btn-outline-primary btn-sm">
+          <i class="ti ti-eye me-1"></i>View All
+        </a>
+      </div>
     </div>
     <div class="table-responsive">
       <table class="table card-table table-vcenter" id="passportTable">
