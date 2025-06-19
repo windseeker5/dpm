@@ -75,19 +75,27 @@ class Activity(db.Model):
     description = db.Column(db.Text)
     start_date = db.Column(db.DateTime, nullable=True)
     end_date = db.Column(db.DateTime, nullable=True)
-    image_filename = db.Column(db.String(255), nullable=True)  # 🆕 NEW FIELD
-    sessions_included = db.Column(db.Integer, default=1)
-    price_per_user = db.Column(db.Float, default=0.0)
-    goal_users = db.Column(db.Integer, default=0)
-    goal_revenue = db.Column(db.Float, default=0.0)
-    cost_to_run = db.Column(db.Float, default=0.0)
+    image_filename = db.Column(db.String(255), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(50), default="active")
-    payment_instructions = db.Column(db.Text)
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 
+
+class PassportType(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # e.g., "Regular", "Substitute"
+    type = db.Column(db.String(50), nullable=False)   # "permanent" or "substitute"
+    price_per_user = db.Column(db.Float, default=0.0)
+    sessions_included = db.Column(db.Integer, default=1)
+    target_revenue = db.Column(db.Float, default=0.0)
+    payment_instructions = db.Column(db.Text)
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    status = db.Column(db.String(50), default="active")
+    
+    activity = db.relationship("Activity", backref="passport_types")
 
 
 class Expense(db.Model):
@@ -143,6 +151,7 @@ class Passport(db.Model):
     pass_code = db.Column(db.String(16), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id"), nullable=True)  # New field
     sold_amt = db.Column(db.Float, default=0.0)
     uses_remaining = db.Column(db.Integer, default=0)
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
@@ -153,6 +162,7 @@ class Passport(db.Model):
     notes = db.Column(db.Text)
 
     signups = db.relationship("Signup", backref="passport", lazy=True)
+    passport_type = db.relationship("PassportType", backref="passports")
 
 
 

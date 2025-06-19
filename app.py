@@ -34,7 +34,7 @@ from werkzeug.utils import secure_filename
 
 # 🧠 Models
 from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
-from models import Activity, User, Signup, Passport, AdminActionLog
+from models import Activity, User, Signup, Passport, PassportType, AdminActionLog
 
 
 # ⚙️ Config
@@ -494,10 +494,16 @@ def dashboard():
         else:
             days_left = "N/A"
 
+        # Get passport type information for this activity
+        passport_types = PassportType.query.filter_by(activity_id=a.id).all()
+        total_sessions = sum(pt.sessions_included for pt in passport_types) if passport_types else 0
+        total_target_revenue = sum(pt.target_revenue for pt in passport_types) if passport_types else 0.0
+        
         activity_cards.append({
             "id": a.id,
             "name": a.name,
-            "sessions_included": a.sessions_included,
+            "passport_types_count": len(passport_types),
+            "total_sessions": total_sessions,
             "signups": len(all_signups),
             "pending_signups": len(pending_signups),
             "passports": len(all_passports),
@@ -506,7 +512,7 @@ def dashboard():
             "paid_passports": len(paid_passports),
             "paid_amount": paid_amount,
             "unpaid_amount": unpaid_amount,
-            "goal_revenue": a.goal_revenue,
+            "goal_revenue": total_target_revenue,
             "image_filename": a.image_filename,
             "days_left": days_left
         })
@@ -572,13 +578,17 @@ def create_pass_from_signup(signup_id):
         flash("⚠️ A passport for this user and activity already exists.", "warning")
         return redirect(url_for("admin_signups"))
 
+    # Get passport type for this activity (use first one if multiple)
+    passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
+    
     # Create new passport
     new_passport = Passport(
         pass_code=f"MP{datetime.utcnow().timestamp():.0f}",
         user_id=signup.user_id,
         activity_id=signup.activity_id,
-        sold_amt=signup.activity.price_per_user,
-        uses_remaining=signup.activity.sessions_included,
+        passport_type_id=passport_type.id if passport_type else None,
+        sold_amt=passport_type.price_per_user if passport_type else 0.0,
+        uses_remaining=passport_type.sessions_included if passport_type else 1,
         created_dt=datetime.utcnow(),
         paid=signup.paid,
         notes=f"Created from signup {signup.id}"
@@ -670,13 +680,16 @@ def approve_and_create_pass(signup_id):
     # ✅ Step 2: Get current Admin info
     current_admin = Admin.query.filter_by(email=session.get("admin")).first()
 
-    # ✅ Step 3: Create Passport
+    # ✅ Step 3: Get passport type and Create Passport
+    passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
+    
     passport = Passport(
         pass_code=generate_pass_code(),
         user_id=signup.user_id,
         activity_id=signup.activity_id,
-        sold_amt=signup.activity.price_per_user,
-        uses_remaining=signup.activity.sessions_included,
+        passport_type_id=passport_type.id if passport_type else None,
+        sold_amt=passport_type.price_per_user if passport_type else 0.0,
+        uses_remaining=passport_type.sessions_included if passport_type else 1,
         created_by=current_admin.id if current_admin else None,
         created_dt=now_utc,
         paid=signup.paid,
@@ -720,7 +733,7 @@ def create_activity():
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        from models import Activity, AdminActionLog, db
+        from models import Activity, PassportType, AdminActionLog, db
         import os
         import uuid
 
@@ -733,13 +746,6 @@ def create_activity():
         name = request.form.get("name", "").strip()
         activity_type = request.form.get("type", "").strip()
         description = request.form.get("description", "").strip()
-        sessions_included = int(request.form.get("sessions_included", 1))
-        price_per_user = float(request.form.get("price_per_user", 0.0))
-        goal_users = int(request.form.get("goal_users", 0))
-        goal_revenue = float(request.form.get("goal_revenue", 0.0))
-        cost_to_run = float(request.form.get("cost_to_run", 0.0))
-        payment_instructions = request.form.get("payment_instructions", "").strip()
-
         status = request.form.get("status", "active")
 
         # 🖼️ Handle image selection
@@ -768,28 +774,54 @@ def create_activity():
             description=description,
             start_date=start_date,
             end_date=end_date,
-            sessions_included=sessions_included,
-            price_per_user=price_per_user,
-            goal_users=goal_users,
-            goal_revenue=goal_revenue,
-            cost_to_run=cost_to_run,
-            payment_instructions=payment_instructions,
+            status=status,
             created_by=session.get("admin"),
-            image_filename=image_filename,  # ✅ Now supports upload or unsplash
+            image_filename=image_filename,
         )
 
         db.session.add(new_activity)
+        db.session.flush()  # Get the activity ID
+
+        # Handle passport types
+        passport_types_data = {}
+        for key, value in request.form.items():
+            if key.startswith('passport_types['):
+                # Parse passport_types[id][field] format
+                parts = key.split('[')
+                if len(parts) == 3:
+                    passport_id = parts[1].rstrip(']')
+                    field = parts[2].rstrip(']')
+                    
+                    if passport_id not in passport_types_data:
+                        passport_types_data[passport_id] = {}
+                    passport_types_data[passport_id][field] = value
+
+        # Create passport types
+        for passport_id, passport_data in passport_types_data.items():
+            if passport_data.get('name'):  # Only create if name is provided
+                passport_type = PassportType(
+                    activity_id=new_activity.id,
+                    name=passport_data.get('name', '').strip(),
+                    type=passport_data.get('type', 'permanent'),
+                    price_per_user=float(passport_data.get('price_per_user', 0.0)),
+                    sessions_included=int(passport_data.get('sessions_included', 1)),
+                    target_revenue=float(passport_data.get('target_revenue', 0.0)),
+                    payment_instructions=passport_data.get('payment_instructions', '').strip(),
+                    status='active'
+                )
+                db.session.add(passport_type)
+
         db.session.commit()
 
         # Log the action
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
-            action=f"Activity Created: {new_activity.name}"
+            action=f"Activity Created: {new_activity.name} with {len(passport_types_data)} passport types"
         ))
         db.session.commit()
 
-        flash("✅ Activity created successfully!", "success")
-        return redirect(url_for("create_activity"))
+        flash(f"✅ Activity created successfully with {len(passport_types_data)} passport types!", "success")
+        return redirect(url_for("edit_activity", activity_id=new_activity.id))
 
     # ✅ GET request
     return render_template("activity_form.html")
@@ -807,18 +839,13 @@ def edit_activity(activity_id):
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
+        from models import PassportType
         import os
         import uuid
 
         activity.name = request.form.get("name", "").strip()
         activity.type = request.form.get("type", "").strip()
         activity.description = request.form.get("description", "").strip()
-        activity.sessions_included = int(request.form.get("sessions_included", 1))
-        activity.price_per_user = float(request.form.get("price_per_user", 0.0))
-        activity.goal_users = int(request.form.get("goal_users", 0))
-        activity.goal_revenue = float(request.form.get("goal_revenue", 0.0))
-        activity.cost_to_run = float(request.form.get("cost_to_run", 0.0))
-        activity.payment_instructions = request.form.get("payment_instructions", "").strip()
         activity.status = request.form.get("status", "active")
 
         start_date_raw = request.form.get("start_date")
@@ -843,17 +870,52 @@ def edit_activity(activity_id):
         elif selected_image_filename:
             activity.image_filename = selected_image_filename
 
+        # Handle passport types - remove existing ones and recreate
+        existing_passport_types = PassportType.query.filter_by(activity_id=activity.id).all()
+        for pt in existing_passport_types:
+            db.session.delete(pt)
+
+        # Parse new passport types from form
+        passport_types_data = {}
+        for key, value in request.form.items():
+            if key.startswith('passport_types['):
+                parts = key.split('[')
+                if len(parts) == 3:
+                    passport_id = parts[1].rstrip(']')
+                    field = parts[2].rstrip(']')
+                    
+                    if passport_id not in passport_types_data:
+                        passport_types_data[passport_id] = {}
+                    passport_types_data[passport_id][field] = value
+
+        # Create new passport types
+        passport_types_created = 0
+        for passport_id, passport_data in passport_types_data.items():
+            if passport_data.get('name'):  # Only create if name is provided
+                passport_type = PassportType(
+                    activity_id=activity.id,
+                    name=passport_data.get('name', '').strip(),
+                    type=passport_data.get('type', 'permanent'),
+                    price_per_user=float(passport_data.get('price_per_user', 0.0)),
+                    sessions_included=int(passport_data.get('sessions_included', 1)),
+                    target_revenue=float(passport_data.get('target_revenue', 0.0)),
+                    payment_instructions=passport_data.get('payment_instructions', '').strip(),
+                    status='active'
+                )
+                db.session.add(passport_type)
+                passport_types_created += 1
+
         db.session.commit()
 
         from models import AdminActionLog
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
-            action=f"Activity Updated: {activity.name}"
+            action=f"Activity Updated: {activity.name} with {passport_types_created} passport types"
         ))
         db.session.commit()
 
-        flash("Activity updated successfully!", "success")
-        return redirect(url_for("activity_dashboard", activity_id=activity.id))
+        flash(f"✅ Activity updated successfully with {passport_types_created} passport types!", "success")
+        return redirect(url_for("edit_activity", activity_id=activity.id))
 
     # 🧮 Add financial summary data (shown at bottom of form)
     passport_income = sum(p.sold_amt for p in activity.passports if p.paid)
@@ -872,7 +934,10 @@ def edit_activity(activity_id):
         "net_income": net_income
     }
 
-    return render_template("activity_form.html", activity=activity, summary=summary)
+    # Get passport types for this activity
+    passport_types = PassportType.query.filter_by(activity_id=activity.id).all()
+    
+    return render_template("activity_form.html", activity=activity, passport_types=passport_types, summary=summary)
 
 
 
@@ -884,6 +949,15 @@ def signup(activity_id):
         flash("❌ Activity not found.", "error")
         return redirect(url_for("dashboard"))
 
+    # Get passport type if specified
+    passport_type_id = request.args.get('passport_type_id')
+    selected_passport_type = None
+    if passport_type_id:
+        selected_passport_type = PassportType.query.get(passport_type_id)
+    
+    # Get all passport types for this activity
+    passport_types = PassportType.query.filter_by(activity_id=activity.id, status='active').all()
+
     # ✅ Corrected settings loading
     settings = {s.key: s.value for s in Setting.query.all()}
 
@@ -891,15 +965,21 @@ def signup(activity_id):
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
         phone = request.form.get("phone", "").strip()
+        selected_passport_type_id = request.form.get("passport_type_id")
 
         user = User(name=name, email=email, phone_number=phone)
         db.session.add(user)
         db.session.flush()
 
+        # Get the selected passport type
+        passport_type = None
+        if selected_passport_type_id:
+            passport_type = PassportType.query.get(selected_passport_type_id)
+        
         signup = Signup(
             user_id=user.id,
             activity_id=activity.id,
-            subject=f"Signup for {activity.name}",
+            subject=f"Signup for {activity.name}" + (f" - {passport_type.name}" if passport_type else ""),
             description=request.form.get("notes", "").strip(),
             form_data="",
         )
@@ -912,7 +992,8 @@ def signup(activity_id):
         flash("✅ Signup submitted!", "success")
         return redirect(url_for("dashboard"))
 
-    return render_template("signup_form.html", activity=activity, settings=settings)
+    return render_template("signup_form.html", activity=activity, settings=settings, 
+                         passport_types=passport_types, selected_passport_type=selected_passport_type)
 
 
 
@@ -1606,12 +1687,6 @@ def activity_form(activity_id=None):
         activity.type = request.form.get("type")
         activity.status = request.form.get("status")
         activity.description = request.form.get("description")
-        activity.payment_instructions = request.form.get("payment_instructions")
-        activity.sessions_included = request.form.get("sessions_included", type=int)
-        activity.price_per_user = request.form.get("price_per_user", type=float)
-        activity.goal_users = request.form.get("goal_users", type=int)
-        activity.goal_revenue = request.form.get("goal_revenue", type=float)
-        activity.cost_to_run = request.form.get("cost_to_run", type=float)
 
         # Dates
         try:
