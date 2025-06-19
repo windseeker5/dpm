@@ -941,15 +941,21 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     intro = render_template_string(intro_raw, user_name=signup.user.name, activity_name=activity.name)
     conclusion = render_template_string(conclusion_raw, user_name=signup.user.name, activity_name=activity.name)
 
+    # Get passport type information if available
+    passport_type = None
+    if hasattr(signup, 'passport_type_id') and signup.passport_type_id:
+        from models import PassportType
+        passport_type = PassportType.query.get(signup.passport_type_id)
+    
     # Build context
     context = {
         "user_name": signup.user.name,
         "user_email": signup.user.email,
         "phone_number": signup.user.phone_number,
         "activity_name": activity.name,
-        "activity_price": f"${activity.price_per_user:.2f}",
-        "sessions_included": activity.sessions_included,
-        "payment_instructions": activity.payment_instructions,
+        "activity_price": f"${passport_type.price_per_user:.2f}" if passport_type else "$0.00",
+        "sessions_included": passport_type.sessions_included if passport_type else 1,
+        "payment_instructions": passport_type.payment_instructions if passport_type else "",
         "title": title,
         "intro_text": intro,
         "conclusion_text": conclusion,
