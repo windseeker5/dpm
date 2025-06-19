@@ -4,16 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Standard Workflow
 
-1. Understand the Problem First. Begin by reading the relevant source code and thinking through the problem. Then, write a clear plan in projectplan.md.
+1. Understand the Problem First and think hard. Begin by reading the relevant source code and thinking through the problem. Then, write a clear plan in projectplan.md.
 
  - Always append new planned features to this file — even small ones.
  - Include the date and time for each new feature entry.
 
-2. Write an Action Plan. Your plan in projectplan.md should include a checklist of concrete steps to implement the feature. You will tick off these steps as you complete them.
+2. Write an Action Plan projectplan.md that include a checklist of concrete steps to implement the feature. You will tick off these steps as you complete them.
 
 3. Review the Plan Before Starting. Before writing any code, contact me to review and approve the action plan.
 
-4. Test-Driven Development. Create Pytest unit tests for all new features — including functions, classes, routes, etc. If you modify existing logic, update the related tests accordingly.
+4. Create Pytest unit tests for all new features — including functions, classes, routes, etc. If you modify existing logic, update the related tests accordingly.
 
  - All tests must live in the /tests directory, mirroring the main app structure.
  - Include at least:
@@ -33,16 +33,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 8. Document Revisions. At the end of each feature or task, add a Revision section to projectplan.md summarizing:
  - What was implemented or changed
  - Any key decisions or notes for future work
-
-
-
-
-
-
-
-
-
-
 
 
 

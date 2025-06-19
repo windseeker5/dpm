@@ -134,8 +134,82 @@
     </div>
   </div>
 
-
-
+  <!-- Passport Overview Section -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <div class="row align-items-center">
+        <div class="col">
+          <h3 class="card-title">
+            <i class="ti ti-ticket text-primary me-2"></i>Passports Overview
+          </h3>
+        </div>
+        <div class="col-auto">
+          <a href="{{ url_for('list_passports') }}" class="btn btn-outline-primary btn-sm">
+            <i class="ti ti-eye me-1"></i>View All Passports
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-6 col-md-2">
+          <div class="text-center">
+            <div class="h3 mb-1 text-primary">{{ passport_stats.total_passports }}</div>
+            <div class="text-muted small text-uppercase">Total</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="text-center">
+            <div class="h3 mb-1 text-success">{{ passport_stats.paid_passports }}</div>
+            <div class="text-muted small text-uppercase">Paid</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="text-center">
+            <div class="h3 mb-1 text-danger">{{ passport_stats.unpaid_passports }}</div>
+            <div class="text-muted small text-uppercase">Unpaid</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="text-center">
+            <div class="h3 mb-1 text-info">{{ passport_stats.active_passports }}</div>
+            <div class="text-muted small text-uppercase">Active</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="text-center">
+            <div class="h3 mb-1 text-success">${{ "{:,.0f}".format(passport_stats.total_revenue) }}</div>
+            <div class="text-muted small text-uppercase">Revenue</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="text-center">
+            <div class="h3 mb-1 text-warning">${{ "{:,.0f}".format(passport_stats.pending_revenue) }}</div>
+            <div class="text-muted small text-uppercase">Pending</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Quick Actions -->
+      <div class="row g-2 mt-3">
+        <div class="col-auto">
+          <a href="{{ url_for('create_passport') }}" class="btn btn-primary btn-sm">
+            <i class="ti ti-plus me-1"></i>New Passport
+          </a>
+        </div>
+        <div class="col-auto">
+          <a href="{{ url_for('list_passports', payment_status='unpaid') }}" class="btn btn-outline-danger btn-sm">
+            <i class="ti ti-alert-circle me-1"></i>Unpaid ({{ passport_stats.unpaid_passports }})
+          </a>
+        </div>
+        <div class="col-auto">
+          <a href="{{ url_for('export_passports') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="ti ti-download me-1"></i>Export
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Title -->
   <div class="d-flex justify-content-between align-items-center mb-4">

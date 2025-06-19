@@ -517,6 +517,17 @@ def dashboard():
             "days_left": days_left
         })
 
+    # ✅ Calculate global passport statistics
+    all_passports = Passport.query.all()
+    passport_stats = {
+        'total_passports': len(all_passports),
+        'paid_passports': len([p for p in all_passports if p.paid]),
+        'unpaid_passports': len([p for p in all_passports if not p.paid]),
+        'active_passports': len([p for p in all_passports if p.uses_remaining > 0]),
+        'total_revenue': sum(p.sold_amt for p in all_passports if p.paid),
+        'pending_revenue': sum(p.sold_amt for p in all_passports if not p.paid),
+    }
+
     # ✅ Use working helper function
     all_logs = get_all_activity_logs()
     recent_logs = all_logs[:20]  # last 20 logs only
@@ -525,6 +536,7 @@ def dashboard():
         "dashboard.html",
         activities=activity_cards,
         kpi_data=kpi_data,
+        passport_stats=passport_stats,
         logs=recent_logs
     )
 
@@ -1556,12 +1568,287 @@ def list_activities():
                          })
 
 
+@app.route("/passports")
+def list_passports():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    # Get filter parameters
+    q = request.args.get("q", "").strip()
+    activity_id = request.args.get("activity", "")
+    payment_status = request.args.get("payment_status", "")
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
+    min_amount = request.args.get("min_amount", "")
+    max_amount = request.args.get("max_amount", "")
+    
+    # Base query with eager loading for performance
+    query = Passport.query.options(
+        db.joinedload(Passport.user),
+        db.joinedload(Passport.activity),
+        db.joinedload(Passport.passport_type)
+    ).order_by(Passport.created_dt.desc())
+
+    # Apply filters
+    if q:
+        query = query.join(User).filter(
+            db.or_(
+                User.name.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%"),
+                Passport.pass_code.ilike(f"%{q}%"),
+                Passport.notes.ilike(f"%{q}%")
+            )
+        )
+    
+    if activity_id:
+        query = query.filter(Passport.activity_id == activity_id)
+    
+    if payment_status == "paid":
+        query = query.filter(Passport.paid == True)
+    elif payment_status == "unpaid":
+        query = query.filter(Passport.paid == False)
+    
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(Passport.created_dt >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            query = query.filter(Passport.created_dt <= end_dt)
+        except ValueError:
+            pass
+    
+    if min_amount:
+        try:
+            min_amt = float(min_amount)
+            query = query.filter(Passport.sold_amt >= min_amt)
+        except ValueError:
+            pass
+    
+    if max_amount:
+        try:
+            max_amt = float(max_amount)
+            query = query.filter(Passport.sold_amt <= max_amt)
+        except ValueError:
+            pass
+
+    passports = query.all()
+    
+    # Get activities for filter dropdown
+    activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
+    
+    # Calculate statistics
+    total_passports = len(passports)
+    paid_passports = len([p for p in passports if p.paid])
+    unpaid_passports = total_passports - paid_passports
+    active_passports = len([p for p in passports if p.uses_remaining > 0])
+    total_revenue = sum(p.sold_amt for p in passports if p.paid)
+    pending_revenue = sum(p.sold_amt for p in passports if not p.paid)
+    
+    statistics = {
+        'total_passports': total_passports,
+        'paid_passports': paid_passports,
+        'unpaid_passports': unpaid_passports,
+        'active_passports': active_passports,
+        'total_revenue': total_revenue,
+        'pending_revenue': pending_revenue
+    }
+    
+    return render_template("passports.html", 
+                         passports=passports, 
+                         activities=activities,
+                         statistics=statistics,
+                         current_filters={
+                             'q': q,
+                             'activity': activity_id,
+                             'payment_status': payment_status,
+                             'start_date': start_date,
+                             'end_date': end_date,
+                             'min_amount': min_amount,
+                             'max_amount': max_amount
+                         })
 
 
+@app.route("/passports/bulk-action", methods=["POST"])
+def passports_bulk_action():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    action = request.form.get("action")
+    passport_ids = request.form.getlist("passport_ids[]")
+    
+    if not passport_ids:
+        flash("❌ No passports selected.", "error")
+        return redirect(url_for("list_passports"))
+    
+    passports = Passport.query.filter(Passport.id.in_(passport_ids)).all()
+    
+    if action == "mark_paid":
+        count = 0
+        for passport in passports:
+            if not passport.paid:
+                passport.paid = True
+                passport.paid_date = datetime.now(timezone.utc)
+                passport.marked_paid_by = session.get("admin", "unknown")
+                count += 1
+        
+        db.session.commit()
+        
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Bulk marked {count} passports as paid by {session.get('admin', 'unknown')}"
+        ))
+        db.session.commit()
+        
+        flash(f"✅ Marked {count} passports as paid.", "success")
+    
+    elif action == "send_reminders":
+        count = 0
+        for passport in passports:
+            if not passport.paid:
+                # Send payment reminder email
+                notify_pass_event(
+                    app=current_app._get_current_object(),
+                    event_type="payment_late",
+                    pass_data=passport,
+                    admin_email=session.get("admin"),
+                    timestamp=datetime.now(timezone.utc)
+                )
+                count += 1
+        
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Sent payment reminders to {count} unpaid passports by {session.get('admin', 'unknown')}"
+        ))
+        db.session.commit()
+        
+        flash(f"📧 Sent payment reminders to {count} unpaid passports.", "success")
+    
+    elif action == "delete":
+        count = len(passports)
+        for passport in passports:
+            db.session.delete(passport)
+        
+        db.session.commit()
+        
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Bulk deleted {count} passports by {session.get('admin', 'unknown')}"
+        ))
+        db.session.commit()
+        
+        flash(f"🗑️ Deleted {count} passports.", "success")
+    
+    else:
+        flash("❌ Invalid bulk action.", "error")
+    
+    return redirect(url_for("list_passports"))
 
 
-
-
+@app.route("/passports/export")
+def export_passports():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    import csv
+    import io
+    from flask import make_response
+    
+    # Get all filters from current session
+    q = request.args.get("q", "").strip()
+    activity_id = request.args.get("activity", "")
+    payment_status = request.args.get("payment_status", "")
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
+    
+    # Build the same query as the main passports page
+    query = Passport.query.options(
+        db.joinedload(Passport.user),
+        db.joinedload(Passport.activity),
+        db.joinedload(Passport.passport_type)
+    ).order_by(Passport.created_dt.desc())
+    
+    # Apply the same filters
+    if q:
+        query = query.join(User).filter(
+            db.or_(
+                User.name.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%"),
+                Passport.pass_code.ilike(f"%{q}%")
+            )
+        )
+    
+    if activity_id:
+        query = query.filter(Passport.activity_id == activity_id)
+    
+    if payment_status == "paid":
+        query = query.filter(Passport.paid == True)
+    elif payment_status == "unpaid":
+        query = query.filter(Passport.paid == False)
+    
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(Passport.created_dt >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            query = query.filter(Passport.created_dt <= end_dt)
+        except ValueError:
+            pass
+    
+    passports = query.all()
+    
+    # Create CSV data
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header row
+    writer.writerow([
+        'Passport Code', 'User Name', 'User Email', 'Activity', 'Passport Type',
+        'Amount', 'Payment Status', 'Uses Remaining', 'Created Date', 'Paid Date', 'Notes'
+    ])
+    
+    # Data rows
+    for passport in passports:
+        writer.writerow([
+            passport.pass_code,
+            passport.user.name if passport.user else '-',
+            passport.user.email if passport.user else '-',
+            passport.activity.name if passport.activity else '-',
+            passport.passport_type.name if passport.passport_type else '-',
+            passport.sold_amt,
+            'Paid' if passport.paid else 'Unpaid',
+            passport.uses_remaining,
+            passport.created_dt.strftime('%Y-%m-%d %H:%M') if passport.created_dt else '-',
+            passport.paid_date.strftime('%Y-%m-%d %H:%M') if passport.paid_date else '-',
+            passport.notes or ''
+        ])
+    
+    # Create response
+    output.seek(0)
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=passports_export_{datetime.now().strftime("%Y%m%d_%H%M")}.csv'
+    
+    # Log admin action
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin", "unknown"),
+        action=f"Exported {len(passports)} passports to CSV by {session.get('admin', 'unknown')}"
+    ))
+    db.session.commit()
+    
+    return response
 
 
 @app.route("/admin/activity-income/<int:activity_id>", methods=["GET", "POST"])
