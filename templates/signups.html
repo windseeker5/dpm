@@ -1,0 +1,617 @@
+{% extends "base.html" %}
+{% block title %}Signups Management{% endblock %}
+
+{% block head %}
+<style>
+.signup-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.signup-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.filter-panel {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stats-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.stat-item {
+  text-align: center;
+  padding: 0.5rem;
+}
+.stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  display: block;
+}
+.stat-label {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+.signup-actions {
+  opacity: 1 !important;
+  transition: opacity 0.2s ease;
+}
+.bulk-actions {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.quick-filters {
+  margin-bottom: 1rem;
+}
+.quick-filter-btn {
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+}
+.table-responsive table {
+  margin-bottom: 0;
+}
+.signup-row {
+  transition: background-color 0.2s ease;
+}
+.signup-row:hover {
+  background-color: #f8f9fa;
+}
+.search-input {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.search-input:focus {
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  border-color: #667eea;
+}
+.loading-spinner {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.loading .loading-spinner {
+  opacity: 1;
+}
+
+/* Mobile Cards */
+@media (max-width: 768px) {
+  .table-responsive {
+    display: none;
+  }
+  .mobile-cards {
+    display: block;
+  }
+  .signup-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .quick-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .quick-filter-btn {
+    flex: 1;
+    min-width: calc(50% - 0.25rem);
+    margin: 0;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-cards {
+    display: none;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          <i class="ti ti-user-check" style="font-size: 1.3em;"></i> Signups Management
+        </h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <a href="{{ url_for('export_signups') }}?{{ request.query_string.decode() }}" class="btn btn-outline-secondary">
+            <i class="ti ti-download me-2"></i> Export CSV
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Page Body -->
+<div class="page-body">
+  <div class="container-xl">
+    
+    <!-- Statistics Cards -->
+    <div class="stats-card">
+      <div class="row">
+        <div class="col-6 col-md-2">
+          <div class="stat-item">
+            <span class="stat-number">{{ statistics.total }}</span>
+            <span class="stat-label">Total</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="stat-item">
+            <span class="stat-number">{{ statistics.paid }}</span>
+            <span class="stat-label">Paid</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="stat-item">
+            <span class="stat-number">{{ statistics.unpaid }}</span>
+            <span class="stat-label">Unpaid</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="stat-item">
+            <span class="stat-number">{{ statistics.pending }}</span>
+            <span class="stat-label">Pending</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="stat-item">
+            <span class="stat-number">{{ statistics.approved }}</span>
+            <span class="stat-label">Approved</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="stat-item">
+            <span class="stat-number">{{ statistics.recent }}</span>
+            <span class="stat-label">Recent (7d)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Filter Buttons -->
+    <div class="quick-filters">
+      <a href="{{ url_for('list_signups') }}" 
+         class="btn btn-outline-primary quick-filter-btn">
+        All Signups ({{ statistics.total }})
+      </a>
+      <a href="{{ url_for('list_signups') }}?payment_status=unpaid" 
+         class="btn btn-outline-danger quick-filter-btn">
+        Unpaid ({{ statistics.unpaid }})
+      </a>
+      <a href="{{ url_for('list_signups') }}?payment_status=paid" 
+         class="btn btn-outline-success quick-filter-btn">
+        Paid ({{ statistics.paid }})
+      </a>
+      <a href="{{ url_for('list_signups') }}?status=pending" 
+         class="btn btn-outline-warning quick-filter-btn">
+        Pending ({{ statistics.pending }})
+      </a>
+      <a href="{{ url_for('list_signups') }}?status=approved" 
+         class="btn btn-outline-info quick-filter-btn">
+        Approved ({{ statistics.approved }})
+      </a>
+    </div>
+
+    <!-- Search and Filter Panel -->
+    <div class="filter-panel">
+      <form method="GET" action="{{ url_for('list_signups') }}" id="filterForm">
+        <div class="row g-3">
+          <!-- Search -->
+          <div class="col-md-3">
+            <div class="input-group">
+              <input type="text" name="q" class="form-control" placeholder="Search users, emails, subjects..." 
+                     value="{{ current_filters.q or '' }}" id="searchInput">
+              <button type="submit" class="btn btn-outline-secondary">
+                <i class="ti ti-search"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Activity Filter -->
+          <div class="col-md-2">
+            <select name="activity_id" class="form-select" onchange="document.getElementById('filterForm').submit();">
+              <option value="">All Activities</option>
+              {% for activity in activities %}
+                <option value="{{ activity.id }}" 
+                        {% if current_filters.activity_id == activity.id|string %}selected{% endif %}>
+                  {{ activity.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <!-- Payment Status Filter -->
+          <div class="col-md-2">
+            <select name="payment_status" class="form-select" onchange="document.getElementById('filterForm').submit();">
+              <option value="">All Status</option>
+              <option value="paid" {% if current_filters.payment_status == 'paid' %}selected{% endif %}>Paid</option>
+              <option value="unpaid" {% if current_filters.payment_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
+            </select>
+          </div>
+          
+          <!-- Signup Status Filter -->
+          <div class="col-md-2">
+            <select name="status" class="form-select" onchange="document.getElementById('filterForm').submit();">
+              <option value="">Signup Status</option>
+              {% for status in statuses %}
+                <option value="{{ status }}" 
+                        {% if current_filters.status == status %}selected{% endif %}>
+                  {{ status.title() }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <!-- Date Range -->
+          <div class="col-md-2">
+            <input type="date" name="start_date" class="form-control" placeholder="Start Date" 
+                   value="{{ current_filters.start_date or '' }}" onchange="document.getElementById('filterForm').submit();">
+          </div>
+          <div class="col-md-1">
+            <input type="date" name="end_date" class="form-control" placeholder="End Date" 
+                   value="{{ current_filters.end_date or '' }}" onchange="document.getElementById('filterForm').submit();">
+          </div>
+        </div>
+        
+        <!-- Clear Filters -->
+        <div class="row g-3 mt-2">
+          {% if current_filters.q or current_filters.activity_id or current_filters.payment_status or current_filters.status or current_filters.start_date or current_filters.end_date %}
+          <div class="col-md-2">
+            <a href="{{ url_for('list_signups') }}" class="btn btn-sm btn-outline-secondary">
+              <i class="ti ti-x"></i> Clear Filters
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <!-- Bulk Actions Panel -->
+    <div class="bulk-actions" id="bulkActions" style="display: none;">
+      <form method="POST" action="{{ url_for('bulk_signup_action') }}" id="bulkForm">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <span id="selectedCount">0</span> signups selected
+          </div>
+          <div class="col-md-6">
+            <div class="btn-group" role="group">
+              <button type="submit" name="action" value="mark_paid" class="btn btn-success btn-sm">
+                <i class="ti ti-check me-1"></i> Mark Paid
+              </button>
+              <button type="submit" name="action" value="send_reminders" class="btn btn-warning btn-sm">
+                <i class="ti ti-mail me-1"></i> Send Reminders
+              </button>
+              <button type="submit" name="action" value="approve" class="btn btn-info btn-sm">
+                <i class="ti ti-thumb-up me-1"></i> Approve
+              </button>
+              <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm" 
+                      onclick="return confirm('Are you sure you want to delete the selected signups?')">
+                <i class="ti ti-trash me-1"></i> Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAll"></th>
+            <th>User</th>
+            <th>Activity</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Payment</th>
+            <th>Signup Date</th>
+            <th class="w-1">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for signup in signups %}
+          <tr class="signup-row">
+            <td>
+              <input type="checkbox" 
+                     class="signup-checkbox" 
+                     name="selected_signups" 
+                     value="{{ signup.id }}" 
+                     form="bulkForm">
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                <span class="avatar avatar-sm me-3" style="background-image: url('https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon')"></span>
+                <div>
+                  <strong>{{ signup.user.name or 'Anonymous' }}</strong>
+                  <br>
+                  <span class="text-muted small">{{ signup.user.email or '-' }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-blue-lt text-blue">{{ signup.activity.name if signup.activity else 'Unknown' }}</span>
+            </td>
+            <td>
+              <div>
+                <div class="text-reset">{{ signup.subject or 'No subject' }}</div>
+                {% if signup.description %}
+                <div class="text-muted small">{{ signup.description[:50] }}{% if signup.description|length > 50 %}...{% endif %}</div>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% set status = signup.status or 'pending' %}
+              {% if status == 'approved' %}
+                <span class="badge bg-green-lt text-green">{{ status.title() }}</span>
+              {% elif status == 'pending' %}
+                <span class="badge bg-yellow-lt text-yellow">{{ status.title() }}</span>
+              {% elif status == 'rejected' %}
+                <span class="badge bg-red-lt text-red">{{ status.title() }}</span>
+              {% else %}
+                <span class="badge bg-gray-lt text-gray">{{ status.title() }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if signup.paid %}
+                <span class="badge bg-green-lt text-green">Paid</span>
+                {% if signup.paid_at %}
+                  <div class="text-muted small">{{ signup.paid_at.strftime('%Y-%m-%d') }}</div>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-red-lt text-red">Unpaid</span>
+              {% endif %}
+            </td>
+            <td>
+              <div>{{ signup.signed_up_at.strftime('%Y-%m-%d') if signup.signed_up_at else 'Unknown' }}</div>
+              <div class="text-muted small">{{ signup.signed_up_at.strftime('%H:%M') if signup.signed_up_at else '' }}</div>
+            </td>
+            <td>
+              <div class="dropdown">
+                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                  Actions
+                </a>
+                <div class="dropdown-menu">
+                  <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
+                    <i class="ti ti-edit me-2"></i> Edit
+                  </a>
+                  {% if not signup.paid %}
+                  <a class="dropdown-item" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}" 
+                     onclick="return confirm('Mark this signup as paid?')">
+                    <i class="ti ti-check me-2"></i> Mark as Paid
+                  </a>
+                  {% endif %}
+                  {% if signup.status == 'pending' %}
+                  <a class="dropdown-item" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
+                     onclick="return confirm('Approve signup and create passport?')">
+                    <i class="ti ti-thumb-up me-2"></i> Approve & Create Pass
+                  </a>
+                  {% endif %}
+                  <a class="dropdown-item" href="{{ url_for('create_pass_from_signup', signup_id=signup.id) }}"
+                     onclick="return confirm('Create passport from this signup?')">
+                    <i class="ti ti-id-badge me-2"></i> Create Passport
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-danger" href="#" 
+                     onclick="if(confirm('Delete this signup?')) { 
+                       var form = document.getElementById('deleteForm{{ signup.id }}'); 
+                       if(form) form.submit(); 
+                     }">
+                    <i class="ti ti-trash me-2"></i> Delete
+                  </a>
+                </div>
+              </div>
+              <!-- Hidden delete form -->
+              <form id="deleteForm{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="selected_signups" value="{{ signup.id }}">
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards">
+      {% for signup in signups %}
+      <div class="signup-card">
+        <div class="row align-items-center mb-2">
+          <div class="col">
+            <div class="d-flex align-items-center">
+              <input type="checkbox" 
+                     class="signup-checkbox me-2" 
+                     name="selected_signups" 
+                     value="{{ signup.id }}" 
+                     form="bulkForm">
+              <span class="avatar avatar-md me-3" style="background-image: url('https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon')"></span>
+              <div>
+                <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
+                <div class="text-muted small">{{ signup.user.email or '-' }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-auto">
+            <div class="dropdown">
+              <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                Actions
+              </a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
+                  <i class="ti ti-edit me-2"></i> Edit
+                </a>
+                {% if not signup.paid %}
+                <a class="dropdown-item" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}">
+                  <i class="ti ti-check me-2"></i> Mark as Paid
+                </a>
+                {% endif %}
+                {% if signup.status == 'pending' %}
+                <a class="dropdown-item" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}">
+                  <i class="ti ti-thumb-up me-2"></i> Approve & Create Pass
+                </a>
+                {% endif %}
+                <a class="dropdown-item" href="{{ url_for('create_pass_from_signup', signup_id=signup.id) }}">
+                  <i class="ti ti-id-badge me-2"></i> Create Passport
+                </a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" href="#" 
+                   onclick="if(confirm('Delete this signup?')) { 
+                     var form = document.getElementById('deleteFormMobile{{ signup.id }}'); 
+                     if(form) form.submit(); 
+                   }">
+                  <i class="ti ti-trash me-2"></i> Delete
+                </a>
+              </div>
+            </div>
+            <!-- Hidden delete form for mobile -->
+            <form id="deleteFormMobile{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="selected_signups" value="{{ signup.id }}">
+            </form>
+          </div>
+        </div>
+        
+        <div class="row mb-2">
+          <div class="col-6">
+            <small class="text-muted">Activity</small>
+            <div><span class="badge bg-blue-lt text-blue">{{ signup.activity.name if signup.activity else 'Unknown' }}</span></div>
+          </div>
+          <div class="col-6">
+            <small class="text-muted">Status</small>
+            <div>
+              {% set status = signup.status or 'pending' %}
+              {% if status == 'approved' %}
+                <span class="badge bg-green-lt text-green">{{ status.title() }}</span>
+              {% elif status == 'pending' %}
+                <span class="badge bg-yellow-lt text-yellow">{{ status.title() }}</span>
+              {% elif status == 'rejected' %}
+                <span class="badge bg-red-lt text-red">{{ status.title() }}</span>
+              {% else %}
+                <span class="badge bg-gray-lt text-gray">{{ status.title() }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <div class="row mb-2">
+          <div class="col-6">
+            <small class="text-muted">Payment</small>
+            <div>
+              {% if signup.paid %}
+                <span class="badge bg-green-lt text-green">Paid</span>
+              {% else %}
+                <span class="badge bg-red-lt text-red">Unpaid</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-6">
+            <small class="text-muted">Signup Date</small>
+            <div>{{ signup.signed_up_at.strftime('%Y-%m-%d %H:%M') if signup.signed_up_at else 'Unknown' }}</div>
+          </div>
+        </div>
+        
+        {% if signup.subject %}
+        <div>
+          <small class="text-muted">Subject</small>
+          <div>{{ signup.subject }}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if signups|length == 0 %}
+    <div class="empty">
+      <div class="empty-icon">
+        <i class="ti ti-user-x"></i>
+      </div>
+      <p class="empty-title">No signups found</p>
+      <p class="empty-subtitle text-muted">
+        {% if current_filters.q or current_filters.activity_id or current_filters.payment_status or current_filters.status %}
+          Try adjusting your search filters or 
+          <a href="{{ url_for('list_signups') }}">clear all filters</a> to see all signups.
+        {% else %}
+          No signups have been created yet. Users can sign up for activities through the activity signup forms.
+        {% endif %}
+      </p>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Bulk selection functionality
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const signupCheckboxes = document.querySelectorAll('.signup-checkbox');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+
+    function updateBulkActions() {
+        const checkedBoxes = document.querySelectorAll('.signup-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCount.textContent = count;
+        bulkActions.style.display = count > 0 ? 'block' : 'none';
+        
+        // Update select all checkbox state
+        if (count === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+        } else if (count === signupCheckboxes.length) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = true;
+        } else {
+            selectAllCheckbox.indeterminate = true;
+        }
+    }
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            signupCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    // Individual checkbox functionality
+    signupCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Search on Enter key
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('filterForm').submit();
+            }
+        });
+    }
+
+
+    // Initialize
+    updateBulkActions();
+});
+</script>
+{% endblock %}

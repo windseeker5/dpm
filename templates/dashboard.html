@@ -211,6 +211,85 @@
     </div>
   </div>
 
+  <!-- Signups Overview -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h4 class="card-title">
+        <i class="ti ti-user-check" style="font-size: 1.2em;"></i> Signups Overview
+      </h4>
+      <div class="card-actions">
+        <a href="{{ url_for('list_signups') }}" class="btn btn-primary">
+          <i class="ti ti-eye me-2"></i> View All Signups
+        </a>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-6 col-lg-2">
+          <div class="text-center">
+            <span class="text-muted">Total</span>
+            <div class="h1 mb-1">{{ signup_stats.total_signups }}</div>
+            <span class="badge bg-blue-lt text-blue">All Signups</span>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <div class="text-center">
+            <span class="text-muted">Paid</span>
+            <div class="h1 mb-1 text-success">{{ signup_stats.paid_signups }}</div>
+            <span class="badge bg-green-lt text-green">Completed</span>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <div class="text-center">
+            <span class="text-muted">Unpaid</span>
+            <div class="h1 mb-1 text-danger">{{ signup_stats.unpaid_signups }}</div>
+            <span class="badge bg-red-lt text-red">Awaiting Payment</span>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <div class="text-center">
+            <span class="text-muted">Pending</span>
+            <div class="h1 mb-1 text-warning">{{ signup_stats.pending_signups }}</div>
+            <span class="badge bg-yellow-lt text-yellow">Review Needed</span>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <div class="text-center">
+            <span class="text-muted">Approved</span>
+            <div class="h1 mb-1 text-info">{{ signup_stats.approved_signups }}</div>
+            <span class="badge bg-green-lt text-green">Confirmed</span>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <div class="text-center">
+            <span class="text-muted">Recent</span>
+            <div class="h1 mb-1 text-primary">{{ signup_stats.recent_signups }}</div>
+            <span class="badge bg-blue-lt text-blue">Last 7 Days</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row mt-3">
+        <div class="col">
+          <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('list_signups') }}?payment_status=unpaid" class="btn btn-outline-danger btn-sm">
+              <i class="ti ti-alert-circle me-1"></i> View Unpaid ({{ signup_stats.unpaid_signups }})
+            </a>
+            <a href="{{ url_for('list_signups') }}?status=pending" class="btn btn-outline-warning btn-sm">
+              <i class="ti ti-clock me-1"></i> Pending Approval ({{ signup_stats.pending_signups }})
+            </a>
+            <a href="{{ url_for('list_signups') }}?status=approved" class="btn btn-outline-success btn-sm">
+              <i class="ti ti-check me-1"></i> Approved ({{ signup_stats.approved_signups }})
+            </a>
+            <a href="{{ url_for('export_signups') }}" class="btn btn-outline-secondary btn-sm">
+              <i class="ti ti-download me-1"></i> Export All
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Title -->
   <div class="d-flex justify-content-between align-items-center mb-4">
 
