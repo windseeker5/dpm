@@ -37,8 +37,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 
 
-
-
 ## Project Overview
 
 Minipass is a mobile-first Activities and Digital Passport Management system built with Flask. It enables organizations and small businesses to easily manage activities, digital passport or tickets, user signups, and payments—all in one place.
@@ -69,7 +67,6 @@ Legacy models marked for cleanup: Pass, Redemption, EbankPayment
 ### Directory Structure
 - `templates/` - Jinja2 HTML templates
 - `static/` - Assets including Tabler UI, TinyMCE, uploads, email templates
-- `migrations/` - Database migration files
 - `instance/` - SQLite database files
 
 
@@ -85,58 +82,172 @@ Legacy models marked for cleanup: Pass, Redemption, EbankPayment
 
 ## UI/UX Guidelines
 
+### Typography & Layout Standards
+
+**Section Headers:**
+- Use `<h4>` for main section titles (not h5)
+- Include consistent icon sizing with `style="font-size: 1.2em;"` for section header icons
+- Maintain proper visual hierarchy with adequate spacing
+
+**Examples:**
+```html
+<!-- Section Header with Icon -->
+<h4 class="mb-3">
+    <i class="ti ti-passport" style="font-size: 1.2em;"></i> Passport Types
+</h4>
+
+<!-- Page Title -->
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    <i class="ti ti-activity" style="font-size: 1.3em;"></i> Activity Management
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
 ### Badge Styling Standards
-Always use consistent badge colors to maintain visual coherence across the application:
+Always use light background badges with darker text for optimal readability:
 
 **Status Badges:**
-- `bg-green-lt` - Paid, Active, Success states
-- `bg-red-lt` - Unpaid, Inactive, Error states  
-- `bg-yellow-lt` - Pending, Warning states
-- `bg-blue-lt` - Informational badges (counts, types)
-- `bg-gray-lt` - Neutral categories (activity types, tags)
+- `badge bg-green-lt text-green` - Paid, Active, Success states
+- `badge bg-red-lt text-red` - Unpaid, Inactive, Error states  
+- `badge bg-yellow-lt text-yellow` - Pending, Warning states
+- `badge bg-blue-lt text-blue` - Informational badges (counts, types)
+- `badge bg-gray-lt text-gray` - Neutral categories (activity types, tags)
 
 **Examples:**
 ```html
 <!-- Payment Status -->
-<span class="badge bg-green-lt">Paid</span>
-<span class="badge bg-red-lt">Unpaid</span>
+<span class="badge bg-green-lt text-green">Paid</span>
+<span class="badge bg-red-lt text-red">Unpaid</span>
 
 <!-- Activity Status -->
-<span class="badge bg-green-lt">Active</span>
-<span class="badge bg-red-lt">Inactive</span>
+<span class="badge bg-green-lt text-green">Active</span>
+<span class="badge bg-red-lt text-red">Inactive</span>
 
-<!-- Informational -->
-<span class="badge bg-blue-lt">5 Types</span>
-<span class="badge bg-gray-lt">Hockey</span>
+<!-- Count Badges -->
+<span class="badge bg-blue-lt text-blue">All Passports (25)</span>
+<span class="badge bg-red-lt text-red">Unpaid (2)</span>
+<span class="badge bg-green-lt text-green">Paid (18)</span>
+<span class="badge bg-blue-lt text-blue">Active (17)</span>
+
+<!-- Category Badges -->
+<span class="badge bg-gray-lt text-gray">Hockey</span>
+<span class="badge bg-gray-lt text-gray">Sports</span>
 ```
 
 ### Button Styling Standards
-Maintain consistent button styles for predictable user interactions:
+Maintain consistent button styles with proper sizing for all user interactions:
 
-**Action Buttons:**
-- `btn btn-outline-secondary dropdown-toggle` - Action dropdowns (standard gray)
-- `btn btn-primary` - Primary actions (create, submit)
+**Action Buttons (Standard Pattern):**
+- `btn btn-outline-secondary dropdown-toggle` - ALL action dropdowns (always gray outline)
+- `btn btn-primary` - Primary actions (create, submit, save)
 - `btn btn-success` - Success actions (approve, mark as paid)
 - `btn btn-danger` - Destructive actions (delete, reject)
-- `btn btn-secondary` - Secondary actions (scan, view)
+- `btn btn-secondary` - Secondary actions (cancel, view details)
+
+**Button Sizing:**
+- Use standard button sizes (no `btn-sm` unless specifically needed for space constraints)
+- Icons in buttons should use standard Tabler icon classes without custom sizing
 
 **Examples:**
 ```html
-<!-- Standard Actions Dropdown -->
-<a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
+<!-- Standard Actions Dropdown (ALWAYS use this pattern) -->
+<div class="dropdown">
+    <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+        Actions
+    </a>
+    <div class="dropdown-menu">
+        <a class="dropdown-item" href="#">
+            <i class="ti ti-eye me-2"></i> View & Redeem
+        </a>
+        <a class="dropdown-item" href="#">
+            <i class="ti ti-edit me-2"></i> Edit
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item text-danger" href="#">
+            <i class="ti ti-trash me-2"></i> Delete
+        </a>
+    </div>
+</div>
 
-<!-- Primary Actions -->
-<a href="#" class="btn btn-primary">Create Activity</a>
+<!-- Primary Action Buttons -->
+<a href="#" class="btn btn-primary">
+    <i class="ti ti-plus me-2"></i> Add Passport Type
+</a>
+
+<button class="btn btn-primary">
+    <i class="ti ti-device-floppy me-2"></i> Create Activity
+</button>
 
 <!-- Success Actions -->
-<button class="btn btn-success">Mark as Paid</button>
+<button class="btn btn-success">
+    <i class="ti ti-check me-2"></i> Mark as Paid
+</button>
+
+<!-- Secondary Actions -->
+<button class="btn btn-secondary">
+    <i class="ti ti-x me-2"></i> Cancel
+</button>
+```
+
+### Page Layout Standards
+
+**Standard Page Header Pattern:**
+```html
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    <i class="ti ti-[icon-name]" style="font-size: 1.3em;"></i> Page Title
+                </h2>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                    <a href="#" class="btn btn-primary">
+                        <i class="ti ti-plus me-2"></i> Primary Action
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+**Card Section Headers:**
+```html
+<div class="card">
+    <div class="card-header">
+        <h4 class="card-title">
+            <i class="ti ti-[icon-name]" style="font-size: 1.2em;"></i> Section Title
+        </h4>
+        <div class="card-actions">
+            <a href="#" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i> Add Item
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Content -->
+    </div>
+</div>
 ```
 
 ### Consistency Rules
 1. **Always use Tabler's standard color classes** - avoid custom CSS overrides
-2. **Maintain semantic meaning** - green = success/paid, red = danger/unpaid
-3. **Follow established patterns** - reference `activity_dashboard.html` for standard implementations
-4. **Use consistent iconography** - maintain icon + text patterns in buttons and dropdowns
+2. **Action buttons are ALWAYS `btn btn-outline-secondary dropdown-toggle`** - no exceptions
+3. **Badges always use light backgrounds with matching darker text** - `bg-[color]-lt text-[color]`
+4. **Section headers use h4 with properly sized icons** - `style="font-size: 1.2em;"`
+5. **Page titles use h2 with larger icons** - `style="font-size: 1.3em;"`
+6. **Maintain semantic meaning** - green = success/paid, red = danger/unpaid, blue = informational
+7. **Icon + text patterns in all buttons and dropdowns** - use `me-2` for icon spacing
+8. **Follow established patterns** - reference these guidelines for all new implementations
 
 ## Business Logic
 
