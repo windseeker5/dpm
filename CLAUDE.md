@@ -2,19 +2,51 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Standard workflow 
-1. Think about the problem first, read the source code for the relevant files, and write a plan in projectplan.md. 
-2. This plan should contain a list of actions to be performed that you can tick as they are carried out. 
-3. Before you start, contact me to check the plan. 
-4. Always create Pytest unit tests for new features (functions, classes, routes, etc). After updating any logic, check whether existing unit tests need to be updated. If so, do it. Tests should live in a `/tests` folder mirroring the main app structure.
-  - Include at least:
-    - 1 test for expected use
-    - 1 edge case
-    - 1 failure case
-5. Then start working on the actions to be performed, marking them as completed as they go along. 
-6. Please provide me with a detailed explanation of the changes made at each stage. 
-7. Simplify each task and code modification as much as possible. We want to avoid massive or complex changes. Each change must have a minimal impact on the code. Simplicity is paramount. 
-7. Finally, add a revision section to the projectplan.md file with a summary of the changes made and any other relevant information.
+## Standard Workflow
+
+1. Understand the Problem First. Begin by reading the relevant source code and thinking through the problem. Then, write a clear plan in projectplan.md.
+
+ - Always append new planned features to this file — even small ones.
+ - Include the date and time for each new feature entry.
+
+2. Write an Action Plan. Your plan in projectplan.md should include a checklist of concrete steps to implement the feature. You will tick off these steps as you complete them.
+
+3. Review the Plan Before Starting. Before writing any code, contact me to review and approve the action plan.
+
+4. Test-Driven Development. Create Pytest unit tests for all new features — including functions, classes, routes, etc. If you modify existing logic, update the related tests accordingly.
+
+ - All tests must live in the /tests directory, mirroring the main app structure.
+ - Include at least:
+   - One success case
+   - One edge case
+   - One failure case
+
+5. Execute the Plan. Begin coding based on the approved action plan. Check off each completed action in projectplan.md as you go.
+
+6. Explain Your Changes. After each stage of implementation, write a clear explanation of the changes made and why.
+
+7. Keep it Simple. Prioritize simplicity.
+ - Break down tasks into small, manageable changes.
+ - Avoid large or complex commits.
+ - Each modification should have minimal impact on the overall codebase.
+
+8. Document Revisions. At the end of each feature or task, add a Revision section to projectplan.md summarizing:
+ - What was implemented or changed
+ - Any key decisions or notes for future work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Project Overview
