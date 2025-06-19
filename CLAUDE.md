@@ -93,6 +93,61 @@ Legacy models marked for cleanup: Pass, Redemption, EbankPayment
 - **QR Code System**: Generated passes with QR codes for ticket validation
 - **Email Templates**: HTML templates with inline CSS processing via premailer
 
+## UI/UX Guidelines
+
+### Badge Styling Standards
+Always use consistent badge colors to maintain visual coherence across the application:
+
+**Status Badges:**
+- `bg-green-lt` - Paid, Active, Success states
+- `bg-red-lt` - Unpaid, Inactive, Error states  
+- `bg-yellow-lt` - Pending, Warning states
+- `bg-blue-lt` - Informational badges (counts, types)
+- `bg-gray-lt` - Neutral categories (activity types, tags)
+
+**Examples:**
+```html
+<!-- Payment Status -->
+<span class="badge bg-green-lt">Paid</span>
+<span class="badge bg-red-lt">Unpaid</span>
+
+<!-- Activity Status -->
+<span class="badge bg-green-lt">Active</span>
+<span class="badge bg-red-lt">Inactive</span>
+
+<!-- Informational -->
+<span class="badge bg-blue-lt">5 Types</span>
+<span class="badge bg-gray-lt">Hockey</span>
+```
+
+### Button Styling Standards
+Maintain consistent button styles for predictable user interactions:
+
+**Action Buttons:**
+- `btn btn-outline-secondary dropdown-toggle` - Action dropdowns (standard gray)
+- `btn btn-primary` - Primary actions (create, submit)
+- `btn btn-success` - Success actions (approve, mark as paid)
+- `btn btn-danger` - Destructive actions (delete, reject)
+- `btn btn-secondary` - Secondary actions (scan, view)
+
+**Examples:**
+```html
+<!-- Standard Actions Dropdown -->
+<a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
+
+<!-- Primary Actions -->
+<a href="#" class="btn btn-primary">Create Activity</a>
+
+<!-- Success Actions -->
+<button class="btn btn-success">Mark as Paid</button>
+```
+
+### Consistency Rules
+1. **Always use Tabler's standard color classes** - avoid custom CSS overrides
+2. **Maintain semantic meaning** - green = success/paid, red = danger/unpaid
+3. **Follow established patterns** - reference `activity_dashboard.html` for standard implementations
+4. **Use consistent iconography** - maintain icon + text patterns in buttons and dropdowns
+
 ## Business Logic
 
 The system manages digital passes for activities where users can:
