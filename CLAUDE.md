@@ -1,7 +1,3 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Standard Workflow
 
 1. Understand the Problem First and think hard. Begin by reading the relevant source code and thinking through the problem. Then, write a clear plan in projectplan.md.
@@ -74,42 +70,18 @@ Legacy models marked for cleanup: Pass, Redemption, EbankPayment
 
 ## Key Patterns
 
-- **Environment Detection**: Uses `FLASK_ENV` to switch between dev/prod databases
 - **UTC Timezone**: All datetime operations use UTC with proper timezone handling
 - **Background Jobs**: APScheduler for email automation and scheduled tasks
 - **Security**: CSRF protection, bcrypt password hashing, secure file uploads
 - **QR Code System**: Generated passes with QR codes for ticket validation
 - **Email Templates**: HTML templates with inline CSS processing via premailer
 
+
 ## UI/UX Guidelines
 
 ### Typography & Layout Standards
 
-**Section Headers:**
-- Use `<h4>` for main section titles (not h5)
-- Include consistent icon sizing with `style="font-size: 1.2em;"` for section header icons
-- Maintain proper visual hierarchy with adequate spacing
 
-**Examples:**
-```html
-<!-- Section Header with Icon -->
-<h4 class="mb-3">
-    <i class="ti ti-passport" style="font-size: 1.2em;"></i> Passport Types
-</h4>
-
-<!-- Page Title -->
-<div class="page-header d-print-none">
-    <div class="container-xl">
-        <div class="row g-2 align-items-center">
-            <div class="col">
-                <h2 class="page-title">
-                    <i class="ti ti-activity" style="font-size: 1.3em;"></i> Activity Management
-                </h2>
-            </div>
-        </div>
-    </div>
-</div>
-```
 
 ### Badge Styling Standards
 Always use light background badges with darker text for optimal readability:
@@ -360,33 +332,6 @@ All data tables must follow this consistent pattern for visual uniformity:
 - **Fallback values**: 'Anonymous' for names, '-' for emails, 'default@example.com' for Gravatar generation
 - **Hover effects**: Automatic with `table-vcenter card-table` classes
 
-### White Background Standard (CRITICAL)
-**ALL cards and tables MUST have white backgrounds** to ensure proper visual hierarchy and contrast against the page background.
-
-**Required CSS Rules:**
-```css
-.card {
-  background-color: #fff !important;
-}
-
-.table {
-  background-color: #fff !important;
-}
-
-/* Any custom card-like components */
-.passport-type-card,
-.signup-link-card,
-.mobile-cards .card {
-  background-color: #fff !important;
-}
-```
-
-**Implementation Requirements:**
-- Apply to ALL template files that use cards or tables
-- Use `!important` to override any default Tabler styling
-- Never use gray or transparent backgrounds for cards/tables
-- This ensures clean, professional appearance matching Tabler reference designs
-
 ### Consistency Rules
 1. **Always use Tabler's standard color classes** - avoid custom CSS overrides
 2. **Action buttons are ALWAYS `btn btn-outline-secondary dropdown-toggle`** - no exceptions
@@ -397,17 +342,5 @@ All data tables must follow this consistent pattern for visual uniformity:
 7. **Tables must use card wrapper and Gravatar avatars** - follow table styling standards above
 8. **Maintain semantic meaning** - green = success/paid, red = danger/unpaid, blue = informational
 9. **Icon + text patterns in all buttons and dropdowns** - use `me-2` for icon spacing
-10. **WHITE BACKGROUNDS MANDATORY** - All cards and tables must have white backgrounds (see White Background Standard above)
-11. **Follow established patterns** - reference these guidelines for all new implementations
+10. **Follow established patterns** - reference these guidelines for all new implementations
 
-## Business Logic
-
-The system manages digital passes for activities where users can:
-1. Sign up for activities with e-bank transfert or Stripe payment integration
-2. Receive digital passes with QR codes
-3. Have passes validated via QR scanning
-4. Receive automated email confirmations and reminders
-
-Financial tracking per activity includes income/expense management with payment reconciliation.
-
-The AI chatbot provides natural language analytics queries against the business data.
