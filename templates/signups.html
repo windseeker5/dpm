@@ -40,6 +40,37 @@
   opacity: 1 !important;
   transition: opacity 0.2s ease;
 }
+
+/* Fix dropdown positioning to prevent cut-off */
+.table-responsive {
+  overflow-x: auto;
+  overflow-y: visible; /* Allow dropdowns to extend beyond table */
+}
+
+/* Ensure dropdown menus have proper positioning */
+.dropdown-menu {
+  z-index: 1050;
+  min-width: 180px;
+}
+
+/* Fix dropdown positioning for table rows near bottom */
+.dropdown-toggle[aria-expanded="true"] + .dropdown-menu {
+  transform: translateY(-100%);
+  top: auto;
+  bottom: 100%;
+}
+
+/* Alternative: Use dropup for last few rows */
+.table tbody tr:nth-last-child(-n+3) .dropdown {
+  position: static;
+}
+
+.table tbody tr:nth-last-child(-n+3) .dropdown-menu {
+  position: absolute;
+  top: auto;
+  bottom: 100%;
+  transform: translateY(0);
+}
 .bulk-actions {
   background: #fff;
   border: 1px solid #dee2e6;
@@ -212,7 +243,7 @@
           <!-- Search -->
           <div class="col-md-3">
             <div class="input-group">
-              <input type="text" name="q" class="form-control" placeholder="Search users, emails, subjects..." 
+              <input type="text" name="q" class="form-control" placeholder="Search users, emails, activities..." 
                      value="{{ current_filters.q or '' }}" id="searchInput">
               <button type="submit" class="btn btn-outline-secondary">
                 <i class="ti ti-search"></i>
@@ -317,7 +348,6 @@
             <th>User</th>
             <th>Activity</th>
             <th>Type</th>
-            <th>Subject</th>
             <th>Status</th>
             <th>Payment</th>
             <th>Signup Date</th>
@@ -351,22 +381,25 @@
               {% if signup.passport_type_id %}
                 {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
                 {% if passport_type %}
-                  <span class="badge bg-purple-lt text-purple">{{ passport_type.name }}</span>
-                  <div class="text-muted small">${{ "%.0f"|format(passport_type.price_per_user or 0) }} • {{ passport_type.sessions_included }} sessions</div>
+                  <div class="mb-1">
+                    <span class="badge bg-purple-lt text-purple">{{ passport_type.name }}</span>
+                  </div>
+                  <div class="text-muted small">
+                    <i class="ti ti-currency-dollar me-1"></i>${{ "%.0f"|format(passport_type.price_per_user or 0) }}
+                    <span class="mx-1">•</span>
+                    <i class="ti ti-ticket me-1"></i>{{ passport_type.sessions_included }} sessions
+                  </div>
+                  {% if passport_type.payment_instructions %}
+                    <div class="text-muted small mt-1">
+                      <i class="ti ti-info-circle me-1"></i>{{ passport_type.payment_instructions[:30] }}{% if passport_type.payment_instructions|length > 30 %}...{% endif %}
+                    </div>
+                  {% endif %}
                 {% else %}
                   <span class="badge bg-gray-lt text-gray">Type #{{ signup.passport_type_id }}</span>
                 {% endif %}
               {% else %}
                 <span class="text-muted">-</span>
               {% endif %}
-            </td>
-            <td>
-              <div>
-                <div class="text-reset">{{ signup.subject or 'No subject' }}</div>
-                {% if signup.description %}
-                <div class="text-muted small">{{ signup.description[:50] }}{% if signup.description|length > 50 %}...{% endif %}</div>
-                {% endif %}
-              </div>
             </td>
             <td>
               {% set status = signup.status or 'pending' %}
@@ -399,7 +432,7 @@
                 <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                   Actions
                 </a>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu dropdown-menu-end">
                   <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
                     <i class="ti ti-edit me-2"></i> Edit
                   </a>
@@ -466,7 +499,7 @@
               <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                 Actions
               </a>
-              <div class="dropdown-menu">
+              <div class="dropdown-menu dropdown-menu-end">
                 <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
                   <i class="ti ti-edit me-2"></i> Edit
                 </a>
@@ -502,10 +535,21 @@
         </div>
         
         <div class="row mb-2">
-          <div class="col-6">
-            <small class="text-muted">Activity</small>
-            <div><span class="badge bg-blue-lt text-blue">{{ signup.activity.name if signup.activity else 'Unknown' }}</span></div>
+          <div class="col-12 mb-2">
+            <small class="text-muted">Activity & Type</small>
+            <div>
+              <span class="badge bg-blue-lt text-blue me-1">{{ signup.activity.name if signup.activity else 'Unknown' }}</span>
+              {% if signup.passport_type_id %}
+                {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+                {% if passport_type %}
+                  <span class="badge bg-purple-lt text-purple">{{ passport_type.name }}</span>
+                {% endif %}
+              {% endif %}
+            </div>
           </div>
+        </div>
+        
+        <div class="row mb-2">
           <div class="col-6">
             <small class="text-muted">Status</small>
             <div>
@@ -518,6 +562,19 @@
                 <span class="badge bg-red-lt text-red">{{ status.title() }}</span>
               {% else %}
                 <span class="badge bg-gray-lt text-gray">{{ status.title() }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-6">
+            <small class="text-muted">Type Info</small>
+            <div>
+              {% if signup.passport_type_id %}
+                {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+                {% if passport_type %}
+                  <span class="text-muted small">${{ "%.0f"|format(passport_type.price_per_user or 0) }} • {{ passport_type.sessions_included }}s</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">-</span>
               {% endif %}
             </div>
           </div>
@@ -540,12 +597,6 @@
           </div>
         </div>
         
-        {% if signup.subject %}
-        <div>
-          <small class="text-muted">Subject</small>
-          <div>{{ signup.subject }}</div>
-        </div>
-        {% endif %}
       </div>
       {% endfor %}
     </div>
