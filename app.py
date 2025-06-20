@@ -678,10 +678,14 @@ def list_signups():
     statuses = db.session.query(Signup.status.distinct()).filter(Signup.status.isnot(None)).all()
     statuses = [status[0] for status in statuses]
     
+    # Get all passport types for display
+    passport_types = PassportType.query.all()
+    
     return render_template('signups.html', 
                          signups=signups, 
                          activities=activities,
                          statuses=statuses,
+                         passport_types=passport_types,
                          statistics=statistics,
                          current_filters={
                              'q': q,
@@ -950,8 +954,12 @@ def create_pass_from_signup(signup_id):
         flash("⚠️ A passport for this user and activity already exists.", "warning")
         return redirect(url_for("list_signups"))
 
-    # Get passport type for this activity (use first one if multiple)
-    passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
+    # Get passport type from signup or fallback to first one for this activity
+    passport_type = None
+    if signup.passport_type_id:
+        passport_type = PassportType.query.get(signup.passport_type_id)
+    else:
+        passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
     
     # Create new passport
     new_passport = Passport(
@@ -1053,7 +1061,12 @@ def approve_and_create_pass(signup_id):
     current_admin = Admin.query.filter_by(email=session.get("admin")).first()
 
     # ✅ Step 3: Get passport type and Create Passport
-    passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
+    # Use passport type from signup if available, otherwise get first one for activity
+    passport_type = None
+    if signup.passport_type_id:
+        passport_type = PassportType.query.get(signup.passport_type_id)
+    else:
+        passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
     
     passport = Passport(
         pass_code=generate_pass_code(),
@@ -1350,6 +1363,7 @@ def signup(activity_id):
         signup = Signup(
             user_id=user.id,
             activity_id=activity.id,
+            passport_type_id=selected_passport_type_id if selected_passport_type_id else None,
             subject=f"Signup for {activity.name}" + (f" - {passport_type.name}" if passport_type else ""),
             description=request.form.get("notes", "").strip(),
             form_data="",

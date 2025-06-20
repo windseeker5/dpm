@@ -316,6 +316,7 @@
             <th><input type="checkbox" id="selectAll"></th>
             <th>User</th>
             <th>Activity</th>
+            <th>Type</th>
             <th>Subject</th>
             <th>Status</th>
             <th>Payment</th>
@@ -345,6 +346,19 @@
             </td>
             <td>
               <span class="badge bg-blue-lt text-blue">{{ signup.activity.name if signup.activity else 'Unknown' }}</span>
+            </td>
+            <td>
+              {% if signup.passport_type_id %}
+                {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+                {% if passport_type %}
+                  <span class="badge bg-purple-lt text-purple">{{ passport_type.name }}</span>
+                  <div class="text-muted small">${{ "%.0f"|format(passport_type.price_per_user or 0) }} • {{ passport_type.sessions_included }} sessions</div>
+                {% else %}
+                  <span class="badge bg-gray-lt text-gray">Type #{{ signup.passport_type_id }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
             </td>
             <td>
               <div>

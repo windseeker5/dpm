@@ -135,6 +135,7 @@ class Signup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id"), nullable=True)  # Added for passport type tracking
     subject = db.Column(db.String(200))
     description = db.Column(db.Text)
     form_url = db.Column(db.String(500))
