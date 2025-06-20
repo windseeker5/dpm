@@ -39,14 +39,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Minipass is a mobile-first Activities and Digital Passport Management system built with Flask. It enables organizations and small businesses to easily manage activities, digital passport or tickets, user signups, and payments—all in one place.
+Minipass is a mobile-first Activities and Digital Passport Management system built with Flask. It enables organizations and small businesses to easily manage activities, digital passport ,signups, and payments.
 
-Designed for non-technical users, Minipass offers an intuitive interface optimized for mobile devices, allowing users to manage everything on the go. The platform also features an AI-powered chatbot for real-time insights and activity analytics, making it easier to track engagement and make informed decisions.
+Minipass offers an intuitive interface optimized for mobile devices, allowing users to manage everything on the go. 
+
 
 ## Tech Stack
 
 - **Flask** - Python web framework with SQLAlchemy ORM
-- **SQLite** - Database (dev: `instance/database.db`, prod: `instance/database_prod.db`)
+- **SQLite** - Database (dev: `instance/database.db`)
 - **Tabler.io** - UI framework for admin dashboard
 - **Stripe** - Payment processing
 - **Python** with comprehensive dependencies in `requirements.txt`
@@ -58,7 +59,7 @@ Designed for non-technical users, Minipass offers an intuitive interface optimiz
 - `models.py` - Database models (User, Activity, Signup, Passport, etc.)
 - `config.py` - Environment-based configuration
 - `utils.py` - Utility functions for QR codes, emails, file handling
-- `chatbot.py` - AI analytics chatbot (separate Blueprint)
+
 
 ### Database Models
 Core business models: User, Activity, Signup, Passport, Expense/Income, Admin, AdminActionLog
@@ -359,6 +360,33 @@ All data tables must follow this consistent pattern for visual uniformity:
 - **Fallback values**: 'Anonymous' for names, '-' for emails, 'default@example.com' for Gravatar generation
 - **Hover effects**: Automatic with `table-vcenter card-table` classes
 
+### White Background Standard (CRITICAL)
+**ALL cards and tables MUST have white backgrounds** to ensure proper visual hierarchy and contrast against the page background.
+
+**Required CSS Rules:**
+```css
+.card {
+  background-color: #fff !important;
+}
+
+.table {
+  background-color: #fff !important;
+}
+
+/* Any custom card-like components */
+.passport-type-card,
+.signup-link-card,
+.mobile-cards .card {
+  background-color: #fff !important;
+}
+```
+
+**Implementation Requirements:**
+- Apply to ALL template files that use cards or tables
+- Use `!important` to override any default Tabler styling
+- Never use gray or transparent backgrounds for cards/tables
+- This ensures clean, professional appearance matching Tabler reference designs
+
 ### Consistency Rules
 1. **Always use Tabler's standard color classes** - avoid custom CSS overrides
 2. **Action buttons are ALWAYS `btn btn-outline-secondary dropdown-toggle`** - no exceptions
@@ -369,7 +397,8 @@ All data tables must follow this consistent pattern for visual uniformity:
 7. **Tables must use card wrapper and Gravatar avatars** - follow table styling standards above
 8. **Maintain semantic meaning** - green = success/paid, red = danger/unpaid, blue = informational
 9. **Icon + text patterns in all buttons and dropdowns** - use `me-2` for icon spacing
-10. **Follow established patterns** - reference these guidelines for all new implementations
+10. **WHITE BACKGROUNDS MANDATORY** - All cards and tables must have white backgrounds (see White Background Standard above)
+11. **Follow established patterns** - reference these guidelines for all new implementations
 
 ## Business Logic
 

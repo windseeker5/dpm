@@ -43,9 +43,26 @@
 
 
 
-/* General card background */
+/* General card background - WHITE for all cards */
 .card {
-  background-color: #f8f9fc !important;
+  background-color: #fff !important;
+}
+
+/* Ensure all table elements have white backgrounds */
+.table {
+  background-color: #fff !important;
+}
+
+.card-body {
+  background-color: #fff !important;
+}
+
+.table-responsive {
+  background-color: #fff !important;
+}
+
+tbody, tr, td, th {
+  background-color: #fff !important;
 }
 
 /* Form fieldset styling */
