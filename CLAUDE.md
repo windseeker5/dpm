@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 4. Create Pytest unit tests for all new features — including functions, classes, routes, etc. If you modify existing logic, update the related tests accordingly.
 
- - All tests must live in the /tests directory, mirroring the main app structure.
+ - All tests must live in the /tests directory. do not delete the test files
  - Include at least:
    - One success case
    - One edge case
