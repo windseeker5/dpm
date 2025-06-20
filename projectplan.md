@@ -1,5 +1,37 @@
 # Activity Form Refactoring Project Plan
 
+## Signup Routes Cleanup - 2025-06-19
+
+### ✅ Problem Identified
+The application had duplicate signup management systems causing confusion and maintenance overhead:
+- Two different signup routes: `/admin/signups` (basic) and `/signups` (advanced)
+- Two separate templates: `admin_signups.html` (simple) and `signups.html` (feature-rich)
+- Only the `/signups` route was linked in navigation, indicating `/admin/signups` was deprecated
+- Multiple redirect references throughout the codebase pointing to the old route
+
+### ✅ Cleanup Completed
+**Removed Deprecated Code:**
+- Deleted `/admin/signups` route and `admin_signups()` function from `app.py`
+- Removed `templates/admin_signups.html` template file (98 lines)
+- Updated all redirect references from `admin_signups` to `list_signups` throughout the codebase
+- Fixed cancel link in `edit_signup.html` to point to the correct route
+
+**Consolidated Functionality:**
+- All signup management now uses the modern `/signups` route with `signups.html` template
+- Maintained all advanced features: filtering, bulk actions, mobile responsiveness, statistics
+- Preserved all existing functionality while eliminating duplicate code
+
+**Files Modified:**
+- `app.py` - Removed deprecated route and updated 8+ redirect references
+- `templates/edit_signup.html` - Updated cancel link
+- `templates/admin_signups.html` - Deleted (deprecated template)
+
+### ✅ Results
+- Eliminated code duplication and confusion between two signup systems
+- Simplified codebase maintenance with single source of truth for signup management
+- Retained all advanced functionality through the modern implementation
+- Improved consistency in URL patterns and navigation flow
+
 ## Button and Badge Styling Standardization - 2025-06-19
 
 ### ✅ Problem Identified
