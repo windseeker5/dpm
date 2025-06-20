@@ -137,21 +137,31 @@
 
           <!-- Passport Types Section -->
           <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="mb-0"><i class="ti ti-id me-2"></i>Passport Types</h5>
-              <button type="button" class="btn btn-primary btn-sm" id="addPassportTypeBtn">
-                <i class="ti ti-plus me-1"></i>Add Passport Type
-              </button>
-            </div>
-            
-            <div id="passportTypesContainer">
-              <!-- Passport types will be dynamically added here -->
-            </div>
-            
-            <div id="noPassportTypes" class="text-center p-4 border border-dashed rounded" style="border-color: #dee2e6;">
-              <i class="ti ti-id-off text-muted mb-2" style="font-size: 2rem;"></i>
-              <p class="text-muted mb-2">No passport types defined</p>
-              <small class="text-muted">Click "Add Passport Type" to create pricing options for this activity</small>
+            <div class="card">
+              <div class="card-header">
+                <h4 class="card-title">
+                  <i class="ti ti-id" style="font-size: 1.2em;"></i> Passport Types
+                </h4>
+                <div class="card-actions">
+                  <button type="button" class="btn btn-primary" id="addPassportTypeBtn" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
+                    <i class="ti ti-plus me-2"></i>Add Passport Type
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div id="passportTypesContainer">
+                  <!-- Passport types overview cards will be dynamically added here -->
+                </div>
+                
+                <div id="noPassportTypes" class="text-center p-4">
+                  <i class="ti ti-id-off text-muted mb-3" style="font-size: 3rem;"></i>
+                  <h5 class="text-muted mb-2">No passport types defined</h5>
+                  <p class="text-muted mb-3">Create different pricing options and user types for this activity</p>
+                  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
+                    <i class="ti ti-plus me-2"></i>Add Your First Passport Type
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -291,6 +301,144 @@
   </div>
 </div>
 
+<!-- Add Passport Type Modal -->
+<div class="modal modal-blur fade" id="addPassportTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-plus me-2"></i>Add New Passport Type
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label required">Passport Type Name</label>
+            <input type="text" class="form-control" id="newPassportTypeName" 
+                   placeholder="e.g., Regular, Premium, Student" required>
+            <div class="form-text">This will be visible to users during signup</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required">User Type</label>
+            <select class="form-select" id="newPassportTypeType" required>
+              <option value="permanent">Permanent User</option>
+              <option value="substitute">Substitute User</option>
+            </select>
+            <div class="form-text">Permanent users attend regularly, substitutes fill in when needed</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required">Price per User ($)</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="newPassportTypePrice" 
+                   value="0.00" required>
+            <div class="form-text">Amount each user pays for this passport type</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required">Sessions Included</label>
+            <input type="number" min="1" class="form-control" id="newPassportTypeSessions" 
+                   value="1" required>
+            <div class="form-text">Number of sessions included in this price</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Target Revenue ($)</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="newPassportTypeRevenue" 
+                   value="0.00">
+            <div class="form-text">Optional: Expected total revenue from this passport type</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Payment Instructions</label>
+            <textarea class="form-control" id="newPassportTypeInstructions" rows="3" 
+                      placeholder="Enter specific payment instructions for users with this passport type..."></textarea>
+            <div class="form-text">These instructions will be shown to users during signup</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveNewPassportType">
+          <i class="ti ti-check me-2"></i>Add Passport Type
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Passport Type Modal -->
+<div class="modal modal-blur fade" id="editPassportTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-edit me-2"></i>Edit Passport Type
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label required">Passport Type Name</label>
+            <input type="text" class="form-control" id="editPassportTypeName" required>
+            <div class="form-text">This will be visible to users during signup</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required">User Type</label>
+            <select class="form-select" id="editPassportTypeType" required>
+              <option value="permanent">Permanent User</option>
+              <option value="substitute">Substitute User</option>
+            </select>
+            <div class="form-text">Permanent users attend regularly, substitutes fill in when needed</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required">Price per User ($)</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="editPassportTypePrice" required>
+            <div class="form-text">Amount each user pays for this passport type</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required">Sessions Included</label>
+            <input type="number" min="1" class="form-control" id="editPassportTypeSessions" required>
+            <div class="form-text">Number of sessions included in this price</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Target Revenue ($)</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="editPassportTypeRevenue">
+            <div class="form-text">Optional: Expected total revenue from this passport type</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Payment Instructions</label>
+            <textarea class="form-control" id="editPassportTypeInstructions" rows="3" 
+                      placeholder="Enter specific payment instructions for users with this passport type..."></textarea>
+            <div class="form-text">These instructions will be shown to users during signup</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="saveEditPassportType">
+          <i class="ti ti-check me-2"></i>Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Passport Type Confirmation Modal -->
+<div class="modal modal-blur fade" id="deletePassportTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-title">Delete Passport Type?</div>
+        <div>Are you sure you want to delete "<span id="deletePassportTypeName"></span>"? This action cannot be undone.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeletePassportType">
+          <i class="ti ti-trash me-2"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block styles %}
@@ -328,41 +476,45 @@
   padding: 1rem;
 }
 
-.passport-type-card {
+.passport-overview-card {
   border: 1px solid #dee2e6;
   border-radius: 0.5rem;
   margin-bottom: 1rem;
-  overflow: hidden;
   transition: all 0.2s ease-in-out;
   background-color: #fff !important;
 }
 
-.passport-type-card.collapsed .card-body {
-  display: none;
+.passport-overview-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.passport-type-header {
-  background-color: #f8f9fa;
+.passport-overview-header {
   padding: 1rem;
-  cursor: pointer;
-  border-bottom: 1px solid #dee2e6;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.passport-type-header:hover {
-  background-color: #e9ecef;
-}
-
-.passport-type-header h6 {
+.passport-overview-header h6 {
   margin: 0;
   font-weight: 600;
 }
 
-.passport-type-actions {
+.passport-overview-details {
+  margin-top: 0.5rem;
   display: flex;
-  gap: 0.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.passport-price-badge {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.passport-sessions-badge {
+  font-size: 0.85rem;
 }
 
 .btn-floating {
@@ -387,12 +539,25 @@
     grid-template-columns: 1fr;
   }
   
-  .passport-type-header {
+  .passport-overview-header {
     padding: 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .passport-overview-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
   
   .card-body {
     padding: 1rem;
+  }
+  
+  .modal-dialog {
+    margin: 1rem;
   }
 }
 
@@ -599,140 +764,199 @@
     }
     
     // Passport Type Management Functions
-    function createPassportTypeCard(passportType) {
+    function createPassportTypeOverviewCard(passportType) {
       const id = passportType.id || `new_${passportTypeCounter++}`;
-      const isCollapsed = passportType.collapsed || false;
+      const typeBadgeClass = passportType.type === 'permanent' ? 'bg-green-lt text-green' : 'bg-yellow-lt text-yellow';
       
       return `
-        <div class="passport-type-card ${isCollapsed ? 'collapsed' : ''}" data-id="${id}">
-          <div class="passport-type-header" onclick="togglePassportType('${id}')">
+        <div class="passport-overview-card" data-id="${id}">
+          <div class="passport-overview-header">
             <div>
               <h6>${passportType.name || 'New Passport Type'}</h6>
-              <small class="text-muted">
-                <span class="badge badge-type ${passportType.type === 'permanent' ? 'bg-success' : 'bg-warning'}">${passportType.type || 'permanent'}</span>
-                $${passportType.price_per_user || '0.00'} • ${passportType.sessions_included || '1'} sessions
-              </small>
+              <div class="passport-overview-details">
+                <span class="badge ${typeBadgeClass}">${passportType.type || 'permanent'}</span>
+                <span class="badge bg-blue-lt text-blue passport-price-badge">$${passportType.price_per_user || '0.00'}</span>
+                <span class="badge bg-gray-lt text-gray passport-sessions-badge">${passportType.sessions_included || '1'} sessions</span>
+              </div>
             </div>
-            <div class="passport-type-actions" onclick="event.stopPropagation()">
-              <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePassportType('${id}')">
-                <i class="ti ti-trash"></i>
-              </button>
-              <i class="ti ti-chevron-down toggle-icon"></i>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Passport Type Name</label>
-                <input type="text" class="form-control" name="passport_types[${id}][name]" 
-                       value="${passportType.name || ''}" placeholder="e.g., Regular, Substitute"
-                       onchange="updatePassportTypeHeader('${id}')">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Type</label>
-                <select class="form-select" name="passport_types[${id}][type]" 
-                        onchange="updatePassportTypeHeader('${id}')">
-                  <option value="permanent" ${passportType.type === 'permanent' ? 'selected' : ''}>Permanent User</option>
-                  <option value="substitute" ${passportType.type === 'substitute' ? 'selected' : ''}>Substitute User</option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Price per User ($)</label>
-                <input type="number" step="0.01" class="form-control" name="passport_types[${id}][price_per_user]" 
-                       value="${passportType.price_per_user || '0.00'}"
-                       onchange="updatePassportTypeHeader('${id}')">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Sessions Included</label>
-                <input type="number" class="form-control" name="passport_types[${id}][sessions_included]" 
-                       value="${passportType.sessions_included || '1'}" min="1"
-                       onchange="updatePassportTypeHeader('${id}')">
-              </div>
-              <div class="col-12">
-                <label class="form-label">Target Revenue ($)</label>
-                <input type="number" step="0.01" class="form-control" name="passport_types[${id}][target_revenue]" 
-                       value="${passportType.target_revenue || '0.00'}">
-              </div>
-              <div class="col-12">
-                <label class="form-label">Payment Instructions</label>
-                <textarea class="form-control" name="passport_types[${id}][payment_instructions]" rows="3" 
-                          placeholder="Enter specific payment instructions for this passport type...">${passportType.payment_instructions || ''}</textarea>
+            <div class="dropdown">
+              <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                Actions
+              </a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="#" onclick="editPassportType('${id}')">
+                  <i class="ti ti-edit me-2"></i> Edit
+                </a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" href="#" onclick="confirmDeletePassportType('${id}', '${passportType.name || 'New Passport Type'}')">
+                  <i class="ti ti-trash me-2"></i> Delete
+                </a>
               </div>
             </div>
           </div>
+          <!-- Hidden form inputs for server submission -->
+          <input type="hidden" name="passport_types[${id}][name]" value="${passportType.name || ''}">
+          <input type="hidden" name="passport_types[${id}][type]" value="${passportType.type || 'permanent'}">
+          <input type="hidden" name="passport_types[${id}][price_per_user]" value="${passportType.price_per_user || '0.00'}">
+          <input type="hidden" name="passport_types[${id}][sessions_included]" value="${passportType.sessions_included || '1'}">
+          <input type="hidden" name="passport_types[${id}][target_revenue]" value="${passportType.target_revenue || '0.00'}">
+          <input type="hidden" name="passport_types[${id}][payment_instructions]" value="${passportType.payment_instructions || ''}">
         </div>
       `;
     }
     
-    function addPassportType() {
+    // Modal Management Functions
+    const addPassportTypeModal = new bootstrap.Modal(document.getElementById('addPassportTypeModal'));
+    const editPassportTypeModal = new bootstrap.Modal(document.getElementById('editPassportTypeModal'));
+    const deletePassportTypeModal = new bootstrap.Modal(document.getElementById('deletePassportTypeModal'));
+    
+    let currentEditingId = null;
+    let currentDeletingId = null;
+    
+    function addNewPassportType() {
+      // Get values from modal
+      const name = document.getElementById('newPassportTypeName').value.trim();
+      const type = document.getElementById('newPassportTypeType').value;
+      const price = document.getElementById('newPassportTypePrice').value;
+      const sessions = document.getElementById('newPassportTypeSessions').value;
+      const revenue = document.getElementById('newPassportTypeRevenue').value;
+      const instructions = document.getElementById('newPassportTypeInstructions').value.trim();
+      
+      // Validation
+      if (!name) {
+        alert('Please enter a passport type name.');
+        return;
+      }
+      
       const newPassportType = {
-        name: '',
-        type: 'permanent',
-        price_per_user: '0.00',
-        sessions_included: '1',
-        target_revenue: '0.00',
-        payment_instructions: ''
+        id: `new_${passportTypeCounter++}`,
+        name: name,
+        type: type,
+        price_per_user: price,
+        sessions_included: sessions,
+        target_revenue: revenue,
+        payment_instructions: instructions
       };
       
       passportTypes.push(newPassportType);
       
-      const cardHtml = createPassportTypeCard(newPassportType);
+      const cardHtml = createPassportTypeOverviewCard(newPassportType);
       passportTypesContainer.insertAdjacentHTML('beforeend', cardHtml);
       
       updateVisibility();
       updateSignupLinks();
+      
+      // Clear modal and close
+      clearAddModal();
+      addPassportTypeModal.hide();
     }
     
-    function removePassportType(id) {
-      if (confirm('Are you sure you want to remove this passport type?')) {
-        const card = document.querySelector(`[data-id="${id}"]`);
-        card.remove();
-        
-        passportTypes = passportTypes.filter(pt => pt.id !== id);
-        updateVisibility();
-        updateSignupLinks();
+    function editPassportType(id) {
+      const passportType = passportTypes.find(pt => pt.id == id) || getPassportTypeFromCard(id);
+      if (!passportType) return;
+      
+      currentEditingId = id;
+      
+      // Populate edit modal
+      document.getElementById('editPassportTypeName').value = passportType.name || '';
+      document.getElementById('editPassportTypeType').value = passportType.type || 'permanent';
+      document.getElementById('editPassportTypePrice').value = passportType.price_per_user || '0.00';
+      document.getElementById('editPassportTypeSessions').value = passportType.sessions_included || '1';
+      document.getElementById('editPassportTypeRevenue').value = passportType.target_revenue || '0.00';
+      document.getElementById('editPassportTypeInstructions').value = passportType.payment_instructions || '';
+      
+      editPassportTypeModal.show();
+    }
+    
+    function saveEditPassportType() {
+      if (!currentEditingId) return;
+      
+      // Get values from modal
+      const name = document.getElementById('editPassportTypeName').value.trim();
+      const type = document.getElementById('editPassportTypeType').value;
+      const price = document.getElementById('editPassportTypePrice').value;
+      const sessions = document.getElementById('editPassportTypeSessions').value;
+      const revenue = document.getElementById('editPassportTypeRevenue').value;
+      const instructions = document.getElementById('editPassportTypeInstructions').value.trim();
+      
+      // Validation
+      if (!name) {
+        alert('Please enter a passport type name.');
+        return;
       }
-    }
-    
-    function togglePassportType(id) {
-      const card = document.querySelector(`[data-id="${id}"]`);
-      const icon = card.querySelector('.toggle-icon');
       
-      card.classList.toggle('collapsed');
+      // Update passport type
+      const updatedPassportType = {
+        id: currentEditingId,
+        name: name,
+        type: type,
+        price_per_user: price,
+        sessions_included: sessions,
+        target_revenue: revenue,
+        payment_instructions: instructions
+      };
       
-      if (card.classList.contains('collapsed')) {
-        icon.className = 'ti ti-chevron-right toggle-icon';
-      } else {
-        icon.className = 'ti ti-chevron-down toggle-icon';
+      // Update in array
+      const index = passportTypes.findIndex(pt => pt.id == currentEditingId);
+      if (index !== -1) {
+        passportTypes[index] = updatedPassportType;
       }
-    }
-    
-    function updatePassportTypeHeader(id) {
-      const card = document.querySelector(`[data-id="${id}"]`);
-      const nameInput = card.querySelector('input[name*="[name]"]');
-      const typeSelect = card.querySelector('select[name*="[type]"]');
-      const priceInput = card.querySelector('input[name*="[price_per_user]"]');
-      const sessionsInput = card.querySelector('input[name*="[sessions_included]"]');
       
-      const header = card.querySelector('.passport-type-header h6');
-      const badge = card.querySelector('.badge-type');
-      const details = card.querySelector('.passport-type-header small');
-      
-      const name = nameInput.value || 'New Passport Type';
-      const type = typeSelect.value;
-      const price = priceInput.value || '0.00';
-      const sessions = sessionsInput.value || '1';
-      
-      header.textContent = name;
-      badge.textContent = type;
-      badge.className = `badge badge-type ${type === 'permanent' ? 'bg-success' : 'bg-warning'}`;
-      
-      details.innerHTML = `
-        <span class="badge badge-type ${type === 'permanent' ? 'bg-success' : 'bg-warning'}">${type}</span>
-        $${price} • ${sessions} sessions
-      `;
+      // Update UI
+      const card = document.querySelector(`[data-id="${currentEditingId}"]`);
+      if (card) {
+        card.outerHTML = createPassportTypeOverviewCard(updatedPassportType);
+      }
       
       updateSignupLinks();
+      editPassportTypeModal.hide();
+      currentEditingId = null;
+    }
+    
+    function confirmDeletePassportType(id, name) {
+      currentDeletingId = id;
+      document.getElementById('deletePassportTypeName').textContent = name;
+      deletePassportTypeModal.show();
+    }
+    
+    function deletePassportType() {
+      if (!currentDeletingId) return;
+      
+      const card = document.querySelector(`[data-id="${currentDeletingId}"]`);
+      if (card) {
+        card.remove();
+      }
+      
+      passportTypes = passportTypes.filter(pt => pt.id != currentDeletingId);
+      updateVisibility();
+      updateSignupLinks();
+      
+      deletePassportTypeModal.hide();
+      currentDeletingId = null;
+    }
+    
+    function getPassportTypeFromCard(id) {
+      const card = document.querySelector(`[data-id="${id}"]`);
+      if (!card) return null;
+      
+      return {
+        id: id,
+        name: card.querySelector('input[name*="[name]"]').value,
+        type: card.querySelector('input[name*="[type]"]').value,
+        price_per_user: card.querySelector('input[name*="[price_per_user]"]').value,
+        sessions_included: card.querySelector('input[name*="[sessions_included]"]').value,
+        target_revenue: card.querySelector('input[name*="[target_revenue]"]').value,
+        payment_instructions: card.querySelector('input[name*="[payment_instructions]"]').value
+      };
+    }
+    
+    function clearAddModal() {
+      document.getElementById('newPassportTypeName').value = '';
+      document.getElementById('newPassportTypeType').value = 'permanent';
+      document.getElementById('newPassportTypePrice').value = '0.00';
+      document.getElementById('newPassportTypeSessions').value = '1';
+      document.getElementById('newPassportTypeRevenue').value = '0.00';
+      document.getElementById('newPassportTypeInstructions').value = '';
     }
     
     function updateVisibility() {
@@ -745,12 +969,12 @@
       
       signupLinksContainer.innerHTML = '';
       
-      const cards = passportTypesContainer.querySelectorAll('.passport-type-card');
+      const cards = passportTypesContainer.querySelectorAll('.passport-overview-card');
       cards.forEach((card, index) => {
         const nameInput = card.querySelector('input[name*="[name]"]');
-        const typeSelect = card.querySelector('select[name*="[type]"]');
+        const typeInput = card.querySelector('input[name*="[type]"]');
         const name = nameInput.value || `Passport Type ${index + 1}`;
-        const type = typeSelect.value;
+        const type = typeInput.value;
         const cardId = card.getAttribute('data-id');
         
         // Check if this is an existing passport type (numeric ID) or new one
@@ -763,12 +987,14 @@
           buttonDisabled = false;
         }
         
+        const typeBadgeClass = type === 'permanent' ? 'bg-green-lt text-green' : 'bg-yellow-lt text-yellow';
+        
         const linkHtml = `
           <div class="signup-link-card">
             <div class="d-flex justify-content-between align-items-start">
               <div>
                 <h6 class="mb-1">${name}</h6>
-                <span class="badge ${type === 'permanent' ? 'bg-success' : 'bg-warning'} mb-2">${type}</span>
+                <span class="badge ${typeBadgeClass} mb-2">${type}</span>
               </div>
             </div>
             <div class="input-group">
@@ -797,19 +1023,18 @@
     // Make function global
     window.copySignupLink = copySignupLink;
     
-    // Event Listeners
-    if (addPassportTypeBtn) {
-      addPassportTypeBtn.addEventListener('click', addPassportType);
-    }
+    // Event Listeners for modals
+    document.getElementById('saveNewPassportType').addEventListener('click', addNewPassportType);
+    document.getElementById('saveEditPassportType').addEventListener('click', saveEditPassportType);
+    document.getElementById('confirmDeletePassportType').addEventListener('click', deletePassportType);
     
     // Make functions global for onclick handlers
-    window.togglePassportType = togglePassportType;
-    window.removePassportType = removePassportType;
-    window.updatePassportTypeHeader = updatePassportTypeHeader;
+    window.editPassportType = editPassportType;
+    window.confirmDeletePassportType = confirmDeletePassportType;
+    window.copySignupLink = copySignupLink;
     
     // Load existing passport types for editing
     {% if passport_types %}
-    // Load existing passport types
     {% for pt in passport_types %}
     const existingPassportType{{ loop.index0 }} = {
       id: '{{ pt.id }}',
@@ -821,7 +1046,8 @@
       payment_instructions: '{{ pt.payment_instructions|replace("'", "\\'") }}'
     };
     
-    const cardHtml{{ loop.index0 }} = createPassportTypeCard(existingPassportType{{ loop.index0 }});
+    passportTypes.push(existingPassportType{{ loop.index0 }});
+    const cardHtml{{ loop.index0 }} = createPassportTypeOverviewCard(existingPassportType{{ loop.index0 }});
     passportTypesContainer.insertAdjacentHTML('beforeend', cardHtml{{ loop.index0 }});
     {% endfor %}
     {% endif %}
