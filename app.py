@@ -568,24 +568,17 @@ def mark_signup_paid(signup_id):
     signup = db.session.get(Signup, signup_id)
     if not signup:
         flash("❌ Signup not found.", "error")
-        return redirect(url_for("admin_signups"))
+        return redirect(url_for("list_signups"))
 
     signup.paid = True
     signup.paid_at = datetime.utcnow()
     db.session.commit()
 
     flash(f"✅ Marked {signup.user.name}'s signup as paid.", "success")
-    return redirect(url_for("admin_signups"))
+    return redirect(url_for("list_signups"))
 
 
 
-@app.route("/admin/signups")
-def admin_signups():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    signups = Signup.query.order_by(Signup.signed_up_at.desc()).all()
-    return render_template("admin_signups.html", signups=signups)
 
 
 @app.route("/signups")
@@ -947,7 +940,7 @@ def create_pass_from_signup(signup_id):
     signup = db.session.get(Signup, signup_id)
     if not signup:
         flash("❌ Signup not found.", "error")
-        return redirect(url_for("admin_signups"))
+        return redirect(url_for("list_signups"))
 
     from models import Passport
 
@@ -955,7 +948,7 @@ def create_pass_from_signup(signup_id):
     existing_passport = Passport.query.filter_by(user_id=signup.user_id, activity_id=signup.activity_id).first()
     if existing_passport:
         flash("⚠️ A passport for this user and activity already exists.", "warning")
-        return redirect(url_for("admin_signups"))
+        return redirect(url_for("list_signups"))
 
     # Get passport type for this activity (use first one if multiple)
     passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
@@ -976,7 +969,7 @@ def create_pass_from_signup(signup_id):
     db.session.commit()
 
     flash("✅ Passport created from signup!", "success")
-    return redirect(url_for("admin_signups"))
+    return redirect(url_for("list_signups"))
 
 
 
@@ -988,14 +981,14 @@ def edit_signup(signup_id):
     signup = db.session.get(Signup, signup_id)
     if not signup:
         flash("❌ Signup not found.", "error")
-        return redirect(url_for("admin_signups"))
+        return redirect(url_for("list_signups"))
 
     if request.method == "POST":
         signup.subject = request.form.get("subject", "").strip()
         signup.description = request.form.get("description", "").strip()
         db.session.commit()
         flash("✅ Signup updated.", "success")
-        return redirect(url_for("admin_signups"))
+        return redirect(url_for("list_signups"))
 
     return render_template("edit_signup.html", signup=signup)
 
@@ -1009,7 +1002,7 @@ def update_signup_status(signup_id):
     signup = db.session.get(Signup, signup_id)
     if not signup:
         flash("❌ Signup not found.", "error")
-        return redirect(url_for("admin_signups"))
+        return redirect(url_for("list_signups"))
 
     status = request.form.get("status")
 
@@ -1030,7 +1023,7 @@ def update_signup_status(signup_id):
     else:
         flash("❌ Invalid status.", "error")
 
-    return redirect(url_for("admin_signups"))
+    return redirect(url_for("list_signups"))
 
 
 
@@ -1043,7 +1036,7 @@ def approve_and_create_pass(signup_id):
     signup = db.session.get(Signup, signup_id)
     if not signup:
         flash("❌ Signup not found.", "error")
-        return redirect(url_for("admin_signups"))
+        return redirect(url_for("list_signups"))
 
     from models import Passport, AdminActionLog, Admin
     from utils import notify_pass_event, generate_pass_code
