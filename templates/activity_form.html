@@ -953,41 +953,64 @@
     }
     
     function showArchivePassportTypeModal(id, name, passportCount, signupCount) {
-      const modalHtml = `
-        <div class="modal modal-blur fade" id="archivePassportTypeModal" tabindex="-1">
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">Cannot Delete Passport Type</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-              <div class="modal-body">
-                <div class="alert alert-warning">
-                  <i class="ti ti-alert-triangle me-2"></i>
-                  <strong>This passport type cannot be deleted</strong>
-                </div>
-                <p>The passport type "<strong>' + name + '</strong>" is currently being used by:</p>
-                <ul class="mb-3">
-                  ' + (passportCount > 0 ? '<li><strong>' + passportCount + '</strong> existing passport' + (passportCount !== 1 ? 's' : '') + '</li>' : '') + '
-                  ' + (signupCount > 0 ? '<li><strong>' + signupCount + '</strong> signup' + (signupCount !== 1 ? 's' : '') + '</li>' : '') + '
-                </ul>
-                <p>Instead of deleting, you can <strong>archive</strong> this passport type. This will:</p>
-                <ul>
-                  <li>Hide it from new signups</li>
-                  <li>Preserve existing passport data</li>
-                  <li>Maintain historical records</li>
-                </ul>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" onclick="archivePassportType(\'' + id + '\', \'' + name + '\')">
-                  <i class="ti ti-archive me-2"></i>Archive Instead
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
+      // Create usage list items
+      let usageItems = '';
+      if (passportCount > 0) {
+        const passportText = passportCount === 1 ? 'existing passport' : 'existing passports';
+        usageItems += '<li><strong>' + passportCount + '</strong> ' + passportText + '</li>';
+      }
+      if (signupCount > 0) {
+        const signupText = signupCount === 1 ? 'signup' : 'signups';
+        usageItems += '<li><strong>' + signupCount + '</strong> ' + signupText + '</li>';
+      }
+      
+      const modalHtml = 
+        '<div class="modal modal-blur fade" id="archivePassportTypeModal" tabindex="-1">' +
+          '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+              '<div class="modal-header">' +
+                '<h5 class="modal-title">' +
+                  '<i class="ti ti-alert-triangle text-warning me-2"></i>' +
+                  'Cannot Delete Passport Type' +
+                '</h5>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+              '</div>' +
+              '<div class="modal-body">' +
+                '<div class="alert alert-warning border-warning">' +
+                  '<div class="d-flex align-items-center">' +
+                    '<i class="ti ti-shield-exclamation me-2"></i>' +
+                    '<strong>This passport type is currently in use and cannot be deleted</strong>' +
+                  '</div>' +
+                '</div>' +
+                '<p class="mb-3">The passport type <strong>"' + name + '"</strong> is currently being used by:</p>' +
+                '<ul class="mb-4">' + usageItems + '</ul>' +
+                '<div class="card bg-light">' +
+                  '<div class="card-body">' +
+                    '<h6 class="card-title">' +
+                      '<i class="ti ti-archive me-2"></i>' +
+                      'Archive Instead' +
+                    '</h6>' +
+                    '<p class="mb-2">Instead of deleting, you can <strong>archive</strong> this passport type. This will:</p>' +
+                    '<ul class="mb-0">' +
+                      '<li>Hide it from new signups</li>' +
+                      '<li>Preserve all existing passport data</li>' +
+                      '<li>Maintain complete historical records</li>' +
+                      '<li>Allow you to restore it later if needed</li>' +
+                    '</ul>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="modal-footer">' +
+                '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' +
+                  '<i class="ti ti-x me-2"></i>Cancel' +
+                '</button>' +
+                '<button type="button" class="btn btn-warning" onclick="archivePassportType(' + id + ', \'' + name.replace(/'/g, "\\'") + '\')">' +
+                  '<i class="ti ti-archive me-2"></i>Archive This Type' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
       
       // Remove existing modal if any
       const existingModal = document.getElementById('archivePassportTypeModal');
@@ -1004,6 +1027,12 @@
     }
     
     function archivePassportType(id, name) {
+      // Show loading state
+      const archiveButton = document.querySelector('button[onclick*="archivePassportType"]');
+      const originalText = archiveButton.innerHTML;
+      archiveButton.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm me-2"></i>Archiving...';
+      archiveButton.disabled = true;
+      
       fetch(`/api/passport-type-archive/${id}`, {
         method: 'POST',
         headers: {
@@ -1028,15 +1057,70 @@
           }
           currentDeletingId = null;
           
-          alert(data.message);
+          // Show success message
+          showSuccessMessage(`✅ Passport type "${name}" has been archived successfully!`);
+          
         } else {
-          alert('Error archiving passport type: ' + data.error);
+          // Restore button state
+          archiveButton.innerHTML = originalText;
+          archiveButton.disabled = false;
+          
+          showErrorMessage('Failed to archive passport type: ' + (data.error || 'Unknown error'));
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('Error archiving passport type. Please try again.');
+        
+        // Restore button state
+        archiveButton.innerHTML = originalText;
+        archiveButton.disabled = false;
+        
+        showErrorMessage('Connection error. Please check your internet connection and try again.');
       });
+    }
+    
+    function showSuccessMessage(message) {
+      // Create and show a Bootstrap alert for success
+      const alertHtml = 
+        '<div class="alert alert-success alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">' +
+          '<div class="d-flex align-items-center">' +
+            '<i class="ti ti-check-circle me-2"></i>' +
+            '<span>' + message + '</span>' +
+          '</div>' +
+          '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+        '</div>';
+      
+      document.body.insertAdjacentHTML('beforeend', alertHtml);
+      
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        const alert = document.querySelector('.alert-success');
+        if (alert) {
+          alert.remove();
+        }
+      }, 5000);
+    }
+    
+    function showErrorMessage(message) {
+      // Create and show a Bootstrap alert for errors
+      const alertHtml = 
+        '<div class="alert alert-danger alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">' +
+          '<div class="d-flex align-items-center">' +
+            '<i class="ti ti-alert-circle me-2"></i>' +
+            '<span>' + message + '</span>' +
+          '</div>' +
+          '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+        '</div>';
+      
+      document.body.insertAdjacentHTML('beforeend', alertHtml);
+      
+      // Auto-dismiss after 8 seconds (longer for errors)
+      setTimeout(() => {
+        const alert = document.querySelector('.alert-danger');
+        if (alert) {
+          alert.remove();
+        }
+      }, 8000);
     }
     
     function deletePassportType() {
