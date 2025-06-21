@@ -405,9 +405,11 @@
             </td>
             <td>
               {% if passport.passport_type %}
-              <span class="badge bg-info">{{ passport.passport_type.name }}</span>
+              <span class="badge bg-blue-lt text-blue">{{ passport.passport_type.name }}</span>
+              {% elif passport.passport_type_name %}
+              <span class="badge bg-gray-lt text-gray">{{ passport.passport_type_name }}</span>
               {% else %}
-              <span class="badge bg-secondary">No Type</span>
+              <span class="badge bg-gray-lt text-gray">No Type</span>
               {% endif %}
             </td>
             <td>
@@ -511,7 +513,9 @@
               <span class="badge bg-red-lt">Unpaid</span>
               {% endif %}
               {% if passport.passport_type %}
-              <span class="badge bg-blue-lt">{{ passport.passport_type.name }}</span>
+              <span class="badge bg-blue-lt text-blue">{{ passport.passport_type.name }}</span>
+              {% elif passport.passport_type_name %}
+              <span class="badge bg-gray-lt text-gray">{{ passport.passport_type_name }}</span>
               {% endif %}
               <span class="badge bg-gray-lt">{{ passport.uses_remaining }} uses</span>
             </div>

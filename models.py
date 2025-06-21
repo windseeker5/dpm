@@ -93,7 +93,9 @@ class PassportType(db.Model):
     target_revenue = db.Column(db.Float, default=0.0)
     payment_instructions = db.Column(db.Text)
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    status = db.Column(db.String(50), default="active")
+    status = db.Column(db.String(50), default="active")  # "active", "archived", "deleted"
+    archived_at = db.Column(db.DateTime, nullable=True)
+    archived_by = db.Column(db.String(120), nullable=True)
     
     activity = db.relationship("Activity", backref="passport_types")
 
@@ -153,6 +155,7 @@ class Passport(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
     passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id"), nullable=True)  # New field
+    passport_type_name = db.Column(db.String(100), nullable=True)  # Preserved type name for historical display
     sold_amt = db.Column(db.Float, default=0.0)
     uses_remaining = db.Column(db.Integer, default=0)
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
