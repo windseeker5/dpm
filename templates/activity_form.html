@@ -137,30 +137,39 @@
 
           <!-- Passport Types Section -->
           <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h4 class="mb-0">Passport Types</h4>
+              <button type="button" class="btn btn-primary" id="addPassportTypeBtn" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
+                <i class="ti ti-plus me-2"></i>Passport Type
+              </button>
+            </div>
+            
             <div class="card">
-              <div class="card-header">
-                <h4 class="card-title">
-                  <i class="ti ti-id" style="font-size: 1.2em;"></i> Passport Types
-                </h4>
-                <div class="card-actions">
-                  <button type="button" class="btn btn-primary" id="addPassportTypeBtn" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
-                    <i class="ti ti-plus me-2"></i>Add Passport Type
-                  </button>
-                </div>
+              <div class="table-responsive">
+                <table class="table table-vcenter card-table" id="passportTypesTable" style="display: none;">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Price</th>
+                      <th>Sessions</th>
+                      <th>Signup Link</th>
+                      <th class="w-1">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="passportTypesContainer">
+                    <!-- Passport types will be dynamically added here -->
+                  </tbody>
+                </table>
               </div>
-              <div class="card-body">
-                <div id="passportTypesContainer">
-                  <!-- Passport types overview cards will be dynamically added here -->
-                </div>
-                
-                <div id="noPassportTypes" class="text-center p-4">
-                  <i class="ti ti-id-off text-muted mb-3" style="font-size: 3rem;"></i>
-                  <h5 class="text-muted mb-2">No passport types defined</h5>
-                  <p class="text-muted mb-3">Create different pricing options and user types for this activity</p>
-                  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
-                    <i class="ti ti-plus me-2"></i>Add Your First Passport Type
-                  </button>
-                </div>
+              
+              <div id="noPassportTypes" class="text-center p-4">
+                <i class="ti ti-id-off text-muted mb-3" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mb-2">No passport types defined</h5>
+                <p class="text-muted mb-3">Create different pricing options and user types for this activity</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
+                  <i class="ti ti-plus me-2"></i>Add Your First Passport Type
+                </button>
               </div>
             </div>
           </div>
@@ -223,13 +232,10 @@
           </div>
           {% endif %}
 
-          <!-- Signup Links Section -->
+          <!-- Signup Links Section - Now integrated into Passport Types table -->
           {% if activity %}
-          <div class="mb-3">
-            <h5 class="mb-3"><i class="ti ti-link me-2"></i>Signup Links</h5>
-            <div id="signupLinksContainer">
-              <!-- Signup links will be generated for each passport type -->
-            </div>
+          <div id="signupLinksContainer" style="display: none;">
+            <!-- Legacy container - functionality moved to table -->
           </div>
           {% endif %}
           
@@ -476,45 +482,24 @@
   padding: 1rem;
 }
 
-.passport-overview-card {
+/* Passport type table styling */
+#passportTypesTable td {
+  vertical-align: middle;
+}
+
+#passportTypesTable .input-group-flat {
   border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
-  transition: all 0.2s ease-in-out;
-  background-color: #fff !important;
+  border-radius: 0.375rem;
 }
 
-.passport-overview-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+#passportTypesTable .input-group-flat .form-control {
+  border: 0;
 }
 
-.passport-overview-header {
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.passport-overview-header h6 {
-  margin: 0;
-  font-weight: 600;
-}
-
-.passport-overview-details {
-  margin-top: 0.5rem;
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.passport-price-badge {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.passport-sessions-badge {
-  font-size: 0.85rem;
+#passportTypesTable .input-group-text {
+  border: 0;
+  background: transparent;
+  padding: 0.25rem 0.5rem;
 }
 
 .btn-floating {
@@ -539,17 +524,12 @@
     grid-template-columns: 1fr;
   }
   
-  .passport-overview-header {
-    padding: 0.75rem;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
+  #passportTypesTable .input-group {
+    max-width: 100% !important;
   }
   
-  .passport-overview-details {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+  #passportTypesTable td {
+    padding: 0.5rem 0.25rem;
   }
   
   .card-body {
@@ -764,21 +744,47 @@
     }
     
     // Passport Type Management Functions
-    function createPassportTypeOverviewCard(passportType) {
+    function createPassportTypeTableRow(passportType) {
       const id = passportType.id || `new_${passportTypeCounter++}`;
       const typeBadgeClass = passportType.type === 'permanent' ? 'bg-green-lt text-green' : 'bg-yellow-lt text-yellow';
       
+      // Check if this is an existing passport type for signup link
+      const isExisting = id && !id.toString().startsWith('new_');
+      let signupUrl = '[Available after saving]';
+      let signupButtonsDisabled = true;
+      
+      if (isExisting && '{{ activity.id if activity }}') {
+        signupUrl = `{{ url_for('signup', activity_id=activity.id, _external=True) if activity }}?passport_type_id=${id}`;
+        signupButtonsDisabled = false;
+      }
+      
       return `
-        <div class="passport-overview-card" data-id="${id}">
-          <div class="passport-overview-header">
-            <div>
-              <h6>${passportType.name || 'New Passport Type'}</h6>
-              <div class="passport-overview-details">
-                <span class="badge ${typeBadgeClass}">${passportType.type || 'permanent'}</span>
-                <span class="badge bg-blue-lt text-blue passport-price-badge">$${passportType.price_per_user || '0.00'}</span>
-                <span class="badge bg-gray-lt text-gray passport-sessions-badge">${passportType.sessions_included || '1'} sessions</span>
-              </div>
+        <tr data-id="${id}">
+          <td>
+            <div class="fw-bold">${passportType.name || 'New Passport Type'}</div>
+          </td>
+          <td>
+            <span class="badge ${typeBadgeClass}">${passportType.type || 'permanent'}</span>
+          </td>
+          <td>
+            <span class="fw-bold text-primary">$${passportType.price_per_user || '0.00'}</span>
+          </td>
+          <td>
+            <span class="text-muted">${passportType.sessions_included || '1'} sessions</span>
+          </td>
+          <td>
+            <div class="input-group input-group-flat" style="max-width: 300px;">
+              <input type="text" class="form-control form-control-sm signup-url-input" readonly value="${signupUrl}">
+              <span class="input-group-text">
+                <button class="btn btn-sm btn-outline-secondary copy-signup-btn" type="button" ${signupButtonsDisabled ? 'disabled' : ''} 
+                        onclick="copySignupLink(this)" title="Copy link">
+                  <i class="ti ti-copy"></i>
+                </button>
+                ${!signupButtonsDisabled ? `<a class="btn btn-sm btn-outline-secondary ms-1" target="_blank" href="${signupUrl}" title="Open in new tab"><i class="ti ti-external-link"></i></a>` : ''}
+              </span>
             </div>
+          </td>
+          <td>
             <div class="dropdown">
               <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                 Actions
@@ -793,7 +799,7 @@
                 </a>
               </div>
             </div>
-          </div>
+          </td>
           <!-- Hidden form inputs for server submission -->
           <input type="hidden" name="passport_types[${id}][name]" value="${passportType.name || ''}">
           <input type="hidden" name="passport_types[${id}][type]" value="${passportType.type || 'permanent'}">
@@ -801,7 +807,7 @@
           <input type="hidden" name="passport_types[${id}][sessions_included]" value="${passportType.sessions_included || '1'}">
           <input type="hidden" name="passport_types[${id}][target_revenue]" value="${passportType.target_revenue || '0.00'}">
           <input type="hidden" name="passport_types[${id}][payment_instructions]" value="${passportType.payment_instructions || ''}">
-        </div>
+        </tr>
       `;
     }
     
@@ -840,11 +846,10 @@
       
       passportTypes.push(newPassportType);
       
-      const cardHtml = createPassportTypeOverviewCard(newPassportType);
-      passportTypesContainer.insertAdjacentHTML('beforeend', cardHtml);
+      const rowHtml = createPassportTypeTableRow(newPassportType);
+      passportTypesContainer.insertAdjacentHTML('beforeend', rowHtml);
       
       updateVisibility();
-      updateSignupLinks();
       
       // Clear modal and close
       clearAddModal();
@@ -852,7 +857,7 @@
     }
     
     function editPassportType(id) {
-      const passportType = passportTypes.find(pt => pt.id == id) || getPassportTypeFromCard(id);
+      const passportType = passportTypes.find(pt => pt.id == id) || getPassportTypeFromRow(id);
       if (!passportType) return;
       
       currentEditingId = id;
@@ -903,12 +908,10 @@
       }
       
       // Update UI
-      const card = document.querySelector(`[data-id="${currentEditingId}"]`);
-      if (card) {
-        card.outerHTML = createPassportTypeOverviewCard(updatedPassportType);
+      const row = document.querySelector(`[data-id="${currentEditingId}"]`);
+      if (row) {
+        row.outerHTML = createPassportTypeTableRow(updatedPassportType);
       }
-      
-      updateSignupLinks();
       editPassportTypeModal.hide();
       currentEditingId = null;
     }
@@ -922,31 +925,30 @@
     function deletePassportType() {
       if (!currentDeletingId) return;
       
-      const card = document.querySelector(`[data-id="${currentDeletingId}"]`);
-      if (card) {
-        card.remove();
+      const row = document.querySelector(`[data-id="${currentDeletingId}"]`);
+      if (row) {
+        row.remove();
       }
       
       passportTypes = passportTypes.filter(pt => pt.id != currentDeletingId);
       updateVisibility();
-      updateSignupLinks();
       
       deletePassportTypeModal.hide();
       currentDeletingId = null;
     }
     
-    function getPassportTypeFromCard(id) {
-      const card = document.querySelector(`[data-id="${id}"]`);
-      if (!card) return null;
+    function getPassportTypeFromRow(id) {
+      const row = document.querySelector(`[data-id="${id}"]`);
+      if (!row) return null;
       
       return {
         id: id,
-        name: card.querySelector('input[name*="[name]"]').value,
-        type: card.querySelector('input[name*="[type]"]').value,
-        price_per_user: card.querySelector('input[name*="[price_per_user]"]').value,
-        sessions_included: card.querySelector('input[name*="[sessions_included]"]').value,
-        target_revenue: card.querySelector('input[name*="[target_revenue]"]').value,
-        payment_instructions: card.querySelector('input[name*="[payment_instructions]"]').value
+        name: row.querySelector('input[name*="[name]"]').value,
+        type: row.querySelector('input[name*="[type]"]').value,
+        price_per_user: row.querySelector('input[name*="[price_per_user]"]').value,
+        sessions_included: row.querySelector('input[name*="[sessions_included]"]').value,
+        target_revenue: row.querySelector('input[name*="[target_revenue]"]').value,
+        payment_instructions: row.querySelector('input[name*="[payment_instructions]"]').value
       };
     }
     
@@ -961,55 +963,21 @@
     
     function updateVisibility() {
       const hasPassportTypes = passportTypesContainer.children.length > 0;
-      noPassportTypes.style.display = hasPassportTypes ? 'none' : 'block';
+      const passportTypesTable = document.getElementById('passportTypesTable');
+      
+      if (hasPassportTypes) {
+        noPassportTypes.style.display = 'none';
+        passportTypesTable.style.display = 'table';
+      } else {
+        noPassportTypes.style.display = 'block';
+        passportTypesTable.style.display = 'none';
+      }
     }
     
     function updateSignupLinks() {
-      if (!signupLinksContainer) return;
-      
-      signupLinksContainer.innerHTML = '';
-      
-      const cards = passportTypesContainer.querySelectorAll('.passport-overview-card');
-      cards.forEach((card, index) => {
-        const nameInput = card.querySelector('input[name*="[name]"]');
-        const typeInput = card.querySelector('input[name*="[type]"]');
-        const name = nameInput.value || `Passport Type ${index + 1}`;
-        const type = typeInput.value;
-        const cardId = card.getAttribute('data-id');
-        
-        // Check if this is an existing passport type (numeric ID) or new one
-        const isExisting = cardId && !cardId.startsWith('new_');
-        let signupUrl = '[Will be generated after saving]';
-        let buttonDisabled = true;
-        
-        if (isExisting && '{{ activity.id if activity }}') {
-          signupUrl = `{{ url_for('signup', activity_id=activity.id, _external=True) if activity }}?passport_type_id=${cardId}`;
-          buttonDisabled = false;
-        }
-        
-        const typeBadgeClass = type === 'permanent' ? 'bg-green-lt text-green' : 'bg-yellow-lt text-yellow';
-        
-        const linkHtml = `
-          <div class="signup-link-card">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <h6 class="mb-1">${name}</h6>
-                <span class="badge ${typeBadgeClass} mb-2">${type}</span>
-              </div>
-            </div>
-            <div class="input-group">
-              <input type="text" class="form-control signup-url-input" readonly 
-                     value="${signupUrl}">
-              <button class="btn btn-outline-secondary copy-signup-btn" type="button" ${buttonDisabled ? 'disabled' : ''} 
-                      onclick="copySignupLink(this)">
-                <i class="ti ti-copy"></i>
-              </button>
-              ${!buttonDisabled ? `<a class="btn btn-outline-secondary" target="_blank" href="${signupUrl}" title="Open in new tab"><i class="ti ti-world"></i></a>` : ''}
-            </div>
-          </div>
-        `;
-        signupLinksContainer.insertAdjacentHTML('beforeend', linkHtml);
-      });
+      // Signup links are now integrated into the table rows
+      // Legacy function - functionality moved to table rows
+      // No longer needed as signup links are integrated into createPassportTypeTableRow
     }
     
     function copySignupLink(button) {
@@ -1047,8 +1015,8 @@
     };
     
     passportTypes.push(existingPassportType{{ loop.index0 }});
-    const cardHtml{{ loop.index0 }} = createPassportTypeOverviewCard(existingPassportType{{ loop.index0 }});
-    passportTypesContainer.insertAdjacentHTML('beforeend', cardHtml{{ loop.index0 }});
+    const rowHtml{{ loop.index0 }} = createPassportTypeTableRow(existingPassportType{{ loop.index0 }});
+    passportTypesContainer.insertAdjacentHTML('beforeend', rowHtml{{ loop.index0 }});
     {% endfor %}
     {% endif %}
     
