@@ -180,9 +180,9 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h4 class="mb-0">Activity Finances</h4>
               <div class="btn-list">
-                <a href="{{ url_for('activity_income', activity_id=activity.id) }}" class="btn btn-success">
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
                   <i class="ti ti-plus me-2"></i>Income
-                </a>
+                </button>
                 <a href="{{ url_for('activity_expenses', activity_id=activity.id) }}" class="btn btn-danger">
                   <i class="ti ti-minus me-2"></i>Expense
                 </a>
@@ -234,10 +234,10 @@
                 <hr class="border-2">
                 <div class="row">
                   <div class="col-8">
-                    <div class="h5 fw-bold mb-0">Net Income</div>
+                    <div class="fw-bold mb-0" style="font-size: 1.1rem;">Net Income</div>
                   </div>
                   <div class="col-4 text-end">
-                    <div class="h5 fw-bold mb-0 {{ 'text-success' if summary.net_income >= 0 else 'text-danger' }}">
+                    <div class="fw-bold mb-0 {{ 'text-success' if summary.net_income >= 0 else 'text-danger' }}" style="font-size: 1.1rem;">
                       ${{ "%.2f"|format(summary.net_income) }}
                     </div>
                   </div>
@@ -246,6 +246,73 @@
             </div>
             {% endif %}
           </div>
+          
+          <!-- Income Ledger Section -->
+          {% if activity and activity.incomes %}
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h4 class="mb-0">Income Ledger</h4>
+              <span class="badge bg-blue-lt text-blue">{{ activity.incomes|length }} entries</span>
+            </div>
+            
+            <div class="card">
+              <div class="table-responsive">
+                <table class="table table-vcenter card-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                      <th>Note</th>
+                      <th>Receipt</th>
+                      <th class="w-1">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="incomeLedgerContainer">
+                    {% for income in activity.incomes %}
+                    <tr data-income-id="{{ income.id }}">
+                      <td>{{ income.date.strftime('%Y-%m-%d') }}</td>
+                      <td>
+                        <span class="badge bg-gray-lt text-gray">{{ income.category }}</span>
+                      </td>
+                      <td>
+                        <span class="fw-bold text-success">${{ "%.2f"|format(income.amount) }}</span>
+                      </td>
+                      <td>{{ income.note or "-" }}</td>
+                      <td>
+                        {% if income.receipt_filename %}
+                          <button type="button" onclick="openReceiptWindow('{{ url_for('static', filename='uploads/receipts/' + income.receipt_filename) }}')" 
+                             title="View Receipt" class="btn btn-sm btn-outline-secondary">
+                            <i class="ti ti-file-search"></i>
+                          </button>
+                        {% else %}
+                          <span class="text-muted">-</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div class="dropdown">
+                          <a href="#" class="btn btn-outline-secondary dropdown-toggle btn-sm" data-bs-toggle="dropdown">
+                            Actions
+                          </a>
+                          <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" onclick="editIncome({{ income.id }})">
+                              <i class="ti ti-edit me-2"></i> Edit
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-danger" href="#" onclick="confirmDeleteIncome({{ income.id }}, '{{ income.category }}')">
+                              <i class="ti ti-trash me-2"></i> Delete
+                            </a>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          {% endif %}
           {% endif %}
 
           <!-- Signup Links Section - Now integrated into Passport Types table -->
@@ -437,6 +504,86 @@
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-success" id="saveEditPassportType">
           <i class="ti ti-check me-2"></i>Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Income Modal -->
+<div class="modal modal-blur fade" id="addIncomeModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-cash me-2"></i>Add Income
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addIncomeForm" method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="activity_id" value="{{ activity.id if activity }}">
+          
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label required">Category</label>
+              <select name="category" class="form-select" required>
+                <option value="Ticket Sales">Ticket Sales</option>
+                <option value="Sponsorship">Sponsorship</option>
+                <option value="Donations">Donations</option>
+                <option value="Vendor Fees">Vendor Fees</option>
+                <option value="Service Income">Service Income</option>
+                <option value="Merchandise Sales">Merchandise Sales</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label required">Amount ($)</label>
+              <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label required">Date</label>
+              <input type="date" name="date" class="form-control" required>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Upload Receipt (optional)</label>
+              <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
+            </div>
+            
+            <div class="col-12">
+              <label class="form-label">Note (optional)</label>
+              <textarea name="note" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="saveIncomeBtn">
+          <i class="ti ti-check me-2"></i>Add Income
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Delete Income Confirmation Modal -->
+<div class="modal modal-blur fade" id="deleteIncomeModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-title">Delete Income Entry?</div>
+        <div>Are you sure you want to delete the <strong id="deleteIncomeCategory"></strong> income entry? This action cannot be undone.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteIncome">
+          <i class="ti ti-trash me-2"></i>Delete
         </button>
       </div>
     </div>
@@ -1218,6 +1365,86 @@
     window.confirmDeletePassportType = confirmDeletePassportType;
     window.copySignupLink = copySignupLink;
     
+    // Income Management Functions
+    const addIncomeModal = new bootstrap.Modal(document.getElementById('addIncomeModal'));
+    const deleteIncomeModal = new bootstrap.Modal(document.getElementById('deleteIncomeModal'));
+    
+    let currentDeletingIncomeId = null;
+    
+    // Set default date to today for add income modal
+    const today = new Date().toISOString().split('T')[0];
+    const addIncomeDateInput = document.querySelector('#addIncomeForm input[name="date"]');
+    if (addIncomeDateInput) {
+      addIncomeDateInput.value = today;
+    }
+    
+    function addNewIncome() {
+      const form = document.getElementById('addIncomeForm');
+      
+      // Validate form
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+      
+      // Show loading state
+      const saveBtn = document.getElementById('saveIncomeBtn');
+      const originalText = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm me-2"></i>Adding...';
+      saveBtn.disabled = true;
+      
+      // Submit form to add income and return to activity form
+      form.action = '/admin/activity-income/{{ activity.id if activity }}?return_to=activity_form';
+      form.method = 'POST';
+      form.submit();
+    }
+    
+    function editIncome(incomeId) {
+      // For now, redirect to the existing edit page
+      // We can enhance this later with a modal approach
+      window.location.href = `/admin/activity-income/{{ activity.id if activity }}/${incomeId}?return_to=activity_form`;
+    }
+    
+    
+    function confirmDeleteIncome(incomeId, category) {
+      currentDeletingIncomeId = incomeId;
+      document.getElementById('deleteIncomeCategory').textContent = category;
+      deleteIncomeModal.show();
+    }
+    
+    function deleteIncome() {
+      if (!currentDeletingIncomeId) return;
+      
+      // Create a form to submit the delete request
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/admin/delete-income/${currentDeletingIncomeId}?return_to=activity_form`;
+      
+      const csrfToken = document.createElement('input');
+      csrfToken.type = 'hidden';
+      csrfToken.name = 'csrf_token';
+      csrfToken.value = document.querySelector('input[name="csrf_token"]').value;
+      
+      form.appendChild(csrfToken);
+      document.body.appendChild(form);
+      form.submit();
+    }
+    
+    // Event listeners for income modals
+    document.getElementById('saveIncomeBtn').addEventListener('click', addNewIncome);
+    document.getElementById('confirmDeleteIncome').addEventListener('click', deleteIncome);
+    
+    // Function to open receipt in new window
+    function openReceiptWindow(receiptUrl) {
+      const windowFeatures = 'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,location=no,directories=no,status=no,menubar=no';
+      window.open(receiptUrl, 'receiptWindow', windowFeatures);
+    }
+    
+    // Make functions global for onclick handlers
+    window.editIncome = editIncome;
+    window.confirmDeleteIncome = confirmDeleteIncome;
+    window.openReceiptWindow = openReceiptWindow;
+    
     // Load existing passport types for editing
     {% if passport_types %}
     {% for pt in passport_types %}
@@ -1228,7 +1455,7 @@
       price_per_user: '{{ pt.price_per_user }}',
       sessions_included: '{{ pt.sessions_included }}',
       target_revenue: '{{ pt.target_revenue }}',
-      payment_instructions: '{{ pt.payment_instructions|replace("'", "\\'") }}'
+      payment_instructions: {{ (pt.payment_instructions or '')|tojson }}
     };
     
     passportTypes.push(existingPassportType{{ loop.index0 }});
