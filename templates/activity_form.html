@@ -919,7 +919,124 @@
     function confirmDeletePassportType(id, name) {
       currentDeletingId = id;
       document.getElementById('deletePassportTypeName').textContent = name;
-      deletePassportTypeModal.show();
+      
+      // Check if this is an existing passport type (not new)
+      if (id && !id.toString().startsWith('new_')) {
+        // Check for dependencies before allowing deletion
+        checkPassportTypeDependencies(id, name);
+      } else {
+        // It's a new passport type, safe to delete
+        deletePassportTypeModal.show();
+      }
+    }
+    
+    function checkPassportTypeDependencies(id, name) {
+      fetch(`/api/passport-type-dependencies/${id}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            if (data.has_dependencies) {
+              // Show archive confirmation instead of delete
+              showArchivePassportTypeModal(id, name, data.passport_count, data.signup_count);
+            } else {
+              // Safe to delete
+              deletePassportTypeModal.show();
+            }
+          } else {
+            alert('Error checking dependencies: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error checking dependencies. Please try again.');
+        });
+    }
+    
+    function showArchivePassportTypeModal(id, name, passportCount, signupCount) {
+      const modalHtml = `
+        <div class="modal modal-blur fade" id="archivePassportTypeModal" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Cannot Delete Passport Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="alert alert-warning">
+                  <i class="ti ti-alert-triangle me-2"></i>
+                  <strong>This passport type cannot be deleted</strong>
+                </div>
+                <p>The passport type "<strong>' + name + '</strong>" is currently being used by:</p>
+                <ul class="mb-3">
+                  ' + (passportCount > 0 ? '<li><strong>' + passportCount + '</strong> existing passport' + (passportCount !== 1 ? 's' : '') + '</li>' : '') + '
+                  ' + (signupCount > 0 ? '<li><strong>' + signupCount + '</strong> signup' + (signupCount !== 1 ? 's' : '') + '</li>' : '') + '
+                </ul>
+                <p>Instead of deleting, you can <strong>archive</strong> this passport type. This will:</p>
+                <ul>
+                  <li>Hide it from new signups</li>
+                  <li>Preserve existing passport data</li>
+                  <li>Maintain historical records</li>
+                </ul>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="archivePassportType(\'' + id + '\', \'' + name + '\')">
+                  <i class="ti ti-archive me-2"></i>Archive Instead
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Remove existing modal if any
+      const existingModal = document.getElementById('archivePassportTypeModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      // Add new modal to DOM
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      // Show the modal
+      const archiveModal = new bootstrap.Modal(document.getElementById('archivePassportTypeModal'));
+      archiveModal.show();
+    }
+    
+    function archivePassportType(id, name) {
+      fetch(`/api/passport-type-archive/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Remove from UI (archive is like deletion from user perspective)
+          const row = document.querySelector(`[data-id="${id}"]`);
+          if (row) {
+            row.remove();
+          }
+          passportTypes = passportTypes.filter(pt => pt.id != id);
+          updateVisibility();
+          
+          // Close modal and reset
+          const archiveModal = bootstrap.Modal.getInstance(document.getElementById('archivePassportTypeModal'));
+          if (archiveModal) {
+            archiveModal.hide();
+          }
+          currentDeletingId = null;
+          
+          alert(data.message);
+        } else {
+          alert('Error archiving passport type: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error archiving passport type. Please try again.');
+      });
     }
     
     function deletePassportType() {

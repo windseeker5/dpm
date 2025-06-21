@@ -967,6 +967,7 @@ def create_pass_from_signup(signup_id):
         user_id=signup.user_id,
         activity_id=signup.activity_id,
         passport_type_id=passport_type.id if passport_type else None,
+        passport_type_name=passport_type.name if passport_type else None,  # Preserve type name
         sold_amt=passport_type.price_per_user if passport_type else 0.0,
         uses_remaining=passport_type.sessions_included if passport_type else 1,
         created_dt=datetime.utcnow(),
@@ -1073,6 +1074,7 @@ def approve_and_create_pass(signup_id):
         user_id=signup.user_id,
         activity_id=signup.activity_id,
         passport_type_id=passport_type.id if passport_type else None,
+        passport_type_name=passport_type.name if passport_type else None,  # Preserve type name
         sold_amt=passport_type.price_per_user if passport_type else 0.0,
         uses_remaining=passport_type.sessions_included if passport_type else 1,
         created_by=current_admin.id if current_admin else None,
@@ -1254,10 +1256,9 @@ def edit_activity(activity_id):
         elif selected_image_filename:
             activity.image_filename = selected_image_filename
 
-        # Handle passport types - remove existing ones and recreate
-        existing_passport_types = PassportType.query.filter_by(activity_id=activity.id).all()
-        for pt in existing_passport_types:
-            db.session.delete(pt)
+        # Handle passport types - preserve existing ones and update/create as needed
+        existing_passport_types = PassportType.query.filter_by(activity_id=activity.id, status='active').all()
+        existing_pt_dict = {pt.id: pt for pt in existing_passport_types}
 
         # Parse new passport types from form
         passport_types_data = {}
@@ -1272,33 +1273,78 @@ def edit_activity(activity_id):
                         passport_types_data[passport_id] = {}
                     passport_types_data[passport_id][field] = value
 
-        # Create new passport types
+        # Update existing passport types or create new ones
         passport_types_created = 0
+        passport_types_updated = 0
+        updated_passport_type_ids = set()
+        
         for passport_id, passport_data in passport_types_data.items():
-            if passport_data.get('name'):  # Only create if name is provided
-                passport_type = PassportType(
-                    activity_id=activity.id,
-                    name=passport_data.get('name', '').strip(),
-                    type=passport_data.get('type', 'permanent'),
-                    price_per_user=float(passport_data.get('price_per_user', 0.0)),
-                    sessions_included=int(passport_data.get('sessions_included', 1)),
-                    target_revenue=float(passport_data.get('target_revenue', 0.0)),
-                    payment_instructions=passport_data.get('payment_instructions', '').strip(),
-                    status='active'
-                )
-                db.session.add(passport_type)
-                passport_types_created += 1
+            if passport_data.get('name'):  # Only process if name is provided
+                try:
+                    existing_id = int(passport_id) if passport_id.isdigit() else None
+                except (ValueError, TypeError):
+                    existing_id = None
+                
+                if existing_id and existing_id in existing_pt_dict:
+                    # Update existing passport type
+                    passport_type = existing_pt_dict[existing_id]
+                    passport_type.name = passport_data.get('name', '').strip()
+                    passport_type.type = passport_data.get('type', 'permanent')
+                    passport_type.price_per_user = float(passport_data.get('price_per_user', 0.0))
+                    passport_type.sessions_included = int(passport_data.get('sessions_included', 1))
+                    passport_type.target_revenue = float(passport_data.get('target_revenue', 0.0))
+                    passport_type.payment_instructions = passport_data.get('payment_instructions', '').strip()
+                    
+                    # Preserve passport type names in existing passports when updating
+                    passports_to_update = Passport.query.filter_by(passport_type_id=existing_id).all()
+                    for passport in passports_to_update:
+                        if not passport.passport_type_name:  # Only update if not already preserved
+                            passport.passport_type_name = passport_type.name
+                    
+                    updated_passport_type_ids.add(existing_id)
+                    passport_types_updated += 1
+                else:
+                    # Create new passport type
+                    passport_type = PassportType(
+                        activity_id=activity.id,
+                        name=passport_data.get('name', '').strip(),
+                        type=passport_data.get('type', 'permanent'),
+                        price_per_user=float(passport_data.get('price_per_user', 0.0)),
+                        sessions_included=int(passport_data.get('sessions_included', 1)),
+                        target_revenue=float(passport_data.get('target_revenue', 0.0)),
+                        payment_instructions=passport_data.get('payment_instructions', '').strip(),
+                        status='active'
+                    )
+                    db.session.add(passport_type)
+                    passport_types_created += 1
+        
+        # Archive passport types that were removed from the form (not deleted, just archived)
+        passport_types_archived = 0
+        for pt_id, pt in existing_pt_dict.items():
+            if pt_id not in updated_passport_type_ids:
+                # This passport type was removed from the form - archive it instead of deleting
+                pt.status = 'archived'
+                pt.archived_at = datetime.now(timezone.utc)
+                pt.archived_by = session.get("admin", "system")
+                
+                # Preserve passport type names in existing passports
+                passports_to_preserve = Passport.query.filter_by(passport_type_id=pt_id).all()
+                for passport in passports_to_preserve:
+                    if not passport.passport_type_name:  # Only update if not already preserved
+                        passport.passport_type_name = pt.name
+                
+                passport_types_archived += 1
 
         db.session.commit()
 
         from models import AdminActionLog
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
-            action=f"Activity Updated: {activity.name} with {passport_types_created} passport types"
+            action=f"Activity Updated: {activity.name} - Created: {passport_types_created}, Updated: {passport_types_updated}, Archived: {passport_types_archived} passport types"
         ))
         db.session.commit()
 
-        flash(f"✅ Activity updated successfully with {passport_types_created} passport types!", "success")
+        flash(f"✅ Activity updated successfully! Created: {passport_types_created}, Updated: {passport_types_updated}, Archived: {passport_types_archived} passport types.", "success")
         return redirect(url_for("edit_activity", activity_id=activity.id))
 
     # 🧮 Add financial summary data (shown at bottom of form)
@@ -2754,7 +2800,73 @@ def mark_passport_paid(passport_id):
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
 
+@app.route("/api/passport-type-dependencies/<int:passport_type_id>", methods=["GET"])
+def check_passport_type_dependencies(passport_type_id):
+    """Check if a passport type has dependencies (existing passports) that prevent deletion"""
+    try:
+        passport_type = PassportType.query.get_or_404(passport_type_id)
+        
+        # Count passports using this passport type
+        passport_count = Passport.query.filter_by(passport_type_id=passport_type_id).count()
+        
+        # Count signups using this passport type
+        signup_count = Signup.query.filter_by(passport_type_id=passport_type_id).count()
+        
+        has_dependencies = passport_count > 0 or signup_count > 0
+        
+        return jsonify({
+            "success": True,
+            "has_dependencies": has_dependencies,
+            "passport_count": passport_count,
+            "signup_count": signup_count,
+            "passport_type_name": passport_type.name,
+            "can_delete": not has_dependencies
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
+
+@app.route("/api/passport-type-archive/<int:passport_type_id>", methods=["POST"])
+def archive_passport_type(passport_type_id):
+    """Archive a passport type instead of deleting it"""
+    try:
+        passport_type = PassportType.query.get_or_404(passport_type_id)
+        
+        # Update passport type status to archived
+        passport_type.status = "archived"
+        passport_type.archived_at = datetime.now(timezone.utc)
+        passport_type.archived_by = session.get("admin", "system")
+        
+        # Preserve passport type names in existing passports
+        passports = Passport.query.filter_by(passport_type_id=passport_type_id).all()
+        for passport in passports:
+            if not passport.passport_type_name:  # Only update if not already preserved
+                passport.passport_type_name = passport_type.name
+        
+        db.session.commit()
+        
+        # Log the action
+        from utils import log_admin_action
+        log_admin_action(
+            admin_email=session.get("admin", "system"),
+            action=f"Archived passport type: {passport_type.name} (ID: {passport_type_id})"
+        )
+        
+        return jsonify({
+            "success": True,
+            "message": f"Passport type '{passport_type.name}' has been archived successfully."
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 
