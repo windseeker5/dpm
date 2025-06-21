@@ -3,9 +3,9 @@
 
 {% block content %}
 <div class="container-xl mt-4">
-  <div class="row">
-    <!-- Left: Add/Edit Income + Ledger -->
-    <div class="col-lg-8">
+  <div class="row justify-content-center">
+    <!-- Income Management -->
+    <div class="col-12 col-lg-10">
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">
@@ -146,21 +146,6 @@
       </div>
     </div>
 
-    <!-- Right: Summary Card -->
-    <div class="col-lg-4">
-      <div class="card sticky-top">
-        <div class="card-header">
-          <h3 class="card-title"><i class="ti ti-chart-pie me-2"></i> Summary</h3>
-        </div>
-        <div class="card-body">
-          <table class="table table-sm">
-            <tr><td>🎟 Passport Income</td><td class="text-end">${{ "%.2f"|format(summary.passport_income) }}</td></tr>
-            <tr><td>📂 Other Income</td><td class="text-end">${{ "%.2f"|format(summary.other_income) }}</td></tr>
-            <tr class="fw-bold"><td>Total Revenue</td><td class="text-end">${{ "%.2f"|format(summary.total_income) }}</td></tr>
-          </table>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 {% endblock %}

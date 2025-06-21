@@ -2312,7 +2312,13 @@ def activity_income(activity_id, income_id=None):
 
         db.session.commit()
         flash("Income saved.", "success")
-        return redirect(url_for("activity_income", activity_id=activity.id))
+        
+        # Check if we should return to activity form
+        return_to = request.args.get('return_to')
+        if return_to == 'activity_form':
+            return redirect(url_for("activity_form", activity_id=activity.id))
+        else:
+            return redirect(url_for("activity_income", activity_id=activity.id))
 
     incomes = Income.query.filter_by(activity_id=activity.id).order_by(Income.date.desc()).all()
     passport_income = sum(p.sold_amt for p in activity.passports if p.paid)
@@ -2420,7 +2426,13 @@ def delete_income(income_id):
     db.session.delete(income)
     db.session.commit()
     flash("Income deleted.", "success")
-    return redirect(url_for("activity_income", activity_id=activity_id))
+    
+    # Check if we should return to activity form
+    return_to = request.args.get('return_to')
+    if return_to == 'activity_form':
+        return redirect(url_for("activity_form", activity_id=activity_id))
+    else:
+        return redirect(url_for("activity_income", activity_id=activity_id))
 
 
 @app.route("/admin/delete-expense/<int:expense_id>", methods=["POST"])
@@ -2499,8 +2511,12 @@ def activity_form(activity_id=None):
     else:
         summary = None
 
-    return render_template("activity_form_redesign.html",
+    # Get passport types for the activity
+    passport_types = activity.passport_types if activity else []
+    
+    return render_template("activity_form.html",
                            activity=activity,
+                           passport_types=passport_types,
                            summary=summary)
 
 
