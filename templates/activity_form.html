@@ -177,52 +177,68 @@
           <!-- Financial Management Section -->
           {% if activity %}
           <div class="mb-4">
-            <h5 class="mb-3"><i class="ti ti-chart-line me-2"></i>Financial Management</h5>
-            
-            <!-- Quick Actions -->
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <a href="{{ url_for('activity_income', activity_id=activity.id) }}" class="btn btn-outline-success w-100">
-                  <i class="ti ti-plus me-2"></i>Add Income
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h4 class="mb-0">Activity Finances</h4>
+              <div class="btn-list">
+                <a href="{{ url_for('activity_income', activity_id=activity.id) }}" class="btn btn-success">
+                  <i class="ti ti-plus me-2"></i>Income
                 </a>
-              </div>
-              <div class="col-md-6">
-                <a href="{{ url_for('activity_expenses', activity_id=activity.id) }}" class="btn btn-outline-danger w-100">
-                  <i class="ti ti-plus me-2"></i>Add Expense
+                <a href="{{ url_for('activity_expenses', activity_id=activity.id) }}" class="btn btn-danger">
+                  <i class="ti ti-minus me-2"></i>Expense
                 </a>
               </div>
             </div>
             
-            <!-- Financial Summary -->
+            <!-- Income Statement (Profit & Loss) -->
             {% if summary %}
             <div class="card">
-              <div class="card-header">
-                <h6 class="card-title mb-0">Financial Overview</h6>
-              </div>
               <div class="card-body">
-                <div class="row text-center">
-                  <div class="col-6 col-md-3">
-                    <div class="mb-2">
-                      <div class="text-muted small">Passport Income</div>
-                      <div class="h5 mb-0 text-success">${{ "%.2f"|format(summary.passport_income) }}</div>
+                <!-- Revenue Section -->
+                <div class="mb-4">
+                  <h6 class="text-uppercase text-muted fw-bold mb-3">Revenue</h6>
+                  <div class="row">
+                    <div class="col-8">
+                      <div class="ps-3 mb-2">Passport Income</div>
+                      <div class="ps-3 mb-2">Other Income</div>
+                    </div>
+                    <div class="col-4 text-end">
+                      <div class="mb-2 text-success fw-bold">${{ "%.2f"|format(summary.passport_income) }}</div>
+                      <div class="mb-2 text-info fw-bold">${{ "%.2f"|format(summary.other_income) }}</div>
                     </div>
                   </div>
-                  <div class="col-6 col-md-3">
-                    <div class="mb-2">
-                      <div class="text-muted small">Other Income</div>
-                      <div class="h5 mb-0 text-info">${{ "%.2f"|format(summary.other_income) }}</div>
+                  <hr class="my-2">
+                  <div class="row">
+                    <div class="col-8">
+                      <div class="fw-bold">Total Revenue</div>
+                    </div>
+                    <div class="col-4 text-end">
+                      <div class="fw-bold text-success">${{ "%.2f"|format(summary.passport_income + summary.other_income) }}</div>
                     </div>
                   </div>
-                  <div class="col-6 col-md-3">
-                    <div class="mb-2">
-                      <div class="text-muted small">Total Expenses</div>
-                      <div class="h5 mb-0 text-danger">${{ "%.2f"|format(summary.total_expenses) }}</div>
+                </div>
+
+                <!-- Expenses Section -->
+                <div class="mb-4">
+                  <h6 class="text-uppercase text-muted fw-bold mb-3">Expenses</h6>
+                  <div class="row">
+                    <div class="col-8">
+                      <div class="ps-3 mb-2">Total Expenses</div>
+                    </div>
+                    <div class="col-4 text-end">
+                      <div class="mb-2 text-danger fw-bold">${{ "%.2f"|format(summary.total_expenses) }}</div>
                     </div>
                   </div>
-                  <div class="col-6 col-md-3">
-                    <div class="mb-2">
-                      <div class="text-muted small">Net Income</div>
-                      <div class="h5 mb-0 {{ 'text-success' if summary.net_income >= 0 else 'text-danger' }}">${{ "%.2f"|format(summary.net_income) }}</div>
+                </div>
+
+                <!-- Net Income Section -->
+                <hr class="border-2">
+                <div class="row">
+                  <div class="col-8">
+                    <div class="h5 fw-bold mb-0">Net Income</div>
+                  </div>
+                  <div class="col-4 text-end">
+                    <div class="h5 fw-bold mb-0 {{ 'text-success' if summary.net_income >= 0 else 'text-danger' }}">
+                      ${{ "%.2f"|format(summary.net_income) }}
                     </div>
                   </div>
                 </div>
