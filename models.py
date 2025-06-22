@@ -284,3 +284,93 @@ db.Index('ix_survey_token', Survey.survey_token)
 db.Index('ix_survey_response_token', SurveyResponse.response_token)
 db.Index('ix_survey_activity', Survey.activity_id)
 db.Index('ix_survey_response_survey', SurveyResponse.survey_id)
+
+
+# ================================
+# 🤖 AI CHATBOT SYSTEM MODELS
+# ================================
+
+class ChatConversation(db.Model):
+    """Chat conversation sessions for the AI analytics chatbot"""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_email = db.Column(db.String(150), nullable=False)
+    session_token = db.Column(db.String(32), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    status = db.Column(db.String(20), default='active')  # active, archived, deleted
+    
+    # Relationships
+    messages = db.relationship("ChatMessage", backref="conversation", lazy=True, cascade="all, delete-orphan")
+
+
+class ChatMessage(db.Model):
+    """Individual chat messages and AI responses"""
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("chat_conversation.id"), nullable=False)
+    message_type = db.Column(db.String(20), nullable=False)  # user, assistant, system, error
+    content = db.Column(db.Text, nullable=False)
+    sql_query = db.Column(db.Text, nullable=True)  # Generated SQL (if applicable)
+    query_result = db.Column(db.Text, nullable=True)  # JSON result (if applicable)
+    ai_provider = db.Column(db.String(50), nullable=True)  # ollama, anthropic, openai
+    ai_model = db.Column(db.String(100), nullable=True)  # Model used for this message
+    tokens_used = db.Column(db.Integer, default=0)
+    cost_cents = db.Column(db.Integer, default=0)  # Cost in cents
+    response_time_ms = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Index for performance
+    __table_args__ = (
+        db.Index('ix_chat_message_conversation', 'conversation_id'),
+        db.Index('ix_chat_message_type', 'message_type'),
+        db.Index('ix_chat_message_created', 'created_at'),
+    )
+
+
+class QueryLog(db.Model):
+    """Query execution log for monitoring and analytics"""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_email = db.Column(db.String(150), nullable=False)
+    original_question = db.Column(db.Text, nullable=False)
+    generated_sql = db.Column(db.Text, nullable=False)
+    execution_status = db.Column(db.String(20), nullable=False)  # success, error, blocked
+    execution_time_ms = db.Column(db.Integer, nullable=True)
+    rows_returned = db.Column(db.Integer, default=0)
+    error_message = db.Column(db.Text, nullable=True)
+    ai_provider = db.Column(db.String(50), nullable=True)
+    ai_model = db.Column(db.String(100), nullable=True)
+    tokens_used = db.Column(db.Integer, default=0)
+    cost_cents = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Indexes for performance and analytics
+    __table_args__ = (
+        db.Index('ix_query_log_admin', 'admin_email'),
+        db.Index('ix_query_log_status', 'execution_status'),
+        db.Index('ix_query_log_created', 'created_at'),
+        db.Index('ix_query_log_provider', 'ai_provider'),
+    )
+
+
+class ChatUsage(db.Model):
+    """Daily usage tracking for cost management"""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_email = db.Column(db.String(150), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    total_queries = db.Column(db.Integer, default=0)
+    total_tokens = db.Column(db.Integer, default=0)
+    total_cost_cents = db.Column(db.Integer, default=0)
+    provider_usage = db.Column(db.Text, nullable=True)  # JSON with per-provider stats
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Unique constraint on admin_email + date
+    __table_args__ = (
+        db.UniqueConstraint('admin_email', 'date', name='uq_chat_usage_admin_date'),
+        db.Index('ix_chat_usage_date', 'date'),
+    )
+
+
+# ✅ Additional indexes for chatbot performance
+db.Index('ix_chat_conversation_admin', ChatConversation.admin_email)
+db.Index('ix_chat_conversation_token', ChatConversation.session_token)
+db.Index('ix_chat_conversation_status', ChatConversation.status)

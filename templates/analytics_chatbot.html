@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% block title %}AI Analytics Chatbot | Minipass{% endblock %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='css/chatbot.css') }}" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    <i class="ti ti-message-chatbot" style="font-size: 1.3em;"></i> AI Analytics Chatbot
+                </h2>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                    <div class="dropdown">
+                        <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="ti ti-settings me-2"></i>Settings
+                        </a>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" onclick="showProviderStatus()">
+                                <i class="ti ti-server me-2"></i>Provider Status
+                            </a>
+                            <a class="dropdown-item" href="#" onclick="showConversationHistory()">
+                                <i class="ti ti-history me-2"></i>Conversation History
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" onclick="newConversation()">
+                                <i class="ti ti-plus me-2"></i>New Conversation
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-xl">
+    <div class="row">
+        <!-- Main Chat Interface -->
+        <div class="col-lg-8">
+            <div class="card chat-container">
+                <div class="card-header">
+                    <div class="d-flex align-items-center">
+                        <span class="avatar avatar-sm me-3 bg-primary text-white">
+                            <i class="ti ti-robot"></i>
+                        </span>
+                        <div>
+                            <h4 class="card-title mb-0">Analytics Assistant</h4>
+                            <div class="text-muted small">
+                                <span id="provider-indicator" class="badge bg-green-lt text-green">
+                                    <i class="ti ti-circle-filled"></i> Ollama Ready
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ms-auto">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearMessages()">
+                                <i class="ti ti-trash me-1"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat Messages Area -->
+                <div class="card-body p-0">
+                    <div id="chat-messages" class="chat-messages">
+                        {% for message in messages %}
+                        <div class="message {{ message.type }}">
+                            <div class="message-content">
+                                <div class="message-bubble">
+                                    <div class="message-text">{{ message.content }}</div>
+                                    {% if message.sql %}
+                                    <div class="message-sql">
+                                        <div class="sql-header">
+                                            <i class="ti ti-code me-1"></i>Generated SQL
+                                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="copySQL('{{ message.id }}')">
+                                                <i class="ti ti-copy"></i>
+                                            </button>
+                                        </div>
+                                        <pre class="sql-code" id="sql-{{ message.id }}"><code>{{ message.sql }}</code></pre>
+                                    </div>
+                                    {% endif %}
+                                    {% if message.chart_data %}
+                                    <div class="message-chart">
+                                        <canvas id="chart-{{ message.id }}" width="400" height="200"></canvas>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="message-meta">
+                                    <span class="message-time">{{ message.timestamp }}</span>
+                                    {% if message.ai_provider %}
+                                    <span class="badge bg-blue-lt text-blue">{{ message.ai_provider }}</span>
+                                    {% endif %}
+                                    {% if message.tokens_used > 0 %}
+                                    <span class="text-muted small">{{ message.tokens_used }} tokens</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Typing Indicator -->
+                        <div id="typing-indicator" class="message assistant typing-indicator" style="display: none;">
+                            <div class="message-content">
+                                <div class="message-bubble">
+                                    <div class="typing-animation">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat Input Area -->
+                <div class="card-footer">
+                    <!-- Quick Action Buttons -->
+                    <div class="quick-actions mb-3">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="insertQuickQuery('Show me all unpaid users')">
+                                <i class="ti ti-users me-1"></i>Unpaid Users
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="insertQuickQuery('What is our total revenue this month?')">
+                                <i class="ti ti-chart-line me-1"></i>Monthly Revenue
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="insertQuickQuery('List activities with most signups')">
+                                <i class="ti ti-activity me-1"></i>Popular Activities
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Message Input Form -->
+                    <form id="chat-form" class="d-flex align-items-end">
+                        <input type="hidden" id="conversation-id" value="{{ conversation_id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="flex-grow-1 me-2">
+                            <textarea 
+                                id="message-input" 
+                                class="form-control" 
+                                placeholder="Ask me about your Minipass data..."
+                                rows="2"
+                                maxlength="500"
+                                required
+                            ></textarea>
+                            <div class="form-text">
+                                <span id="char-count">0</span>/500 characters
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex flex-column">
+                            <button type="submit" id="send-button" class="btn btn-primary">
+                                <i class="ti ti-send"></i>
+                            </button>
+                            <button type="button" id="stop-button" class="btn btn-outline-danger mt-1" style="display: none;" onclick="stopGeneration()">
+                                <i class="ti ti-square"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar with Results -->
+        <div class="col-lg-4">
+            <!-- Current Query Results -->
+            <div class="card" id="results-card" style="display: none;">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="ti ti-table" style="font-size: 1.2em;"></i>Query Results
+                    </h4>
+                    <div class="card-actions">
+                        <div class="dropdown">
+                            <a href="#" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="ti ti-download"></i>Export
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="#" onclick="exportResults('csv')">
+                                    <i class="ti ti-file-text me-2"></i>Export as CSV
+                                </a>
+                                <a class="dropdown-item" href="#" onclick="exportResults('json')">
+                                    <i class="ti ti-file-code me-2"></i>Export as JSON
+                                </a>
+                                {% if chart_data %}
+                                <a class="dropdown-item" href="#" onclick="exportChart()">
+                                    <i class="ti ti-photo me-2"></i>Export Chart as PNG
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="results-content">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Provider Status -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="ti ti-server" style="font-size: 1.2em;"></i>AI Providers
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div id="provider-status">
+                        {% for provider_name, status in provider_status.items() %}
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-{{ 'green' if status.available else 'red' }}-lt text-{{ 'green' if status.available else 'red' }} me-2">
+                                <i class="ti ti-circle-filled"></i>
+                            </span>
+                            <div class="flex-grow-1">
+                                <strong>{{ provider_name.title() }}</strong>
+                                <div class="text-muted small">
+                                    {% if status.available %}
+                                    {{ status.models|length }} models available
+                                    {% else %}
+                                    Offline
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Usage Statistics -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="ti ti-chart-pie" style="font-size: 1.2em;"></i>Session Stats
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h3 mb-0" id="queries-count">0</div>
+                                <div class="text-muted small">Queries</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h3 mb-0" id="tokens-count">0</div>
+                                <div class="text-muted small">Tokens</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h3 mb-0" id="cost-total">$0.00</div>
+                                <div class="text-muted small">Cost</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h3 mb-0" id="avg-time">0ms</div>
+                                <div class="text-muted small">Avg Time</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Provider Status Modal -->
+<div class="modal modal-blur fade" id="provider-status-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">AI Provider Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detailed-provider-status">
+                    <!-- Detailed provider status will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Conversation History Modal -->
+<div class="modal modal-blur fade" id="conversation-history-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Conversation History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="conversation-history-list">
+                    <!-- Conversation history will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chatbot-debug.js') }}"></script>
+<script>
+    // Initialize chatbot with current data
+    document.addEventListener('DOMContentLoaded', function() {
+        window.ChatBot.init({
+            conversationId: {{ conversation_id }},
+            sessionToken: '{{ session_token }}',
+            csrfToken: '{{ csrf_token() }}',
+            availableModels: {{ available_models|tojson }},
+            providerStatus: {{ provider_status|tojson }}
+        });
+        
+        // Auto-scroll to bottom of messages
+        window.ChatBot.scrollToBottom();
+        
+        // Focus on input
+        document.getElementById('message-input').focus();
+    });
+</script>
+{% endblock %}

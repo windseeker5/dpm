@@ -29,6 +29,12 @@ faker
 
 # 🧠 LLM / Chatbot
 ollama  # Python client for your Ollama server
+anthropic>=0.25.0  # Claude API client
+openai>=1.30.0     # OpenAI API client
+aiohttp>=3.8.0     # Async HTTP client for AI providers
+tiktoken>=0.6.0    # Token counting for OpenAI models
+tenacity>=8.2.0    # Retry logic for API calls
+pydantic>=2.0.0    # Data validation
 
 premailer
 requests
