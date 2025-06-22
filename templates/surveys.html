@@ -1,0 +1,631 @@
+{% extends "base.html" %}
+{% block title %}Survey Management{% endblock %}
+
+{% block head %}
+<style>
+.survey-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.survey-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.filter-panel {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stats-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.stat-item {
+  text-align: center;
+  padding: 0.5rem;
+}
+.stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  display: block;
+}
+.stat-label {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+.survey-actions {
+  opacity: 1 !important;
+  transition: opacity 0.2s ease;
+}
+.bulk-actions {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: none;
+}
+.bulk-actions.show {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .survey-table {
+    display: none;
+  }
+  .survey-cards {
+    display: block;
+  }
+  .filter-panel {
+    padding: 0.75rem;
+  }
+  .stats-card {
+    padding: 1rem;
+  }
+  .stat-number {
+    font-size: 1.5rem;
+  }
+}
+@media (min-width: 769px) {
+  .survey-table {
+    display: block;
+  }
+  .survey-cards {
+    display: none;
+  }
+}
+
+/* White background for all cards and tables */
+.card {
+  background-color: #fff !important;
+}
+
+.table {
+  background-color: #fff !important;
+}
+
+.survey-card {
+  background-color: #fff !important;
+}
+
+.survey-table {
+  background-color: #fff !important;
+}
+
+/* Form buttons in dropdowns should look like dropdown items */
+.dropdown-menu form {
+  margin: 0;
+}
+
+.dropdown-menu button.dropdown-item {
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+  padding: 0.375rem 1rem;
+}
+
+.dropdown-menu button.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-pretitle text-muted text-uppercase mb-1">Management</h2>
+        <h1 class="page-title mb-0">Survey Dashboard</h1>
+      </div>
+      <div class="col-auto">
+        <div class="btn-list">
+          <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-primary">
+            <i class="ti ti-template"></i> Manage Templates
+          </a>
+          <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+            <i class="ti ti-plus"></i> New Template
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-card">
+    <div class="row">
+      <div class="col-6 col-md-3">
+        <div class="stat-item">
+          <span class="stat-number">{{ statistics.total_surveys }}</span>
+          <span class="stat-label">Total Surveys</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-item">
+          <span class="stat-number">{{ statistics.active_surveys }}</span>
+          <span class="stat-label">Active</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-item">
+          <span class="stat-number">{{ statistics.total_invitations }}</span>
+          <span class="stat-label">Total Invitations</span>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-item">
+          <span class="stat-number">{{ "%.1f"|format(statistics.avg_completion_rate) }}%</span>
+          <span class="stat-label">Avg Completion</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Search and Filters -->
+  <div class="filter-panel">
+    <form method="GET" id="filterForm">
+      <div class="row g-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search surveys..." 
+                   value="{{ current_filters.q }}" id="searchInput">
+            <button type="submit" class="btn btn-outline-secondary">
+              <i class="ti ti-search"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Status Filter -->
+        <div class="col-md-2">
+          <select name="status" class="form-select" onchange="document.getElementById('filterForm').submit();">
+            <option value="">All Status</option>
+            <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>Active</option>
+            <option value="closed" {% if current_filters.status == 'closed' %}selected{% endif %}>Closed</option>
+            <option value="draft" {% if current_filters.status == 'draft' %}selected{% endif %}>Draft</option>
+          </select>
+        </div>
+        
+        <!-- Activity Filter -->
+        <div class="col-md-2">
+          <select name="activity" class="form-select" onchange="document.getElementById('filterForm').submit();">
+            <option value="">All Activities</option>
+            {% for activity in activities %}
+            <option value="{{ activity.id }}" {% if current_filters.activity == activity.id|string %}selected{% endif %}>{{ activity.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Template Filter -->
+        <div class="col-md-2">
+          <select name="template" class="form-select" onchange="document.getElementById('filterForm').submit();">
+            <option value="">All Templates</option>
+            {% for template in survey_templates %}
+            <option value="{{ template.id }}" {% if current_filters.template == template.id|string %}selected{% endif %}>{{ template.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Date Range -->
+        <div class="col-md-1 col-6">
+          <input type="date" name="start_date" class="form-control" placeholder="Start Date" 
+                 value="{{ current_filters.start_date }}" onchange="document.getElementById('filterForm').submit();">
+        </div>
+        <div class="col-md-1 col-6">
+          <input type="date" name="end_date" class="form-control" placeholder="End Date" 
+                 value="{{ current_filters.end_date }}" onchange="document.getElementById('filterForm').submit();">
+        </div>
+      </div>
+      
+      <!-- Clear Filters -->
+      {% if current_filters.q or current_filters.status or current_filters.activity or current_filters.template or current_filters.start_date or current_filters.end_date %}
+      <div class="row mt-2">
+        <div class="col">
+          <a href="{{ url_for('list_surveys') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="ti ti-x"></i> Clear Filters
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Bulk Actions (Hidden by default) -->
+  <div class="bulk-actions" id="bulkActions">
+    <div class="row align-items-center">
+      <div class="col">
+        <span id="selectedCount">0</span> surveys selected
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-sm btn-success me-2" onclick="bulkAction('activate')">
+          <i class="ti ti-check"></i> Activate
+        </button>
+        <button class="btn btn-sm btn-warning me-2" onclick="bulkAction('close')">
+          <i class="ti ti-pause"></i> Close
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="bulkAction('delete')">
+          <i class="ti ti-trash"></i> Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop Table View -->
+  <div class="card survey-table">
+    <div class="table-responsive">
+      <table class="table card-table table-hover table-vcenter">
+        <thead>
+          <tr>
+            <th style="width: 40px;">
+              <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleAll()">
+            </th>
+            <th>Survey</th>
+            <th>Activity</th>
+            <th>Status</th>
+            <th>Invitations/Responses</th>
+            <th>Completion Rate</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for survey in surveys %}
+          <tr class="survey-row">
+            <td>
+              <input type="checkbox" class="form-check-input survey-checkbox" value="{{ survey.id }}" onchange="updateBulkActions()">
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar avatar-md me-3" style="background-color: #206bc4;">
+                  <i class="ti ti-clipboard-check text-white"></i>
+                </div>
+                <div>
+                  <strong>{{ survey.name }}</strong>
+                  {% if survey.template %}
+                  <span class="badge bg-gray-lt text-gray ms-2">{{ survey.template.name }}</span>
+                  {% endif %}
+                  <br>
+                  {% if survey.description %}
+                  <span class="text-muted small">{{ survey.description|truncate(50) }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <strong>{{ survey.activity.name if survey.activity else '-' }}</strong>
+              {% if survey.passport_type %}
+              <br><span class="text-muted small">{{ survey.passport_type.name }} participants</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if survey.status == 'active' %}
+              <span class="badge bg-green-lt text-green">Active</span>
+              {% elif survey.status == 'closed' %}
+              <span class="badge bg-red-lt text-red">Closed</span>
+              {% else %}
+              <span class="badge bg-gray-lt text-gray">{{ survey.status|title }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <strong>{{ survey.invitation_count }} invited</strong>
+              {% if survey.response_count > 0 %}
+              <br><span class="text-muted small">{{ survey.response_count }} started</span>
+              {% endif %}
+              {% if survey.completed_count > 0 %}
+              <br><span class="text-success small">{{ survey.completed_count }} completed</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if survey.invitation_count > 0 %}
+              <strong>{{ "%.1f"|format(survey.completion_rate) }}%</strong>
+              <div class="progress progress-sm mt-1">
+                <div class="progress-bar" style="width: {{ survey.completion_rate }}%"></div>
+              </div>
+              {% else %}
+              <span class="text-muted">No invitations</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="small">
+                {{ survey.created_dt.strftime('%Y-%m-%d') }}
+              </div>
+            </td>
+            <td>
+              <div class="dropdown">
+                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                  Actions
+                </a>
+                <div class="dropdown-menu">
+                  <a class="dropdown-item" href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank">
+                    <i class="ti ti-external-link me-2"></i>View Survey
+                  </a>
+                  <a class="dropdown-item" href="{{ url_for('survey_results', survey_id=survey.id) }}">
+                    <i class="ti ti-chart-bar me-2"></i>View Results
+                  </a>
+                  {% if survey.status == 'active' %}
+                  <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item" onclick="return confirm('Send survey invitations to new participants?')">
+                      <i class="ti ti-mail me-2"></i>Send Invitations
+                    </button>
+                  </form>
+                  <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="resend_all" value="true">
+                    <button type="submit" class="dropdown-item" onclick="return confirm('Resend invitations to ALL participants (including already invited)?')">
+                      <i class="ti ti-refresh me-2"></i>Resend All Invitations
+                    </button>
+                  </form>
+                  <form method="POST" action="{{ url_for('close_survey', survey_id=survey.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item" onclick="return confirm('Close this survey?')">
+                      <i class="ti ti-pause me-2"></i>Close Survey
+                    </button>
+                  </form>
+                  {% elif survey.status == 'closed' %}
+                  <form method="POST" action="{{ url_for('reopen_survey', survey_id=survey.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item" onclick="return confirm('Reopen this survey?')">
+                      <i class="ti ti-play me-2"></i>Reopen Survey
+                    </button>
+                  </form>
+                  {% endif %}
+                  {% if survey.responses %}
+                  <a class="dropdown-item" href="{{ url_for('export_survey_results', survey_id=survey.id) }}">
+                    <i class="ti ti-download me-2"></i>Export Results
+                  </a>
+                  {% endif %}
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ survey.id }}, '{{ survey.name }}')">
+                    <i class="ti ti-trash me-2"></i>Delete Survey
+                  </a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center py-5">
+              <div class="empty">
+                <div class="empty-img">
+                  <i class="ti ti-clipboard-check" style="font-size: 4rem; color: #ccc;"></i>
+                </div>
+                <p class="empty-title">No surveys found</p>
+                <p class="empty-subtitle text-muted">
+                  {% if current_filters.q or current_filters.status or current_filters.activity or current_filters.template %}
+                    Try adjusting your search filters or <a href="{{ url_for('list_surveys') }}">clear all filters</a>
+                  {% else %}
+                    Surveys are created from activity dashboards or you can start by creating a survey template
+                  {% endif %}
+                </p>
+                <div class="empty-action">
+                  <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+                    <i class="ti ti-plus"></i> Create Survey Template
+                  </a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Mobile Card View -->
+  <div class="survey-cards">
+    {% for survey in surveys %}
+    <div class="card survey-card mb-3">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <input type="checkbox" class="form-check-input survey-checkbox" value="{{ survey.id }}" onchange="updateBulkActions()">
+          </div>
+          <div class="col-auto">
+            <div class="avatar avatar-md" style="background-color: #206bc4;">
+              <i class="ti ti-clipboard-check text-white"></i>
+            </div>
+          </div>
+          <div class="col">
+            <h4 class="card-title mb-1">{{ survey.name }}</h4>
+            <div class="mb-2">
+              {% if survey.status == 'active' %}
+              <span class="badge bg-green-lt text-green">Active</span>
+              {% elif survey.status == 'closed' %}
+              <span class="badge bg-red-lt text-red">Closed</span>
+              {% else %}
+              <span class="badge bg-gray-lt text-gray">{{ survey.status|title }}</span>
+              {% endif %}
+              {% if survey.template %}
+              <span class="badge bg-gray-lt text-gray">{{ survey.template.name }}</span>
+              {% endif %}
+            </div>
+            <div class="small text-muted mb-2">{{ survey.activity.name if survey.activity else '-' }}</div>
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="stat-number small">{{ survey.invitation_count }}</div>
+                <div class="stat-label">Invited</div>
+              </div>
+              <div class="col-4">
+                <div class="stat-number small">{{ survey.completed_count }}</div>
+                <div class="stat-label">Completed</div>
+              </div>
+              <div class="col-4">
+                <div class="stat-number small">{{ "%.1f"|format(survey.completion_rate) }}%</div>
+                <div class="stat-label">Rate</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-auto">
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="ti ti-dots-vertical"></i>
+              </button>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank">
+                  <i class="ti ti-external-link me-2"></i>View Survey
+                </a>
+                <a class="dropdown-item" href="{{ url_for('survey_results', survey_id=survey.id) }}">
+                  <i class="ti ti-chart-bar me-2"></i>View Results
+                </a>
+                {% if survey.status == 'active' %}
+                <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="dropdown-item" onclick="return confirm('Send survey invitations to new participants?')">
+                    <i class="ti ti-mail me-2"></i>Send Invitations
+                  </button>
+                </form>
+                <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="resend_all" value="true">
+                  <button type="submit" class="dropdown-item" onclick="return confirm('Resend invitations to ALL participants (including already invited)?')">
+                    <i class="ti ti-refresh me-2"></i>Resend All
+                  </button>
+                </form>
+                {% endif %}
+                {% if survey.responses %}
+                <a class="dropdown-item" href="{{ url_for('export_survey_results', survey_id=survey.id) }}">
+                  <i class="ti ti-download me-2"></i>Export Results
+                </a>
+                {% endif %}
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ survey.id }}, '{{ survey.name }}')">
+                  <i class="ti ti-trash me-2"></i>Delete Survey
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty py-5">
+      <div class="empty-img">
+        <i class="ti ti-clipboard-check" style="font-size: 4rem; color: #ccc;"></i>
+      </div>
+      <p class="empty-title">No surveys found</p>
+      <p class="empty-subtitle text-muted">
+        {% if current_filters.q or current_filters.status or current_filters.activity or current_filters.template %}
+          Try adjusting your search filters or <a href="{{ url_for('list_surveys') }}">clear all filters</a>
+        {% else %}
+          Surveys are created from activity dashboards or you can start by creating a survey template
+        {% endif %}
+      </p>
+      <div class="empty-action">
+        <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+          <i class="ti ti-plus"></i> Create Survey Template
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the survey <strong id="deleteSurveyName"></strong>?</p>
+        <p class="text-muted">This action cannot be undone and will delete all responses.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" id="deleteForm" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger">Delete Survey</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Search only on Enter key press or button click
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('filterForm').submit();
+  }
+});
+
+// Bulk selection functionality
+function toggleAll() {
+  const selectAll = document.getElementById('selectAll');
+  const checkboxes = document.querySelectorAll('.survey-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = selectAll.checked;
+  });
+  updateBulkActions();
+}
+
+function updateBulkActions() {
+  const checkboxes = document.querySelectorAll('.survey-checkbox:checked');
+  const bulkActions = document.getElementById('bulkActions');
+  const selectedCount = document.getElementById('selectedCount');
+  
+  if (checkboxes.length > 0) {
+    bulkActions.classList.add('show');
+    selectedCount.textContent = checkboxes.length;
+  } else {
+    bulkActions.classList.remove('show');
+  }
+  
+  // Update select all checkbox
+  const allCheckboxes = document.querySelectorAll('.survey-checkbox');
+  const selectAll = document.getElementById('selectAll');
+  selectAll.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
+  selectAll.checked = checkboxes.length === allCheckboxes.length;
+}
+
+// Bulk actions
+function bulkAction(action) {
+  const selectedIds = Array.from(document.querySelectorAll('.survey-checkbox:checked')).map(cb => cb.value);
+  if (selectedIds.length === 0) return;
+  
+  if (confirm(`Are you sure you want to ${action} ${selectedIds.length} surveys?`)) {
+    // Here you would make an AJAX call to perform the bulk action
+    alert(`Bulk ${action} functionality would be implemented here`);
+  }
+}
+
+// Delete confirmation
+function confirmDelete(surveyId, surveyName) {
+  document.getElementById('deleteSurveyName').textContent = surveyName;
+  document.getElementById('deleteForm').action = `/delete-survey/${surveyId}`;
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Initialize tooltips and other Bootstrap components
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize tooltips
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+  
+  // Add better visual feedback for buttons
+  document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('mouseenter', function() {
+      this.style.transform = 'translateY(-1px)';
+    });
+    btn.addEventListener('mouseleave', function() {
+      this.style.transform = 'translateY(0)';
+    });
+  });
+});
+</script>
+{% endblock %}

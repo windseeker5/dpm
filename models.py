@@ -268,7 +268,9 @@ class SurveyResponse(db.Model):
     responses = db.Column(db.Text)  # JSON string containing all answers
     completed = db.Column(db.Boolean, default=False)
     completed_dt = db.Column(db.DateTime, nullable=True)
-    started_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    started_dt = db.Column(db.DateTime, nullable=True)  # When user first accessed survey
+    invited_dt = db.Column(db.DateTime, nullable=True)  # When invitation was sent
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # When record was created
     ip_address = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.Text, nullable=True)
     

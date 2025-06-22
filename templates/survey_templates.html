@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+{% block title %}Survey Templates{% endblock %}
+
+{% block head %}
+<style>
+.template-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.template-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.filter-panel {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* White background for all cards and tables */
+.card {
+  background-color: #fff !important;
+}
+
+.table {
+  background-color: #fff !important;
+}
+
+.template-card {
+  background-color: #fff !important;
+}
+
+@media (max-width: 768px) {
+  .template-table {
+    display: none;
+  }
+  .template-cards {
+    display: block;
+  }
+  .filter-panel {
+    padding: 0.75rem;
+  }
+}
+@media (min-width: 769px) {
+  .template-table {
+    display: block;
+  }
+  .template-cards {
+    display: none;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-pretitle text-muted text-uppercase mb-1">Management</h2>
+        <h1 class="page-title mb-0">Survey Templates</h1>
+      </div>
+      <div class="col-auto">
+        <div class="btn-list">
+          <a href="{{ url_for('list_surveys') }}" class="btn btn-outline-secondary">
+            <i class="ti ti-arrow-left"></i> Back to Surveys
+          </a>
+          <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+            <i class="ti ti-plus"></i> New Template
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Panel -->
+  <div class="filter-panel">
+    <form method="GET" id="filterForm">
+      <div class="row g-3">
+        <!-- Search -->
+        <div class="col-md-6">
+          <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search templates..." 
+                   value="{{ current_filters.q }}" id="searchInput">
+            <button type="submit" class="btn btn-outline-secondary">
+              <i class="ti ti-search"></i>
+            </button>
+          </div>
+        </div>
+        <div class="col-md-6">
+          {% if current_filters.q %}
+          <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-secondary">
+            <i class="ti ti-x"></i> Clear Search
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Desktop Table View -->
+  <div class="card template-table">
+    <div class="table-responsive">
+      <table class="table card-table table-hover table-vcenter">
+        <thead>
+          <tr>
+            <th>Template</th>
+            <th>Questions</th>
+            <th>Usage</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for template in templates %}
+          <tr class="template-row">
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar avatar-md me-3" style="background-color: #0054a6;">
+                  <i class="ti ti-template text-white"></i>
+                </div>
+                <div>
+                  <strong>{{ template.name }}</strong>
+                  <br>
+                  {% if template.description %}
+                  <span class="text-muted small">{{ template.description|truncate(60) }}</span>
+                  {% else %}
+                  <span class="text-muted small">No description</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <strong>{{ template.question_count }}</strong> questions
+            </td>
+            <td>
+              {% if template.usage_count > 0 %}
+              <span class="badge bg-blue-lt text-blue">Used in {{ template.usage_count }} surveys</span>
+              {% else %}
+              <span class="badge bg-gray-lt text-gray">Not used yet</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="small">
+                {{ template.created_dt.strftime('%Y-%m-%d') }}
+              </div>
+            </td>
+            <td>
+              <div class="dropdown">
+                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                  Actions
+                </a>
+                <div class="dropdown-menu">
+                  <a class="dropdown-item" href="{{ url_for('edit_survey_template', template_id=template.id) }}">
+                    <i class="ti ti-edit me-2"></i>Edit Template
+                  </a>
+                  <a class="dropdown-item" href="#" onclick="showPreview({{ template.id }}, '{{ template.name }}', {{ template.questions|e }})">
+                    <i class="ti ti-eye me-2"></i>Preview Questions
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  {% if template.usage_count == 0 %}
+                  <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}')">
+                    <i class="ti ti-trash me-2"></i>Delete Template
+                  </a>
+                  {% else %}
+                  <span class="dropdown-item-text text-muted">
+                    <i class="ti ti-info-circle me-2"></i>Cannot delete (in use)
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center py-5">
+              <div class="empty">
+                <div class="empty-img">
+                  <i class="ti ti-template" style="font-size: 4rem; color: #ccc;"></i>
+                </div>
+                <p class="empty-title">No survey templates found</p>
+                <p class="empty-subtitle text-muted">
+                  {% if current_filters.q %}
+                    Try adjusting your search or <a href="{{ url_for('list_survey_templates') }}">clear search</a>
+                  {% else %}
+                    Create your first survey template to reuse across activities
+                  {% endif %}
+                </p>
+                <div class="empty-action">
+                  <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+                    <i class="ti ti-plus"></i> Create Template
+                  </a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Mobile Card View -->
+  <div class="template-cards">
+    {% for template in templates %}
+    <div class="card template-card mb-3">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <div class="avatar avatar-md" style="background-color: #0054a6;">
+              <i class="ti ti-template text-white"></i>
+            </div>
+          </div>
+          <div class="col">
+            <h4 class="card-title mb-1">{{ template.name }}</h4>
+            <div class="mb-2">
+              <span class="badge bg-blue-lt text-blue">{{ template.question_count }} questions</span>
+              {% if template.usage_count > 0 %}
+              <span class="badge bg-green-lt text-green">{{ template.usage_count }} surveys</span>
+              {% else %}
+              <span class="badge bg-gray-lt text-gray">Not used</span>
+              {% endif %}
+            </div>
+            {% if template.description %}
+            <div class="text-muted small mb-2">{{ template.description|truncate(50) }}</div>
+            {% endif %}
+            <div class="text-muted small">Created {{ template.created_dt.strftime('%Y-%m-%d') }}</div>
+          </div>
+          <div class="col-auto">
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="ti ti-dots-vertical"></i>
+              </button>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="{{ url_for('edit_survey_template', template_id=template.id) }}">
+                  <i class="ti ti-edit me-2"></i>Edit Template
+                </a>
+                <a class="dropdown-item" href="#" onclick="showPreview({{ template.id }}, '{{ template.name }}', {{ template.questions|e }})">
+                  <i class="ti ti-eye me-2"></i>Preview Questions
+                </a>
+                <div class="dropdown-divider"></div>
+                {% if template.usage_count == 0 %}
+                <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}')">
+                  <i class="ti ti-trash me-2"></i>Delete Template
+                </a>
+                {% else %}
+                <span class="dropdown-item-text text-muted">
+                  <i class="ti ti-info-circle me-2"></i>Cannot delete (in use)
+                </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty py-5">
+      <div class="empty-img">
+        <i class="ti ti-template" style="font-size: 4rem; color: #ccc;"></i>
+      </div>
+      <p class="empty-title">No survey templates found</p>
+      <p class="empty-subtitle text-muted">
+        {% if current_filters.q %}
+          Try adjusting your search or <a href="{{ url_for('list_survey_templates') }}">clear search</a>
+        {% else %}
+          Create your first survey template to reuse across activities
+        {% endif %}
+      </p>
+      <div class="empty-action">
+        <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+          <i class="ti ti-plus"></i> Create Template
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- Preview Modal -->
+<div class="modal modal-blur fade" id="previewModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-eye me-2"></i>Template Preview: <span id="previewTemplateName"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="previewContent">
+          <!-- Questions will be loaded here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the template <strong id="deleteTemplateName"></strong>?</p>
+        <p class="text-muted">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" id="deleteForm" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger">Delete Template</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Search only on Enter key press or button click
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('filterForm').submit();
+  }
+});
+
+// Preview template questions
+function showPreview(templateId, templateName, questionsJson) {
+  document.getElementById('previewTemplateName').textContent = templateName;
+  
+  try {
+    const templateData = JSON.parse(questionsJson);
+    const questions = templateData.questions || [];
+    
+    let previewHtml = '';
+    questions.forEach((question, index) => {
+      previewHtml += `
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-start mb-2">
+              <span class="badge bg-primary me-2">${index + 1}</span>
+              <div class="flex-grow-1">
+                <h6 class="card-title mb-1">${question.question}</h6>
+                <div class="text-muted small mb-2">
+                  Type: ${question.type === 'multiple_choice' ? 'Multiple Choice' : 'Open-ended'}
+                  ${question.required ? ' • Required' : ' • Optional'}
+                </div>
+                ${question.type === 'multiple_choice' && question.options ? 
+                  `<div class="ms-3">
+                    ${question.options.map(option => `<div class="text-muted small">• ${option}</div>`).join('')}
+                  </div>` : ''}
+                ${question.type === 'open_ended' && question.max_length ? 
+                  `<div class="text-muted small">Maximum ${question.max_length} characters</div>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    if (questions.length === 0) {
+      previewHtml = '<div class="text-muted">No questions found in this template.</div>';
+    }
+    
+    document.getElementById('previewContent').innerHTML = previewHtml;
+  } catch (e) {
+    document.getElementById('previewContent').innerHTML = '<div class="text-danger">Error loading template questions.</div>';
+  }
+  
+  new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+// Delete confirmation
+function confirmDelete(templateId, templateName) {
+  document.getElementById('deleteTemplateName').textContent = templateName;
+  document.getElementById('deleteForm').action = `/delete-survey-template/${templateId}`;
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+</script>
+{% endblock %}
