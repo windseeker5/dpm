@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}Create Survey Template{% endblock %}
+
+{% block head %}
+<style>
+.question-builder {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+}
+
+.question-builder:hover {
+  border-color: #206bc4;
+}
+
+.question-header {
+  background: #fff;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e9ecef;
+}
+
+.option-input {
+  margin-bottom: 0.5rem;
+}
+
+.add-option-btn {
+  background: none;
+  border: 1px dashed #dee2e6;
+  color: #206bc4;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.add-option-btn:hover {
+  background: #f8f9fa;
+  border-color: #206bc4;
+}
+
+.remove-question-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.remove-question-btn:hover {
+  opacity: 1;
+}
+
+.question-builder {
+  position: relative;
+}
+
+/* White background for all cards */
+.card {
+  background-color: #fff !important;
+}
+
+.question-builder {
+  background-color: #f8f9fa !important;
+}
+
+.question-header {
+  background-color: #fff !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-pretitle text-muted text-uppercase mb-1">Survey Templates</h2>
+        <h1 class="page-title mb-0">Create New Template</h1>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-secondary">
+          <i class="ti ti-arrow-left"></i> Back to Templates
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="ti ti-template me-2"></i>Template Information
+          </h3>
+        </div>
+        <form method="POST" id="templateForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <div class="card-body">
+            <!-- Template Name and Description -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">Template Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="name" placeholder="e.g., Activity Feedback Survey" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Description <span class="text-muted">(optional)</span></label>
+                <input type="text" class="form-control" name="description" placeholder="Brief description of this template">
+              </div>
+            </div>
+
+            <!-- Questions Section -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                  <i class="ti ti-help me-2"></i>Questions
+                </h4>
+                <button type="button" class="btn btn-primary" onclick="addQuestion()">
+                  <i class="ti ti-plus me-1"></i>Add Question
+                </button>
+              </div>
+              
+              <div id="questionsContainer">
+                <!-- Questions will be added here dynamically -->
+              </div>
+              
+              <div id="noQuestionsMessage" class="text-center py-4 text-muted">
+                <i class="ti ti-help" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-2">No questions added yet. Click "Add Question" to get started.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-footer d-flex justify-content-between">
+            <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-secondary">
+              <i class="ti ti-x me-1"></i>Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="ti ti-check me-1"></i>Create Template
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let questionCounter = 0;
+
+function addQuestion() {
+  questionCounter++;
+  const container = document.getElementById('questionsContainer');
+  const noQuestionsMessage = document.getElementById('noQuestionsMessage');
+  
+  const questionHtml = `
+    <div class="question-builder" id="question_${questionCounter}">
+      <button type="button" class="remove-question-btn" onclick="removeQuestion(${questionCounter})">
+        <i class="ti ti-x"></i>
+      </button>
+      
+      <div class="question-header">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">Question Text <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="question_${questionCounter}" 
+                   placeholder="Enter your question..." required>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Type</label>
+            <select class="form-select" name="question_type_${questionCounter}" 
+                    onchange="toggleQuestionOptions(${questionCounter})">
+              <option value="multiple_choice">Multiple Choice</option>
+              <option value="open_ended">Open-ended</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Required</label>
+            <div class="form-check form-switch mt-2">
+              <input class="form-check-input" type="checkbox" name="required_${questionCounter}" 
+                     id="required_${questionCounter}" checked>
+              <label class="form-check-label" for="required_${questionCounter}">Yes</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multiple Choice Options -->
+      <div id="options_${questionCounter}" class="options-container">
+        <label class="form-label">Answer Options</label>
+        <div id="optionsList_${questionCounter}">
+          <div class="option-input">
+            <input type="text" class="form-control" name="question_${questionCounter}_option_1" 
+                   placeholder="Option 1">
+          </div>
+          <div class="option-input">
+            <input type="text" class="form-control" name="question_${questionCounter}_option_2" 
+                   placeholder="Option 2">
+          </div>
+        </div>
+        <button type="button" class="add-option-btn" onclick="addOption(${questionCounter})">
+          <i class="ti ti-plus me-1"></i>Add Option
+        </button>
+      </div>
+
+      <!-- Open-ended Options -->
+      <div id="openended_${questionCounter}" class="openended-container" style="display: none;">
+        <label class="form-label">Maximum Characters <span class="text-muted">(optional)</span></label>
+        <input type="number" class="form-control" name="max_length_${questionCounter}" 
+               placeholder="e.g., 500" min="1" max="5000">
+        <div class="form-hint">Leave empty for no limit</div>
+      </div>
+    </div>
+  `;
+  
+  container.insertAdjacentHTML('beforeend', questionHtml);
+  noQuestionsMessage.style.display = 'none';
+  
+  // Scroll to the new question
+  setTimeout(() => {
+    document.getElementById(`question_${questionCounter}`).scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'center' 
+    });
+  }, 100);
+}
+
+function removeQuestion(questionId) {
+  const questionElement = document.getElementById(`question_${questionId}`);
+  questionElement.remove();
+  
+  // Show "no questions" message if no questions remain
+  const container = document.getElementById('questionsContainer');
+  const noQuestionsMessage = document.getElementById('noQuestionsMessage');
+  if (container.children.length === 0) {
+    noQuestionsMessage.style.display = 'block';
+  }
+}
+
+function toggleQuestionOptions(questionId) {
+  const typeSelect = document.querySelector(`select[name="question_type_${questionId}"]`);
+  const optionsContainer = document.getElementById(`options_${questionId}`);
+  const openendedContainer = document.getElementById(`openended_${questionId}`);
+  
+  if (typeSelect.value === 'multiple_choice') {
+    optionsContainer.style.display = 'block';
+    openendedContainer.style.display = 'none';
+  } else {
+    optionsContainer.style.display = 'none';
+    openendedContainer.style.display = 'block';
+  }
+}
+
+function addOption(questionId) {
+  const optionsList = document.getElementById(`optionsList_${questionId}`);
+  const optionCount = optionsList.children.length + 1;
+  
+  const optionHtml = `
+    <div class="option-input">
+      <div class="input-group">
+        <input type="text" class="form-control" name="question_${questionId}_option_${optionCount}" 
+               placeholder="Option ${optionCount}">
+        <button type="button" class="btn btn-outline-danger" onclick="removeOption(this)">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+    </div>
+  `;
+  
+  optionsList.insertAdjacentHTML('beforeend', optionHtml);
+}
+
+function removeOption(button) {
+  button.closest('.option-input').remove();
+}
+
+// Form validation
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+  const questionsContainer = document.getElementById('questionsContainer');
+  
+  if (questionsContainer.children.length === 0) {
+    e.preventDefault();
+    alert('Please add at least one question to the template.');
+    return false;
+  }
+  
+  // Validate that each question has text
+  const questionInputs = document.querySelectorAll('input[name^="question_"][name$="_"]:not([name*="_option_"])');
+  let hasEmptyQuestions = false;
+  
+  questionInputs.forEach(input => {
+    if (!input.value.trim()) {
+      hasEmptyQuestions = true;
+      input.style.borderColor = '#dc3545';
+    } else {
+      input.style.borderColor = '';
+    }
+  });
+  
+  if (hasEmptyQuestions) {
+    e.preventDefault();
+    alert('Please fill in all question texts.');
+    return false;
+  }
+  
+  // Validate multiple choice questions have at least 2 options
+  const multipleChoiceQuestions = document.querySelectorAll('select[name^="question_type_"]');
+  let hasInvalidMultipleChoice = false;
+  
+  multipleChoiceQuestions.forEach(select => {
+    if (select.value === 'multiple_choice') {
+      const questionId = select.name.replace('question_type_', '');
+      const options = document.querySelectorAll(`input[name^="question_${questionId}_option_"]`);
+      const filledOptions = Array.from(options).filter(opt => opt.value.trim() !== '');
+      
+      if (filledOptions.length < 2) {
+        hasInvalidMultipleChoice = true;
+        options.forEach(opt => {
+          if (!opt.value.trim()) {
+            opt.style.borderColor = '#dc3545';
+          } else {
+            opt.style.borderColor = '';
+          }
+        });
+      }
+    }
+  });
+  
+  if (hasInvalidMultipleChoice) {
+    e.preventDefault();
+    alert('Multiple choice questions must have at least 2 options.');
+    return false;
+  }
+});
+
+// Add first question on page load
+document.addEventListener('DOMContentLoaded', function() {
+  addQuestion();
+});
+</script>
+{% endblock %}

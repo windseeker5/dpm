@@ -1214,7 +1214,7 @@ def create_activity():
         return redirect(url_for("edit_activity", activity_id=new_activity.id))
 
     # ✅ GET request
-    return render_template("activity_form.html")
+    return render_template("activity_form.html", activity=None)
 
 
 @app.route("/edit-activity/<int:activity_id>", methods=["GET", "POST"])
@@ -1570,8 +1570,8 @@ def setup():
 
             flash("✅ Logo uploaded successfully!", "success")
 
-        # ✅ Step 8: Save email notification templates (including signup)
-        for event in ["pass_created", "pass_redeemed", "payment_received", "payment_late", "signup"]:
+        # ✅ Step 8: Save email notification templates (including signup and survey_invitation)
+        for event in ["pass_created", "pass_redeemed", "payment_received", "payment_late", "signup", "survey_invitation"]:
             for key in ["SUBJECT", "TITLE", "INTRO", "CONCLUSION", "THEME"]:
                 full_key = f"{key}_{event}"
                 value = request.form.get(full_key, "").strip()
@@ -1619,6 +1619,8 @@ def setup():
             if os.path.exists(index_path):
                 email_templates.append(entry.replace("_compiled", "") + ".html")
 
+    # Add survey invitation template manually since it's in the main templates folder
+    email_templates.append("email_survey_invitation.html")
     email_templates.sort()
 
     return render_template(
@@ -1999,6 +2001,107 @@ def list_activities():
                              'q': q,
                              'status': status,
                              'type': activity_type,
+                             'start_date': start_date,
+                             'end_date': end_date
+                         })
+
+
+@app.route("/surveys")
+def list_surveys():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    # Get filter parameters
+    q = request.args.get("q", "").strip()
+    status = request.args.get("status", "")
+    activity_id = request.args.get("activity", "")
+    template_id = request.args.get("template", "")
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
+    
+    # Base query with eager loading for performance
+    query = Survey.query.options(
+        db.joinedload(Survey.activity),
+        db.joinedload(Survey.template),
+        db.joinedload(Survey.passport_type),
+        db.joinedload(Survey.responses)
+    ).order_by(Survey.created_dt.desc())
+
+    # Apply filters
+    if q:
+        query = query.filter(
+            db.or_(
+                Survey.name.ilike(f"%{q}%"),
+                Survey.description.ilike(f"%{q}%")
+            )
+        )
+    
+    if status:
+        query = query.filter(Survey.status == status)
+    
+    if activity_id:
+        query = query.filter(Survey.activity_id == activity_id)
+        
+    if template_id:
+        query = query.filter(Survey.template_id == template_id)
+    
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(Survey.created_dt >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            query = query.filter(Survey.created_dt <= end_dt)
+        except ValueError:
+            pass
+
+    surveys = query.all()
+    
+    # Get activities and templates for filter dropdowns
+    activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
+    survey_templates = SurveyTemplate.query.order_by(SurveyTemplate.name).all()
+    
+    # Calculate KPI statistics
+    total_surveys = len(surveys)
+    active_surveys = len([s for s in surveys if s.status == 'active'])
+    inactive_surveys = total_surveys - active_surveys
+    
+    # Calculate proper completion rates based on invitations sent vs completed
+    total_invitations = sum(len([r for r in s.responses if r.invited_dt]) for s in surveys)
+    completed_responses = sum(len([r for r in s.responses if r.completed]) for s in surveys)
+    avg_completion_rate = (completed_responses / total_invitations * 100) if total_invitations > 0 else 0
+    
+    # Calculate statistics for each survey
+    for survey in surveys:
+        survey.invitation_count = len([r for r in survey.responses if r.invited_dt])  # Invited users
+        survey.response_count = len([r for r in survey.responses if r.started_dt])    # Users who started
+        survey.completed_count = len([r for r in survey.responses if r.completed])   # Users who completed
+        survey.completion_rate = (survey.completed_count / survey.invitation_count * 100) if survey.invitation_count > 0 else 0
+    
+    statistics = {
+        'total_surveys': total_surveys,
+        'active_surveys': active_surveys,
+        'inactive_surveys': inactive_surveys,
+        'total_invitations': total_invitations,
+        'total_responses': completed_responses,  # Keep this for compatibility
+        'completed_responses': completed_responses,
+        'avg_completion_rate': avg_completion_rate
+    }
+    
+    return render_template("surveys.html", 
+                         surveys=surveys, 
+                         activities=activities,
+                         survey_templates=survey_templates,
+                         statistics=statistics,
+                         current_filters={
+                             'q': q,
+                             'status': status,
+                             'activity': activity_id,
+                             'template': template_id,
                              'start_date': start_date,
                              'end_date': end_date
                          })
@@ -3051,6 +3154,19 @@ def take_survey(survey_token):
         if survey.status != "active":
             return render_template("survey_closed.html", survey=survey)
         
+        # Check for specific user token (from email invitations)
+        user_token = request.args.get('token')
+        if user_token:
+            # Find the user's response record and mark as started
+            response = SurveyResponse.query.filter_by(
+                survey_id=survey.id,
+                response_token=user_token
+            ).first()
+            
+            if response and not response.started_dt:
+                response.started_dt = datetime.now(timezone.utc)
+                db.session.commit()
+        
         # Get survey questions from template
         template_questions = json.loads(survey.template.questions)
         
@@ -3220,6 +3336,500 @@ def get_or_create_survey_template(template_id, template_data):
     return template
 
 
+
+
+# ================================
+# Survey Template Management Routes
+# ================================
+
+@app.route("/survey-templates")
+def list_survey_templates():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    # Get filter parameters
+    q = request.args.get("q", "").strip()
+    
+    # Base query
+    query = SurveyTemplate.query.order_by(SurveyTemplate.created_dt.desc())
+    
+    # Apply search filter
+    if q:
+        query = query.filter(
+            db.or_(
+                SurveyTemplate.name.ilike(f"%{q}%"),
+                SurveyTemplate.description.ilike(f"%{q}%")
+            )
+        )
+    
+    templates = query.all()
+    
+    # Calculate usage statistics for each template
+    for template in templates:
+        template.usage_count = Survey.query.filter_by(template_id=template.id).count()
+        # Parse questions to get count
+        try:
+            questions_data = json.loads(template.questions)
+            template.question_count = len(questions_data.get('questions', []))
+        except:
+            template.question_count = 0
+    
+    return render_template("survey_templates.html", 
+                         templates=templates,
+                         current_filters={'q': q})
+
+
+@app.route("/create-survey-template", methods=["GET", "POST"])
+def create_survey_template():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        
+        if not name:
+            flash("Template name is required", "error")
+            return redirect(url_for("create_survey_template"))
+        
+        # Build questions from form data
+        questions = []
+        question_index = 1
+        
+        while f"question_{question_index}" in request.form:
+            question_text = request.form.get(f"question_{question_index}", "").strip()
+            question_type = request.form.get(f"question_type_{question_index}", "multiple_choice")
+            required = f"required_{question_index}" in request.form
+            
+            if question_text:
+                question_data = {
+                    "id": question_index,
+                    "question": question_text,
+                    "type": question_type,
+                    "required": required
+                }
+                
+                if question_type == "multiple_choice":
+                    options = []
+                    option_index = 1
+                    while f"question_{question_index}_option_{option_index}" in request.form:
+                        option = request.form.get(f"question_{question_index}_option_{option_index}", "").strip()
+                        if option:
+                            options.append(option)
+                        option_index += 1
+                    question_data["options"] = options
+                
+                elif question_type == "open_ended":
+                    max_length = request.form.get(f"max_length_{question_index}", "")
+                    if max_length:
+                        try:
+                            question_data["max_length"] = int(max_length)
+                        except ValueError:
+                            pass
+                
+                questions.append(question_data)
+            
+            question_index += 1
+        
+        if not questions:
+            flash("At least one question is required", "error")
+            return redirect(url_for("create_survey_template"))
+        
+        # Create template
+        template = SurveyTemplate(
+            name=name,
+            description=description,
+            questions=json.dumps({"questions": questions}),
+            created_dt=datetime.now(timezone.utc)
+        )
+        
+        try:
+            db.session.add(template)
+            db.session.commit()
+            flash(f"Survey template '{name}' created successfully", "success")
+            return redirect(url_for("list_survey_templates"))
+        except Exception as e:
+            db.session.rollback()
+            flash("Error creating survey template", "error")
+            return redirect(url_for("create_survey_template"))
+    
+    return render_template("create_survey_template.html")
+
+
+@app.route("/edit-survey-template/<int:template_id>", methods=["GET", "POST"])
+def edit_survey_template(template_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    template = SurveyTemplate.query.get_or_404(template_id)
+    
+    if request.method == "POST":
+        template.name = request.form.get("name", "").strip()
+        template.description = request.form.get("description", "").strip()
+        
+        if not template.name:
+            flash("Template name is required", "error")
+            return redirect(url_for("edit_survey_template", template_id=template_id))
+        
+        # Build questions from form data (same logic as create)
+        questions = []
+        question_index = 1
+        
+        while f"question_{question_index}" in request.form:
+            question_text = request.form.get(f"question_{question_index}", "").strip()
+            question_type = request.form.get(f"question_type_{question_index}", "multiple_choice")
+            required = f"required_{question_index}" in request.form
+            
+            if question_text:
+                question_data = {
+                    "id": question_index,
+                    "question": question_text,
+                    "type": question_type,
+                    "required": required
+                }
+                
+                if question_type == "multiple_choice":
+                    options = []
+                    option_index = 1
+                    while f"question_{question_index}_option_{option_index}" in request.form:
+                        option = request.form.get(f"question_{question_index}_option_{option_index}", "").strip()
+                        if option:
+                            options.append(option)
+                        option_index += 1
+                    question_data["options"] = options
+                
+                elif question_type == "open_ended":
+                    max_length = request.form.get(f"max_length_{question_index}", "")
+                    if max_length:
+                        try:
+                            question_data["max_length"] = int(max_length)
+                        except ValueError:
+                            pass
+                
+                questions.append(question_data)
+            
+            question_index += 1
+        
+        if not questions:
+            flash("At least one question is required", "error")
+            return redirect(url_for("edit_survey_template", template_id=template_id))
+        
+        template.questions = json.dumps({"questions": questions})
+        
+        try:
+            db.session.commit()
+            flash(f"Survey template '{template.name}' updated successfully", "success")
+            return redirect(url_for("list_survey_templates"))
+        except Exception as e:
+            db.session.rollback()
+            flash("Error updating survey template", "error")
+    
+    # Parse questions for editing
+    try:
+        questions_data = json.loads(template.questions)
+        template.parsed_questions = questions_data.get('questions', [])
+    except:
+        template.parsed_questions = []
+    
+    return render_template("edit_survey_template.html", template=template)
+
+
+@app.route("/delete-survey-template/<int:template_id>", methods=["POST"])
+def delete_survey_template(template_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    template = SurveyTemplate.query.get_or_404(template_id)
+    
+    # Check if template is being used by any surveys
+    surveys_using_template = Survey.query.filter_by(template_id=template_id).count()
+    if surveys_using_template > 0:
+        flash(f"Cannot delete template '{template.name}' - it is being used by {surveys_using_template} surveys", "error")
+        return redirect(url_for("list_survey_templates"))
+    
+    try:
+        db.session.delete(template)
+        db.session.commit()
+        flash(f"Survey template '{template.name}' deleted successfully", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Error deleting survey template", "error")
+    
+    return redirect(url_for("list_survey_templates"))
+
+
+# ================================
+# Enhanced Survey Action Routes
+# ================================
+
+@app.route("/survey/<int:survey_id>/results")
+def survey_results(survey_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    survey = Survey.query.get_or_404(survey_id)
+    responses = SurveyResponse.query.filter_by(survey_id=survey_id).all()
+    
+    # Parse questions for analysis
+    try:
+        questions_data = json.loads(survey.template.questions)
+        questions = questions_data.get('questions', [])
+    except:
+        questions = []
+    
+    # Analyze responses
+    analysis = {}
+    for question in questions:
+        question_id = str(question['id'])
+        analysis[question_id] = {
+            'question': question,
+            'responses': [],
+            'summary': {}
+        }
+        
+        for response in responses:
+            if response.responses and question_id in response.responses:
+                analysis[question_id]['responses'].append(response.responses[question_id])
+        
+        # Generate summary based on question type
+        if question['type'] == 'multiple_choice':
+            summary = {}
+            for resp in analysis[question_id]['responses']:
+                summary[resp] = summary.get(resp, 0) + 1
+            analysis[question_id]['summary'] = summary
+        else:
+            analysis[question_id]['summary'] = {'count': len(analysis[question_id]['responses'])}
+    
+    return render_template("survey_results.html", 
+                         survey=survey, 
+                         responses=responses, 
+                         analysis=analysis)
+
+
+@app.route("/survey/<int:survey_id>/send-invitations", methods=["POST"])
+def send_survey_invitations(survey_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    survey = Survey.query.get_or_404(survey_id)
+    
+    # For surveys, include all participants (paid and unpaid)
+    if survey.passport_type_id:
+        passports = Passport.query.filter_by(
+            activity_id=survey.activity_id,
+            passport_type_id=survey.passport_type_id
+        ).all()
+    else:
+        passports = Passport.query.filter_by(
+            activity_id=survey.activity_id
+        ).all()
+    
+    # Debug information
+    all_passports_count = Passport.query.filter_by(activity_id=survey.activity_id).count()
+    print(f"DEBUG: Survey '{survey.name}' (ID:{survey.id}) for Activity ID:{survey.activity_id}")
+    print(f"DEBUG: Found {len(passports)} eligible passports, {all_passports_count} total passports for this activity")
+    print(f"DEBUG: Survey passport_type_id: {survey.passport_type_id}")
+    
+    if not passports:
+        flash(f"No participants found for survey '{survey.name}' in activity {survey.activity_id}. Found {all_passports_count} total passports for this activity.", "warning")
+        return redirect(url_for("list_surveys"))
+    
+    # Check if this is a resend request
+    resend_all = request.form.get('resend_all') == 'true'
+    print(f"DEBUG: Resend all invitations: {resend_all}")
+    
+    # Parse questions to get count for email
+    try:
+        questions_data = json.loads(survey.template.questions)
+        question_count = len(questions_data.get('questions', []))
+    except:
+        question_count = 0
+    
+    sent_count = 0
+    already_invited = 0
+    
+    for passport in passports:
+        # Check if user already has a response token for this survey
+        existing_response = SurveyResponse.query.filter_by(
+            survey_id=survey_id,
+            user_id=passport.user_id
+        ).first()
+        
+        if not existing_response or resend_all:
+            # Create response record with unique token (or resend to existing)
+            if existing_response and resend_all:
+                # Update existing record's invitation timestamp
+                response = existing_response
+                response.invited_dt = datetime.now(timezone.utc)
+            else:
+                # Create new response record
+                response = SurveyResponse(
+                    survey_id=survey_id,
+                    user_id=passport.user_id,
+                    passport_id=passport.id,
+                    response_token=generate_response_token(),
+                    invited_dt=datetime.now(timezone.utc),
+                    created_dt=datetime.now(timezone.utc)
+                )
+                db.session.add(response)
+            
+            # Send email invitation
+            try:
+                survey_url = url_for('take_survey', survey_token=survey.survey_token, 
+                                   _external=True) + f"?token={response.response_token}"
+                
+                # Use template system from setup page
+                subject = get_setting('SUBJECT_survey_invitation', f"{survey.name} - Your Feedback Requested")
+                template_name = get_setting('THEME_survey_invitation', 'email_survey_invitation.html')
+                
+                context = {
+                    'user_name': passport.user.name or 'Participant',
+                    'activity_name': survey.activity.name,
+                    'survey_name': survey.name,
+                    'survey_url': survey_url,
+                    'question_count': question_count,
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_address': get_setting('ORG_ADDRESS', ''),
+                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                    'title': get_setting('TITLE_survey_invitation', 'We\'d Love Your Feedback!'),
+                    'intro': get_setting('INTRO_survey_invitation', 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'),
+                    'conclusion': get_setting('CONCLUSION_survey_invitation', 'Thank you for helping us create better experiences!')
+                }
+                
+                send_email_async(
+                    app=current_app._get_current_object(),
+                    subject=subject,
+                    to_email=passport.user.email,
+                    template_name=template_name,
+                    context=context
+                )
+                
+                sent_count += 1
+                
+            except Exception as e:
+                # Log error but continue with other invitations
+                print(f"Failed to send email to {passport.user.email}: {e}")
+                flash(f"Warning: Failed to send email to {passport.user.email}", "warning")
+                
+        elif existing_response and not existing_response.invited_dt:
+            # User exists but hasn't been invited yet (maybe created manually)
+            existing_response.invited_dt = datetime.now(timezone.utc)
+            
+            # Send email invitation
+            try:
+                survey_url = url_for('take_survey', survey_token=survey.survey_token, 
+                                   _external=True) + f"?token={existing_response.response_token}"
+                
+                # Use template system from setup page
+                subject = get_setting('SUBJECT_survey_invitation', f"{survey.name} - Your Feedback Requested")
+                template_name = get_setting('THEME_survey_invitation', 'email_survey_invitation.html')
+                
+                context = {
+                    'user_name': passport.user.name or 'Participant',
+                    'activity_name': survey.activity.name,
+                    'survey_name': survey.name,
+                    'survey_url': survey_url,
+                    'question_count': question_count,
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_address': get_setting('ORG_ADDRESS', ''),
+                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                    'title': get_setting('TITLE_survey_invitation', 'We\'d Love Your Feedback!'),
+                    'intro': get_setting('INTRO_survey_invitation', 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'),
+                    'conclusion': get_setting('CONCLUSION_survey_invitation', 'Thank you for helping us create better experiences!')
+                }
+                
+                send_email_async(
+                    app=current_app._get_current_object(),
+                    subject=subject,
+                    to_email=passport.user.email,
+                    template_name=template_name,
+                    context=context
+                )
+                
+                sent_count += 1
+                
+            except Exception as e:
+                print(f"Failed to send email to {passport.user.email}: {e}")
+                flash(f"Warning: Failed to send email to {passport.user.email}", "warning")
+                
+        else:
+            already_invited += 1
+    
+    db.session.commit()
+    
+    if already_invited > 0:
+        flash(f"Survey invitations sent to {sent_count} participants. {already_invited} were already invited.", "success")
+    else:
+        flash(f"Survey invitations sent to {sent_count} participants", "success")
+    
+    return redirect(url_for("list_surveys"))
+
+
+@app.route("/survey/<int:survey_id>/export")
+def export_survey_results(survey_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    # TODO: Implement CSV/Excel export functionality
+    flash("Export functionality will be implemented", "info")
+    return redirect(url_for("survey_results", survey_id=survey_id))
+
+
+@app.route("/survey/<int:survey_id>/close", methods=["POST"])
+def close_survey(survey_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    survey = Survey.query.get_or_404(survey_id)
+    survey.status = 'closed'
+    
+    try:
+        db.session.commit()
+        flash(f"Survey '{survey.name}' has been closed", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Error closing survey", "error")
+    
+    return redirect(url_for("list_surveys"))
+
+
+@app.route("/survey/<int:survey_id>/reopen", methods=["POST"])
+def reopen_survey(survey_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    survey = Survey.query.get_or_404(survey_id)
+    survey.status = 'active'
+    
+    try:
+        db.session.commit()
+        flash(f"Survey '{survey.name}' has been reopened", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Error reopening survey", "error")
+    
+    return redirect(url_for("list_surveys"))
+
+
+@app.route("/delete-survey/<int:survey_id>", methods=["POST"])
+def delete_survey(survey_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    survey = Survey.query.get_or_404(survey_id)
+    
+    # Delete all responses first
+    SurveyResponse.query.filter_by(survey_id=survey_id).delete()
+    
+    try:
+        db.session.delete(survey)
+        db.session.commit()
+        flash(f"Survey '{survey.name}' deleted successfully", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Error deleting survey", "error")
+    
+    return redirect(url_for("list_surveys"))
 
 
 if __name__ == "__main__":

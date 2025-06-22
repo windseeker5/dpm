@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}Survey Results - {{ survey.name }}{% endblock %}
+
+{% block head %}
+<style>
+.results-card {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.response-bar {
+  background: #f8f9fa;
+  border-radius: 0.25rem;
+  height: 2rem;
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.response-bar-fill {
+  background: linear-gradient(90deg, #0054a6, #206bc4);
+  height: 100%;
+  border-radius: 0.25rem;
+  transition: width 0.3s ease;
+}
+
+.response-bar-label {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  transform: translateY(-50%);
+  font-weight: 500;
+  color: #1e293b;
+  z-index: 2;
+}
+
+.response-bar-count {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  font-weight: 500;
+  color: #64748b;
+  z-index: 2;
+}
+
+.open-response {
+  background: #f8f9fa;
+  border-left: 4px solid #206bc4;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.question-header {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* White background for all cards */
+.card {
+  background-color: #fff !important;
+}
+
+.results-card {
+  background-color: #fff !important;
+}
+
+.question-header {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl mt-4">
+
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-pretitle text-muted text-uppercase mb-1">Survey Results</h2>
+        <h1 class="page-title mb-0">{{ survey.name }}</h1>
+        <div class="text-muted mt-1">{{ survey.activity.name if survey.activity else 'No activity' }}</div>
+      </div>
+      <div class="col-auto">
+        <div class="btn-list">
+          <a href="{{ url_for('list_surveys') }}" class="btn btn-outline-secondary">
+            <i class="ti ti-arrow-left"></i> Back to Surveys
+          </a>
+          {% if responses %}
+          <a href="{{ url_for('export_survey_results', survey_id=survey.id) }}" class="btn btn-outline-primary">
+            <i class="ti ti-download"></i> Export Results
+          </a>
+          {% endif %}
+          <a href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank" class="btn btn-primary">
+            <i class="ti ti-external-link"></i> View Survey
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card card-sm">
+        <div class="card-body text-center">
+          <div class="h2 mb-1 text-blue">{{ responses|length }}</div>
+          <div class="text-muted small">Total Responses</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-sm">
+        <div class="card-body text-center">
+          <div class="h2 mb-1 text-green">{{ responses|selectattr('completed', 'equalto', True)|list|length }}</div>
+          <div class="text-muted small">Completed</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-sm">
+        <div class="card-body text-center">
+          {% set completion_rate = ((responses|selectattr('completed', 'equalto', True)|list|length / responses|length) * 100) if responses|length > 0 else 0 %}
+          <div class="h2 mb-1 text-primary">{{ "%.1f"|format(completion_rate) }}%</div>
+          <div class="text-muted small">Completion Rate</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-sm">
+        <div class="card-body text-center">
+          <div class="h2 mb-1 text-yellow">{{ survey.status|title }}</div>
+          <div class="text-muted small">Survey Status</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if responses|length == 0 %}
+  <!-- No Responses State -->
+  <div class="card">
+    <div class="card-body text-center py-5">
+      <div class="empty">
+        <div class="empty-img">
+          <i class="ti ti-chart-bar" style="font-size: 4rem; color: #ccc;"></i>
+        </div>
+        <p class="empty-title">No responses yet</p>
+        <p class="empty-subtitle text-muted">
+          {% if survey.status == 'active' %}
+            Survey is active but no responses have been received yet.
+          {% else %}
+            This survey has no responses.
+          {% endif %}
+        </p>
+        <div class="empty-action">
+          {% if survey.status == 'active' %}
+          <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Send survey invitations to all participants?')">
+              <i class="ti ti-mail"></i> Send Invitations
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <!-- Question Results -->
+  {% for question_id, analysis_data in analysis.items() %}
+  <div class="results-card">
+    <div class="question-header">
+      <div class="d-flex align-items-start">
+        <span class="badge bg-primary me-3">Q{{ analysis_data.question.id }}</span>
+        <div class="flex-grow-1">
+          <h4 class="mb-1">{{ analysis_data.question.question }}</h4>
+          <div class="text-muted small">
+            Type: {{ analysis_data.question.type.replace('_', ' ').title() }}
+            {% if analysis_data.question.required %} • Required{% else %} • Optional{% endif %}
+            • {{ analysis_data.responses|length }} responses
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if analysis_data.question.type == 'multiple_choice' %}
+    <!-- Multiple Choice Results -->
+    <div class="mb-3">
+      <h5 class="mb-3">Response Distribution</h5>
+      {% set total_responses = analysis_data.responses|length %}
+      {% for option, count in analysis_data.summary.items() %}
+      {% set percentage = (count / total_responses * 100) if total_responses > 0 else 0 %}
+      <div class="response-bar">
+        <div class="response-bar-fill" style="width: {{ percentage }}%"></div>
+        <div class="response-bar-label">{{ option }}</div>
+        <div class="response-bar-count">{{ count }} ({{ "%.1f"|format(percentage) }}%)</div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    {% else %}
+    <!-- Open-ended Results -->
+    <div class="mb-3">
+      <h5 class="mb-3">Responses ({{ analysis_data.summary.count }})</h5>
+      {% if analysis_data.responses %}
+      <div style="max-height: 400px; overflow-y: auto;">
+        {% for response in analysis_data.responses %}
+        <div class="open-response">
+          <div class="text-break">{{ response }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-muted text-center py-3">No responses for this question</div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <!-- Response Details -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">
+        <i class="ti ti-users me-2"></i>Response Details
+      </h3>
+    </div>
+    <div class="table-responsive">
+      <table class="table card-table table-vcenter">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Status</th>
+            <th>Started</th>
+            <th>Completed</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for response in responses %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                {% if response.user %}
+                <span class="avatar avatar-sm me-2" style="background-image: url('https://www.gravatar.com/avatar/{{ (response.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon')"></span>
+                <div>
+                  <strong>{{ response.user.name or 'Anonymous' }}</strong>
+                  <br>
+                  <span class="text-muted small">{{ response.user.email or '-' }}</span>
+                </div>
+                {% else %}
+                <span class="text-muted">Anonymous User</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% if response.completed %}
+              <span class="badge bg-green-lt text-green">Completed</span>
+              {% else %}
+              <span class="badge bg-yellow-lt text-yellow">In Progress</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="small">
+                {{ response.created_dt.strftime('%Y-%m-%d %H:%M') if response.created_dt else '-' }}
+              </div>
+            </td>
+            <td>
+              <div class="small">
+                {{ response.completed_dt.strftime('%Y-%m-%d %H:%M') if response.completed_dt else '-' }}
+              </div>
+            </td>
+            <td>
+              {% if response.responses %}
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="showIndividualResponse({{ response.id }}, '{{ response.user.name if response.user else 'Anonymous' }}', {{ response.responses|tojson|e }})">
+                <i class="ti ti-eye me-1"></i>View Response
+              </button>
+              {% else %}
+              <span class="text-muted small">No data</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Individual Response Modal -->
+<div class="modal modal-blur fade" id="responseModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-user me-2"></i>Response from <span id="responseUserName"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="responseContent">
+          <!-- Individual response will be loaded here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden question data for modal -->
+<script id="questionData" type="application/json">
+{{ analysis | tojson }}
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showIndividualResponse(responseId, userName, responseData) {
+  document.getElementById('responseUserName').textContent = userName;
+  
+  try {
+    const questionData = JSON.parse(document.getElementById('questionData').textContent);
+    
+    let responseHtml = '';
+    for (const [questionId, analysis] of Object.entries(questionData)) {
+      const question = analysis.question;
+      const userAnswer = responseData[questionId] || 'No answer';
+      
+      responseHtml += `
+        <div class="mb-4">
+          <div class="d-flex align-items-start mb-2">
+            <span class="badge bg-primary me-2">Q${question.id}</span>
+            <div class="flex-grow-1">
+              <h6 class="mb-1">${question.question}</h6>
+              <div class="text-muted small">${question.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+            </div>
+          </div>
+          <div class="ms-4">
+            <div class="p-3 bg-light rounded">
+              <strong>Answer:</strong> ${userAnswer}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    if (responseHtml === '') {
+      responseHtml = '<div class="text-muted">No response data found.</div>';
+    }
+    
+    document.getElementById('responseContent').innerHTML = responseHtml;
+  } catch (e) {
+    document.getElementById('responseContent').innerHTML = '<div class="text-danger">Error loading response data.</div>';
+  }
+  
+  new bootstrap.Modal(document.getElementById('responseModal')).show();
+}
+</script>
+{% endblock %}

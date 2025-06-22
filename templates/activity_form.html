@@ -649,7 +649,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form id="addExpenseForm" method="POST" action="{{ url_for('activity_expenses', activity_id=activity.id) }}" enctype="multipart/form-data">
+        <form id="addExpenseForm" method="POST" action="{{ url_for('activity_expenses', activity_id=activity.id) if activity else '#' }}" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="return_to" value="activity_form">
           

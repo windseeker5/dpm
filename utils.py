@@ -661,6 +661,7 @@ def safe_template(template_name: str) -> str:
     """
     Corrects template path.
     - If a compiled version exists, redirect to compiled/index.html.
+    - If a folder with index.html exists, redirect to folder/index.html.
     - Otherwise normal path.
     """
 
@@ -668,9 +669,14 @@ def safe_template(template_name: str) -> str:
     base_name = template_name.replace(".html", "")
 
     # Check if compiled version exists
-    compiled_folder = os.path.join("app", "templates", "email_templates", f"{base_name}_compiled", "index.html")
+    compiled_folder = os.path.join("templates", "email_templates", f"{base_name}_compiled", "index.html")
     if os.path.exists(compiled_folder):
         return f"email_templates/{base_name}_compiled/index.html"
+
+    # Check if folder with index.html exists
+    folder_index = os.path.join("templates", "email_templates", base_name, "index.html")
+    if os.path.exists(folder_index):
+        return f"email_templates/{base_name}/index.html"
 
     # Otherwise fallback normal
     if not template_name.startswith("email_templates/"):
