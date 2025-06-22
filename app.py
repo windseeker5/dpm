@@ -36,6 +36,7 @@ from werkzeug.utils import secure_filename
 from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
 from models import Activity, User, Signup, Passport, PassportType, AdminActionLog
 from models import SurveyTemplate, Survey, SurveyResponse
+from models import ChatConversation, ChatMessage, QueryLog, ChatUsage
 
 
 # ⚙️ Config
@@ -65,9 +66,7 @@ from utils import (
 # 🧠 Data Tools
 from collections import defaultdict
 
-#from app.chatbot.to_delete_routes_chatbot import chat_bp
-#from chatbot.routes_chatbot import chat_bp
-from chatbot import chat_bp
+# ✅ Old chatbot imports removed - using new chatbot_v2 blueprint instead
 
 
 # ✅ Pass the full datetime object
@@ -152,6 +151,14 @@ app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
+# 🤖 Register AI Analytics Chatbot Blueprint
+try:
+    from chatbot_v2 import chatbot_bp
+    app.register_blueprint(chatbot_bp)
+    print("✅ AI Analytics Chatbot registered successfully")
+except ImportError as e:
+    print(f"⚠️  AI Analytics Chatbot not available: {e}")
+
 import hashlib
 
 @app.template_filter("hashlib_md5")
@@ -176,7 +183,7 @@ with app.app_context():
 
 
 
-app.register_blueprint(chat_bp)         
+# ✅ Old chat_bp blueprint registration removed - using chatbot_v2 instead         
 
 
 ##
