@@ -220,3 +220,65 @@ class EmailLog(db.Model):
 
 # ✅ Place index right after the model class
 db.Index('ix_signup_status', Signup.status)
+
+
+# ================================
+# 📋 SURVEY SYSTEM MODELS
+# ================================
+
+class SurveyTemplate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text)
+    questions = db.Column(db.Text)  # JSON string containing questions
+    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    status = db.Column(db.String(50), default="active")  # active, archived
+    
+    # Relationships
+    surveys = db.relationship("Survey", backref="template", lazy=True)
+
+
+class Survey(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    template_id = db.Column(db.Integer, db.ForeignKey("survey_template.id"), nullable=False)
+    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id"), nullable=True)
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text)
+    survey_token = db.Column(db.String(32), unique=True, nullable=False)  # For URL generation
+    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    status = db.Column(db.String(50), default="active")  # active, closed, archived
+    email_sent = db.Column(db.Boolean, default=False)
+    email_sent_dt = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    activity = db.relationship("Activity", backref="surveys")
+    passport_type = db.relationship("PassportType", backref="surveys")
+    responses = db.relationship("SurveyResponse", backref="survey", lazy=True)
+
+
+class SurveyResponse(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    survey_id = db.Column(db.Integer, db.ForeignKey("survey.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=True)
+    response_token = db.Column(db.String(32), unique=True, nullable=False)
+    responses = db.Column(db.Text)  # JSON string containing all answers
+    completed = db.Column(db.Boolean, default=False)
+    completed_dt = db.Column(db.DateTime, nullable=True)
+    started_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    user = db.relationship("User", backref="survey_responses")
+    passport = db.relationship("Passport", backref="survey_responses")
+
+
+# ✅ Survey indexes for performance
+db.Index('ix_survey_token', Survey.survey_token)
+db.Index('ix_survey_response_token', SurveyResponse.response_token)
+db.Index('ix_survey_activity', Survey.activity_id)
+db.Index('ix_survey_response_survey', SurveyResponse.survey_id)

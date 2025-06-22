@@ -1119,4 +1119,20 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
         )
 
 
+# ================================
+# 📋 SURVEY UTILITIES
+# ================================
+
+def generate_survey_token():
+    """Generate a secure random token for surveys"""
+    import secrets
+    return secrets.token_urlsafe(24)
+
+
+def generate_response_token():
+    """Generate a secure random token for survey responses"""
+    import secrets
+    return secrets.token_urlsafe(24)
+
+
 

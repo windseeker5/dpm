@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% block title %}{{ survey.name }}{% endblock %}
+
+{% block content %}
+<style>
+  /* Mobile-first survey styling */
+  .survey-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  
+  .survey-progress {
+    height: 6px;
+    background-color: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+  
+  .survey-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #0054a6, #206bc4);
+    transition: width 0.3s ease;
+  }
+  
+  .question-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .question-number {
+    background: #206bc4;
+    color: white;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+  }
+  
+  .question-text {
+    font-size: 1.125rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    color: #1e293b;
+  }
+  
+  .form-check-input {
+    margin-top: 0.25rem;
+  }
+  
+  .form-check {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+  }
+  
+  .form-check:hover {
+    background-color: #f8f9fa;
+    border-color: #206bc4;
+  }
+  
+  .form-check-input:checked + .form-check-label {
+    color: #206bc4;
+    font-weight: 500;
+  }
+  
+  .text-area-question textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  
+  .survey-submit {
+    background: linear-gradient(135deg, #0054a6, #206bc4);
+    border: none;
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 1.125rem;
+    width: 100%;
+    margin-top: 1rem;
+    transition: all 0.2s ease;
+  }
+  
+  .survey-submit:hover {
+    background: linear-gradient(135deg, #004494, #1a5ba8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(32, 107, 196, 0.3);
+  }
+  
+  .activity-info {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .completion-estimate {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: #856404;
+  }
+  
+  .required-indicator {
+    color: #dc3545;
+    font-weight: bold;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 576px) {
+    .survey-container {
+      padding: 0.75rem;
+    }
+    
+    .question-card {
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .question-text {
+      font-size: 1rem;
+    }
+    
+    .form-check {
+      padding: 0.5rem;
+    }
+  }
+</style>
+
+<div class="survey-container">
+  <!-- Survey Header -->
+  <div class="activity-info">
+    <h1 class="h3 mb-2">{{ survey.name }}</h1>
+    <p class="text-muted mb-0">{{ survey.activity.name }}</p>
+    {% if survey.description %}
+      <p class="mt-2 mb-0">{{ survey.description }}</p>
+    {% endif %}
+  </div>
+  
+  <!-- Completion Estimate -->
+  <div class="completion-estimate">
+    <i class="ti ti-clock me-1"></i>
+    <strong>Estimated time:</strong> About 1 minute
+  </div>
+  
+  <!-- Progress Bar -->
+  <div class="survey-progress">
+    <div class="survey-progress-bar" id="progressBar" style="width: 0%"></div>
+  </div>
+  
+  <!-- Survey Form -->
+  <form method="POST" action="{{ url_for('submit_survey_response', survey_token=survey.survey_token) }}" id="surveyForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    {% for question in questions.questions %}
+      <div class="question-card" data-question="{{ question.id }}">
+        <div class="question-number">{{ question.id }}</div>
+        
+        <div class="question-text">
+          {{ question.question }}
+          {% if question.required %}
+            <span class="required-indicator">*</span>
+          {% endif %}
+        </div>
+        
+        {% if question.type == 'multiple_choice' %}
+          {% for option in question.options %}
+            <div class="form-check">
+              <input class="form-check-input" 
+                     type="radio" 
+                     name="question_{{ question.id }}" 
+                     value="{{ option }}" 
+                     id="q{{ question.id }}_{{ loop.index }}"
+                     {% if question.required %}required{% endif %}
+                     onchange="updateProgress()">
+              <label class="form-check-label" for="q{{ question.id }}_{{ loop.index }}">
+                {{ option }}
+              </label>
+            </div>
+          {% endfor %}
+          
+        {% elif question.type == 'open_ended' %}
+          <div class="text-area-question">
+            <textarea class="form-control" 
+                      name="question_{{ question.id }}" 
+                      placeholder="Share your thoughts..."
+                      {% if question.max_length %}maxlength="{{ question.max_length }}"{% endif %}
+                      {% if question.required %}required{% endif %}
+                      onkeyup="updateProgress()"></textarea>
+            {% if question.max_length %}
+              <div class="form-hint mt-1">Maximum {{ question.max_length }} characters</div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+    
+    <!-- Submit Button -->
+    <button type="submit" class="survey-submit">
+      <i class="ti ti-check me-2"></i>Submit Survey
+    </button>
+    
+    <!-- Privacy Note -->
+    <div class="text-center mt-3">
+      <small class="text-muted">
+        <i class="ti ti-shield-check me-1"></i>
+        Your responses are confidential and help us improve our activities
+      </small>
+    </div>
+  </form>
+</div>
+
+<script>
+  // Progress tracking
+  function updateProgress() {
+    const form = document.getElementById('surveyForm');
+    const questions = document.querySelectorAll('.question-card');
+    const totalQuestions = questions.length;
+    let answeredQuestions = 0;
+    
+    questions.forEach(function(questionCard) {
+      const inputs = questionCard.querySelectorAll('input[type="radio"]:checked, textarea');
+      let hasAnswer = false;
+      
+      inputs.forEach(function(input) {
+        if (input.type === 'radio' && input.checked) {
+          hasAnswer = true;
+        } else if (input.type === 'textarea' && input.value.trim() !== '') {
+          hasAnswer = true;
+        }
+      });
+      
+      if (hasAnswer) {
+        answeredQuestions++;
+      }
+    });
+    
+    const progressPercent = (answeredQuestions / totalQuestions) * 100;
+    document.getElementById('progressBar').style.width = progressPercent + '%';
+  }
+  
+  // Auto-scroll to next question on selection
+  document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      updateProgress();
+      
+      // Small delay then scroll to next question
+      setTimeout(function() {
+        const currentQuestion = radio.closest('.question-card');
+        const nextQuestion = currentQuestion.nextElementSibling;
+        
+        if (nextQuestion && nextQuestion.classList.contains('question-card')) {
+          nextQuestion.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 300);
+    });
+  });
+  
+  // Form validation with better UX
+  document.getElementById('surveyForm').addEventListener('submit', function(e) {
+    const requiredInputs = document.querySelectorAll('input[required], textarea[required]');
+    let isValid = true;
+    
+    requiredInputs.forEach(function(input) {
+      if (input.type === 'radio') {
+        const radioGroup = document.querySelectorAll(`input[name="${input.name}"]`);
+        const isChecked = Array.from(radioGroup).some(radio => radio.checked);
+        if (!isChecked) {
+          isValid = false;
+          input.closest('.question-card').style.border = '2px solid #dc3545';
+        } else {
+          input.closest('.question-card').style.border = '1px solid #e9ecef';
+        }
+      } else if (input.type === 'textarea' && input.hasAttribute('required')) {
+        if (input.value.trim() === '') {
+          isValid = false;
+          input.closest('.question-card').style.border = '2px solid #dc3545';
+        } else {
+          input.closest('.question-card').style.border = '1px solid #e9ecef';
+        }
+      }
+    });
+    
+    if (!isValid) {
+      e.preventDefault();
+      // Scroll to first invalid question
+      const firstInvalid = document.querySelector('.question-card[style*="dc3545"]');
+      if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  });
+  
+  // Initialize progress
+  updateProgress();
+  
+  // Add loading state to submit button
+  document.getElementById('surveyForm').addEventListener('submit', function() {
+    const submitBtn = document.querySelector('.survey-submit');
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+    submitBtn.disabled = true;
+  });
+</script>
+
+{% endblock %}

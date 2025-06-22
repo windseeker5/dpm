@@ -35,6 +35,7 @@ from werkzeug.utils import secure_filename
 # 🧠 Models
 from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
 from models import Activity, User, Signup, Passport, PassportType, AdminActionLog
+from models import SurveyTemplate, Survey, SurveyResponse
 
 
 # ⚙️ Config
@@ -56,7 +57,9 @@ from utils import (
     get_kpi_stats,
     notify_pass_event,
     notify_signup_event,
-    generate_pass_code
+    generate_pass_code,
+    generate_survey_token,
+    generate_response_token
 )
 
 # 🧠 Data Tools
@@ -2592,7 +2595,7 @@ def activity_dashboard(activity_id):
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from models import Activity, Signup, Passport
+    from models import Activity, Signup, Passport, Survey, SurveyResponse
     from sqlalchemy.orm import joinedload
     from sqlalchemy import or_
 
@@ -2625,16 +2628,61 @@ def activity_dashboard(activity_id):
         .all()
     )
 
+    # Load surveys for this activity (handle case where tables might not exist yet)
+    try:
+        surveys = (
+            Survey.query
+            .options(joinedload(Survey.responses))
+            .filter_by(activity_id=activity_id)
+            .order_by(Survey.created_dt.desc())
+            .all()
+        )
+    except Exception as e:
+        # If survey tables don't exist yet, return empty list
+        print(f"Warning: Survey tables not found: {e}")
+        surveys = []
+
+    # Load available survey templates for the modal
+    try:
+        survey_templates = SurveyTemplate.query.filter_by(status='active').all()
+    except Exception as e:
+        print(f"Warning: Survey template tables not found: {e}")
+        survey_templates = []
+
     return render_template(
         "activity_dashboard.html",
         activity=activity,
         signups=signups,
-        passes=passports
+        passes=passports,
+        surveys=surveys,
+        survey_templates=survey_templates
     )
 
 
 
 
+
+@app.template_filter("from_json")
+def from_json_filter(json_str):
+    """Parse JSON string in templates"""
+    try:
+        return json.loads(json_str) if json_str else {}
+    except:
+        return {}
+
+@app.template_filter("days_ago")
+def days_ago_filter(dt):
+    """Calculate days between a datetime and now"""
+    try:
+        if dt:
+            now = datetime.now(timezone.utc)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            diff = now - dt
+            return diff.days
+        return 0
+    except:
+        return 0
 
 @app.template_filter("utc_to_local")
 def jinja_utc_to_local_filter(dt):
@@ -2923,6 +2971,253 @@ def archive_passport_type(passport_type_id):
             "success": False,
             "error": str(e)
         }), 500
+
+
+# ================================
+# 📋 SURVEY SYSTEM ROUTES
+# ================================
+
+@app.route("/create-survey", methods=["POST"])
+def create_survey():
+    """Create a new survey for an activity"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        activity_id = request.form.get("activity_id")
+        survey_name = request.form.get("survey_name")
+        survey_description = request.form.get("survey_description", "")
+        template_id = request.form.get("template_id")
+        passport_type_id = request.form.get("passport_type_id")
+        
+        # Validate required fields
+        if not activity_id or not survey_name or not template_id:
+            flash("❌ Missing required fields", "error")
+            return redirect(url_for("activity_dashboard", activity_id=activity_id))
+        
+        # Verify activity exists
+        activity = Activity.query.get_or_404(activity_id)
+        
+        # Get template from database or use hardcoded fallback
+        if template_id.isdigit():
+            # Numeric template ID - get from database
+            template = SurveyTemplate.query.get(int(template_id))
+            if not template:
+                flash("❌ Invalid survey template", "error")
+                return redirect(url_for("activity_dashboard", activity_id=activity_id))
+        else:
+            # String template ID - get hardcoded template
+            template_questions = get_survey_template_questions(template_id)
+            if not template_questions:
+                flash("❌ Invalid survey template", "error")
+                return redirect(url_for("activity_dashboard", activity_id=activity_id))
+            
+            # Create survey template in database if it doesn't exist
+            template = get_or_create_survey_template(template_id, template_questions)
+        
+        # Generate unique survey token
+        survey_token = generate_survey_token()
+        
+        # Create the survey
+        survey = Survey(
+            activity_id=activity_id,
+            template_id=template.id,
+            passport_type_id=passport_type_id if passport_type_id else None,
+            name=survey_name,
+            description=survey_description,
+            survey_token=survey_token,
+            created_by=session.get("admin_id"),
+            status="active"
+        )
+        
+        db.session.add(survey)
+        db.session.commit()
+        
+        flash(f"✅ Survey '{survey_name}' created successfully!", "success")
+        return redirect(url_for("activity_dashboard", activity_id=activity_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"❌ Error creating survey: {str(e)}", "error")
+        return redirect(url_for("activity_dashboard", activity_id=activity_id))
+
+
+@app.route("/survey/<survey_token>")
+def take_survey(survey_token):
+    """Public survey taking page"""
+    try:
+        survey = Survey.query.filter_by(survey_token=survey_token).first_or_404()
+        
+        if survey.status != "active":
+            return render_template("survey_closed.html", survey=survey)
+        
+        # Get survey questions from template
+        template_questions = json.loads(survey.template.questions)
+        
+        return render_template("survey_form.html", 
+                             survey=survey, 
+                             questions=template_questions)
+        
+    except Exception as e:
+        flash(f"❌ Error loading survey: {str(e)}", "error")
+        return redirect(url_for("index"))
+
+
+@app.route("/survey/<survey_token>/submit", methods=["POST"])
+def submit_survey_response(survey_token):
+    """Submit survey response"""
+    try:
+        survey = Survey.query.filter_by(survey_token=survey_token).first_or_404()
+        
+        if survey.status != "active":
+            flash("❌ This survey is no longer accepting responses", "error")
+            return redirect(url_for("take_survey", survey_token=survey_token))
+        
+        # Collect responses
+        responses = {}
+        template_questions = json.loads(survey.template.questions)
+        
+        for question in template_questions.get("questions", []):
+            question_id = str(question["id"])
+            response_value = request.form.get(f"question_{question_id}")
+            
+            if question.get("required", False) and not response_value:
+                flash(f"❌ Please answer question: {question['question']}", "error")
+                return redirect(url_for("take_survey", survey_token=survey_token))
+            
+            if response_value:
+                responses[question_id] = response_value
+        
+        # Create survey response
+        response_token = generate_response_token()
+        
+        # Get user ID from session or create anonymous user
+        user_id = session.get("user_id")
+        if not user_id:
+            # For anonymous responses, try to find or create a user
+            # For now, we'll use a default anonymous user ID or create one
+            anonymous_user = User.query.filter_by(email="anonymous@survey.local").first()
+            if not anonymous_user:
+                anonymous_user = User(
+                    name="Anonymous Survey User",
+                    email="anonymous@survey.local"
+                )
+                db.session.add(anonymous_user)
+                db.session.flush()  # Get the ID
+            user_id = anonymous_user.id
+        
+        survey_response = SurveyResponse(
+            survey_id=survey.id,
+            user_id=user_id,
+            response_token=response_token,
+            responses=json.dumps(responses),
+            completed=True,
+            completed_dt=datetime.now(timezone.utc),
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
+        db.session.add(survey_response)
+        db.session.commit()
+        
+        return render_template("survey_thank_you.html", survey=survey)
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"❌ Error submitting survey: {str(e)}", "error")
+        return redirect(url_for("take_survey", survey_token=survey_token))
+
+
+def get_survey_template_questions(template_id):
+    """Get questions for a survey template"""
+    templates = {
+        "default": {
+            "name": "Activity Feedback Survey",
+            "questions": [
+                {
+                    "id": 1,
+                    "type": "multiple_choice",
+                    "question": "How would you rate your overall experience?",
+                    "options": ["Excellent", "Good", "Fair", "Poor"],
+                    "required": True
+                },
+                {
+                    "id": 2,
+                    "type": "multiple_choice",
+                    "question": "How likely are you to recommend this activity to others?",
+                    "options": ["Very likely", "Likely", "Unlikely", "Very unlikely"],
+                    "required": True
+                },
+                {
+                    "id": 3,
+                    "type": "multiple_choice",
+                    "question": "What did you like most about this activity?",
+                    "options": ["Instruction quality", "Facilities", "Organization", "Other participants"],
+                    "required": False
+                },
+                {
+                    "id": 4,
+                    "type": "multiple_choice",
+                    "question": "Would you participate in this activity again?",
+                    "options": ["Definitely", "Probably", "Maybe", "No"],
+                    "required": True
+                },
+                {
+                    "id": 5,
+                    "type": "open_ended",
+                    "question": "Any additional feedback or suggestions for improvement?",
+                    "required": False,
+                    "max_length": 500
+                }
+            ]
+        },
+        "quick": {
+            "name": "Quick Feedback Survey",
+            "questions": [
+                {
+                    "id": 1,
+                    "type": "multiple_choice",
+                    "question": "How satisfied were you with this activity?",
+                    "options": ["Very satisfied", "Satisfied", "Neutral", "Dissatisfied"],
+                    "required": True
+                },
+                {
+                    "id": 2,
+                    "type": "multiple_choice",
+                    "question": "Would you recommend this to a friend?",
+                    "options": ["Yes", "Maybe", "No"],
+                    "required": True
+                },
+                {
+                    "id": 3,
+                    "type": "open_ended",
+                    "question": "What could we improve?",
+                    "required": False,
+                    "max_length": 300
+                }
+            ]
+        }
+    }
+    
+    return templates.get(template_id)
+
+
+def get_or_create_survey_template(template_id, template_data):
+    """Get existing template or create new one"""
+    # Check if template already exists
+    template = SurveyTemplate.query.filter_by(name=template_data["name"]).first()
+    
+    if not template:
+        template = SurveyTemplate(
+            name=template_data["name"],
+            description=f"Default {template_data['name'].lower()}",
+            questions=json.dumps(template_data),
+            status="active"
+        )
+        db.session.add(template)
+        db.session.flush()  # To get the ID
+    
+    return template
 
 
 

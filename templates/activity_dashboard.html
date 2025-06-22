@@ -99,10 +99,17 @@
               <i class="ti ti-user-check"></i> Signups
             </a>
             <a href="{{ url_for('list_signups') }}?activity_id={{ activity.id }}&payment_status=unpaid"
-               class="btn btn-outline-warning btn-sm"
+               class="btn btn-outline-warning btn-sm mb-1"
                title="View unpaid signups">
               <i class="ti ti-alert-circle"></i> Unpaid
             </a>
+            <button type="button" 
+                    class="btn btn-outline-info btn-sm" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#create-survey-modal"
+                    title="Create survey for this activity">
+              <i class="ti ti-clipboard-check"></i> Survey
+            </button>
           </div>
         </div>
         <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}"
@@ -568,6 +575,273 @@ document.addEventListener('DOMContentLoaded', function() {
   
 
 
+<!-- ================================ -->
+<!-- 📋 SURVEY CREATION MODAL -->
+<!-- ================================ -->
 
+<div class="modal modal-blur fade" id="create-survey-modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-clipboard-check me-2"></i>Create Activity Survey
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <form method="POST" action="{{ url_for('create_survey') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="activity_id" value="{{ activity.id }}">
+        
+        <div class="modal-body">
+          <div class="row g-3">
+            <!-- Survey Name -->
+            <div class="col-12">
+              <label class="form-label">Survey Name</label>
+              <input type="text" 
+                     class="form-control" 
+                     name="survey_name" 
+                     placeholder="e.g., {{ activity.name }} Feedback Survey"
+                     value="{{ activity.name }} Feedback Survey"
+                     required>
+            </div>
+            
+            <!-- Survey Description -->
+            <div class="col-12">
+              <label class="form-label">Description <span class="text-muted">(optional)</span></label>
+              <textarea class="form-control" 
+                        name="survey_description" 
+                        rows="2" 
+                        placeholder="Brief description of this survey">Help us improve {{ activity.name }} by sharing your feedback!</textarea>
+            </div>
+            
+            <!-- Survey Template Selection -->
+            <div class="col-12">
+              <label class="form-label">Survey Template</label>
+              <select class="form-select" name="template_id" required id="template-select">
+                <option value="">Select a survey template...</option>
+                {% if survey_templates %}
+                  {% for template in survey_templates %}
+                    {% set question_count = (template.questions|from_json).questions|length %}
+                    <option value="{{ template.id }}" 
+                            data-questions="{{ template.questions|e }}"
+                            {% if loop.first %}selected{% endif %}>
+                      {{ template.name }} ({{ question_count }} questions)
+                    </option>
+                  {% endfor %}
+                {% else %}
+                  <option value="1" selected>Activity Feedback Survey (5 questions)</option>
+                  <option value="2">Quick Feedback Survey (3 questions)</option>
+                {% endif %}
+              </select>
+              <div class="form-hint">Templates contain pre-designed questions for quick setup</div>
+            </div>
+            
+            <!-- Passport Type Targeting -->
+            <div class="col-12">
+              <label class="form-label">Send Survey To</label>
+              <select class="form-select" name="passport_type_id">
+                <option value="">All activity participants</option>
+                {% for passport_type in activity.passport_types %}
+                  {% if passport_type.status == 'active' %}
+                    <option value="{{ passport_type.id }}">{{ passport_type.name }} participants only</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <div class="form-hint">Choose specific passport types or send to all participants</div>
+            </div>
+            
+            <!-- Survey Preview -->
+            <div class="col-12">
+              <div class="card card-sm">
+                <div class="card-header">
+                  <h4 class="card-title">Survey Preview</h4>
+                </div>
+                <div class="card-body" id="survey-preview">
+                  <div class="text-muted">Select a template to preview questions...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="ti ti-plus me-2"></i>Create Survey
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Survey Results Section -->
+{% if surveys %}
+<div class="card mb-4" id="survey-results-section">
+  <div class="card-header">
+    <h3 class="card-title">
+      <i class="ti ti-chart-bar me-2"></i>Survey Results
+    </h3>
+    <div class="card-actions">
+      <span class="badge bg-blue-lt text-blue">{{ surveys|length }} surveys</span>
+    </div>
+  </div>
+  <div class="card-body">
+    {% for survey in surveys %}
+      <div class="survey-result-item mb-4 pb-4" style="border-bottom: 1px solid #e9ecef;">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h4 class="h5 mb-1">{{ survey.name }}</h4>
+            <div class="text-muted small">
+              Created {{ survey.created_dt.strftime('%Y-%m-%d') }}
+              {% if survey.passport_type %}
+                • {{ survey.passport_type.name }} participants
+              {% else %}
+                • All participants
+              {% endif %}
+            </div>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-{{ 'green' if survey.status == 'active' else 'gray' }}-lt text-{{ 'green' if survey.status == 'active' else 'gray' }}">
+              {{ survey.status|title }}
+            </span>
+            {% if survey.responses %}
+              <div class="text-muted small mt-1">{{ survey.responses|length }} responses</div>
+            {% endif %}
+          </div>
+        </div>
+        
+        {% if survey.description %}
+          <p class="text-muted small mb-3">{{ survey.description }}</p>
+        {% endif %}
+        
+        <div class="row g-3">
+          <div class="col-md-8">
+            {% if survey.responses %}
+              <div class="row g-2">
+                <div class="col-6 col-md-3">
+                  <div class="card card-sm">
+                    <div class="card-body text-center">
+                      <div class="h3 m-0 text-blue">{{ survey.responses|length }}</div>
+                      <div class="text-muted small">Responses</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="card card-sm">
+                    <div class="card-body text-center">
+                      <div class="h3 m-0 text-green">{{ survey.responses|selectattr('completed', 'equalto', True)|list|length }}</div>
+                      <div class="text-muted small">Completed</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="card card-sm">
+                    <div class="card-body text-center">
+                      {% set completion_rate = ((survey.responses|selectattr('completed', 'equalto', True)|list|length / survey.responses|length) * 100) if survey.responses|length > 0 else 0 %}
+                      <div class="h3 m-0 text-primary">{{ "%.0f"|format(completion_rate) }}%</div>
+                      <div class="text-muted small">Rate</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="card card-sm">
+                    <div class="card-body text-center">
+                      <div class="h3 m-0 text-yellow">
+                        {% set latest_response = survey.responses|selectattr('completed_dt')|sort(attribute='completed_dt')|last %}
+                        {% if latest_response %}
+                          {{ latest_response.completed_dt.strftime('%m/%d') }}
+                        {% else %}
+                          -
+                        {% endif %}
+                      </div>
+                      <div class="text-muted small">Latest</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% else %}
+              <div class="text-muted">No responses yet</div>
+            {% endif %}
+          </div>
+          
+          <div class="col-md-4">
+            <div class="d-flex flex-column gap-2">
+              <a href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" 
+                 class="btn btn-outline-primary btn-sm" 
+                 target="_blank">
+                <i class="ti ti-external-link me-1"></i>View Survey
+              </a>
+              {% if survey.status == 'active' %}
+                <button class="btn btn-outline-success btn-sm">
+                  <i class="ti ti-mail me-1"></i>Send Invitations
+                </button>
+                <button class="btn btn-outline-warning btn-sm">
+                  <i class="ti ti-pause me-1"></i>Close Survey
+                </button>
+              {% endif %}
+              {% if survey.responses %}
+                <button class="btn btn-outline-info btn-sm">
+                  <i class="ti ti-download me-1"></i>Export Results
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+// Survey template preview functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const templateSelect = document.getElementById('template-select');
+    const surveyPreview = document.getElementById('survey-preview');
+    
+    if (templateSelect && surveyPreview) {
+        // Update preview when template changes
+        templateSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const questionsData = selectedOption.getAttribute('data-questions');
+            
+            if (questionsData && questionsData !== '') {
+                try {
+                    const templateData = JSON.parse(questionsData);
+                    const questions = templateData.questions || [];
+                    
+                    let previewHtml = '<div class="mb-2"><strong>Preview:</strong></div>';
+                    questions.forEach((question, index) => {
+                        previewHtml += `
+                            <div class="mb-2">
+                                <div class="fw-medium">${index + 1}. ${question.question}</div>
+                                <div class="text-muted small">
+                                    Type: ${question.type === 'multiple_choice' ? 'Multiple Choice' : 'Open-ended'}
+                                    ${question.required ? ' • Required' : ' • Optional'}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    surveyPreview.innerHTML = previewHtml;
+                } catch (e) {
+                    surveyPreview.innerHTML = '<div class="text-muted">Error loading preview</div>';
+                }
+            } else {
+                surveyPreview.innerHTML = '<div class="text-muted">Select a template to preview questions...</div>';
+            }
+        });
+        
+        // Trigger initial preview if a template is pre-selected
+        if (templateSelect.value) {
+            templateSelect.dispatchEvent(new Event('change'));
+        }
+    }
+});
+</script>
 
 {% endblock %}
