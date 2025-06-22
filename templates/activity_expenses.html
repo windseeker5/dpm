@@ -3,9 +3,9 @@
 
 {% block content %}
 <div class="container-xl mt-4">
-  <div class="row">
-    <!-- Left: Add/Edit Expense + Ledger -->
-    <div class="col-lg-8">
+  <div class="row justify-content-center">
+    <!-- Expense Management -->
+    <div class="col-lg-10">
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">
@@ -140,25 +140,6 @@
               </tr>
               {% endfor %}
             </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right: Summary Card -->
-    <div class="col-lg-4">
-      <div class="card sticky-top">
-        <div class="card-header">
-          <h3 class="card-title"><i class="ti ti-chart-pie me-2"></i> Summary Report</h3>
-        </div>
-        <div class="card-body">
-          <table class="table table-sm">
-            <tr><td>💰 Gross Revenue</td><td class="text-end">${{ "%.2f"|format(summary.gross_revenue) }}</td></tr>
-            <tr><td>📦 COGS</td><td class="text-end">${{ "%.2f"|format(summary.cogs_total) }}</td></tr>
-            <tr><td>📈 Gross Profit</td><td class="text-end fw-bold">${{ "%.2f"|format(summary.gross_profit) }}</td></tr>
-            <tr><td>🧾 Operating Expenses</td><td class="text-end">${{ "%.2f"|format(summary.opex_total) }}</td></tr>
-            <tr class="table-info"><td>Total Expenses</td><td class="text-end">${{ "%.2f"|format(summary.total_expenses) }}</td></tr>
-            <tr class="table-success"><td>Net Income</td><td class="text-end">${{ "%.2f"|format(summary.net_income) }}</td></tr>
           </table>
         </div>
       </div>

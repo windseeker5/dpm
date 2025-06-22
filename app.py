@@ -1365,7 +1365,20 @@ def edit_activity(activity_id):
     }
 
     # Get passport types for this activity
-    passport_types = PassportType.query.filter_by(activity_id=activity.id).all()
+    passport_types_objects = PassportType.query.filter_by(activity_id=activity.id).all()
+    
+    # Convert to dictionaries for JSON serialization
+    passport_types = []
+    for pt in passport_types_objects:
+        passport_types.append({
+            'id': pt.id,
+            'name': pt.name,
+            'type': pt.type,
+            'price_per_user': pt.price_per_user,
+            'sessions_included': pt.sessions_included,
+            'target_revenue': pt.target_revenue,
+            'payment_instructions': pt.payment_instructions or ''
+        })
     
     return render_template("activity_form.html", activity=activity, passport_types=passport_types, summary=summary)
 
@@ -2386,7 +2399,13 @@ def activity_expenses(activity_id, expense_id=None):
 
         db.session.commit()
         flash("Expense saved.", "success")
-        return redirect(url_for("activity_expenses", activity_id=activity.id))
+        
+        # Check if we should return to activity form
+        return_to = request.form.get('return_to') or request.args.get('return_to')
+        if return_to == 'activity_form':
+            return redirect(url_for("activity_form", activity_id=activity.id))
+        else:
+            return redirect(url_for("activity_expenses", activity_id=activity.id))
 
     expenses = Expense.query.filter_by(activity_id=activity.id).order_by(Expense.date.desc()).all()
 
@@ -2442,7 +2461,13 @@ def delete_expense(expense_id):
     db.session.delete(expense)
     db.session.commit()
     flash("Expense deleted.", "success")
-    return redirect(url_for("activity_expenses", activity_id=activity_id))
+    
+    # Check if we should return to activity form
+    return_to = request.args.get('return_to')
+    if return_to == 'activity_form':
+        return redirect(url_for("activity_form", activity_id=activity_id))
+    else:
+        return redirect(url_for("activity_expenses", activity_id=activity_id))
 
 
 
@@ -2512,7 +2537,22 @@ def activity_form(activity_id=None):
         summary = None
 
     # Get passport types for the activity
-    passport_types = activity.passport_types if activity else []
+    if activity:
+        passport_types_objects = activity.passport_types
+        # Convert to dictionaries for JSON serialization
+        passport_types = []
+        for pt in passport_types_objects:
+            passport_types.append({
+                'id': pt.id,
+                'name': pt.name,
+                'type': pt.type,
+                'price_per_user': pt.price_per_user,
+                'sessions_included': pt.sessions_included,
+                'target_revenue': pt.target_revenue,
+                'payment_instructions': pt.payment_instructions or ''
+            })
+    else:
+        passport_types = []
     
     return render_template("activity_form.html",
                            activity=activity,

@@ -183,9 +183,9 @@
                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
                   <i class="ti ti-plus me-2"></i>Income
                 </button>
-                <a href="{{ url_for('activity_expenses', activity_id=activity.id) }}" class="btn btn-danger">
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
                   <i class="ti ti-minus me-2"></i>Expense
-                </a>
+                </button>
               </div>
             </div>
             
@@ -313,6 +313,73 @@
             </div>
           </div>
           {% endif %}
+          {% endif %}
+
+          <!-- Expense Ledger Section -->
+          {% if activity and activity.expenses %}
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h4 class="mb-0">Expense Ledger</h4>
+              <span class="badge bg-blue-lt text-blue">{{ activity.expenses|length }} entries</span>
+            </div>
+            
+            <div class="card">
+              <div class="table-responsive">
+                <table class="table table-vcenter card-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                      <th>Description</th>
+                      <th>Receipt</th>
+                      <th class="w-1">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="expenseLedgerContainer">
+                    {% for expense in activity.expenses %}
+                    <tr data-expense-id="{{ expense.id }}">
+                      <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
+                      <td>
+                        <span class="badge bg-gray-lt text-gray">{{ expense.category }}</span>
+                      </td>
+                      <td>
+                        <span class="fw-bold text-danger">${{ "%.2f"|format(expense.amount) }}</span>
+                      </td>
+                      <td>{{ expense.description or "-" }}</td>
+                      <td>
+                        {% if expense.receipt_filename %}
+                          <button type="button" onclick="openReceiptWindow('{{ url_for('static', filename='uploads/receipts/' + expense.receipt_filename) }}')" 
+                             title="View Receipt" class="btn btn-sm btn-outline-secondary">
+                            <i class="ti ti-file-search"></i>
+                          </button>
+                        {% else %}
+                          <span class="text-muted">-</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div class="dropdown">
+                          <a href="#" class="btn btn-outline-secondary dropdown-toggle btn-sm" data-bs-toggle="dropdown">
+                            Actions
+                          </a>
+                          <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" onclick="editExpense({{ expense.id }})">
+                              <i class="ti ti-edit me-2"></i> Edit
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-danger" href="#" onclick="confirmDeleteExpense({{ expense.id }}, '{{ expense.category }}')">
+                              <i class="ti ti-trash me-2"></i> Delete
+                            </a>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
           {% endif %}
 
           <!-- Signup Links Section - Now integrated into Passport Types table -->
@@ -571,6 +638,132 @@
   </div>
 </div>
 
+<!-- Add Expense Modal -->
+<div class="modal modal-blur fade" id="addExpenseModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-currency-dollar me-2"></i>Add Expense
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addExpenseForm" method="POST" action="{{ url_for('activity_expenses', activity_id=activity.id) }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="return_to" value="activity_form">
+          
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label required">Category</label>
+              <select name="category" class="form-select" required>
+                <option value="Cost of Goods Sold">Cost of Goods Sold</option>
+                <option value="Staff">Staff</option>
+                <option value="Venue">Venue</option>
+                <option value="Equipment Rental">Equipment Rental</option>
+                <option value="Insurance">Insurance</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Travel">Travel</option>
+                <option value="Supplies">Supplies</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label required">Amount ($)</label>
+              <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label required">Date</label>
+              <input type="date" name="date" class="form-control" required>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Upload Receipt (optional)</label>
+              <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
+            </div>
+            
+            <div class="col-12">
+              <label class="form-label">Description (optional)</label>
+              <textarea name="description" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="saveExpenseBtn">
+          <i class="ti ti-check me-2"></i>Add Expense
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Expense Modal -->
+<div class="modal modal-blur fade" id="editExpenseModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-edit me-2"></i>Edit Expense
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editExpenseForm" method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="return_to" value="activity_form">
+          <input type="hidden" id="editExpenseId" name="expense_id">
+          
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label required">Category</label>
+              <select name="category" id="editExpenseCategory" class="form-select" required>
+                <option value="Cost of Goods Sold">Cost of Goods Sold</option>
+                <option value="Staff">Staff</option>
+                <option value="Venue">Venue</option>
+                <option value="Equipment Rental">Equipment Rental</option>
+                <option value="Insurance">Insurance</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Travel">Travel</option>
+                <option value="Supplies">Supplies</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label required">Amount ($)</label>
+              <input type="number" name="amount" id="editExpenseAmount" step="0.01" min="0" class="form-control" required>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label required">Date</label>
+              <input type="date" name="date" id="editExpenseDate" class="form-control" required>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Upload Receipt (optional)</label>
+              <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
+            </div>
+            
+            <div class="col-12">
+              <label class="form-label">Description (optional)</label>
+              <textarea name="description" id="editExpenseDescription" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="updateExpenseBtn">
+          <i class="ti ti-check me-2"></i>Update Expense
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Delete Income Confirmation Modal -->
 <div class="modal modal-blur fade" id="deleteIncomeModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -583,6 +776,24 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-danger" id="confirmDeleteIncome">
+          <i class="ti ti-trash me-2"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Expense Confirmation Modal -->
+<div class="modal modal-blur fade" id="deleteExpenseModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-title">Delete Expense Entry?</div>
+        <div>Are you sure you want to delete the <strong id="deleteExpenseCategory"></strong> expense entry? This action cannot be undone.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteExpense">
           <i class="ti ti-trash me-2"></i>Delete
         </button>
       </div>
@@ -1434,6 +1645,65 @@
     document.getElementById('saveIncomeBtn').addEventListener('click', addNewIncome);
     document.getElementById('confirmDeleteIncome').addEventListener('click', deleteIncome);
     
+    // Expense Management Functions
+    let currentDeletingExpenseId = null;
+    const deleteExpenseModal = new bootstrap.Modal(document.getElementById('deleteExpenseModal'));
+    const addExpenseModal = new bootstrap.Modal(document.getElementById('addExpenseModal'));
+    const editExpenseModal = new bootstrap.Modal(document.getElementById('editExpenseModal'));
+    
+    function addNewExpense() {
+      const form = document.getElementById('addExpenseForm');
+      
+      // Validate form
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+      
+      // Show loading state
+      const saveBtn = document.getElementById('saveExpenseBtn');
+      const originalText = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm me-2"></i>Adding...';
+      saveBtn.disabled = true;
+      
+      // Submit form to add expense and return to activity form
+      form.submit();
+    }
+    
+    function editExpense(expenseId) {
+      // For now, redirect to the existing edit page
+      // We can enhance this later with a modal approach
+      window.location.href = `/admin/activity-expenses/{{ activity.id if activity }}/edit/${expenseId}?return_to=activity_form`;
+    }
+    
+    function confirmDeleteExpense(expenseId, category) {
+      currentDeletingExpenseId = expenseId;
+      document.getElementById('deleteExpenseCategory').textContent = category;
+      deleteExpenseModal.show();
+    }
+    
+    function deleteExpense() {
+      if (!currentDeletingExpenseId) return;
+      
+      // Create a form to submit the delete request
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/admin/delete-expense/${currentDeletingExpenseId}?return_to=activity_form`;
+      
+      const csrfToken = document.createElement('input');
+      csrfToken.type = 'hidden';
+      csrfToken.name = 'csrf_token';
+      csrfToken.value = document.querySelector('input[name="csrf_token"]').value;
+      
+      form.appendChild(csrfToken);
+      document.body.appendChild(form);
+      form.submit();
+    }
+    
+    // Event listeners for expense modals
+    document.getElementById('saveExpenseBtn').addEventListener('click', addNewExpense);
+    document.getElementById('confirmDeleteExpense').addEventListener('click', deleteExpense);
+    
     // Function to open receipt in new window
     function openReceiptWindow(receiptUrl) {
       const windowFeatures = 'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,location=no,directories=no,status=no,menubar=no';
@@ -1443,25 +1713,33 @@
     // Make functions global for onclick handlers
     window.editIncome = editIncome;
     window.confirmDeleteIncome = confirmDeleteIncome;
+    window.editExpense = editExpense;
+    window.confirmDeleteExpense = confirmDeleteExpense;
     window.openReceiptWindow = openReceiptWindow;
     
     // Load existing passport types for editing
     {% if passport_types %}
-    {% for pt in passport_types %}
-    const existingPassportType{{ loop.index0 }} = {
-      id: '{{ pt.id }}',
-      name: '{{ pt.name }}',
-      type: '{{ pt.type }}',
-      price_per_user: '{{ pt.price_per_user }}',
-      sessions_included: '{{ pt.sessions_included }}',
-      target_revenue: '{{ pt.target_revenue }}',
-      payment_instructions: {{ (pt.payment_instructions or '')|tojson }}
-    };
-    
-    passportTypes.push(existingPassportType{{ loop.index0 }});
-    const rowHtml{{ loop.index0 }} = createPassportTypeTableRow(existingPassportType{{ loop.index0 }});
-    passportTypesContainer.insertAdjacentHTML('beforeend', rowHtml{{ loop.index0 }});
-    {% endfor %}
+    try {
+      const existingPassportTypesData = {{ passport_types|tojson }};
+      
+      existingPassportTypesData.forEach((pt, index) => {
+        const existingPassportType = {
+          id: pt.id.toString(),
+          name: pt.name,
+          type: pt.type,
+          price_per_user: pt.price_per_user.toString(),
+          sessions_included: pt.sessions_included.toString(),
+          target_revenue: pt.target_revenue.toString(),
+          payment_instructions: pt.payment_instructions || ''
+        };
+        
+        passportTypes.push(existingPassportType);
+        const rowHtml = createPassportTypeTableRow(existingPassportType);
+        passportTypesContainer.insertAdjacentHTML('beforeend', rowHtml);
+      });
+    } catch (error) {
+      console.error('Error loading passport types:', error);
+    }
     {% endif %}
     
     // Initialize
