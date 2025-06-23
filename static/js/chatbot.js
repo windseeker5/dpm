@@ -781,6 +781,97 @@ window.exportChart = function() {
     // TODO: Implement chart export
 };
 
+window.validateModel = async function(modelName) {
+    console.log('🔄 Validating model:', modelName);
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+    
+    if (!statusIndicator || !statusText) {
+        console.error('❌ Status elements not found');
+        return;
+    }
+    
+    // Show yellow/loading state
+    statusIndicator.className = 'badge bg-yellow-lt text-yellow me-2';
+    statusIndicator.innerHTML = '<i class="ti ti-circle-filled"></i>';
+    statusText.textContent = 'Validating...';
+    console.log('🟡 Status set to validating');
+    
+    try {
+        const response = await fetch('/chatbot/status');
+        if (response.ok) {
+            const status = await response.json();
+            console.log('📡 Status response:', status);
+            
+            // Check if the selected model is available
+            let modelAvailable = false;
+            for (const [provider, info] of Object.entries(status)) {
+                if (info.available && info.models && info.models.includes(modelName)) {
+                    modelAvailable = true;
+                    console.log('✅ Model found in provider:', provider);
+                    break;
+                }
+            }
+            
+            if (modelAvailable) {
+                statusIndicator.className = 'badge bg-green-lt text-green me-2';
+                statusIndicator.innerHTML = '<i class="ti ti-circle-filled"></i>';
+                statusText.textContent = 'Model Ready';
+                console.log('🟢 Status set to ready');
+            } else {
+                statusIndicator.className = 'badge bg-red-lt text-red me-2';
+                statusIndicator.innerHTML = '<i class="ti ti-circle-filled"></i>';
+                statusText.textContent = 'Model Offline';
+                console.log('🔴 Status set to offline');
+            }
+        } else {
+            statusIndicator.className = 'badge bg-red-lt text-red me-2';
+            statusIndicator.innerHTML = '<i class="ti ti-circle-filled"></i>';
+            statusText.textContent = 'Connection Error';
+            console.log('🔴 Connection error');
+        }
+    } catch (error) {
+        console.error('💥 Validation error:', error);
+        statusIndicator.className = 'badge bg-red-lt text-red me-2';
+        statusIndicator.innerHTML = '<i class="ti ti-circle-filled"></i>';
+        statusText.textContent = 'Connection Error';
+    }
+};
+
+window.clearSession = function() {
+    if (confirm('Clear the entire chat session? This cannot be undone.')) {
+        // Clear messages container
+        const messagesContainer = document.getElementById('chat-messages');
+        if (messagesContainer) {
+            // Keep only typing indicator
+            const typingIndicator = document.getElementById('typing-indicator');
+            messagesContainer.innerHTML = '';
+            if (typingIndicator) {
+                messagesContainer.appendChild(typingIndicator);
+            }
+        }
+        
+        // Reset session stats
+        if (window.ChatBot) {
+            window.ChatBot.sessionStats = { queries: 0, tokens: 0, cost: 0, totalTime: 0 };
+            window.ChatBot.displaySessionStats();
+            window.ChatBot.saveSessionStats();
+        }
+        
+        // Reset query counter in header
+        const queriesCount = document.getElementById('queries-count');
+        if (queriesCount) {
+            queriesCount.textContent = '0';
+        }
+        
+        // Focus on input
+        const messageInput = document.getElementById('message-input');
+        if (messageInput) {
+            messageInput.focus();
+        }
+    }
+};
+
 // Initialize global ChatBot instance
 window.ChatBot = new ChatBot();
 
