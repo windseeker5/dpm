@@ -105,18 +105,18 @@
                 <div class="card-footer">
                     <!-- Quick Actions -->
                     <div class="mb-3">
-                        <div class="d-flex flex-wrap gap-2">
-                            <button class="btn btn-sm btn-light border" onclick="insertQuickQuery('Show me all unpaid users')" style="border-radius: 20px;">
-                                <i class="ti ti-users me-1 text-primary"></i>
-                                <span class="text-dark">Unpaid Users</span>
+                        <div class="d-flex flex-wrap gap-3">
+                            <button class="btn btn-outline-primary" onclick="insertQuickQuery('Show me all unpaid users')" style="border-radius: 25px; padding: 0.75rem 1.5rem; font-weight: 500;">
+                                <i class="ti ti-users me-2" style="font-size: 1.1rem;"></i>
+                                Unpaid Users
                             </button>
-                            <button class="btn btn-sm btn-light border" onclick="insertQuickQuery('What is our total revenue this month?')" style="border-radius: 20px;">
-                                <i class="ti ti-chart-line me-1 text-success"></i>
-                                <span class="text-dark">Monthly Revenue</span>
+                            <button class="btn btn-outline-success" onclick="insertQuickQuery('What is our total revenue this month?')" style="border-radius: 25px; padding: 0.75rem 1.5rem; font-weight: 500;">
+                                <i class="ti ti-chart-line me-2" style="font-size: 1.1rem;"></i>
+                                Monthly Revenue
                             </button>
-                            <button class="btn btn-sm btn-light border" onclick="insertQuickQuery('List activities with most signups')" style="border-radius: 20px;">
-                                <i class="ti ti-activity me-1 text-warning"></i>
-                                <span class="text-dark">Popular Activities</span>
+                            <button class="btn btn-outline-warning" onclick="insertQuickQuery('List activities with most signups')" style="border-radius: 25px; padding: 0.75rem 1.5rem; font-weight: 500;">
+                                <i class="ti ti-activity me-2" style="font-size: 1.1rem;"></i>
+                                Popular Activities
                             </button>
                         </div>
                     </div>
@@ -136,8 +136,8 @@
                                 required
                                 style="resize: none; padding-right: 50px;"
                             ></textarea>
-                            <button type="submit" id="send-button" class="btn btn-primary position-absolute" style="right: 8px; top: 50%; transform: translateY(-50%); width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <i class="ti ti-send"></i>
+                            <button type="submit" id="send-button" class="btn position-absolute" style="right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; display: flex; align-items: center; justify-content: center;">
+                                <i class="ti ti-send" style="font-size: 1.5rem; color: #007bff;"></i>
                             </button>
                             <button type="button" id="stop-button" class="btn btn-outline-secondary position-absolute" style="right: 8px; top: 50%; transform: translateY(-50%); width: 35px; height: 35px; border-radius: 50%; display: none; align-items: center; justify-content: center;" onclick="stopGeneration()">
                                 <div class="spinner-border spinner-border-sm" role="status" style="width: 16px; height: 16px;">
