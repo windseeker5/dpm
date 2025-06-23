@@ -456,6 +456,13 @@
     box-shadow: none !important;
 }
 
+#message-input {
+    display: flex !important;
+    align-items: center !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+}
+
 #message-input:focus {
     border-color: #f59e0b !important;
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1) !important;

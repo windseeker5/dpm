@@ -128,7 +128,7 @@ class ChatBot {
         } catch (error) {
             console.error('💥 Error sending message:', error);
             this.hideTypingIndicator();
-            this.addMessage('error', 'Failed to send message. Please try again.');
+            this.addMessage('error', `Failed to send message: ${error.message}. Please check your connection and try again.`);
         } finally {
             console.log('✅ Processing complete');
             this.setProcessing(false);
@@ -164,8 +164,14 @@ class ChatBot {
         this.currentRequest = null;
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Request failed');
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorMessage;
+            } catch (e) {
+                console.warn('Could not parse error response as JSON');
+            }
+            throw new Error(errorMessage);
         }
 
         return await response.json();
