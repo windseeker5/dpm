@@ -106,6 +106,7 @@ class QueryEngine:
             
             # Clean and validate the generated SQL
             sql = self._clean_generated_sql(ai_response.content)
+            print(f"🤖 Generated SQL: {sql}")
             
             return {
                 'success': True,
@@ -168,11 +169,13 @@ class QueryEngine:
             self.schema_cache = schema
             self.schema_cache_time = datetime.now()
             
+            print(f"✅ Schema fetched successfully: {len(schema)} tables")
             return schema
             
         except Exception as e:
             # Return a basic schema if we can't fetch the real one
-            current_app.logger.error(f"Failed to fetch database schema: {e}")
+            current_app.logger.error(f"Failed to fetch database schema from {self.db_path}: {e}")
+            print(f"❌ Schema fetch failed: {e}")
             return self._get_fallback_schema()
     
     def _get_fallback_schema(self) -> Dict[str, List[Dict[str, str]]]:
@@ -188,13 +191,70 @@ class QueryEngine:
                 {'name': 'id', 'type': 'INTEGER', 'nullable': False, 'primary_key': True},
                 {'name': 'name', 'type': 'VARCHAR(150)', 'nullable': False, 'primary_key': False},
                 {'name': 'type', 'type': 'VARCHAR(50)', 'nullable': True, 'primary_key': False},
-                {'name': 'status', 'type': 'VARCHAR(50)', 'nullable': True, 'primary_key': False}
+                {'name': 'description', 'type': 'TEXT', 'nullable': True, 'primary_key': False},
+                {'name': 'start_date', 'type': 'DATETIME', 'nullable': True, 'primary_key': False},
+                {'name': 'end_date', 'type': 'DATETIME', 'nullable': True, 'primary_key': False},
+                {'name': 'status', 'type': 'VARCHAR(50)', 'nullable': True, 'primary_key': False},
+                {'name': 'created_dt', 'type': 'DATETIME', 'nullable': True, 'primary_key': False}
             ],
             'passport': [
                 {'name': 'id', 'type': 'INTEGER', 'nullable': False, 'primary_key': True},
+                {'name': 'pass_code', 'type': 'VARCHAR(16)', 'nullable': False, 'primary_key': False},
                 {'name': 'user_id', 'type': 'INTEGER', 'nullable': False, 'primary_key': False},
                 {'name': 'activity_id', 'type': 'INTEGER', 'nullable': False, 'primary_key': False},
-                {'name': 'paid', 'type': 'BOOLEAN', 'nullable': True, 'primary_key': False}
+                {'name': 'passport_type_id', 'type': 'INTEGER', 'nullable': True, 'primary_key': False},
+                {'name': 'passport_type_name', 'type': 'VARCHAR(100)', 'nullable': True, 'primary_key': False},
+                {'name': 'sold_amt', 'type': 'FLOAT', 'nullable': True, 'primary_key': False},
+                {'name': 'uses_remaining', 'type': 'INTEGER', 'nullable': True, 'primary_key': False},
+                {'name': 'paid', 'type': 'BOOLEAN', 'nullable': True, 'primary_key': False},
+                {'name': 'paid_date', 'type': 'DATETIME', 'nullable': True, 'primary_key': False},
+                {'name': 'created_dt', 'type': 'DATETIME', 'nullable': True, 'primary_key': False},
+                {'name': 'notes', 'type': 'TEXT', 'nullable': True, 'primary_key': False}
+            ],
+            'passport_type': [
+                {'name': 'id', 'type': 'INTEGER', 'nullable': False, 'primary_key': True},
+                {'name': 'activity_id', 'type': 'INTEGER', 'nullable': False, 'primary_key': False},
+                {'name': 'name', 'type': 'VARCHAR(100)', 'nullable': False, 'primary_key': False},
+                {'name': 'type', 'type': 'VARCHAR(50)', 'nullable': False, 'primary_key': False},
+                {'name': 'price_per_user', 'type': 'FLOAT', 'nullable': True, 'primary_key': False},
+                {'name': 'sessions_included', 'type': 'INTEGER', 'nullable': True, 'primary_key': False},
+                {'name': 'target_revenue', 'type': 'FLOAT', 'nullable': True, 'primary_key': False},
+                {'name': 'status', 'type': 'VARCHAR(50)', 'nullable': True, 'primary_key': False},
+                {'name': 'created_dt', 'type': 'DATETIME', 'nullable': True, 'primary_key': False}
+            ],
+            'signup': [
+                {'name': 'id', 'type': 'INTEGER', 'nullable': False, 'primary_key': True},
+                {'name': 'user_id', 'type': 'INTEGER', 'nullable': False, 'primary_key': False},
+                {'name': 'activity_id', 'type': 'INTEGER', 'nullable': False, 'primary_key': False},
+                {'name': 'passport_type_id', 'type': 'INTEGER', 'nullable': True, 'primary_key': False},
+                {'name': 'subject', 'type': 'VARCHAR(200)', 'nullable': True, 'primary_key': False},
+                {'name': 'signed_up_at', 'type': 'DATETIME', 'nullable': True, 'primary_key': False},
+                {'name': 'paid', 'type': 'BOOLEAN', 'nullable': True, 'primary_key': False},
+                {'name': 'paid_at', 'type': 'DATETIME', 'nullable': True, 'primary_key': False},
+                {'name': 'passport_id', 'type': 'INTEGER', 'nullable': True, 'primary_key': False},
+                {'name': 'status', 'type': 'VARCHAR(50)', 'nullable': True, 'primary_key': False}
+            ],
+            'expense': [
+                {'name': 'id', 'type': 'INTEGER', 'nullable': False, 'primary_key': True},
+                {'name': 'activity_id', 'type': 'INTEGER', 'nullable': False, 'primary_key': False},
+                {'name': 'date', 'type': 'DATETIME', 'nullable': True, 'primary_key': False},
+                {'name': 'category', 'type': 'VARCHAR(100)', 'nullable': False, 'primary_key': False},
+                {'name': 'amount', 'type': 'FLOAT', 'nullable': False, 'primary_key': False},
+                {'name': 'description', 'type': 'TEXT', 'nullable': True, 'primary_key': False},
+                {'name': 'created_by', 'type': 'VARCHAR(100)', 'nullable': True, 'primary_key': False}
+            ],
+            'income': [
+                {'name': 'id', 'type': 'INTEGER', 'nullable': False, 'primary_key': True},
+                {'name': 'activity_id', 'type': 'INTEGER', 'nullable': False, 'primary_key': False},
+                {'name': 'date', 'type': 'DATETIME', 'nullable': True, 'primary_key': False},
+                {'name': 'category', 'type': 'VARCHAR(100)', 'nullable': False, 'primary_key': False},
+                {'name': 'amount', 'type': 'FLOAT', 'nullable': False, 'primary_key': False},
+                {'name': 'note', 'type': 'TEXT', 'nullable': True, 'primary_key': False},
+                {'name': 'created_by', 'type': 'VARCHAR(100)', 'nullable': True, 'primary_key': False}
+            ],
+            'admin': [
+                {'name': 'id', 'type': 'INTEGER', 'nullable': False, 'primary_key': True},
+                {'name': 'email', 'type': 'VARCHAR(100)', 'nullable': False, 'primary_key': False}
             ]
         }
     
@@ -225,12 +285,24 @@ IMPORTANT RULES:
 7. Add appropriate WHERE clauses to filter results
 8. Use LIMIT to avoid returning too many rows
 
+KEY RELATIONSHIPS:
+- Revenue/Price data: passport.sold_amt (actual revenue) or passport_type.price_per_user (listed price)
+- Financial data: expense.amount, income.amount
+- User data: Always join through user table
+- Payment status: passport.paid (boolean), signup.paid (boolean)
+
 Examples:
 Question: "Show me all users"
 Answer: SELECT * FROM user LIMIT 100
 
 Question: "Find unpaid passports"  
 Answer: SELECT u.name, u.email, a.name as activity_name FROM passport p JOIN user u ON p.user_id = u.id JOIN activity a ON p.activity_id = a.id WHERE p.paid = 0 LIMIT 100
+
+Question: "What is our total revenue this month?"
+Answer: SELECT SUM(p.sold_amt) as total_revenue FROM passport p WHERE p.paid = 1 AND DATE(p.paid_date) >= DATE('now', 'start of month')
+
+Question: "Show users who didn't pay for Golf 2025"
+Answer: SELECT u.name, u.email, p.sold_amt FROM passport p JOIN user u ON p.user_id = u.id JOIN activity a ON p.activity_id = a.id WHERE a.name LIKE '%Golf%' AND a.name LIKE '%2025%' AND p.paid = 0 LIMIT 100
 
 Now generate a SQL query for the following question:"""
     
