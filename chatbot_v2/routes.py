@@ -110,6 +110,7 @@ def ask_question():
         
         # Get database path from app config
         db_path = current_app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "")
+        print(f"🔍 Using database path: {db_path}")
         
         # Create query engine and process question
         query_engine = create_query_engine(db_path)
