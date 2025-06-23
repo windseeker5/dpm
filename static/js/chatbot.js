@@ -120,9 +120,6 @@ class ChatBot {
                 
                 // Update session stats
                 this.updateSessionStats(response);
-                
-                // Show results in sidebar
-                this.displayResults(response);
             } else {
                 console.error('❌ Response error:', response.error);
                 this.addMessage('error', response.error || 'An error occurred');
@@ -193,14 +190,20 @@ class ChatBot {
      * Add assistant message with SQL and chart data
      */
     addAssistantMessage(response) {
-        const messageElement = this.addMessage('assistant', 
-            `Found ${response.row_count || 0} results`, {
-            sql: response.sql,
+        let content = `Found ${response.row_count || 0} results`;
+        
+        // Add table data if available
+        if (response.rows && response.rows.length > 0) {
+            content += '\n\n' + this.generateResultsTable(response.columns, response.rows);
+        }
+        
+        const messageElement = this.addMessage('assistant', content, {
             chartData: response.chart_suggestion,
             provider: response.ai_provider,
             model: response.ai_model,
             tokens: response.tokens_used || 0,
-            time: response.processing_time_ms || 0
+            time: response.processing_time_ms || 0,
+            hasTable: response.rows && response.rows.length > 0
         });
 
         // Add chart if available
@@ -221,24 +224,10 @@ class ChatBot {
         let messageHTML = `
             <div class="message-content">
                 <div class="message-bubble">
-                    <div class="message-text">${this.escapeHtml(content)}</div>
+                    <div class="message-text">${metadata.hasTable ? content : this.escapeHtml(content)}</div>
         `;
 
-        // Add SQL if present
-        if (metadata.sql) {
-            const sqlId = 'sql-' + Date.now();
-            messageHTML += `
-                <div class="message-sql">
-                    <div class="sql-header">
-                        <i class="ti ti-code me-1"></i>Generated SQL
-                        <button class="btn btn-sm btn-outline-primary" onclick="ChatBot.copySQL('${sqlId}')">
-                            <i class="ti ti-copy"></i>
-                        </button>
-                    </div>
-                    <pre class="sql-code" id="${sqlId}"><code>${this.escapeHtml(metadata.sql)}</code></pre>
-                </div>
-            `;
-        }
+        // SQL is hidden from users - they don't need to see it
 
         messageHTML += `</div>`;
 
@@ -362,41 +351,57 @@ class ChatBot {
         return config;
     }
 
-    /**
-     * Display results in sidebar
-     */
-    displayResults(response) {
-        const resultsCard = document.getElementById('results-card');
-        const resultsContent = document.getElementById('results-content');
-        
-        if (!resultsCard || !resultsContent) return;
-
-        if (response.rows && response.rows.length > 0) {
-            resultsContent.innerHTML = this.generateResultsTable(response.columns, response.rows);
-            resultsCard.style.display = 'block';
-        } else {
-            resultsCard.style.display = 'none';
-        }
-    }
 
     /**
-     * Generate results table HTML
+     * Generate results table HTML for chat messages
      */
     generateResultsTable(columns, rows) {
-        let html = `
-            <div class="table-responsive">
-                <table class="table table-sm results-table">
-                    <thead>
-                        <tr>
-        `;
+        // For small result sets, show as a simple table
+        if (rows.length <= 10) {
+            let html = `<div class="table-responsive mt-3">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>`;
+            
+            columns.forEach(col => {
+                html += `<th class="fw-bold">${this.escapeHtml(col)}</th>`;
+            });
+            
+            html += `</tr></thead><tbody>`;
+            
+            rows.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td>${this.escapeHtml(String(cell || ''))}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += `</tbody></table></div>`;
+            return html;
+        }
+        
+        // For larger result sets, show summary with expandable table
+        let html = `<div class="mt-3">
+            <div class="d-flex align-items-center mb-2">
+                <strong>Results (${rows.length} rows)</strong>
+                <button class="btn btn-sm btn-outline-primary ms-auto" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                    <i class="ti ti-eye me-1"></i>View Table
+                </button>
+            </div>
+            <div class="table-responsive d-none">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>`;
         
         columns.forEach(col => {
-            html += `<th>${this.escapeHtml(col)}</th>`;
+            html += `<th class="fw-bold">${this.escapeHtml(col)}</th>`;
         });
         
         html += `</tr></thead><tbody>`;
         
-        rows.forEach(row => {
+        // Show first 50 rows
+        rows.slice(0, 50).forEach(row => {
             html += '<tr>';
             row.forEach(cell => {
                 html += `<td>${this.escapeHtml(String(cell || ''))}</td>`;
@@ -404,11 +409,13 @@ class ChatBot {
             html += '</tr>';
         });
         
-        html += '</tbody></table></div>';
+        html += `</tbody></table>`;
         
-        if (rows.length === 1000) {
-            html += '<div class="alert alert-info mt-2"><small>Results limited to 1000 rows</small></div>';
+        if (rows.length > 50) {
+            html += `<div class="text-muted small">Showing first 50 of ${rows.length} rows</div>`;
         }
+        
+        html += `</div></div>`;
         
         return html;
     }
@@ -660,6 +667,11 @@ class ChatBot {
     }
 
     getSelectedModel() {
+        // Get selected model from header dropdown
+        const modelSelector = document.getElementById('model-selector-header');
+        if (modelSelector && modelSelector.value) {
+            return modelSelector.value;
+        }
         // Default to first available model
         return this.config.availableModels?.[0]?.model || 'dolphin-mistral:latest';
     }
