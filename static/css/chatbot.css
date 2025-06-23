@@ -98,6 +98,10 @@
     flex-direction: column;
 }
 
+.message.assistant .message-content {
+    max-width: 95% !important;
+}
+
 .message.user .message-content {
     align-items: flex-end;
 }
@@ -137,6 +141,13 @@
     border: none !important;
     border-bottom-left-radius: 0.25rem;
     box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.message.assistant .message-content {
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 /* System Messages */
