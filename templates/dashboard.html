@@ -35,7 +35,7 @@
     
     <!-- Revenue -->
     <div class="col-sm-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+      <div class="card kpi-card-rounded" style="border-radius: 8px !important;">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Revenue</div>
@@ -62,7 +62,7 @@
 
     <!-- Active Passports -->
     <div class="col-sm-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+      <div class="card kpi-card-rounded" style="border-radius: 8px !important;">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Active Passports</div>
@@ -89,7 +89,7 @@
 
     <!-- Passports Created -->
     <div class="col-sm-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+      <div class="card kpi-card-rounded" style="border-radius: 8px !important;">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Passports Created</div>
@@ -116,7 +116,7 @@
 
     <!-- Pending Signups -->
     <div class="col-sm-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+      <div class="card kpi-card-rounded" style="border-radius: 8px !important;">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Pending Signups</div>
@@ -334,8 +334,13 @@ document.addEventListener("DOMContentLoaded", function () {
               },
               label: function(context) {
                 const metric = ctxId.replace('-sparkline', '');
-                const prefix = metric === 'revenue' ? '$' : '';
-                return `${prefix}${context.parsed.y.toLocaleString()}`;
+                if (metric === 'revenue') {
+                  // For revenue, show actual dollar amount not quantity
+                  return `$${context.parsed.y.toLocaleString()}`;
+                } else {
+                  // For other metrics, show the number
+                  return `${context.parsed.y.toLocaleString()}`;
+                }
               }
             }
           }
@@ -389,14 +394,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const val = metric === "revenue" ? `$${current.toLocaleString()}` : current;
     const trendElement = document.querySelector(`#${id}-trend`);
-    const trendClass = percent >= 0 ? 'text-success' : 'text-danger';
+    
+    // Fix trend colors and icons like Tabler reference
+    let trendClass, arrow;
+    if (parseFloat(percent) === 0) {
+      trendClass = 'text-warning'; // Orange for 0%
+      arrow = '—'; // Dash for no change
+    } else if (parseFloat(percent) > 0) {
+      trendClass = 'text-success'; // Green for positive
+      arrow = '↗';
+    } else {
+      trendClass = 'text-danger'; // Red for negative
+      arrow = '↘';
+    }
     
     // Update value
     document.querySelector(`#${id}-value`).textContent = val;
     
-    // Update trend (simplified for new layout)
-    trendElement.className = trendClass;
-    const arrow = percent >= 0 ? '↗' : '↘';
+    // Update trend with proper styling
+    trendElement.className = `${trendClass} d-flex align-items-center`;
+    trendElement.style.fontSize = '0.875rem';
+    trendElement.style.fontWeight = '500';
     trendElement.textContent = `${percent}% ${arrow}`;
 
     // Update dropdown text and active state
