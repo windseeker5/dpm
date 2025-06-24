@@ -31,145 +31,113 @@
 
 
   <!-- KPI Cards -->
-  <div class="row g-3 mb-4 d-none d-md-flex">
-  
+  <div class="row g-3 mb-4">
+    
     <!-- Revenue -->
-    <div class="col-md-3">
-      <div class="card">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="subheader">Revenue</div>
-            <div class="ms-auto lh-1">
-              <div class="dropdown">
-                <a class="dropdown-toggle text-secondary" id="revenue-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Select time range for revenue">Last 7 days</a>
-                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-dropdown">
-                  <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                  <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
-                  <a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a>
-                  <a class="dropdown-item revenue-option" href="#" data-period="all">All time</a>
-                </div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Revenue</div>
+            <div class="dropdown">
+              <a class="dropdown-toggle text-secondary" id="revenue-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-dropdown">
+                <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
+                <a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a>
+                <a class="dropdown-item revenue-option" href="#" data-period="all">All time</a>
               </div>
             </div>
           </div>
-          <div class="d-flex align-items-baseline">
-            <div class="h1 mb-0 me-2" id="revenue-value">$0</div>
-            <div class="me-auto">
-              <span class="text-green d-inline-flex align-items-center lh-1" id="revenue-trend">
-                0%
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
-                  <path d="M3 17l6 -6l4 4l8 -8"></path>
-                  <path d="M14 7l7 0l0 7"></path>
-                </svg>
-              </span>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="h2 mb-0" id="revenue-value" style="font-weight: 600;">$0</div>
+            <div class="text-success d-flex align-items-center" id="revenue-trend" style="font-size: 0.875rem; font-weight: 500;">
+              8% ↗
             </div>
           </div>
+          <div id="revenue-sparkline" style="height: 48px;"></div>
         </div>
-        <div id="revenue-sparkline" class="position-relative chart-sm" style="min-height: 40px;"></div>
       </div>
     </div>
 
     <!-- Active Passports -->
-    <div class="col-md-3">
-      <div class="card">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="subheader">Active Passports</div>
-            <div class="ms-auto lh-1">
-              <div class="dropdown">
-                <a class="dropdown-toggle text-secondary" id="users-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Select time range for active passports">Last 7 days</a>
-                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-dropdown">
-                  <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                  <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
-                  <a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a>
-                  <a class="dropdown-item users-option" href="#" data-period="all">All time</a>
-                </div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Active Passports</div>
+            <div class="dropdown">
+              <a class="dropdown-toggle text-secondary" id="users-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-dropdown">
+                <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
+                <a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a>
+                <a class="dropdown-item users-option" href="#" data-period="all">All time</a>
               </div>
             </div>
           </div>
-          <div class="d-flex align-items-baseline">
-            <div class="h1 mb-0 me-2" id="users-value">0</div>
-            <div class="me-auto">
-              <span class="text-green d-inline-flex align-items-center lh-1" id="users-trend">
-                0%
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
-                  <path d="M3 17l6 -6l4 4l8 -8"></path>
-                  <path d="M14 7l7 0l0 7"></path>
-                </svg>
-              </span>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="h2 mb-0" id="users-value" style="font-weight: 600;">0</div>
+            <div class="text-warning d-flex align-items-center" id="users-trend" style="font-size: 0.875rem; font-weight: 500;">
+              0% —
             </div>
           </div>
+          <div id="users-sparkline" style="height: 48px;"></div>
         </div>
-        <div id="users-sparkline" class="position-relative chart-sm" style="min-height: 40px;"></div>
       </div>
     </div>
 
     <!-- Passports Created -->
-    <div class="col-md-3">
-      <div class="card">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="subheader">Passports Created</div>
-            <div class="ms-auto lh-1">
-              <div class="dropdown">
-                <a class="dropdown-toggle text-secondary" id="passes-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Select time range for passports created">Last 7 days</a>
-                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-dropdown">
-                  <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                  <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
-                  <a class="dropdown-item passes-option" href="#" data-period="90d">Last 90 days</a>
-                  <a class="dropdown-item passes-option" href="#" data-period="all">All time</a>
-                </div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Passports Created</div>
+            <div class="dropdown">
+              <a class="dropdown-toggle text-secondary" id="passes-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-dropdown">
+                <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
+                <a class="dropdown-item passes-option" href="#" data-period="90d">Last 90 days</a>
+                <a class="dropdown-item passes-option" href="#" data-period="all">All time</a>
               </div>
             </div>
           </div>
-          <div class="d-flex align-items-baseline">
-            <div class="h1 mb-0 me-2" id="passes-value">0</div>
-            <div class="me-auto">
-              <span class="text-green d-inline-flex align-items-center lh-1" id="passes-trend">
-                0%
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
-                  <path d="M3 17l6 -6l4 4l8 -8"></path>
-                  <path d="M14 7l7 0l0 7"></path>
-                </svg>
-              </span>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="h2 mb-0" id="passes-value" style="font-weight: 600;">0</div>
+            <div class="text-success d-flex align-items-center" id="passes-trend" style="font-size: 0.875rem; font-weight: 500;">
+              4% ↗
             </div>
           </div>
+          <div id="passes-sparkline" style="height: 48px;"></div>
         </div>
-        <div id="passes-sparkline" class="position-relative chart-sm" style="min-height: 40px;"></div>
       </div>
     </div>
 
     <!-- Pending Signups -->
-    <div class="col-md-3">
-      <div class="card">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="subheader">Pending Signups</div>
-            <div class="ms-auto lh-1">
-              <div class="dropdown">
-                <a class="dropdown-toggle text-secondary" id="pending-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Select time range for pending signups">Last 7 days</a>
-                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-dropdown">
-                  <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                  <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
-                  <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
-                  <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
-                </div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Pending Signups</div>
+            <div class="dropdown">
+              <a class="dropdown-toggle text-secondary" id="pending-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-dropdown">
+                <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
+                <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
+                <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
               </div>
             </div>
           </div>
-          <div class="d-flex align-items-baseline">
-            <div class="h1 mb-0 me-2" id="pending-value">0</div>
-            <div class="me-auto">
-              <span class="text-green d-inline-flex align-items-center lh-1" id="pending-trend">
-                0%
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
-                  <path d="M3 17l6 -6l4 4l8 -8"></path>
-                  <path d="M14 7l7 0l0 7"></path>
-                </svg>
-              </span>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="h2 mb-0" id="pending-value" style="font-weight: 600;">0</div>
+            <div class="text-success d-flex align-items-center" id="pending-trend" style="font-size: 0.875rem; font-weight: 500;">
+              0% ↗
             </div>
           </div>
+          <div id="pending-sparkline" style="height: 48px;"></div>
         </div>
-        <div id="pending-sparkline" class="position-relative chart-sm" style="min-height: 40px;"></div>
       </div>
     </div>
   </div>
@@ -317,38 +285,60 @@ document.addEventListener("DOMContentLoaded", function () {
     // Only show chart if we have any meaningful data
     if (!trendList || trendList.length === 0 || maxValue <= 0) {
       // Just leave container empty when no data
-      container.style.height = '40px';
+      container.style.height = '48px';
       return;
     }
     
     // Create canvas element
     const canvas = document.createElement('canvas');
-    canvas.width = container.offsetWidth || 300;
-    canvas.height = 40;
+    canvas.width = container.offsetWidth || 280;
+    canvas.height = 48;
     container.appendChild(canvas);
     
     const ctx = canvas.getContext("2d");
     new Chart(ctx, {
-      type: chartType,
+      type: chartType === "bar" ? "bar" : "line",
       data: {
-        labels: trendList.map((_, i) => i + 1),
+        labels: trendList.map((_, i) => `Day ${i + 1}`),
         datasets: [{
           data: trendList,
           backgroundColor: chartType === "bar" ? "#206bc4" : "rgba(32,107,196,0.1)",
-          borderColor: chartType === "line" ? "#206bc4" : "transparent",
+          borderColor: "#206bc4",
           fill: chartType === "line",
           tension: 0.4,
-          borderWidth: chartType === "line" ? 2 : 0,
+          borderWidth: 2,
           pointRadius: 0,
+          pointHoverRadius: 4,
           spanGaps: false
         }]
       },
       options: {
-        responsive: false,
+        responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { enabled: false }
+          tooltip: { 
+            enabled: true,
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: '#206bc4',
+            borderWidth: 1,
+            cornerRadius: 6,
+            displayColors: false,
+            callbacks: {
+              title: function(context) {
+                return context[0].label;
+              },
+              label: function(context) {
+                const metric = ctxId.replace('-sparkline', '');
+                const prefix = metric === 'revenue' ? '$' : '';
+                return `${prefix}${context.parsed.y.toLocaleString()}`;
+              }
+            }
+          }
         },
         scales: {
           x: { 
@@ -376,14 +366,16 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         },
         elements: {
-          point: { radius: 0 },
-          line: { borderWidth: 2 }
+          point: { radius: 0, hoverRadius: 4 },
+          line: { borderWidth: 2 },
+          bar: { borderRadius: 2 }
         },
         layout: {
-          padding: 5
+          padding: 4
         },
         interaction: {
-          intersect: false
+          intersect: false,
+          mode: 'index'
         }
       }
     });
@@ -397,20 +389,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const val = metric === "revenue" ? `$${current.toLocaleString()}` : current;
     const trendElement = document.querySelector(`#${id}-trend`);
-    const trendClass = percent >= 0 ? 'text-green' : 'text-red';
+    const trendClass = percent >= 0 ? 'text-success' : 'text-danger';
     
     // Update value
     document.querySelector(`#${id}-value`).textContent = val;
     
-    // Update trend with icon
-    trendElement.className = `${trendClass} d-inline-flex align-items-center lh-1`;
-    trendElement.innerHTML = `
-      ${percent}%
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
-        <path d="M3 17l6 -6l4 4l8 -8"></path>
-        <path d="M14 7l7 0l0 7"></path>
-      </svg>
-    `;
+    // Update trend (simplified for new layout)
+    trendElement.className = trendClass;
+    const arrow = percent >= 0 ? '↗' : '↘';
+    trendElement.textContent = `${percent}% ${arrow}`;
 
     // Update dropdown text and active state
     const periodText = {
@@ -457,6 +444,9 @@ document.addEventListener("DOMContentLoaded", function () {
 <style>
 .card {
   background-color: #fff !important;
+  border: 1px solid #e6e7e9;
+  border-radius: 16px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .table {
@@ -467,10 +457,77 @@ document.addEventListener("DOMContentLoaded", function () {
   background-color: #fff !important;
 }
 
-.chart-sm canvas {
-  display: block;
+/* KPI Card specific styling */
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Force rounded corners on KPI cards */
+.kpi-card-rounded {
+  border-radius: 16px !important;
+  overflow: hidden;
+  -webkit-border-radius: 16px !important;
+  -moz-border-radius: 16px !important;
+}
+
+.kpi-card-rounded .card-body {
+  border-radius: 16px !important;
+}
+
+/* Additional CSS for rounded corners */
+div.card.kpi-card-rounded {
+  border-radius: 16px !important;
+}
+
+.row .col-sm-6 .card.kpi-card-rounded,
+.row .col-lg-3 .card.kpi-card-rounded {
+  border-radius: 16px !important;
+}
+
+.h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+/* Chart container styling */
+#revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline {
+  height: 48px;
+  width: 100%;
+  position: relative;
+}
+
+#revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas {
   width: 100% !important;
-  height: 40px !important;
+  height: 48px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .h2 {
+    font-size: 1.5rem;
+  }
+  
+  #revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline {
+    height: 40px;
+  }
+  
+  #revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas {
+    height: 40px !important;
+  }
+}
+
+/* Hover effects */
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.2s ease-in-out;
+  transform: translateY(-1px);
+  transition: all 0.2s ease-in-out;
 }
 </style>
 {% endblock %}
