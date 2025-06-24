@@ -48,6 +48,38 @@
   background-color: #fff !important;
 }
 
+/* KPI Cards - Rounded corners */
+.kpi-card-rounded,
+div.card.kpi-card-rounded,
+.card.kpi-card-rounded,
+.row .col-sm-6 .card.kpi-card-rounded,
+.row .col-lg-3 .card.kpi-card-rounded {
+  border-radius: 16px !important;
+  -webkit-border-radius: 16px !important;
+  -moz-border-radius: 16px !important;
+  overflow: visible !important;
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+  border-bottom-left-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+  position: relative;
+}
+
+.kpi-card-rounded .card-body {
+  border-radius: 16px !important;
+}
+
+/* Fix dropdown z-index and positioning */
+.kpi-card-rounded .dropdown {
+  position: relative;
+  z-index: 1050;
+}
+
+.kpi-card-rounded .dropdown-menu {
+  z-index: 1055 !important;
+  position: absolute !important;
+}
+
 /* Ensure all table elements have white backgrounds */
 .table {
   background-color: #fff !important;
