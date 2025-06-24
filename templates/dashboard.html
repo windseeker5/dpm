@@ -35,260 +35,145 @@
   
     <!-- Revenue -->
     <div class="col-md-3">
-      <div class="card card-sm h-100">
+      <div class="card">
         <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Revenue</div>
-              <div class="h2 mb-1" id="revenue-value">$0</div>
-              <div class="small" id="revenue-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="revenue-period">Last 7 days</a>
-              <div class="dropdown-menu">
-                <a class="dropdown-item revenue-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item revenue-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item revenue-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item revenue-option" data-period="all">All time</a>
+          <div class="d-flex align-items-center">
+            <div class="subheader">Revenue</div>
+            <div class="ms-auto lh-1">
+              <div class="dropdown">
+                <a class="dropdown-toggle text-secondary" id="revenue-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Select time range for revenue">Last 7 days</a>
+                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-dropdown">
+                  <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                  <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
+                  <a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a>
+                  <a class="dropdown-item revenue-option" href="#" data-period="all">All time</a>
+                </div>
               </div>
             </div>
           </div>
-          <canvas id="revenue-sparkline" height="30" class="mt-2 w-100"></canvas>
+          <div class="d-flex align-items-baseline">
+            <div class="h1 mb-0 me-2" id="revenue-value">$0</div>
+            <div class="me-auto">
+              <span class="text-green d-inline-flex align-items-center lh-1" id="revenue-trend">
+                0%
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
+                  <path d="M3 17l6 -6l4 4l8 -8"></path>
+                  <path d="M14 7l7 0l0 7"></path>
+                </svg>
+              </span>
+            </div>
+          </div>
         </div>
+        <div id="revenue-sparkline" class="position-relative chart-sm" style="min-height: 40px;"></div>
       </div>
     </div>
 
     <!-- Active Passports -->
     <div class="col-md-3">
-      <div class="card card-sm h-100">
+      <div class="card">
         <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Active Passports</div>
-              <div class="h2 mb-1" id="users-value">0</div>
-              <div class="small" id="users-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="users-period">Last 7 days</a>
-              <div class="dropdown-menu">
-                <a class="dropdown-item users-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item users-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item users-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item users-option" data-period="all">All time</a>
+          <div class="d-flex align-items-center">
+            <div class="subheader">Active Passports</div>
+            <div class="ms-auto lh-1">
+              <div class="dropdown">
+                <a class="dropdown-toggle text-secondary" id="users-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Select time range for active passports">Last 7 days</a>
+                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-dropdown">
+                  <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                  <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
+                  <a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a>
+                  <a class="dropdown-item users-option" href="#" data-period="all">All time</a>
+                </div>
               </div>
             </div>
           </div>
-          <canvas id="users-sparkline" height="30" class="mt-2 w-100"></canvas>
+          <div class="d-flex align-items-baseline">
+            <div class="h1 mb-0 me-2" id="users-value">0</div>
+            <div class="me-auto">
+              <span class="text-green d-inline-flex align-items-center lh-1" id="users-trend">
+                0%
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
+                  <path d="M3 17l6 -6l4 4l8 -8"></path>
+                  <path d="M14 7l7 0l0 7"></path>
+                </svg>
+              </span>
+            </div>
+          </div>
         </div>
+        <div id="users-sparkline" class="position-relative chart-sm" style="min-height: 40px;"></div>
       </div>
     </div>
 
     <!-- Passports Created -->
     <div class="col-md-3">
-      <div class="card card-sm h-100">
+      <div class="card">
         <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Passports Created</div>
-              <div class="h2 mb-1" id="passes-value">0</div>
-              <div class="small" id="passes-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="passes-period">Last 7 days</a>
-              <div class="dropdown-menu">
-                <a class="dropdown-item passes-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item passes-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item passes-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item passes-option" data-period="all">All time</a>
+          <div class="d-flex align-items-center">
+            <div class="subheader">Passports Created</div>
+            <div class="ms-auto lh-1">
+              <div class="dropdown">
+                <a class="dropdown-toggle text-secondary" id="passes-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Select time range for passports created">Last 7 days</a>
+                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-dropdown">
+                  <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                  <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
+                  <a class="dropdown-item passes-option" href="#" data-period="90d">Last 90 days</a>
+                  <a class="dropdown-item passes-option" href="#" data-period="all">All time</a>
+                </div>
               </div>
             </div>
           </div>
-          <canvas id="passes-sparkline" height="30" class="mt-2 w-100"></canvas>
+          <div class="d-flex align-items-baseline">
+            <div class="h1 mb-0 me-2" id="passes-value">0</div>
+            <div class="me-auto">
+              <span class="text-green d-inline-flex align-items-center lh-1" id="passes-trend">
+                0%
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
+                  <path d="M3 17l6 -6l4 4l8 -8"></path>
+                  <path d="M14 7l7 0l0 7"></path>
+                </svg>
+              </span>
+            </div>
+          </div>
         </div>
+        <div id="passes-sparkline" class="position-relative chart-sm" style="min-height: 40px;"></div>
       </div>
     </div>
 
     <!-- Pending Signups -->
     <div class="col-md-3">
-      <div class="card card-sm h-100">
+      <div class="card">
         <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <div>
-              <div class="text-muted text-uppercase small">Pending Signups</div>
-              <div class="h2 mb-1" id="pending-value">0</div>
-              <div class="small" id="pending-trend">0%</div>
-            </div>
-            <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="pending-period">Last 7 days</a>
-              <div class="dropdown-menu">
-                <a class="dropdown-item pending-option" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item pending-option" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item pending-option" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item pending-option" data-period="all">All time</a>
+          <div class="d-flex align-items-center">
+            <div class="subheader">Pending Signups</div>
+            <div class="ms-auto lh-1">
+              <div class="dropdown">
+                <a class="dropdown-toggle text-secondary" id="pending-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Select time range for pending signups">Last 7 days</a>
+                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-dropdown">
+                  <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                  <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
+                  <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
+                  <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
+                </div>
               </div>
             </div>
           </div>
-          <canvas id="pending-sparkline" height="30" class="mt-2 w-100"></canvas>
+          <div class="d-flex align-items-baseline">
+            <div class="h1 mb-0 me-2" id="pending-value">0</div>
+            <div class="me-auto">
+              <span class="text-green d-inline-flex align-items-center lh-1" id="pending-trend">
+                0%
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
+                  <path d="M3 17l6 -6l4 4l8 -8"></path>
+                  <path d="M14 7l7 0l0 7"></path>
+                </svg>
+              </span>
+            </div>
+          </div>
         </div>
+        <div id="pending-sparkline" class="position-relative chart-sm" style="min-height: 40px;"></div>
       </div>
     </div>
   </div>
 
-  <!-- Passport Overview Section -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <div class="row align-items-center">
-        <div class="col">
-          <h3 class="card-title">
-            <i class="ti ti-ticket text-primary me-2"></i>Passports Overview
-          </h3>
-        </div>
-        <div class="col-auto">
-          <a href="{{ url_for('list_passports') }}" class="btn btn-outline-primary btn-sm">
-            <i class="ti ti-eye me-1"></i>View All Passports
-          </a>
-        </div>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-6 col-md-2">
-          <div class="text-center">
-            <div class="h3 mb-1 text-primary">{{ passport_stats.total_passports }}</div>
-            <div class="text-muted small text-uppercase">Total</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-2">
-          <div class="text-center">
-            <div class="h3 mb-1 text-success">{{ passport_stats.paid_passports }}</div>
-            <div class="text-muted small text-uppercase">Paid</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-2">
-          <div class="text-center">
-            <div class="h3 mb-1 text-danger">{{ passport_stats.unpaid_passports }}</div>
-            <div class="text-muted small text-uppercase">Unpaid</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-2">
-          <div class="text-center">
-            <div class="h3 mb-1 text-info">{{ passport_stats.active_passports }}</div>
-            <div class="text-muted small text-uppercase">Active</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-2">
-          <div class="text-center">
-            <div class="h3 mb-1 text-success">${{ "{:,.0f}".format(passport_stats.total_revenue) }}</div>
-            <div class="text-muted small text-uppercase">Revenue</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-2">
-          <div class="text-center">
-            <div class="h3 mb-1 text-warning">${{ "{:,.0f}".format(passport_stats.pending_revenue) }}</div>
-            <div class="text-muted small text-uppercase">Pending</div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Quick Actions -->
-      <div class="row g-2 mt-3">
-        <div class="col-auto">
-          <a href="{{ url_for('create_passport') }}" class="btn btn-primary btn-sm">
-            <i class="ti ti-plus me-1"></i>New Passport
-          </a>
-        </div>
-        <div class="col-auto">
-          <a href="{{ url_for('list_passports', payment_status='unpaid') }}" class="btn btn-outline-danger btn-sm">
-            <i class="ti ti-alert-circle me-1"></i>Unpaid ({{ passport_stats.unpaid_passports }})
-          </a>
-        </div>
-        <div class="col-auto">
-          <a href="{{ url_for('export_passports') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="ti ti-download me-1"></i>Export
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Signups Overview -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h4 class="card-title">
-        <i class="ti ti-user-check" style="font-size: 1.2em;"></i> Signups Overview
-      </h4>
-      <div class="card-actions">
-        <a href="{{ url_for('list_signups') }}" class="btn btn-primary">
-          <i class="ti ti-eye me-2"></i> View All Signups
-        </a>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-sm-6 col-lg-2">
-          <div class="text-center">
-            <span class="text-muted">Total</span>
-            <div class="h1 mb-1">{{ signup_stats.total_signups }}</div>
-            <span class="badge bg-blue-lt text-blue">All Signups</span>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-2">
-          <div class="text-center">
-            <span class="text-muted">Paid</span>
-            <div class="h1 mb-1 text-success">{{ signup_stats.paid_signups }}</div>
-            <span class="badge bg-green-lt text-green">Completed</span>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-2">
-          <div class="text-center">
-            <span class="text-muted">Unpaid</span>
-            <div class="h1 mb-1 text-danger">{{ signup_stats.unpaid_signups }}</div>
-            <span class="badge bg-red-lt text-red">Awaiting Payment</span>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-2">
-          <div class="text-center">
-            <span class="text-muted">Pending</span>
-            <div class="h1 mb-1 text-warning">{{ signup_stats.pending_signups }}</div>
-            <span class="badge bg-yellow-lt text-yellow">Review Needed</span>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-2">
-          <div class="text-center">
-            <span class="text-muted">Approved</span>
-            <div class="h1 mb-1 text-info">{{ signup_stats.approved_signups }}</div>
-            <span class="badge bg-green-lt text-green">Confirmed</span>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-2">
-          <div class="text-center">
-            <span class="text-muted">Recent</span>
-            <div class="h1 mb-1 text-primary">{{ signup_stats.recent_signups }}</div>
-            <span class="badge bg-blue-lt text-blue">Last 7 Days</span>
-          </div>
-        </div>
-      </div>
-      
-      <div class="row mt-3">
-        <div class="col">
-          <div class="d-flex flex-wrap gap-2">
-            <a href="{{ url_for('list_signups') }}?payment_status=unpaid" class="btn btn-outline-danger btn-sm">
-              <i class="ti ti-alert-circle me-1"></i> View Unpaid ({{ signup_stats.unpaid_signups }})
-            </a>
-            <a href="{{ url_for('list_signups') }}?status=pending" class="btn btn-outline-warning btn-sm">
-              <i class="ti ti-clock me-1"></i> Pending Approval ({{ signup_stats.pending_signups }})
-            </a>
-            <a href="{{ url_for('list_signups') }}?status=approved" class="btn btn-outline-success btn-sm">
-              <i class="ti ti-check me-1"></i> Approved ({{ signup_stats.approved_signups }})
-            </a>
-            <a href="{{ url_for('export_signups') }}" class="btn btn-outline-secondary btn-sm">
-              <i class="ti ti-download me-1"></i> Export All
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Title -->
   <div class="d-flex justify-content-between align-items-center mb-4">
@@ -420,7 +305,29 @@ document.addEventListener("DOMContentLoaded", function () {
   const kpiData = {{ kpi_data | tojson }};
 
   function createSparkline(ctxId, chartType, trendList) {
-    const ctx = document.getElementById(ctxId).getContext("2d");
+    const container = document.getElementById(ctxId);
+    if (!container) return;
+    
+    // Clear previous chart
+    container.innerHTML = '';
+    
+    // Check if chart should be rendered
+    const maxValue = Math.max(...(trendList || [0]));
+    
+    // Only show chart if we have any meaningful data
+    if (!trendList || trendList.length === 0 || maxValue <= 0) {
+      // Just leave container empty when no data
+      container.style.height = '40px';
+      return;
+    }
+    
+    // Create canvas element
+    const canvas = document.createElement('canvas');
+    canvas.width = container.offsetWidth || 300;
+    canvas.height = 40;
+    container.appendChild(canvas);
+    
+    const ctx = canvas.getContext("2d");
     new Chart(ctx, {
       type: chartType,
       data: {
@@ -428,25 +335,55 @@ document.addEventListener("DOMContentLoaded", function () {
         datasets: [{
           data: trendList,
           backgroundColor: chartType === "bar" ? "#206bc4" : "rgba(32,107,196,0.1)",
-          borderColor: chartType === "line" ? "#206bc4" : undefined,
+          borderColor: chartType === "line" ? "#206bc4" : "transparent",
           fill: chartType === "line",
           tension: 0.4,
           borderWidth: chartType === "line" ? 2 : 0,
-          pointRadius: 0
+          pointRadius: 0,
+          spanGaps: false
         }]
       },
       options: {
-        responsive: true,
+        responsive: false,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: { enabled: false }
         },
         scales: {
-          x: { display: false },
-          y: { display: false }
+          x: { 
+            display: false,
+            grid: { 
+              display: false,
+              drawBorder: false,
+              drawOnChartArea: false,
+              drawTicks: false
+            },
+            border: { display: false },
+            ticks: { display: false }
+          },
+          y: { 
+            display: false,
+            grid: { 
+              display: false,
+              drawBorder: false,
+              drawOnChartArea: false,
+              drawTicks: false
+            },
+            border: { display: false },
+            ticks: { display: false },
+            beginAtZero: true
+          }
         },
         elements: {
-          point: { radius: 0 } // No points on line chart
+          point: { radius: 0 },
+          line: { borderWidth: 2 }
+        },
+        layout: {
+          padding: 5
+        },
+        interaction: {
+          intersect: false
         }
       }
     });
@@ -459,16 +396,41 @@ document.addEventListener("DOMContentLoaded", function () {
     const percent = previous > 0 ? ((current - previous) / previous * 100).toFixed(1) : "0.0";
 
     const val = metric === "revenue" ? `$${current.toLocaleString()}` : current;
-    const trend = `<span class="${percent >= 0 ? 'text-green' : 'text-red'}">${percent}% ${percent >= 0 ? '↑' : '↓'}</span>`;
-
+    const trendElement = document.querySelector(`#${id}-trend`);
+    const trendClass = percent >= 0 ? 'text-green' : 'text-red';
+    
+    // Update value
     document.querySelector(`#${id}-value`).textContent = val;
-    document.querySelector(`#${id}-trend`).innerHTML = trend;
-    document.querySelector(`#${id}-period`).textContent = {
+    
+    // Update trend with icon
+    trendElement.className = `${trendClass} d-inline-flex align-items-center lh-1`;
+    trendElement.innerHTML = `
+      ${percent}%
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ms-1 icon-sm">
+        <path d="M3 17l6 -6l4 4l8 -8"></path>
+        <path d="M14 7l7 0l0 7"></path>
+      </svg>
+    `;
+
+    // Update dropdown text and active state
+    const periodText = {
       "7d": "Last 7 days",
-      "30d": "Last 30 days",
+      "30d": "Last 30 days", 
       "90d": "Last 90 days",
       "all": "All time"
     }[period];
+    
+    document.querySelector(`#${id}-dropdown`).textContent = periodText;
+    
+    // Update active dropdown item
+    document.querySelectorAll(`.${id}-option`).forEach(item => {
+      item.classList.remove('active');
+      item.removeAttribute('aria-current');
+      if (item.dataset.period === period) {
+        item.classList.add('active');
+        item.setAttribute('aria-current', 'true');
+      }
+    });
 
     createSparkline(`${id}-sparkline`, chartType, trendList);
   }
@@ -503,6 +465,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 .activity-card {
   background-color: #fff !important;
+}
+
+.chart-sm canvas {
+  display: block;
+  width: 100% !important;
+  height: 40px !important;
 }
 </style>
 {% endblock %}
