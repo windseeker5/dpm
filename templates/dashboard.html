@@ -345,7 +345,7 @@
 <div class="mt-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0" style="font-family: 'Poppins', sans-serif;">
-      <i class="ti ti-activity text-pink me-2"></i> What's happening in your system
+      <i class="ti ti-activity text-pink me-2"></i> What's happening ...
     </h2>
   </div>
 
@@ -355,7 +355,8 @@
         <thead>
           <tr>
             <th class="text-muted">Date/Time</th>
-            <th class="text-muted">Type</th>
+            <th class="text-muted"></th>
+            <th class="text-muted d-none d-md-table-cell">Type</th>
             <th class="text-muted">Description</th>
           </tr>
         </thead>
@@ -391,8 +392,8 @@
               {% else %}
                 <i class="ti ti-activity text-muted"></i>  
               {% endif %}
-              {{ log.type }}
             </td>
+            <td class="d-none d-md-table-cell">{{ log.type }}</td>
             <td>{{ log.details }}</td>
           </tr>
           {% endfor %}
