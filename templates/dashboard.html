@@ -363,7 +363,7 @@
         <tbody>
           {% for log in logs[:25] %}
           <tr>
-            <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
+            <td style="font-size: 0.75rem; color: #6c757d;" class="d-md-table-cell">{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
             <td data-type="{{ log.type }}">
               {% if log.type == 'Passport Redeemed' %}
                 <i class="ti ti-ticket text-danger"></i>
@@ -394,7 +394,7 @@
               {% endif %}
             </td>
             <td class="d-none d-md-table-cell">{{ log.type }}</td>
-            <td>{{ log.details }}</td>
+            <td style="font-size: 0.7rem !important; line-height: 1.3 !important; color: #495057 !important;">{{ log.details }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -756,6 +756,18 @@ document.addEventListener("DOMContentLoaded", function () {
   #kpiCarousel {
     position: relative;
     overflow: hidden;
+  }
+  
+  /* Mobile table typography optimization - Force override */
+  .card.transaction-table-card .table.card-table.table-vcenter tbody tr td:first-child {
+    font-size: 0.75rem !important;
+    color: #6c757d !important;
+    line-height: 1.3 !important;
+  }
+  
+  .card.transaction-table-card .table.card-table.table-vcenter tbody tr td:last-child {
+    font-size: 0.875rem !important;
+    line-height: 1.4 !important;
   }
   
 }
