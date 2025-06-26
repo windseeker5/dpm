@@ -70,3 +70,38 @@ Minipass offers an intuitive interface optimized for mobile devices, allowing us
 
 
 ## UI/UX Guidelines
+
+### Mobile Dropdown Buttons in Bootstrap Carousels
+
+When creating dropdown buttons in mobile carousels, use Bootstrap's built-in Popper.js boundary configuration instead of fighting against carousel overflow requirements:
+
+#### HTML Solution:
+```html
+<!-- Add data-bs-boundary="viewport" to mobile dropdown toggles -->
+<a class="dropdown-toggle" 
+   data-bs-toggle="dropdown" 
+   data-bs-boundary="viewport" 
+   href="#">Dropdown</a>
+```
+
+#### CSS Solution:
+```css
+/* Simple z-index boost for mobile dropdowns in carousels */
+@media (max-width: 767.98px) {
+  #carousel .dropdown-menu {
+    z-index: 1060 !important;
+  }
+}
+```
+
+**Key Points:**
+- Use `data-bs-boundary="viewport"` on dropdown toggles in carousels
+- Let Bootstrap's Popper.js handle positioning automatically
+- Only override z-index, never override carousel overflow
+- Avoid custom JavaScript positioning that conflicts with Popper.js
+- Keep carousel `overflow: hidden` intact for proper sliding
+
+**Why This Works:**
+- Bootstrap carousels need `overflow: hidden` for slide transitions
+- Popper.js can position dropdowns outside overflow boundaries when boundary="viewport"
+- This maintains both carousel functionality and dropdown visibility
