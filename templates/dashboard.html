@@ -18,7 +18,7 @@
     </div>
     <div class="col-auto">
       <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
-        <i class="ti ti-plus me-1"></i> Create New Activity
+        <i class="ti ti-plus me-1"></i> Activity
       </a>
     </div>
   </div>
@@ -31,11 +31,13 @@
 
 
   <!-- KPI Cards -->
-  <div class="row g-3 mb-4">
-    
-    <!-- Revenue -->
-    <div class="col-sm-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 8px !important;">
+  <div class="kpi-carousel-container">
+    <!-- Desktop/Tablet Grid (hidden on mobile) -->
+    <div class="row g-3 mb-4 kpi-responsive-grid d-none d-md-flex">
+      
+      <!-- Revenue -->
+    <div class="col-12 col-md-6 col-lg-3">
+      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Revenue</div>
@@ -61,8 +63,8 @@
     </div>
 
     <!-- Active Passports -->
-    <div class="col-sm-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 8px !important;">
+    <div class="col-12 col-md-6 col-lg-3">
+      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Active Passports</div>
@@ -88,8 +90,8 @@
     </div>
 
     <!-- Passports Created -->
-    <div class="col-sm-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 8px !important;">
+    <div class="col-12 col-md-6 col-lg-3">
+      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Passports Created</div>
@@ -115,8 +117,8 @@
     </div>
 
     <!-- Pending Signups -->
-    <div class="col-sm-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 8px !important;">
+    <div class="col-12 col-md-6 col-lg-3">
+      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Pending Signups</div>
@@ -140,6 +142,122 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <!-- Mobile Carousel (visible only on mobile) -->
+    <div id="kpiCarousel" class="carousel slide d-md-none mb-4" data-bs-ride="false" data-bs-touch="true" data-bs-interval="false">
+      <div class="carousel-inner">
+        
+        <!-- Revenue Card -->
+        <div class="carousel-item active">
+          <div class="px-2">
+            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Revenue</div>
+                  <div class="dropdown">
+                    <a class="dropdown-toggle text-secondary" id="revenue-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-mobile-dropdown">
+                      <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                      <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
+                      <a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a>
+                      <a class="dropdown-item revenue-option" href="#" data-period="all">All time</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <div class="h2 mb-0" id="revenue-mobile-value" style="font-weight: 600;">$0</div>
+                  <div class="text-warning d-flex align-items-center" id="revenue-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
+                </div>
+                <div id="revenue-mobile-sparkline" style="height: 48px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Passports Card -->
+        <div class="carousel-item">
+          <div class="px-2">
+            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Active Passports</div>
+                  <div class="dropdown">
+                    <a class="dropdown-toggle text-secondary" id="users-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-mobile-dropdown">
+                      <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                      <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
+                      <a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a>
+                      <a class="dropdown-item users-option" href="#" data-period="all">All time</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <div class="h2 mb-0" id="users-mobile-value" style="font-weight: 600;">0</div>
+                  <div class="text-warning d-flex align-items-center" id="users-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
+                </div>
+                <div id="users-mobile-sparkline" style="height: 48px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Passports Created Card -->
+        <div class="carousel-item">
+          <div class="px-2">
+            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Passports Created</div>
+                  <div class="dropdown">
+                    <a class="dropdown-toggle text-secondary" id="passes-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-mobile-dropdown">
+                      <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                      <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
+                      <a class="dropdown-item passes-option" href="#" data-period="90d">Last 90 days</a>
+                      <a class="dropdown-item passes-option" href="#" data-period="all">All time</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <div class="h2 mb-0" id="passes-mobile-value" style="font-weight: 600;">0</div>
+                  <div class="text-warning d-flex align-items-center" id="passes-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
+                </div>
+                <div id="passes-mobile-sparkline" style="height: 48px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending Signups Card -->
+        <div class="carousel-item">
+          <div class="px-2">
+            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Pending Signups</div>
+                  <div class="dropdown">
+                    <a class="dropdown-toggle text-secondary" id="pending-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-mobile-dropdown">
+                      <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+                      <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
+                      <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
+                      <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <div class="h2 mb-0" id="pending-mobile-value" style="font-weight: 600;">0</div>
+                  <div class="text-warning d-flex align-items-center" id="pending-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
+                </div>
+                <div id="pending-mobile-sparkline" style="height: 48px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 
@@ -223,7 +341,7 @@
 
 
 
-<!-- 🔻 What's happening in your system -->
+<!-- 🔻 What's happening  -->
 <div class="mt-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0" style="font-family: 'Poppins', sans-serif;">
@@ -420,6 +538,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const val = metric === "revenue" ? `$${current.toLocaleString()}` : current;
     const trendElement = document.querySelector(`#${id}-trend`);
+    const valueElement = document.querySelector(`#${id}-value`);
+    const dropdownElement = document.querySelector(`#${id}-dropdown`);
+    
+    // Check if elements exist before updating
+    if (!trendElement || !valueElement || !dropdownElement) {
+      console.warn(`Card elements not found for ID: ${id}`);
+      return;
+    }
     
     // Fix trend colors and icons like Tabler reference
     let trendClass, arrow;
@@ -435,7 +561,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     
     // Update value
-    document.querySelector(`#${id}-value`).textContent = val;
+    valueElement.textContent = val;
     
     // Update trend with proper styling
     trendElement.className = `${trendClass} d-flex align-items-center`;
@@ -451,10 +577,11 @@ document.addEventListener("DOMContentLoaded", function () {
       "all": "All time"
     }[period];
     
-    document.querySelector(`#${id}-dropdown`).textContent = periodText;
+    dropdownElement.textContent = periodText;
     
-    // Update active dropdown item
-    document.querySelectorAll(`.${id}-option`).forEach(item => {
+    // Update active dropdown item - handle both desktop and mobile selectors
+    const optionClass = id.includes('-mobile') ? `.${id.replace('-mobile', '')}-option-mobile` : `.${id}-option`;
+    document.querySelectorAll(optionClass).forEach(item => {
       item.classList.remove('active');
       item.removeAttribute('aria-current');
       if (item.dataset.period === period) {
@@ -473,10 +600,65 @@ document.addEventListener("DOMContentLoaded", function () {
     { id: "pending", metric: "pending_signups", selector: ".pending-option", chartType: "bar" }
   ].forEach(({ id, metric, selector, chartType }) => {
     document.querySelectorAll(selector).forEach(el => {
-      el.addEventListener("click", () => updateCard(id, metric, el.dataset.period, chartType));
+      el.addEventListener("click", () => {
+        // Update desktop card
+        updateCard(id, metric, el.dataset.period, chartType);
+        // Update mobile card if it exists
+        if (document.querySelector(`#${id}-mobile-value`)) {
+          updateCard(id + "-mobile", metric, el.dataset.period, chartType);
+        }
+      });
     });
+    
+    // Initialize desktop card
     updateCard(id, metric, "7d", chartType);
+    
+    // Initialize mobile card if it exists
+    if (document.querySelector(`#${id}-mobile-value`)) {
+      updateCard(id + "-mobile", metric, "7d", chartType);
+    }
   });
+
+  // Initialize mobile carousel with proper touch settings
+  const kpiCarousel = document.getElementById('kpiCarousel');
+  if (kpiCarousel) {
+    // Initialize Bootstrap carousel with touch support
+    const carousel = new bootstrap.Carousel(kpiCarousel, {
+      interval: false,
+      ride: false,
+      touch: true,
+      wrap: true
+    });
+    
+    // Additional touch event handling for better mobile experience
+    let startX = null;
+    let startY = null;
+    
+    kpiCarousel.addEventListener('touchstart', function(e) {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    kpiCarousel.addEventListener('touchmove', function(e) {
+      if (!startX || !startY) {
+        return;
+      }
+      
+      const diffX = startX - e.touches[0].clientX;
+      const diffY = startY - e.touches[0].clientY;
+      
+      // If horizontal swipe is more prominent than vertical, prevent default
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    
+    kpiCarousel.addEventListener('touchend', function() {
+      startX = null;
+      startY = null;
+    }, { passive: true });
+  }
+
 });
 </script>
 
@@ -502,8 +684,8 @@ document.addEventListener("DOMContentLoaded", function () {
 }
 
 /* KPI Card specific styling */
-.card-body {
-  padding: 1.5rem;
+.kpi-card-rounded .card-body {
+  padding: 1.25rem !important;
 }
 
 /* Force rounded corners on KPI cards */
@@ -514,20 +696,6 @@ document.addEventListener("DOMContentLoaded", function () {
   -moz-border-radius: 16px !important;
 }
 
-.kpi-card-rounded .card-body {
-  border-radius: 16px !important;
-}
-
-/* Additional CSS for rounded corners */
-div.card.kpi-card-rounded {
-  border-radius: 16px !important;
-}
-
-.row .col-sm-6 .card.kpi-card-rounded,
-.row .col-lg-3 .card.kpi-card-rounded {
-  border-radius: 16px !important;
-}
-
 .h2 {
   font-size: 2rem;
   font-weight: 600;
@@ -536,32 +704,76 @@ div.card.kpi-card-rounded {
 }
 
 /* Chart container styling */
-#revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline {
+#revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline,
+#revenue-mobile-sparkline, #users-mobile-sparkline, #passes-mobile-sparkline, #pending-mobile-sparkline {
   height: 48px;
   width: 100%;
   position: relative;
 }
 
-#revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas {
+#revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas,
+#revenue-mobile-sparkline canvas, #users-mobile-sparkline canvas, #passes-mobile-sparkline canvas, #pending-mobile-sparkline canvas {
   width: 100% !important;
   height: 48px !important;
 }
 
+/* Mobile Carousel Styles */
+@media (max-width: 767.98px) {
+  /* Ensure carousel has proper touch support */
+  .carousel-inner {
+    touch-action: pan-x !important;
+  }
+  
+  .carousel-item {
+    transition: transform 0.3s ease-in-out !important;
+  }
+  
+  /* Improve touch interaction */
+  #kpiCarousel {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  #kpiCarousel .carousel-inner {
+    overflow: hidden;
+  }
+  
+  /* Better touch handling for mobile */
+  #kpiCarousel .carousel-item {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Ensure proper swiping */
+  #kpiCarousel {
+    position: relative;
+    overflow: hidden;
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 576px) {
-  .card-body {
-    padding: 1rem;
+  .kpi-card-rounded .card-body {
+    padding: 1rem !important;
   }
   
   .h2 {
     font-size: 1.5rem;
   }
   
-  #revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline {
+  #revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline,
+  #revenue-mobile-sparkline, #users-mobile-sparkline, #passes-mobile-sparkline, #pending-mobile-sparkline {
     height: 40px;
   }
   
-  #revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas {
+  #revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas,
+  #revenue-mobile-sparkline canvas, #users-mobile-sparkline canvas, #passes-mobile-sparkline canvas, #pending-mobile-sparkline canvas {
     height: 40px !important;
   }
 }

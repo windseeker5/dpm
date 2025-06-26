@@ -40,7 +40,7 @@ Minipass offers an intuitive interface optimized for mobile devices, allowing us
 
 - **Flask** - Python web framework with SQLAlchemy ORM
 - **SQLite** - Database (dev: `instance/database.db`)
-- **Tabler.io** - UI framework for admin dashboard
+- **Tabler.io** - UI framework for admin dashboard based on Boostrap and ApexJS
 - **Stripe** - Payment processing
 - **Python** with comprehensive dependencies in `requirements.txt`
 
@@ -51,7 +51,6 @@ Minipass offers an intuitive interface optimized for mobile devices, allowing us
 - `models.py` - Database models (User, Activity, Signup, Passport, etc.)
 - `config.py` - Environment-based configuration
 - `utils.py` - Utility functions for QR codes, emails, file handling
-- FormatAndStyle.md - Reference Tabler.io documentation and examples
 
 
 ### Directory Structure
@@ -71,63 +70,3 @@ Minipass offers an intuitive interface optimized for mobile devices, allowing us
 
 
 ## UI/UX Guidelines
-
-- Find all the guides and resources you need to develop with Tabler : https://docs.tabler.io/
-- FormatAndStyle.md - Reference Tabler.io documentation and examples
-
-### Rounded Corners Standard
-**CRITICAL**: ALL cards and tables MUST have 16px rounded corners to maintain design consistency.
-
-#### For Cards:
-```css
-.card {
-  border-radius: 16px !important;
-  overflow: hidden;
-}
-```
-
-#### For Tables inside Cards:
-Tables require special handling due to their internal structure. Use this pattern:
-
-```css
-/* Card wrapper */
-.your-table-card {
-  border-radius: 16px !important;
-  overflow: hidden;
-  border: 1px solid #e6e7e9;
-}
-
-/* Table corner fixes - target specific cells */
-.your-table-card .table thead tr:first-child th:first-child {
-  border-top-left-radius: 15px;
-}
-.your-table-card .table thead tr:first-child th:last-child {
-  border-top-right-radius: 15px;
-}
-.your-table-card .table tbody tr:last-child td:first-child {
-  border-bottom-left-radius: 15px;
-}
-.your-table-card .table tbody tr:last-child td:last-child {
-  border-bottom-right-radius: 15px;
-}
-
-/* Remove conflicting borders */
-.your-table-card .table {
-  border: none;
-  margin-bottom: 0;
-}
-.your-table-card .table thead th {
-  border-top: none;
-}
-.your-table-card .table thead th,
-.your-table-card .table tbody td {
-  border-left: none;
-  border-right: none;
-}
-```
-
-**Why this pattern is needed:**
-- Simple `border-radius` on card wrapper doesn't work for tables
-- Table structure (thead, tbody, tr, td) doesn't inherit border-radius properly
-- Must target specific corner cells individually
-- Use 15px on cells (1px less than 16px card) to account for border thickness
