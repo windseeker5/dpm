@@ -183,7 +183,7 @@ with app.app_context():
 
 
 
-# ✅ Old chat_bp blueprint registration removed - using chatbot_v2 instead         
+app.register_blueprint(chat_bp)         
 
 
 ##

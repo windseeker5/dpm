@@ -3,62 +3,118 @@
 
 {% block head %}
 <style>
-.activity-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* Simple, Clean Styling */
+.card {
+  background-color: #fff !important;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
 }
-.activity-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+/* Simple KPI Stats Card */
+.stats-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
 }
+
+.stat-item {
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  display: block;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+/* Simple Search & Filter Panel */
+.filter-panel {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Activity Image */
 .activity-image {
   height: 60px;
   width: 60px;
   object-fit: cover;
   border-radius: 8px;
 }
-.filter-panel {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-.stats-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-.stat-item {
-  text-align: center;
-  padding: 0.5rem;
-}
-.stat-number {
-  font-size: 2rem;
-  font-weight: bold;
-  display: block;
-}
-.stat-label {
-  font-size: 0.875rem;
-  opacity: 0.9;
-}
-.activity-actions {
-  opacity: 1 !important;
-  transition: opacity 0.2s ease;
-}
-.bulk-actions {
-  background: #fff;
+
+/* Clean Mobile Cards */
+.activity-card {
+  background-color: #fff !important;
   border: 1px solid #dee2e6;
   border-radius: 8px;
-  padding: 1rem;
   margin-bottom: 1rem;
-  display: none;
-}
-.bulk-actions.show {
-  display: block;
+  padding: 1rem;
 }
 
+.mobile-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f3f4;
+}
 
+.mobile-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: #495057;
+}
+
+.mobile-card-content {
+  padding: 0.5rem 0;
+}
+
+.mobile-stats {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.mobile-stat {
+  text-align: center;
+  flex: 1;
+}
+
+.mobile-stat-number {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #495057;
+}
+
+.mobile-stat-label {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+/* Mobile Badge Layout */
+.mobile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   .activity-table {
     display: none;
@@ -76,6 +132,7 @@
     font-size: 1.5rem;
   }
 }
+
 @media (min-width: 769px) {
   .activity-table {
     display: block;
@@ -83,23 +140,6 @@
   .activity-cards {
     display: none;
   }
-}
-
-/* White background for all cards and tables */
-.card {
-  background-color: #fff !important;
-}
-
-.table {
-  background-color: #fff !important;
-}
-
-.activity-card {
-  background-color: #fff !important;
-}
-
-.activity-table {
-  background-color: #fff !important;
 }
 </style>
 {% endblock %}
@@ -152,7 +192,7 @@
     </div>
   </div>
 
-  <!-- Enhanced Search and Filters -->
+  <!-- Modern Search and Filters -->
   <div class="filter-panel">
     <form method="GET" id="filterForm">
       <div class="row g-3">
@@ -161,7 +201,7 @@
           <div class="input-group">
             <input type="text" name="q" class="form-control" placeholder="Search activities..." 
                    value="{{ current_filters.q }}" id="searchInput">
-            <button type="submit" class="btn btn-outline-secondary">
+            <button type="submit" class="btn btn-primary">
               <i class="ti ti-search"></i>
             </button>
           </div>
@@ -202,7 +242,7 @@
       <div class="row mt-2">
         <div class="col">
           <a href="{{ url_for('list_activities') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="ti ti-x"></i> Clear Filters
+            <i class="ti ti-x me-1"></i> Clear Filters
           </a>
         </div>
       </div>
@@ -210,50 +250,28 @@
     </form>
   </div>
 
-  <!-- Bulk Actions (Hidden by default) -->
-  <div class="bulk-actions" id="bulkActions">
-    <div class="row align-items-center">
-      <div class="col">
-        <span id="selectedCount">0</span> activities selected
-      </div>
-      <div class="col-auto">
-        <button class="btn btn-sm btn-success me-2" onclick="bulkAction('activate')">
-          <i class="ti ti-check"></i> Activate
-        </button>
-        <button class="btn btn-sm btn-warning me-2" onclick="bulkAction('deactivate')">
-          <i class="ti ti-pause"></i> Deactivate
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="bulkAction('delete')">
-          <i class="ti ti-trash"></i> Delete
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- Desktop Table View -->
   <div class="card activity-table">
+    <div class="card-header">
+      <h3 class="card-title">Activities Overview</h3>
+    </div>
     <div class="table-responsive">
-      <table class="table card-table table-hover table-vcenter">
+      <table class="table card-table table-vcenter">
         <thead>
           <tr>
-            <th style="width: 40px;">
-              <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleAll()">
-            </th>
             <th>Activity</th>
             <th>Status</th>
             <th>Passport Types</th>
             <th>Signups</th>
             <th>Revenue</th>
             <th>Dates</th>
-            <th>Actions</th>
+            <th class="w-1">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for activity in activities %}
           <tr class="activity-row">
-            <td>
-              <input type="checkbox" class="form-check-input activity-checkbox" value="{{ activity.id }}" onchange="updateBulkActions()">
-            </td>
             <td>
               <div class="d-flex align-items-center">
                 {% if activity.image_filename %}
@@ -267,7 +285,7 @@
                 <div>
                   <strong>{{ activity.name }}</strong>
                   {% if activity.type %}
-                  <span class="badge bg-secondary ms-2">{{ activity.type }}</span>
+                  <br><span class="badge bg-blue-lt text-blue mt-1">{{ activity.type }}</span>
                   {% endif %}
                   <br>
                   <span class="text-muted small">{{ activity.description|truncate(50) }}</span>
@@ -297,36 +315,34 @@
               </div>
             </td>
             <td>
-              <div class="activity-actions">
-                <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-sm btn-primary me-1" title="Edit Activity">
-                  <i class="ti ti-pencil"></i>
+              <div class="dropdown">
+                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" data-bs-boundary="viewport">
+                  Actions
                 </a>
-                <div class="btn-group">
-                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="More Actions">
-                    <i class="ti ti-dots-vertical"></i>
-                  </button>
-                  <div class="dropdown-menu">
-                    <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                      <i class="ti ti-pencil me-2"></i>Edit Activity
-                    </a>
-                    <a class="dropdown-item" href="#">
-                      <i class="ti ti-chart-bar me-2"></i>View Statistics
-                    </a>
-                    <a class="dropdown-item" href="#">
-                      <i class="ti ti-copy me-2"></i>Duplicate
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ activity.id }}, '{{ activity.name }}')">
-                      <i class="ti ti-trash me-2"></i>Delete Activity
-                    </a>
-                  </div>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
+                    <i class="ti ti-pencil me-2"></i>Edit Activity
+                  </a>
+                  <a class="dropdown-item" href="#">
+                    <i class="ti ti-chart-bar me-2"></i>View Statistics
+                  </a>
+                  <a class="dropdown-item" href="#">
+                    <i class="ti ti-copy me-2"></i>Duplicate Activity
+                  </a>
+                  <a class="dropdown-item" href="#">
+                    <i class="ti ti-users me-2"></i>Manage Participants
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ activity.id }}, '{{ activity.name }}')">
+                    <i class="ti ti-trash me-2"></i>Delete Activity
+                  </a>
                 </div>
               </div>
             </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="8" class="text-center py-5">
+            <td colspan="7" class="text-center py-5">
               <div class="empty">
                 <div class="empty-img">
                   <i class="ti ti-activity" style="font-size: 4rem; color: #ccc;"></i>
@@ -351,81 +367,100 @@
         </tbody>
       </table>
     </div>
+    <div class="card-footer d-flex align-items-center">
+      <p class="m-0 text-muted">Showing <span>{{ activities|length }}</span> of <span>{{ activities|length }}</span> entries</p>
+      <ul class="pagination m-0 ms-auto">
+        <li class="page-item disabled">
+          <a class="page-link" href="#" tabindex="-1" aria-disabled="true">
+            <i class="ti ti-chevron-left"></i>
+            prev
+          </a>
+        </li>
+        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+        <li class="page-item disabled">
+          <a class="page-link" href="#">
+            next
+            <i class="ti ti-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </div>
   </div>
 
   <!-- Mobile Card View -->
   <div class="activity-cards">
     {% for activity in activities %}
-    <div class="card activity-card mb-3">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-auto">
-            <input type="checkbox" class="form-check-input activity-checkbox" value="{{ activity.id }}" onchange="updateBulkActions()">
-          </div>
-          <div class="col-auto">
-            {% if activity.image_filename %}
-            <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}" 
-                 class="activity-image" alt="{{ activity.name }}">
-            {% else %}
-            <div class="avatar avatar-md" style="background-color: #{{ '%06x' % (activity.name|hash|abs % 16777215) }};">
-              {{ activity.name[0]|upper }}
-            </div>
-            {% endif %}
-          </div>
-          <div class="col">
-            <h4 class="card-title mb-1">{{ activity.name }}</h4>
-            <div class="mb-2">
-              {% if activity.status == 'active' %}
-              <span class="badge bg-green-lt">Active</span>
-              {% else %}
-              <span class="badge bg-red-lt">Inactive</span>
-              {% endif %}
-              {% if activity.type %}
-              <span class="badge bg-gray-lt">{{ activity.type }}</span>
-              {% endif %}
-              <span class="badge bg-blue-lt">{{ activity.passport_types_count or 0 }} Types</span>
-            </div>
-            <div class="row text-center">
-              <div class="col-4">
-                <div class="stat-number small">{{ activity.signup_count or 0 }}</div>
-                <div class="stat-label">Signups</div>
-              </div>
-              <div class="col-4">
-                <div class="stat-number small">${{ "{:,.0f}".format(activity.total_revenue or 0) }}</div>
-                <div class="stat-label">Revenue</div>
-              </div>
-              <div class="col-4">
-                <div class="stat-number small">{{ activity.passport_types_count or 0 }}</div>
-                <div class="stat-label">Types</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-auto">
-            <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-primary btn-sm me-1" title="Edit Activity">
-              <i class="ti ti-pencil"></i>
+    <div class="activity-card">
+      <div class="mobile-card-header">
+        {% if activity.image_filename %}
+        <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}" 
+             class="activity-image me-3" alt="{{ activity.name }}">
+        {% else %}
+        <div class="avatar avatar-md me-3" style="background-color: #{{ '%06x' % (activity.name|hash|abs % 16777215) }};">
+          {{ activity.name[0]|upper }}
+        </div>
+        {% endif %}
+        <div class="flex-fill">
+          <h4 class="mobile-card-title">{{ activity.name }}</h4>
+        </div>
+        <div class="dropdown">
+          <a href="#" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-boundary="viewport">
+            Actions
+          </a>
+          <div class="dropdown-menu dropdown-menu-end">
+            <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
+              <i class="ti ti-pencil me-2"></i>Edit Activity
             </a>
-            <div class="dropdown d-inline-block">
-              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <i class="ti ti-dots-vertical"></i>
-              </button>
-              <div class="dropdown-menu">
-                <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                  <i class="ti ti-pencil me-2"></i>Edit Activity
-                </a>
-                <a class="dropdown-item" href="#">
-                  <i class="ti ti-chart-bar me-2"></i>View Statistics
-                </a>
-                <a class="dropdown-item" href="#">
-                  <i class="ti ti-copy me-2"></i>Duplicate
-                </a>
-                <div class="dropdown-divider"></div>
-                <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ activity.id }}, '{{ activity.name }}')">
-                  <i class="ti ti-trash me-2"></i>Delete Activity
-                </a>
-              </div>
-            </div>
+            <a class="dropdown-item" href="#">
+              <i class="ti ti-chart-bar me-2"></i>View Statistics
+            </a>
+            <a class="dropdown-item" href="#">
+              <i class="ti ti-copy me-2"></i>Duplicate Activity
+            </a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ activity.id }}, '{{ activity.name }}')">
+              <i class="ti ti-trash me-2"></i>Delete Activity
+            </a>
           </div>
         </div>
+      </div>
+      
+      <div class="mobile-card-content">
+        <div class="mobile-badges">
+          {% if activity.status == 'active' %}
+          <span class="badge bg-success">Active</span>
+          {% else %}
+          <span class="badge bg-secondary">Inactive</span>
+          {% endif %}
+          {% if activity.type %}
+          <span class="badge bg-blue">{{ activity.type }}</span>
+          {% endif %}
+          <span class="badge bg-azure">{{ activity.passport_types_count or 0 }} Types</span>
+        </div>
+        
+        <div class="mobile-stats">
+          <div class="mobile-stat">
+            <div class="mobile-stat-number">{{ activity.signup_count or 0 }}</div>
+            <div class="mobile-stat-label">Signups</div>
+          </div>
+          <div class="mobile-stat">
+            <div class="mobile-stat-number">${{ "{:,.0f}".format(activity.total_revenue or 0) }}</div>
+            <div class="mobile-stat-label">Revenue</div>
+          </div>
+          <div class="mobile-stat">
+            <div class="mobile-stat-number">{{ activity.passport_types_count or 0 }}</div>
+            <div class="mobile-stat-label">Types</div>
+          </div>
+        </div>
+        
+        {% if activity.start_date or activity.end_date %}
+        <div class="text-muted small">
+          <i class="ti ti-calendar me-1"></i>
+          {% if activity.start_date %}Start: {{ activity.start_date.strftime('%Y-%m-%d') }}{% endif %}
+          {% if activity.start_date and activity.end_date %} • {% endif %}
+          {% if activity.end_date %}End: {{ activity.end_date.strftime('%Y-%m-%d') }}{% endif %}
+        </div>
+        {% endif %}
       </div>
     </div>
     {% else %}
@@ -478,54 +513,22 @@
 
 {% block scripts %}
 <script>
-// Search only on Enter key press or button click (no real-time search)
-document.getElementById('searchInput').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    document.getElementById('filterForm').submit();
-  }
-});
-
-// Bulk selection functionality
-function toggleAll() {
-  const selectAll = document.getElementById('selectAll');
-  const checkboxes = document.querySelectorAll('.activity-checkbox');
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = selectAll.checked;
+// Simple search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Search on Enter key press
+  document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('filterForm').submit();
+    }
   });
-  updateBulkActions();
-}
-
-function updateBulkActions() {
-  const checkboxes = document.querySelectorAll('.activity-checkbox:checked');
-  const bulkActions = document.getElementById('bulkActions');
-  const selectedCount = document.getElementById('selectedCount');
   
-  if (checkboxes.length > 0) {
-    bulkActions.classList.add('show');
-    selectedCount.textContent = checkboxes.length;
-  } else {
-    bulkActions.classList.remove('show');
-  }
-  
-  // Update select all checkbox
-  const allCheckboxes = document.querySelectorAll('.activity-checkbox');
-  const selectAll = document.getElementById('selectAll');
-  selectAll.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
-  selectAll.checked = checkboxes.length === allCheckboxes.length;
-}
-
-// Bulk actions
-function bulkAction(action) {
-  const selectedIds = Array.from(document.querySelectorAll('.activity-checkbox:checked')).map(cb => cb.value);
-  if (selectedIds.length === 0) return;
-  
-  if (confirm(`Are you sure you want to ${action} ${selectedIds.length} activities?`)) {
-    // Here you would make an AJAX call to perform the bulk action
-    // For now, we'll just show an alert
-    alert(`Bulk ${action} functionality would be implemented here`);
-  }
-}
+  // Initialize tooltips
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
 
 // Delete confirmation
 function confirmDelete(activityId, activityName) {
@@ -533,24 +536,5 @@ function confirmDelete(activityId, activityName) {
   document.getElementById('deleteForm').action = `/delete-activity/${activityId}`;
   new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
-
-// Initialize tooltips and other Bootstrap components
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize tooltips
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-  
-  // Add better visual feedback for buttons
-  document.querySelectorAll('.btn').forEach(btn => {
-    btn.addEventListener('mouseenter', function() {
-      this.style.transform = 'translateY(-1px)';
-    });
-    btn.addEventListener('mouseleave', function() {
-      this.style.transform = 'translateY(0)';
-    });
-  });
-});
 </script>
 {% endblock %}
