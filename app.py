@@ -183,7 +183,6 @@ with app.app_context():
 
 
 
-app.register_blueprint(chat_bp)         
 
 
 ##
