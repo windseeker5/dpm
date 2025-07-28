@@ -4,7 +4,7 @@ import sys
 import os
 
 # Customize these as needed
-db_path = "instance/dev_database.db"
+db_path = "instance/minipass.db"
 email_to_check = "kdresdell@gmail.com"
 input_password = sys.argv[1] if len(sys.argv) > 1 else "admin123"
 

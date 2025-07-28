@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Standard Workflow
 
 1. Understand the Problem First. Begin by reading the relevant source code and thinking through the problem. Then, write a clear plan in projectplan.md.
@@ -26,48 +30,104 @@
  - What was implemented or changed
  - Any key decisions or notes for future work
 
-
-
-
 ## Project Overview
 
-Minipass is a mobile-first Activities and Digital Passport Management system built with Flask. It enables organizations and small businesses to easily manage activities, digital passport ,signups, and payments.
+Minipass is a mobile-first Activities and Digital Passport Management system built with Flask. It enables organizations and small businesses to easily manage activities, digital passport, signups, and payments.
 
-Minipass offers an intuitive interface optimized for mobile devices, allowing users to manage everything on the go. 
-
+Minipass offers an intuitive interface optimized for mobile devices, allowing users to manage everything on the go.
 
 ## Tech Stack
 
 - **Flask** - Python web framework with SQLAlchemy ORM
-- **SQLite** - Database (dev: `instance/database.db`)
-- **Tabler.io** - UI framework for admin dashboard based on Boostrap and ApexJS
+- **SQLite** - Database (`instance/minipass.db`)
+- **Tabler.io** - UI framework for admin dashboard based on Bootstrap and ApexJS
 - **Stripe** - Payment processing
 - **Python** with comprehensive dependencies in `requirements.txt`
+
+## Development Commands
+
+### Environment Setup
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run development server
+python app.py
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest tests/
+
+# Run specific test files
+python tests/test_flask_startup.py
+python tests/test_survey_system.py
+python tests/test_chatbot_infrastructure.py
+
+# Run database validation
+python tests/validate_fix.py
+```
+
+### Database Management
+```bash
+# Initialize database
+python migrations/init_db_1.py
+
+# Run migrations
+python migrations/migrate_database.py
+
+# Create survey templates
+python migrations/init_survey_templates.py
+
+# Database uses single minipass.db file
+```
 
 ## Core Architecture
 
 ### Key Files
-- `app.py` - Main Flask application with all routes
-- `models.py` - Database models (User, Activity, Signup, Passport, etc.)
-- `config.py` - Environment-based configuration
-- `utils.py` - Utility functions for QR codes, emails, file handling
-
+- `app.py` - Main Flask application with all routes and core functionality
+- `models.py` - SQLAlchemy database models (User, Activity, Signup, Passport, etc.)
+- `config.py` - Environment-based configuration with database path handling
+- `utils.py` - Utility functions for QR codes, emails, file handling, and background tasks
 
 ### Directory Structure
-- `templates/` - Jinja2 HTML templates
-- `static/` - Assets including Tabler UI, TinyMCE, uploads, email templates
-- `instance/` - SQLite database files
+- `templates/` - Jinja2 HTML templates for web interface
+- `static/` - Frontend assets including Tabler UI, TinyMCE, uploads, email templates
+- `instance/` - SQLite database file (minipass.db)
+- `tests/` - Comprehensive test suite including Flask startup, survey system, and chatbot tests
+- `migrations/` - Database migration scripts and version control
 
+### Database Models
+Core entities include:
+- **Admin** - Admin user management with bcrypt password hashing
+- **Activity** - Event/activity management with image support
+- **User/Signup** - User registration and activity signups
+- **Passport/PassportType** - Digital passport system with QR code generation
+- **Pass** - Legacy pass system (marked for deletion)
+- **Survey System** - SurveyTemplate, Survey, SurveyResponse for feedback collection
+- **Chat System** - ChatConversation, ChatMessage, QueryLog for AI chatbot integration
+- **Financial** - EbankPayment, Income, Expense for payment tracking
 
 ## Key Patterns
 
-- **UTC Timezone**: All datetime operations use UTC with proper timezone handling
+- **UTC Timezone**: All datetime operations use UTC with proper timezone handling via `datetime.now(timezone.utc)`
 - **Background Jobs**: APScheduler for email automation and scheduled tasks
 - **Security**: CSRF protection, bcrypt password hashing, secure file uploads
-- **QR Code System**: Generated passes with QR codes for ticket validation
+- **QR Code System**: Generated passes with QR codes for ticket validation using `utils.py` functions
 - **Email Templates**: HTML templates with inline CSS processing via premailer
+- **AI Integration**: Chatbot system with support for multiple LLM providers (Ollama, Anthropic, OpenAI)
 
+## Testing Strategy
 
+The test suite includes:
+- **test_flask_startup.py** - Application initialization and configuration validation
+- **test_survey_system.py** - Survey functionality and database operations
+- **test_chatbot_infrastructure.py** - AI chatbot integration testing
+- **validate_fix.py** - Database schema and data integrity validation
+- **test_admin.py** - Admin authentication and management features
+
+Tests can be run individually with `python tests/filename.py` or collectively with pytest.
 
 ## UI/UX Guidelines
 
@@ -105,3 +165,16 @@ When creating dropdown buttons in mobile carousels, use Bootstrap's built-in Pop
 - Bootstrap carousels need `overflow: hidden` for slide transitions
 - Popper.js can position dropdowns outside overflow boundaries when boundary="viewport"
 - This maintains both carousel functionality and dropdown visibility
+
+## Environment Configuration
+
+The application uses a single database configuration with `instance/minipass.db`.
+
+Required environment variables should include Stripe keys, email configuration, and any AI API keys for chatbot functionality.
+
+## Important Reminders
+
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless they're absolutely necessary for achieving your goal
+- ALWAYS prefer editing an existing file to creating a new one
+- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User

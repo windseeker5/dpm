@@ -4,7 +4,7 @@ import bcrypt
 import os
 
 # Compute absolute path to the DB file
-db_path = os.path.abspath("instance/dev_database.db")
+db_path = os.path.abspath("instance/minipass.db")
 
 # Ensure folder exists
 os.makedirs(os.path.dirname(db_path), exist_ok=True)

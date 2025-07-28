@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timezone
 
 # Database path
-db_path = "instance/dev_database.db"
+db_path = "instance/minipass.db"
 
 def setup_default_templates():
     """Create default survey templates"""
