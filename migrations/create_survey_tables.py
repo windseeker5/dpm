@@ -6,7 +6,7 @@ import sqlite3
 import os
 
 # Database path
-db_path = "instance/dev_database.db"  # Development database
+db_path = "instance/minipass.db"  # Main database
 
 def create_survey_tables():
     """Create the survey system tables"""

@@ -9,10 +9,8 @@ from datetime import datetime
 def create_chatbot_tables():
     """Create the chatbot tables in the database"""
     
-    # Determine database path (same logic as app.py)
-    env = os.environ.get("FLASK_ENV", "dev").lower()
-    db_filename = "dev_database.db" if env == "dev" else "prod_database.db"
-    db_path = os.path.join("instance", db_filename)
+    # Use single database path
+    db_path = os.path.join("instance", "minipass.db")
     
     print(f"🗃️  Creating chatbot tables in: {db_path}")
     

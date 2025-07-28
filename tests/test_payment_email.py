@@ -9,8 +9,7 @@ from utils import get_setting
 
 # === ⚙️ Setup minimal Flask app context ===
 app = Flask(__name__)
-env = os.environ.get("FLASK_ENV", "dev").lower()
-db_path = os.path.join("instance", "dev_database.db" if env != "prod" else "prod_database.db")
+db_path = os.path.join("instance", "minipass.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config.from_object(Config)

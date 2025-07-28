@@ -20,6 +20,7 @@ def get_database_path():
     """Get the path to the database file"""
     # Check common database locations
     possible_paths = [
+        'instance/minipass.db',
         'instance/dev_database.db',
         'instance/database.db',
         'dev_database.db',

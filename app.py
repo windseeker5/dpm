@@ -103,11 +103,8 @@ from datetime import datetime as dt
 
 
 
-env = os.environ.get("FLASK_ENV", "prod").lower()
-db_filename = "dev_database.db" if env == "dev" else "prod_database.db"
-
-db_path = os.path.join("instance", db_filename)
-print(f"📦 Using {'DEV' if env == 'dev' else 'PROD'} database → {db_path}")
+db_path = os.path.join("instance", "minipass.db")
+print(f"📦 Using database → {db_path}")
 
 
 
@@ -3839,7 +3836,6 @@ def delete_survey(survey_id):
 
 
 if __name__ == "__main__":
-    env = os.environ.get("FLASK_ENV", "dev").lower()
-    port = 8889 if env == "prod" else 8890
-    print(f"🚀 Running on port {port} (env={env})")
-    app.run(debug=(env != "prod"), port=port)
+    port = 8890
+    print(f"🚀 Running on port {port}")
+    app.run(debug=True, port=port)

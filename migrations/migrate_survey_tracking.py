@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 def migrate_survey_tracking():
     """Add new tracking fields to SurveyResponse table"""
     
-    db_path = "instance/dev_database.db"
+    db_path = "instance/minipass.db"
     
     try:
         conn = sqlite3.connect(db_path)
