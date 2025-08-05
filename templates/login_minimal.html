@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Sign In - minipass Activities Management</title>
+  <title>Sign In - MiniPass</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Favicons -->
@@ -34,7 +34,6 @@
       background: var(--primary-gradient);
       min-height: 100vh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 2rem 1rem;
@@ -54,19 +53,6 @@
       text-align: center;
       padding: 3rem 2rem 1rem;
       background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-    }
-
-    .login-logo {
-      height: 72px;
-      width: auto;
-      margin-bottom: 2rem;
-      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08));
-      transition: all 0.3s ease;
-    }
-
-    .login-logo:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
     }
 
     .logo-container {
@@ -100,8 +86,6 @@
       color: var(--text-muted);
       font-weight: 500;
       margin-bottom: 0;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
     }
 
     .login-form {
@@ -241,18 +225,6 @@
       .brand-title {
         font-size: 1.5rem;
       }
-      
-      .login-logo {
-        height: 56px;
-        margin-bottom: 1.5rem;
-      }
-    }
-
-    @media (max-width: 360px) {
-      .login-logo {
-        height: 48px;
-        margin-bottom: 1.25rem;
-      }
     }
   </style>
 </head>
@@ -275,12 +247,11 @@
   <div class="login-container">
     <!-- Header with Branding -->
     <div class="login-header">
-      <!-- Primary logo - PNG for consistent rendering -->
-      <img src="{{ url_for('static', filename='logo-dark.png') }}" alt="minipass" class="login-logo">
-      <!-- Alternative: SVG version for perfect scaling
-      <img src="{{ url_for('static', filename='logo-white.svg') }}" alt="minipass" class="login-logo login-logo-svg">
-      -->
-      <p class="brand-subtitle">Activities Management Platform</p>
+      <div class="logo-container">
+        <i class="ti ti-shield-check logo-icon"></i>
+      </div>
+      <h1 class="brand-title">MiniPass</h1>
+      <p class="brand-subtitle">Digital Passport Management</p>
     </div>
 
     <!-- Login Form -->

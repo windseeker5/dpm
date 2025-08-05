@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Simple professional shield for favicon -->
+  <defs>
+    <linearGradient id="faviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Simplified shield shape optimized for small size -->
+  <path d="M16 3L7 7V16C7 21.5228 11.4772 26 17 26H15C14.4477 26 14 25.5523 14 25C14 19.4772 18.4772 15 24 15C24.5523 15 25 14.5523 25 14V7L16 3Z" fill="url(#faviconGradient)"/>
+  
+  <!-- Simple ticket/pass symbol -->
+  <rect x="12" y="13" width="8" height="5" rx="0.8" fill="white" fill-opacity="0.95"/>
+  <line x1="13" y1="15" x2="19" y2="15" stroke="#2563eb" stroke-width="1"/>
+  <circle cx="18" cy="14" r="0.6" fill="#7c3aed"/>
+</svg>

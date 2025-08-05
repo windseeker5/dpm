@@ -37,12 +37,12 @@
       
       <!-- Revenue -->
     <div class="col-12 col-md-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+      <div class="card kpi-card">
         <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Revenue</div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="kpi-label">Revenue</div>
             <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" id="revenue-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+              <a class="dropdown-toggle" id="revenue-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
               <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-dropdown">
                 <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
                 <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
@@ -51,25 +51,23 @@
               </div>
             </div>
           </div>
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="h2 mb-0" id="revenue-value" style="font-weight: 600;">$0</div>
-            <div class="text-success d-flex align-items-center" id="revenue-trend" style="font-size: 0.875rem; font-weight: 500;">
-              8% ↗
-            </div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="kpi-value" id="revenue-value">$0</div>
+            <div class="kpi-trend text-success" id="revenue-trend">8% ↗</div>
           </div>
-          <div id="revenue-sparkline" style="height: 48px;"></div>
+          <div class="kpi-chart" id="revenue-sparkline"></div>
         </div>
       </div>
     </div>
 
     <!-- Active Passports -->
     <div class="col-12 col-md-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+      <div class="card kpi-card">
         <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Active Passports</div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="kpi-label">Active Passports</div>
             <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" id="users-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+              <a class="dropdown-toggle" id="users-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
               <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-dropdown">
                 <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
                 <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
@@ -78,25 +76,23 @@
               </div>
             </div>
           </div>
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="h2 mb-0" id="users-value" style="font-weight: 600;">0</div>
-            <div class="text-warning d-flex align-items-center" id="users-trend" style="font-size: 0.875rem; font-weight: 500;">
-              0% —
-            </div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="kpi-value" id="users-value">0</div>
+            <div class="kpi-trend text-warning" id="users-trend">0% —</div>
           </div>
-          <div id="users-sparkline" style="height: 48px;"></div>
+          <div class="kpi-chart" id="users-sparkline"></div>
         </div>
       </div>
     </div>
 
     <!-- Passports Created -->
     <div class="col-12 col-md-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+      <div class="card kpi-card">
         <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Passports Created</div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="kpi-label">Passports Created</div>
             <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" id="passes-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+              <a class="dropdown-toggle" id="passes-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
               <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-dropdown">
                 <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
                 <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
@@ -105,25 +101,23 @@
               </div>
             </div>
           </div>
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="h2 mb-0" id="passes-value" style="font-weight: 600;">0</div>
-            <div class="text-success d-flex align-items-center" id="passes-trend" style="font-size: 0.875rem; font-weight: 500;">
-              4% ↗
-            </div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="kpi-value" id="passes-value">0</div>
+            <div class="kpi-trend text-success" id="passes-trend">4% ↗</div>
           </div>
-          <div id="passes-sparkline" style="height: 48px;"></div>
+          <div class="kpi-chart" id="passes-sparkline"></div>
         </div>
       </div>
     </div>
 
     <!-- Pending Signups -->
     <div class="col-12 col-md-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+      <div class="card kpi-card">
         <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Pending Signups</div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="kpi-label">Pending Signups</div>
             <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" id="pending-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+              <a class="dropdown-toggle" id="pending-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
               <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-dropdown">
                 <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
                 <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
@@ -132,13 +126,11 @@
               </div>
             </div>
           </div>
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="h2 mb-0" id="pending-value" style="font-weight: 600;">0</div>
-            <div class="text-success d-flex align-items-center" id="pending-trend" style="font-size: 0.875rem; font-weight: 500;">
-              0% ↗
-            </div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="kpi-value" id="pending-value">0</div>
+            <div class="kpi-trend text-success" id="pending-trend">0% ↗</div>
           </div>
-          <div id="pending-sparkline" style="height: 48px;"></div>
+          <div class="kpi-chart" id="pending-sparkline"></div>
         </div>
       </div>
     </div>
@@ -151,12 +143,12 @@
         <!-- Revenue Card -->
         <div class="carousel-item active">
           <div class="px-2">
-            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+            <div class="card kpi-card">
               <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Revenue</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="kpi-label">Revenue</div>
                   <div class="dropdown">
-                    <a class="dropdown-toggle text-secondary" id="revenue-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+                    <a class="dropdown-toggle" id="revenue-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
                     <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-mobile-dropdown">
                       <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
                       <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
@@ -165,11 +157,11 @@
                     </div>
                   </div>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="h2 mb-0" id="revenue-mobile-value" style="font-weight: 600;">$0</div>
-                  <div class="text-warning d-flex align-items-center" id="revenue-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="kpi-value" id="revenue-mobile-value">$0</div>
+                  <div class="kpi-trend text-warning" id="revenue-mobile-trend">0% —</div>
                 </div>
-                <div id="revenue-mobile-sparkline" style="height: 48px;"></div>
+                <div class="kpi-chart" id="revenue-mobile-sparkline"></div>
               </div>
             </div>
           </div>
@@ -178,12 +170,12 @@
         <!-- Active Passports Card -->
         <div class="carousel-item">
           <div class="px-2">
-            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+            <div class="card kpi-card">
               <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Active Passports</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="kpi-label">Active Passports</div>
                   <div class="dropdown">
-                    <a class="dropdown-toggle text-secondary" id="users-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+                    <a class="dropdown-toggle" id="users-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
                     <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-mobile-dropdown">
                       <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
                       <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
@@ -192,11 +184,11 @@
                     </div>
                   </div>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="h2 mb-0" id="users-mobile-value" style="font-weight: 600;">0</div>
-                  <div class="text-warning d-flex align-items-center" id="users-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="kpi-value" id="users-mobile-value">0</div>
+                  <div class="kpi-trend text-warning" id="users-mobile-trend">0% —</div>
                 </div>
-                <div id="users-mobile-sparkline" style="height: 48px;"></div>
+                <div class="kpi-chart" id="users-mobile-sparkline"></div>
               </div>
             </div>
           </div>
@@ -205,12 +197,12 @@
         <!-- Passports Created Card -->
         <div class="carousel-item">
           <div class="px-2">
-            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+            <div class="card kpi-card">
               <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Passports Created</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="kpi-label">Passports Created</div>
                   <div class="dropdown">
-                    <a class="dropdown-toggle text-secondary" id="passes-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+                    <a class="dropdown-toggle" id="passes-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
                     <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-mobile-dropdown">
                       <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
                       <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
@@ -219,11 +211,11 @@
                     </div>
                   </div>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="h2 mb-0" id="passes-mobile-value" style="font-weight: 600;">0</div>
-                  <div class="text-warning d-flex align-items-center" id="passes-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="kpi-value" id="passes-mobile-value">0</div>
+                  <div class="kpi-trend text-warning" id="passes-mobile-trend">0% —</div>
                 </div>
-                <div id="passes-mobile-sparkline" style="height: 48px;"></div>
+                <div class="kpi-chart" id="passes-mobile-sparkline"></div>
               </div>
             </div>
           </div>
@@ -232,25 +224,24 @@
         <!-- Pending Signups Card -->
         <div class="carousel-item">
           <div class="px-2">
-            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
+            <div class="card kpi-card">
               <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Pending Signups</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="kpi-label">Pending Signups</div>
                   <div class="dropdown">
-                    <a class="dropdown-toggle text-secondary" id="pending-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
+                    <a class="dropdown-toggle" id="pending-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
                     <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-mobile-dropdown">
                       <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
                       <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
-                      <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
                       <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
                     </div>
                   </div>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="h2 mb-0" id="pending-mobile-value" style="font-weight: 600;">0</div>
-                  <div class="text-warning d-flex align-items-center" id="pending-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="kpi-value" id="pending-mobile-value">0</div>
+                  <div class="kpi-trend text-warning" id="pending-mobile-trend">0% —</div>
                 </div>
-                <div id="pending-mobile-sparkline" style="height: 48px;"></div>
+                <div class="kpi-chart" id="pending-mobile-sparkline"></div>
               </div>
             </div>
           </div>
@@ -431,6 +422,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!trendList || trendList.length === 0 || maxValue <= 0) {
       // Just leave container empty when no data
       container.style.height = '48px';
+      container.style.background = 'transparent';
       return;
     }
     
@@ -447,13 +439,18 @@ document.addEventListener("DOMContentLoaded", function () {
         labels: trendList.map((_, i) => `Day ${i + 1}`),
         datasets: [{
           data: trendList,
-          backgroundColor: chartType === "bar" ? "#206bc4" : "rgba(32,107,196,0.1)",
-          borderColor: "#206bc4",
+          backgroundColor: chartType === "bar" 
+            ? "linear-gradient(135deg, #2563eb, #7c3aed)" 
+            : "rgba(37, 99, 235, 0.08)",
+          borderColor: "#2563eb",
           fill: chartType === "line",
           tension: 0.4,
-          borderWidth: 2,
+          borderWidth: 2.5,
           pointRadius: 0,
-          pointHoverRadius: 4,
+          pointHoverRadius: 5,
+          pointBackgroundColor: "#2563eb",
+          pointBorderColor: "#ffffff",
+          pointBorderWidth: 2,
           spanGaps: false
         }]
       },
@@ -466,13 +463,16 @@ document.addEventListener("DOMContentLoaded", function () {
             enabled: true,
             mode: 'index',
             intersect: false,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: '#206bc4',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#2563eb',
             borderWidth: 1,
-            cornerRadius: 6,
+            cornerRadius: 12,
             displayColors: false,
+            padding: 12,
+            caretPadding: 8,
+            caretSize: 6,
             callbacks: {
               title: function(context) {
                 return context[0].label;
@@ -670,58 +670,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 {% block styles %}
 <style>
-.card {
-  background-color: #fff !important;
-  border: 1px solid #e6e7e9;
-  border-radius: 16px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table {
-  background-color: #fff !important;
-}
-
-.activity-card {
-  background-color: #fff !important;
-}
-
-/* KPI Card specific styling */
-.kpi-card-rounded .card-body {
-  padding: 1.25rem !important;
-}
-
-/* Force rounded corners on KPI cards */
-.kpi-card-rounded {
-  border-radius: 16px !important;
-  overflow: hidden;
-  -webkit-border-radius: 16px !important;
-  -moz-border-radius: 16px !important;
-}
-
-.h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1.2;
-  margin-bottom: 0;
-}
-
-/* Chart container styling */
-#revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline,
-#revenue-mobile-sparkline, #users-mobile-sparkline, #passes-mobile-sparkline, #pending-mobile-sparkline {
-  height: 48px;
-  width: 100%;
-  position: relative;
-}
-
-#revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas,
-#revenue-mobile-sparkline canvas, #users-mobile-sparkline canvas, #passes-mobile-sparkline canvas, #pending-mobile-sparkline canvas {
-  width: 100% !important;
-  height: 48px !important;
-}
-
 /* Mobile Carousel Styles */
 @media (max-width: 767.98px) {
-  /* Ensure carousel has proper touch support */
   .carousel-inner {
     touch-action: pan-x !important;
   }
@@ -730,7 +680,6 @@ document.addEventListener("DOMContentLoaded", function () {
     transition: transform 0.3s ease-in-out !important;
   }
   
-  /* Improve touch interaction */
   #kpiCarousel {
     user-select: none;
     -webkit-user-select: none;
@@ -738,69 +687,20 @@ document.addEventListener("DOMContentLoaded", function () {
     -ms-user-select: none;
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
+    position: relative;
+    overflow: hidden;
   }
   
   #kpiCarousel .carousel-inner {
     overflow: hidden;
   }
   
-  /* Better touch handling for mobile */
   #kpiCarousel .carousel-item {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
   }
-  
-  /* Ensure proper swiping */
-  #kpiCarousel {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  /* Mobile table typography optimization - Force override */
-  .card.transaction-table-card .table.card-table.table-vcenter tbody tr td:first-child {
-    font-size: 0.75rem !important;
-    color: #6c757d !important;
-    line-height: 1.3 !important;
-  }
-  
-  .card.transaction-table-card .table.card-table.table-vcenter tbody tr td:last-child {
-    font-size: 0.875rem !important;
-    line-height: 1.4 !important;
-  }
-  
-}
-
-/* Responsive adjustments */
-@media (max-width: 576px) {
-  .kpi-card-rounded .card-body {
-    padding: 1rem !important;
-  }
-  
-  .h2 {
-    font-size: 1.5rem;
-  }
-  
-  #revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline,
-  #revenue-mobile-sparkline, #users-mobile-sparkline, #passes-mobile-sparkline, #pending-mobile-sparkline {
-    height: 40px;
-  }
-  
-  #revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas,
-  #revenue-mobile-sparkline canvas, #users-mobile-sparkline canvas, #passes-mobile-sparkline canvas, #pending-mobile-sparkline canvas {
-    height: 40px !important;
-  }
-}
-
-/* Transaction table card styling - uses Bootstrap classes like activity cards */
-
-/* Hover effects */
-.card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: box-shadow 0.2s ease-in-out;
-  transform: translateY(-1px);
-  transition: all 0.2s ease-in-out;
 }
 </style>
 {% endblock %}

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>minipass</title>
+  <title>minipass - Activities Management Platform</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Favicons -->
@@ -22,7 +22,7 @@
   <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
 
   <!-- Custom Styles -->
-  <link href="{{ url_for('static', filename='minipass.css') }}?v=20250624110800" rel="stylesheet">
+  <link href="{{ url_for('static', filename='minipass.css') }}?v=20250805142000" rel="stylesheet">
 
   <!-- Fix navbar button height to match standard buttons -->
   <style>
@@ -69,12 +69,14 @@
 
 <div class="page">
   <!-- Top Navbar -->
-  <header class="navbar navbar-expand-md navbar-dark bg-gray-800 d-print-none">
+  <header class="navbar navbar-expand-md navbar-dark bg-gray-800 d-print-none" style="padding: 0.75rem 0;">
     <div class="container-xl d-flex justify-content-between align-items-center">
-      <a href="https://minipass.me" class="d-flex align-items-center text-white text-decoration-none">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Minipass Logo" class="d-none d-md-inline" style="height: 17px; width: auto;">
-      </a>
-      <span class="org-name-responsive ms-2">{{ ORG_NAME }}</span>
+      <div class="d-flex align-items-center">
+        <a href="https://minipass.me" class="d-flex align-items-center text-white text-decoration-none">
+          <img src="{{ url_for('static', filename='logo-white.svg') }}" alt="Minipass Logo" class="logo-desktop" style="height: 32px; width: auto;">
+        </a>
+        <span class="org-name-responsive d-none d-md-inline">{{ ORG_NAME }}</span>
+      </div>
 
       {% if session.get("admin") %}
       <div class="navbar-nav flex-row align-items-center">
@@ -95,6 +97,9 @@
 
             <a href="{{ url_for('setup') }}" class="dropdown-item">
               <i class="ti ti-settings me-2"></i>Settings
+            </a>
+            <a href="{{ url_for('styleguide') }}" class="dropdown-item">
+              <i class="ti ti-palette me-2"></i>Style Guide
             </a>
             <div class="dropdown-divider"></div>
             <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
@@ -167,14 +172,14 @@
     <div class="collapse navbar-collapse d-md-block" id="secondary-navbar">
       <div class="d-flex align-items-center w-100">
         <ul class="navbar-nav flex-grow-1">
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="ti ti-home"></i> Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_activities') }}"><i class="ti ti-activity"></i> Activities</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_passports') }}"><i class="ti ti-ticket"></i> Passports</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_signups') }}"><i class="ti ti-user-check"></i> Signups</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_surveys') }}"><i class="ti ti-clipboard-check"></i> Surveys</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="ti ti-home"></i> Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_activities') }}"><i class="ti ti-calendar-event"></i> Activities</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_signups') }}"><i class="ti ti-users"></i> Registrations</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_passports') }}"><i class="ti ti-ticket"></i> Digital Passes</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_surveys') }}"><i class="ti ti-chart-bar"></i> Analytics</a></li>
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('chatbot.index') }}">
-              <i class="ti ti-message-chatbot"></i> AI Analytics
+              <i class="ti ti-message-chatbot"></i> AI Insights
             </a>          
           </li>
         </ul>
@@ -205,7 +210,7 @@
     <!-- Footer -->
     <footer class="footer footer-transparent d-print-none">
       <div class="container-xl text-center text-muted py-3">
-        © 2025 <a href="https://minipass.me" class="text-muted">minipass.me</a> - All rights reserved.
+        © 2025 <a href="https://minipass.me" class="text-muted">minipass.me</a> - Activities Management Platform
       </div>
     </footer>
   </div>

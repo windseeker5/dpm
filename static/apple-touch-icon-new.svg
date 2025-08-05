@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none">
+  <!-- Apple touch icon - 180x180 optimized -->
+  <defs>
+    <linearGradient id="appleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background with rounded corners -->
+  <rect width="180" height="180" rx="40" fill="url(#appleGradient)"/>
+  
+  <!-- Shield shape -->
+  <path d="M90 25L45 40V85C45 120.898 74.1015 150 110 150H70C67.7909 150 66 148.209 66 146C66 110.102 96.1015 80 132 80C134.209 80 136 78.2091 136 76V40L90 25Z" fill="white" fill-opacity="0.95"/>
+  
+  <!-- Inner shield details -->
+  <path d="M90 35L55 47V82C55 111.823 78.1766 136 108 136H78C76.8954 136 76 135.105 76 134C76 104.177 99.1766 80 129 80C130.105 80 131 79.1046 131 78V47L90 35Z" fill="url(#appleGradient)" fill-opacity="0.3"/>
+  
+  <!-- Passport/ticket symbol -->
+  <rect x="75" y="75" width="30" height="18" rx="3" fill="white"/>
+  <line x1="80" y1="82" x2="100" y2="82" stroke="#2563eb" stroke-width="2.5"/>
+  <line x1="80" y1="87" x2="95" y2="87" stroke="#2563eb" stroke-width="2"/>
+  <circle cx="96" cy="79" r="2.5" fill="#7c3aed"/>
+</svg>

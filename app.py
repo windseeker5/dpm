@@ -565,6 +565,13 @@ def dashboard():
 
 
 
+@app.route("/styleguide")
+def styleguide():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    return render_template("styleguide.html")
+
 
 @app.route("/admin/signup/mark-paid/<int:signup_id>", methods=["POST"])
 def mark_signup_paid(signup_id):

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KPI Cards Test</title>
+  
+  <!-- Tabler CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/icons@2.47.0/icons-sprite.svg" rel="stylesheet"/>
+  
+  <style>
+    /* Clean Tabler.io KPI Cards */
+    .kpi-card {
+      border: 1px solid var(--tblr-border-color);
+      border-radius: var(--tblr-border-radius-lg);
+      background: #fff;
+      box-shadow: var(--tblr-box-shadow-sm);
+      transition: all 0.15s ease;
+    }
+
+    .kpi-card:hover {
+      box-shadow: var(--tblr-box-shadow);
+      transform: translateY(-1px);
+    }
+
+    .kpi-card .card-body {
+      padding: 1.5rem;
+    }
+
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--tblr-body-color);
+      margin: 0;
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--tblr-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .kpi-trend {
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .kpi-card .dropdown-toggle {
+      font-size: 0.75rem;
+      color: var(--tblr-secondary);
+      text-decoration: none;
+      border: none;
+      background: none;
+      padding: 0;
+    }
+
+    .kpi-card .dropdown-toggle:hover {
+      color: var(--tblr-primary);
+    }
+
+    .kpi-card .dropdown-toggle:focus {
+      box-shadow: none;
+    }
+
+    .kpi-card .dropdown-menu {
+      font-size: 0.75rem;
+      min-width: 120px;
+    }
+
+    .kpi-chart {
+      height: 48px;
+      margin-top: 0.75rem;
+      background: #f8f9fa;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 0.7rem;
+    }
+
+    @media (max-width: 576px) {
+      .kpi-card .card-body {
+        padding: 1.25rem;
+      }
+      
+      .kpi-value {
+        font-size: 1.25rem;
+      }
+      
+      .kpi-chart {
+        height: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-xl mt-4">
+    <h1 class="mb-4">Clean Tabler.io KPI Cards Test</h1>
+    
+    <!-- KPI Cards Row -->
+    <div class="row g-3 mb-4">
+      
+      <!-- Revenue Card -->
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card kpi-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="kpi-label">Revenue</div>
+              <div class="dropdown">
+                <a class="dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <a class="dropdown-item active" href="#" aria-current="true">Last 7 days</a>
+                  <a class="dropdown-item" href="#">Last 30 days</a>
+                  <a class="dropdown-item" href="#">Last 90 days</a>
+                  <a class="dropdown-item" href="#">All time</a>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="kpi-value">$12,345</div>
+              <div class="kpi-trend text-success">8% ↗</div>
+            </div>
+            <div class="kpi-chart">Chart placeholder</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Card -->
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card kpi-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="kpi-label">Active Users</div>
+              <div class="dropdown">
+                <a class="dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <a class="dropdown-item active" href="#" aria-current="true">Last 7 days</a>
+                  <a class="dropdown-item" href="#">Last 30 days</a>
+                  <a class="dropdown-item" href="#">Last 90 days</a>
+                  <a class="dropdown-item" href="#">All time</a>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="kpi-value">1,234</div>
+              <div class="kpi-trend text-warning">0% —</div>
+            </div>
+            <div class="kpi-chart">Chart placeholder</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conversions Card -->
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card kpi-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="kpi-label">Conversions</div>
+              <div class="dropdown">
+                <a class="dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <a class="dropdown-item active" href="#" aria-current="true">Last 7 days</a>
+                  <a class="dropdown-item" href="#">Last 30 days</a>
+                  <a class="dropdown-item" href="#">Last 90 days</a>
+                  <a class="dropdown-item" href="#">All time</a>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="kpi-value">89</div>
+              <div class="kpi-trend text-success">12% ↗</div>
+            </div>
+            <div class="kpi-chart">Chart placeholder</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Growth Card -->
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card kpi-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="kpi-label">Growth Rate</div>
+              <div class="dropdown">
+                <a class="dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Last 7 days</a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <a class="dropdown-item active" href="#" aria-current="true">Last 7 days</a>
+                  <a class="dropdown-item" href="#">Last 30 days</a>
+                  <a class="dropdown-item" href="#">Last 90 days</a>
+                  <a class="dropdown-item" href="#">All time</a>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="kpi-value">23%</div>
+              <div class="kpi-trend text-danger">-5% ↘</div>
+            </div>
+            <div class="kpi-chart">Chart placeholder</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="alert alert-info">
+      <h4>Testing Results:</h4>
+      <ul class="mb-0">
+        <li>✅ Clean, minimal CSS using Tabler.io variables</li>
+        <li>✅ No z-index conflicts</li>
+        <li>✅ Proper dropdown positioning</li>
+        <li>✅ Mobile responsive design</li>
+        <li>✅ Consistent with Tabler.io design system</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Tabler JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Shield with subtle shadow -->
+  <path d="M16 4L8 8V16C8 22.6274 13.3726 28 20 28H12C11.4477 28 11 27.5523 11 27V27C11 20.3726 16.3726 15 23 15H23C23.5523 15 24 14.5523 24 14V8L16 4Z" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M16 4L8 8V16C8 22.6274 13.3726 28 20 28H12C11.4477 28 11 27.5523 11 27V27C11 20.3726 16.3726 15 23 15H23C23.5523 15 24 14.5523 24 14V8L16 4Z" stroke="white" stroke-width="2" stroke-linejoin="round" fill="rgba(255,255,255,0.15)"/>
+  
+  <!-- Passport/ticket icon inside shield -->
+  <rect x="12" y="12" width="8" height="6" rx="1" stroke="white" stroke-width="1" fill="rgba(255,255,255,0.25)"/>
+  <line x1="13" y1="14" x2="19" y2="14" stroke="white" stroke-width="0.8"/>
+  <line x1="13" y1="16" x2="17" y2="16" stroke="white" stroke-width="0.8"/>
+  
+  <!-- Security indicator -->
+  <circle cx="18" cy="13" r="0.8" fill="white" opacity="0.9"/>
+</svg>
