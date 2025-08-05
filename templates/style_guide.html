@@ -115,6 +115,25 @@
     color: #6c757d;
     margin-top: 0.5rem;
   }
+
+  /* Custom Light Badge Styles */
+  .badge-light-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+
+  .badge-light-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+
+  .badge-light-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+  }
 </style>
 {% endblock %}
 
@@ -849,36 +868,28 @@
 
           <!-- Forms Section -->
           <section id="forms" class="style-guide-section">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">Forms</h3>
+            <h3>Forms</h3>
+            <h4>Form Fieldset</h4>
+            <div class="form-fieldset">
+              <div class="mb-3">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-control" placeholder="Enter name">
               </div>
-              <div class="card-body">
-                <h4>Form Fieldset</h4>
-                <div class="component-demo">
-                  <div class="form-fieldset">
-                    <div class="mb-3">
-                      <label class="form-label">Name</label>
-                      <input type="text" class="form-control" placeholder="Enter name">
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Email</label>
-                      <div class="input-icon">
-                        <span class="input-icon-addon">
-                          <i class="ti ti-mail"></i>
-                        </span>
-                        <input type="email" class="form-control" placeholder="Enter email">
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="code-preview">
-                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
-                    <i class="ti ti-copy"></i>
-                  </button>
-                  <code>&lt;div class="form-fieldset"&gt;...&lt;/div&gt;</code>
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <div class="input-icon">
+                  <span class="input-icon-addon">
+                    <i class="ti ti-mail"></i>
+                  </span>
+                  <input type="email" class="form-control" placeholder="Enter email">
                 </div>
               </div>
+            </div>
+            <div class="code-preview">
+              <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                <i class="ti ti-copy"></i>
+              </button>
+              <code>&lt;div class="form-fieldset"&gt;...&lt;/div&gt;</code>
             </div>
           </section>
 
@@ -891,35 +902,337 @@
               <div class="card-body">
                 <h4>Standard Table</h4>
                 <div class="component-demo">
+                  <!-- Table Controls -->
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center">
+                      <span class="me-2">Show</span>
+                      <select class="form-select form-select-sm" style="width: auto;">
+                        <option>8</option>
+                        <option>16</option>
+                        <option>32</option>
+                      </select>
+                      <span class="ms-2">entries</span>
+                    </div>
+                    <div class="position-relative" style="width: 300px;">
+                      <div class="input-icon">
+                        <span class="input-icon-addon">
+                          <i class="ti ti-search"></i>
+                        </span>
+                        <input type="text" class="form-control" placeholder="" style="padding-right: 60px;">
+                        <span class="position-absolute end-0 top-50 translate-middle-y me-3">
+                          <kbd class="small text-muted">ctrl + k</kbd>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Table -->
                   <div class="table-responsive">
-                    <table class="table">
+                    <table class="table table-hover">
                       <thead>
                         <tr>
-                          <th>Name</th>
-                          <th>Email</th>
+                          <th style="width: 300px;">User</th>
+                          <th>City</th>
                           <th>Status</th>
+                          <th>Category</th>
+                          <th style="width: 120px;">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td>John Doe</td>
-                          <td>john@example.com</td>
-                          <td><span class="badge bg-success">Active</span></td>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <img src="https://www.gravatar.com/avatar/1?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                              <div>
+                                <div class="fw-bold">John Doe</div>
+                                <div class="text-muted small">john@example.com</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>New York, USA</td>
+                          <td><span class="badge badge-light-success">Active</span></td>
+                          <td>Individual</td>
+                          <td>
+                            <div class="dropdown">
+                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Edit</a></li>
+                                <li><a class="dropdown-item" href="#">View</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
                         </tr>
                         <tr>
-                          <td>Jane Smith</td>
-                          <td>jane@example.com</td>
-                          <td><span class="badge bg-warning">Pending</span></td>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <img src="https://www.gravatar.com/avatar/2?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                              <div>
+                                <div class="fw-bold">Jane Smith</div>
+                                <div class="text-muted small">jane@example.com</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>London, UK</td>
+                          <td><span class="badge badge-light-danger">Inactive</span></td>
+                          <td>Agency</td>
+                          <td>
+                            <div class="dropdown">
+                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Edit</a></li>
+                                <li><a class="dropdown-item" href="#">View</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <img src="https://www.gravatar.com/avatar/3?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                              <div>
+                                <div class="fw-bold">Mike Johnson</div>
+                                <div class="text-muted small">mike@example.com</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>Toronto, Canada</td>
+                          <td><span class="badge badge-light-warning">Requested</span></td>
+                          <td>Individual</td>
+                          <td>
+                            <div class="dropdown">
+                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Edit</a></li>
+                                <li><a class="dropdown-item" href="#">View</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <img src="https://www.gravatar.com/avatar/4?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                              <div>
+                                <div class="fw-bold">Sarah Wilson</div>
+                                <div class="text-muted small">sarah@example.com</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>Sydney, Australia</td>
+                          <td><span class="badge badge-light-success">Active</span></td>
+                          <td>Agency</td>
+                          <td>
+                            <div class="dropdown">
+                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Edit</a></li>
+                                <li><a class="dropdown-item" href="#">View</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <img src="https://www.gravatar.com/avatar/5?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                              <div>
+                                <div class="fw-bold">David Brown</div>
+                                <div class="text-muted small">david@example.com</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>Berlin, Germany</td>
+                          <td><span class="badge badge-light-danger">Inactive</span></td>
+                          <td>Individual</td>
+                          <td>
+                            <div class="dropdown">
+                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Edit</a></li>
+                                <li><a class="dropdown-item" href="#">View</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <img src="https://www.gravatar.com/avatar/6?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                              <div>
+                                <div class="fw-bold">Lisa Anderson</div>
+                                <div class="text-muted small">lisa@example.com</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>Paris, France</td>
+                          <td><span class="badge badge-light-warning">Requested</span></td>
+                          <td>Agency</td>
+                          <td>
+                            <div class="dropdown">
+                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Edit</a></li>
+                                <li><a class="dropdown-item" href="#">View</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <img src="https://www.gravatar.com/avatar/7?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                              <div>
+                                <div class="fw-bold">Tom Garcia</div>
+                                <div class="text-muted small">tom@example.com</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>Madrid, Spain</td>
+                          <td><span class="badge badge-light-success">Active</span></td>
+                          <td>Individual</td>
+                          <td>
+                            <div class="dropdown">
+                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Edit</a></li>
+                                <li><a class="dropdown-item" href="#">View</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <img src="https://www.gravatar.com/avatar/8?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                              <div>
+                                <div class="fw-bold">Emma Davis</div>
+                                <div class="text-muted small">emma@example.com</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>Tokyo, Japan</td>
+                          <td><span class="badge badge-light-danger">Inactive</span></td>
+                          <td>Agency</td>
+                          <td>
+                            <div class="dropdown">
+                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Edit</a></li>
+                                <li><a class="dropdown-item" href="#">View</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                              </ul>
+                            </div>
+                          </td>
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+
+                  <!-- Pagination -->
+                  <div class="d-flex justify-content-between align-items-center mt-3">
+                    <span class="text-muted">Showing 1 to 8 of 16 entries</span>
+                    <nav>
+                      <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                          <a class="page-link" href="#" tabindex="-1">
+                            <i class="ti ti-chevron-left"></i>
+                          </a>
+                        </li>
+                        <li class="page-item active">
+                          <a class="page-link" href="#">1</a>
+                        </li>
+                        <li class="page-item">
+                          <a class="page-link" href="#">2</a>
+                        </li>
+                        <li class="page-item">
+                          <a class="page-link" href="#">3</a>
+                        </li>
+                        <li class="page-item">
+                          <a class="page-link" href="#">
+                            <i class="ti ti-chevron-right"></i>
+                          </a>
+                        </li>
+                      </ul>
+                    </nav>
                   </div>
                 </div>
                 <div class="code-preview">
                   <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
                     <i class="ti ti-copy"></i>
                   </button>
-                  <code>&lt;div class="table-responsive"&gt;&lt;table class="table"&gt;...&lt;/table&gt;&lt;/div&gt;</code>
+                  <code>&lt;div class="table-responsive"&gt;
+  &lt;table class="table table-hover"&gt;
+    &lt;thead&gt;
+      &lt;tr&gt;
+        &lt;th style="width: 300px;"&gt;User&lt;/th&gt;
+        &lt;th&gt;City&lt;/th&gt;
+        &lt;th&gt;Status&lt;/th&gt;
+        &lt;th&gt;Category&lt;/th&gt;
+        &lt;th style="width: 120px;"&gt;Actions&lt;/th&gt;
+      &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+      &lt;tr&gt;
+        &lt;td&gt;
+          &lt;div class="d-flex align-items-center"&gt;
+            &lt;img src="https://www.gravatar.com/avatar/1?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar"&gt;
+            &lt;div&gt;
+              &lt;div class="fw-bold"&gt;John Doe&lt;/div&gt;
+              &lt;div class="text-muted small"&gt;john@example.com&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/td&gt;
+        &lt;td&gt;New York, USA&lt;/td&gt;
+        &lt;td&gt;&lt;span class="badge badge-light-success"&gt;Active&lt;/span&gt;&lt;/td&gt;
+        &lt;td&gt;Individual&lt;/td&gt;
+        &lt;td&gt;
+          &lt;div class="dropdown"&gt;
+            &lt;button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"&gt;
+              Actions
+            &lt;/button&gt;
+            &lt;ul class="dropdown-menu"&gt;
+              &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;Edit&lt;/a&gt;&lt;/li&gt;
+              &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;View&lt;/a&gt;&lt;/li&gt;
+              &lt;li&gt;&lt;hr class="dropdown-divider"&gt;&lt;/li&gt;
+              &lt;li&gt;&lt;a class="dropdown-item text-danger" href="#"&gt;Delete&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+          &lt;/div&gt;
+        &lt;/td&gt;
+      &lt;/tr&gt;
+    &lt;/tbody&gt;
+  &lt;/table&gt;
+&lt;/div&gt;</code>
                 </div>
               </div>
             </div>
