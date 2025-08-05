@@ -754,12 +754,69 @@
                   </div>
                 </div>
 
-                <h4>Activity Card (with Hover Effect)</h4>
+                <h4>Activity Card (Tabler Style)</h4>
                 <div class="component-demo">
-                  <div class="card activity-card" style="max-width: 300px;">
-                    <div class="card-body">
-                      <h3 class="card-title">Summer Camp</h3>
-                      <p class="text-muted">Activity with hover animation</p>
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <div class="card" style="border-radius: 12px; overflow: hidden;">
+                        <!-- Activity Image -->
+                        <div class="img-responsive img-responsive-21x9 card-img-top" 
+                             style="background-image: url('/static/uploads/activity_images/activity_28486c0e82.jpg');">
+                        </div>
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h3 class="card-title mb-0">Summer Camp Adventure</h3>
+                            <small class="text-muted">152d left</small>
+                          </div>
+                          <div class="d-flex gap-2 flex-wrap mb-3">
+                            <span class="badge bg-green-lt">55 active</span>
+                            <span class="badge bg-yellow-lt">22 pending</span>
+                            <span class="badge bg-blue-lt">125 created</span>
+                          </div>
+                          <button class="btn btn-secondary">Manage</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <div class="card" style="border-radius: 12px; overflow: hidden;">
+                        <!-- Activity Image -->
+                        <div class="img-responsive img-responsive-21x9 card-img-top" 
+                             style="background-image: url('/static/uploads/activity_images/activity_3beae4fa86.jpg');">
+                        </div>
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h3 class="card-title mb-0">Weekend Workshop</h3>
+                            <small class="text-muted">28d left</small>
+                          </div>
+                          <div class="d-flex gap-2 flex-wrap mb-3">
+                            <span class="badge bg-green-lt">42 active</span>
+                            <span class="badge bg-yellow-lt">8 pending</span>
+                            <span class="badge bg-blue-lt">89 created</span>
+                          </div>
+                          <button class="btn btn-secondary">Manage</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <div class="card" style="border-radius: 12px; overflow: hidden;">
+                        <!-- Placeholder for activities without images -->
+                        <div class="img-responsive img-responsive-21x9 card-img-top" 
+                             style="background: linear-gradient(45deg, #e3f2fd 0%, #2196f3 100%); display: flex; align-items: center; justify-content: center;">
+                          <i class="ti ti-calendar-event" style="font-size: 3rem; color: #1976d2; opacity: 0.8;"></i>
+                        </div>
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h3 class="card-title mb-0">Activity Name</h3>
+                            <small class="text-muted">7d left</small>
+                          </div>
+                          <div class="d-flex gap-2 flex-wrap mb-3">
+                            <span class="badge bg-green-lt">18 active</span>
+                            <span class="badge bg-yellow-lt">5 pending</span>
+                            <span class="badge bg-blue-lt">67 created</span>
+                          </div>
+                          <button class="btn btn-secondary">Manage</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -767,7 +824,24 @@
                   <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
                     <i class="ti ti-copy"></i>
                   </button>
-                  <code>&lt;div class="card activity-card"&gt;...&lt;/div&gt;</code>
+                  <code>&lt;div class="card" style="border-radius: 12px; overflow: hidden;"&gt;
+  &lt;!-- Activity Image --&gt;
+  &lt;div class="img-responsive img-responsive-21x9 card-img-top" 
+       style="background-image: url('/static/uploads/activity_images/activity_name.jpg');"&gt;
+  &lt;/div&gt;
+  &lt;div class="card-body"&gt;
+    &lt;div class="d-flex justify-content-between align-items-center mb-2"&gt;
+      &lt;h3 class="card-title mb-0"&gt;Activity Name&lt;/h3&gt;
+      &lt;small class="text-muted"&gt;152d left&lt;/small&gt;
+    &lt;/div&gt;
+    &lt;div class="d-flex gap-2 flex-wrap mb-3"&gt;
+      &lt;span class="badge bg-green-lt"&gt;55 active&lt;/span&gt;
+      &lt;span class="badge bg-yellow-lt"&gt;22 pending&lt;/span&gt;
+      &lt;span class="badge bg-blue-lt"&gt;125 created&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;button class="btn btn-secondary"&gt;Manage&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code>
                 </div>
               </div>
             </div>
