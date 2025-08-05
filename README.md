@@ -1,32 +1,64 @@
-# dpm
-Digital Pass Manager system ( python, flask )
+# Minipass
 
+**Minipass** is an all-in-one solution to centralize **registrations**, **payments**, **digital passes**, and **activity tracking**.  
+✔️ Simple — ✔️ Automated — ✔️ Secure
 
-## How to setup after git clone...
-$ cd dpm
+---
 
-$ python -m venv venv
+## 🔧 Technology Stack
 
-$ cd backend
+This application is built with:
 
-$ pip install -r requirements.txt
+- [Flask](https://flask.palletsprojects.com/) — Python web framework
+- [Tabler.io](https://tabler.io/) — Modern and responsive UI component library
 
+---
 
-# How to
+## 🚀 Key Features
 
-### Step 1: Delete Existing Migrations and Database
-rm -rf migrations
+- 🎫 **Digital Pass Management**  
+  Create, send, track, and redeem digital passes
 
-rm database.db  # Delete SQLite database (if using SQLite)
+- 💳 **Integrated Payment Tracking**  
+  Centralize and manage your payment records with ease
 
-### Step 2: Initialize Migrations Again
-flask db init
+- 📝 **Automated Surveys**  
+  - Collect feedback from **customers**
+  - Evaluate each **activity** with custom surveys
 
-flask db migrate -m "Initial migration"
+- 📊 **Detailed Financial Reporting**  
+  - Monitor **revenue and expenses** by activity
+  - View clear accounting summaries and trends
 
-flask db upgrade
+- 💼 **Expense & Revenue Tracking**  
+  - Track all income and costs per activity
+  - Upload receipts and generate custom reports
 
+---
 
-### Web Interface 
-http://127.0.0.1:5000
+## 📎 About Minipass
 
+Minipass is designed for organizations that want to offer a seamless digital experience to their members or clients—while keeping full control over their operations, payments, and performance metrics.
+
+---
+
+## 📷 UI Overview
+
+The interface is built using [Tabler.io](https://tabler.io/), providing a clean, mobile-first, and modern user experience.
+
+---
+
+## 📦 Installation
+
+> To be completed based on your Flask or Docker environment setup
+
+---
+
+## 📫 Contact
+
+Developed by **Ken Dresdell**  
+📧 kdresdell@gmail.com
+
+---
+
+> _Minipass – Simplify your operations. Optimize your revenue._

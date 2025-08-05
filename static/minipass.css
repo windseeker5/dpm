@@ -145,12 +145,31 @@ tbody, tr, td, th {
 
 
 
+/* 🏷️ Logo sizing classes */
+.logo-mini { height: 32px; }
+.logo-small { height: 40px; }
+.logo-standard { height: 60px; }
+.logo-large { height: 80px; }
+.logo-hero { height: 120px; }
+
+.logo-mini, .logo-small, .logo-standard, .logo-large, .logo-hero {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
 /* 📱 Smaller size on small screens */
 @media (max-width: 576px) {
     .org-name-responsive {
         font-size: 1.4rem;
         margin-left: 0.5rem;
     }
+    
+    /* Responsive logo sizing */
+    .logo-hero { height: 80px; }
+    .logo-large { height: 60px; }
+    .logo-standard { height: 50px; }
 }
 
 
