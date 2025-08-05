@@ -466,6 +466,18 @@ def home():
 
 
 
+@app.route("/assets/<path:filename>")
+def assets(filename):
+    return send_from_directory('assets', filename)
+
+
+@app.route("/style-guide")
+def style_guide():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    return render_template("style_guide.html")
+
+
 @app.route("/dashboard")
 def dashboard():
     if "admin" not in session:
