@@ -1,6 +1,6 @@
 # Minipass
 
-**Minipass** is an all-in-one solution to centralize **registrations**, **payments**, **digital passes**, and **activity tracking**.  
+**Minipass** is SAAS application for **registrations**, **payments**, **digital passes**, and **activity tracking**.  
 ✔️ Simple — ✔️ Automated — ✔️ Secure
 
 ---
@@ -62,3 +62,4 @@ Developed by **Ken Dresdell**
 ---
 
 > _Minipass – Simplify your operations. Optimize your revenue._
+
