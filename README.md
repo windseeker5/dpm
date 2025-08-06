@@ -1,6 +1,6 @@
 # Minipass
 
-**Minipass** is SAAS application for **registrations**, **payments**, **digital passes**, and **activity tracking**.  
+**Minipass** is a powerful SAAS PWA application for end-to-end Activities management. **registrations**, **payments**, **digital passes**, and **activity tracking**.  
 ✔️ Simple — ✔️ Automated — ✔️ Secure
 
 ---
