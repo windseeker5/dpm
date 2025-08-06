@@ -5,21 +5,24 @@
 <div class="container-xl mt-4">
 
 
-<!-- 🧩 Clean Header (No extra space under OVERVIEW) -->
-<div class="page-header mb-4">
+<!-- Enhanced Welcome Header -->
+<div class="minipass-dashboard-header mb-5">
   <div class="row align-items-center">
     <div class="col">
-      <h2 class="page-pretitle text-muted text-uppercase mb-1" style="letter-spacing: 0.05em; font-size: 0.75rem;">
+      <div class="minipass-dashboard-subtitle text-muted text-uppercase mb-1" style="letter-spacing: 0.05em; font-size: var(--minipass-text-xs, 0.75rem); font-weight: var(--minipass-font-medium, 500);">
         Overview
-      </h2>
-      <h1 class="page-title mb-0" style="font-weight: 600; font-size: 1.75rem;">
-        Dashboard
+      </div>
+      <h1 class="minipass-dashboard-welcome mb-0">
+        Welcome back{% if session.get("admin") %}, {{ session['admin'].split('@')[0].title() }}{% endif %}!
       </h1>
+      <p class="minipass-dashboard-subtitle mb-0">Here's what's happening with your activities today.</p>
     </div>
-    <div class="col-auto">
-      <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
-        <i class="ti ti-plus me-1"></i> Activity
-      </a>
+    <div class="col-auto minipass-hide-mobile">
+      <div class="d-flex gap-3">
+        <a href="{{ url_for('create_activity') }}" class="minipass-btn-primary">
+          <i class="ti ti-plus"></i> Create Activity
+        </a>
+      </div>
     </div>
   </div>
 </div>
@@ -33,114 +36,98 @@
   <!-- KPI Cards -->
   <div class="kpi-carousel-container">
     <!-- Desktop/Tablet Grid (hidden on mobile) -->
-    <div class="row g-3 mb-4 kpi-responsive-grid d-none d-md-flex">
+    <div class="minipass-kpi-grid minipass-hide-mobile">
       
       <!-- Revenue -->
-    <div class="col-12 col-md-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Revenue</div>
-            <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" id="revenue-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
-              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-dropdown">
-                <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item revenue-option" href="#" data-period="all">All time</a>
-              </div>
-            </div>
+    <div class="minipass-kpi-card">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="minipass-kpi-label">Revenue</div>
+        <div class="dropdown">
+          <a class="dropdown-toggle text-secondary" id="revenue-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: var(--minipass-text-xs, 0.75rem);">Last 7 days</a>
+          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-dropdown">
+            <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+            <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
+            <a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a>
+            <a class="dropdown-item revenue-option" href="#" data-period="all">All time</a>
           </div>
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="h2 mb-0" id="revenue-value" style="font-weight: 600;">$0</div>
-            <div class="text-success d-flex align-items-center" id="revenue-trend" style="font-size: 0.875rem; font-weight: 500;">
-              8% ↗
-            </div>
-          </div>
-          <div id="revenue-sparkline" style="height: 48px;"></div>
         </div>
       </div>
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="minipass-kpi-value" id="revenue-value">$0</div>
+        <div class="minipass-kpi-trend text-success" id="revenue-trend">
+          8% ↗
+        </div>
+      </div>
+      <div id="revenue-sparkline" style="height: 48px;"></div>
     </div>
 
     <!-- Active Passports -->
-    <div class="col-12 col-md-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Active Passports</div>
-            <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" id="users-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
-              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-dropdown">
-                <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item users-option" href="#" data-period="all">All time</a>
-              </div>
-            </div>
+    <div class="minipass-kpi-card">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="minipass-kpi-label">Active Passports</div>
+        <div class="dropdown">
+          <a class="dropdown-toggle text-secondary" id="users-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: var(--minipass-text-xs, 0.75rem);">Last 7 days</a>
+          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-dropdown">
+            <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+            <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
+            <a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a>
+            <a class="dropdown-item users-option" href="#" data-period="all">All time</a>
           </div>
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="h2 mb-0" id="users-value" style="font-weight: 600;">0</div>
-            <div class="text-warning d-flex align-items-center" id="users-trend" style="font-size: 0.875rem; font-weight: 500;">
-              0% —
-            </div>
-          </div>
-          <div id="users-sparkline" style="height: 48px;"></div>
         </div>
       </div>
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="minipass-kpi-value" id="users-value">0</div>
+        <div class="minipass-kpi-trend text-warning" id="users-trend">
+          0% —
+        </div>
+      </div>
+      <div id="users-sparkline" style="height: 48px;"></div>
     </div>
 
     <!-- Passports Created -->
-    <div class="col-12 col-md-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Passports Created</div>
-            <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" id="passes-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
-              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-dropdown">
-                <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item passes-option" href="#" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item passes-option" href="#" data-period="all">All time</a>
-              </div>
-            </div>
+    <div class="minipass-kpi-card">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="minipass-kpi-label">Passports Created</div>
+        <div class="dropdown">
+          <a class="dropdown-toggle text-secondary" id="passes-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: var(--minipass-text-xs, 0.75rem);">Last 7 days</a>
+          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-dropdown">
+            <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+            <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
+            <a class="dropdown-item passes-option" href="#" data-period="90d">Last 90 days</a>
+            <a class="dropdown-item passes-option" href="#" data-period="all">All time</a>
           </div>
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="h2 mb-0" id="passes-value" style="font-weight: 600;">0</div>
-            <div class="text-success d-flex align-items-center" id="passes-trend" style="font-size: 0.875rem; font-weight: 500;">
-              4% ↗
-            </div>
-          </div>
-          <div id="passes-sparkline" style="height: 48px;"></div>
         </div>
       </div>
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="minipass-kpi-value" id="passes-value">0</div>
+        <div class="minipass-kpi-trend text-success" id="passes-trend">
+          4% ↗
+        </div>
+      </div>
+      <div id="passes-sparkline" style="height: 48px;"></div>
     </div>
 
     <!-- Pending Signups -->
-    <div class="col-12 col-md-6 col-lg-3">
-      <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Pending Signups</div>
-            <div class="dropdown">
-              <a class="dropdown-toggle text-secondary" id="pending-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
-              <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-dropdown">
-                <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
-                <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
-                <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
-              </div>
-            </div>
+    <div class="minipass-kpi-card">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="minipass-kpi-label">Pending Signups</div>
+        <div class="dropdown">
+          <a class="dropdown-toggle text-secondary" id="pending-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: var(--minipass-text-xs, 0.75rem);">Last 7 days</a>
+          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-dropdown">
+            <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
+            <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
+            <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
+            <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
           </div>
-          <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="h2 mb-0" id="pending-value" style="font-weight: 600;">0</div>
-            <div class="text-success d-flex align-items-center" id="pending-trend" style="font-size: 0.875rem; font-weight: 500;">
-              0% ↗
-            </div>
-          </div>
-          <div id="pending-sparkline" style="height: 48px;"></div>
         </div>
       </div>
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="minipass-kpi-value" id="pending-value">0</div>
+        <div class="minipass-kpi-trend text-success" id="pending-trend">
+          0% ↗
+        </div>
+      </div>
+      <div id="pending-sparkline" style="height: 48px;"></div>
     </div>
     </div>
 
@@ -411,6 +398,34 @@
 
 </div>
 
+<!-- Mobile Floating Action Button -->
+<button class="minipass-fab minipass-show-mobile" onclick="window.location.href='{{ url_for('create_activity') }}'">
+  <i class="ti ti-plus"></i>
+</button>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="minipass-mobile-nav minipass-show-mobile">
+  <a href="{{ url_for('dashboard') }}" class="minipass-mobile-nav-item active">
+    <i class="ti ti-dashboard"></i>
+    <span>Home</span>
+  </a>
+  <a href="{{ url_for('list_activities') }}" class="minipass-mobile-nav-item">
+    <i class="ti ti-activity"></i>
+    <span>Activities</span>
+  </a>
+  <a href="{{ url_for('list_passports') }}" class="minipass-mobile-nav-item">
+    <i class="ti ti-ticket"></i>
+    <span>Passes</span>
+  </a>
+  <a href="{{ url_for('list_signups') }}" class="minipass-mobile-nav-item">
+    <i class="ti ti-currency-dollar"></i>
+    <span>Payments</span>
+  </a>
+  <a href="{{ url_for('setup') }}" class="minipass-mobile-nav-item">
+    <i class="ti ti-settings"></i>
+    <span>More</span>
+  </a>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -672,7 +687,7 @@ document.addEventListener("DOMContentLoaded", function () {
 <style>
 .card {
   background-color: #fff !important;
-  border: 1px solid #e6e7e9;
+  border: 1px solid #e5e7eb !important; /* Use minipass-gray-200 equivalent */
   border-radius: 16px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -690,8 +705,9 @@ document.addEventListener("DOMContentLoaded", function () {
   padding: 1.25rem !important;
 }
 
-/* Force rounded corners on KPI cards */
+/* Force rounded corners and borders on KPI cards */
 .kpi-card-rounded {
+  border: 1px solid #e5e7eb !important; /* Ensure border on mobile carousel cards */
   border-radius: 16px !important;
   overflow: hidden;
   -webkit-border-radius: 16px !important;

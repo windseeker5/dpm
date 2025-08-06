@@ -179,6 +179,7 @@ html {
   position: relative;
   padding: var(--minipass-space-6);
   background: white;
+  border: 1px solid var(--minipass-gray-200);
   border-radius: var(--minipass-radius-xl);
   box-shadow: var(--minipass-shadow-default);
   transition: all var(--minipass-transition-normal);
@@ -285,7 +286,7 @@ html {
   right: 0;
   background: white;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-  display: flex;
+  display: none; /* Hidden by default */
   padding: var(--minipass-space-2) 0;
   z-index: 1000;
   border-top: 1px solid var(--minipass-gray-100);
@@ -666,6 +667,19 @@ html {
     display: block !important;
   }
   
+  .minipass-mobile-nav {
+    display: flex !important;
+  }
+  
+  .minipass-fab {
+    display: flex !important;
+  }
+  
+  /* Adjust body padding for mobile nav */
+  body {
+    padding-bottom: 80px;
+  }
+  
   /* Adjust spacing for mobile */
   .minipass-card {
     margin-bottom: var(--minipass-space-4);
@@ -686,6 +700,22 @@ html {
     width: 100%;
     justify-content: center;
   }
+  
+  /* Mobile KPI Grid - Horizontal carousel style */
+  .minipass-kpi-grid {
+    display: flex;
+    gap: var(--minipass-space-4);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: var(--minipass-space-2);
+    margin-bottom: var(--minipass-space-6);
+  }
+  
+  .minipass-kpi-grid .minipass-kpi-card {
+    min-width: 280px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
 }
 
 /* Tablet Styles */
@@ -697,10 +727,26 @@ html {
   .minipass-show-tablet {
     display: block !important;
   }
+  
+  /* Tablet KPI Grid - 2 columns */
+  .minipass-kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--minipass-space-4) !important;
+    margin-bottom: var(--minipass-space-6) !important;
+  }
+  
+  /* Tablet KPI Grid - 2 columns */
+  .minipass-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--minipass-space-4);
+    margin-bottom: var(--minipass-space-6);
+  }
 }
 
 /* Desktop Styles */
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .minipass-hide-desktop {
     display: none !important;
   }
@@ -709,11 +755,42 @@ html {
     display: block !important;
   }
   
+  /* Ensure mobile navigation is hidden on desktop */
+  .minipass-mobile-nav {
+    display: none !important;
+  }
+  
+  /* Ensure FAB is hidden on desktop */
+  .minipass-fab {
+    display: none !important;
+  }
+  
+  /* Remove body padding on desktop */
+  body {
+    padding-bottom: 0 !important;
+  }
+  
+  /* Desktop KPI Grid - Force 4 columns for wireframe layout */
+  .minipass-kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: var(--minipass-space-6) !important;
+    margin-bottom: var(--minipass-space-8) !important;
+  }
+  
   /* Desktop specific card grid */
   .minipass-card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: var(--minipass-space-6);
+  }
+  
+  /* Desktop KPI Grid - 4 columns for wireframe layout */
+  .minipass-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--minipass-space-6);
+    margin-bottom: var(--minipass-space-8);
   }
 }
 
