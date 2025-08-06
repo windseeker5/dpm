@@ -43,8 +43,8 @@
   }
   
   .brand-gradient {
-    background: linear-gradient(to right, #007bff, #ed2988);
-    color: white;
+    background: linear-gradient(to right, #1e3a8a, #3b82f6);
+    color: #fef3c7;
     text-align: center;
     padding: 2rem;
     border-radius: 0.5rem;
@@ -80,7 +80,7 @@
   }
   
   /* Logo sizing classes */
-  .logo-mini { height: 32px; }
+  .logo-mini { height: 24px; }
   .logo-small { height: 40px; }
   .logo-standard { height: 60px; }
   .logo-large { height: 80px; }
@@ -115,6 +115,13 @@
     color: #6c757d;
     margin-top: 0.5rem;
   }
+
+  /* Brand typography styling */
+  .component-demo .org-name-responsive {
+    color: #fef3c7 !important;
+  }
+
+  /* Simple Modal Styling - No custom effects to prevent crashes */
 </style>
 {% endblock %}
 
@@ -194,7 +201,7 @@
                 <div class="logo-demo-container">
                   <div class="logo-size-demo">
                     <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-mini" alt="Mini Logo">
-                    <div class="size-label">Mini: 32px<br>Icons only</div>
+                    <div class="size-label">Mini: 24px<br>Icons only</div>
                   </div>
                   <div class="logo-size-demo">
                     <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-small" alt="Small Logo">
@@ -227,7 +234,7 @@
                   <h5>Logo Size Classes</h5>
                   <div class="row">
                     <div class="col-md-6">
-                      <code>.logo-mini</code> - 32px height<br>
+                      <code>.logo-mini</code> - 24px height<br>
                       <code>.logo-small</code> - 40px height<br>
                       <code>.logo-standard</code> - 60px height
                     </div>
@@ -308,10 +315,10 @@
                 <h4>Brand Colors</h4>
                 <div class="row mb-4">
                   <div class="col-md-4">
-                    <div class="color-swatch" style="background: linear-gradient(to right, #007bff, #ed2988);"></div>
+                    <div class="color-swatch" style="background: linear-gradient(to right, #1e3a8a, #3b82f6);"></div>
                     <div>
                       <strong>Brand Gradient</strong><br>
-                      <span class="color-info">linear-gradient(to right, #007bff, #ed2988)</span>
+                      <span class="color-info">linear-gradient(to right, #1e3a8a, #3b82f6)</span>
                     </div>
                   </div>
                   <div class="col-md-4">
@@ -1217,17 +1224,47 @@
                 <h3 class="card-title">Modals</h3>
               </div>
               <div class="card-body">
-                <h4>Modal with Fade Animation</h4>
+                <h4>Standard Bootstrap Modal</h4>
+                <p class="text-muted mb-3">A standard Bootstrap 5 modal implementation with proper accessibility and clean functionality.</p>
                 <div class="component-demo">
                   <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
                     Launch Demo Modal
                   </button>
                 </div>
+                
+                <h5 class="mt-4">Features:</h5>
+                <ul class="text-muted">
+                  <li>Standard Bootstrap 5 modal behavior</li>
+                  <li>Proper accessibility attributes</li>
+                  <li>Keyboard navigation (ESC to close)</li>
+                  <li>Click outside to close</li>
+                  <li>Responsive design</li>
+                </ul>
                 <div class="code-preview">
                   <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
                     <i class="ti ti-copy"></i>
                   </button>
-                  <code>.modal-content { animation: fadeIn 0.3s ease-in-out; }</code>
+                  <code>&lt;button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal"&gt;
+  Launch Demo Modal
+&lt;/button&gt;
+
+&lt;div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"&gt;
+  &lt;div class="modal-dialog"&gt;
+    &lt;div class="modal-content"&gt;
+      &lt;div class="modal-header"&gt;
+        &lt;h5 class="modal-title" id="exampleModalLabel"&gt;Modal Title&lt;/h5&gt;
+        &lt;button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"&gt;&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;div class="modal-body"&gt;
+        Modal content goes here...
+      &lt;/div&gt;
+      &lt;div class="modal-footer"&gt;
+        &lt;button type="button" class="btn btn-secondary" data-bs-dismiss="modal"&gt;Close&lt;/button&gt;
+        &lt;button type="button" class="btn btn-primary"&gt;Save changes&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code>
                 </div>
               </div>
             </div>
@@ -1239,15 +1276,16 @@
 </div>
 
 <!-- Example Modal -->
-<div class="modal fade" id="exampleModal" tabindex="-1">
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Example Modal</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="exampleModalLabel">Example Modal</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p>This modal uses the custom fade-in animation defined in your CSS.</p>
+        <p>This is a standard Bootstrap 5 modal. It demonstrates the basic modal functionality with proper accessibility features.</p>
+        <p>The modal can be closed by clicking the X button, the Close button, pressing Escape, or clicking outside the modal.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -1290,5 +1328,7 @@ document.querySelectorAll('.nav-link').forEach(link => {
     this.classList.add('active');
   });
 });
+
+// Simple modal - let Bootstrap handle everything natively
 </script>
 {% endblock %}
