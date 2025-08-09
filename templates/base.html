@@ -25,7 +25,7 @@
   
   <!-- Custom Styles -->
   <link href="{{ url_for('static', filename='minipass.css') }}?v=20250624110800" rel="stylesheet">
-  <link href="{{ url_for('static', filename='minipass-redesign.css') }}?v=20250809003" rel="stylesheet">
+  <link href="{{ url_for('static', filename='minipass-redesign.css') }}?v={{ range(1000000, 9999999) | random }}" rel="stylesheet">
   
   {% block head %}{% endblock %}
 </head>
@@ -182,127 +182,53 @@
     
     <!-- Main Content Area -->
     <div class="minipass-main">
-      <!-- Modern Top Header Bar -->
-      <header class="minipass-header">
-        <!-- Mobile Menu Toggle -->
-        <button class="header-menu-toggle d-lg-none" id="sidebarToggle">
+      <!-- Organization Name Header -->
+      <header class="minipass-org-header">
+        <button class="header-menu-toggle d-lg-none" type="button" id="sidebarToggle">
           <i class="ti ti-menu-2"></i>
         </button>
-        
-        <!-- Search Bar -->
-        <div class="header-search d-none d-md-flex">
-          <div class="input-icon">
-            <span class="input-icon-addon">
-              <i class="ti ti-search"></i>
-            </span>
-            <input type="text" class="form-control form-control-light" 
-                   placeholder="Search activities, users, passes..." 
-                   aria-label="Search">
-          </div>
-        </div>
-        
-        <!-- Header Actions -->
-        <div class="header-actions">
-          <!-- Quick Add Button -->
-          <button class="btn btn-primary btn-sm d-none d-md-inline-flex">
-            <i class="ti ti-plus me-1"></i>
-            New Activity
-          </button>
-          
-          <!-- Notifications -->
-          <div class="dropdown d-none d-md-block">
-            <button class="header-action-btn" data-bs-toggle="dropdown">
-              <i class="ti ti-bell"></i>
-              <span class="badge bg-red"></span>
-            </button>
-            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-              <div class="dropdown-header">
-                <h6 class="m-0">Notifications</h6>
-              </div>
-              <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item">
-                <div class="d-flex align-items-start">
-                  <div class="avatar avatar-sm bg-blue-lt">
-                    <i class="ti ti-user-plus"></i>
-                  </div>
-                  <div class="ms-2">
-                    <div class="text-dark">New signup received</div>
-                    <div class="text-muted small">2 minutes ago</div>
-                  </div>
-                </div>
-              </a>
-              <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item text-center">View all notifications</a>
-            </div>
-          </div>
-          
-          <!-- Mobile User Menu -->
-          {% if session.get("admin") %}
-          <div class="dropdown d-lg-none">
-            <button class="header-action-btn" data-bs-toggle="dropdown">
-              <span class="avatar avatar-sm" 
-                    style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')">
-              </span>
-            </button>
-            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-              <a href="{{ url_for('activity_log') }}" class="dropdown-item">
-                <i class="ti ti-history me-2"></i>Activity Log
-              </a>
-              <a href="{{ url_for('setup') }}" class="dropdown-item">
-                <i class="ti ti-settings me-2"></i>Settings
-              </a>
-              <div class="dropdown-divider"></div>
-              <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
-                <i class="ti ti-logout me-2"></i>Logout
-              </a>
-            </div>
-          </div>
-          {% endif %}
-        </div>
+        <div class="minipass-org-name">{{ ORG_NAME }}</div>
       </header>
       
       <!-- Page Content Container -->
       <main class="minipass-content" id="main-content">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            <div class="minipass-alerts">
-              {% for category, message in messages %}
-                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible" role="alert">
-                  <div class="d-flex">
-                    <div>
-                      {% if category == 'success' %}
-                      <i class="ti ti-check alert-icon"></i>
-                      {% else %}
-                      <i class="ti ti-alert-circle alert-icon"></i>
-                      {% endif %}
+        <div class="minipass-content-container">
+          <!-- Flash Messages -->
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <div class="minipass-alerts">
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible" role="alert">
+                    <div class="d-flex">
+                      <div>
+                        {% if category == 'success' %}
+                        <i class="ti ti-check alert-icon"></i>
+                        {% else %}
+                        <i class="ti ti-alert-circle alert-icon"></i>
+                        {% endif %}
+                      </div>
+                      <div>
+                        <h4 class="alert-title">{{ 'Success!' if category == 'success' else 'Error!' }}</h4>
+                        <div class="text-muted">{{ message }}</div>
+                      </div>
                     </div>
-                    <div>
-                      <h4 class="alert-title">{{ 'Success!' if category == 'success' else 'Error!' }}</h4>
-                      <div class="text-muted">{{ message }}</div>
-                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                   </div>
-                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-              {% endfor %}
-            </div>
-          {% endif %}
-        {% endwith %}
-        
-        <!-- Page Content -->
-        {% block content %}{% endblock %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+          
+          <!-- Page Content -->
+          {% block content %}{% endblock %}
+        </div>
       </main>
       
       <!-- Modern Footer -->
       <footer class="minipass-footer">
-        <div class="container-xl">
-          <div class="row align-items-center">
-            <div class="col-auto">
-              <span class="text-muted">© 2025 Minipass. All rights reserved.</span>
-            </div>
-            <div class="col-auto ms-auto">
-              <span class="text-muted">Version 2.0.0</span>
-            </div>
+        <div class="minipass-footer-content">
+          <div class="minipass-footer-text">
+            © 2025 Minipass. All rights reserved. - version: {{ git_branch }}
           </div>
         </div>
       </footer>

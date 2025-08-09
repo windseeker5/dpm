@@ -20,15 +20,16 @@ This document outlines the redesigned user interface for the Minipass SAAS PWA a
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Application Container                    │
 ├──────────────┬──────────────────────────────────────────────────┤
-│              │                  Header Bar (64px)                │
-│   Sidebar    ├──────────────────────────────────────────────────┤
-│   (260px)    │                                                  │
-│              │              Main Content Area                    │
-│   Fixed      │                                                  │
-│   Position   │            Flexible Height/Scroll                 │
+│              │         Organization Name Header (48px)          │
+│   Sidebar    │         Background: #F8F9FA (seamless)           │
+│   (260px)    ├──────────────────────────────────────────────────┤
+│              │                                                  │
+│   Fixed      │         Main Content Area (Centered)             │
+│   Position   │         Max-width: 1320px Container              │
+│              │            Flexible Height/Scroll                 │
 │              │                                                  │
 │              ├──────────────────────────────────────────────────┤
-│              │                Footer (Auto)                      │
+│              │          Footer (Auto, no border)                │
 └──────────────┴──────────────────────────────────────────────────┘
 ```
 
@@ -36,7 +37,8 @@ This document outlines the redesigned user interface for the Minipass SAAS PWA a
 
 ```
 ┌─────────────────────────────────────┐
-│         Header Bar (64px)           │
+│    Organization Name Header (48px)  │
+│         Background: #F8F9FA         │
 ├─────────────────────────────────────┤
 │                                     │
 │                                     │
@@ -50,6 +52,30 @@ This document outlines the redesigned user interface for the Minipass SAAS PWA a
 ```
 
 ## Component Specifications
+
+### Content Container
+
+**Specifications:**
+- Max-width: 1320px (Bootstrap's XXL container)
+- Margin: 0 auto (centered horizontally)
+- Padding: Inherits from parent (2rem)
+- Purpose: Centers content and creates equal visual spacing on both sides
+
+**CSS Implementation:**
+```css
+.minipass-content {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.minipass-content-container {
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+```
 
 ### 1. Sidebar Navigation
 
@@ -89,25 +115,59 @@ Sidebar
 - Hover: Color #1E293B, Background #F1F5F9
 - Active: Color #206BC4, Background #EFF6FF, Left indicator 3px
 
-### 2. Header Bar
+### 2. Organization Name Header
 
 **Specifications:**
-- Height: 64px (fixed)
-- Background: #FFFFFF
-- Border: 1px solid #E9ECEF (bottom)
+- Height: 48px (fixed)
+- Background: #F8F9FA (matches main content area)
+- Border: None (seamless integration)
 - Position: Sticky top
 - Z-index: 1030
+- Text: Dynamically pulled from ORG_NAME settings variable
 
 **Components:**
 ```
-Header Bar
-├── Mobile Menu Toggle (Left, mobile only)
-├── Search Bar (Center-left, max-width: 400px)
-│   └── Icon + Input field
-├── Actions Section (Right)
-│   ├── New Activity Button (Desktop only)
-│   ├── Notifications Bell (with badge)
-│   └── User Avatar (Mobile only)
+Organization Header
+├── Organization Name (Center)
+│   ├── Font: Inter, font-weight: 600
+│   ├── Size: 1.125rem (18px)
+│   ├── Color: #374151
+│   └── Dynamic content from settings.ORG_NAME
+└── Mobile Menu Toggle (Left, mobile only)
+```
+
+**CSS Implementation:**
+```css
+.minipass-org-header {
+  height: 48px;
+  background: #F8F9FA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  padding: 0 1rem;
+}
+
+.minipass-org-header h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
+}
+
+@media (max-width: 991px) {
+  .minipass-org-header {
+    justify-content: space-between;
+  }
+  
+  .minipass-org-header h1 {
+    flex: 1;
+    margin-left: 2rem; /* Account for mobile menu toggle */
+  }
+}
 ```
 
 ### 3. Mobile Bottom Navigation
@@ -135,6 +195,40 @@ Bottom Nav (5 items, equal width)
 - Position: Absolute, -20px top offset
 - Border-radius: 50%
 - Shadow: 0 4px 12px rgba(32, 107, 196, 0.4)
+
+### 4. Footer
+
+**Specifications:**
+- Background: Transparent (no white background)
+- Border: None (removed border lines)
+- Padding: 1rem 0
+- Text alignment: Center
+
+**Content:**
+```
+Footer
+├── Copyright Text
+│   ├── Format: "© 2025 Minipass. All rights reserved. - version: {git_branch}"
+│   ├── Font: Inter, 14px
+│   ├── Color: #6B7280
+│   └── Dynamic git branch from repository
+```
+
+**CSS Implementation:**
+```css
+.minipass-footer {
+  background: transparent;
+  border: none;
+  padding: 1rem 0;
+  text-align: center;
+  color: #6B7280;
+  font-size: 0.875rem;
+}
+
+.minipass-footer p {
+  margin: 0;
+}
+```
 
 ## Color System
 
@@ -179,7 +273,8 @@ Bottom Nav (5 items, equal width)
 --bg-primary: #FFFFFF
 --bg-secondary: #F8F9FA
 --bg-sidebar: #FFFFFF
---bg-header: #FFFFFF
+--bg-header: #F8F9FA  /* Updated to match main content */
+--bg-org-header: #F8F9FA  /* New organization header background */
 ```
 
 ## Typography
@@ -284,15 +379,13 @@ Using an 8px grid system:
 
 **< 992px (Mobile/Tablet):**
 - Sidebar: Hidden by default, slide-over when toggled
-- Header: Show mobile menu toggle
-- Search: Hidden on small screens (<768px)
+- Organization header: Show mobile menu toggle, center organization name
 - Bottom navigation: Visible
 - Content padding: 16px
 
 **≥ 992px (Desktop):**
 - Sidebar: Always visible, sticky position
-- Header: Hide mobile menu toggle
-- Search: Always visible
+- Organization header: Hide mobile menu toggle, center organization name
 - Bottom navigation: Hidden
 - Content padding: 32px
 
@@ -377,6 +470,36 @@ Using an 8px grid system:
 - Maintains Bootstrap grid system
 - Compatible with existing Tabler components
 
+### Dynamic Content Integration
+- **Organization Name**: Pulled from Flask app settings via `current_app.config['ORG_NAME']`
+- **Git Branch Detection**: Footer displays current branch via `subprocess` or environment variable
+- Template implementation uses Jinja2 variables for dynamic content
+
+### Git Branch Integration
+```python
+# In Flask app context
+import subprocess
+import os
+
+def get_git_branch():
+    try:
+        branch = subprocess.check_output(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'], 
+            cwd=os.path.dirname(__file__)
+        ).decode('utf-8').strip()
+        return branch
+    except:
+        return os.environ.get('GIT_BRANCH', 'main')
+
+# Make available to templates
+@app.context_processor
+def inject_git_info():
+    return {
+        'git_branch': get_git_branch(),
+        'org_name': current_app.config.get('ORG_NAME', 'Minipass')
+    }
+```
+
 ### Browser Support
 - Chrome/Edge: Latest 2 versions
 - Firefox: Latest 2 versions
@@ -424,7 +547,25 @@ Using an 8px grid system:
 
 ---
 
-**Version**: 1.0.0  
+**Version**: 1.2.0  
 **Last Updated**: 2025-08-09  
 **Author**: UI/UX Design Team  
 **Status**: Ready for Implementation
+
+## Changelog
+
+### Version 1.2.0 (2025-08-09)
+- **BREAKING**: Removed entire header bar section (search, notifications, user menu, action buttons)
+- **NEW**: Added simplified organization name header with seamless background integration
+- **NEW**: Dynamic organization name pulled from ORG_NAME settings variable
+- **UPDATED**: Footer redesign - removed white background and borders
+- **UPDATED**: Footer copyright format includes dynamic git branch detection
+- **UPDATED**: Header background now matches main content area (#F8F9FA) for seamless flow
+- **UPDATED**: Reduced header height from 64px to 48px for minimal footprint
+- **TECHNICAL**: Added git branch detection implementation notes
+- **TECHNICAL**: Added CSS specifications for new .minipass-org-header styles
+
+### Version 1.1.0 (2025-08-09)
+- Added centered content container with max-width (1320px) for better content balance
+- Fixed asymmetric spacing issue between left and right margins
+- Improved readability on wide screens by limiting content width
