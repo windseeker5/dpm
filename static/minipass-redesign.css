@@ -25,6 +25,14 @@
   /* Brand Gradient from Style Guide */
   --minipass-brand-gradient: linear-gradient(180deg, #ffffff 0%, #fef3c7 100%);
   
+  /* Wireframe Light Sidebar Colors */
+  --minipass-sidebar-bg: #e9ecef;
+  --minipass-sidebar-text: #495057;
+  --minipass-sidebar-text-active: #212529;
+  --minipass-sidebar-border: #dee2e6;
+  --minipass-sidebar-hover: rgba(0, 0, 0, 0.05);
+  --minipass-sidebar-active-bg: #007bff;
+  
   /* Semantic Colors */
   --minipass-success: #10b981;
   --minipass-success-light: #d1fae5;
@@ -259,23 +267,308 @@ html {
 }
 
 /* ============================================
-   4. NAVIGATION COMPONENTS
+   4. LAYOUT & NAVIGATION COMPONENTS
    ============================================ */
 
-/* Enhanced Navbar */
-.minipass-navbar {
-  background: white;
-  box-shadow: var(--minipass-shadow-sm);
-  border-bottom: 1px solid var(--minipass-gray-100);
-  padding: var(--minipass-space-4) 0;
+/* Modern App Container */
+.minipass-app {
+  display: flex;
+  min-height: 100vh;
+  background: #f8f9fa;
 }
 
-.minipass-navbar .navbar-brand {
-  font-family: var(--minipass-font-brand);
-  font-size: var(--minipass-text-2xl);
-  background: var(--minipass-brand-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Modern Sidebar - Clean Design */
+.minipass-sidebar {
+  width: 260px;
+  background: white;
+  border-right: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1040;
+  transition: transform 0.3s ease;
+}
+
+/* Main Content Area */
+.minipass-main {
+  flex: 1;
+  margin-left: 260px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+/* Modern Header Bar */
+.minipass-header {
+  background: white;
+  border-bottom: 1px solid #e9ecef;
+  padding: 0 1.5rem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+.header-menu-toggle {
+  border: none;
+  background: none;
+  font-size: 1.25rem;
+  color: #626976;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.header-search {
+  flex: 1;
+  max-width: 400px;
+}
+
+.header-search .form-control {
+  background: #f4f6fa;
+  border: none;
+  padding-left: 2.5rem;
+}
+
+.header-search .form-control:focus {
+  background: white;
+  border: 1px solid var(--minipass-primary-600);
+  box-shadow: 0 0 0 0.25rem rgba(32, 107, 196, 0.1);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.header-action-btn {
+  border: none;
+  background: none;
+  padding: 0.5rem;
+  color: #626976;
+  cursor: pointer;
+  position: relative;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+}
+
+.header-action-btn:hover {
+  background: #f4f6fa;
+  color: var(--minipass-primary-600);
+}
+
+.header-action-btn .badge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+/* Content Area */
+.minipass-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.minipass-alerts {
+  margin-bottom: 1.5rem;
+}
+
+.minipass-alerts .alert {
+  border-radius: 0.5rem;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.minipass-alerts .alert-icon {
+  font-size: 1.25rem;
+  margin-right: 0.75rem;
+}
+
+/* Modern Footer */
+.minipass-footer {
+  background: white;
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 0;
+  margin-top: auto;
+}
+
+.minipass-footer .text-muted {
+  font-size: 0.875rem;
+}
+
+/* Sidebar Brand */
+.minipass-sidebar-brand {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.brand-text {
+  font-family: 'Anton', sans-serif;
+  font-size: 1.5rem;
+  color: #1e293b;
+  letter-spacing: -0.025em;
+}
+
+/* Sidebar Navigation */
+.minipass-sidebar-nav {
+  flex: 1;
+  padding: 1rem 0;
+  overflow-y: auto;
+}
+
+.nav-section {
+  margin-bottom: 0.5rem;
+}
+
+.nav-section-title {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  margin: 0.125rem 0.75rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.nav-link:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.nav-link.active {
+  background: #eff6ff;
+  color: var(--minipass-primary-600);
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.nav-text {
+  flex: 1;
+}
+
+.nav-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.nav-tag {
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.nav-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 24px;
+  background: var(--minipass-primary-600);
+  border-radius: 0 2px 2px 0;
+}
+
+
+/* Sidebar Footer */
+.minipass-sidebar-footer {
+  margin-top: auto;
+  padding: 1rem 0.75rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.sidebar-user {
+  margin-top: 0.75rem;
+}
+
+.sidebar-user-link {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.2s;
+}
+
+.sidebar-user-link:hover {
+  background: #f1f5f9;
+}
+
+.sidebar-user-info {
+  flex: 1;
+  margin-left: 0.75rem;
+}
+
+.sidebar-user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.sidebar-user-role {
+  font-size: 0.75rem;
+  color: #64748b;
 }
 
 /* Mobile Bottom Navigation */
@@ -285,42 +578,61 @@ html {
   left: 0;
   right: 0;
   background: white;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-  display: none; /* Hidden by default */
-  padding: var(--minipass-space-2) 0;
-  z-index: 1000;
-  border-top: 1px solid var(--minipass-gray-100);
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  padding: 0.5rem 0;
+  z-index: 1050;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.minipass-mobile-nav-item {
+.mobile-nav-item {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--minipass-space-2);
-  color: var(--minipass-gray-600);
+  padding: 0.5rem;
+  color: #64748b;
   text-decoration: none;
-  font-size: var(--minipass-text-xs);
-  transition: all var(--minipass-transition-fast);
-  min-height: 56px;
+  font-size: 0.625rem;
+  font-weight: 500;
+  position: relative;
+  transition: color 0.2s;
 }
 
-.minipass-mobile-nav-item:hover,
-.minipass-mobile-nav-item:active {
+.mobile-nav-item:hover,
+.mobile-nav-item.active {
   color: var(--minipass-primary-600);
-  background: var(--minipass-primary-50);
 }
 
-.minipass-mobile-nav-item.active {
-  color: var(--minipass-primary-600);
-  font-weight: var(--minipass-font-semibold);
+.mobile-nav-item i {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
 }
 
-.minipass-mobile-nav-item .icon {
-  width: 24px;
-  height: 24px;
-  margin-bottom: var(--minipass-space-1);
+.mobile-nav-center {
+  position: relative;
+}
+
+.mobile-nav-center-btn {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  background: var(--minipass-primary-600);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(32, 107, 196, 0.4);
+}
+
+.mobile-nav-center-btn i {
+  font-size: 1.5rem;
+  margin: 0;
 }
 
 /* ============================================
@@ -656,49 +968,34 @@ html {
    ============================================ */
 
 /* Mobile Styles */
-@media (max-width: 767px) {
-  /* Hide desktop elements */
-  .minipass-hide-mobile {
-    display: none !important;
+@media (max-width: 991px) {
+  /* Sidebar mobile behavior */
+  .minipass-sidebar {
+    transform: translateX(-100%);
   }
   
-  /* Show mobile elements */
-  .minipass-show-mobile {
-    display: block !important;
+  .minipass-sidebar.show {
+    transform: translateX(0);
   }
   
-  .minipass-mobile-nav {
-    display: flex !important;
+  body.sidebar-open::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1039;
   }
   
-  .minipass-fab {
-    display: flex !important;
+  .minipass-main {
+    margin-left: 0;
   }
   
-  /* Adjust body padding for mobile nav */
-  body {
-    padding-bottom: 80px;
-  }
-  
-  /* Adjust spacing for mobile */
-  .minipass-card {
-    margin-bottom: var(--minipass-space-4);
-  }
-  
-  /* Mobile padding adjustments */
-  .minipass-mobile-padding {
-    padding: var(--minipass-space-4);
-  }
-  
-  /* Bottom padding for mobile nav */
-  .minipass-content-mobile {
-    padding-bottom: 80px;
-  }
-  
-  /* Full width buttons on mobile */
-  .minipass-btn-mobile-full {
-    width: 100%;
-    justify-content: center;
+  .minipass-content {
+    padding: 1rem;
+    padding-bottom: 80px; /* Space for bottom nav */
   }
   
   /* Mobile KPI Grid - Horizontal carousel style */
@@ -746,28 +1043,18 @@ html {
 }
 
 /* Desktop Styles */
-@media (min-width: 768px) {
-  .minipass-hide-desktop {
-    display: none !important;
+@media (min-width: 992px) {
+  .minipass-sidebar {
+    position: sticky;
+    transform: none;
   }
   
-  .minipass-show-desktop {
-    display: block !important;
+  .header-menu-toggle {
+    display: none;
   }
   
-  /* Ensure mobile navigation is hidden on desktop */
   .minipass-mobile-nav {
     display: none !important;
-  }
-  
-  /* Ensure FAB is hidden on desktop */
-  .minipass-fab {
-    display: none !important;
-  }
-  
-  /* Remove body padding on desktop */
-  body {
-    padding-bottom: 0 !important;
   }
   
   /* Desktop KPI Grid - Force 4 columns for wireframe layout */
@@ -783,14 +1070,6 @@ html {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: var(--minipass-space-6);
-  }
-  
-  /* Desktop KPI Grid - 4 columns for wireframe layout */
-  .minipass-kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--minipass-space-6);
-    margin-bottom: var(--minipass-space-8);
   }
 }
 
@@ -862,7 +1141,7 @@ html {
 
 @media print {
   .minipass-no-print,
-  .minipass-mobile-nav,
+  .minipass-mobile-bottom-nav,
   .minipass-fab {
     display: none !important;
   }
@@ -877,8 +1156,19 @@ html {
   }
 }
 
+
+/* Copyright Section - Wireframe Centered Bottom */
+.minipass-copyright-centered {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  font-size: 12px;
+  color: var(--minipass-gray-500);
+  line-height: 1.4;
+}
+
 /* ============================================
-   14. DARK MODE SUPPORT (Future Enhancement)
+   15. DARK MODE SUPPORT (Future Enhancement)
    ============================================ */
 
 @media (prefers-color-scheme: dark) {

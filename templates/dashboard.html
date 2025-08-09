@@ -2,7 +2,6 @@
 {% block title %}Dashboard | Activities Overview{% endblock %}
 
 {% block content %}
-<div class="container-xl mt-4">
 
 
 <!-- Enhanced Welcome Header -->
@@ -17,7 +16,7 @@
       </h1>
       <p class="minipass-dashboard-subtitle mb-0">Here's what's happening with your activities today.</p>
     </div>
-    <div class="col-auto minipass-hide-mobile">
+    <div class="col-auto d-none d-lg-block">
       <div class="d-flex gap-3">
         <a href="{{ url_for('create_activity') }}" class="minipass-btn-primary">
           <i class="ti ti-plus"></i> Create Activity
@@ -36,7 +35,7 @@
   <!-- KPI Cards -->
   <div class="kpi-carousel-container">
     <!-- Desktop/Tablet Grid (hidden on mobile) -->
-    <div class="minipass-kpi-grid minipass-hide-mobile">
+    <div class="minipass-kpi-grid d-none d-md-block">
       
       <!-- Revenue -->
     <div class="minipass-kpi-card">
@@ -396,36 +395,10 @@
 
 
 
-</div>
-
-<!-- Mobile Floating Action Button -->
-<button class="minipass-fab minipass-show-mobile" onclick="window.location.href='{{ url_for('create_activity') }}'">
+<!-- Mobile Floating Action Button (Hidden when bottom nav is active) -->
+<!-- <button class="minipass-fab d-lg-none" onclick="window.location.href='{{ url_for('create_activity') }}'">
   <i class="ti ti-plus"></i>
-</button>
-
-<!-- Mobile Bottom Navigation -->
-<nav class="minipass-mobile-nav minipass-show-mobile">
-  <a href="{{ url_for('dashboard') }}" class="minipass-mobile-nav-item active">
-    <i class="ti ti-dashboard"></i>
-    <span>Home</span>
-  </a>
-  <a href="{{ url_for('list_activities') }}" class="minipass-mobile-nav-item">
-    <i class="ti ti-activity"></i>
-    <span>Activities</span>
-  </a>
-  <a href="{{ url_for('list_passports') }}" class="minipass-mobile-nav-item">
-    <i class="ti ti-ticket"></i>
-    <span>Passes</span>
-  </a>
-  <a href="{{ url_for('list_signups') }}" class="minipass-mobile-nav-item">
-    <i class="ti ti-currency-dollar"></i>
-    <span>Payments</span>
-  </a>
-  <a href="{{ url_for('setup') }}" class="minipass-mobile-nav-item">
-    <i class="ti ti-settings"></i>
-    <span>More</span>
-  </a>
-</nav>
+</button> -->
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
