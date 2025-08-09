@@ -146,10 +146,10 @@ tbody, tr, td, th {
 
 /* 🏷️ Logo sizing classes */
 .logo-mini { height: 32px; }
-.logo-small { height: 40px; }
-.logo-standard { height: 60px; }
-.logo-large { height: 80px; }
-.logo-hero { height: 120px; }
+.logo-small { height: 48px; }
+.logo-standard { height: 64px; }
+.logo-large { height: 96px; }
+.logo-hero { height: 128px; }
 
 .logo-mini, .logo-small, .logo-standard, .logo-large, .logo-hero {
   width: auto;
@@ -166,9 +166,9 @@ tbody, tr, td, th {
     }
     
     /* Responsive logo sizing */
-    .logo-hero { height: 80px; }
-    .logo-large { height: 60px; }
-    .logo-standard { height: 50px; }
+    .logo-hero { height: 96px; }
+    .logo-large { height: 64px; }
+    .logo-standard { height: 48px; }
 }
 
 

@@ -177,56 +177,50 @@
               <div class="card-body">
                 <h4>Logo Files & Locations</h4>
                 <div class="row mb-4">
-                  <div class="col-md-6">
+                  <div class="col-md-12">
                     <div class="code-preview">
                       <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
                         <i class="ti ti-copy"></i>
                       </button>
-                      <code>/assets/brand/logo/primary/logo.png</code>
+                      <code>/static/assets/brand/logo/primary/logo.png</code>
                     </div>
-                    <p class="text-muted">Primary logo for light backgrounds</p>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="code-preview">
-                      <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
-                        <i class="ti ti-copy"></i>
-                      </button>
-                      <code>/assets/brand/logo/variations/logo-dark.png</code>
+                    <p class="text-muted">Primary logo file - Used throughout the application</p>
+                    <div class="alert alert-info mt-3">
+                      <strong>Note:</strong> The logo has been updated to the new Minipass brand identity. This logo should be used consistently across all interfaces.
                     </div>
-                    <p class="text-muted">Dark version for dark backgrounds</p>
                   </div>
                 </div>
 
                 <h4>Size Specifications</h4>
                 <div class="logo-demo-container">
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-mini" alt="Mini Logo">
-                    <div class="size-label">Mini: 24px<br>Icons only</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-mini" alt="Mini Logo">
+                    <div class="size-label">Mini: 32px<br>Mobile nav</div>
                   </div>
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-small" alt="Small Logo">
-                    <div class="size-label">Small: 40px<br>Minimum size</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-small" alt="Small Logo">
+                    <div class="size-label">Small: 48px<br>Sidebar</div>
                   </div>
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-standard" alt="Standard Logo">
-                    <div class="size-label">Standard: 60px<br>Recommended</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-standard" alt="Standard Logo">
+                    <div class="size-label">Standard: 64px<br>Default</div>
                   </div>
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-large" alt="Large Logo">
-                    <div class="size-label">Large: 80px<br>Headers</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-large" alt="Large Logo">
+                    <div class="size-label">Large: 96px<br>Headers</div>
                   </div>
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-hero" alt="Hero Logo">
-                    <div class="size-label">Hero: 120px<br>Landing pages</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-hero" alt="Hero Logo">
+                    <div class="size-label">Hero: 128px<br>Landing pages</div>
                   </div>
                 </div>
 
                 <h4>Clear Space Requirements</h4>
                 <div class="text-center mb-4">
-                  <div class="logo-clear-space">
-                    <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-standard" alt="Logo with clear space">
+                  <div class="logo-clear-space" style="padding: 30px; border: 2px dashed #dee2e6; border-radius: 8px; display: inline-block;">
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-standard" alt="Logo with clear space">
                   </div>
-                  <p class="text-muted">Minimum 20px clear space around the logo</p>
+                  <p class="text-muted mt-3">Minimum 20px clear space around the logo</p>
                 </div>
 
                 <h4>CSS Classes for Implementation</h4>
@@ -234,36 +228,36 @@
                   <h5>Logo Size Classes</h5>
                   <div class="row">
                     <div class="col-md-6">
-                      <code>.logo-mini</code> - 24px height<br>
-                      <code>.logo-small</code> - 40px height<br>
-                      <code>.logo-standard</code> - 60px height
+                      <code>.logo-mini</code> - 32px height<br>
+                      <code>.logo-small</code> - 48px height<br>
+                      <code>.logo-standard</code> - 64px height
                     </div>
                     <div class="col-md-6">
-                      <code>.logo-large</code> - 80px height<br>
-                      <code>.logo-hero</code> - 120px height
+                      <code>.logo-large</code> - 96px height<br>
+                      <code>.logo-hero</code> - 128px height
                     </div>
                   </div>
                 </div>
 
-                <div class="code-preview">
+                <div class="code-preview mt-4">
                   <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
                     <i class="ti ti-copy"></i>
                   </button>
-                  <code>&lt;img src="/assets/brand/logo/primary/logo.png" class="logo-standard" alt="Minipass Logo"&gt;</code>
+                  <code>&lt;img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" class="logo-standard" alt="Minipass Logo"&gt;</code>
                 </div>
 
                 <h4>Background Usage</h4>
                 <div class="row">
                   <div class="col-md-6">
-                    <div class="p-4 bg-light text-center rounded">
-                      <img src="{{ url_for('assets', filename='brand/logo/primary/logo.png') }}" class="logo-standard" alt="Logo on light">
-                      <div class="mt-2"><strong>Light backgrounds</strong><br>Use primary logo</div>
+                    <div class="p-4 bg-light text-center rounded" style="min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                      <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-standard mb-3" alt="Logo on light">
+                      <div><strong>Light backgrounds</strong><br>Use primary logo as-is</div>
                     </div>
                   </div>
                   <div class="col-md-6">
-                    <div class="p-4 bg-dark text-center rounded">
-                      <img src="{{ url_for('assets', filename='brand/logo/variations/logo-dark.png') }}" class="logo-standard" alt="Logo on dark" style="filter: invert(1);">
-                      <div class="mt-2 text-white"><strong>Dark backgrounds</strong><br>Use dark variation</div>
+                    <div class="p-4 text-center rounded" style="background: #1e293b; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                      <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-standard mb-3" alt="Logo on dark" style="filter: brightness(0) invert(1);">
+                      <div class="text-white"><strong>Dark backgrounds</strong><br>Apply invert filter for visibility</div>
                     </div>
                   </div>
                 </div>
@@ -281,12 +275,12 @@
                 <h4>Logo Usage</h4>
                 <div class="logo-showcase">
                   <div class="logo-item">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Primary Logo">
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" alt="Primary Logo">
                     <div class="small text-muted">Primary Logo</div>
                   </div>
-                  <div class="logo-item">
-                    <img src="{{ url_for('assets', filename='brand/logo/variations/logo-dark.png') }}" alt="Dark Logo" onerror="this.style.display='none'">
-                    <div class="small text-muted">Dark Variation</div>
+                  <div class="logo-item" style="background: #1e293b; padding: 20px; border-radius: 8px;">
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" alt="Logo on Dark" style="filter: brightness(0) invert(1);">
+                    <div class="small text-white">Logo on Dark Background</div>
                   </div>
                 </div>
                 
