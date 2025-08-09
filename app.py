@@ -9,6 +9,7 @@ import hashlib
 import bcrypt
 import stripe
 import qrcode
+import subprocess
 from datetime import datetime, timezone, timedelta
 
 
@@ -227,12 +228,27 @@ scheduler.start()
 
 
 
+def get_git_branch():
+    """Get current git branch name"""
+    try:
+        result = subprocess.run(
+            ['git', 'branch', '--show-current'],
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        branch = result.stdout.strip()
+        return branch if branch else 'main'
+    except Exception:
+        return 'main'
+
 @app.context_processor
 def inject_globals_and_csrf():
     from flask_wtf.csrf import generate_csrf
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
+        'git_branch': get_git_branch(),
         'csrf_token': generate_csrf  # returns the raw CSRF token
     }
 

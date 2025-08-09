@@ -300,85 +300,54 @@ html {
   flex-direction: column;
   min-height: 100vh;
   background: #f8f9fa;
+  width: calc(100vw - 260px);
+  max-width: calc(100vw - 260px);
 }
 
-/* Modern Header Bar */
-.minipass-header {
-  background: white;
+/* Organization Name Header */
+.minipass-org-header {
+  height: 48px;
+  background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
-  padding: 0 1.5rem;
-  height: 64px;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  position: sticky;
-  top: 0;
-  z-index: 1030;
-}
-
-.header-menu-toggle {
-  border: none;
-  background: none;
-  font-size: 1.25rem;
-  color: #626976;
-  padding: 0.5rem;
-  cursor: pointer;
-}
-
-.header-search {
-  flex: 1;
-  max-width: 400px;
-}
-
-.header-search .form-control {
-  background: #f4f6fa;
-  border: none;
-  padding-left: 2.5rem;
-}
-
-.header-search .form-control:focus {
-  background: white;
-  border: 1px solid var(--minipass-primary-600);
-  box-shadow: 0 0 0 0.25rem rgba(32, 107, 196, 0.1);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-left: auto;
-}
-
-.header-action-btn {
-  border: none;
-  background: none;
-  padding: 0.5rem;
-  color: #626976;
-  cursor: pointer;
+  justify-content: center;
   position: relative;
-  border-radius: 0.375rem;
-  transition: all 0.2s;
+  padding: 0 1rem;
 }
 
-.header-action-btn:hover {
-  background: #f4f6fa;
-  color: var(--minipass-primary-600);
+.minipass-org-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #495057;
+  text-align: center;
 }
 
-.header-action-btn .badge {
+.minipass-org-header .header-menu-toggle {
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  width: 8px;
-  height: 8px;
-  padding: 0;
-  border-radius: 50%;
+  left: 1rem;
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: #495057;
+  padding: 0.5rem;
 }
 
 /* Content Area */
 .minipass-content {
   flex: 1;
   padding: 2rem;
+  width: 100%;
+  overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.minipass-content-container {
+  width: 100%;
+  max-width: 1320px; /* Bootstrap's XXL container width */
+  /* Force equal spacing by calculating the correct left margin */
+  margin: 0 auto;
 }
 
 .minipass-alerts {
@@ -396,15 +365,21 @@ html {
   margin-right: 0.75rem;
 }
 
-/* Modern Footer */
+/* Updated Footer */
 .minipass-footer {
-  background: white;
-  border-top: 1px solid #e9ecef;
-  padding: 1rem 0;
+  background: transparent;
+  border: none;
+  padding: 1.5rem 0;
+  text-align: center;
   margin-top: auto;
 }
 
-.minipass-footer .text-muted {
+.minipass-footer-content {
+  width: 100%;
+}
+
+.minipass-footer-text {
+  color: #6c757d;
   font-size: 0.875rem;
 }
 
@@ -982,6 +957,17 @@ html {
    11. RESPONSIVE STYLES
    ============================================ */
 
+/* Mobile Responsive */
+@media (max-width: 991px) {
+  .minipass-org-header {
+    padding: 0 0.5rem;
+  }
+  
+  .minipass-org-name {
+    font-size: 1.125rem;
+  }
+}
+
 /* Mobile Styles */
 @media (max-width: 991px) {
   /* Sidebar mobile behavior */
@@ -1180,6 +1166,95 @@ html {
   font-size: 12px;
   color: var(--minipass-gray-500);
   line-height: 1.4;
+}
+
+/* ============================================
+   14. LAYOUT FIXES & OVERRIDES
+   ============================================ */
+
+/* Fix Bootstrap container constraints in the new layout */
+.minipass-main .container-xl,
+.minipass-content .container-xl,
+.minipass-content-container .container-xl,
+.minipass-footer .container-xl,
+.container-xl {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+/* Super strong override for the problematic container */
+body .minipass-main .container-xl,
+body .minipass-footer .container-xl,
+body .container-xl {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Additional specificity for stubborn containers */
+html body .minipass-app .minipass-main .minipass-footer .container-xl,
+html body .minipass-app .minipass-main .container-xl,
+html body .minipass-app .container-xl,
+html body .container-xl {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+/* Ensure main content uses full width properly */
+.minipass-content-container {
+  width: 100% !important;
+  max-width: 1320px !important;
+  margin: 0 auto !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+/* Fix main content to use correct spacing */
+main.minipass-content {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+/* Ensure proper sidebar behavior on desktop */
+@media (min-width: 992px) {
+  .minipass-main {
+    margin-left: 260px !important;
+    width: calc(100vw - 260px) !important;
+  }
+  
+  .minipass-content {
+    width: 100% !important;
+    max-width: calc(100vw - 260px) !important;
+  }
+  
+  .minipass-content-container {
+    max-width: 1200px !important; /* Reasonable max width for content */
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 991px) {
+  .minipass-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  
+  .minipass-content {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  .minipass-content-container {
+    max-width: none !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
 }
 
 /* ============================================
