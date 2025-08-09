@@ -1,57 +1,347 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>minipass</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#206bc4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
+  <title>{% block title %}Minipass - Activity Management Platform{% endblock %}</title>
+  
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-
+  
+  <!-- Font Preconnects -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
-  <link href="{{ url_for('static', filename='tabler/css/tabler-flags.min.css') }}" rel="stylesheet"/>
-  <link href="{{ url_for('static', filename='tabler/css/tabler-vendors.min.css') }}" rel="stylesheet"/>
-  <link href="{{ url_for('static', filename='tabler/css/demo.min.css') }}" rel="stylesheet"/>
   <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
-
+  
   <!-- Custom Styles -->
   <link href="{{ url_for('static', filename='minipass.css') }}?v=20250624110800" rel="stylesheet">
+  <link href="{{ url_for('static', filename='minipass-redesign.css') }}?v=20250809001" rel="stylesheet">
   
-  <!-- Minipass Redesign Framework -->
-  <link href="{{ url_for('static', filename='minipass-redesign.css') }}?v=20250806001" rel="stylesheet">
-
-  <!-- Fix navbar button height to match standard buttons -->
-  <style>
-    .navbar .navbar-nav .btn,
-    .navbar-nav .btn.btn-success {
-      padding: 0.375rem 0.75rem !important;
-      line-height: 1.5 !important;
-      font-size: 0.875rem !important;
-      height: auto !important;
-      min-height: calc(1.5em + 0.75rem + 2px) !important;
-    }
-  </style>
-
   {% block head %}{% endblock %}
 </head>
-<body>
+<body class="antialiased">
 
+  <!-- Skip Navigation for Accessibility -->
+  <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
 
+  <!-- Main Application Container -->
+  <div class="minipass-app">
+    
+    <!-- Modern Sidebar Navigation -->
+    <nav class="minipass-sidebar" id="sidebar">
+      <!-- Brand Section -->
+      <div class="minipass-sidebar-brand">
+        <a href="{{ url_for('dashboard') }}" class="brand-link">
+          <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" 
+               alt="Minipass" class="brand-logo">
+          <span class="brand-text">minipass</span>
+        </a>
+      </div>
+      
+      <!-- Main Navigation -->
+      <div class="minipass-sidebar-nav">
+        <!-- Primary Navigation -->
+        <div class="nav-section">
+          <div class="nav-section-title">Main</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="{{ url_for('dashboard') }}" 
+                 class="nav-link {{ 'active' if request.endpoint == 'dashboard' }}">
+                <i class="nav-icon ti ti-layout-dashboard"></i>
+                <span class="nav-text">Dashboard</span>
+                {% if request.endpoint == 'dashboard' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('list_activities') }}" 
+                 class="nav-link {{ 'active' if request.endpoint == 'list_activities' }}">
+                <i class="nav-icon ti ti-activity"></i>
+                <span class="nav-text">Activities</span>
+                {% if request.endpoint == 'list_activities' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('list_signups') }}" 
+                 class="nav-link {{ 'active' if request.endpoint == 'list_signups' }}">
+                <i class="nav-icon ti ti-user-check"></i>
+                <span class="nav-text">Signups</span>
+                <span class="nav-badge">12</span>
+                {% if request.endpoint == 'list_signups' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('list_passports') }}" 
+                 class="nav-link {{ 'active' if request.endpoint == 'list_passports' }}">
+                <i class="nav-icon ti ti-ticket"></i>
+                <span class="nav-text">Passports</span>
+                {% if request.endpoint == 'list_passports' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('list_surveys') }}" 
+                 class="nav-link {{ 'active' if request.endpoint == 'list_surveys' }}">
+                <i class="nav-icon ti ti-clipboard-check"></i>
+                <span class="nav-text">Surveys</span>
+                {% if request.endpoint == 'list_surveys' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        <!-- Tools Section -->
+        <div class="nav-section">
+          <div class="nav-section-title">Tools</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="{{ url_for('chatbot.index') }}" 
+                 class="nav-link {{ 'active' if 'chatbot' in request.endpoint }}">
+                <i class="nav-icon ti ti-message-chatbot"></i>
+                <span class="nav-text">AI Analytics</span>
+                <span class="nav-tag">Beta</span>
+                {% if 'chatbot' in request.endpoint %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('style_guide') }}" 
+                 class="nav-link {{ 'active' if request.endpoint == 'style_guide' }}">
+                <i class="nav-icon ti ti-palette"></i>
+                <span class="nav-text">Style Guide</span>
+                {% if request.endpoint == 'style_guide' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Sidebar Footer -->
+      <div class="minipass-sidebar-footer">
+        <a href="{{ url_for('setup') }}" 
+           class="nav-link {{ 'active' if request.endpoint == 'setup' }}">
+          <i class="nav-icon ti ti-settings"></i>
+          <span class="nav-text">Settings</span>
+        </a>
+        
+        <!-- User Profile Section -->
+        {% if session.get("admin") %}
+        <div class="sidebar-user">
+          <div class="dropdown">
+            <a href="#" class="sidebar-user-link" data-bs-toggle="dropdown">
+              <span class="avatar avatar-sm" 
+                    style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')">
+              </span>
+              <div class="sidebar-user-info">
+                <div class="sidebar-user-name">{{ session['admin'].split('@')[0].title() }}</div>
+                <div class="sidebar-user-role">Administrator</div>
+              </div>
+              <i class="ti ti-chevron-up ms-auto"></i>
+            </a>
+            <div class="dropdown-menu dropdown-menu-top dropdown-menu-arrow">
+              <a href="{{ url_for('activity_log') }}" class="dropdown-item">
+                <i class="ti ti-history me-2"></i>Activity Log
+              </a>
+              <a href="{{ url_for('setup') }}" class="dropdown-item">
+                <i class="ti ti-settings me-2"></i>Settings
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
+                <i class="ti ti-logout me-2"></i>Logout
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </nav>
+    
+    <!-- Main Content Area -->
+    <div class="minipass-main">
+      <!-- Modern Top Header Bar -->
+      <header class="minipass-header">
+        <!-- Mobile Menu Toggle -->
+        <button class="header-menu-toggle d-lg-none" id="sidebarToggle">
+          <i class="ti ti-menu-2"></i>
+        </button>
+        
+        <!-- Search Bar -->
+        <div class="header-search d-none d-md-flex">
+          <div class="input-icon">
+            <span class="input-icon-addon">
+              <i class="ti ti-search"></i>
+            </span>
+            <input type="text" class="form-control form-control-light" 
+                   placeholder="Search activities, users, passes..." 
+                   aria-label="Search">
+          </div>
+        </div>
+        
+        <!-- Header Actions -->
+        <div class="header-actions">
+          <!-- Quick Add Button -->
+          <button class="btn btn-primary btn-sm d-none d-md-inline-flex">
+            <i class="ti ti-plus me-1"></i>
+            New Activity
+          </button>
+          
+          <!-- Notifications -->
+          <div class="dropdown d-none d-md-block">
+            <button class="header-action-btn" data-bs-toggle="dropdown">
+              <i class="ti ti-bell"></i>
+              <span class="badge bg-red"></span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+              <div class="dropdown-header">
+                <h6 class="m-0">Notifications</h6>
+              </div>
+              <div class="dropdown-divider"></div>
+              <a href="#" class="dropdown-item">
+                <div class="d-flex align-items-start">
+                  <div class="avatar avatar-sm bg-blue-lt">
+                    <i class="ti ti-user-plus"></i>
+                  </div>
+                  <div class="ms-2">
+                    <div class="text-dark">New signup received</div>
+                    <div class="text-muted small">2 minutes ago</div>
+                  </div>
+                </div>
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="#" class="dropdown-item text-center">View all notifications</a>
+            </div>
+          </div>
+          
+          <!-- Mobile User Menu -->
+          {% if session.get("admin") %}
+          <div class="dropdown d-lg-none">
+            <button class="header-action-btn" data-bs-toggle="dropdown">
+              <span class="avatar avatar-sm" 
+                    style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')">
+              </span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+              <a href="{{ url_for('activity_log') }}" class="dropdown-item">
+                <i class="ti ti-history me-2"></i>Activity Log
+              </a>
+              <a href="{{ url_for('setup') }}" class="dropdown-item">
+                <i class="ti ti-settings me-2"></i>Settings
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
+                <i class="ti ti-logout me-2"></i>Logout
+              </a>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </header>
+      
+      <!-- Page Content Container -->
+      <main class="minipass-content" id="main-content">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="minipass-alerts">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible" role="alert">
+                  <div class="d-flex">
+                    <div>
+                      {% if category == 'success' %}
+                      <i class="ti ti-check alert-icon"></i>
+                      {% else %}
+                      <i class="ti ti-alert-circle alert-icon"></i>
+                      {% endif %}
+                    </div>
+                    <div>
+                      <h4 class="alert-title">{{ 'Success!' if category == 'success' else 'Error!' }}</h4>
+                      <div class="text-muted">{{ message }}</div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+      </main>
+      
+      <!-- Modern Footer -->
+      <footer class="minipass-footer">
+        <div class="container-xl">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="text-muted">© 2025 Minipass. All rights reserved.</span>
+            </div>
+            <div class="col-auto ms-auto">
+              <span class="text-muted">Version 2.0.0</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    
+    <!-- Mobile Bottom Navigation -->
+    {% if session.get("admin") %}
+    <nav class="minipass-mobile-nav d-lg-none">
+      <a href="{{ url_for('dashboard') }}" 
+         class="mobile-nav-item {{ 'active' if request.endpoint == 'dashboard' }}">
+        <i class="ti ti-layout-dashboard"></i>
+        <span>Home</span>
+      </a>
+      <a href="{{ url_for('list_activities') }}" 
+         class="mobile-nav-item {{ 'active' if request.endpoint == 'list_activities' }}">
+        <i class="ti ti-activity"></i>
+        <span>Activities</span>
+      </a>
+      <a href="{{ url_for('scan_qr') }}" class="mobile-nav-item mobile-nav-center">
+        <div class="mobile-nav-center-btn">
+          <i class="ti ti-scan"></i>
+        </div>
+      </a>
+      <a href="{{ url_for('list_signups') }}" 
+         class="mobile-nav-item {{ 'active' if request.endpoint == 'list_signups' }}">
+        <i class="ti ti-user-check"></i>
+        <span>Signups</span>
+      </a>
+      <a href="{{ url_for('list_passports') }}" 
+         class="mobile-nav-item {{ 'active' if request.endpoint == 'list_passports' }}">
+        <i class="ti ti-ticket"></i>
+        <span>Passes</span>
+      </a>
+    </nav>
+    {% endif %}
+  </div>
 
-
-
-
-  <!-- THIS CODE IS REQUIRED FOR TINYMCE EDITOR FROM TABLER.IO -->
+  <!-- TinyMCE Editor -->
   <script src="{{ url_for('static', filename='tinymce/tinymce.min.js') }}"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
+      // Initialize TinyMCE
       if (document.querySelector('textarea.tinymce')) {
         tinymce.init({
           selector: 'textarea.tinymce',
@@ -64,174 +354,39 @@
           content_css: "default"
         });
       }
+      
+      // Auto-dismiss alerts
+      const alerts = document.querySelectorAll(".alert");
+      alerts.forEach(alert => {
+        setTimeout(() => {
+          const bsAlert = new bootstrap.Alert(alert);
+          bsAlert.close();
+        }, 5000);
+      });
+      
+      // Mobile sidebar toggle
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebar = document.getElementById('sidebar');
+      if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function() {
+          sidebar.classList.toggle('show');
+          document.body.classList.toggle('sidebar-open');
+        });
+        
+        // Close sidebar when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
+            sidebar.classList.remove('show');
+            document.body.classList.remove('sidebar-open');
+          }
+        });
+      }
     });
   </script>
   
-
-
-
-<div class="page">
-  <!-- Top Navbar -->
-  <header class="navbar navbar-expand-md navbar-dark bg-gray-800 d-print-none">
-    <div class="container-xl d-flex justify-content-between align-items-center">
-      <a href="https://minipass.me" class="d-flex align-items-center text-white text-decoration-none">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Minipass Logo" class="d-none d-md-inline" style="height: 17px; width: auto;">
-      </a>
-      <span class="org-name-responsive ms-2">{{ ORG_NAME }}</span>
-
-      {% if session.get("admin") %}
-      <div class="navbar-nav flex-row align-items-center">
-        <div class="nav-item dropdown">
-          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
-            <span class="avatar avatar-sm rounded-circle" style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')"></span>
-            <div class="d-none d-xl-block ps-2">
-              <div class="text-white">{{ session['admin'] }}</div>
-              <div class="text-white small">Admin</div>
-            </div>
-          </a>
-          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-
-
-            <a href="{{ url_for('activity_log') }}" class="dropdown-item">
-              <i class="ti ti-history me-2"></i>Activity Log
-            </a>
-
-            <a href="{{ url_for('setup') }}" class="dropdown-item">
-              <i class="ti ti-settings me-2"></i>Settings
-            </a>
-            <div class="dropdown-divider"></div>
-            <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
-              <i class="ti ti-logout me-2"></i>Logout
-            </a>
-          </div>
-        </div>
-      </div>
-      {% endif %}
-    </div>
-  </header>
-
-
-
-<!-- ✅ Flash block goes here -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    <div class="position-fixed start-50 translate-middle-x" style="top: 1.5rem; width: 100%; max-width: 600px; z-index: 1055; pointer-events: none;">
-      {% for category, message in messages %}
-        <div class="alert alert-important alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show shadow-lg mx-auto"
-             role="alert"
-             style="background: #fff; pointer-events: auto; border: 1px solid rgba(0,0,0,0.1); border-left: 5px solid {% if category == 'success' %}#28a745{% else %}#dc3545{% endif %};">
-          <div class="d-flex align-items-center">
-            <i class="ti ti-info-circle me-2"></i>
-            <div class="flex-grow-1">{{ message }}</div>
-            <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-{% endwith %}
-
-
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const alerts = document.querySelectorAll(".alert");
-    alerts.forEach(alert => {
-      setTimeout(() => {
-        alert.classList.remove("show");
-        setTimeout(() => alert.remove(), 300); // match fade transition
-      }, 5000); // 5 seconds
-    });
-  });
-</script>
-
-
-
-
-
-  <!-- Secondary Navbar -->
-<div class="navbar navbar-expand-md navbar-light bg-white border-bottom">
-  <div class="container-xl">
-    <!-- Mobile toggle button and scan button -->
-    <div class="d-md-none d-flex justify-content-between align-items-center w-100">
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#secondary-navbar"
-              aria-controls="secondary-navbar" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <!-- Mobile Scan Passport Button (visible only on mobile) -->
-      {% if session.get("admin") %}
-      <a href="{{ url_for('scan_qr') }}" class="btn btn-success ms-auto">
-        <i class="ti ti-scan"></i>
-      </a>
-      {% endif %}
-    </div>
-
-    <!-- Nav links -->
-    <div class="collapse navbar-collapse d-md-block" id="secondary-navbar">
-      <div class="d-flex align-items-center w-100">
-        <ul class="navbar-nav flex-grow-1">
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="ti ti-home"></i> Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_activities') }}"><i class="ti ti-activity"></i> Activities</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_passports') }}"><i class="ti ti-ticket"></i> Passports</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_signups') }}"><i class="ti ti-user-check"></i> Signups</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('list_surveys') }}"><i class="ti ti-clipboard-check"></i> Surveys</a></li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('chatbot.index') }}">
-              <i class="ti ti-message-chatbot"></i> AI Analytics
-            </a>          
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('style_guide') }}">
-              <i class="ti ti-palette"></i> Style Guide
-            </a>
-          </li>
-        </ul>
-        
-        <!-- Desktop Scan Button (visible only on desktop) - Outside navbar-nav context -->
-        {% if session.get("admin") %}
-        <div class="d-none d-md-block">
-          <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
-            <i class="ti ti-scan me-1"></i>Scan
-          </a>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-
-
+  <!-- Tabler Core JS -->
+  <script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
   
-  <!-- Page content -->
-  <div class="page-wrapper">
-    <div class="page-body">
-      <div class="container-xl">
-        {% block content %}{% endblock %}
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="footer footer-transparent d-print-none">
-      <div class="container-xl text-center text-muted py-3">
-        © 2025 <a href="https://minipass.me" class="text-muted">minipass.me</a> - All rights reserved.
-      </div>
-    </footer>
-  </div>
-</div>
-
-<!-- Tabler Core JS -->
-<script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    setTimeout(() => {
-      document.querySelectorAll(".alert").forEach(alert => {
-        alert.classList.remove("show");
-        alert.classList.add("opacity-0");
-        setTimeout(() => alert.remove(), 500);
-      });
-    }, 4000);
-  });
-</script>
-{% block scripts %}{% endblock %}
+  {% block scripts %}{% endblock %}
 </body>
 </html>
