@@ -25,7 +25,7 @@
   
   <!-- Custom Styles -->
   <link href="{{ url_for('static', filename='minipass.css') }}?v=20250624110800" rel="stylesheet">
-  <link href="{{ url_for('static', filename='minipass-redesign.css') }}?v=20250809001" rel="stylesheet">
+  <link href="{{ url_for('static', filename='minipass-redesign.css') }}?v=20250809003" rel="stylesheet">
   
   {% block head %}{% endblock %}
 </head>
@@ -44,7 +44,6 @@
         <a href="{{ url_for('dashboard') }}" class="brand-link">
           <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" 
                alt="Minipass" class="brand-logo">
-          <span class="brand-text">minipass</span>
         </a>
       </div>
       
@@ -133,18 +132,22 @@
                 {% endif %}
               </a>
             </li>
+            <li class="nav-item">
+              <a href="{{ url_for('setup') }}" 
+                 class="nav-link {{ 'active' if request.endpoint == 'setup' }}">
+                <i class="nav-icon ti ti-settings"></i>
+                <span class="nav-text">Settings</span>
+                {% if request.endpoint == 'setup' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
           </ul>
         </div>
       </div>
       
       <!-- Sidebar Footer -->
       <div class="minipass-sidebar-footer">
-        <a href="{{ url_for('setup') }}" 
-           class="nav-link {{ 'active' if request.endpoint == 'setup' }}">
-          <i class="nav-icon ti ti-settings"></i>
-          <span class="nav-text">Settings</span>
-        </a>
-        
         <!-- User Profile Section -->
         {% if session.get("admin") %}
         <div class="sidebar-user">
