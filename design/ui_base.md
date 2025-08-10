@@ -56,23 +56,23 @@ This document outlines the redesigned user interface for the Minipass SAAS PWA a
 ### Content Container
 
 **Specifications:**
-- Max-width: 1320px (Bootstrap's XXL container)
+- Max-width: 1400px (Optimized for balanced margins)
 - Margin: 0 auto (centered horizontally)
-- Padding: Inherits from parent (2rem)
-- Purpose: Centers content and creates equal visual spacing on both sides
+- Padding: 2rem 3rem (desktop), 1rem (mobile)
+- Purpose: Creates equal visual spacing on both sides without centering issues
 
 **CSS Implementation:**
 ```css
 .minipass-content {
   flex: 1;
-  padding: 2rem;
-  display: flex;
-  justify-content: center;
+  padding: 2rem 3rem;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .minipass-content-container {
   width: 100%;
-  max-width: 1320px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 ```
@@ -90,8 +90,7 @@ This document outlines the redesigned user interface for the Minipass SAAS PWA a
 ```
 Sidebar
 ├── Brand Section
-│   ├── Logo (32x32px)
-│   └── Brand Text (Anton, 1.5rem)
+│   └── Logo (32x32px mini version)
 ├── Navigation Sections
 │   ├── Main Section
 │   │   ├── Dashboard
@@ -128,10 +127,11 @@ Sidebar
 **Components:**
 ```
 Organization Header
-├── Organization Name (Center)
-│   ├── Font: Inter, font-weight: 600
-│   ├── Size: 1.125rem (18px)
-│   ├── Color: #374151
+├── Organization Name (Left-aligned on desktop, centered on mobile)
+│   ├── Font: Anton (brand font)
+│   ├── Size: 1.5rem (24px) desktop, 1.25rem (20px) mobile
+│   ├── Gradient: linear-gradient(135deg, #2d3436, #ff6b35)
+│   ├── Text effect: -webkit-background-clip: text
 │   └── Dynamic content from settings.ORG_NAME
 └── Mobile Menu Toggle (Left, mobile only)
 ```
@@ -143,29 +143,36 @@ Organization Header
   background: #F8F9FA;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: sticky;
   top: 0;
   z-index: 1030;
-  padding: 0 1rem;
+  padding: 0 2rem;
 }
 
-.minipass-org-header h1 {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #374151;
-  text-align: center;
+.minipass-org-name.org-name-gradient {
+  font-family: 'Anton', sans-serif;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #2d3436, #ff6b35);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+  letter-spacing: 0.025em;
+  margin-left: 1rem;
 }
 
 @media (max-width: 991px) {
   .minipass-org-header {
-    justify-content: space-between;
+    justify-content: center;
+    padding: 0 1rem;
   }
   
-  .minipass-org-header h1 {
+  .minipass-org-name {
+    font-size: 1.25rem;
+    margin-left: 0;
+    text-align: center;
     flex: 1;
-    margin-left: 2rem; /* Account for mobile menu toggle */
   }
 }
 ```
@@ -547,12 +554,22 @@ def inject_git_info():
 
 ---
 
-**Version**: 1.2.0  
-**Last Updated**: 2025-08-09  
+**Version**: 1.3.0  
+**Last Updated**: 2025-08-10  
 **Author**: UI/UX Design Team  
 **Status**: Ready for Implementation
 
 ## Changelog
+
+### Version 1.3.0 (2025-08-10)
+- **UPDATED**: Organization name now uses brand gradient (dark gray to orange)
+- **UPDATED**: Organization name aligned left on desktop, centered on mobile
+- **UPDATED**: Logo updated to mini version (32x32px) in sidebar
+- **FIXED**: Desktop layout gap issue - removed content centering that caused asymmetric margins
+- **UPDATED**: Content container max-width increased to 1400px for better balance
+- **UPDATED**: Content padding adjusted to 2rem 3rem for proper spacing
+- **TECHNICAL**: Added .org-name-gradient class with text gradient effect
+- **TECHNICAL**: Added .logo-mini class for 32px logo sizing
 
 ### Version 1.2.0 (2025-08-09)
 - **BREAKING**: Removed entire header bar section (search, notifications, user menu, action buttons)
