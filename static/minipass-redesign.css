@@ -389,7 +389,7 @@ html {
 /* Footer at End of Content (Not Sticky) */
 .minipass-footer {
   background: transparent;
-  border-top: 1px solid var(--tblr-border-color, #e9ecef);
+  /* border-top removed - no line above footer */
   padding: 1.5rem 0;
   text-align: center;
   margin-top: 2rem;
@@ -1388,7 +1388,7 @@ main.minipass-content {
 /* Option B: Footer at End of Content (Not Sticky) */
 .minipass-footer {
   background: transparent;
-  border-top: 1px solid var(--tblr-border-color, #e9ecef);
+  /* border-top removed - no line above footer */
   padding: 1.5rem 0;
   text-align: center;
   margin-top: auto;
