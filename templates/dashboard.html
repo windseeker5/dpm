@@ -1,404 +1,437 @@
 {% extends "base.html" %}
-{% block title %}Dashboard | Activities Overview{% endblock %}
+{% block title %}Dashboard - Minipass{% endblock %}
 
 {% block content %}
-
-
-<!-- Enhanced Welcome Header -->
-<div class="minipass-dashboard-header mb-5">
-  <div class="row align-items-center">
-    <div class="col">
-      <div class="minipass-dashboard-subtitle text-muted text-uppercase mb-1" style="letter-spacing: 0.05em; font-size: var(--minipass-text-xs, 0.75rem); font-weight: var(--minipass-font-medium, 500);">
-        Overview
-      </div>
-      <h1 class="minipass-dashboard-welcome mb-0">
-        Welcome back{% if session.get("admin") %}, {{ session['admin'].split('@')[0].title() }}{% endif %}!
-      </h1>
-      <p class="minipass-dashboard-subtitle mb-0">Here's what's happening with your activities today.</p>
-    </div>
-    <div class="col-auto d-none d-lg-block">
-      <div class="d-flex gap-3">
-        <a href="{{ url_for('create_activity') }}" class="minipass-btn-primary">
-          <i class="ti ti-plus"></i> Create Activity
-        </a>
+<div class="page-wrapper">
+  <!-- Page Header -->
+  <div class="page-header d-print-none">
+    <div class="container-xl">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h2 class="page-title">Dashboard</h2>
+          <div class="text-muted">
+            Welcome back{% if session.get("admin") %}, {{ session['admin'].split('@')[0].title() }}{% endif %}. Here's what's happening with your activities.
+          </div>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+          <div class="btn-list">
+            <a href="{{ url_for('create_activity') }}" class="btn btn-primary d-none d-md-inline-block">
+              <i class="ti ti-plus"></i>
+              New Activity
+            </a>
+            <a href="{{ url_for('create_activity') }}" class="btn btn-primary d-md-none btn-icon" aria-label="New Activity">
+              <i class="ti ti-plus"></i>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-
-
-
-
-
-
-  <!-- KPI Cards -->
-  <div class="kpi-carousel-container">
-    <!-- Desktop/Tablet Grid (hidden on mobile) -->
-    <div class="minipass-kpi-grid d-none d-md-block">
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="container-xl">
       
-      <!-- Revenue -->
-    <div class="minipass-kpi-card">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="minipass-kpi-label">Revenue</div>
-        <div class="dropdown">
-          <a class="dropdown-toggle text-secondary" id="revenue-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: var(--minipass-text-xs, 0.75rem);">Last 7 days</a>
-          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-dropdown">
-            <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-            <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
-            <a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a>
-            <a class="dropdown-item revenue-option" href="#" data-period="all">All time</a>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="minipass-kpi-value" id="revenue-value">$0</div>
-        <div class="minipass-kpi-trend text-success" id="revenue-trend">
-          8% ↗
-        </div>
-      </div>
-      <div id="revenue-sparkline" style="height: 48px;"></div>
-    </div>
-
-    <!-- Active Passports -->
-    <div class="minipass-kpi-card">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="minipass-kpi-label">Active Passports</div>
-        <div class="dropdown">
-          <a class="dropdown-toggle text-secondary" id="users-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: var(--minipass-text-xs, 0.75rem);">Last 7 days</a>
-          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-dropdown">
-            <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-            <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
-            <a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a>
-            <a class="dropdown-item users-option" href="#" data-period="all">All time</a>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="minipass-kpi-value" id="users-value">0</div>
-        <div class="minipass-kpi-trend text-warning" id="users-trend">
-          0% —
-        </div>
-      </div>
-      <div id="users-sparkline" style="height: 48px;"></div>
-    </div>
-
-    <!-- Passports Created -->
-    <div class="minipass-kpi-card">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="minipass-kpi-label">Passports Created</div>
-        <div class="dropdown">
-          <a class="dropdown-toggle text-secondary" id="passes-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: var(--minipass-text-xs, 0.75rem);">Last 7 days</a>
-          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-dropdown">
-            <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-            <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
-            <a class="dropdown-item passes-option" href="#" data-period="90d">Last 90 days</a>
-            <a class="dropdown-item passes-option" href="#" data-period="all">All time</a>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="minipass-kpi-value" id="passes-value">0</div>
-        <div class="minipass-kpi-trend text-success" id="passes-trend">
-          4% ↗
-        </div>
-      </div>
-      <div id="passes-sparkline" style="height: 48px;"></div>
-    </div>
-
-    <!-- Pending Signups -->
-    <div class="minipass-kpi-card">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="minipass-kpi-label">Pending Signups</div>
-        <div class="dropdown">
-          <a class="dropdown-toggle text-secondary" id="pending-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: var(--minipass-text-xs, 0.75rem);">Last 7 days</a>
-          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-dropdown">
-            <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-            <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
-            <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
-            <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
-          </div>
-        </div>
-      </div>
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="minipass-kpi-value" id="pending-value">0</div>
-        <div class="minipass-kpi-trend text-success" id="pending-trend">
-          0% ↗
-        </div>
-      </div>
-      <div id="pending-sparkline" style="height: 48px;"></div>
-    </div>
-    </div>
-
-    <!-- Mobile Carousel (visible only on mobile) -->
-    <div id="kpiCarousel" class="carousel slide d-md-none mb-4" data-bs-ride="false" data-bs-touch="true" data-bs-interval="false">
-      <div class="carousel-inner">
-        
+      <!-- KPI Cards Row -->
+      <div class="row mb-4">
         <!-- Revenue Card -->
-        <div class="carousel-item active">
-          <div class="px-2">
-            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
-              <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Revenue</div>
-                  <div class="dropdown">
-                    <a class="dropdown-toggle text-secondary" id="revenue-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
-                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="revenue-mobile-dropdown">
-                      <a class="dropdown-item active revenue-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                      <a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a>
-                      <a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a>
-                      <a class="dropdown-item revenue-option" href="#" data-period="all">All time</a>
-                    </div>
-                  </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">REVENUE</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" id="revenue-dropdown" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item active revenue-option" href="#" data-period="7d">Last 7 days</a></li>
+                    <li><a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a></li>
+                    <li><a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a></li>
+                    <li><a class="dropdown-item revenue-option" href="#" data-period="all">All time</a></li>
+                  </ul>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="h2 mb-0" id="revenue-mobile-value" style="font-weight: 600;">$0</div>
-                  <div class="text-warning d-flex align-items-center" id="revenue-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
-                </div>
-                <div id="revenue-mobile-sparkline" style="height: 48px;"></div>
               </div>
+              <div class="h2 mb-1" id="revenue-value">$0</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-success me-2" id="revenue-trend">
+                  0% <i class="ti ti-trending-up"></i>
+                </div>
+              </div>
+              <div id="revenue-sparkline" style="height: 40px; position: relative; overflow: hidden;"></div>
             </div>
           </div>
         </div>
 
-        <!-- Active Passports Card -->
-        <div class="carousel-item">
-          <div class="px-2">
-            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
-              <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Active Passports</div>
-                  <div class="dropdown">
-                    <a class="dropdown-toggle text-secondary" id="users-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
-                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="users-mobile-dropdown">
-                      <a class="dropdown-item active users-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                      <a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a>
-                      <a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a>
-                      <a class="dropdown-item users-option" href="#" data-period="all">All time</a>
-                    </div>
-                  </div>
+        <!-- Active Passes Card -->
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">ACTIVE PASSES</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" id="users-dropdown" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item active users-option" href="#" data-period="7d">Last 7 days</a></li>
+                    <li><a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a></li>
+                    <li><a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a></li>
+                    <li><a class="dropdown-item users-option" href="#" data-period="all">All time</a></li>
+                  </ul>
                 </div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="h2 mb-0" id="users-mobile-value" style="font-weight: 600;">0</div>
-                  <div class="text-warning d-flex align-items-center" id="users-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
-                </div>
-                <div id="users-mobile-sparkline" style="height: 48px;"></div>
               </div>
+              <div class="h2 mb-1" id="users-value">0</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-success me-2" id="users-trend">
+                  0% <i class="ti ti-trending-up"></i>
+                </div>
+              </div>
+              <div id="users-sparkline" style="height: 40px; position: relative; overflow: hidden;"></div>
             </div>
           </div>
         </div>
 
         <!-- Passports Created Card -->
-        <div class="carousel-item">
-          <div class="px-2">
-            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
-              <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Passports Created</div>
-                  <div class="dropdown">
-                    <a class="dropdown-toggle text-secondary" id="passes-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
-                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="passes-mobile-dropdown">
-                      <a class="dropdown-item active passes-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                      <a class="dropdown-item passes-option" href="#" data-period="30d">Last 30 days</a>
-                      <a class="dropdown-item passes-option" href="#" data-period="90d">Last 90 days</a>
-                      <a class="dropdown-item passes-option" href="#" data-period="all">All time</a>
-                    </div>
-                  </div>
-                </div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="h2 mb-0" id="passes-mobile-value" style="font-weight: 600;">0</div>
-                  <div class="text-warning d-flex align-items-center" id="passes-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
-                </div>
-                <div id="passes-mobile-sparkline" style="height: 48px;"></div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-body text-center">
+              <div class="text-muted small text-uppercase mb-2">PASSPORTS CREATED</div>
+              <div class="h3 mb-1" id="passes-value">0</div>
+              <div class="text-success small" id="passes-trend">
+                <i class="ti ti-trending-up me-1"></i>0%
               </div>
             </div>
           </div>
         </div>
 
         <!-- Pending Signups Card -->
-        <div class="carousel-item">
-          <div class="px-2">
-            <div class="card kpi-card-rounded" style="border-radius: 16px !important;">
-              <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <div class="text-secondary small text-uppercase" style="font-size: 0.75rem; font-weight: 500;">Pending Signups</div>
-                  <div class="dropdown">
-                    <a class="dropdown-toggle text-secondary" id="pending-mobile-dropdown" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-decoration: none; font-size: 0.75rem;">Last 7 days</a>
-                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="pending-mobile-dropdown">
-                      <a class="dropdown-item active pending-option" href="#" aria-current="true" data-period="7d">Last 7 days</a>
-                      <a class="dropdown-item pending-option" href="#" data-period="30d">Last 30 days</a>
-                      <a class="dropdown-item pending-option" href="#" data-period="90d">Last 90 days</a>
-                      <a class="dropdown-item pending-option" href="#" data-period="all">All time</a>
-                    </div>
-                  </div>
-                </div>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="h2 mb-0" id="pending-mobile-value" style="font-weight: 600;">0</div>
-                  <div class="text-warning d-flex align-items-center" id="pending-mobile-trend" style="font-size: 0.875rem; font-weight: 500;">0% —</div>
-                </div>
-                <div id="pending-mobile-sparkline" style="height: 48px;"></div>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-body text-center">
+              <div class="text-muted small text-uppercase mb-2">PENDING SIGNUPS</div>
+              <div class="h3 mb-1" id="pending-value">0</div>
+              <div class="text-warning small" id="pending-trend">
+                <i class="ti ti-minus me-1"></i>0%
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-  </div>
+      <!-- Mobile Carousel (visible only on mobile) -->
+      <div id="kpiCarousel" class="carousel slide d-lg-none mb-4" data-bs-ride="false" data-bs-touch="true" data-bs-interval="false">
+        <div class="carousel-inner">
+          
+          <!-- Revenue Card -->
+          <div class="carousel-item active">
+            <div class="px-2">
+              <div class="card" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-body">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="text-muted small text-uppercase">REVENUE</div>
+                    <div class="dropdown">
+                      <button class="btn btn-sm text-muted dropdown-toggle" type="button" id="revenue-mobile-dropdown" data-bs-toggle="dropdown">
+                        Last 7 days
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li><a class="dropdown-item active revenue-option" href="#" data-period="7d">Last 7 days</a></li>
+                        <li><a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a></li>
+                        <li><a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a></li>
+                        <li><a class="dropdown-item revenue-option" href="#" data-period="all">All time</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="h2 mb-1" id="revenue-mobile-value">$0</div>
+                  <div class="d-flex align-items-center mb-3">
+                    <div class="text-success me-2" id="revenue-mobile-trend">
+                      0% <i class="ti ti-trending-up"></i>
+                    </div>
+                  </div>
+                  <div id="revenue-mobile-sparkline" style="height: 40px; position: relative; overflow: hidden;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
+          <!-- Active Passes Card -->
+          <div class="carousel-item">
+            <div class="px-2">
+              <div class="card" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-body">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="text-muted small text-uppercase">ACTIVE PASSES</div>
+                    <div class="dropdown">
+                      <button class="btn btn-sm text-muted dropdown-toggle" type="button" id="users-mobile-dropdown" data-bs-toggle="dropdown">
+                        Last 7 days
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li><a class="dropdown-item active users-option" href="#" data-period="7d">Last 7 days</a></li>
+                        <li><a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a></li>
+                        <li><a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a></li>
+                        <li><a class="dropdown-item users-option" href="#" data-period="all">All time</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="h2 mb-1" id="users-mobile-value">0</div>
+                  <div class="d-flex align-items-center mb-3">
+                    <div class="text-success me-2" id="users-mobile-trend">
+                      0% <i class="ti ti-trending-up"></i>
+                    </div>
+                  </div>
+                  <div id="users-mobile-sparkline" style="height: 40px; position: relative; overflow: hidden;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-  <!-- Title -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
+          <!-- Passports Created Card -->
+          <div class="carousel-item">
+            <div class="px-2">
+              <div class="card" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-body text-center">
+                  <div class="text-muted small text-uppercase mb-2">PASSPORTS CREATED</div>
+                  <div class="h2 mb-1" id="passes-mobile-value">0</div>
+                  <div class="text-success small" id="passes-mobile-trend">
+                    <i class="ti ti-trending-up me-1"></i>0%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    <h2 class="mb-0">
-      <i class="ti ti-activity text-pink me-2"></i> Your Active Activities
-    </h2>    
-
-  </div>
-
-
-
-
-
-<!-- Active Activities List -->
-<div class="row">
-
-  {% for a in activities %}
-
-
-<div class="col-md-6 col-xl-4 mb-4">
-  <div class="card activity-card h-100 shadow-sm rounded-2 overflow-hidden">
-
-    {% if a.image_filename %}
-    <img src="{{ url_for('static', filename='uploads/activity_images/' ~ a.image_filename) }}"
-         class="card-img-top" alt="{{ a.name }}"
-         style="height: 130px; object-fit: cover;">
-    {% endif %}
-
-    <!-- 🌟 WRAPPER for internal padding -->
-    <div class="px-4 pt-3 pb-2">
-
-      <!-- Header Row -->
-      <div class="d-flex justify-content-between align-items-start mb-2">
-        <div class="fw-semibold text-dark fs-3">
-          <i class="ti ti-activity text-pink me-1"></i> {{ a.name }}
+          <!-- Pending Signups Card -->
+          <div class="carousel-item">
+            <div class="px-2">
+              <div class="card" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-body text-center">
+                  <div class="text-muted small text-uppercase mb-2">PENDING SIGNUPS</div>
+                  <div class="h2 mb-1" id="pending-mobile-value">0</div>
+                  <div class="text-warning small" id="pending-mobile-trend">
+                    <i class="ti ti-minus me-1"></i>0%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        {% if a.days_left != "N/A" %}
-        <small class="text-muted">{{ a.days_left }}d left</small>
-        {% endif %}
       </div>
 
-      <!-- Stats -->
-      <div class="row gy-1 gx-2 small text-muted">
-        <div class="col-6 d-flex align-items-center"><i class="ti ti-user me-1"></i> {{ a.pending_signups }} Pending</div>
-        <div class="col-6 d-flex align-items-center"><i class="ti ti-users me-1"></i> {{ a.signups }} Total</div>
-
-        <div class="col-6 d-flex align-items-center"><i class="ti ti-ticket me-1 text-success"></i> {{ a.active_passports }} Active</div>
-        <div class="col-6 d-flex align-items-center"><i class="ti ti-ticket me-1 text-muted"></i> {{ a.passports }} Created</div>
-
-        <div class="col-6 d-flex align-items-center"><i class="ti ti-currency-dollar me-1 text-green"></i> {{ "%.2f"|format(a.paid_amount) }} Paid</div>
-        <div class="col-6 d-flex align-items-center"><i class="ti ti-currency-dollar me-1 text-red"></i> {{ "%.2f"|format(a.unpaid_amount) }} Unpaid</div>
+      <!-- Recent Activities Section -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="page-title">Recent Activities</h3>
+            <a href="{{ url_for('list_activities') if url_for('list_activities') else '#' }}" class="btn btn-outline-primary btn-sm">
+              View All <i class="ti ti-arrow-right ms-1"></i>
+            </a>
+          </div>
+        </div>
+        {% for activity in activities %}
+        <div class="col-lg-4 col-md-6 mb-3">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <!-- Activity Image -->
+            {% if activity.image_filename %}
+            <div class="img-responsive img-responsive-21x9 card-img-top" 
+                 style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');">
+            </div>
+            {% else %}
+            <div class="img-responsive img-responsive-21x9 card-img-top" 
+                 style="background: linear-gradient(45deg, #e3f2fd 0%, #2196f3 100%); display: flex; align-items: center; justify-content: center;">
+              <i class="ti ti-calendar-event" style="font-size: 3rem; color: #1976d2; opacity: 0.8;"></i>
+            </div>
+            {% endif %}
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="card-title mb-0">{{ activity.name[:25] }}{% if activity.name|length > 25 %}...{% endif %}</h3>
+                {% if activity.days_left != "N/A" %}
+                <small class="text-muted">{{ activity.days_left }}d left</small>
+                {% endif %}
+              </div>
+              <div class="d-flex gap-2 flex-wrap mb-3">
+                <span class="badge bg-green-lt">{{ activity.signups }} active</span>
+                <span class="badge bg-yellow-lt">{{ activity.pending_signups }} pending</span>
+                <span class="badge bg-blue-lt">{{ activity.passports }} passes</span>
+              </div>
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-secondary btn-sm">
+                <i class="ti ti-settings me-1"></i>Manage
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
       </div>
 
+      <!-- Recent Signups Table -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header">
+              <h3 class="card-title">Recent Signups</h3>
+              <div class="card-actions">
+                <a href="{{ url_for('list_signups') if url_for('list_signups') else '#' }}" class="btn btn-outline-primary btn-sm">
+                  View All <i class="ti ti-arrow-right ms-1"></i>
+                </a>
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- Search Bar -->
+              <div class="d-flex justify-content-end align-items-center mb-3">
+                <div class="position-relative" style="width: 300px;">
+                  <div class="input-icon">
+                    <span class="input-icon-addon">
+                      <i class="ti ti-search"></i>
+                    </span>
+                    <input type="text" class="form-control" placeholder="Search signups..." style="padding-right: 60px;">
+                    <span class="position-absolute end-0 top-50 translate-middle-y me-3">
+                      <kbd class="small text-muted">ctrl + k</kbd>
+                    </span>
+                  </div>
+                </div>
+              </div>
 
+              <!-- Table -->
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th style="width: 300px;">Participant</th>
+                      <th>Activity</th>
+                      <th>Status</th>
+                      <th>Pass Type</th>
+                      <th>Date</th>
+                      <th style="width: 120px;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for log in logs[:10] %}
+                    <tr>
+                      <td style="vertical-align: middle;">
+                        <div class="d-flex align-items-center">
+                          <img src="https://www.gravatar.com/avatar/default?d=identicon&s=48" 
+                               class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                          <div>
+                            <div class="fw-bold">{{ log.details[:20] }}{% if log.details|length > 20 %}...{% endif %}</div>
+                            <div class="text-muted small">user@example.com</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style="vertical-align: middle;">{{ log.type }}</td>
+                      <td style="vertical-align: middle;">
+                        {% if log.type == 'Signup Approved' %}
+                        <span class="badge bg-green-lt text-green-lt-fg">
+                          <i class="ti ti-check me-1"></i>Confirmed
+                        </span>
+                        {% elif log.type == 'Signup Submitted' %}
+                        <span class="badge bg-yellow-lt text-yellow-lt-fg">
+                          <i class="ti ti-clock me-1"></i>Pending
+                        </span>
+                        {% else %}
+                        <span class="badge bg-red-lt text-red-lt-fg">
+                          <i class="ti ti-x me-1"></i>Cancelled
+                        </span>
+                        {% endif %}
+                      </td>
+                      <td style="vertical-align: middle;">Standard Pass</td>
+                      <td style="vertical-align: middle;">{{ log.timestamp.strftime('%m/%d/%Y') }}</td>
+                      <td style="vertical-align: middle;">
+                        <div class="dropdown">
+                          <button class="btn btn-outline-secondary dropdown-toggle btn-sm" type="button" data-bs-toggle="dropdown">
+                            Actions
+                          </button>
+                          <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">
+                              <i class="ti ti-eye me-1"></i>View
+                            </a></li>
+                            <li><a class="dropdown-item" href="#">
+                              <i class="ti ti-edit me-1"></i>Edit
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#">
+                              <i class="ti ti-trash me-1"></i>Delete
+                            </a></li>
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions and Status Row -->
+      <div class="row">
+        <div class="col-md-8">
+          <!-- Quick Actions -->
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header">
+              <h3 class="card-title">Quick Actions</h3>
+            </div>
+            <div class="card-body">
+              <div class="d-flex gap-3 flex-wrap">
+                <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
+                  <i class="ti ti-plus me-1"></i>New Activity
+                </a>
+                <a href="#" class="btn btn-secondary">
+                  <i class="ti ti-users me-1"></i>Bulk Signup
+                </a>
+                <a href="#" class="btn btn-info">
+                  <i class="ti ti-ticket me-1"></i>New Pass Type
+                </a>
+                <a href="#" class="btn btn-outline-primary">
+                  <i class="ti ti-download me-1"></i>Export Data
+                </a>
+                <a href="#" class="btn btn-outline-secondary">
+                  <i class="ti ti-chart-bar me-1"></i>Reports
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <!-- System Status -->
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header">
+              <h3 class="card-title">System Status</h3>
+            </div>
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span>Payment System</span>
+                <span class="badge bg-green text-green-fg">
+                  <i class="ti ti-check me-1"></i>Operational
+                </span>
+              </div>
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span>Email Notifications</span>
+                <span class="badge bg-green text-green-fg">
+                  <i class="ti ti-check me-1"></i>Operational
+                </span>
+              </div>
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span>Database</span>
+                <span class="badge bg-green text-green-fg">
+                  <i class="ti ti-check me-1"></i>Operational
+                </span>
+              </div>
+              <div class="d-flex align-items-center justify-content-between">
+                <span>AI Chatbot</span>
+                <span class="badge bg-yellow text-yellow-fg">
+                  <i class="ti ti-alert-triangle me-1"></i>Maintenance
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
     </div>
-
-    <!-- Footer -->
-    <div class="card-footer border-0 pt-2 pb-3 bg-white">
-      <a href="{{ url_for('activity_dashboard', activity_id=a.id) }}" class="btn btn-outline-primary w-100">
-        <i class="ti ti-chevron-right me-1"></i> View Details
-      </a>
-    </div>
-
   </div>
 </div>
-
-
-
-
-{% endfor %}
-
-
-</div>
-
-
-
-
-
-
-
-<!-- 🔻 What's happening  -->
-<div class="mt-5">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0" style="font-family: 'Poppins', sans-serif;">
-      <i class="ti ti-activity text-pink me-2"></i> What's happening ...
-    </h2>
-  </div>
-
-  <div class="card transaction-table-card shadow-sm rounded-2 overflow-hidden">
-    <div class="table-responsive">
-      <table class="table card-table table-vcenter">
-        <thead>
-          <tr>
-            <th class="text-muted">Date/Time</th>
-            <th class="text-muted"></th>
-            <th class="text-muted d-none d-md-table-cell">Type</th>
-            <th class="text-muted">Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for log in logs[:25] %}
-          <tr>
-            <td style="font-size: 0.75rem; color: #6c757d;" class="d-md-table-cell">{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
-            <td data-type="{{ log.type }}">
-              {% if log.type == 'Passport Redeemed' %}
-                <i class="ti ti-ticket text-danger"></i>
-              {% elif log.type == 'Email Sent' %}
-                <i class="ti ti-mail text-info"></i>
-              {% elif log.type == 'Passport Created' %}
-                <i class="ti ti-id text-lime"></i>
-              {% elif log.type == 'Interact Payment' %}
-                <i class="ti ti-currency-dollar text-success"></i>  
-              {% elif log.type == 'Marked Paid' %}
-                <i class="ti ti-check text-green"></i>  
-              {% elif log.type == 'Reminder Sent' %}
-                <i class="ti ti-bell text-purple"></i>
-              {% elif log.type == 'Signup Submitted' %}
-                <i class="ti ti-user-plus text-success"></i>  
-              {% elif log.type == 'Signup Approved' %}
-                <i class="ti ti-user-check text-green"></i>
-              {% elif log.type == 'Signup Rejected' %}
-                <i class="ti ti-user-x text-danger"></i>
-              {% elif log.type == 'Signup Cancelled' %}
-                <i class="ti ti-user-x text-danger"></i>
-              {% elif log.type == 'Activity Created' %}
-                <i class="ti ti-target text-orange"></i>
-              {% elif log.type == 'Admin Action' %}
-                <i class="ti ti-settings text-muted"></i>
-              {% else %}
-                <i class="ti ti-activity text-muted"></i>  
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell">{{ log.type }}</td>
-            <td style="font-size: 0.7rem !important; line-height: 1.3 !important; color: #495057 !important;">{{ log.details }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-
-
-
-
-
-
-<!-- Mobile Floating Action Button (Hidden when bottom nav is active) -->
-<!-- <button class="minipass-fab d-lg-none" onclick="window.location.href='{{ url_for('create_activity') }}'">
-  <i class="ti ti-plus"></i>
-</button> -->
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -418,14 +451,14 @@ document.addEventListener("DOMContentLoaded", function () {
     // Only show chart if we have any meaningful data
     if (!trendList || trendList.length === 0 || maxValue <= 0) {
       // Just leave container empty when no data
-      container.style.height = '48px';
+      container.style.height = '40px';
       return;
     }
     
     // Create canvas element
     const canvas = document.createElement('canvas');
     canvas.width = container.offsetWidth || 280;
-    canvas.height = 48;
+    canvas.height = 40;
     container.appendChild(canvas);
     
     const ctx = canvas.getContext("2d");
@@ -553,10 +586,8 @@ document.addEventListener("DOMContentLoaded", function () {
     valueElement.textContent = val;
     
     // Update trend with proper styling
-    trendElement.className = `${trendClass} d-flex align-items-center`;
-    trendElement.style.fontSize = '0.875rem';
-    trendElement.style.fontWeight = '500';
-    trendElement.textContent = `${percent}% ${arrow}`;
+    trendElement.className = `${trendClass} me-2`;
+    trendElement.innerHTML = `${percent}% <i class="ti ti-trending-up"></i>`;
 
     // Update dropdown text and active state
     const periodText = {
@@ -569,7 +600,7 @@ document.addEventListener("DOMContentLoaded", function () {
     dropdownElement.textContent = periodText;
     
     // Update active dropdown item - handle both desktop and mobile selectors
-    const optionClass = id.includes('-mobile') ? `.${id.replace('-mobile', '')}-option-mobile` : `.${id}-option`;
+    const optionClass = id.includes('-mobile') ? `.${id.replace('-mobile', '')}-option` : `.${id}-option`;
     document.querySelectorAll(optionClass).forEach(item => {
       item.classList.remove('active');
       item.removeAttribute('aria-current');
@@ -652,16 +683,14 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
-
-
 {% endblock %}
 
 {% block styles %}
 <style>
 .card {
   background-color: #fff !important;
-  border: 1px solid #e5e7eb !important; /* Use minipass-gray-200 equivalent */
-  border-radius: 16px !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -669,35 +698,10 @@ document.addEventListener("DOMContentLoaded", function () {
   background-color: #fff !important;
 }
 
-.activity-card {
-  background-color: #fff !important;
-}
-
-/* KPI Card specific styling */
-.kpi-card-rounded .card-body {
-  padding: 1.25rem !important;
-}
-
-/* Force rounded corners and borders on KPI cards */
-.kpi-card-rounded {
-  border: 1px solid #e5e7eb !important; /* Ensure border on mobile carousel cards */
-  border-radius: 16px !important;
-  overflow: hidden;
-  -webkit-border-radius: 16px !important;
-  -moz-border-radius: 16px !important;
-}
-
-.h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1.2;
-  margin-bottom: 0;
-}
-
 /* Chart container styling */
 #revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline,
 #revenue-mobile-sparkline, #users-mobile-sparkline, #passes-mobile-sparkline, #pending-mobile-sparkline {
-  height: 48px;
+  height: 40px;
   width: 100%;
   position: relative;
 }
@@ -705,11 +709,11 @@ document.addEventListener("DOMContentLoaded", function () {
 #revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas,
 #revenue-mobile-sparkline canvas, #users-mobile-sparkline canvas, #passes-mobile-sparkline canvas, #pending-mobile-sparkline canvas {
   width: 100% !important;
-  height: 48px !important;
+  height: 40px !important;
 }
 
 /* Mobile Carousel Styles */
-@media (max-width: 767.98px) {
+@media (max-width: 991.98px) {
   /* Ensure carousel has proper touch support */
   .carousel-inner {
     touch-action: pan-x !important;
@@ -746,54 +750,13 @@ document.addEventListener("DOMContentLoaded", function () {
     position: relative;
     overflow: hidden;
   }
-  
-  /* Mobile table typography optimization - Force override */
-  .card.transaction-table-card .table.card-table.table-vcenter tbody tr td:first-child {
-    font-size: 0.75rem !important;
-    color: #6c757d !important;
-    line-height: 1.3 !important;
-  }
-  
-  .card.transaction-table-card .table.card-table.table-vcenter tbody tr td:last-child {
-    font-size: 0.875rem !important;
-    line-height: 1.4 !important;
-  }
-  
 }
-
-/* Responsive adjustments */
-@media (max-width: 576px) {
-  .kpi-card-rounded .card-body {
-    padding: 1rem !important;
-  }
-  
-  .h2 {
-    font-size: 1.5rem;
-  }
-  
-  #revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline,
-  #revenue-mobile-sparkline, #users-mobile-sparkline, #passes-mobile-sparkline, #pending-mobile-sparkline {
-    height: 40px;
-  }
-  
-  #revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas,
-  #revenue-mobile-sparkline canvas, #users-mobile-sparkline canvas, #passes-mobile-sparkline canvas, #pending-mobile-sparkline canvas {
-    height: 40px !important;
-  }
-}
-
-/* Transaction table card styling - uses Bootstrap classes like activity cards */
 
 /* Hover effects */
 .card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: box-shadow 0.2s ease-in-out;
   transform: translateY(-1px);
   transition: all 0.2s ease-in-out;
 }
 </style>
 {% endblock %}
-
-
-
-

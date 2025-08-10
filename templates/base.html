@@ -151,40 +151,42 @@
     <div class="minipass-main">
       <!-- Header with Organization Name (Left) + User Avatar (Right) -->
       <header class="minipass-header">
-        <!-- Mobile menu toggle -->
-        <button class="header-menu-toggle d-lg-none" type="button" id="sidebarToggle">
-          <i class="ti ti-menu-2"></i>
-        </button>
-        
-        <!-- Organization Name (aligned with sidebar logo) -->
-        <div class="minipass-org-name">
-          {{ ORG_NAME if ORG_NAME else "Minipass" }}
-        </div>
-        
-        <!-- User Avatar Section -->
-        {% if session.get("admin") %}
-        <div class="minipass-header-user">
-          <div class="dropdown">
-            <a href="#" class="header-user-link" data-bs-toggle="dropdown">
-              <span class="avatar avatar-sm" 
-                    style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')">
-              </span>
-            </a>
-            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-              <a href="{{ url_for('activity_log') }}" class="dropdown-item">
-                <i class="ti ti-history me-2"></i>Activity Log
+        <div class="minipass-header-container">
+          <!-- Mobile menu toggle -->
+          <button class="header-menu-toggle d-lg-none" type="button" id="sidebarToggle">
+            <i class="ti ti-menu-2"></i>
+          </button>
+          
+          <!-- Organization Name (aligned with sidebar logo) -->
+          <div class="minipass-org-name">
+            {{ ORG_NAME if ORG_NAME else "Minipass" }}
+          </div>
+          
+          <!-- User Avatar Section -->
+          {% if session.get("admin") %}
+          <div class="minipass-header-user">
+            <div class="dropdown">
+              <a href="#" class="header-user-link" data-bs-toggle="dropdown">
+                <span class="avatar avatar-sm" 
+                      style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')">
+                </span>
               </a>
-              <a href="{{ url_for('setup') }}" class="dropdown-item">
-                <i class="ti ti-settings me-2"></i>Settings
-              </a>
-              <div class="dropdown-divider"></div>
-              <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
-                <i class="ti ti-logout me-2"></i>Logout
-              </a>
+              <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <a href="{{ url_for('activity_log') }}" class="dropdown-item">
+                  <i class="ti ti-history me-2"></i>Activity Log
+                </a>
+                <a href="{{ url_for('setup') }}" class="dropdown-item">
+                  <i class="ti ti-settings me-2"></i>Settings
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
+                  <i class="ti ti-logout me-2"></i>Logout
+                </a>
+              </div>
             </div>
           </div>
+          {% endif %}
         </div>
-        {% endif %}
       </header>
       
       <!-- Scrollable Main Content with Footer at End -->
