@@ -307,23 +307,27 @@ html {
 /* Main content column - Removed as we're using flexbox */
 /* .minipass-main-content - Not needed with new flexbox layout */
 
-/* Organization Name Header */
+/* Organization Name Header - CRITICAL ALIGNMENT: 64px height, 24px padding */
 .minipass-org-header {
-  height: 48px;
+  height: 64px;
   background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   position: relative;
-  padding: 0 1.5rem;
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .minipass-org-name {
   font-size: 1.5rem;
   font-weight: 600;
   color: #495057;
-  margin-left: 0;
+  margin: 0;
+  line-height: 32px;
 }
 
 /* Organization Name with Gradient */
@@ -400,21 +404,28 @@ html {
   font-size: 0.875rem;
 }
 
-/* Sidebar Brand */
+/* Sidebar Brand - CRITICAL ALIGNMENT: 64px height, 24px padding */
 .minipass-sidebar-brand {
-  padding: 1.5rem 1rem;
+  height: 64px;
+  padding: 0 24px;
   border-bottom: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  /* Debug: Ensure exact same positioning as header */
+  position: relative;
 }
 
 .brand-link {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-decoration: none;
   color: inherit;
   transition: all var(--minipass-transition-fast);
-  border-radius: var(--minipass-radius-lg);
-  padding: var(--minipass-space-2);
+  height: 100%;
+  /* Remove padding to allow logo to align properly */
+  padding: 0;
 }
 
 .brand-link:hover {
@@ -427,12 +438,15 @@ html {
 }
 
 .brand-logo {
-  width: 150px !important;
-  height: auto !important;
+  width: auto !important;
+  height: 28px !important;
   max-width: 150px !important;
-  max-height: 40px !important;
+  max-height: 28px !important;
   object-fit: contain;
   transition: transform var(--minipass-transition-fast);
+  /* Ensure logo is vertically centered to match header text */
+  display: block;
+  margin: 0;
 }
 
 /* Logo Mini - 32px version for sidebar */
@@ -1231,24 +1245,44 @@ main.minipass-content {
    16. NEW WIREFRAME LAYOUT - HEADER & CENTERING
    ============================================ */
 
-/* New Header Styling - Fixed Height */
+/* DEBUG HELPER - Uncomment to verify alignment */
+/*
+.minipass-sidebar-brand::after,
+.minipass-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: red;
+  z-index: 9999;
+  pointer-events: none;
+}
+*/
+
+/* Option B Header Styling - CRITICAL ALIGNMENT: 64px height, 24px padding */
 .minipass-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 0 24px;
   background: var(--tblr-bg-surface, white);
   border-bottom: 1px solid var(--tblr-border-color, #e9ecef);
-  height: 60px;
-  min-height: 60px;
+  height: 64px;
+  min-height: 64px;
   flex-shrink: 0;
+  /* Option B: Header spans full width of main content area */
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
 }
 
+/* Option B: Organization name aligned with sidebar logo on LEFT - CRITICAL ALIGNMENT */
 .minipass-header .minipass-org-name {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--tblr-primary, var(--minipass-primary-600));
-  flex: 1;
   text-align: left;
   margin: 0;
   font-family: 'Anton', sans-serif;
@@ -1257,11 +1291,18 @@ main.minipass-content {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: 0.025em;
+  /* CRITICAL: Perfect alignment with sidebar logo */
+  line-height: 1;
+  height: auto;
+  display: flex;
+  align-items: center;
 }
 
+/* Option B: User avatar positioned on RIGHT side */
 .minipass-header-user {
   display: flex;
   align-items: center;
+  margin-left: auto;
 }
 
 .minipass-header .header-user-link {
@@ -1284,18 +1325,21 @@ main.minipass-content {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* Content Container - Centered with Max Width */
+/* Option B: Content Container - Centered with Max Width (1200px) */
 .minipass-content-container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0;
+  padding: 2rem 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Updated Footer for Centering */
+/* Option B: Footer at End of Content (Not Sticky) */
 .minipass-footer {
   background: transparent;
-  border: none;
+  border-top: 1px solid var(--tblr-border-color, #e9ecef);
   padding: 1.5rem 0;
   text-align: center;
   margin-top: auto;
@@ -1344,7 +1388,7 @@ html, body {
   background: #a8a8a8;
 }
 
-/* Desktop Layout - Flexbox Structure with Footer at End of Content */
+/* Option B Desktop Layout - Flexbox Structure with Centered Content */
 @media (min-width: 992px) {
   .minipass-app {
     display: flex;
@@ -1358,6 +1402,7 @@ html, body {
     top: 0;
     height: 100vh;
     z-index: 1040;
+    width: 260px;
   }
   
   .minipass-main {
@@ -1369,26 +1414,34 @@ html, body {
     overflow: hidden;
   }
   
+  /* Option B: Header spans full width of main content area */
   .minipass-header {
     flex-shrink: 0;
+    width: 100%;
   }
   
   .minipass-content {
     flex: 1;
     overflow-y: auto;
-    padding: 1.5rem 2rem 0 2rem;
+    padding: 0;
     display: flex;
     flex-direction: column;
+    background: #f8f9fa;
   }
   
+  /* Option B: Centered main content with 1200px max-width */
   .minipass-content-container {
     flex: 1;
     display: flex;
     flex-direction: column;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    width: 100%;
   }
 }
 
-/* Mobile Layout - Stack Structure with Footer at End of Content */
+/* Option B Mobile Layout - Stack Structure with Centered Content */
 @media (max-width: 991px) {
   .minipass-app {
     height: 100vh;
@@ -1411,26 +1464,36 @@ html, body {
     overflow: hidden;
   }
   
+  /* Option B: Mobile header with organization name and user avatar */
   .minipass-header {
     flex-shrink: 0;
     height: 56px;
     min-height: 56px;
     padding: 1rem;
+    width: 100%;
+  }
+  
+  .minipass-header .minipass-org-name {
+    font-size: 1.1rem;
+    text-align: center;
+    flex: 1;
   }
   
   .minipass-content {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem 1.5rem 0 1.5rem;
-    padding-bottom: 80px; /* Space for mobile nav */
+    padding: 0;
     display: flex;
     flex-direction: column;
+    background: #f8f9fa;
   }
   
   .minipass-content-container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding-bottom: 80px; /* Ensure space for mobile nav */
+    padding: 1rem 1rem 80px 1rem; /* Bottom space for mobile nav */
+    max-width: none;
+    margin: 0;
   }
 }

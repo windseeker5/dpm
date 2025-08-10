@@ -30,10 +30,12 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 ┌─────────────────────────────────────────────────────────────────┐
 │  SIDEBAR (Fixed Left)  │         MAIN CONTENT AREA              │
 │                        │                                         │
-│  [Brand Logo] ←────────┼→ ┌─────────────────────────────────┐   │
-│                        │  │ HEADER (Option B - Full Width)  │   │
-│  [Main Navigation]     │  │  Org Name (L)  User Avatar (R) │   │
-│  • Dashboard           │  └─────────────────────────────────┘   │
+│  [Brand Logo] ←═══════┼→ ┌─────────────────────────────────┐   │
+│  ↕ 64px height        │  │ HEADER (64px) - EXACT ALIGNMENT │   │
+│  ├─24px padding       │  │  ├─24px│Org Name│    │Avatar│  │   │
+│  │                    │  │  ↕ CENTER ALIGNED WITH LOGO ↕   │   │
+│  [Main Navigation]     │  └─────────────────────────────────┘   │
+│  • Dashboard           │                                         │
 │  • Activities          │                                         │
 │  • Signups             │  ┌─────────────────────────────────┐   │
 │  • Passports           │  │                                 │   │
@@ -53,14 +55,18 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Header Section Implementation (Option B)
+### Header Section Implementation (Option B) - PRECISE ALIGNMENT SPECIFICATIONS
 - **Container**: Full width of main content area
-- **Left Side**: Organization name display (`{{ ORG_NAME }}`) - **aligned with sidebar logo** (Option B requirement)
+- **Left Side**: Organization name display (`{{ ORG_NAME }}`) - **EXACT alignment with sidebar logo** (Option B critical requirement)
 - **Right Side**: User gravatar with dropdown functionality (Option B requirement)
 - **Layout**: Header spans full width of main content area (Option B requirement)
-- **Styling**: Match existing organization header but add user avatar
-- **Height**: 60px minimum for proper spacing
-- **Alignment**: Organization name baseline matches sidebar logo vertical position (Option B specification)
+- **Height**: EXACTLY 64px to match sidebar brand section height
+- **Critical Alignment Requirements**:
+  - Sidebar logo vertical center MUST align with organization name text center
+  - Header padding-left MUST match sidebar brand logo left margin (typically 24px)
+  - Organization name line-height MUST be calculated to center text vertically
+  - Use CSS `align-items: center` and matching padding values for perfect alignment
+  - Header top position relative to sidebar brand section: 0px offset
 
 ### Main Content Centering
 - **Container**: `.minipass-content-container` - maintain existing class
@@ -170,34 +176,98 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 
 ---
 
+## CRITICAL ALIGNMENT SPECIFICATIONS FOR OPTION B
+
+### Sidebar-Header Alignment Requirements
+
+**Problem**: Sidebar logo and header organization name must be perfectly aligned horizontally.
+
+**Solution**: Match exact dimensions, padding, and positioning between sidebar brand section and header.
+
+#### Measurements Required:
+1. **Sidebar brand section height**: 64px
+2. **Sidebar brand logo left margin**: 24px  
+3. **Sidebar brand logo vertical centering**: CSS `align-items: center`
+4. **Header must match**: Same height (64px), same left padding (24px), same centering
+
+#### CSS Properties for Perfect Alignment:
+```css
+/* Sidebar Brand Section (existing - for reference) */
+.sidebar-brand {
+  height: 64px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center; /* Centers logo vertically */
+}
+
+/* Header MUST match these exact values */
+.minipass-header {
+  height: 64px;
+  padding: 16px 24px; /* EXACT match with sidebar */
+  display: flex;
+  align-items: center; /* EXACT match with sidebar */
+}
+
+/* Organization name positioning */
+.minipass-org-name {
+  line-height: 32px; /* Calculated: 64px - 32px padding = 32px content height */
+  margin: 0; /* No additional margins */
+  vertical-align: middle;
+}
+```
+
+#### Visual Alignment Check:
+```
+SIDEBAR BRAND:    |←24px→|[LOGO]|←text baseline→|
+HEADER:           |←24px→|ORG NAME|←baseline→|
+                  ↑                ↑
+                  MUST ALIGN    MUST ALIGN
+```
+
+#### Developer Implementation Checklist:
+- [ ] Measure actual sidebar brand section height in browser dev tools
+- [ ] Match header height EXACTLY to sidebar brand height
+- [ ] Match header padding-left EXACTLY to sidebar brand padding-left
+- [ ] Use identical `align-items: center` on both elements
+- [ ] Test alignment with browser dev tools visual guides
+- [ ] Verify alignment persists across different screen sizes
+
+---
+
 ## CSS Implementation Notes
 
 ### Required CSS Classes
 ```css
-/* Header Styling - Option B Implementation */
+/* Header Styling - Option B Implementation - PRECISE ALIGNMENT */
 .minipass-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  /* CRITICAL: Exact padding to match sidebar brand section */
+  padding: 16px 24px 16px 24px; /* 64px total height (16+32+16) */
   background: var(--tblr-bg-surface);
   border-bottom: 1px solid var(--tblr-border-color);
   /* Option B: Header spans full width of main content area */
   width: 100%;
-  /* Option B: Ensure vertical alignment with sidebar logo */
-  min-height: 60px;
+  /* CRITICAL: Exact height to match sidebar brand section */
+  height: 64px;
+  /* Ensure consistent box-sizing */
+  box-sizing: border-box;
 }
 
 .minipass-org-name {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--tblr-primary);
-  /* Option B: Align with sidebar logo on left side */
-  line-height: 1;
+  /* CRITICAL: Precise alignment properties */
+  line-height: 32px; /* Exact line-height for vertical centering */
   display: flex;
   align-items: center;
-  /* Option B: Ensure proper alignment with sidebar brand logo */
-  margin-left: 0;
+  /* CRITICAL: Zero margin to align with header padding */
+  margin: 0;
+  padding: 0;
+  /* Ensure text baseline aligns with logo center */
+  vertical-align: middle;
 }
 
 .minipass-header-user {
@@ -230,18 +300,39 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
   border-top: 1px solid var(--tblr-border-color);
 }
 
-/* Mobile Responsive */
+/* Mobile Responsive - MAINTAIN ALIGNMENT ON MOBILE */
 @media (max-width: 991.98px) {
   .minipass-header {
-    padding: 1rem;
+    /* Maintain 64px height for consistency */
+    height: 64px;
+    /* Adjust padding for mobile but keep proportions */
+    padding: 16px 20px;
   }
   
   .minipass-org-name {
     font-size: 1.1rem;
+    /* Maintain same line-height calculation */
+    line-height: 32px;
   }
   
   .minipass-content-centered {
     padding: 1rem;
+  }
+}
+
+/* ALIGNMENT DEBUG HELPER (remove in production) */
+.debug-alignment {
+  /* Add temporary guide lines to verify alignment */
+  .sidebar-brand::after,
+  .minipass-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: red;
+    top: 50%;
+    z-index: 9999;
   }
 }
 ```

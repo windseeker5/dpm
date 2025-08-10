@@ -8,7 +8,14 @@ Minipass is a Flask-based SAAS PWA application for end-to-end activities managem
 
 ## Key Development Commands
 
-### Running the Application
+### IMPORTANT: Development Server Status
+**THE FLASK SERVER IS ALREADY RUNNING IN DEBUG MODE ON PORT 8890**
+- DO NOT start a new Flask server with `python app.py`
+- DO NOT attempt to kill or restart the existing server
+- The server is ALWAYS available at http://127.0.0.1:8890
+- Simply navigate to the URL to test changes - the debug server auto-reloads
+
+### Running the Application (Only if server is not already running)
 ```bash
 # Activate virtual environment
 source venv/bin/activate
@@ -16,7 +23,7 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run development server (port 8890)
+# Run development server (port 8890) - ONLY IF NOT ALREADY RUNNING
 python app.py
 ```
 
