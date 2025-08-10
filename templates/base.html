@@ -37,7 +37,7 @@
   <!-- Main Application Container -->
   <div class="minipass-app">
     
-    <!-- Modern Sidebar Navigation -->
+    <!-- Clean Sidebar Navigation (NO USER PROFILE) -->
     <nav class="minipass-sidebar" id="sidebar">
       <!-- Brand Section -->
       <div class="minipass-sidebar-brand">
@@ -145,24 +145,32 @@
           </ul>
         </div>
       </div>
-      
-      <!-- Sidebar Footer -->
-      <div class="minipass-sidebar-footer">
-        <!-- User Profile Section -->
+    </nav>
+    
+    <!-- Main Content Area -->
+    <div class="minipass-main">
+      <!-- Header with Organization Name (Left) + User Avatar (Right) -->
+      <header class="minipass-header">
+        <!-- Mobile menu toggle -->
+        <button class="header-menu-toggle d-lg-none" type="button" id="sidebarToggle">
+          <i class="ti ti-menu-2"></i>
+        </button>
+        
+        <!-- Organization Name (aligned with sidebar logo) -->
+        <div class="minipass-org-name">
+          {{ ORG_NAME if ORG_NAME else "Minipass" }}
+        </div>
+        
+        <!-- User Avatar Section -->
         {% if session.get("admin") %}
-        <div class="sidebar-user">
+        <div class="minipass-header-user">
           <div class="dropdown">
-            <a href="#" class="sidebar-user-link" data-bs-toggle="dropdown">
+            <a href="#" class="header-user-link" data-bs-toggle="dropdown">
               <span class="avatar avatar-sm" 
                     style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')">
               </span>
-              <div class="sidebar-user-info">
-                <div class="sidebar-user-name">{{ session['admin'].split('@')[0].title() }}</div>
-                <div class="sidebar-user-role">Administrator</div>
-              </div>
-              <i class="ti ti-chevron-up ms-auto"></i>
             </a>
-            <div class="dropdown-menu dropdown-menu-top dropdown-menu-arrow">
+            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
               <a href="{{ url_for('activity_log') }}" class="dropdown-item">
                 <i class="ti ti-history me-2"></i>Activity Log
               </a>
@@ -177,21 +185,10 @@
           </div>
         </div>
         {% endif %}
-      </div>
-    </nav>
-    
-    <!-- Main Content Area -->
-    <div class="minipass-main">
-      <!-- Organization Name Header -->
-      <header class="minipass-org-header">
-        <button class="header-menu-toggle d-lg-none" type="button" id="sidebarToggle">
-          <i class="ti ti-menu-2"></i>
-        </button>
-        <div class="minipass-org-name org-name-gradient">{{ ORG_NAME }}</div>
       </header>
       
-      <!-- Page Content Container -->
-      <main class="minipass-content" id="main-content">
+      <!-- Scrollable Main Content with Footer at End -->
+      <main class="minipass-content minipass-content-centered" id="main-content">
         <div class="minipass-content-container">
           <!-- Flash Messages -->
           {% with messages = get_flashed_messages(with_categories=true) %}
@@ -221,20 +218,20 @@
           
           <!-- Page Content -->
           {% block content %}{% endblock %}
+          
+          <!-- Footer at END of content (scrollable, not sticky) -->
+          <footer class="minipass-footer">
+            <div class="minipass-footer-content">
+              <div class="minipass-footer-text">
+                © 2025 Minipass. All rights reserved. | Version: {{ git_branch if git_branch else "main" }}
+              </div>
+            </div>
+          </footer>
         </div>
       </main>
-      
-      <!-- Modern Footer -->
-      <footer class="minipass-footer">
-        <div class="minipass-footer-content">
-          <div class="minipass-footer-text">
-            © 2025 Minipass. All rights reserved. # version: {{ git_branch }}
-          </div>
-        </div>
-      </footer>
     </div>
     
-    <!-- Mobile Bottom Navigation -->
+    <!-- Mobile Bottom Navigation (PRESERVED EXACTLY) -->
     {% if session.get("admin") %}
     <nav class="minipass-mobile-nav d-lg-none">
       <a href="{{ url_for('dashboard') }}" 

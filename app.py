@@ -494,6 +494,13 @@ def style_guide():
     return render_template("style_guide.html")
 
 
+@app.route("/hello-world")
+def hello_world():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    return render_template("hello_world.html")
+
+
 @app.route("/dashboard")
 def dashboard():
     if "admin" not in session:

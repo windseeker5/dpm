@@ -1,20 +1,25 @@
-# Flask Dashboard Template Wireframe: Base.html Redesign
+# Flask Dashboard Template Wireframe: Base.html Redesign - Option B
 
 ## Overview
-This wireframe outlines the redesigned layout for the Minipass Flask application dashboard template while preserving the existing sidebar menu structure and implementing specific layout requirements.
+This wireframe outlines the redesigned layout for the Minipass Flask application dashboard template using **Option B** design approach while preserving the existing sidebar menu structure and implementing specific layout requirements.
+
+## Selected Design: Option B
+**Option B** keeps the organization name aligned with the sidebar logo on the left side of the header, places the user avatar on the right side of the header, ensures the header spans the full width of the main content area, and maintains proper alignment between the sidebar logo and the organization name in the header.
 
 ## Current Structure Analysis
-- **Existing Sidebar**: Modern custom sidebar with brand, navigation sections, and user profile footer
+- **Existing Sidebar**: Modern custom sidebar with brand and navigation sections (no user profile)
 - **Current Header**: Organization name with mobile menu toggle
-- **Current Footer**: Copyright with Git branch version
+- **Current Footer**: Copyright with Git branch version at end of content
 - **Mobile Layout**: Bottom navigation bar with center scan button
 
-## Design Requirements
-1. Keep left sidebar menu exactly as current implementation
+## Design Requirements - Option B Implementation
+1. Keep left sidebar menu structure but remove user profile section from bottom
 2. Center the main content section
-3. Add header above main section with organization name (left) and user gravatar (right)
-4. Maintain current footer with copyright and Git branch
-5. Preserve mobile layout structure with organization name in mobile header
+3. **Option B**: Add header above main section with organization name (left aligned with sidebar logo) and user gravatar (right)
+4. **Option B**: Header spans the full width of the main content area
+5. **Option B**: Maintain proper alignment between the sidebar logo and the organization name in the header
+6. Place footer at end of main content (not sticky) with copyright and Git branch
+7. Preserve mobile layout structure with organization name in mobile header
 
 ---
 
@@ -25,8 +30,8 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 ┌─────────────────────────────────────────────────────────────────┐
 │  SIDEBAR (Fixed Left)  │         MAIN CONTENT AREA              │
 │                        │                                         │
-│  [Brand Logo]          │  ┌─────────────────────────────────┐   │
-│                        │  │        HEADER SECTION           │   │
+│  [Brand Logo] ←────────┼→ ┌─────────────────────────────────┐   │
+│                        │  │ HEADER (Option B - Full Width)  │   │
 │  [Main Navigation]     │  │  Org Name (L)  User Avatar (R) │   │
 │  • Dashboard           │  └─────────────────────────────────┘   │
 │  • Activities          │                                         │
@@ -39,28 +44,30 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 │  • Style Guide         │  │                                 │   │
 │  • Settings            │  │                                 │   │
 │                        │  │                                 │   │
+│                        │  │            ...                  │   │
 │                        │  │                                 │   │
-│                        │  └─────────────────────────────────┘   │
-│                        │                                         │
-│                        │  ┌─────────────────────────────────┐   │
+│  (Clean sidebar end)   │  │  ─────────────────────────────  │   │
 │                        │  │            FOOTER               │   │
 │                        │  │  © 2025 Minipass. Version: v1  │   │
 │                        │  └─────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Header Section Implementation
+### Header Section Implementation (Option B)
 - **Container**: Full width of main content area
-- **Left Side**: Organization name display (`{{ ORG_NAME }}`)
-- **Right Side**: User gravatar with dropdown functionality
+- **Left Side**: Organization name display (`{{ ORG_NAME }}`) - **aligned with sidebar logo** (Option B requirement)
+- **Right Side**: User gravatar with dropdown functionality (Option B requirement)
+- **Layout**: Header spans full width of main content area (Option B requirement)
 - **Styling**: Match existing organization header but add user avatar
 - **Height**: 60px minimum for proper spacing
+- **Alignment**: Organization name baseline matches sidebar logo vertical position (Option B specification)
 
 ### Main Content Centering
 - **Container**: `.minipass-content-container` - maintain existing class
 - **Centering**: Use CSS flexbox or grid to center content horizontally
 - **Max Width**: Consider 1200px maximum width for optimal readability
 - **Responsive**: Scale down gracefully on smaller screens
+- **Footer**: Positioned at end of content (not sticky), appears after scrolling
 
 ---
 
@@ -102,7 +109,7 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 
 ### 1. Header Component
 ```html
-<!-- Desktop & Mobile Header -->
+<!-- Desktop & Mobile Header - Option B Implementation -->
 <header class="minipass-header">
   <!-- Mobile menu toggle (existing) -->
   <button class="header-menu-toggle d-lg-none" type="button" id="sidebarToggle">
@@ -149,8 +156,9 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 </main>
 ```
 
-### 3. Updated Footer
+### 3. Footer at End of Content
 ```html
+<!-- Footer appears at the end of main content, not sticky -->
 <footer class="minipass-footer">
   <div class="minipass-footer-content">
     <div class="minipass-footer-text">
@@ -166,7 +174,7 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 
 ### Required CSS Classes
 ```css
-/* Header Styling */
+/* Header Styling - Option B Implementation */
 .minipass-header {
   display: flex;
   justify-content: space-between;
@@ -174,29 +182,52 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
   padding: 1rem 1.5rem;
   background: var(--tblr-bg-surface);
   border-bottom: 1px solid var(--tblr-border-color);
+  /* Option B: Header spans full width of main content area */
+  width: 100%;
+  /* Option B: Ensure vertical alignment with sidebar logo */
+  min-height: 60px;
 }
 
 .minipass-org-name {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--tblr-primary);
+  /* Option B: Align with sidebar logo on left side */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  /* Option B: Ensure proper alignment with sidebar brand logo */
+  margin-left: 0;
 }
 
 .minipass-header-user {
   display: flex;
   align-items: center;
+  /* Option B: User avatar positioned on right side */
+  margin-left: auto;
 }
 
 /* Content Centering */
-.minipass-content-centered {
+.minipass-content {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  min-height: calc(100vh - 60px); /* Full height minus header */
+}
+
+.minipass-content-container {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 2rem 1rem;
 }
 
-.minipass-content-centered .minipass-content-container {
-  width: 100%;
-  max-width: 1200px;
+/* Footer at end of content */
+.minipass-footer {
+  margin-top: auto; /* Push to bottom of content */
+  padding: 1rem;
+  text-align: center;
+  border-top: 1px solid var(--tblr-border-color);
 }
 
 /* Mobile Responsive */
@@ -297,10 +328,14 @@ This wireframe outlines the redesigned layout for the Minipass Flask application
 - Ensure Tabler.io CSS integration
 
 ### No Changes Required
-- Sidebar navigation structure (preserve exactly as is)
+- Sidebar navigation structure (except removing user profile section)
 - Mobile bottom navigation
-- Footer copyright structure (just format adjustment)
 - JavaScript functionality (preserve existing)
+
+### Elements to Remove
+- Sidebar footer user profile section
+- Gray divider lines in sidebar footer
+- Any user-related components from sidebar
 
 ---
 
