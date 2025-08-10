@@ -157,7 +157,7 @@
             <i class="ti ti-menu-2"></i>
           </button>
           
-          <!-- Organization Name (aligned with sidebar logo) -->
+          <!-- Organization Name (left-aligned to match content) -->
           <div class="minipass-org-name">
             {{ ORG_NAME if ORG_NAME else "Minipass" }}
           </div>
@@ -190,8 +190,8 @@
       </header>
       
       <!-- Scrollable Main Content with Footer at End -->
-      <main class="minipass-content minipass-content-centered" id="main-content">
-        <div class="minipass-content-container">
+      <main class="minipass-content" id="main-content">
+        <div class="minipass-content-wrapper">
           <!-- Flash Messages -->
           {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
