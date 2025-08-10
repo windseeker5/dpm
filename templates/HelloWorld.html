@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Hello World - Minipass{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="page-header">
+      <h1 class="page-title">Hello World Test Page</h1>
+      <p class="page-subtitle text-muted">This page demonstrates the new layout with footer at the end of content.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Test Cards Section -->
+<div class="row mb-4">
+  <div class="col-md-6 col-xl-3 mb-3">
+    <div class="card minipass-card">
+      <div class="card-body text-center">
+        <i class="ti ti-world text-primary mb-3" style="font-size: 3rem;"></i>
+        <h3 class="card-title">Hello World</h3>
+        <p class="text-muted">Welcome to the new layout design!</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3 mb-3">
+    <div class="card minipass-card">
+      <div class="card-body text-center">
+        <i class="ti ti-layout-dashboard text-success mb-3" style="font-size: 3rem;"></i>
+        <h3 class="card-title">Clean Layout</h3>
+        <p class="text-muted">No user profile in sidebar, clean design.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3 mb-3">
+    <div class="card minipass-card">
+      <div class="card-body text-center">
+        <i class="ti ti-scroll text-warning mb-3" style="font-size: 3rem;"></i>
+        <h3 class="card-title">Scrollable Content</h3>
+        <p class="text-muted">Content scrolls, footer appears at end.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3 mb-3">
+    <div class="card minipass-card">
+      <div class="card-body text-center">
+        <i class="ti ti-check text-info mb-3" style="font-size: 3rem;"></i>
+        <h3 class="card-title">Header Aligned</h3>
+        <p class="text-muted">Organization name aligned with logo.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Content Sections to Demonstrate Scrolling -->
+<div class="row mb-4">
+  <div class="col-lg-8">
+    <div class="card minipass-card">
+      <div class="card-header">
+        <h3 class="card-title">Layout Features</h3>
+      </div>
+      <div class="card-body">
+        <h4>Key Improvements</h4>
+        <ul class="list-unstyled">
+          <li class="mb-2"><i class="ti ti-check text-success me-2"></i>Removed user profile section from sidebar footer</li>
+          <li class="mb-2"><i class="ti ti-check text-success me-2"></i>Clean sidebar ending with no gray dividers</li>
+          <li class="mb-2"><i class="ti ti-check text-success me-2"></i>Header with organization name aligned with sidebar logo</li>
+          <li class="mb-2"><i class="ti ti-check text-success me-2"></i>Footer appears at the end of scrollable content</li>
+          <li class="mb-2"><i class="ti ti-check text-success me-2"></i>Proper flexbox layout for content scrolling</li>
+          <li class="mb-2"><i class="ti ti-check text-success me-2"></i>User avatar moved to header (right side)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card minipass-card">
+      <div class="card-header">
+        <h3 class="card-title">Navigation</h3>
+      </div>
+      <div class="card-body">
+        <p>The sidebar maintains all existing navigation links but removes the user profile section for a cleaner look.</p>
+        <p class="text-muted">User functions are now accessible via the avatar dropdown in the header.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Long Content Section for Scrolling Demo -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card minipass-card">
+      <div class="card-header">
+        <h3 class="card-title">Scrolling Demonstration</h3>
+        <p class="card-subtitle">This section contains enough content to demonstrate the scrolling behavior</p>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h4>Content Block 1</h4>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+            <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis.</p>
+          </div>
+          <div class="col-md-6">
+            <h4>Content Block 2</h4>
+            <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias.</p>
+            <p>Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus.</p>
+            <p>Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae.</p>
+          </div>
+        </div>
+        
+        <hr class="my-4">
+        
+        <div class="row">
+          <div class="col-md-4">
+            <div class="minipass-kpi-card">
+              <div class="minipass-kpi-value">250+</div>
+              <div class="minipass-kpi-label">Layout Elements</div>
+              <div class="minipass-kpi-trend positive">
+                <i class="ti ti-trending-up"></i>
+                <span>15% increase</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="minipass-kpi-card">
+              <div class="minipass-kpi-value">98%</div>
+              <div class="minipass-kpi-label">User Satisfaction</div>
+              <div class="minipass-kpi-trend positive">
+                <i class="ti ti-trending-up"></i>
+                <span>5% increase</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="minipass-kpi-card">
+              <div class="minipass-kpi-value">0</div>
+              <div class="minipass-kpi-label">User Profile in Sidebar</div>
+              <div class="minipass-kpi-trend positive">
+                <i class="ti ti-check"></i>
+                <span>Removed as requested</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h4>Additional Content</h4>
+        <div class="row">
+          <div class="col-md-6">
+            <p>This additional content helps demonstrate the scrolling behavior. When you scroll down, you'll see that the footer appears at the very end of all content.</p>
+            <p>The footer is no longer sticky at the bottom of the viewport, but instead appears after all the content has been scrolled through.</p>
+            <p>This creates a more natural reading flow where users can see all content before reaching the footer information.</p>
+          </div>
+          <div class="col-md-6">
+            <p>The header remains fixed at the top with the organization name properly aligned with the sidebar logo position.</p>
+            <p>The user avatar in the header provides quick access to user functions like Activity Log, Settings, and Logout.</p>
+            <p>Mobile responsiveness is maintained with the bottom navigation bar for touch-friendly access to key functions.</p>
+          </div>
+        </div>
+
+        <div class="alert alert-info mt-4">
+          <i class="ti ti-info-circle me-2"></i>
+          <strong>Layout Test:</strong> Scroll down to see the footer appear at the end of this content. It should not be sticky at the bottom of your screen.
+        </div>
+
+        <h4>Final Content Block</h4>
+        <p>This is the final content block to ensure there's enough content to demonstrate the scrolling behavior properly. The footer will appear below this section.</p>
+        <p>The new layout successfully implements all the wireframe requirements:</p>
+        <ul>
+          <li>Clean sidebar without user profile section</li>
+          <li>Header with aligned organization name and user avatar</li>
+          <li>Scrollable content area</li>
+          <li>Footer at the end of content (not sticky)</li>
+          <li>Proper responsive behavior</li>
+        </ul>
+        <p class="text-muted">Thank you for testing the new Hello World layout implementation!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Test Table Section -->
+<div class="row mb-5">
+  <div class="col-12">
+    <div class="card minipass-card">
+      <div class="card-header">
+        <h3 class="card-title">Sample Data Table</h3>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table minipass-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Status</th>
+                <th>Description</th>
+                <th>Priority</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Clean Sidebar</td>
+                <td><span class="badge bg-success">Completed</span></td>
+                <td>Removed user profile from sidebar footer</td>
+                <td>High</td>
+              </tr>
+              <tr>
+                <td>Header Alignment</td>
+                <td><span class="badge bg-success">Completed</span></td>
+                <td>Organization name aligned with sidebar logo</td>
+                <td>High</td>
+              </tr>
+              <tr>
+                <td>Scrollable Footer</td>
+                <td><span class="badge bg-success">Completed</span></td>
+                <td>Footer appears at end of content, not sticky</td>
+                <td>High</td>
+              </tr>
+              <tr>
+                <td>User Avatar</td>
+                <td><span class="badge bg-success">Completed</span></td>
+                <td>Moved to header with dropdown functionality</td>
+                <td>Medium</td>
+              </tr>
+              <tr>
+                <td>Mobile Responsiveness</td>
+                <td><span class="badge bg-success">Completed</span></td>
+                <td>Maintained mobile bottom navigation</td>
+                <td>High</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

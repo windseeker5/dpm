@@ -270,14 +270,15 @@ html {
    4. LAYOUT & NAVIGATION COMPONENTS
    ============================================ */
 
-/* Modern App Container */
+/* Modern App Container - Fixed Height Viewport */
 .minipass-app {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   background: #f8f9fa;
+  overflow: hidden;
 }
 
-/* Modern Sidebar - Clean Design */
+/* Modern Sidebar - Fixed Position */
 .minipass-sidebar {
   width: 260px;
   background: white;
@@ -292,27 +293,19 @@ html {
   transition: transform 0.3s ease;
 }
 
-/* Main Content Area - New Grid-based Layout */
+/* Main Content Area - Flexbox Layout for Proper Scrolling */
 .minipass-main {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  min-height: 100vh;
-  background: #f8f9fa;
-  width: 100vw;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-
-/* Main content column */
-.minipass-main-content {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  flex: 1;
+  margin-left: 260px;
+  height: 100vh;
   background: #f8f9fa;
-  grid-column: 2;
+  overflow: hidden;
 }
+
+/* Main content column - Removed as we're using flexbox */
+/* .minipass-main-content - Not needed with new flexbox layout */
 
 /* Organization Name Header */
 .minipass-org-header {
@@ -354,19 +347,24 @@ html {
   padding: 0.5rem;
 }
 
-/* Content Area - Full width with equal padding */
+/* Content Area - Scrollable with Footer at End */
 .minipass-content {
   flex: 1;
-  width: 100%;
-  padding: 1.5rem 2rem;
-  min-height: calc(100vh - 48px); /* Account for header */
-  max-width: 1400px;
-  margin: 0 auto;
+  overflow-y: auto;
+  padding: 1.5rem 2rem 0 2rem;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
 }
 
 .minipass-content-container {
   width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .minipass-alerts {
@@ -384,13 +382,13 @@ html {
   margin-right: 0.75rem;
 }
 
-/* Updated Footer */
+/* Footer at End of Content (Not Sticky) */
 .minipass-footer {
   background: transparent;
-  border: none;
+  border-top: 1px solid var(--tblr-border-color, #e9ecef);
   padding: 1.5rem 0;
   text-align: center;
-  margin-top: auto;
+  margin-top: 2rem;
 }
 
 .minipass-footer-content {
@@ -549,46 +547,9 @@ html {
 }
 
 
-/* Sidebar Footer */
-.minipass-sidebar-footer {
-  margin-top: auto;
-  padding: 1rem 0.75rem;
-  border-top: 1px solid #e9ecef;
-}
-
-.sidebar-user {
-  margin-top: 0.75rem;
-}
-
-.sidebar-user-link {
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-  text-decoration: none;
-  color: inherit;
-  transition: background 0.2s;
-}
-
-.sidebar-user-link:hover {
-  background: #f1f5f9;
-}
-
-.sidebar-user-info {
-  flex: 1;
-  margin-left: 0.75rem;
-}
-
-.sidebar-user-name {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.sidebar-user-role {
-  font-size: 0.75rem;
-  color: #64748b;
-}
+/* Clean Sidebar End - No User Profile Section */
+/* Removed all sidebar footer styling as per wireframe requirements */
+/* The sidebar now ends cleanly with just navigation sections */
 
 /* Mobile Bottom Navigation */
 .minipass-mobile-nav {
@@ -1001,17 +962,8 @@ html {
   }
 }
 
-/* Mobile Styles */
+/* Mobile Sidebar Overlay */
 @media (max-width: 991px) {
-  /* Sidebar mobile behavior */
-  .minipass-sidebar {
-    transform: translateX(-100%);
-  }
-  
-  .minipass-sidebar.show {
-    transform: translateX(0);
-  }
-  
   body.sidebar-open::before {
     content: '';
     position: fixed;
@@ -1021,15 +973,6 @@ html {
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 1039;
-  }
-  
-  .minipass-main {
-    margin-left: 0;
-  }
-  
-  .minipass-content {
-    padding: 1rem;
-    padding-bottom: 80px; /* Space for bottom nav */
   }
   
   /* Mobile KPI Grid - Horizontal carousel style */
@@ -1076,17 +1019,8 @@ html {
   }
 }
 
-/* Desktop Styles */
+/* Desktop Layout Overrides */
 @media (min-width: 992px) {
-  .minipass-sidebar {
-    position: sticky;
-    transform: none;
-  }
-  
-  .header-menu-toggle {
-    display: none;
-  }
-  
   .minipass-mobile-nav {
     display: none !important;
   }
@@ -1254,58 +1188,34 @@ main.minipass-content {
   margin: 0 !important;
 }
 
-/* Desktop layout - Simplified approach */
+/* Additional Desktop Responsive Rules */
 @media (min-width: 992px) {
-  .minipass-main {
-    grid-template-columns: 260px 1fr;
-    position: fixed;
-    width: 100vw;
-  }
-  
-  .minipass-content {
-    padding: 1.5rem 3rem;
-    max-width: none;
-    margin: 0;
-  }
-  
   .minipass-content-container {
-    max-width: 1320px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0;
   }
+  
+  .header-menu-toggle {
+    display: none;
+  }
 }
 
-/* Mobile responsiveness */
+/* Additional Mobile Responsive Rules */
 @media (max-width: 991px) {
-  .minipass-main {
-    grid-template-columns: 1fr;
-    position: relative;
-    width: 100%;
-  }
-  
-  .minipass-main-content {
-    grid-column: 1;
-  }
-  
-  .minipass-content {
-    padding: 1rem 1.5rem;
-    max-width: none;
-    margin: 0;
-  }
-  
   .minipass-content-container {
+    max-width: none;
     padding: 0;
   }
   
-  .minipass-content {
-    width: 100%;
-    max-width: 100%;
+  .minipass-header .minipass-org-name {
+    font-size: 1.1rem;
+    text-align: center;
+    flex: 1;
   }
   
-  .minipass-content-container {
-    max-width: none;
-    padding-left: 0;
-    padding-right: 0;
+  .minipass-header .header-menu-toggle {
+    margin-right: 0.5rem;
   }
 }
 
@@ -1315,4 +1225,212 @@ main.minipass-content {
 
 @media (prefers-color-scheme: dark) {
   /* Dark mode styles can be added here when needed */
+}
+
+/* ============================================
+   16. NEW WIREFRAME LAYOUT - HEADER & CENTERING
+   ============================================ */
+
+/* New Header Styling - Fixed Height */
+.minipass-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: var(--tblr-bg-surface, white);
+  border-bottom: 1px solid var(--tblr-border-color, #e9ecef);
+  height: 60px;
+  min-height: 60px;
+  flex-shrink: 0;
+}
+
+.minipass-header .minipass-org-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--tblr-primary, var(--minipass-primary-600));
+  flex: 1;
+  text-align: left;
+  margin: 0;
+  font-family: 'Anton', sans-serif;
+  background: linear-gradient(135deg, #2d3436, #ff6b35);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.025em;
+}
+
+.minipass-header-user {
+  display: flex;
+  align-items: center;
+}
+
+.minipass-header .header-user-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.minipass-header .header-menu-toggle {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: #495057;
+  padding: 0.5rem;
+  margin-right: 1rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.15s ease;
+}
+
+.minipass-header .header-menu-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Content Container - Centered with Max Width */
+.minipass-content-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Updated Footer for Centering */
+.minipass-footer {
+  background: transparent;
+  border: none;
+  padding: 1.5rem 0;
+  text-align: center;
+  margin-top: auto;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.minipass-footer-content {
+  width: 100%;
+  text-align: center;
+}
+
+.minipass-footer-text {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+/* Ensure proper scrolling behavior */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.minipass-app {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Fix any remaining layout issues */
+.minipass-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.minipass-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.minipass-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.minipass-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Desktop Layout - Flexbox Structure with Footer at End of Content */
+@media (min-width: 992px) {
+  .minipass-app {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .minipass-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 1040;
+  }
+  
+  .minipass-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    margin-left: 260px;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .minipass-header {
+    flex-shrink: 0;
+  }
+  
+  .minipass-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem 2rem 0 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .minipass-content-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Mobile Layout - Stack Structure with Footer at End of Content */
+@media (max-width: 991px) {
+  .minipass-app {
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .minipass-sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .minipass-sidebar.show {
+    transform: translateX(0);
+  }
+  
+  .minipass-main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    margin-left: 0;
+    overflow: hidden;
+  }
+  
+  .minipass-header {
+    flex-shrink: 0;
+    height: 56px;
+    min-height: 56px;
+    padding: 1rem;
+  }
+  
+  .minipass-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem 0 1.5rem;
+    padding-bottom: 80px; /* Space for mobile nav */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .minipass-content-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 80px; /* Ensure space for mobile nav */
+  }
 }
