@@ -8,9 +8,11 @@
     <div class="container-xl">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h2 class="page-title">Dashboard</h2>
+          <h2 class="page-title mb-2">
+            Welcome back{% if session.get("admin") %}, {{ session['admin'].split('@')[0].title() }}{% endif %}!
+          </h2>
           <div class="text-muted">
-            Welcome back{% if session.get("admin") %}, {{ session['admin'].split('@')[0].title() }}{% endif %}. Here's what's happening with your activities.
+            Here's what's happening with your activities today.
           </div>
         </div>
         <div class="col-auto ms-auto d-print-none">
@@ -32,398 +34,526 @@
   <div class="page-body">
     <div class="container-xl">
       
-      <!-- KPI Cards Row -->
-      <div class="row mb-4">
+      <!-- KPI Cards Section - Desktop Layout -->
+      <div class="row mb-4 d-none d-md-flex">
         <!-- Revenue Card -->
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">REVENUE</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" id="revenue-dropdown" data-bs-toggle="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item active revenue-option" href="#" data-period="7d">Last 7 days</a></li>
-                    <li><a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a></li>
-                    <li><a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a></li>
-                    <li><a class="dropdown-item revenue-option" href="#" data-period="all">All time</a></li>
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1" id="revenue-value">$0</div>
+              <div class="h2 mb-1">$4,300</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2" id="revenue-trend">
-                  0% <i class="ti ti-trending-up"></i>
-                </div>
+                <div class="text-success me-2">8% <i class="ti ti-trending-up"></i></div>
               </div>
-              <div id="revenue-sparkline" style="height: 40px; position: relative; overflow: hidden;"></div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                  <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
+                        fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Active Passes Card -->
-        <div class="col-lg-3 col-md-6 mb-3">
+        <!-- Active Passports Card -->
+        <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">ACTIVE PASSES</div>
+                <div class="text-muted small text-uppercase">ACTIVE PASSPORTS</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" id="users-dropdown" data-bs-toggle="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item active users-option" href="#" data-period="7d">Last 7 days</a></li>
-                    <li><a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a></li>
-                    <li><a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a></li>
-                    <li><a class="dropdown-item users-option" href="#" data-period="all">All time</a></li>
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1" id="users-value">0</div>
+              <div class="h2 mb-1">2,986</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2" id="users-trend">
-                  0% <i class="ti ti-trending-up"></i>
-                </div>
+                <div class="text-success me-2">4% <i class="ti ti-trending-up"></i></div>
               </div>
-              <div id="users-sparkline" style="height: 40px; position: relative; overflow: hidden;"></div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                  <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                  <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                  <rect x="55" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                  <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                  <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                  <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                  <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                  <rect x="130" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
+                  <rect x="145" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
+                  <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
+                  <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
+                  <rect x="190" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                  <rect x="205" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                  <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                  <rect x="235" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
+                  <rect x="250" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                  <rect x="265" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  <rect x="280" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Passports Created Card -->
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-body text-center">
-              <div class="text-muted small text-uppercase mb-2">PASSPORTS CREATED</div>
-              <div class="h3 mb-1" id="passes-value">0</div>
-              <div class="text-success small" id="passes-trend">
-                <i class="ti ti-trending-up me-1"></i>0%
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">PASSPORTS CREATED</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1">145</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-success me-2">12% <i class="ti ti-trending-up"></i></div>
+              </div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                  <rect x="10" y="35" width="8" height="5" fill="#206bc4" opacity="0.8" />
+                  <rect x="25" y="32" width="8" height="8" fill="#206bc4" opacity="0.8" />
+                  <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                  <rect x="55" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  <rect x="70" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                  <rect x="85" y="23" width="8" height="17" fill="#206bc4" opacity="0.8" />
+                  <rect x="100" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                  <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                  <rect x="130" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                  <rect x="145" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
+                  <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
+                  <rect x="175" y="8" width="8" height="32" fill="#206bc4" opacity="0.8" />
+                  <rect x="190" y="6" width="8" height="34" fill="#206bc4" opacity="0.8" />
+                  <rect x="205" y="5" width="8" height="35" fill="#206bc4" opacity="0.8" />
+                  <rect x="220" y="3" width="8" height="37" fill="#206bc4" opacity="0.8" />
+                  <rect x="235" y="2" width="8" height="38" fill="#206bc4" opacity="0.8" />
+                  <rect x="250" y="1" width="8" height="39" fill="#206bc4" opacity="0.8" />
+                  <rect x="265" y="3" width="8" height="37" fill="#206bc4" opacity="0.8" />
+                  <rect x="280" y="5" width="8" height="35" fill="#206bc4" opacity="0.8" />
+                </svg>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Pending Signups Card -->
-        <div class="col-lg-3 col-md-6 mb-3">
+        <!-- Pending Sign Ups Card -->
+        <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-body text-center">
-              <div class="text-muted small text-uppercase mb-2">PENDING SIGNUPS</div>
-              <div class="h3 mb-1" id="pending-value">0</div>
-              <div class="text-warning small" id="pending-trend">
-                <i class="ti ti-minus me-1"></i>0%
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">PENDING SIGN UPS</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1">23</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-success me-2">5% <i class="ti ti-trending-up"></i></div>
+              </div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                  <rect x="10" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                  <rect x="25" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  <rect x="40" y="32" width="8" height="8" fill="#206bc4" opacity="0.8" />
+                  <rect x="55" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                  <rect x="70" y="27" width="8" height="13" fill="#206bc4" opacity="0.8" />
+                  <rect x="85" y="23" width="8" height="17" fill="#206bc4" opacity="0.8" />
+                  <rect x="100" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                  <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                  <rect x="130" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                  <rect x="145" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
+                  <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
+                  <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
+                  <rect x="190" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
+                  <rect x="205" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                  <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                  <rect x="235" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                  <rect x="250" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
+                  <rect x="265" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                  <rect x="280" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                </svg>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Mobile Carousel (visible only on mobile) -->
-      <div id="kpiCarousel" class="carousel slide d-lg-none mb-4" data-bs-ride="false" data-bs-touch="true" data-bs-interval="false">
-        <div class="carousel-inner">
-          
+      <!-- KPI Cards Section - Mobile Carousel -->
+      <div class="d-md-none mb-4">
+        <div class="d-flex overflow-auto pb-2" style="scroll-snap-type: x mandatory;">
           <!-- Revenue Card -->
-          <div class="carousel-item active">
-            <div class="px-2">
-              <div class="card" style="border-radius: 12px; overflow: hidden;">
-                <div class="card-body">
-                  <div class="d-flex align-items-center justify-content-between mb-2">
-                    <div class="text-muted small text-uppercase">REVENUE</div>
-                    <div class="dropdown">
-                      <button class="btn btn-sm text-muted dropdown-toggle" type="button" id="revenue-mobile-dropdown" data-bs-toggle="dropdown">
-                        Last 7 days
-                      </button>
-                      <ul class="dropdown-menu">
-                        <li><a class="dropdown-item active revenue-option" href="#" data-period="7d">Last 7 days</a></li>
-                        <li><a class="dropdown-item revenue-option" href="#" data-period="30d">Last 30 days</a></li>
-                        <li><a class="dropdown-item revenue-option" href="#" data-period="90d">Last 90 days</a></li>
-                        <li><a class="dropdown-item revenue-option" href="#" data-period="all">All time</a></li>
-                      </ul>
-                    </div>
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">REVENUE</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                      <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                      <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    </ul>
                   </div>
-                  <div class="h2 mb-1" id="revenue-mobile-value">$0</div>
-                  <div class="d-flex align-items-center mb-3">
-                    <div class="text-success me-2" id="revenue-mobile-trend">
-                      0% <i class="ti ti-trending-up"></i>
-                    </div>
-                  </div>
-                  <div id="revenue-mobile-sparkline" style="height: 40px; position: relative; overflow: hidden;"></div>
+                </div>
+                <div class="h2 mb-1">$4,300</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-success me-2">8% <i class="ti ti-trending-up"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                    <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
+                          fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Active Passes Card -->
-          <div class="carousel-item">
-            <div class="px-2">
-              <div class="card" style="border-radius: 12px; overflow: hidden;">
-                <div class="card-body">
-                  <div class="d-flex align-items-center justify-content-between mb-2">
-                    <div class="text-muted small text-uppercase">ACTIVE PASSES</div>
-                    <div class="dropdown">
-                      <button class="btn btn-sm text-muted dropdown-toggle" type="button" id="users-mobile-dropdown" data-bs-toggle="dropdown">
-                        Last 7 days
-                      </button>
-                      <ul class="dropdown-menu">
-                        <li><a class="dropdown-item active users-option" href="#" data-period="7d">Last 7 days</a></li>
-                        <li><a class="dropdown-item users-option" href="#" data-period="30d">Last 30 days</a></li>
-                        <li><a class="dropdown-item users-option" href="#" data-period="90d">Last 90 days</a></li>
-                        <li><a class="dropdown-item users-option" href="#" data-period="all">All time</a></li>
-                      </ul>
-                    </div>
+          <!-- Active Passports Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">ACTIVE PASSPORTS</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                      <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                      <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    </ul>
                   </div>
-                  <div class="h2 mb-1" id="users-mobile-value">0</div>
-                  <div class="d-flex align-items-center mb-3">
-                    <div class="text-success me-2" id="users-mobile-trend">
-                      0% <i class="ti ti-trending-up"></i>
-                    </div>
-                  </div>
-                  <div id="users-mobile-sparkline" style="height: 40px; position: relative; overflow: hidden;"></div>
+                </div>
+                <div class="h2 mb-1">2,986</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-success me-2">4% <i class="ti ti-trending-up"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                    <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                    <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                    <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                    <rect x="55" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                    <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                    <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                    <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                    <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                    <rect x="130" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
+                    <rect x="145" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
+                    <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
+                    <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
+                    <rect x="190" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                    <rect x="205" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                    <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                    <rect x="235" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
+                    <rect x="250" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                    <rect x="265" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                    <rect x="280" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                  </svg>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Passports Created Card -->
-          <div class="carousel-item">
-            <div class="px-2">
-              <div class="card" style="border-radius: 12px; overflow: hidden;">
-                <div class="card-body text-center">
-                  <div class="text-muted small text-uppercase mb-2">PASSPORTS CREATED</div>
-                  <div class="h2 mb-1" id="passes-mobile-value">0</div>
-                  <div class="text-success small" id="passes-mobile-trend">
-                    <i class="ti ti-trending-up me-1"></i>0%
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">PASSPORTS CREATED</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                      <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                      <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    </ul>
                   </div>
+                </div>
+                <div class="h2 mb-1">145</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-success me-2">12% <i class="ti ti-trending-up"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                    <rect x="10" y="35" width="8" height="5" fill="#206bc4" opacity="0.8" />
+                    <rect x="25" y="32" width="8" height="8" fill="#206bc4" opacity="0.8" />
+                    <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                    <rect x="55" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                    <rect x="70" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                    <rect x="85" y="23" width="8" height="17" fill="#206bc4" opacity="0.8" />
+                    <rect x="100" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                    <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                    <rect x="130" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                    <rect x="145" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
+                    <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
+                    <rect x="175" y="8" width="8" height="32" fill="#206bc4" opacity="0.8" />
+                    <rect x="190" y="6" width="8" height="34" fill="#206bc4" opacity="0.8" />
+                    <rect x="205" y="5" width="8" height="35" fill="#206bc4" opacity="0.8" />
+                    <rect x="220" y="3" width="8" height="37" fill="#206bc4" opacity="0.8" />
+                    <rect x="235" y="2" width="8" height="38" fill="#206bc4" opacity="0.8" />
+                    <rect x="250" y="1" width="8" height="39" fill="#206bc4" opacity="0.8" />
+                    <rect x="265" y="3" width="8" height="37" fill="#206bc4" opacity="0.8" />
+                    <rect x="280" y="5" width="8" height="35" fill="#206bc4" opacity="0.8" />
+                  </svg>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Pending Signups Card -->
-          <div class="carousel-item">
-            <div class="px-2">
-              <div class="card" style="border-radius: 12px; overflow: hidden;">
-                <div class="card-body text-center">
-                  <div class="text-muted small text-uppercase mb-2">PENDING SIGNUPS</div>
-                  <div class="h2 mb-1" id="pending-mobile-value">0</div>
-                  <div class="text-warning small" id="pending-mobile-trend">
-                    <i class="ti ti-minus me-1"></i>0%
+          <!-- Pending Sign Ups Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">PENDING SIGN UPS</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                      <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                      <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    </ul>
                   </div>
+                </div>
+                <div class="h2 mb-1">23</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-success me-2">5% <i class="ti ti-trending-up"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                    <rect x="10" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                    <rect x="25" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                    <rect x="40" y="32" width="8" height="8" fill="#206bc4" opacity="0.8" />
+                    <rect x="55" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                    <rect x="70" y="27" width="8" height="13" fill="#206bc4" opacity="0.8" />
+                    <rect x="85" y="23" width="8" height="17" fill="#206bc4" opacity="0.8" />
+                    <rect x="100" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                    <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                    <rect x="130" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                    <rect x="145" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
+                    <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
+                    <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
+                    <rect x="190" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
+                    <rect x="205" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                    <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                    <rect x="235" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                    <rect x="250" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
+                    <rect x="265" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                    <rect x="280" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  </svg>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+        <!-- Scroll indicators -->
+        <div class="text-center mt-2">
+          <span class="badge bg-primary me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light" style="width: 8px; height: 8px; border-radius: 50%;"></span>
         </div>
       </div>
 
-      <!-- Recent Activities Section -->
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="page-title">Recent Activities</h3>
-            <a href="{{ url_for('list_activities') if url_for('list_activities') else '#' }}" class="btn btn-outline-primary btn-sm">
-              View All <i class="ti ti-arrow-right ms-1"></i>
-            </a>
-          </div>
-        </div>
-        {% for activity in activities %}
-        <div class="col-lg-4 col-md-6 mb-3">
-          <div class="card" style="border-radius: 12px; overflow: hidden;">
-            <!-- Activity Image -->
-            {% if activity.image_filename %}
-            <div class="img-responsive img-responsive-21x9 card-img-top" 
-                 style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');">
-            </div>
-            {% else %}
-            <div class="img-responsive img-responsive-21x9 card-img-top" 
-                 style="background: linear-gradient(45deg, #e3f2fd 0%, #2196f3 100%); display: flex; align-items: center; justify-content: center;">
-              <i class="ti ti-calendar-event" style="font-size: 3rem; color: #1976d2; opacity: 0.8;"></i>
-            </div>
-            {% endif %}
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <h3 class="card-title mb-0">{{ activity.name[:25] }}{% if activity.name|length > 25 %}...{% endif %}</h3>
-                {% if activity.days_left != "N/A" %}
-                <small class="text-muted">{{ activity.days_left }}d left</small>
+      <!-- Activities Section -->
+      <div class="mb-4">
+        <h3 class="mb-3">Your Activities</h3>
+        
+        <!-- Desktop Layout -->
+        <div class="d-none d-md-block">
+          <div class="row">
+            {% for activity in activities %}
+            <div class="col-md-3 mb-3">
+              <div class="card" style="border-radius: 12px; overflow: hidden;">
+                <!-- Activity Image -->
+                {% if activity.image_filename %}
+                <div class="img-responsive img-responsive-21x9 card-img-top" 
+                     style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');">
+                </div>
+                {% else %}
+                <div class="img-responsive img-responsive-21x9 card-img-top" 
+                     style="background: linear-gradient(45deg, #e3f2fd 0%, #2196f3 100%); display: flex; align-items: center; justify-content: center;">
+                  <i class="ti ti-calendar-event" style="font-size: 3rem; color: #1976d2; opacity: 0.8;"></i>
+                </div>
                 {% endif %}
-              </div>
-              <div class="d-flex gap-2 flex-wrap mb-3">
-                <span class="badge bg-green-lt">{{ activity.signups }} active</span>
-                <span class="badge bg-yellow-lt">{{ activity.pending_signups }} pending</span>
-                <span class="badge bg-blue-lt">{{ activity.passports }} passes</span>
-              </div>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-secondary btn-sm">
-                <i class="ti ti-settings me-1"></i>Manage
-              </a>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Recent Signups Table -->
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="card" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header">
-              <h3 class="card-title">Recent Signups</h3>
-              <div class="card-actions">
-                <a href="{{ url_for('list_signups') if url_for('list_signups') else '#' }}" class="btn btn-outline-primary btn-sm">
-                  View All <i class="ti ti-arrow-right ms-1"></i>
-                </a>
-              </div>
-            </div>
-            <div class="card-body">
-              <!-- Search Bar -->
-              <div class="d-flex justify-content-end align-items-center mb-3">
-                <div class="position-relative" style="width: 300px;">
-                  <div class="input-icon">
-                    <span class="input-icon-addon">
-                      <i class="ti ti-search"></i>
-                    </span>
-                    <input type="text" class="form-control" placeholder="Search signups..." style="padding-right: 60px;">
-                    <span class="position-absolute end-0 top-50 translate-middle-y me-3">
-                      <kbd class="small text-muted">ctrl + k</kbd>
-                    </span>
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="card-title mb-0">{{ activity.name[:20] }}{% if activity.name|length > 20 %}...{% endif %}</h3>
+                    {% if activity.days_left != "N/A" %}
+                    <small class="text-muted">{{ activity.days_left }}d left</small>
+                    {% endif %}
                   </div>
+                  <div class="d-flex gap-2 flex-wrap mb-3">
+                    <span class="badge bg-green-lt">{{ activity.signups }} active</span>
+                    <span class="badge bg-yellow-lt">{{ activity.pending_signups }} pending</span>
+                    <span class="badge bg-blue-lt">{{ activity.passports }} created</span>
+                  </div>
+                  <button class="btn btn-secondary">Manage</button>
                 </div>
               </div>
-
-              <!-- Table -->
-              <div class="table-responsive">
-                <table class="table table-hover">
-                  <thead>
-                    <tr>
-                      <th style="width: 300px;">Participant</th>
-                      <th>Activity</th>
-                      <th>Status</th>
-                      <th>Pass Type</th>
-                      <th>Date</th>
-                      <th style="width: 120px;">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for log in logs[:10] %}
-                    <tr>
-                      <td style="vertical-align: middle;">
-                        <div class="d-flex align-items-center">
-                          <img src="https://www.gravatar.com/avatar/default?d=identicon&s=48" 
-                               class="rounded-circle me-3" width="48" height="48" alt="Avatar">
-                          <div>
-                            <div class="fw-bold">{{ log.details[:20] }}{% if log.details|length > 20 %}...{% endif %}</div>
-                            <div class="text-muted small">user@example.com</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style="vertical-align: middle;">{{ log.type }}</td>
-                      <td style="vertical-align: middle;">
-                        {% if log.type == 'Signup Approved' %}
-                        <span class="badge bg-green-lt text-green-lt-fg">
-                          <i class="ti ti-check me-1"></i>Confirmed
-                        </span>
-                        {% elif log.type == 'Signup Submitted' %}
-                        <span class="badge bg-yellow-lt text-yellow-lt-fg">
-                          <i class="ti ti-clock me-1"></i>Pending
-                        </span>
-                        {% else %}
-                        <span class="badge bg-red-lt text-red-lt-fg">
-                          <i class="ti ti-x me-1"></i>Cancelled
-                        </span>
-                        {% endif %}
-                      </td>
-                      <td style="vertical-align: middle;">Standard Pass</td>
-                      <td style="vertical-align: middle;">{{ log.timestamp.strftime('%m/%d/%Y') }}</td>
-                      <td style="vertical-align: middle;">
-                        <div class="dropdown">
-                          <button class="btn btn-outline-secondary dropdown-toggle btn-sm" type="button" data-bs-toggle="dropdown">
-                            Actions
-                          </button>
-                          <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">
-                              <i class="ti ti-eye me-1"></i>View
-                            </a></li>
-                            <li><a class="dropdown-item" href="#">
-                              <i class="ti ti-edit me-1"></i>Edit
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#">
-                              <i class="ti ti-trash me-1"></i>Delete
-                            </a></li>
-                          </ul>
-                        </div>
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions and Status Row -->
-      <div class="row">
-        <div class="col-md-8">
-          <!-- Quick Actions -->
-          <div class="card" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header">
-              <h3 class="card-title">Quick Actions</h3>
-            </div>
-            <div class="card-body">
-              <div class="d-flex gap-3 flex-wrap">
-                <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
-                  <i class="ti ti-plus me-1"></i>New Activity
-                </a>
-                <a href="#" class="btn btn-secondary">
-                  <i class="ti ti-users me-1"></i>Bulk Signup
-                </a>
-                <a href="#" class="btn btn-info">
-                  <i class="ti ti-ticket me-1"></i>New Pass Type
-                </a>
-                <a href="#" class="btn btn-outline-primary">
-                  <i class="ti ti-download me-1"></i>Export Data
-                </a>
-                <a href="#" class="btn btn-outline-secondary">
-                  <i class="ti ti-chart-bar me-1"></i>Reports
-                </a>
-              </div>
-            </div>
+            {% endfor %}
           </div>
         </div>
         
-        <div class="col-md-4">
-          <!-- System Status -->
+        <!-- Mobile Layout -->
+        <div class="d-md-none">
+          <div class="d-flex overflow-auto pb-2" style="scroll-snap-type: x mandatory;">
+            {% for activity in activities %}
+            <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+              <div class="card" style="border-radius: 12px; overflow: hidden;">
+                <!-- Activity Image -->
+                {% if activity.image_filename %}
+                <div class="img-responsive img-responsive-21x9 card-img-top" 
+                     style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');">
+                </div>
+                {% else %}
+                <div class="img-responsive img-responsive-21x9 card-img-top" 
+                     style="background: linear-gradient(45deg, #e3f2fd 0%, #2196f3 100%); display: flex; align-items: center; justify-content: center;">
+                  <i class="ti ti-calendar-event" style="font-size: 3rem; color: #1976d2; opacity: 0.8;"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="card-title mb-0">{{ activity.name }}</h3>
+                    {% if activity.days_left != "N/A" %}
+                    <small class="text-muted">{{ activity.days_left }}d left</small>
+                    {% endif %}
+                  </div>
+                  <div class="d-flex gap-2 flex-wrap mb-3">
+                    <span class="badge bg-green-lt">{{ activity.signups }} active</span>
+                    <span class="badge bg-yellow-lt">{{ activity.pending_signups }} pending</span>
+                    <span class="badge bg-blue-lt">{{ activity.passports }} created</span>
+                  </div>
+                  <button class="btn btn-secondary">Manage</button>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <!-- Scroll indicators for activities -->
+          <div class="text-center mt-2">
+            {% set activity_count = activities|length %}
+            {% set max_indicators = 4 if activity_count > 4 else activity_count %}
+            {% for i in range(max_indicators) %}
+              <span class="badge {% if i == 0 %}bg-primary{% else %}bg-light{% endif %} me-1" 
+                    style="width: 8px; height: 8px; border-radius: 50%;"></span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Log Section -->
+      <div class="row mb-4">
+        <div class="col-12">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-header">
-              <h3 class="card-title">System Status</h3>
+              <h3 class="card-title">What's Happening?</h3>
             </div>
-            <div class="card-body">
-              <div class="d-flex align-items-center justify-content-between mb-3">
-                <span>Payment System</span>
-                <span class="badge bg-green text-green-fg">
-                  <i class="ti ti-check me-1"></i>Operational
-                </span>
-              </div>
-              <div class="d-flex align-items-center justify-content-between mb-3">
-                <span>Email Notifications</span>
-                <span class="badge bg-green text-green-fg">
-                  <i class="ti ti-check me-1"></i>Operational
-                </span>
-              </div>
-              <div class="d-flex align-items-center justify-content-between mb-3">
-                <span>Database</span>
-                <span class="badge bg-green text-green-fg">
-                  <i class="ti ti-check me-1"></i>Operational
-                </span>
-              </div>
-              <div class="d-flex align-items-center justify-content-between">
-                <span>AI Chatbot</span>
-                <span class="badge bg-yellow text-yellow-fg">
-                  <i class="ti ti-alert-triangle me-1"></i>Maintenance
-                </span>
-              </div>
+            <div class="table-responsive">
+              <table class="table card-table table-vcenter" id="logTable">
+                <thead>
+                  <tr>
+                    <th scope="col" class="text-muted">Date/Time</th>
+                    <th scope="col" class="text-muted">Type</th>
+                    <th scope="col" class="text-muted">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for log in logs[:25] %}
+                  <tr>
+                    <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
+                    <td data-type="{{ log.type }}">
+                      {% if log.type == 'Passport Redeemed' %}
+                        <i class="ti ti-ticket text-danger"></i>
+                      {% elif log.type == 'Email Sent' %}
+                        <i class="ti ti-mail text-info"></i>
+                      {% elif log.type == 'Passport Created' %}
+                        <i class="ti ti-id text-lime"></i>
+                      {% elif log.type == 'Interact Payment' %}
+                        <i class="ti ti-currency-dollar text-success"></i>  
+                      {% elif log.type == 'Marked Paid' %}
+                        <i class="ti ti-check text-green"></i>  
+                      {% elif log.type == 'Reminder Sent' %}
+                        <i class="ti ti-bell text-purple"></i>
+                      {% elif log.type == 'Signup Submitted' %}
+                        <i class="ti ti-user-plus text-success"></i>  
+                      {% elif log.type == 'Signup Approved' %}
+                        <i class="ti ti-user-check text-green"></i>
+                      {% elif log.type == 'Signup Rejected' %}
+                        <i class="ti ti-user-x text-danger"></i>
+                      {% elif log.type == 'Signup Cancelled' %}
+                        <i class="ti ti-user-x text-danger"></i>
+                      {% elif log.type == 'Activity Created' %}
+                        <i class="ti ti-target text-orange"></i>
+                      {% elif log.type == 'Admin Action' %}
+                        <i class="ti ti-settings text-muted"></i>
+                      {% else %}
+                        <i class="ti ti-activity text-muted"></i>  
+                      {% endif %}
+                      {{ log.type }}
+                    </td>
+                    <td>{{ log.details }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="card-footer d-flex align-items-center">
+              <p class="m-0 text-muted">Showing <span id="showingCount">{{ logs[:25]|length }}</span> of {{ logs|length }}</p>
+              <ul class="pagination m-0 ms-auto" id="paginationControls">
+                <li class="page-item active"><a href="#" class="page-link">1</a></li>
+                <li class="page-item"><a href="#" class="page-link">2</a></li>
+                <li class="page-item"><a href="#" class="page-link">3</a></li>
+                <li class="page-item disabled"><a href="#" class="page-link">...</a></li>
+                <li class="page-item"><a href="#" class="page-link">{{ (logs|length / 25)|round(0, 'ceil')|int }}</a></li>
+              </ul>
             </div>
           </div>
         </div>
@@ -432,256 +562,6 @@
     </div>
   </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const kpiData = {{ kpi_data | tojson }};
-
-  function createSparkline(ctxId, chartType, trendList) {
-    const container = document.getElementById(ctxId);
-    if (!container) return;
-    
-    // Clear previous chart
-    container.innerHTML = '';
-    
-    // Check if chart should be rendered
-    const maxValue = Math.max(...(trendList || [0]));
-    
-    // Only show chart if we have any meaningful data
-    if (!trendList || trendList.length === 0 || maxValue <= 0) {
-      // Just leave container empty when no data
-      container.style.height = '40px';
-      return;
-    }
-    
-    // Create canvas element
-    const canvas = document.createElement('canvas');
-    canvas.width = container.offsetWidth || 280;
-    canvas.height = 40;
-    container.appendChild(canvas);
-    
-    const ctx = canvas.getContext("2d");
-    new Chart(ctx, {
-      type: chartType === "bar" ? "bar" : "line",
-      data: {
-        labels: trendList.map((_, i) => `Day ${i + 1}`),
-        datasets: [{
-          data: trendList,
-          backgroundColor: chartType === "bar" ? "#206bc4" : "rgba(32,107,196,0.1)",
-          borderColor: "#206bc4",
-          fill: chartType === "line",
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          spanGaps: false
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { 
-            enabled: true,
-            mode: 'index',
-            intersect: false,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: '#206bc4',
-            borderWidth: 1,
-            cornerRadius: 6,
-            displayColors: false,
-            callbacks: {
-              title: function(context) {
-                return context[0].label;
-              },
-              label: function(context) {
-                const metric = ctxId.replace('-sparkline', '');
-                if (metric === 'revenue') {
-                  // For revenue, show actual dollar amount not quantity
-                  return `$${context.parsed.y.toLocaleString()}`;
-                } else {
-                  // For other metrics, show the number
-                  return `${context.parsed.y.toLocaleString()}`;
-                }
-              }
-            }
-          }
-        },
-        scales: {
-          x: { 
-            display: false,
-            grid: { 
-              display: false,
-              drawBorder: false,
-              drawOnChartArea: false,
-              drawTicks: false
-            },
-            border: { display: false },
-            ticks: { display: false }
-          },
-          y: { 
-            display: false,
-            grid: { 
-              display: false,
-              drawBorder: false,
-              drawOnChartArea: false,
-              drawTicks: false
-            },
-            border: { display: false },
-            ticks: { display: false },
-            beginAtZero: true
-          }
-        },
-        elements: {
-          point: { radius: 0, hoverRadius: 4 },
-          line: { borderWidth: 2 },
-          bar: { borderRadius: 2 }
-        },
-        layout: {
-          padding: 4
-        },
-        interaction: {
-          intersect: false,
-          mode: 'index'
-        }
-      }
-    });
-  }
-
-  function updateCard(id, metric, period, chartType) {
-    const current = kpiData[period][metric];
-    const previous = kpiData[period][`${metric}_prev`] || 0;
-    const trendList = kpiData[period][`${metric}_trend`] || [];
-    const percent = previous > 0 ? ((current - previous) / previous * 100).toFixed(1) : "0.0";
-
-    const val = metric === "revenue" ? `$${current.toLocaleString()}` : current;
-    const trendElement = document.querySelector(`#${id}-trend`);
-    const valueElement = document.querySelector(`#${id}-value`);
-    const dropdownElement = document.querySelector(`#${id}-dropdown`);
-    
-    // Check if elements exist before updating
-    if (!trendElement || !valueElement || !dropdownElement) {
-      console.warn(`Card elements not found for ID: ${id}`);
-      return;
-    }
-    
-    // Fix trend colors and icons like Tabler reference
-    let trendClass, arrow;
-    if (parseFloat(percent) === 0) {
-      trendClass = 'text-warning'; // Orange for 0%
-      arrow = '—'; // Dash for no change
-    } else if (parseFloat(percent) > 0) {
-      trendClass = 'text-success'; // Green for positive
-      arrow = '↗';
-    } else {
-      trendClass = 'text-danger'; // Red for negative
-      arrow = '↘';
-    }
-    
-    // Update value
-    valueElement.textContent = val;
-    
-    // Update trend with proper styling
-    trendElement.className = `${trendClass} me-2`;
-    trendElement.innerHTML = `${percent}% <i class="ti ti-trending-up"></i>`;
-
-    // Update dropdown text and active state
-    const periodText = {
-      "7d": "Last 7 days",
-      "30d": "Last 30 days", 
-      "90d": "Last 90 days",
-      "all": "All time"
-    }[period];
-    
-    dropdownElement.textContent = periodText;
-    
-    // Update active dropdown item - handle both desktop and mobile selectors
-    const optionClass = id.includes('-mobile') ? `.${id.replace('-mobile', '')}-option` : `.${id}-option`;
-    document.querySelectorAll(optionClass).forEach(item => {
-      item.classList.remove('active');
-      item.removeAttribute('aria-current');
-      if (item.dataset.period === period) {
-        item.classList.add('active');
-        item.setAttribute('aria-current', 'true');
-      }
-    });
-
-    createSparkline(`${id}-sparkline`, chartType, trendList);
-  }
-
-  [
-    { id: "revenue", metric: "revenue", selector: ".revenue-option", chartType: "line" },
-    { id: "passes", metric: "pass_created", selector: ".passes-option", chartType: "bar" },
-    { id: "users", metric: "active_users", selector: ".users-option", chartType: "bar" },
-    { id: "pending", metric: "pending_signups", selector: ".pending-option", chartType: "bar" }
-  ].forEach(({ id, metric, selector, chartType }) => {
-    document.querySelectorAll(selector).forEach(el => {
-      el.addEventListener("click", () => {
-        // Update desktop card
-        updateCard(id, metric, el.dataset.period, chartType);
-        // Update mobile card if it exists
-        if (document.querySelector(`#${id}-mobile-value`)) {
-          updateCard(id + "-mobile", metric, el.dataset.period, chartType);
-        }
-      });
-    });
-    
-    // Initialize desktop card
-    updateCard(id, metric, "7d", chartType);
-    
-    // Initialize mobile card if it exists
-    if (document.querySelector(`#${id}-mobile-value`)) {
-      updateCard(id + "-mobile", metric, "7d", chartType);
-    }
-  });
-
-  // Initialize mobile carousel with proper touch settings
-  const kpiCarousel = document.getElementById('kpiCarousel');
-  if (kpiCarousel) {
-    // Initialize Bootstrap carousel with touch support
-    const carousel = new bootstrap.Carousel(kpiCarousel, {
-      interval: false,
-      ride: false,
-      touch: true,
-      wrap: true
-    });
-    
-    
-    // Additional touch event handling for better mobile experience
-    let startX = null;
-    let startY = null;
-    
-    kpiCarousel.addEventListener('touchstart', function(e) {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-    
-    kpiCarousel.addEventListener('touchmove', function(e) {
-      if (!startX || !startY) {
-        return;
-      }
-      
-      const diffX = startX - e.touches[0].clientX;
-      const diffY = startY - e.touches[0].clientY;
-      
-      // If horizontal swipe is more prominent than vertical, prevent default
-      if (Math.abs(diffX) > Math.abs(diffY)) {
-        e.preventDefault();
-      }
-    }, { passive: false });
-    
-    kpiCarousel.addEventListener('touchend', function() {
-      startX = null;
-      startY = null;
-    }, { passive: true });
-  }
-
-});
-</script>
 
 {% endblock %}
 
@@ -698,58 +578,14 @@ document.addEventListener("DOMContentLoaded", function () {
   background-color: #fff !important;
 }
 
-/* Chart container styling */
-#revenue-sparkline, #users-sparkline, #passes-sparkline, #pending-sparkline,
-#revenue-mobile-sparkline, #users-mobile-sparkline, #passes-mobile-sparkline, #pending-mobile-sparkline {
-  height: 40px;
-  width: 100%;
-  position: relative;
+/* Mobile scroll snap styles */
+.d-flex.overflow-auto {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 
-#revenue-sparkline canvas, #users-sparkline canvas, #passes-sparkline canvas, #pending-sparkline canvas,
-#revenue-mobile-sparkline canvas, #users-mobile-sparkline canvas, #passes-mobile-sparkline canvas, #pending-mobile-sparkline canvas {
-  width: 100% !important;
-  height: 40px !important;
-}
-
-/* Mobile Carousel Styles */
-@media (max-width: 991.98px) {
-  /* Ensure carousel has proper touch support */
-  .carousel-inner {
-    touch-action: pan-x !important;
-  }
-  
-  .carousel-item {
-    transition: transform 0.3s ease-in-out !important;
-  }
-  
-  /* Improve touch interaction */
-  #kpiCarousel {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -webkit-touch-callout: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  #kpiCarousel .carousel-inner {
-    overflow: hidden;
-  }
-  
-  /* Better touch handling for mobile */
-  #kpiCarousel .carousel-item {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-  
-  /* Ensure proper swiping */
-  #kpiCarousel {
-    position: relative;
-    overflow: hidden;
-  }
+.d-flex.overflow-auto::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 /* Hover effects */
@@ -757,6 +593,13 @@ document.addEventListener("DOMContentLoaded", function () {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-1px);
   transition: all 0.2s ease-in-out;
+}
+
+/* Mobile scroll indicators */
+@media (max-width: 767.98px) {
+  .flex-shrink-0 {
+    scroll-snap-align: start;
+  }
 }
 </style>
 {% endblock %}
