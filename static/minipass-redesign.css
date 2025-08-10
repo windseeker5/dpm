@@ -292,16 +292,26 @@ html {
   transition: transform 0.3s ease;
 }
 
-/* Main Content Area */
+/* Main Content Area - New Grid-based Layout */
 .minipass-main {
-  flex: 1;
-  margin-left: 260px;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+  background: #f8f9fa;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+/* Main content column */
+.minipass-main-content {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background: #f8f9fa;
-  width: calc(100vw - 260px);
-  max-width: calc(100vw - 260px);
+  grid-column: 2;
 }
 
 /* Organization Name Header */
@@ -311,16 +321,27 @@ html {
   border-bottom: 1px solid #e9ecef;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
-  padding: 0 1rem;
+  padding: 0 1.5rem;
 }
 
 .minipass-org-name {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: #495057;
-  text-align: center;
+  margin-left: 0;
+}
+
+/* Organization Name with Gradient */
+.minipass-org-name.org-name-gradient {
+  font-family: 'Anton', sans-serif;
+  background: linear-gradient(135deg, #2d3436, #ff6b35);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+  letter-spacing: 0.025em;
 }
 
 .minipass-org-header .header-menu-toggle {
@@ -333,21 +354,19 @@ html {
   padding: 0.5rem;
 }
 
-/* Content Area */
+/* Content Area - Full width with equal padding */
 .minipass-content {
   flex: 1;
-  padding: 2rem;
   width: 100%;
-  overflow-x: hidden;
-  display: flex;
-  justify-content: center;
+  padding: 1.5rem 2rem;
+  min-height: calc(100vh - 48px); /* Account for header */
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .minipass-content-container {
   width: 100%;
-  max-width: 1320px; /* Bootstrap's XXL container width */
-  /* Force equal spacing by calculating the correct left margin */
-  margin: 0 auto;
+  padding: 0;
 }
 
 .minipass-alerts {
@@ -410,9 +429,19 @@ html {
 }
 
 .brand-logo {
-  width: 180px !important;
+  width: 150px !important;
+  height: auto !important;
+  max-width: 150px !important;
+  max-height: 40px !important;
+  object-fit: contain;
+  transition: transform var(--minipass-transition-fast);
+}
+
+/* Logo Mini - 32px version for sidebar */
+.logo-mini {
+  width: 32px !important;
   height: 32px !important;
-  max-width: 180px !important;
+  max-width: 32px !important;
   max-height: 32px !important;
   object-fit: contain;
   transition: transform var(--minipass-transition-fast);
@@ -960,11 +989,15 @@ html {
 /* Mobile Responsive */
 @media (max-width: 991px) {
   .minipass-org-header {
-    padding: 0 0.5rem;
+    padding: 0 1rem;
+    justify-content: center;
   }
   
   .minipass-org-name {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
+    margin-left: 0;
+    text-align: center;
+    flex: 1;
   }
 }
 
@@ -1181,8 +1214,8 @@ html {
   width: 100% !important;
   max-width: none !important;
   margin: 0 !important;
-  padding-left: 1.5rem !important;
-  padding-right: 1.5rem !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* Super strong override for the problematic container */
@@ -1209,9 +1242,9 @@ html body .container-xl {
 .minipass-content-container {
   width: 100% !important;
   max-width: 1320px !important;
-  margin: 0 auto !important;
-  padding-left: 1.5rem !important;
-  padding-right: 1.5rem !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* Fix main content to use correct spacing */
@@ -1221,39 +1254,58 @@ main.minipass-content {
   margin: 0 !important;
 }
 
-/* Ensure proper sidebar behavior on desktop */
+/* Desktop layout - Simplified approach */
 @media (min-width: 992px) {
   .minipass-main {
-    margin-left: 260px !important;
-    width: calc(100vw - 260px) !important;
+    grid-template-columns: 260px 1fr;
+    position: fixed;
+    width: 100vw;
   }
   
   .minipass-content {
-    width: 100% !important;
-    max-width: calc(100vw - 260px) !important;
+    padding: 1.5rem 3rem;
+    max-width: none;
+    margin: 0;
   }
   
   .minipass-content-container {
-    max-width: 1200px !important; /* Reasonable max width for content */
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0;
   }
 }
 
 /* Mobile responsiveness */
 @media (max-width: 991px) {
   .minipass-main {
-    margin-left: 0 !important;
-    width: 100% !important;
+    grid-template-columns: 1fr;
+    position: relative;
+    width: 100%;
+  }
+  
+  .minipass-main-content {
+    grid-column: 1;
   }
   
   .minipass-content {
-    width: 100% !important;
-    max-width: 100% !important;
+    padding: 1rem 1.5rem;
+    max-width: none;
+    margin: 0;
   }
   
   .minipass-content-container {
-    max-width: none !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding: 0;
+  }
+  
+  .minipass-content {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .minipass-content-container {
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
