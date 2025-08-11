@@ -53,14 +53,23 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">$4,300</div>
+              <div class="h2 mb-1">${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2">8% <i class="ti ti-trending-up"></i></div>
+                {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('revenue_change') %}
+                  {% if kpi_data['7d']['revenue_change'] > 0 %}
+                    <div class="text-success me-2">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['7d']['revenue_change'] < 0 %}
+                    <div class="text-danger me-2">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                {% endif %}
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
-                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                  <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
-                        fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="revenue-chart">
+                  <!-- Chart will be dynamically rendered -->
                 </svg>
               </div>
             </div>
@@ -84,31 +93,23 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">2,986</div>
+              <div class="h2 mb-1">{{ passport_stats['active_passports'] if passport_stats else '0' }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2">4% <i class="ti ti-trending-up"></i></div>
+                {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('passport_change') %}
+                  {% if kpi_data['7d']['passport_change'] > 0 %}
+                    <div class="text-success me-2">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['7d']['passport_change'] < 0 %}
+                    <div class="text-danger me-2">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                {% endif %}
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
-                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                  <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                  <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
-                  <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
-                  <rect x="55" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
-                  <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
-                  <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                  <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
-                  <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                  <rect x="130" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
-                  <rect x="145" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
-                  <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
-                  <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
-                  <rect x="190" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                  <rect x="205" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
-                  <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                  <rect x="235" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
-                  <rect x="250" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
-                  <rect x="265" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                  <rect x="280" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="active-passports-chart">
+                  <!-- Chart will be dynamically rendered -->
                 </svg>
               </div>
             </div>
@@ -132,31 +133,23 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">145</div>
+              <div class="h2 mb-1">{{ passport_stats['total_passports'] if passport_stats else '0' }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2">12% <i class="ti ti-trending-up"></i></div>
+                {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('new_passports_change') %}
+                  {% if kpi_data['7d']['new_passports_change'] > 0 %}
+                    <div class="text-success me-2">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['7d']['new_passports_change'] < 0 %}
+                    <div class="text-danger me-2">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                {% endif %}
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
-                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                  <rect x="10" y="35" width="8" height="5" fill="#206bc4" opacity="0.8" />
-                  <rect x="25" y="32" width="8" height="8" fill="#206bc4" opacity="0.8" />
-                  <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
-                  <rect x="55" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                  <rect x="70" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
-                  <rect x="85" y="23" width="8" height="17" fill="#206bc4" opacity="0.8" />
-                  <rect x="100" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                  <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                  <rect x="130" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
-                  <rect x="145" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
-                  <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
-                  <rect x="175" y="8" width="8" height="32" fill="#206bc4" opacity="0.8" />
-                  <rect x="190" y="6" width="8" height="34" fill="#206bc4" opacity="0.8" />
-                  <rect x="205" y="5" width="8" height="35" fill="#206bc4" opacity="0.8" />
-                  <rect x="220" y="3" width="8" height="37" fill="#206bc4" opacity="0.8" />
-                  <rect x="235" y="2" width="8" height="38" fill="#206bc4" opacity="0.8" />
-                  <rect x="250" y="1" width="8" height="39" fill="#206bc4" opacity="0.8" />
-                  <rect x="265" y="3" width="8" height="37" fill="#206bc4" opacity="0.8" />
-                  <rect x="280" y="5" width="8" height="35" fill="#206bc4" opacity="0.8" />
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="passports-created-chart">
+                  <!-- Chart will be dynamically rendered -->
                 </svg>
               </div>
             </div>
@@ -180,31 +173,23 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">23</div>
+              <div class="h2 mb-1">{{ signup_stats['pending_signups'] if signup_stats else '0' }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2">5% <i class="ti ti-trending-up"></i></div>
+                {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('signup_change') %}
+                  {% if kpi_data['7d']['signup_change'] > 0 %}
+                    <div class="text-success me-2">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['7d']['signup_change'] < 0 %}
+                    <div class="text-danger me-2">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                {% endif %}
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
-                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                  <rect x="10" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
-                  <rect x="25" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                  <rect x="40" y="32" width="8" height="8" fill="#206bc4" opacity="0.8" />
-                  <rect x="55" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
-                  <rect x="70" y="27" width="8" height="13" fill="#206bc4" opacity="0.8" />
-                  <rect x="85" y="23" width="8" height="17" fill="#206bc4" opacity="0.8" />
-                  <rect x="100" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                  <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                  <rect x="130" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
-                  <rect x="145" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
-                  <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
-                  <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
-                  <rect x="190" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
-                  <rect x="205" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                  <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                  <rect x="235" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
-                  <rect x="250" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
-                  <rect x="265" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
-                  <rect x="280" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="pending-signups-chart">
+                  <!-- Chart will be dynamically rendered -->
                 </svg>
               </div>
             </div>
@@ -232,14 +217,23 @@
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1">$4,300</div>
+                <div class="h2 mb-1">${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}</div>
                 <div class="d-flex align-items-center mb-3">
-                  <div class="text-success me-2">8% <i class="ti ti-trending-up"></i></div>
+                  {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('revenue_change') %}
+                    {% if kpi_data['7d']['revenue_change'] > 0 %}
+                      <div class="text-success me-2">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif kpi_data['7d']['revenue_change'] < 0 %}
+                      <div class="text-danger me-2">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
+                  {% else %}
+                    <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                  {% endif %}
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
-                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                    <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
-                          fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-revenue-chart">
+                    <!-- Chart will be dynamically rendered -->
                   </svg>
                 </div>
               </div>
@@ -263,31 +257,23 @@
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1">2,986</div>
+                <div class="h2 mb-1">{{ passport_stats['active_passports'] if passport_stats else '0' }}</div>
                 <div class="d-flex align-items-center mb-3">
-                  <div class="text-success me-2">4% <i class="ti ti-trending-up"></i></div>
+                  {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('passport_change') %}
+                    {% if kpi_data['7d']['passport_change'] > 0 %}
+                      <div class="text-success me-2">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif kpi_data['7d']['passport_change'] < 0 %}
+                      <div class="text-danger me-2">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
+                  {% else %}
+                    <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                  {% endif %}
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
-                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                    <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                    <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
-                    <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
-                    <rect x="55" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
-                    <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
-                    <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                    <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
-                    <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                    <rect x="130" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
-                    <rect x="145" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
-                    <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
-                    <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
-                    <rect x="190" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                    <rect x="205" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
-                    <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                    <rect x="235" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
-                    <rect x="250" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
-                    <rect x="265" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                    <rect x="280" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-active-passports-chart">
+                    <!-- Chart will be dynamically rendered -->
                   </svg>
                 </div>
               </div>
@@ -311,31 +297,23 @@
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1">145</div>
+                <div class="h2 mb-1">{{ passport_stats['total_passports'] if passport_stats else '0' }}</div>
                 <div class="d-flex align-items-center mb-3">
-                  <div class="text-success me-2">12% <i class="ti ti-trending-up"></i></div>
+                  {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('new_passports_change') %}
+                    {% if kpi_data['7d']['new_passports_change'] > 0 %}
+                      <div class="text-success me-2">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif kpi_data['7d']['new_passports_change'] < 0 %}
+                      <div class="text-danger me-2">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
+                  {% else %}
+                    <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                  {% endif %}
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
-                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                    <rect x="10" y="35" width="8" height="5" fill="#206bc4" opacity="0.8" />
-                    <rect x="25" y="32" width="8" height="8" fill="#206bc4" opacity="0.8" />
-                    <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
-                    <rect x="55" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                    <rect x="70" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
-                    <rect x="85" y="23" width="8" height="17" fill="#206bc4" opacity="0.8" />
-                    <rect x="100" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                    <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                    <rect x="130" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
-                    <rect x="145" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
-                    <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
-                    <rect x="175" y="8" width="8" height="32" fill="#206bc4" opacity="0.8" />
-                    <rect x="190" y="6" width="8" height="34" fill="#206bc4" opacity="0.8" />
-                    <rect x="205" y="5" width="8" height="35" fill="#206bc4" opacity="0.8" />
-                    <rect x="220" y="3" width="8" height="37" fill="#206bc4" opacity="0.8" />
-                    <rect x="235" y="2" width="8" height="38" fill="#206bc4" opacity="0.8" />
-                    <rect x="250" y="1" width="8" height="39" fill="#206bc4" opacity="0.8" />
-                    <rect x="265" y="3" width="8" height="37" fill="#206bc4" opacity="0.8" />
-                    <rect x="280" y="5" width="8" height="35" fill="#206bc4" opacity="0.8" />
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-passports-created-chart">
+                    <!-- Chart will be dynamically rendered -->
                   </svg>
                 </div>
               </div>
@@ -359,31 +337,23 @@
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1">23</div>
+                <div class="h2 mb-1">{{ signup_stats['pending_signups'] if signup_stats else '0' }}</div>
                 <div class="d-flex align-items-center mb-3">
-                  <div class="text-success me-2">5% <i class="ti ti-trending-up"></i></div>
+                  {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('signup_change') %}
+                    {% if kpi_data['7d']['signup_change'] > 0 %}
+                      <div class="text-success me-2">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif kpi_data['7d']['signup_change'] < 0 %}
+                      <div class="text-danger me-2">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
+                  {% else %}
+                    <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                  {% endif %}
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
-                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                    <rect x="10" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
-                    <rect x="25" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                    <rect x="40" y="32" width="8" height="8" fill="#206bc4" opacity="0.8" />
-                    <rect x="55" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
-                    <rect x="70" y="27" width="8" height="13" fill="#206bc4" opacity="0.8" />
-                    <rect x="85" y="23" width="8" height="17" fill="#206bc4" opacity="0.8" />
-                    <rect x="100" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                    <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                    <rect x="130" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
-                    <rect x="145" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
-                    <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
-                    <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
-                    <rect x="190" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
-                    <rect x="205" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                    <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                    <rect x="235" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
-                    <rect x="250" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
-                    <rect x="265" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
-                    <rect x="280" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-pending-signups-chart">
+                    <!-- Chart will be dynamically rendered -->
                   </svg>
                 </div>
               </div>
@@ -428,11 +398,11 @@
                     {% endif %}
                   </div>
                   <div class="d-flex gap-2 flex-wrap mb-3">
-                    <span class="badge bg-green-lt">{{ activity.signups }} active</span>
+                    <span class="badge bg-green-lt">{{ activity.active_passports }} active</span>
                     <span class="badge bg-yellow-lt">{{ activity.pending_signups }} pending</span>
                     <span class="badge bg-blue-lt">{{ activity.passports }} created</span>
                   </div>
-                  <button class="btn btn-secondary">Manage</button>
+                  <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-secondary">Manage</a>
                 </div>
               </div>
             </div>
@@ -465,11 +435,11 @@
                     {% endif %}
                   </div>
                   <div class="d-flex gap-2 flex-wrap mb-3">
-                    <span class="badge bg-green-lt">{{ activity.signups }} active</span>
+                    <span class="badge bg-green-lt">{{ activity.active_passports }} active</span>
                     <span class="badge bg-yellow-lt">{{ activity.pending_signups }} pending</span>
                     <span class="badge bg-blue-lt">{{ activity.passports }} created</span>
                   </div>
-                  <button class="btn btn-secondary">Manage</button>
+                  <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-secondary">Manage</a>
                 </div>
               </div>
             </div>
@@ -601,5 +571,127 @@
     scroll-snap-align: start;
   }
 }
+}
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Store KPI data from backend
+const kpiData = {{ kpi_data | tojson | safe }};
+let currentPeriod = '7d';
+
+// Function to generate line chart SVG path
+function generateLineChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) return '';
+  
+  // Find min and max for scaling
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  
+  // Generate path coordinates
+  const points = data.map((value, index) => {
+    const x = (index / (data.length - 1)) * width;
+    const y = height - ((value - min) / range) * (height - 10) - 5;
+    return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
+  });
+  
+  return points.join(' ');
+}
+
+// Function to generate bar chart SVG rectangles
+function generateBarChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) return '';
+  
+  const max = Math.max(...data) || 1;
+  const barWidth = (width - (data.length - 1) * 2) / data.length;
+  
+  let svg = '';
+  data.forEach((value, index) => {
+    const barHeight = (value / max) * (height - 5);
+    const x = index * (barWidth + 2);
+    const y = height - barHeight;
+    svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#206bc4" opacity="0.8" />`;
+  });
+  
+  return svg;
+}
+
+// Update all charts with real data
+function updateCharts(period = '7d') {
+  const periodData = kpiData[period];
+  if (!periodData) return;
+  
+  // Update Revenue Line Chart (both desktop and mobile)
+  const revenuePath = generateLineChart(periodData.revenue_trend);
+  const revenueCharts = ['#revenue-chart', '#mobile-revenue-chart'];
+  revenueCharts.forEach(selector => {
+    const chart = document.querySelector(selector);
+    if (chart && revenuePath) {
+      chart.innerHTML = `<path d="${revenuePath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+  });
+  
+  // Update Active Passports Bar Chart (both desktop and mobile)
+  const activePassportsBars = generateBarChart(periodData.active_users_trend);
+  const activePassportsCharts = ['#active-passports-chart', '#mobile-active-passports-chart'];
+  activePassportsCharts.forEach(selector => {
+    const chart = document.querySelector(selector);
+    if (chart && periodData.active_users_trend) {
+      chart.innerHTML = activePassportsBars;
+    }
+  });
+  
+  // Update Passports Created Line Chart (both desktop and mobile)
+  const passportsCreatedPath = generateLineChart(periodData.pass_created_trend);
+  const passportsCreatedCharts = ['#passports-created-chart', '#mobile-passports-created-chart'];
+  passportsCreatedCharts.forEach(selector => {
+    const chart = document.querySelector(selector);
+    if (chart && passportsCreatedPath) {
+      chart.innerHTML = `<path d="${passportsCreatedPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+  });
+  
+  // Update Pending Signups Bar Chart (both desktop and mobile)
+  const pendingSignupsBars = generateBarChart(periodData.pending_signups_trend);
+  const pendingSignupsCharts = ['#pending-signups-chart', '#mobile-pending-signups-chart'];
+  pendingSignupsCharts.forEach(selector => {
+    const chart = document.querySelector(selector);
+    if (chart && periodData.pending_signups_trend) {
+      chart.innerHTML = pendingSignupsBars;
+    }
+  });
+}
+
+// Handle period dropdown clicks
+function attachDropdownHandlers() {
+  // Find all dropdown items in KPI cards
+  document.querySelectorAll('.card .dropdown-menu .dropdown-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Get period from text
+      const text = this.textContent.trim();
+      let period = '7d';
+      if (text.includes('30')) period = '30d';
+      else if (text.includes('90')) period = '90d';
+      
+      // Update button text
+      const button = this.closest('.dropdown').querySelector('.dropdown-toggle');
+      if (button) button.textContent = text;
+      
+      // Update charts
+      currentPeriod = period;
+      updateCharts(period);
+    });
+  });
+}
+
+// Initialize charts on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updateCharts('7d');
+  attachDropdownHandlers();
+});
+</script>
 {% endblock %}
