@@ -316,7 +316,7 @@ def get_kpi_stats():
     with current_app.app_context():
         now = datetime.now(timezone.utc)
 
-        def build_daily_series(model, date_attr, filter_fn=None, days=7):
+        def build_daily_series(model, date_attr, filter_fn=None, days=7, aggregate_fn=None):
             trend = []
             for i in reversed(range(days)):
                 start = now - timedelta(days=i+1)
@@ -324,7 +324,29 @@ def get_kpi_stats():
                 query = model.query.filter(getattr(model, date_attr) >= start, getattr(model, date_attr) < end)
                 if filter_fn:
                     query = query.filter(filter_fn)
-                trend.append(query.count())
+                
+                if aggregate_fn:
+                    # Use custom aggregation function (e.g., sum revenue)
+                    result = aggregate_fn(query.all())
+                else:
+                    # Default to count
+                    result = query.count()
+                trend.append(result)
+            return trend
+        
+        def build_revenue_series(days=7):
+            """Build daily revenue series from paid passports"""
+            trend = []
+            for i in reversed(range(days)):
+                start = now - timedelta(days=i+1)
+                end = now - timedelta(days=i)
+                passports = Passport.query.filter(
+                    Passport.created_dt >= start, 
+                    Passport.created_dt < end,
+                    Passport.paid == True
+                ).all()
+                daily_revenue = sum(p.sold_amt for p in passports)
+                trend.append(round(daily_revenue, 2))
             return trend
 
         ranges = {
@@ -353,16 +375,38 @@ def get_kpi_stats():
             def active(passports): return len([p for p in passports if p.uses_remaining > 0])
             def pending_signups_count(): return Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= start, Signup.signed_up_at <= end).count()
 
+            # Calculate percentage changes
+            revenue_change = 0
+            if total(previous_passports) > 0:
+                revenue_change = round(((total(current_passports) - total(previous_passports)) / total(previous_passports)) * 100, 1)
+            
+            passport_change = 0
+            if active(previous_passports) > 0:
+                passport_change = round(((active(current_passports) - active(previous_passports)) / active(previous_passports)) * 100, 1)
+            
+            new_passports_change = 0
+            if created(previous_passports) > 0:
+                new_passports_change = round(((created(current_passports) - created(previous_passports)) / created(previous_passports)) * 100, 1)
+            
+            prev_signups = Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= prev_start, Signup.signed_up_at <= prev_end).count()
+            signup_change = 0
+            if prev_signups > 0:
+                signup_change = round(((pending_signups_count() - prev_signups) / prev_signups) * 100, 1)
+            
             kpis[label] = {
                 "revenue": round(total(current_passports), 2),
                 "revenue_prev": round(total(previous_passports), 2),
+                "revenue_change": revenue_change,
                 "pass_created": created(current_passports),
                 "pass_created_prev": created(previous_passports),
+                "new_passports_change": new_passports_change,
                 "active_users": active(current_passports),
                 "active_users_prev": active(previous_passports),
+                "passport_change": passport_change,
                 "pending_signups": pending_signups_count(),
-                # Real trend arrays
-                "revenue_trend": build_daily_series(Passport, "created_dt", lambda: Passport.paid == True, trend_days),
+                "signup_change": signup_change,
+                # Real trend arrays - use proper functions
+                "revenue_trend": build_revenue_series(trend_days),
                 "active_users_trend": build_daily_series(Passport, "created_dt", lambda: Passport.uses_remaining > 0, trend_days),
                 "pass_created_trend": build_daily_series(Passport, "created_dt", None, trend_days),
                 "pending_signups_trend": build_daily_series(Signup, "signed_up_at", lambda: Signup.status == "pending", trend_days)
