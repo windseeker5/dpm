@@ -159,6 +159,7 @@
                 <a class="nav-link" href="#badges">Badges</a>
                 <a class="nav-link" href="#cards">Cards</a>
                 <a class="nav-link" href="#forms">Forms</a>
+                <a class="nav-link" href="#search">Search Forms</a>
                 <a class="nav-link" href="#tables">Tables</a>
                 <a class="nav-link" href="#modals">Modals</a>
               </nav>
@@ -867,6 +868,220 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
             </div>
           </section>
 
+          <!-- Search Forms Section -->
+          <section id="search" class="style-guide-section">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Search Forms</h3>
+              </div>
+              <div class="card-body">
+                <!-- Enhanced Basic Search -->
+                <h4>Enhanced Basic Search</h4>
+                <div class="component-demo mb-4">
+                  <div class="position-relative" style="max-width: 600px;">
+                    <div class="input-icon">
+                      <span class="input-icon-addon">
+                        <i class="ti ti-search fs-3"></i>
+                      </span>
+                      <input type="text" class="form-control form-control-lg shadow-sm" placeholder="Search for anything..." 
+                             style="padding-right: 80px; border-radius: 0.5rem; transition: all 0.3s ease;"
+                             onfocus="this.style.boxShadow='0 0 0 0.25rem rgba(32, 107, 196, 0.15)'" 
+                             onblur="this.style.boxShadow='0 0.125rem 0.25rem rgba(0,0,0,0.075)'">
+                      <span class="position-absolute end-0 top-50 translate-middle-y me-3">
+                        <kbd class="text-muted">ctrl + k</kbd>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="code-preview mb-5">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="input-icon"&gt;
+  &lt;span class="input-icon-addon"&gt;
+    &lt;i class="ti ti-search fs-3"&gt;&lt;/i&gt;
+  &lt;/span&gt;
+  &lt;input type="text" class="form-control form-control-lg shadow-sm" 
+         placeholder="Search for anything..." 
+         style="padding-right: 80px; border-radius: 0.5rem;"&gt;
+  &lt;span class="position-absolute end-0 top-50 translate-middle-y me-3"&gt;
+    &lt;kbd class="text-muted"&gt;ctrl + k&lt;/kbd&gt;
+  &lt;/span&gt;
+&lt;/div&gt;</code>
+                </div>
+
+                <!-- Modern Search with Button -->
+                <h4>Modern Search with Button</h4>
+                <div class="component-demo mb-4">
+                  <div class="input-group" style="max-width: 600px;">
+                    <span class="input-group-text bg-white border-end-0">
+                      <i class="ti ti-search fs-4"></i>
+                    </span>
+                    <input type="text" class="form-control form-control-lg border-start-0 border-end-0 ps-0" 
+                           placeholder="What are you looking for?" 
+                           style="box-shadow: none;">
+                    <button class="btn btn-primary btn-lg px-4" type="button">
+                      <span>Search</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="code-preview mb-5">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="input-group"&gt;
+  &lt;span class="input-group-text bg-white border-end-0"&gt;
+    &lt;i class="ti ti-search fs-4"&gt;&lt;/i&gt;
+  &lt;/span&gt;
+  &lt;input type="text" class="form-control form-control-lg border-start-0 border-end-0 ps-0" 
+         placeholder="What are you looking for?"&gt;
+  &lt;button class="btn btn-primary btn-lg px-4" type="button"&gt;
+    &lt;span&gt;Search&lt;/span&gt;
+  &lt;/button&gt;
+&lt;/div&gt;</code>
+                </div>
+
+                <!-- Floating Label Search -->
+                <h4>Floating Label Search</h4>
+                <div class="component-demo mb-4">
+                  <div class="form-floating" style="max-width: 600px;">
+                    <input type="text" class="form-control form-control-lg" id="floatingSearch" placeholder="Search">
+                    <label for="floatingSearch">
+                      <i class="ti ti-search me-2"></i>Search our database
+                    </label>
+                  </div>
+                </div>
+                <div class="code-preview mb-5">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="form-floating"&gt;
+  &lt;input type="text" class="form-control form-control-lg" 
+         id="floatingSearch" placeholder="Search"&gt;
+  &lt;label for="floatingSearch"&gt;
+    &lt;i class="ti ti-search me-2"&gt;&lt;/i&gt;Search our database
+  &lt;/label&gt;
+&lt;/div&gt;</code>
+                </div>
+
+                <!-- Search with Filter Dropdown -->
+                <h4>Search with Category Filter</h4>
+                <div class="component-demo mb-4">
+                  <div class="input-group" style="max-width: 700px;">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      All Categories
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Activities</a></li>
+                      <li><a class="dropdown-item" href="#">Users</a></li>
+                      <li><a class="dropdown-item" href="#">Passports</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item" href="#">All Categories</a></li>
+                    </ul>
+                    <input type="text" class="form-control form-control-lg" placeholder="Search in selected category...">
+                    <button class="btn btn-primary px-4" type="button">
+                      <i class="ti ti-search fs-4"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="code-preview mb-5">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="input-group"&gt;
+  &lt;button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+          data-bs-toggle="dropdown"&gt;
+    All Categories
+  &lt;/button&gt;
+  &lt;ul class="dropdown-menu"&gt;
+    &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;Activities&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;Users&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;Passports&lt;/a&gt;&lt;/li&gt;
+  &lt;/ul&gt;
+  &lt;input type="text" class="form-control form-control-lg" 
+         placeholder="Search in selected category..."&gt;
+  &lt;button class="btn btn-primary px-4" type="button"&gt;
+    &lt;i class="ti ti-search fs-4"&gt;&lt;/i&gt;
+  &lt;/button&gt;
+&lt;/div&gt;</code>
+                </div>
+
+                <!-- Expandable Search -->
+                <h4>Expandable Search (Click to Expand)</h4>
+                <div class="component-demo mb-4">
+                  <div class="d-flex align-items-center">
+                    <div class="position-relative">
+                      <input type="text" class="form-control" 
+                             id="expandableSearch"
+                             placeholder="Search..." 
+                             style="width: 50px; padding-left: 40px; transition: width 0.4s ease; cursor: pointer;"
+                             onfocus="this.style.width='400px'; this.style.cursor='text';"
+                             onblur="if(!this.value) { this.style.width='50px'; this.style.cursor='pointer'; }">
+                      <span class="position-absolute start-0 top-50 translate-middle-y ms-3">
+                        <i class="ti ti-search"></i>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="code-preview mb-5">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;input type="text" class="form-control" 
+       placeholder="Search..." 
+       style="width: 50px; padding-left: 40px; transition: width 0.4s ease;"
+       onfocus="this.style.width='400px'"
+       onblur="if(!this.value) this.style.width='50px'"&gt;
+&lt;span class="position-absolute start-0 top-50 translate-middle-y ms-3"&gt;
+  &lt;i class="ti ti-search"&gt;&lt;/i&gt;
+&lt;/span&gt;</code>
+                </div>
+
+                <!-- Search with Suggestions -->
+                <h4>Search with Popular Suggestions</h4>
+                <div class="component-demo mb-4">
+                  <div style="max-width: 600px;">
+                    <div class="position-relative">
+                      <input type="text" class="form-control form-control-lg" 
+                             placeholder="Try 'Summer Activities' or 'Youth Programs'..."
+                             style="padding-right: 50px;">
+                      <button class="btn btn-icon position-absolute end-0 top-50 translate-middle-y me-2" 
+                              style="transform: translateY(-50%);">
+                        <i class="ti ti-search"></i>
+                      </button>
+                    </div>
+                    <div class="mt-2">
+                      <small class="text-muted">Popular: </small>
+                      <a href="#" class="badge bg-secondary-lt me-1">Basketball</a>
+                      <a href="#" class="badge bg-secondary-lt me-1">Swimming</a>
+                      <a href="#" class="badge bg-secondary-lt me-1">Dance</a>
+                      <a href="#" class="badge bg-secondary-lt">Summer Camp</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="code-preview">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div&gt;
+  &lt;div class="position-relative"&gt;
+    &lt;input type="text" class="form-control form-control-lg" 
+           placeholder="Try 'Summer Activities' or 'Youth Programs'..."&gt;
+    &lt;button class="btn btn-icon position-absolute end-0 top-50 translate-middle-y me-2"&gt;
+      &lt;i class="ti ti-search"&gt;&lt;/i&gt;
+    &lt;/button&gt;
+  &lt;/div&gt;
+  &lt;div class="mt-2"&gt;
+    &lt;small class="text-muted"&gt;Popular: &lt;/small&gt;
+    &lt;a href="#" class="badge bg-secondary-lt"&gt;Basketball&lt;/a&gt;
+    &lt;a href="#" class="badge bg-secondary-lt"&gt;Swimming&lt;/a&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <!-- Tables Section -->
           <section id="tables" class="style-guide-section">
             <div class="card">
@@ -876,30 +1091,17 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
               <div class="card-body">
                 <h4>Standard Table</h4>
                 <div class="component-demo">
-                  <!-- Table Controls -->
-                  <div class="d-flex justify-content-end align-items-center mb-3">
-                    <div class="position-relative" style="width: 300px;">
-                      <div class="input-icon">
-                        <span class="input-icon-addon">
-                          <i class="ti ti-search"></i>
-                        </span>
-                        <input type="text" class="form-control" placeholder="" style="padding-right: 60px;">
-                        <span class="position-absolute end-0 top-50 translate-middle-y me-3">
-                          <kbd class="small text-muted">ctrl + k</kbd>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
                   <!-- Table -->
                   <div class="table-responsive">
                     <table class="table table-hover">
                       <thead>
                         <tr>
                           <th style="width: 300px;">User</th>
-                          <th>City</th>
+                          <th>Created</th>
+                          <th>Activity</th>
                           <th>Status</th>
-                          <th>Category</th>
+                          <th>Amount</th>
+                          <th>Remain</th>
                           <th style="width: 120px;">Actions</th>
                         </tr>
                       </thead>
@@ -914,9 +1116,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                               </div>
                             </div>
                           </td>
-                          <td style="vertical-align: middle;">New York, USA</td>
+                          <td style="vertical-align: middle;">2 days ago</td>
+                          <td style="vertical-align: middle;">Summer Hockey League</td>
                           <td style="vertical-align: middle;"><span class="badge bg-green-lt text-green-lt-fg">Active</span></td>
-                          <td style="vertical-align: middle;">Individual</td>
+                          <td style="vertical-align: middle;">$50</td>
+                          <td style="vertical-align: middle;">3/5 sessions</td>
                           <td style="vertical-align: middle;">
                             <div class="dropdown">
                               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -941,9 +1145,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                               </div>
                             </div>
                           </td>
-                          <td style="vertical-align: middle;">London, UK</td>
+                          <td style="vertical-align: middle;">5 days ago</td>
+                          <td style="vertical-align: middle;">Winter Training</td>
                           <td style="vertical-align: middle;"><span class="badge bg-red-lt text-red-lt-fg">Inactive</span></td>
-                          <td style="vertical-align: middle;">Agency</td>
+                          <td style="vertical-align: middle;">$75</td>
+                          <td style="vertical-align: middle;">1/3 sessions</td>
                           <td style="vertical-align: middle;">
                             <div class="dropdown">
                               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -968,9 +1174,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                               </div>
                             </div>
                           </td>
-                          <td style="vertical-align: middle;">Toronto, Canada</td>
+                          <td style="vertical-align: middle;">Today</td>
+                          <td style="vertical-align: middle;">Spring Camp</td>
                           <td style="vertical-align: middle;"><span class="badge bg-yellow-lt text-yellow-lt-fg">Requested</span></td>
-                          <td style="vertical-align: middle;">Individual</td>
+                          <td style="vertical-align: middle;">$100</td>
+                          <td style="vertical-align: middle;">5/5 sessions</td>
                           <td style="vertical-align: middle;">
                             <div class="dropdown">
                               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -995,9 +1203,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                               </div>
                             </div>
                           </td>
-                          <td style="vertical-align: middle;">Sydney, Australia</td>
+                          <td style="vertical-align: middle;">Yesterday</td>
+                          <td style="vertical-align: middle;">Fall Basketball</td>
                           <td style="vertical-align: middle;"><span class="badge bg-green-lt text-green-lt-fg">Active</span></td>
-                          <td style="vertical-align: middle;">Agency</td>
+                          <td style="vertical-align: middle;">$60</td>
+                          <td style="vertical-align: middle;">2/4 sessions</td>
                           <td style="vertical-align: middle;">
                             <div class="dropdown">
                               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -1022,9 +1232,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                               </div>
                             </div>
                           </td>
-                          <td style="vertical-align: middle;">Berlin, Germany</td>
+                          <td style="vertical-align: middle;">1 week ago</td>
+                          <td style="vertical-align: middle;">Soccer Training</td>
                           <td style="vertical-align: middle;"><span class="badge bg-red-lt text-red-lt-fg">Inactive</span></td>
-                          <td style="vertical-align: middle;">Individual</td>
+                          <td style="vertical-align: middle;">$80</td>
+                          <td style="vertical-align: middle;">0/6 sessions</td>
                           <td style="vertical-align: middle;">
                             <div class="dropdown">
                               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -1049,9 +1261,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                               </div>
                             </div>
                           </td>
-                          <td style="vertical-align: middle;">Paris, France</td>
+                          <td style="vertical-align: middle;">3 days ago</td>
+                          <td style="vertical-align: middle;">Tennis Lessons</td>
                           <td style="vertical-align: middle;"><span class="badge bg-yellow-lt text-yellow-lt-fg">Requested</span></td>
-                          <td style="vertical-align: middle;">Agency</td>
+                          <td style="vertical-align: middle;">$120</td>
+                          <td style="vertical-align: middle;">4/8 sessions</td>
                           <td style="vertical-align: middle;">
                             <div class="dropdown">
                               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -1076,9 +1290,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                               </div>
                             </div>
                           </td>
-                          <td style="vertical-align: middle;">Madrid, Spain</td>
+                          <td style="vertical-align: middle;">6 days ago</td>
+                          <td style="vertical-align: middle;">Swimming Classes</td>
                           <td style="vertical-align: middle;"><span class="badge bg-green-lt text-green-lt-fg">Active</span></td>
-                          <td style="vertical-align: middle;">Individual</td>
+                          <td style="vertical-align: middle;">$90</td>
+                          <td style="vertical-align: middle;">1/10 sessions</td>
                           <td style="vertical-align: middle;">
                             <div class="dropdown">
                               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -1103,9 +1319,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                               </div>
                             </div>
                           </td>
-                          <td style="vertical-align: middle;">Tokyo, Japan</td>
+                          <td style="vertical-align: middle;">2 weeks ago</td>
+                          <td style="vertical-align: middle;">Yoga Workshop</td>
                           <td style="vertical-align: middle;"><span class="badge bg-red-lt text-red-lt-fg">Inactive</span></td>
-                          <td style="vertical-align: middle;">Agency</td>
+                          <td style="vertical-align: middle;">$45</td>
+                          <td style="vertical-align: middle;">6/6 sessions</td>
                           <td style="vertical-align: middle;">
                             <div class="dropdown">
                               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -1161,9 +1379,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
     &lt;thead&gt;
       &lt;tr&gt;
         &lt;th style="width: 300px;"&gt;User&lt;/th&gt;
-        &lt;th&gt;City&lt;/th&gt;
+        &lt;th&gt;Created&lt;/th&gt;
+        &lt;th&gt;Activity&lt;/th&gt;
         &lt;th&gt;Status&lt;/th&gt;
-        &lt;th&gt;Category&lt;/th&gt;
+        &lt;th&gt;Amount&lt;/th&gt;
+        &lt;th&gt;Remain&lt;/th&gt;
         &lt;th style="width: 120px;"&gt;Actions&lt;/th&gt;
       &lt;/tr&gt;
     &lt;/thead&gt;
@@ -1178,9 +1398,11 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
             &lt;/div&gt;
           &lt;/div&gt;
         &lt;/td&gt;
-        &lt;td style="vertical-align: middle;"&gt;New York, USA&lt;/td&gt;
+        &lt;td style="vertical-align: middle;"&gt;2 days ago&lt;/td&gt;
+        &lt;td style="vertical-align: middle;"&gt;Summer Hockey League&lt;/td&gt;
         &lt;td style="vertical-align: middle;"&gt;&lt;span class="badge bg-green-lt text-green-lt-fg"&gt;Active&lt;/span&gt;&lt;/td&gt;
-        &lt;td style="vertical-align: middle;"&gt;Individual&lt;/td&gt;
+        &lt;td style="vertical-align: middle;"&gt;$50&lt;/td&gt;
+        &lt;td style="vertical-align: middle;"&gt;3/5 sessions&lt;/td&gt;
         &lt;td style="vertical-align: middle;"&gt;
           &lt;div class="dropdown"&gt;
             &lt;button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"&gt;
