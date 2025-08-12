@@ -474,15 +474,26 @@
       </div>
 
       <!-- Passport List Title -->
-      <h3 class="mt-4 mb-3">Your active or unpaid passport list</h3>
+      <h2 class="mt-4 mb-3">
+        <i class="ti ti-activity-heartbeat me-2" style="color: #e03131;"></i>Your Activity Passport
+      </h2>
 
       <!-- Search Bar -->
       <div class="mb-4">
-        <div class="input-icon" style="max-width: 400px;">
-          <span class="input-icon-addon">
-            <i class="ti ti-search"></i>
-          </span>
-          <input type="text" id="userSearch" class="form-control" placeholder="Search active or unpaid users...">
+        <div class="position-relative" style="max-width: 600px;">
+          <div class="input-icon">
+            <span class="input-icon-addon">
+              <i class="ti ti-search fs-3"></i>
+            </span>
+            <input type="text" id="userSearch" class="form-control form-control-lg shadow-sm" 
+                   placeholder="Search passports and users..." 
+                   style="padding-right: 80px; border-radius: 0.5rem; transition: all 0.3s ease;"
+                   onfocus="this.style.boxShadow='0 0 0 0.25rem rgba(32, 107, 196, 0.15)'" 
+                   onblur="this.style.boxShadow='0 0.125rem 0.25rem rgba(0,0,0,0.075)'">
+            <span class="position-absolute end-0 top-50 translate-middle-y me-3">
+              <kbd class="text-muted">ctrl + k</kbd>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -748,6 +759,292 @@
               </li>
             </ul>
           </nav>
+        </div>
+      </div>
+
+      <!-- Pending Signups Section -->
+      <h2 class="mt-4 mb-3">
+        <i class="ti ti-hand-stop me-2" style="color: #e03131;"></i>Pending Signups
+      </h2>
+
+
+
+
+
+
+
+
+      <!-- Pending Signups Table -->
+      <div class="component-demo">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th style="width: 300px;">User</th>
+                <th>Signup Date</th>
+                <th>Activity</th>
+                <th>Status</th>
+                <th>Payment Due</th>
+                <th>Days Pending</th>
+                <th style="width: 120px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="vertical-align: middle;">
+                  <div class="d-flex align-items-center">
+                    <img src="https://www.gravatar.com/avatar/9?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">Alex Thompson</div>
+                      <div class="text-muted small">alex@example.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">3 days ago</td>
+                <td style="vertical-align: middle;">Summer Hockey League</td>
+                <td style="vertical-align: middle;"><span class="badge bg-yellow-lt text-yellow-lt-fg">Pending Approval</span></td>
+                <td style="vertical-align: middle;">$50</td>
+                <td style="vertical-align: middle;">3 days</td>
+                <td style="vertical-align: middle;">
+                  <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Approve</a></li>
+                      <li><a class="dropdown-item" href="#">Contact User</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#">Reject</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="vertical-align: middle;">
+                  <div class="d-flex align-items-center">
+                    <img src="https://www.gravatar.com/avatar/10?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">Michelle Parker</div>
+                      <div class="text-muted small">michelle@example.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">1 day ago</td>
+                <td style="vertical-align: middle;">Weekend Workshop</td>
+                <td style="vertical-align: middle;"><span class="badge bg-orange-lt text-orange-lt-fg">Payment Required</span></td>
+                <td style="vertical-align: middle;">$75</td>
+                <td style="vertical-align: middle;">1 day</td>
+                <td style="vertical-align: middle;">
+                  <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Send Payment Link</a></li>
+                      <li><a class="dropdown-item" href="#">View Details</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#">Cancel Signup</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="vertical-align: middle;">
+                  <div class="d-flex align-items-center">
+                    <img src="https://www.gravatar.com/avatar/11?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">Robert Kim</div>
+                      <div class="text-muted small">robert@example.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">5 days ago</td>
+                <td style="vertical-align: middle;">Tennis Lessons</td>
+                <td style="vertical-align: middle;"><span class="badge bg-red-lt text-red-lt-fg">Overdue Payment</span></td>
+                <td style="vertical-align: middle;">$120</td>
+                <td style="vertical-align: middle;">5 days</td>
+                <td style="vertical-align: middle;">
+                  <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Send Reminder</a></li>
+                      <li><a class="dropdown-item" href="#">Payment History</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#">Cancel & Refund</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="vertical-align: middle;">
+                  <div class="d-flex align-items-center">
+                    <img src="https://www.gravatar.com/avatar/12?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">Jennifer Lee</div>
+                      <div class="text-muted small">jennifer@example.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">Today</td>
+                <td style="vertical-align: middle;">Dance Workshop</td>
+                <td style="vertical-align: middle;"><span class="badge bg-blue-lt text-blue-lt-fg">Waitlisted</span></td>
+                <td style="vertical-align: middle;">$60</td>
+                <td style="vertical-align: middle;">0 days</td>
+                <td style="vertical-align: middle;">
+                  <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">Move to Active</a></li>
+                      <li><a class="dropdown-item" href="#">Contact User</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#">Remove from Waitlist</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination for Pending Signups -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <span class="text-muted">Showing 1 to 4 of 4 pending signups</span>
+          <nav aria-label="Pending signups pagination">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">
+                  <i class="ti ti-chevron-left"></i>
+                </a>
+              </li>
+              <li class="page-item active"><a class="page-link" href="#">1</a></li>
+              <li class="page-item disabled">
+                <a class="page-link" href="#">
+                  <i class="ti ti-chevron-right"></i>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+
+      <!-- What's Happening Section -->
+      <h3 class="mt-5 mb-3">
+        <i class="ti ti-cardboards me-2" style="color: #2fb344;"></i>What's Happening in Your Activity
+      </h3>
+
+      <!-- Activity Log Table -->
+      <div class="card" style="border-radius: 12px; overflow: hidden;">
+        <div class="card-header">
+          <h4 class="card-title">Recent Activity</h4>
+        </div>
+        <div class="table-responsive">
+          <table class="table card-table table-vcenter" id="activityLogTable">
+            <thead>
+              <tr>
+                <th scope="col" class="text-muted">Date/Time</th>
+                <th scope="col" class="text-muted">Type</th>
+                <th scope="col" class="text-muted">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2024-08-12 14:30</td>
+                <td data-type="Passport Redeemed">
+                  <i class="ti ti-ticket text-danger"></i>
+                  Passport Redeemed
+                </td>
+                <td>Ken Dresdell redeemed a session for Summer Hockey League</td>
+              </tr>
+              <tr>
+                <td>2024-08-12 13:15</td>
+                <td data-type="Signup Submitted">
+                  <i class="ti ti-user-plus text-success"></i>
+                  Signup Submitted
+                </td>
+                <td>New signup from Alex Thompson for Summer Hockey League</td>
+              </tr>
+              <tr>
+                <td>2024-08-12 11:45</td>
+                <td data-type="Passport Created">
+                  <i class="ti ti-id text-lime"></i>
+                  Passport Created
+                </td>
+                <td>Michelle Parker purchased a passport for Summer Hockey League</td>
+              </tr>
+              <tr>
+                <td>2024-08-12 10:20</td>
+                <td data-type="Email Sent">
+                  <i class="ti ti-mail text-info"></i>
+                  Email Sent
+                </td>
+                <td>Reminder email sent to 5 participants about upcoming sessions</td>
+              </tr>
+              <tr>
+                <td>2024-08-11 16:30</td>
+                <td data-type="Signup Approved">
+                  <i class="ti ti-user-check text-green"></i>
+                  Signup Approved
+                </td>
+                <td>Jennifer Lee's signup approved for Summer Hockey League</td>
+              </tr>
+              <tr>
+                <td>2024-08-11 15:10</td>
+                <td data-type="Interact Payment">
+                  <i class="ti ti-currency-dollar text-success"></i>
+                  Payment Received
+                </td>
+                <td>$50 payment received from Robert Kim via Interac</td>
+              </tr>
+              <tr>
+                <td>2024-08-11 14:25</td>
+                <td data-type="Passport Redeemed">
+                  <i class="ti ti-ticket text-danger"></i>
+                  Passport Redeemed
+                </td>
+                <td>Sarah Wilson redeemed a session for Summer Hockey League</td>
+              </tr>
+              <tr>
+                <td>2024-08-11 12:00</td>
+                <td data-type="Admin Action">
+                  <i class="ti ti-settings text-muted"></i>
+                  Admin Action
+                </td>
+                <td>Activity settings updated - session capacity increased to 25</td>
+              </tr>
+              <tr>
+                <td>2024-08-11 09:30</td>
+                <td data-type="Signup Submitted">
+                  <i class="ti ti-user-plus text-success"></i>
+                  Signup Submitted
+                </td>
+                <td>New signup from David Brown for Summer Hockey League</td>
+              </tr>
+              <tr>
+                <td>2024-08-10 17:45</td>
+                <td data-type="Reminder Sent">
+                  <i class="ti ti-bell text-purple"></i>
+                  Reminder Sent
+                </td>
+                <td>Payment reminder sent to 3 users with pending payments</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="card-footer d-flex align-items-center">
+          <p class="m-0 text-muted">Showing <span id="activityShowingCount">10</span> of 45 activity logs</p>
+          <ul class="pagination m-0 ms-auto" id="activityPaginationControls">
+            <li class="page-item active"><a href="#" class="page-link">1</a></li>
+            <li class="page-item"><a href="#" class="page-link">2</a></li>
+            <li class="page-item"><a href="#" class="page-link">3</a></li>
+            <li class="page-item disabled"><a href="#" class="page-link">...</a></li>
+            <li class="page-item"><a href="#" class="page-link">5</a></li>
+          </ul>
         </div>
       </div>
 
