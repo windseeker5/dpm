@@ -1,0 +1,1098 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Dashboard - {{ activity.name }}{% endblock %}
+
+{% block head %}
+<style>
+  /* Modern SaaS Dashboard Styles */
+  .kpi-card {
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+  }
+  
+  .kpi-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
+  
+  .kpi-trend {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  
+  .kpi-trend.positive {
+    color: #2fb344;
+  }
+  
+  .kpi-trend.negative {
+    color: #d63939;
+  }
+  
+  .mini-chart {
+    height: 40px;
+    margin-top: 0.5rem;
+  }
+  
+  .search-container {
+    position: relative;
+    max-width: 400px;
+  }
+  
+  .search-shortcut {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #6c757d;
+  }
+  
+  .filter-pills .nav-link {
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    margin-right: 0.5rem;
+    color: #6c757d;
+    transition: all 0.2s ease;
+  }
+  
+  .filter-pills .nav-link:hover {
+    background: #f8f9fa;
+  }
+  
+  .filter-pills .nav-link.active {
+    background: #206bc4;
+    color: white;
+  }
+  
+  .filter-pills .badge {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .user-table {
+    font-size: 0.9375rem;
+  }
+  
+  .user-table th {
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e9ecef;
+  }
+  
+  .user-table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+  }
+  
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .sessions-progress {
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+  }
+  
+  .sessions-progress-bar {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  
+  .bulk-actions-bar {
+    background: #f0f7ff;
+    border: 1px solid #206bc4;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  
+  .bulk-actions-bar.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Mobile Responsive Styles */
+  @media (max-width: 768px) {
+    .kpi-card {
+      margin-bottom: 1rem;
+    }
+    
+    .filter-pills {
+      overflow-x: auto;
+      white-space: nowrap;
+      padding-bottom: 0.5rem;
+    }
+    
+    .filter-pills .nav-link {
+      display: inline-block;
+    }
+    
+    .search-container {
+      max-width: 100%;
+    }
+    
+    .user-card {
+      background: white;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .user-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 0.75rem;
+    }
+    
+    .user-card-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+    
+    .desktop-only {
+      display: none !important;
+    }
+    
+    .mobile-only {
+      display: block !important;
+    }
+  }
+  
+  @media (min-width: 769px) {
+    .desktop-only {
+      display: block !important;
+    }
+    
+    .mobile-only {
+      display: none !important;
+    }
+  }
+  
+  /* Loading States */
+  .skeleton-loader {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+  }
+  
+  @keyframes loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <!-- Header with Breadcrumb -->
+  <div class="page-header d-print-none">
+    <div class="container-xl">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="{{ url_for('list_activities') }}">Activities</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Summer Hockey League 2024</li>
+            </ol>
+          </nav>
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editActivityModal">
+            <i class="ti ti-edit me-2"></i>Edit Activity
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <div class="container-xl">
+      <!-- Activity Overview Card -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h1 class="card-title mb-2">Summer Hockey League 2024</h1>
+          <p class="text-muted mb-3">Professional hockey league for all skill levels • June 1 - Aug 31</p>
+          <div class="d-flex gap-2 flex-wrap">
+            <span class="badge bg-green-lt">Public</span>
+            <span class="badge bg-blue-lt">Registration Open</span>
+            <span class="badge bg-purple-lt">55 Active Users</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Metrics Row -->
+      <div class="row row-cards mb-4">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase fw-semibold">Active Users</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-ghost-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">All time</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1">55</div>
+              <div class="kpi-trend positive">
+                <i class="ti ti-trending-up me-1"></i>8% from last week
+              </div>
+              <div class="mini-chart">
+                <svg width="100%" height="40" viewBox="0 0 200 40">
+                  <polyline points="0,35 40,30 80,20 120,25 160,15 200,10" stroke="#2fb344" stroke-width="2" fill="none" opacity="0.5"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase fw-semibold">Revenue</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-ghost-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">All time</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1">$4,300</div>
+              <div class="kpi-trend positive">
+                <i class="ti ti-trending-up me-1"></i>12% from last month
+              </div>
+              <div class="mini-chart">
+                <svg width="100%" height="40" viewBox="0 0 200 40">
+                  <polyline points="0,30 40,25 80,28 120,20 160,18 200,5" stroke="#206bc4" stroke-width="2" fill="none" opacity="0.5"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase fw-semibold">Completion Rate</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-ghost-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">This activity</a></li>
+                    <li><a class="dropdown-item" href="#">All activities</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1">68%</div>
+              <div class="text-muted small">Sessions used vs total</div>
+              <div class="progress mt-2" style="height: 8px;">
+                <div class="progress-bar bg-primary" style="width: 68%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase fw-semibold">Pending Payments</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-ghost-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">View all</a></li>
+                    <li><a class="dropdown-item" href="#">Send reminders</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1">12</div>
+              <div class="kpi-trend negative">
+                <i class="ti ti-trending-down me-1"></i>3 overdue
+              </div>
+              <div class="text-muted small mt-2">Total: $600</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters and Search Bar -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <!-- Filter Pills -->
+            <div class="nav nav-pills filter-pills">
+              <a class="nav-link active" href="#" data-filter="all">
+                All Users <span class="badge bg-secondary">55</span>
+              </a>
+              <a class="nav-link" href="#" data-filter="active">
+                Active <span class="badge bg-green">43</span>
+              </a>
+              <a class="nav-link" href="#" data-filter="unpaid">
+                Unpaid <span class="badge bg-yellow">12</span>
+              </a>
+              <a class="nav-link" href="#" data-filter="completed">
+                Completed <span class="badge bg-secondary">0</span>
+              </a>
+            </div>
+            
+            <!-- Search Input -->
+            <div class="search-container">
+              <div class="input-icon">
+                <span class="input-icon-addon">
+                  <i class="ti ti-search"></i>
+                </span>
+                <input type="text" id="userSearch" class="form-control" placeholder="Search users..." style="padding-right: 60px;">
+                <span class="search-shortcut">
+                  <kbd>ctrl+k</kbd>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div class="bulk-actions-bar" id="bulkActionsBar">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="text-primary fw-bold">
+            <span id="selectedCount">0</span> users selected
+          </span>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline-primary">
+              <i class="ti ti-mail me-1"></i>Send Reminder
+            </button>
+            <button class="btn btn-sm btn-outline-success">
+              <i class="ti ti-check me-1"></i>Mark Paid
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="ti ti-download me-1"></i>Export
+            </button>
+            <button class="btn btn-sm btn-outline-danger">
+              <i class="ti ti-trash me-1"></i>Delete
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Data Table (Desktop) -->
+      <div class="card desktop-only">
+        <div class="table-responsive">
+          <table class="table table-hover user-table">
+            <thead>
+              <tr>
+                <th width="40">
+                  <input type="checkbox" class="form-check-input" id="selectAll">
+                </th>
+                <th style="width: 300px;">User</th>
+                <th>Passport Status</th>
+                <th>Sessions</th>
+                <th>Payment Status</th>
+                <th>Last Activity</th>
+                <th style="width: 120px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input user-checkbox">
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="d-flex align-items-center">
+                    <img src="https://www.gravatar.com/avatar/1?d=identicon&s=40" 
+                         class="rounded-circle me-3 user-avatar" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">Ken Dresdell</div>
+                      <div class="text-muted small">ken@example.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="badge bg-green-lt">Active</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div>
+                    <div class="fw-semibold">3/5 remaining</div>
+                    <div class="sessions-progress">
+                      <div class="sessions-progress-bar bg-primary" style="width: 60%"></div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="badge bg-success">Paid</span>
+                  <div class="text-muted small">$50</div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="text-muted">2 days ago</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li><a class="dropdown-item" href="#">View Profile</a></li>
+                      <li><a class="dropdown-item" href="#">Edit Passport</a></li>
+                      <li><a class="dropdown-item" href="#">Add Session</a></li>
+                      <li><a class="dropdown-item" href="#">Send Reminder</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#">Remove User</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input user-checkbox">
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="d-flex align-items-center">
+                    <img src="https://www.gravatar.com/avatar/2?d=identicon&s=40" 
+                         class="rounded-circle me-3 user-avatar" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">Marie Leblanc</div>
+                      <div class="text-muted small">marie@example.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="badge bg-green-lt">Active</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div>
+                    <div class="fw-semibold">5/5 remaining</div>
+                    <div class="sessions-progress">
+                      <div class="sessions-progress-bar bg-primary" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="badge bg-success">Paid</span>
+                  <div class="text-muted small">$50</div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="text-muted">Never</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li><a class="dropdown-item" href="#">View Profile</a></li>
+                      <li><a class="dropdown-item" href="#">Edit Passport</a></li>
+                      <li><a class="dropdown-item" href="#">Add Session</a></li>
+                      <li><a class="dropdown-item" href="#">Send Reminder</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#">Remove User</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              
+              <!-- Unpaid User Example -->
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input user-checkbox">
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="d-flex align-items-center">
+                    <img src="https://www.gravatar.com/avatar/3?d=identicon&s=40" 
+                         class="rounded-circle me-3 user-avatar" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">John Smith</div>
+                      <div class="text-muted small">john@example.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="badge bg-yellow-lt">Pending</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div>
+                    <div class="fw-semibold">0/5 remaining</div>
+                    <div class="sessions-progress">
+                      <div class="sessions-progress-bar bg-primary" style="width: 0%"></div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="badge bg-danger">Overdue</span>
+                  <div class="text-muted small">$50 (3 days)</div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="text-muted">5 days ago</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li><a class="dropdown-item" href="#">Mark as Paid</a></li>
+                      <li><a class="dropdown-item" href="#">Send Payment Reminder</a></li>
+                      <li><a class="dropdown-item" href="#">View Payment History</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#">Cancel Passport</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input user-checkbox">
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="d-flex align-items-center">
+                    <img src="https://www.gravatar.com/avatar/4?d=identicon&s=40" 
+                         class="rounded-circle me-3 user-avatar" alt="Avatar">
+                    <div>
+                      <div class="fw-bold">Sarah Wilson</div>
+                      <div class="text-muted small">sarah@example.com</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="badge bg-green-lt">Active</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div>
+                    <div class="fw-semibold">1/5 remaining</div>
+                    <div class="sessions-progress">
+                      <div class="sessions-progress-bar bg-warning" style="width: 20%"></div>
+                    </div>
+                  </div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="badge bg-success">Paid</span>
+                  <div class="text-muted small">$50</div>
+                </td>
+                <td style="vertical-align: middle;">
+                  <span class="text-muted">Yesterday</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li><a class="dropdown-item" href="#">View Profile</a></li>
+                      <li><a class="dropdown-item" href="#">Edit Passport</a></li>
+                      <li><a class="dropdown-item" href="#">Add Session</a></li>
+                      <li><a class="dropdown-item" href="#">Send Reminder</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#">Remove User</a></li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          <span class="text-muted">Showing 1 to 10 of 55 entries</span>
+          <nav aria-label="User table pagination">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">
+                  <i class="ti ti-chevron-left"></i>
+                </a>
+              </li>
+              <li class="page-item active"><a class="page-link" href="#">1</a></li>
+              <li class="page-item"><a class="page-link" href="#">2</a></li>
+              <li class="page-item"><a class="page-link" href="#">3</a></li>
+              <li class="page-item"><a class="page-link" href="#">4</a></li>
+              <li class="page-item"><a class="page-link" href="#">5</a></li>
+              <li class="page-item">
+                <a class="page-link" href="#">
+                  <i class="ti ti-chevron-right"></i>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Mobile Card Layout -->
+      <div class="mobile-only" style="display: none;">
+        <div class="user-card">
+          <div class="user-card-header">
+            <div>
+              <h5 class="mb-1">Ken Dresdell</h5>
+              <small class="text-muted">ken@example.com</small>
+            </div>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown">
+                <i class="ti ti-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#">View Profile</a></li>
+                <li><a class="dropdown-item" href="#">Edit Passport</a></li>
+                <li><a class="dropdown-item" href="#">Send Reminder</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="user-card-stats">
+            <div>
+              <small class="text-muted d-block">Sessions</small>
+              <strong>3/5 remaining</strong>
+              <div class="sessions-progress mt-1">
+                <div class="sessions-progress-bar bg-primary" style="width: 60%"></div>
+              </div>
+            </div>
+            <div>
+              <small class="text-muted d-block">Payment</small>
+              <span class="badge bg-success">Paid</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="user-card">
+          <div class="user-card-header">
+            <div>
+              <h5 class="mb-1">Marie Leblanc</h5>
+              <small class="text-muted">marie@example.com</small>
+            </div>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown">
+                <i class="ti ti-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#">View Profile</a></li>
+                <li><a class="dropdown-item" href="#">Edit Passport</a></li>
+                <li><a class="dropdown-item" href="#">Send Reminder</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="user-card-stats">
+            <div>
+              <small class="text-muted d-block">Sessions</small>
+              <strong>5/5 remaining</strong>
+              <div class="sessions-progress mt-1">
+                <div class="sessions-progress-bar bg-primary" style="width: 100%"></div>
+              </div>
+            </div>
+            <div>
+              <small class="text-muted d-block">Payment</small>
+              <span class="badge bg-success">Paid</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="user-card">
+          <div class="user-card-header">
+            <div>
+              <h5 class="mb-1">John Smith</h5>
+              <small class="text-muted">john@example.com</small>
+            </div>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown">
+                <i class="ti ti-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#">Mark as Paid</a></li>
+                <li><a class="dropdown-item" href="#">Send Payment Reminder</a></li>
+                <li><a class="dropdown-item" href="#">View Payment History</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="user-card-stats">
+            <div>
+              <small class="text-muted d-block">Sessions</small>
+              <strong>0/5 remaining</strong>
+              <div class="sessions-progress mt-1">
+                <div class="sessions-progress-bar bg-primary" style="width: 0%"></div>
+              </div>
+            </div>
+            <div>
+              <small class="text-muted d-block">Payment</small>
+              <span class="badge bg-danger">Overdue 3d</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Activity Modal -->
+<div class="modal fade" id="editActivityModal" tabindex="-1" aria-labelledby="editActivityModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editActivityModalLabel">Edit Activity</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editActivityForm">
+          <div class="mb-3">
+            <label class="form-label">Activity Name</label>
+            <input type="text" class="form-control" id="activityName" value="Summer Hockey League 2024">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" id="activityDescription" rows="3">Professional hockey league for all skill levels</textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="startDate" value="2024-06-01">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">End Date</label>
+                <input type="date" class="form-control" id="endDate" value="2024-08-31">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Price per Passport</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" id="passportPrice" value="50">
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Sessions per Passport</label>
+                <input type="number" class="form-control" id="sessionsPerPassport" value="5">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="activityStatus">
+              <option selected>Registration Open</option>
+              <option>Registration Closed</option>
+              <option>Activity Completed</option>
+              <option>Cancelled</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveActivityChanges()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize dashboard
+  initializeActivityDashboard();
+});
+
+function initializeActivityDashboard() {
+  // Search functionality
+  const searchInput = document.getElementById('userSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(handleSearch, 300));
+  }
+  
+  // Filter tabs
+  document.querySelectorAll('.filter-pills .nav-link').forEach(tab => {
+    tab.addEventListener('click', handleFilterChange);
+  });
+  
+  // Bulk selection
+  const selectAllCheckbox = document.getElementById('selectAll');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', handleSelectAll);
+  }
+  
+  document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateBulkActionsBar);
+  });
+  
+  // Keyboard shortcuts
+  document.addEventListener('keydown', handleKeyboardShortcuts);
+  
+  // Dropdown actions
+  document.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', handleUserAction);
+  });
+}
+
+// Search functionality
+function handleSearch(e) {
+  const query = e.target.value.toLowerCase();
+  const rows = document.querySelectorAll('tbody tr');
+  
+  rows.forEach(row => {
+    const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+    const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+    
+    if (userName.includes(query) || userEmail.includes(query)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  
+  updateResultCount();
+}
+
+// Filter handling
+function handleFilterChange(e) {
+  e.preventDefault();
+  
+  // Update active state
+  document.querySelectorAll('.filter-pills .nav-link').forEach(link => {
+    link.classList.remove('active');
+  });
+  e.target.classList.add('active');
+  
+  const filter = e.target.dataset.filter;
+  applyFilter(filter);
+}
+
+function applyFilter(filter) {
+  const rows = document.querySelectorAll('tbody tr');
+  
+  rows.forEach(row => {
+    const passportStatus = row.querySelector('td:nth-child(3) .badge')?.textContent.trim();
+    const paymentStatus = row.querySelector('td:nth-child(5) .badge')?.textContent.trim();
+    
+    let shouldShow = false;
+    
+    switch(filter) {
+      case 'all':
+        shouldShow = true;
+        break;
+      case 'active':
+        shouldShow = passportStatus === 'Active';
+        break;
+      case 'unpaid':
+        shouldShow = paymentStatus === 'Overdue' || passportStatus === 'Pending';
+        break;
+      case 'completed':
+        shouldShow = row.querySelector('.sessions-progress-bar')?.style.width === '0%';
+        break;
+      default:
+        shouldShow = true;
+    }
+    
+    row.style.display = shouldShow ? '' : 'none';
+  });
+  
+  updateResultCount();
+}
+
+// Bulk selection
+function handleSelectAll(e) {
+  const isChecked = e.target.checked;
+  document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+    checkbox.checked = isChecked;
+  });
+  updateBulkActionsBar();
+}
+
+function updateBulkActionsBar() {
+  const selectedCount = document.querySelectorAll('.user-checkbox:checked').length;
+  const bulkBar = document.getElementById('bulkActionsBar');
+  const countSpan = document.getElementById('selectedCount');
+  
+  if (selectedCount > 0) {
+    bulkBar.classList.add('show');
+    countSpan.textContent = selectedCount;
+  } else {
+    bulkBar.classList.remove('show');
+  }
+}
+
+// Update result count
+function updateResultCount() {
+  const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+  const totalRows = document.querySelectorAll('tbody tr');
+  const footerText = document.querySelector('.card-footer .text-muted');
+  
+  if (footerText) {
+    footerText.textContent = `Showing ${visibleRows.length} of ${totalRows.length} entries`;
+  }
+}
+
+// Keyboard shortcuts
+function handleKeyboardShortcuts(e) {
+  // Focus search with Ctrl+K or /
+  if ((e.ctrlKey && e.key === 'k') || (e.key === '/' && e.target.tagName !== 'INPUT')) {
+    e.preventDefault();
+    document.getElementById('userSearch')?.focus();
+  }
+  
+  // Clear search with Escape
+  if (e.key === 'Escape') {
+    const searchInput = document.getElementById('userSearch');
+    if (searchInput === document.activeElement) {
+      searchInput.value = '';
+      searchInput.blur();
+      handleSearch({ target: searchInput });
+    }
+  }
+  
+  // Select all with Ctrl+A
+  if (e.ctrlKey && e.key === 'a' && e.target.tagName !== 'INPUT') {
+    e.preventDefault();
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+      selectAll.checked = !selectAll.checked;
+      handleSelectAll({ target: selectAll });
+    }
+  }
+}
+
+// User actions
+function handleUserAction(e) {
+  e.preventDefault();
+  const action = e.target.textContent.trim();
+  const row = e.target.closest('tr');
+  const userName = row?.querySelector('.fw-bold')?.textContent || 'User';
+  
+  // Show notification (placeholder for real implementation)
+  console.log(`Action: ${action} for ${userName}`);
+  
+  // You would implement actual API calls here
+  switch(action) {
+    case 'View Profile':
+      // Navigate to user profile
+      break;
+    case 'Edit Passport':
+      // Open edit modal
+      break;
+    case 'Add Session':
+      // Add session logic
+      break;
+    case 'Send Reminder':
+      // Send email reminder
+      showNotification('success', `Reminder sent to ${userName}`);
+      break;
+    case 'Mark as Paid':
+      // Update payment status
+      showNotification('success', `${userName} marked as paid`);
+      break;
+    case 'Remove User':
+      if (confirm(`Remove ${userName} from this activity?`)) {
+        row.remove();
+        showNotification('success', `${userName} removed`);
+        updateResultCount();
+      }
+      break;
+  }
+}
+
+// Save activity changes
+function saveActivityChanges() {
+  // Gather form data
+  const formData = {
+    name: document.getElementById('activityName').value,
+    description: document.getElementById('activityDescription').value,
+    startDate: document.getElementById('startDate').value,
+    endDate: document.getElementById('endDate').value,
+    price: document.getElementById('passportPrice').value,
+    sessions: document.getElementById('sessionsPerPassport').value,
+    status: document.getElementById('activityStatus').value
+  };
+  
+  // API call would go here
+  console.log('Saving activity:', formData);
+  
+  // Close modal
+  const modal = bootstrap.Modal.getInstance(document.getElementById('editActivityModal'));
+  modal?.hide();
+  
+  // Show success notification
+  showNotification('success', 'Activity updated successfully');
+}
+
+// Utility functions
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function showNotification(type, message) {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible position-fixed top-0 end-0 m-3`;
+  notification.style.zIndex = '9999';
+  notification.innerHTML = `
+    <div class="d-flex">
+      <div>
+        <i class="ti ti-${type === 'success' ? 'check' : 'alert-circle'} alert-icon"></i>
+      </div>
+      <div>
+        <h4 class="alert-title">${type === 'success' ? 'Success!' : 'Error!'}</h4>
+        <div class="text-muted">${message}</div>
+      </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    notification.remove();
+  }, 5000);
+}
+</script>
+{% endblock %}

@@ -1,365 +1,650 @@
-# Activity Dashboard Wireframe - Field Operations Tool
+# Activity Dashboard Wireframe - Modern SaaS Admin Panel
 
 ## Executive Summary
-This wireframe presents a field operations tool designed specifically for use at hockey rinks and sports venues. The dashboard prioritizes speed and simplicity for administrators who need to quickly validate players who arrive without QR codes. This is NOT a data analytics dashboard - it's a rapid check-in tool optimized for cold environments, gloved hands, and time-critical situations.
-
-## Real-World Use Case
-**Scenario**: It's game time at the hockey rink. A player arrives to play but forgot their QR code. Other players are waiting. The admin needs to:
-1. Quickly search for the player by name
-2. Verify they have remaining sessions
-3. Check them in with one tap
-4. Move on to the next player
+This wireframe presents a modern, elegant SaaS-style activity management dashboard designed for administrators to efficiently manage users, track passport usage, monitor payments, and edit activity details. The design follows contemporary SaaS patterns seen in platforms like Stripe, Linear, and Notion, with a focus on data clarity, administrative efficiency, and professional aesthetics.
 
 ## Design Philosophy
-- **Search First**: Large, prominent search bar for instant player lookup
-- **Speed Optimized**: Minimal clicks, maximum efficiency
-- **Field Ready**: Large touch targets for gloved hands, high contrast for poor lighting
-- **Essential Data Only**: Just what's needed for check-in decisions
-- **Mobile First**: Optimized for phones/tablets used in the field
+- **Data-Driven Interface**: Clear presentation of metrics and user data
+- **Administrative Efficiency**: Quick access to editing and management functions
+- **Professional Aesthetics**: Clean, minimalist design with proper visual hierarchy
+- **Component Reusability**: Exclusively uses Tabler.io components from the style guide
+- **Responsive Design**: Optimized for desktop with mobile considerations
 
 ---
 
 ## Desktop Layout (1440px width)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ MINIMAL HEADER                                                             │
-│ [Logo] Ligue Hockey Gagnon - Check-In            [High Contrast] [Settings]│
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ HEADER                                                                          │
+│ ┌─────────────────────────────────────────────────────────────────────────┐   │
+│ │ [← Back] Activities / Summer Hockey League 2024                         │   │
+│ │                                                        [Edit Activity]   │   │
+│ └─────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 🔍 SEARCH BAR (Auto-focused on page load)                                  │
-│ ┌─────────────────────────────────────────────────────────────────────┐   │
-│ │ 🔍  Search player name...                          Press / to search │   │
-│ │     (Large 56px height input for easy targeting)                    │   │
-│ └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│ Quick Actions: [+ New Passport] [📷 Scan QR] [📱 Switch to Mobile View]    │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ ACTIVITY OVERVIEW                                                              │
+│ ┌─────────────────────────────────────────────────────────────────────────┐   │
+│ │ <h1>Summer Hockey League 2024</h1>                                      │   │
+│ │ Professional hockey league for all skill levels • June 1 - Aug 31      │   │
+│ │ [Public] [Registration Open] [55 Active Users]                         │   │
+│ └─────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ RECENT ACTIVITY (Last 5 check-ins for quick re-access)                     │
-│ ┌─────────────────────────────────────────────────────────────────────┐   │
-│ │ Just now: ✅ Ken Dresdell checked in (2 sessions left)   [UNDO]     │   │
-│ │ 5 min ago: ✅ Marie Leblanc checked in (4 sessions left)            │   │
-│ │ 10 min ago: 💰 John Smith marked as paid                            │   │
-│ └─────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ KPI METRICS                                                                    │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐         │
+│ │ ACTIVE USERS │ │   REVENUE    │ │ COMPLETION   │ │   PENDING    │         │
+│ │     ▼8%      │ │     ▲12%     │ │    RATE      │ │   PAYMENTS   │         │
+│ │      55      │ │   $4,300     │ │     68%      │ │      12      │         │
+│ │ ░░░░░░░░░░   │ │ ░░░░░░░░░░   │ │ ░░░░░░░░░░   │ │ ░░░░░░░░░░   │         │
+│ └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘         │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ ACTIVE PASSPORTS (8 players with remaining sessions)                       │
-│ ┌─────────────────────────────────────────────────────────────────────┐   │
-│ │ Player              Sessions    Last Activity    Actions             │   │
-│ ├─────────────────────────────────────────────────────────────────────┤   │
-│ │ 👤 Ken Dresdell     3/5 left    2 days ago      [CHECK IN] [DETAILS]│   │
-│ │ 👤 Marie Leblanc    5/5 left    Never           [CHECK IN] [DETAILS]│   │
-│ │ 👤 Bob Wilson       1/5 left    Yesterday       [CHECK IN] [DETAILS]│   │
-│ │ 👤 Sarah Jones      4/5 left    3 days ago      [CHECK IN] [DETAILS]│   │
-│ │ 👤 Mike Thompson    2/5 left    1 week ago      [CHECK IN] [DETAILS]│   │
-│ └─────────────────────────────────────────────────────────────────────┘   │
-│ Showing 5 of 8 • [Show All]                                                │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ FILTERS & SEARCH                                                               │
+│ ┌─────────────────────────────────────────────────────────────────────────┐   │
+│ │ [All Users] [Active (43)] [Unpaid (12)] [Completed (0)]                 │   │
+│ │                                           🔍 Search users... [ctrl+k]   │   │
+│ └─────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ ⚠️ UNPAID USERS (3 players need payment)                                   │
-│ ┌─────────────────────────────────────────────────────────────────────┐   │
-│ │ Player              Amount      Overdue         Actions             │   │
-│ ├─────────────────────────────────────────────────────────────────────┤   │
-│ │ 👤 John Doe         $50         3 days          [MARK PAID] [EMAIL] │   │
-│ │ 👤 Jane Smith       $50         1 day           [MARK PAID] [EMAIL] │   │
-│ │ 👤 Tom Brown        $50         Due today       [MARK PAID] [EMAIL] │   │
-│ └─────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ USER MANAGEMENT TABLE                                                          │
+│ ┌─────────────────────────────────────────────────────────────────────────┐   │
+│ │ □ User                  Passport    Sessions    Payment    Last        │   │
+│ │                         Status      Remaining   Status     Activity    │   │
+│ ├─────────────────────────────────────────────────────────────────────────┤   │
+│ │ □ 👤 Ken Dresdell       [Active]    3/5 ████░   [Paid]     2 days ago  │   │
+│ │    ken@example.com                  60%         $50                    │   │
+│ │                                                             [Actions ▼] │   │
+│ ├─────────────────────────────────────────────────────────────────────────┤   │
+│ │ □ 👤 Marie Leblanc      [Active]    5/5 █████   [Paid]     Never       │   │
+│ │    marie@example.com                100%        $50                    │   │
+│ │                                                             [Actions ▼] │   │
+│ ├─────────────────────────────────────────────────────────────────────────┤   │
+│ │ □ 👤 John Smith         [Pending]   0/5 ░░░░░   [Overdue]  5 days ago  │   │
+│ │    john@example.com                 0%          $50 (3d)               │   │
+│ │                                                             [Actions ▼] │   │
+│ ├─────────────────────────────────────────────────────────────────────────┤   │
+│ │ □ 👤 Sarah Wilson       [Active]    1/5 ██░░░   [Paid]     Yesterday   │   │
+│ │    sarah@example.com                20%         $50                    │   │
+│ │                                                             [Actions ▼] │   │
+│ └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                │
+│ Showing 1 to 10 of 55 entries                              [< 1 2 3 4 5 >]    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ BULK ACTIONS BAR (appears when items selected)                                │
+│ ┌─────────────────────────────────────────────────────────────────────────┐   │
+│ │ 3 users selected    [Send Reminder] [Mark Paid] [Export] [Delete]      │   │
+│ └─────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Mobile Layout (375px width) - PRIMARY DESIGN
+## Mobile Layout (375px width)
 
 ```
-┌──────────────────────┐
-│ STICKY SEARCH        │
-│ ┌──────────────────┐ │
-│ │🔍 Search player..│ │
-│ └──────────────────┘ │
-│ [Active (8)][Unpaid(3)]│
-└──────────────────────┘
-
-┌──────────────────────┐
-│ ACTIVE TAB SELECTED  │
-├──────────────────────┤
-│ Ken Dresdell         │
-│ 3 of 5 left          │
-│ Last: 2 days ago     │
-│ ┌──────────────────┐ │
-│ │   CHECK IN       │ │
-│ └──────────────────┘ │
-├──────────────────────┤
-│ Marie Leblanc        │
-│ 5 of 5 left          │
-│ Never used           │
-│ ┌──────────────────┐ │
-│ │   CHECK IN       │ │
-│ └──────────────────┘ │
-├──────────────────────┤
-│ Bob Wilson           │
-│ 1 of 5 left ⚠️       │
-│ Last: Yesterday      │
-│ ┌──────────────────┐ │
-│ │   CHECK IN       │ │
-│ └──────────────────┘ │
-└──────────────────────┘
-
-[Floating Actions Bar]
-[📷 Scan] [+ Add] [⚙️]
-```
-
-### Mobile - Unpaid Tab
-```
-┌──────────────────────┐
-│ UNPAID TAB SELECTED  │
-├──────────────────────┤
-│ ⚠️ John Doe          │
-│ Owes: $50            │
-│ 3 days overdue       │
-│ ┌──────────────────┐ │
-│ │   MARK PAID      │ │
-│ └──────────────────┘ │
-├──────────────────────┤
-│ ⚠️ Jane Smith        │
-│ Owes: $50            │
-│ 1 day overdue        │
-│ ┌──────────────────┐ │
-│ │   MARK PAID      │ │
-│ └──────────────────┘ │
-└──────────────────────┘
+┌────────────────────────┐
+│ ← Summer Hockey League │
+│                   [⋮]  │
+├────────────────────────┤
+│ 55 Active • $4.3k Rev  │
+│ ████████████████░░ 68% │
+├────────────────────────┤
+│ 🔍 Search users...     │
+├────────────────────────┤
+│ [All] [Active] [Unpaid]│
+├────────────────────────┤
+│ ┌────────────────────┐ │
+│ │ Ken Dresdell       │ │
+│ │ 3/5 sessions left  │ │
+│ │ [Active] [Paid]    │ │
+│ │              [⋮]   │ │
+│ └────────────────────┘ │
+│ ┌────────────────────┐ │
+│ │ Marie Leblanc      │ │
+│ │ 5/5 sessions left  │ │
+│ │ [Active] [Paid]    │ │
+│ │              [⋮]   │ │
+│ └────────────────────┘ │
+│ ┌────────────────────┐ │
+│ │ John Smith    ⚠️   │ │
+│ │ 0/5 sessions left  │ │
+│ │ [Pending][Overdue] │ │
+│ │              [⋮]   │ │
+│ └────────────────────┘ │
+└────────────────────────┘
 ```
 
 ---
 
 ## Component Specifications
 
-### 1. Search Bar (Primary Component)
+### 1. Header Section
 ```html
-<!-- Large Search Input with Keyboard Shortcut -->
-<div class="card">
-  <div class="card-body p-4">
-    <div class="input-icon">
-      <span class="input-icon-addon">
-        <i class="ti ti-search"></i>
-      </span>
-      <input type="text" 
-             class="form-control form-control-lg" 
-             placeholder="Search player name..."
-             style="height: 56px; font-size: 18px;"
-             autofocus>
-      <span class="position-absolute end-0 top-50 translate-middle-y me-3">
-        <kbd>/</kbd>
-      </span>
+<!-- Breadcrumb Navigation -->
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#">Activities</a></li>
+            <li class="breadcrumb-item active">Summer Hockey League 2024</li>
+          </ol>
+        </nav>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editActivityModal">
+          <i class="ti ti-edit me-2"></i>Edit Activity
+        </button>
+      </div>
     </div>
   </div>
 </div>
 ```
 
-### 2. Active Passports Table (Tabler.io Style)
+### 2. Activity Overview
 ```html
-<!-- Clean Table Design from Style Guide -->
-<div class="table-responsive">
-  <table class="table table-hover">
-    <thead>
-      <tr>
-        <th style="width: 300px;">Player</th>
-        <th>Sessions</th>
-        <th>Last Activity</th>
-        <th style="width: 200px;">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td style="vertical-align: middle;">
-          <div class="d-flex align-items-center">
-            <img src="avatar.jpg" class="rounded-circle me-3" width="48" height="48">
+<div class="card">
+  <div class="card-body">
+    <h1 class="card-title mb-2">Summer Hockey League 2024</h1>
+    <p class="text-muted mb-3">Professional hockey league for all skill levels • June 1 - Aug 31</p>
+    <div class="d-flex gap-2">
+      <span class="badge bg-green-lt">Public</span>
+      <span class="badge bg-blue-lt">Registration Open</span>
+      <span class="badge bg-purple-lt">55 Active Users</span>
+    </div>
+  </div>
+</div>
+```
+
+### 3. KPI Cards (Using Style Guide Components)
+```html
+<div class="row">
+  <div class="col-md-3">
+    <div class="card" style="border-radius: 12px;">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="text-muted small text-uppercase">Active Users</div>
+          <div class="dropdown">
+            <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              Last 7 days
+            </button>
+          </div>
+        </div>
+        <div class="h2 mb-1">55</div>
+        <div class="text-success small">
+          <i class="ti ti-trending-up me-1"></i>8%
+        </div>
+        <!-- Mini chart SVG here -->
+      </div>
+    </div>
+  </div>
+  <!-- Repeat for Revenue, Completion Rate, Pending Payments -->
+</div>
+```
+
+### 4. Filter Tabs & Search
+```html
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center">
+      <!-- Filter Pills -->
+      <div class="nav nav-pills">
+        <a class="nav-link active" href="#">All Users <span class="badge bg-secondary ms-2">55</span></a>
+        <a class="nav-link" href="#">Active <span class="badge bg-green ms-2">43</span></a>
+        <a class="nav-link" href="#">Unpaid <span class="badge bg-yellow ms-2">12</span></a>
+        <a class="nav-link" href="#">Completed <span class="badge bg-secondary ms-2">0</span></a>
+      </div>
+      
+      <!-- Search Input -->
+      <div class="position-relative" style="width: 300px;">
+        <div class="input-icon">
+          <span class="input-icon-addon">
+            <i class="ti ti-search"></i>
+          </span>
+          <input type="text" class="form-control" placeholder="Search users..." style="padding-right: 60px;">
+          <span class="position-absolute end-0 top-50 translate-middle-y me-3">
+            <kbd class="small text-muted">ctrl+k</kbd>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### 5. Main Data Table (Exact Style Guide Format)
+```html
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th width="40">
+            <input type="checkbox" class="form-check-input">
+          </th>
+          <th style="width: 300px;">User</th>
+          <th>Passport Status</th>
+          <th>Sessions</th>
+          <th>Payment Status</th>
+          <th>Last Activity</th>
+          <th style="width: 120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <input type="checkbox" class="form-check-input">
+          </td>
+          <td style="vertical-align: middle;">
+            <div class="d-flex align-items-center">
+              <img src="https://www.gravatar.com/avatar/1?d=identicon&s=48" 
+                   class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+              <div>
+                <div class="fw-bold">Ken Dresdell</div>
+                <div class="text-muted small">ken@example.com</div>
+              </div>
+            </div>
+          </td>
+          <td style="vertical-align: middle;">
+            <span class="badge bg-green-lt text-green-lt-fg">Active</span>
+          </td>
+          <td style="vertical-align: middle;">
             <div>
-              <div class="fw-bold">Ken Dresdell</div>
-              <div class="text-muted small">#MP-9e5d4c</div>
+              <div class="fw-bold">3/5 remaining</div>
+              <div class="progress" style="height: 6px;">
+                <div class="progress-bar bg-primary" style="width: 60%"></div>
+              </div>
+            </div>
+          </td>
+          <td style="vertical-align: middle;">
+            <span class="badge bg-success">Paid</span>
+            <div class="text-muted small">$50</div>
+          </td>
+          <td style="vertical-align: middle;">
+            <span class="text-muted">2 days ago</span>
+          </td>
+          <td style="vertical-align: middle;">
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Actions
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#">View Profile</a></li>
+                <li><a class="dropdown-item" href="#">Edit Passport</a></li>
+                <li><a class="dropdown-item" href="#">Add Session</a></li>
+                <li><a class="dropdown-item" href="#">Send Reminder</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#">Remove User</a></li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+        
+        <!-- Unpaid User Example -->
+        <tr>
+          <td>
+            <input type="checkbox" class="form-check-input">
+          </td>
+          <td style="vertical-align: middle;">
+            <div class="d-flex align-items-center">
+              <img src="https://www.gravatar.com/avatar/3?d=identicon&s=48" 
+                   class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+              <div>
+                <div class="fw-bold">John Smith</div>
+                <div class="text-muted small">john@example.com</div>
+              </div>
+            </div>
+          </td>
+          <td style="vertical-align: middle;">
+            <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending</span>
+          </td>
+          <td style="vertical-align: middle;">
+            <div>
+              <div class="fw-bold">0/5 remaining</div>
+              <div class="progress" style="height: 6px;">
+                <div class="progress-bar bg-primary" style="width: 0%"></div>
+              </div>
+            </div>
+          </td>
+          <td style="vertical-align: middle;">
+            <span class="badge bg-danger">Overdue</span>
+            <div class="text-muted small">$50 (3 days)</div>
+          </td>
+          <td style="vertical-align: middle;">
+            <span class="text-muted">5 days ago</span>
+          </td>
+          <td style="vertical-align: middle;">
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Actions
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#">Mark as Paid</a></li>
+                <li><a class="dropdown-item" href="#">Send Payment Reminder</a></li>
+                <li><a class="dropdown-item" href="#">View Payment History</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#">Cancel Passport</a></li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Pagination -->
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <span class="text-muted">Showing 1 to 10 of 55 entries</span>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item disabled">
+          <a class="page-link" href="#" tabindex="-1">
+            <i class="ti ti-chevron-left"></i>
+          </a>
+        </li>
+        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+        <li class="page-item"><a class="page-link" href="#">2</a></li>
+        <li class="page-item"><a class="page-link" href="#">3</a></li>
+        <li class="page-item"><a class="page-link" href="#">4</a></li>
+        <li class="page-item"><a class="page-link" href="#">5</a></li>
+        <li class="page-item">
+          <a class="page-link" href="#">
+            <i class="ti ti-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>
+```
+
+### 6. Bulk Actions Bar
+```html
+<!-- Shows when checkboxes are selected -->
+<div class="card border-primary" id="bulkActionsBar" style="display: none;">
+  <div class="card-body py-2">
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="text-primary fw-bold">3 users selected</span>
+      <div class="btn-group">
+        <button class="btn btn-sm btn-outline-primary">
+          <i class="ti ti-mail me-1"></i>Send Reminder
+        </button>
+        <button class="btn btn-sm btn-outline-success">
+          <i class="ti ti-check me-1"></i>Mark Paid
+        </button>
+        <button class="btn btn-sm btn-outline-secondary">
+          <i class="ti ti-download me-1"></i>Export
+        </button>
+        <button class="btn btn-sm btn-outline-danger">
+          <i class="ti ti-trash me-1"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### 7. Edit Activity Modal
+```html
+<div class="modal fade" id="editActivityModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Activity</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+            <label class="form-label">Activity Name</label>
+            <input type="text" class="form-control" value="Summer Hockey League 2024">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" rows="3">Professional hockey league for all skill levels</textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" class="form-control" value="2024-06-01">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">End Date</label>
+                <input type="date" class="form-control" value="2024-08-31">
+              </div>
             </div>
           </div>
-        </td>
-        <td style="vertical-align: middle;">
-          <div class="fw-bold">3/5 remaining</div>
-          <div class="progress" style="height: 6px;">
-            <div class="progress-bar bg-primary" style="width: 60%"></div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Price per Passport</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" value="50">
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Sessions per Passport</label>
+                <input type="number" class="form-control" value="5">
+              </div>
+            </div>
           </div>
-        </td>
-        <td style="vertical-align: middle;">
-          <span class="text-muted">2 days ago</span>
-        </td>
-        <td style="vertical-align: middle;">
-          <button class="btn btn-primary btn-lg" style="min-height: 48px;">
-            CHECK IN
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-```
-
-### 3. Mobile List Item
-```html
-<!-- Mobile-Optimized List Item -->
-<div class="card mb-3">
-  <div class="card-body p-3">
-    <div class="d-flex justify-content-between align-items-start mb-2">
-      <h4 class="mb-0">Ken Dresdell</h4>
-      <span class="badge bg-green">3/5</span>
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select class="form-select">
+              <option selected>Registration Open</option>
+              <option>Registration Closed</option>
+              <option>Activity Completed</option>
+              <option>Cancelled</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary">Save Changes</button>
+      </div>
     </div>
-    <p class="text-muted mb-3">Last: 2 days ago</p>
-    <button class="btn btn-primary w-100 btn-lg" style="height: 48px;">
-      CHECK IN
-    </button>
   </div>
-</div>
-```
-
-### 4. Recent Activity Strip
-```html
-<!-- Recent Activity for Quick Re-access -->
-<div class="alert alert-success d-flex align-items-center">
-  <div class="flex-fill">
-    <strong>Just now:</strong> Ken Dresdell checked in (2 sessions left)
-  </div>
-  <button class="btn btn-sm btn-outline-secondary">UNDO</button>
 </div>
 ```
 
 ---
 
-## Field-Optimized Features
+## Color Scheme (From Style Guide)
 
-### 1. Touch Targets
-- **Minimum Size**: 48x48px for all interactive elements
-- **Button Height**: 56px for primary actions (CHECK IN, MARK PAID)
-- **Spacing**: 12px between buttons to prevent mis-taps
-- **Mobile**: Full-width buttons for easy thumb access
+### Primary Colors
+- **Primary Blue**: #206bc4 - Main actions, links, primary buttons
+- **Success Green**: #2fb344 - Paid status, active states
+- **Warning Yellow**: #f76707 - Pending payments, attention needed
+- **Danger Red**: #d63939 - Overdue, errors, destructive actions
+- **Muted Gray**: #6c757d - Secondary text, inactive states
 
-### 2. High Contrast Mode
-```css
-/* High Contrast Mode for Poor Lighting */
-.high-contrast {
-  background: #000;
-  color: #fff;
-}
-.high-contrast .btn-primary {
-  background: #0066ff;
-  border: 2px solid #fff;
-  font-weight: bold;
-}
-.high-contrast .table {
-  border: 2px solid #fff;
-}
-```
-
-### 3. Keyboard Shortcuts
-- `/` - Focus search input
-- `Enter` - Check in selected player
-- `Esc` - Clear search
-- `Tab` - Navigate between players
-- `c` - Quick check-in for highlighted player
-- `p` - Mark as paid for highlighted player
-
-### 4. Speed Optimizations
-- **Auto-focus**: Search input focused on page load
-- **Instant Search**: Results appear as you type (no submit needed)
-- **Recent Activity**: One-click re-access to recent check-ins
-- **Optimistic Updates**: UI updates immediately, sync in background
-- **Offline Mode**: Service worker caches player list
-
----
-
-## Color Scheme (High Visibility)
-
-### Primary Actions
-- **Check In Button**: Bright Blue (#0066ff) - High contrast
-- **Mark Paid Button**: Bright Green (#00cc44) - Clear success action
-- **Warning Badges**: Bright Orange (#ff6600) - Attention grabbing
-
-### Status Indicators
-- **Active**: Green text/badge - Player can play
-- **Low Sessions**: Orange warning - 1-2 sessions left
-- **Unpaid**: Red badge - Payment required
-- **Expired**: Gray - No sessions remaining
-
-### Background Colors
-- **Normal Mode**: White background, black text
-- **High Contrast**: Black background, white text
-- **Selected Row**: Light blue highlight (#e3f2fd)
+### Badge Colors (Light Variants)
+- **bg-green-lt**: Active users, paid status
+- **bg-yellow-lt**: Pending payments, warnings
+- **bg-red-lt**: Overdue, inactive users
+- **bg-blue-lt**: Informational badges
+- **bg-purple-lt**: Special status indicators
 
 ---
 
 ## Interaction Patterns
 
-### 1. Search Flow
+### 1. Search & Filter
 ```javascript
-// Instant search with highlighting
+// Real-time search filtering
 searchInput.addEventListener('input', (e) => {
   const query = e.target.value.toLowerCase();
-  filterPlayers(query);
-  highlightFirstResult();
+  filterTableRows(query);
+  updateResultCount();
 });
 
-// Keyboard navigation
-searchInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    checkInFirstResult();
-  }
+// Tab filtering
+document.querySelectorAll('.nav-pills .nav-link').forEach(tab => {
+  tab.addEventListener('click', (e) => {
+    e.preventDefault();
+    const filter = e.target.dataset.filter;
+    applyFilter(filter);
+    updateActiveTab(e.target);
+  });
 });
 ```
 
-### 2. One-Tap Actions
-- **CHECK IN**: Single tap, immediate confirmation
-- **MARK PAID**: Single tap with success animation
-- **UNDO**: Available for 30 seconds after action
-- **Audio Feedback**: Optional beep on successful action
-
-### 3. Confirmation Feedback
+### 2. Bulk Selection
 ```javascript
-// Visual + Audio confirmation
-function confirmCheckIn(player) {
-  showSuccessToast(`✅ ${player.name} checked in`);
-  if (audioEnabled) playSuccessSound();
-  updateRecentActivity(player);
+// Select all checkbox
+selectAllCheckbox.addEventListener('change', (e) => {
+  const isChecked = e.target.checked;
+  document.querySelectorAll('tbody input[type="checkbox"]').forEach(cb => {
+    cb.checked = isChecked;
+  });
+  updateBulkActionsBar();
+});
+
+// Individual checkbox selection
+document.querySelectorAll('tbody input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener('change', updateBulkActionsBar);
+});
+
+function updateBulkActionsBar() {
+  const selectedCount = document.querySelectorAll('tbody input[type="checkbox"]:checked').length;
+  const bulkBar = document.getElementById('bulkActionsBar');
+  
+  if (selectedCount > 0) {
+    bulkBar.style.display = 'block';
+    bulkBar.querySelector('.text-primary').textContent = `${selectedCount} users selected`;
+  } else {
+    bulkBar.style.display = 'none';
+  }
 }
+```
+
+### 3. Inline Actions
+```javascript
+// Dropdown action handlers
+document.querySelectorAll('.dropdown-item').forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.preventDefault();
+    const action = e.target.textContent.trim();
+    const userId = e.target.closest('tr').dataset.userId;
+    handleUserAction(action, userId);
+  });
+});
+```
+
+### 4. Keyboard Shortcuts
+- `Ctrl + K` or `/` - Focus search input
+- `Escape` - Clear search and filters
+- `Ctrl + A` - Select all visible users
+- `Delete` - Delete selected users (with confirmation)
+
+---
+
+## Mobile Responsiveness
+
+### Breakpoint Behaviors
+- **Desktop (≥1200px)**: Full table with all columns visible
+- **Tablet (768px-1199px)**: Hide "Last Activity" column, condensed spacing
+- **Mobile (<768px)**: Card-based layout with essential information
+
+### Mobile Card Component
+```html
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div>
+        <h5 class="mb-1">Ken Dresdell</h5>
+        <small class="text-muted">ken@example.com</small>
+      </div>
+      <div class="dropdown">
+        <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown">
+          <i class="ti ti-dots-vertical"></i>
+        </button>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="#">View Profile</a></li>
+          <li><a class="dropdown-item" href="#">Edit Passport</a></li>
+          <li><a class="dropdown-item" href="#">Send Reminder</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="row g-2">
+      <div class="col-6">
+        <small class="text-muted d-block">Sessions</small>
+        <strong>3/5 remaining</strong>
+        <div class="progress mt-1" style="height: 4px;">
+          <div class="progress-bar" style="width: 60%"></div>
+        </div>
+      </div>
+      <div class="col-6">
+        <small class="text-muted d-block">Payment</small>
+        <span class="badge bg-success">Paid</span>
+      </div>
+    </div>
+  </div>
+</div>
 ```
 
 ---
 
-## Mobile-First Considerations
+## Accessibility Features
 
-### Touch Optimization
-- **Swipe Actions**: Swipe right to check in, left for options
-- **Pull to Refresh**: Update player list
-- **Sticky Search**: Always accessible at top
-- **Tab Toggle**: Easy switch between Active/Unpaid
+### WCAG 2.1 Compliance
+- **Color Contrast**: All text meets WCAG AA standards
+- **Keyboard Navigation**: Full keyboard support for all interactive elements
+- **Screen Reader Support**: Proper ARIA labels and roles
+- **Focus Indicators**: Clear visual focus states
 
-### Performance
-- **Lazy Loading**: Load 20 players at a time
-- **Virtual Scrolling**: For lists over 50 players
-- **Image Optimization**: 48x48px avatars, lazy loaded
-- **Minimal Animations**: Reduce motion for better performance
+### ARIA Implementation
+```html
+<!-- Table with ARIA labels -->
+<table class="table" role="table" aria-label="User management table">
+  <thead role="rowgroup">
+    <tr role="row">
+      <th role="columnheader" aria-sort="none">User</th>
+      <th role="columnheader" aria-sort="ascending">Status</th>
+    </tr>
+  </thead>
+</table>
 
-### Offline Capability
-```javascript
-// Service Worker for Offline Mode
-self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/players')) {
-    event.respondWith(
-      caches.match(event.request).then((response) => {
-        return response || fetch(event.request);
-      })
-    );
-  }
-});
+<!-- Status badges with screen reader text -->
+<span class="badge bg-success" aria-label="Payment status: Paid">Paid</span>
+<span class="badge bg-danger" aria-label="Payment overdue by 3 days">Overdue</span>
+```
+
+---
+
+## Performance Considerations
+
+### Optimization Strategies
+1. **Virtual Scrolling**: For tables with >100 rows
+2. **Lazy Loading**: Load user data in chunks of 50
+3. **Debounced Search**: 300ms delay on search input
+4. **Optimistic UI Updates**: Immediate visual feedback for actions
+5. **Client-side Caching**: Cache user data for quick filtering
+
+### Loading States
+```html
+<!-- Table loading skeleton -->
+<tr class="skeleton-loader">
+  <td><div class="skeleton-box" style="width: 200px; height: 20px;"></div></td>
+  <td><div class="skeleton-box" style="width: 80px; height: 20px;"></div></td>
+  <td><div class="skeleton-box" style="width: 120px; height: 20px;"></div></td>
+  <td><div class="skeleton-box" style="width: 100px; height: 20px;"></div></td>
+</tr>
 ```
 
 ---
@@ -367,144 +652,143 @@ self.addEventListener('fetch', (event) => {
 ## Implementation Notes
 
 ### Required Tabler.io Components
-1. **Tables** (table, table-hover, table-responsive)
-2. **Forms** (form-control, form-control-lg, input-icon)
-3. **Buttons** (btn, btn-primary, btn-lg)
-4. **Cards** (card, card-body)
-5. **Badges** (badge, bg-green, bg-warning)
-6. **Alerts** (alert, alert-success)
-7. **Progress** (progress, progress-bar)
+1. **Cards** (card, card-body, card-header, card-footer)
+2. **Tables** (table, table-hover, table-responsive)
+3. **Badges** (badge, bg-*-lt color variants)
+4. **Buttons** (btn, btn-primary, btn-outline-*, dropdown)
+5. **Forms** (form-control, form-select, input-group)
+6. **Progress** (progress, progress-bar)
+7. **Modals** (modal, modal-dialog, modal-content)
+8. **Navigation** (nav, nav-pills, breadcrumb)
+9. **Utilities** (spacing, flexbox, text utilities)
 
 ### Flask Template Structure
 ```python
 templates/
   ├── base.html
-  ├── activity_dashboard_field.html  # New field-optimized design
+  ├── activity_dashboard.html  # New SaaS-style dashboard
   └── components/
-      ├── search_bar.html
-      ├── player_table.html
-      └── mobile_player_list.html
+      ├── kpi_cards.html
+      ├── user_table.html
+      ├── filter_tabs.html
+      ├── edit_activity_modal.html
+      └── bulk_actions_bar.html
 ```
 
-### API Endpoints (Simplified)
+### API Endpoints
 ```python
-# Minimal endpoints for speed
-GET  /api/activity/{id}/active-players  # Players with sessions
-GET  /api/activity/{id}/unpaid-players  # Players who owe money
-POST /api/player/{id}/check-in         # Quick check-in
-POST /api/player/{id}/mark-paid        # Mark as paid
-GET  /api/activity/{id}/recent         # Recent activity
+# RESTful API design
+GET  /api/activities/{id}              # Get activity details
+PUT  /api/activities/{id}              # Update activity
+GET  /api/activities/{id}/users        # Get users with filters
+POST /api/activities/{id}/users/{uid}  # Update user status
+POST /api/activities/{id}/bulk-action  # Bulk operations
+GET  /api/activities/{id}/stats        # Get KPI metrics
 ```
 
-### JavaScript (Field Operations)
+### JavaScript Modules
 ```javascript
-// Focus on speed and reliability
+// Modular JavaScript structure
+import { TableManager } from './modules/TableManager.js';
+import { FilterController } from './modules/FilterController.js';
+import { BulkActions } from './modules/BulkActions.js';
+import { ActivityEditor } from './modules/ActivityEditor.js';
+import { SearchHandler } from './modules/SearchHandler.js';
+
+// Initialize dashboard
 document.addEventListener('DOMContentLoaded', () => {
-  // Auto-focus search
-  document.getElementById('playerSearch').focus();
-  
-  // Keyboard shortcuts
-  initKeyboardShortcuts();
-  
-  // Load players
-  loadActivePlayers();
-  
-  // Enable offline mode
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-  }
+  const dashboard = new ActivityDashboard({
+    tableId: 'userTable',
+    searchId: 'userSearch',
+    filtersId: 'filterTabs'
+  });
+  dashboard.init();
 });
 ```
 
 ---
 
-## Accessibility Features
+## Security Considerations
 
-### Field Accessibility
-- **Large Text**: 18px minimum for readability
-- **High Contrast**: Toggle for poor lighting
-- **Clear Labels**: Simple, descriptive text
-- **Audio Feedback**: Optional for confirmations
-- **Error Prevention**: Confirmation for destructive actions
+### Data Protection
+1. **CSRF Protection**: All forms include CSRF tokens
+2. **XSS Prevention**: Sanitize all user inputs
+3. **SQL Injection**: Use parameterized queries
+4. **Rate Limiting**: Limit API calls to prevent abuse
+5. **Authentication**: Require admin role for all operations
 
-### Keyboard Navigation
-- Full keyboard support for non-touch devices
-- Tab navigation through all interactive elements
-- Clear focus indicators (3px blue border)
-- Shortcuts displayed on hover
-
----
-
-## Performance Metrics
-
-### Target Performance (Field Conditions)
-- **Initial Load**: < 1 second
-- **Search Response**: < 100ms
-- **Check-in Action**: < 200ms
-- **Offline Mode**: Full functionality
-
-### Optimization Strategies
-1. **Minimal Dependencies**: Only essential JS/CSS
-2. **Local Storage**: Cache player list
-3. **Progressive Enhancement**: Works without JS
-4. **CDN Assets**: Tabler.io from CDN
-5. **Compressed Data**: Minimal JSON responses
+### Permissions Matrix
+| Action | Admin | Manager | User |
+|--------|-------|---------|------|
+| View Dashboard | ✓ | ✓ | ✗ |
+| Edit Activity | ✓ | ✗ | ✗ |
+| Manage Users | ✓ | ✓ | ✗ |
+| Export Data | ✓ | ✓ | ✗ |
+| Bulk Actions | ✓ | ✗ | ✗ |
 
 ---
 
 ## Testing Checklist
 
-### Field Testing
-- [ ] Test with gloves on
-- [ ] Test in bright sunlight
-- [ ] Test in dim lighting
-- [ ] Test with cold fingers
-- [ ] Test on various phones/tablets
-- [ ] Test offline mode
-- [ ] Test with 100+ players
-
 ### Functional Testing
-- [ ] Search finds players instantly
-- [ ] Check-in completes in one tap
-- [ ] Mark paid works correctly
-- [ ] Recent activity displays
-- [ ] Undo function works
-- [ ] High contrast mode toggles
-- [ ] Audio feedback (if enabled)
+- [ ] Search filters users correctly
+- [ ] Filter tabs show accurate counts
+- [ ] Pagination works properly
+- [ ] Bulk selection/deselection works
+- [ ] Edit activity modal saves changes
+- [ ] Dropdown actions trigger correctly
+- [ ] Export functionality works
+- [ ] Payment status updates properly
 
-### Device Testing
-- [ ] iPhone (various sizes)
-- [ ] Android phones
-- [ ] iPad/Tablets
-- [ ] Desktop (backup option)
+### Responsive Testing
+- [ ] Desktop layout (1440px+)
+- [ ] Laptop layout (1024px-1439px)
+- [ ] Tablet layout (768px-1023px)
+- [ ] Mobile layout (<768px)
+- [ ] Landscape orientation on mobile
+
+### Accessibility Testing
+- [ ] Keyboard navigation complete
+- [ ] Screen reader compatible
+- [ ] Color contrast passes WCAG AA
+- [ ] Focus indicators visible
+- [ ] ARIA labels present
+
+### Performance Testing
+- [ ] Page loads in <2 seconds
+- [ ] Search responds in <300ms
+- [ ] Smooth scrolling with 100+ rows
+- [ ] No memory leaks with extended use
 
 ---
 
 ## Future Enhancements
 
 ### Phase 2 Features
-1. **Voice Search**: "Check in Ken Dresdell"
-2. **Facial Recognition**: Camera-based check-in
-3. **Team Lists**: Pre-game roster loading
-4. **Batch Actions**: Check in multiple players
+1. **Advanced Filtering**: Multi-column filtering with saved views
+2. **Real-time Updates**: WebSocket for live user status updates
+3. **Analytics Dashboard**: Detailed charts and insights
+4. **Email Templates**: Customizable reminder emails
+5. **Audit Log**: Track all administrative actions
 
 ### Phase 3 Features
-1. **Predictive Search**: Learn common players
-2. **NFC Support**: Tap phone/card to check in
-3. **Watch App**: Check in from smartwatch
-4. **Integration**: Sync with team management apps
+1. **Batch Import**: CSV/Excel user import
+2. **Custom Fields**: Add activity-specific user fields
+3. **Automated Workflows**: Trigger actions based on rules
+4. **API Access**: Public API for integrations
+5. **White-label Options**: Customizable branding
 
 ---
 
 ## Conclusion
 
-This wireframe represents a complete paradigm shift from a traditional dashboard to a field operations tool. Every design decision prioritizes speed, simplicity, and reliability in challenging real-world conditions.
+This modern SaaS activity dashboard represents a complete transformation from a field operations tool to a sophisticated administrative interface. The design prioritizes:
 
-**Key Differentiators:**
-1. **Search-first interface** - Players found in seconds
-2. **One-tap actions** - No multi-step processes
-3. **Field-optimized UI** - Works with gloves, in any lighting
-4. **Minimal data display** - Only what's needed for decisions
-5. **Mobile-first design** - Built for phones/tablets in the field
+1. **Professional Aesthetics**: Clean, modern interface matching leading SaaS platforms
+2. **Administrative Efficiency**: Quick access to all management functions
+3. **Data Clarity**: Clear presentation of user status and payment information
+4. **Scalability**: Handles large datasets with pagination and filtering
+5. **Responsiveness**: Optimized for all device sizes
+6. **Component Reusability**: Exclusively uses Tabler.io components from the style guide
 
-This is not a dashboard for analyzing data - it's a tool for getting players on the ice quickly and efficiently when they don't have their QR codes.
+The dashboard provides administrators with a powerful, intuitive interface for managing activities, tracking user participation, monitoring payments, and making data-driven decisions—all while maintaining a professional, modern aesthetic suitable for a SaaS application.
