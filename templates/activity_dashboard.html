@@ -5,34 +5,6 @@
 {% block head %}
 <style>
   /* Modern SaaS Dashboard Styles */
-  .kpi-card {
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-  }
-  
-  .kpi-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
-  }
-  
-  .kpi-trend {
-    font-size: 0.875rem;
-    font-weight: 600;
-  }
-  
-  .kpi-trend.positive {
-    color: #2fb344;
-  }
-  
-  .kpi-trend.negative {
-    color: #d63939;
-  }
-  
-  .mini-chart {
-    height: 40px;
-    margin-top: 0.5rem;
-  }
   
   .search-container {
     position: relative;
@@ -138,9 +110,32 @@
   
   /* Mobile Responsive Styles */
   @media (max-width: 768px) {
-    .kpi-card {
-      margin-bottom: 1rem;
+    .activity-header-split {
+      padding: 1.5rem 1rem;
     }
+    
+    .activity-header-split .col-lg-5 {
+      order: -1;
+      margin-bottom: 1.5rem;
+    }
+    
+    .activity-featured-image {
+      height: 180px;
+    }
+    
+    .activity-title {
+      font-size: 1.75rem;
+    }
+    
+    .activity-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .activity-actions .btn {
+      flex: 1;
+    }
+
     
     .filter-pills {
       overflow-x: auto;
@@ -197,6 +192,86 @@
     }
   }
   
+  /* Split Layout Activity Header */
+  .activity-header-split {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .activity-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: #1a1a1a;
+  }
+
+  .activity-description {
+    font-size: 1rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+  }
+
+  .activity-meta .badge {
+    margin-right: 0.5rem;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .activity-image-card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transition: transform 0.3s ease;
+  }
+
+  .activity-image-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  .activity-featured-image {
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .activity-image-card:hover .image-overlay {
+    opacity: 1;
+  }
+
+  .btn-ghost-light {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(4px);
+  }
+
+  .btn-ghost-light:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
   /* Loading States */
   .skeleton-loader {
     background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
@@ -217,143 +292,185 @@
 
 {% block content %}
 <div class="page-wrapper">
-  <!-- Header with Breadcrumb -->
-  <div class="page-header d-print-none">
-    <div class="container-xl">
-      <div class="row g-2 align-items-center">
-        <div class="col">
-          <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-              <li class="breadcrumb-item"><a href="{{ url_for('list_activities') }}">Activities</a></li>
-              <li class="breadcrumb-item active" aria-current="page">Summer Hockey League 2024</li>
-            </ol>
-          </nav>
-        </div>
-        <div class="col-auto">
-          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editActivityModal">
-            <i class="ti ti-edit me-2"></i>Edit Activity
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div class="page-body">
-    <div class="container-xl">
-      <!-- Activity Overview Card -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <h1 class="card-title mb-2">Summer Hockey League 2024</h1>
-          <p class="text-muted mb-3">Professional hockey league for all skill levels • June 1 - Aug 31</p>
-          <div class="d-flex gap-2 flex-wrap">
-            <span class="badge bg-green-lt">Public</span>
-            <span class="badge bg-blue-lt">Registration Open</span>
-            <span class="badge bg-purple-lt">55 Active Users</span>
+    <div class="dashboard-container">
+      <!-- Split Layout Header with Activity Image -->
+      <div class="activity-header-split">
+        <div class="row g-4 align-items-center">
+          <div class="col-lg-7">
+            <div class="activity-info">
+              <h1 class="activity-title">Summer Hockey League 2024</h1>
+              <p class="activity-description">Professional hockey league for all skill levels • June 1 - Aug 31</p>
+              <div class="activity-actions">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editActivityModal">
+                  <i class="ti ti-edit me-2"></i>Edit Activity
+                </button>
+                <button class="btn btn-success ms-2">
+                  <i class="ti ti-scan me-2"></i>Scan Activity
+                </button>
+                <button class="btn btn-outline-secondary ms-2">
+                  <i class="ti ti-share me-2"></i>Share
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="activity-image-card">
+              <!-- Use a placeholder image for now, will be replaced with actual activity image -->
+              <img src="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=400&fit=crop" 
+                   class="activity-featured-image" 
+                   alt="Summer Hockey League 2024">
+              <div class="image-overlay">
+                <button class="btn btn-sm btn-ghost-light">
+                  <i class="ti ti-camera me-1"></i>Change Image
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- KPI Metrics Row -->
       <div class="row row-cards mb-4">
+        <!-- Revenue Card -->
         <div class="col-sm-6 col-lg-3">
-          <div class="card kpi-card">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase fw-semibold">Active Users</div>
+                <div class="text-muted small text-uppercase">REVENUE</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm btn-ghost-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="ti ti-dots-vertical"></i>
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
                   </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
+                  <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="#">Last 7 days</a></li>
                     <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                    <li><a class="dropdown-item" href="#">All time</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="h2 mb-1">55</div>
-              <div class="kpi-trend positive">
-                <i class="ti ti-trending-up me-1"></i>8% from last week
-              </div>
-              <div class="mini-chart">
-                <svg width="100%" height="40" viewBox="0 0 200 40">
-                  <polyline points="0,35 40,30 80,20 120,25 160,15 200,10" stroke="#2fb344" stroke-width="2" fill="none" opacity="0.5"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <div class="card kpi-card">
-            <div class="card-body">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase fw-semibold">Revenue</div>
-                <div class="dropdown">
-                  <button class="btn btn-sm btn-ghost-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="ti ti-dots-vertical"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                    <li><a class="dropdown-item" href="#">All time</a></li>
+                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
               <div class="h2 mb-1">$4,300</div>
-              <div class="kpi-trend positive">
-                <i class="ti ti-trending-up me-1"></i>12% from last month
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-success me-2">12% <i class="ti ti-trending-up"></i></div>
               </div>
-              <div class="mini-chart">
-                <svg width="100%" height="40" viewBox="0 0 200 40">
-                  <polyline points="0,30 40,25 80,28 120,20 160,18 200,5" stroke="#206bc4" stroke-width="2" fill="none" opacity="0.5"/>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                  <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
+                        fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Active Users Card -->
         <div class="col-sm-6 col-lg-3">
-          <div class="card kpi-card">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase fw-semibold">Completion Rate</div>
+                <div class="text-muted small text-uppercase">ACTIVE USERS</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm btn-ghost-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="ti ti-dots-vertical"></i>
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
                   </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#">This activity</a></li>
-                    <li><a class="dropdown-item" href="#">All activities</a></li>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">68%</div>
-              <div class="text-muted small">Sessions used vs total</div>
-              <div class="progress mt-2" style="height: 8px;">
-                <div class="progress-bar bg-primary" style="width: 68%"></div>
+              <div class="h2 mb-1">55</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-success me-2">8% <i class="ti ti-trending-up"></i></div>
+              </div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                  <!-- Bar chart for active users -->
+                  <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                  <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                  <rect x="55" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                  <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                  <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                  <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                  <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                  <rect x="130" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
+                  <rect x="145" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
+                  <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
+                  <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
+                  <rect x="190" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
+                  <rect x="205" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                  <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                  <rect x="235" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
+                  <rect x="250" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                  <rect x="265" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  <rect x="280" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                </svg>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Unpaid Passports Card -->
         <div class="col-sm-6 col-lg-3">
-          <div class="card kpi-card">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase fw-semibold">Pending Payments</div>
+                <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm btn-ghost-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="ti ti-dots-vertical"></i>
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
                   </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#">View all</a></li>
-                    <li><a class="dropdown-item" href="#">Send reminders</a></li>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
               <div class="h2 mb-1">12</div>
-              <div class="kpi-trend negative">
-                <i class="ti ti-trending-down me-1"></i>3 overdue
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-danger me-2">3 overdue <i class="ti ti-alert-circle"></i></div>
               </div>
-              <div class="text-muted small mt-2">Total: $600</div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                  <path d="M 0,25 L 30,28 L 60,26 L 90,30 L 120,32 L 150,29 L 180,31 L 210,28 L 240,30 L 270,27 L 300,29" 
+                        fill="none" stroke="#f76707" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Profit Card -->
+        <div class="col-sm-6 col-lg-3">
+          <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">ACTIVITY PROFIT</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1">$3,100</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-success me-2">72% margin <i class="ti ti-trending-up"></i></div>
+              </div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                  <path d="M 0,30 L 30,28 L 60,25 L 90,22 L 120,20 L 150,18 L 180,15 L 210,12 L 240,10 L 270,8 L 300,5" 
+                        fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
