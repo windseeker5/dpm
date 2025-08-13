@@ -241,12 +241,12 @@
       <!-- Search Bar -->
       <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center">
-          <div class="position-relative" style="max-width: 600px; flex: 1;">
+          <div class="position-relative flex-fill me-3">
             <div class="input-icon">
               <span class="input-icon-addon">
                 <i class="ti ti-search fs-3"></i>
               </span>
-              <input type="text" id="userSearch" class="form-control form-control-lg shadow-sm" 
+              <input type="text" id="userSearch" class="form-control shadow-sm" 
                      placeholder="Search passports and users..." 
                      style="padding-right: 80px; border-radius: 0.5rem; transition: all 0.3s ease;"
                      onfocus="this.style.boxShadow='0 0 0 0.25rem rgba(32, 107, 196, 0.15)'" 
@@ -256,9 +256,9 @@
               </span>
             </div>
           </div>
-          <div class="ms-3">
+          <div class="flex-shrink-0">
             <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
-              <i class="ti ti-plus me-1"></i>Add New Passport
+              <i class="ti ti-plus me-1"></i>Passport
             </a>
           </div>
         </div>
@@ -691,7 +691,6 @@ function initializeActivityDashboard() {
     tab.addEventListener('click', handleFilterChange);
   });
   
-  
   // KPI dropdowns
   initializeKPIDropdowns();
   
@@ -703,23 +702,51 @@ function initializeActivityDashboard() {
   document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
     item.addEventListener('click', handleUserAction);
   });
+  
+  // Handle window resize to update search behavior
+  window.addEventListener('resize', debounce(() => {
+    // Re-trigger search to update for new layout
+    const searchInput = document.getElementById('userSearch');
+    if (searchInput && searchInput.value) {
+      handleSearch({ target: searchInput });
+    }
+  }, 300));
 }
 
-// Search functionality
+// Search functionality - works for both desktop table and mobile cards
 function handleSearch(e) {
   const query = e.target.value.toLowerCase();
-  const rows = document.querySelectorAll('tbody tr');
   
-  rows.forEach(row => {
-    const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
-    const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
-    
-    if (userName.includes(query) || userEmail.includes(query)) {
-      row.style.display = '';
-    } else {
-      row.style.display = 'none';
-    }
-  });
+  // Check if we're in mobile view
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isMobile) {
+    // Search mobile cards
+    const mobileCards = document.querySelectorAll('.mobile-only .user-card');
+    mobileCards.forEach(card => {
+      const userName = card.querySelector('h5')?.textContent.toLowerCase() || '';
+      const userEmail = card.querySelector('small.text-muted')?.textContent.toLowerCase() || '';
+      
+      if (userName.includes(query) || userEmail.includes(query)) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  } else {
+    // Search desktop table rows
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+      const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+      
+      if (userName.includes(query) || userEmail.includes(query)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
   
   updateResultCount();
 }
@@ -771,14 +798,26 @@ function applyFilter(filter) {
 }
 
 
-// Update result count
+// Update result count - works for both desktop and mobile
 function updateResultCount() {
-  const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
-  const totalRows = document.querySelectorAll('tbody tr');
-  const footerText = document.querySelector('.card-footer .text-muted');
+  const isMobile = window.innerWidth <= 768;
+  let visibleCount, totalCount;
   
+  if (isMobile) {
+    const visibleCards = document.querySelectorAll('.mobile-only .user-card:not([style*="display: none"])');
+    const totalCards = document.querySelectorAll('.mobile-only .user-card');
+    visibleCount = visibleCards.length;
+    totalCount = totalCards.length;
+  } else {
+    const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+    const totalRows = document.querySelectorAll('tbody tr');
+    visibleCount = visibleRows.length;
+    totalCount = totalRows.length;
+  }
+  
+  const footerText = document.querySelector('.card-footer .text-muted');
   if (footerText) {
-    footerText.textContent = `Showing ${visibleRows.length} of ${totalRows.length} entries`;
+    footerText.textContent = `Showing ${visibleCount} of ${totalCount} entries`;
   }
 }
 
