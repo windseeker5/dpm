@@ -251,14 +251,14 @@
                      style="padding-right: 80px; border-radius: 0.5rem; transition: all 0.3s ease;"
                      onfocus="this.style.boxShadow='0 0 0 0.25rem rgba(32, 107, 196, 0.15)'" 
                      onblur="this.style.boxShadow='0 0.125rem 0.25rem rgba(0,0,0,0.075)'">
-              <span class="position-absolute end-0 top-50 translate-middle-y me-3">
+              <span class="position-absolute end-0 top-50 translate-middle-y me-3 d-none d-md-block">
                 <kbd class="text-muted">ctrl + k</kbd>
               </span>
             </div>
           </div>
           <div class="flex-shrink-0">
             <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
-              <i class="ti ti-plus me-1"></i>Passport
+              <i class="ti ti-plus me-1 me-md-1"></i><span class="d-none d-md-inline">Passport</span>
             </a>
           </div>
         </div>
@@ -630,44 +630,6 @@
       </div>
       {% endif %}
 
-      <!-- Mobile Card Layout -->
-      <div class="mobile-only" style="display: none;">
-        {% for p in passes[:3] %}
-        <div class="user-card">
-          <div class="user-card-header">
-            <div>
-              <h5 class="mb-1">{{ p.user.name }}</h5>
-              <small class="text-muted">{{ p.user.email }}</small>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown">
-                <i class="ti ti-dots-vertical"></i>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="{{ url_for('show_pass', pass_code=p.pass_code) }}">View Profile</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=p.id) }}">Edit Passport</a></li>
-                <li><a class="dropdown-item" href="#">Send Reminder</a></li>
-              </ul>
-            </div>
-          </div>
-          <div class="user-card-stats">
-            <div>
-              <small class="text-muted d-block">Sessions</small>
-              {% set total_sessions = (p.passport_type.sessions_included if p.passport_type else 5) %}
-              <strong>{{ p.uses_remaining }}/{{ total_sessions }} remaining</strong>
-              <div class="sessions-progress mt-1">
-                <div class="sessions-progress-bar bg-primary" style="width: {{ (p.uses_remaining / total_sessions * 100) if total_sessions > 0 else 0 }}%"></div>
-              </div>
-            </div>
-            <div>
-              <small class="text-muted d-block">Payment</small>
-              <span class="badge bg-{{ 'success' if p.paid else 'warning' }}">{{ 'Paid' if p.paid else 'Unpaid' }}</span>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-
-      </div>
     </div>
   </div>
 </div>
@@ -703,9 +665,9 @@ function initializeActivityDashboard() {
     item.addEventListener('click', handleUserAction);
   });
   
-  // Handle window resize to update search behavior
+  // Handle window resize to update search behavior (simplified since we use unified approach)
   window.addEventListener('resize', debounce(() => {
-    // Re-trigger search to update for new layout
+    // Re-trigger search to update result count
     const searchInput = document.getElementById('userSearch');
     if (searchInput && searchInput.value) {
       handleSearch({ target: searchInput });
@@ -713,40 +675,22 @@ function initializeActivityDashboard() {
   }, 300));
 }
 
-// Search functionality - works for both desktop table and mobile cards
+// Search functionality - unified approach for both mobile and desktop
 function handleSearch(e) {
   const query = e.target.value.toLowerCase();
   
-  // Check if we're in mobile view
-  const isMobile = window.innerWidth <= 768;
-  
-  if (isMobile) {
-    // Search mobile cards
-    const mobileCards = document.querySelectorAll('.mobile-only .user-card');
-    mobileCards.forEach(card => {
-      const userName = card.querySelector('h5')?.textContent.toLowerCase() || '';
-      const userEmail = card.querySelector('small.text-muted')?.textContent.toLowerCase() || '';
-      
-      if (userName.includes(query) || userEmail.includes(query)) {
-        card.style.display = '';
-      } else {
-        card.style.display = 'none';
-      }
-    });
-  } else {
-    // Search desktop table rows
-    const rows = document.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-      const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
-      const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
-      
-      if (userName.includes(query) || userEmail.includes(query)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
-  }
+  // Use unified search logic that targets table rows (works for both mobile and desktop)
+  const rows = document.querySelectorAll('tbody tr');
+  rows.forEach(row => {
+    const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+    const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+    
+    if (userName.includes(query) || userEmail.includes(query)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
   
   updateResultCount();
 }
@@ -798,22 +742,12 @@ function applyFilter(filter) {
 }
 
 
-// Update result count - works for both desktop and mobile
+// Update result count - unified approach for both mobile and desktop
 function updateResultCount() {
-  const isMobile = window.innerWidth <= 768;
-  let visibleCount, totalCount;
-  
-  if (isMobile) {
-    const visibleCards = document.querySelectorAll('.mobile-only .user-card:not([style*="display: none"])');
-    const totalCards = document.querySelectorAll('.mobile-only .user-card');
-    visibleCount = visibleCards.length;
-    totalCount = totalCards.length;
-  } else {
-    const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
-    const totalRows = document.querySelectorAll('tbody tr');
-    visibleCount = visibleRows.length;
-    totalCount = totalRows.length;
-  }
+  const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+  const totalRows = document.querySelectorAll('tbody tr');
+  const visibleCount = visibleRows.length;
+  const totalCount = totalRows.length;
   
   const footerText = document.querySelector('.card-footer .text-muted');
   if (footerText) {
