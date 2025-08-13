@@ -240,19 +240,26 @@
 
       <!-- Search Bar -->
       <div class="mb-4">
-        <div class="position-relative" style="max-width: 600px;">
-          <div class="input-icon">
-            <span class="input-icon-addon">
-              <i class="ti ti-search fs-3"></i>
-            </span>
-            <input type="text" id="userSearch" class="form-control form-control-lg shadow-sm" 
-                   placeholder="Search passports and users..." 
-                   style="padding-right: 80px; border-radius: 0.5rem; transition: all 0.3s ease;"
-                   onfocus="this.style.boxShadow='0 0 0 0.25rem rgba(32, 107, 196, 0.15)'" 
-                   onblur="this.style.boxShadow='0 0.125rem 0.25rem rgba(0,0,0,0.075)'">
-            <span class="position-absolute end-0 top-50 translate-middle-y me-3">
-              <kbd class="text-muted">ctrl + k</kbd>
-            </span>
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="position-relative" style="max-width: 600px; flex: 1;">
+            <div class="input-icon">
+              <span class="input-icon-addon">
+                <i class="ti ti-search fs-3"></i>
+              </span>
+              <input type="text" id="userSearch" class="form-control form-control-lg shadow-sm" 
+                     placeholder="Search passports and users..." 
+                     style="padding-right: 80px; border-radius: 0.5rem; transition: all 0.3s ease;"
+                     onfocus="this.style.boxShadow='0 0 0 0.25rem rgba(32, 107, 196, 0.15)'" 
+                     onblur="this.style.boxShadow='0 0.125rem 0.25rem rgba(0,0,0,0.075)'">
+              <span class="position-absolute end-0 top-50 translate-middle-y me-3">
+                <kbd class="text-muted">ctrl + k</kbd>
+              </span>
+            </div>
+          </div>
+          <div class="ms-3">
+            <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
+              <i class="ti ti-plus me-1"></i>Add New Passport
+            </a>
           </div>
         </div>
       </div>
@@ -261,27 +268,22 @@
 
       <!-- Main Data Table (Responsive) -->
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header">
           <h3 class="card-title">
             <i class="ti ti-passport me-2"></i>Digital Passes
           </h3>
-          <div class="d-flex align-items-center gap-2">
-            <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
-              <i class="ti ti-plus me-1"></i>Add New Passport
-            </a>
-          </div>
         </div>
         <div class="table-responsive">
           <table class="table table-hover user-table">
             <thead>
               <tr>
                 <th style="width: 300px;">User</th>
-                <th class="d-md-none">State</th>
+                <th class="d-md-none text-center">Combined Status</th>
                 <th class="d-none d-md-table-cell">Activity</th>
-                <th class="d-none d-md-table-cell">Pass Type</th>
-                <th class="d-none d-md-table-cell">Created</th>
-                <th class="d-none d-md-table-cell">Remaining</th>
-                <th class="d-none d-md-table-cell">Status</th>
+                <th class="d-none d-md-table-cell text-center">Pass Type</th>
+                <th class="d-none d-md-table-cell text-center">Created</th>
+                <th class="d-none d-md-table-cell text-center">Remaining</th>
+                <th class="d-none d-md-table-cell text-center">Status</th>
                 <th style="width: 120px;">Actions</th>
               </tr>
             </thead>
@@ -298,26 +300,32 @@
                     </div>
                   </div>
                 </td>
-                <td class="d-md-none" style="vertical-align: middle;">
-                  <span class="badge bg-{{ 'green-lt text-green-lt-fg' if p.paid else 'red-lt text-red-lt-fg' }}">{{ p.uses_remaining }}</span>
+                <td class="d-md-none text-center" style="vertical-align: middle;">
+                  <span class="badge bg-{{ 'green-lt' if p.paid else 'red-lt' }}">{{ p.uses_remaining }}</span>
                 </td>
                 <td class="d-none d-md-table-cell" style="vertical-align: middle;">
                   {{ activity.name }}
                 </td>
-                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-                  {{ p.passport_type.name if p.passport_type else 'Standard' }}
+                <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+                  {% if p.passport_type %}
+                    {{ p.passport_type.name }}
+                  {% elif p.passport_type_name %}
+                    {{ p.passport_type_name }}
+                  {% else %}
+                    Standard
+                  {% endif %}
                 </td>
-                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
                   {% if p.created_dt %}
                     {{ p.created_dt.strftime('%Y-%m-%d') }}
                   {% else %}
                     <span class="text-muted">Unknown</span>
                   {% endif %}
                 </td>
-                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
                   {{ p.uses_remaining }}
                 </td>
-                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
                   <span class="badge bg-{{ 'green-lt text-green-lt-fg' if p.paid else 'red-lt text-red-lt-fg' }}">{{ 'Paid' if p.paid else 'Unpaid' }}</span>
                 </td>
                 <td style="vertical-align: middle;">
