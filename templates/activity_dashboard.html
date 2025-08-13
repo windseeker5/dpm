@@ -17,9 +17,12 @@
   position: absolute !important;
   transform: none !important;
   top: 100% !important;
-  left: 0 !important;
   min-width: 160px;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+.table-responsive .dropdown-menu.dropdown-menu-end {
+  right: 0 !important;
+  left: auto !important;
 }
 
 /* Ensure card doesn't clip dropdowns */
@@ -312,7 +315,7 @@
                 <td style="vertical-align: middle;">
                   <div class="dropdown">
                     <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
-                    <div class="dropdown-menu">
+                    <div class="dropdown-menu dropdown-menu-end">
                       {% if p.uses_remaining > 0 %}
                       <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-modal-{{ p.id }}">
                         <i class="ti ti-check me-2"></i>Redeem
@@ -485,7 +488,7 @@
                   <td style="vertical-align: middle;">
                     <div class="dropdown">
                       <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
-                      <div class="dropdown-menu">
+                      <div class="dropdown-menu dropdown-menu-end">
                         <a class="dropdown-item text-success" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}">
                           <i class="ti ti-check me-2"></i>Approve & Create Pass
                         </a>
