@@ -278,7 +278,7 @@
             <thead>
               <tr>
                 <th style="width: 300px;">User</th>
-                <th class="d-md-none text-center">Combined Status</th>
+                <th class="d-md-none text-center">Remain</th>
                 <th class="d-none d-md-table-cell">Activity</th>
                 <th class="d-none d-md-table-cell text-center">Pass Type</th>
                 <th class="d-none d-md-table-cell text-center">Created</th>
@@ -293,7 +293,7 @@
                 <td style="vertical-align: middle;">
                   <div class="d-flex align-items-center">
                     <img src="https://www.gravatar.com/avatar/{{ p.user.email|lower|trim|encode_md5 }}?d=identicon&s=40" 
-                         class="rounded-circle me-3 user-avatar" alt="Avatar">
+                         class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
                     <div>
                       <div class="fw-bold">{{ p.user.name }}</div>
                       <div class="text-muted small">{{ p.user.email }}</div>
@@ -330,7 +330,10 @@
                 </td>
                 <td style="vertical-align: middle;">
                   <div class="dropdown">
-                    <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
+                    <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                      <span class="d-none d-md-inline">Actions</span>
+                      <i class="ti ti-menu-2 d-md-none"></i>
+                    </a>
                     <div class="dropdown-menu dropdown-menu-end">
                       {% if p.uses_remaining > 0 %}
                       <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-modal-{{ p.id }}">
