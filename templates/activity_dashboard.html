@@ -35,6 +35,20 @@
   background-color: #fff !important;
   border-top: 1px solid rgba(98, 105, 118, 0.16);
 }
+
+/* Add proper table padding for alignment with card margins */
+.table-responsive .table td:first-child {
+  padding-left: 1.5rem !important;
+}
+.table-responsive .table td:last-child {
+  padding-right: 1.5rem !important;
+}
+.table-responsive .table th:first-child {
+  padding-left: 1.5rem !important;
+}
+.table-responsive .table th:last-child {
+  padding-right: 1.5rem !important;
+}
 </style>
 
 <div class="page-wrapper">
@@ -245,8 +259,8 @@
 
 
 
-      <!-- Main Data Table (Desktop) -->
-      <div class="card desktop-only">
+      <!-- Main Data Table (Responsive) -->
+      <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h3 class="card-title">
             <i class="ti ti-passport me-2"></i>Digital Passes
@@ -262,10 +276,12 @@
             <thead>
               <tr>
                 <th style="width: 300px;">User</th>
-                <th>Passport Status</th>
-                <th>Sessions</th>
-                <th>Payment Status</th>
-                <th>Last Activity</th>
+                <th class="d-md-none">State</th>
+                <th class="d-none d-md-table-cell">Activity</th>
+                <th class="d-none d-md-table-cell">Pass Type</th>
+                <th class="d-none d-md-table-cell">Created</th>
+                <th class="d-none d-md-table-cell">Remaining</th>
+                <th class="d-none d-md-table-cell">Status</th>
                 <th style="width: 120px;">Actions</th>
               </tr>
             </thead>
@@ -282,35 +298,27 @@
                     </div>
                   </div>
                 </td>
-                <td style="vertical-align: middle;">
-                  {% if p.paid and p.uses_remaining > 0 %}
-                    <span class="badge bg-green-lt text-green-lt-fg">Active</span>
-                  {% elif not p.paid %}
-                    <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
+                <td class="d-md-none" style="vertical-align: middle;">
+                  <span class="badge bg-{{ 'green-lt text-green-lt-fg' if p.paid else 'red-lt text-red-lt-fg' }}">{{ p.uses_remaining }}</span>
+                </td>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  {{ activity.name }}
+                </td>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  {{ p.passport_type.name if p.passport_type else 'Standard' }}
+                </td>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  {% if p.created_dt %}
+                    {{ p.created_dt.strftime('%Y-%m-%d') }}
                   {% else %}
-                    <span class="badge bg-gray-lt text-gray-lt-fg">Complete</span>
+                    <span class="text-muted">Unknown</span>
                   {% endif %}
                 </td>
-                <td style="vertical-align: middle;">
-                  <div>
-                    {% set total_sessions = (p.passport_type.sessions_included if p.passport_type else 5) %}
-                    {% set remaining_sessions = p.uses_remaining %}
-                    <div class="fw-semibold">{{ remaining_sessions }}/{{ total_sessions }} remaining</div>
-                    <div class="sessions-progress">
-                      <div class="sessions-progress-bar bg-primary" style="width: {{ (remaining_sessions / total_sessions * 100) if total_sessions > 0 else 0 }}%"></div>
-                    </div>
-                  </div>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  {{ p.uses_remaining }}
                 </td>
-                <td style="vertical-align: middle;">
-                  <span class="badge bg-{{ 'green' if p.paid else 'yellow' }}-lt text-{{ 'green' if p.paid else 'yellow' }}-lt-fg">{{ 'Paid' if p.paid else 'Unpaid' }}</span>
-                  <div class="text-muted small">${{ p.sold_amt }}{% if not p.paid and p.created_dt %} ({{ p.created_dt|days_ago }} days){% endif %}</div>
-                </td>
-                <td style="vertical-align: middle;">
-                  {% if p.last_redeemed_at %}
-                    <span class="text-muted">{{ p.last_redeemed_at|days_ago }} days ago</span>
-                  {% else %}
-                    <span class="text-muted">Never</span>
-                  {% endif %}
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  <span class="badge bg-{{ 'green-lt text-green-lt-fg' if p.paid else 'red-lt text-red-lt-fg' }}">{{ 'Paid' if p.paid else 'Unpaid' }}</span>
                 </td>
                 <td style="vertical-align: middle;">
                   <div class="dropdown">
@@ -430,7 +438,7 @@
 
 
 
-
+<br><br>
 
 
 
