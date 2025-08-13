@@ -2758,7 +2758,7 @@ def activity_dashboard(activity_id):
     # Load only relevant passports: unpaid OR with uses remaining
     passports = (
         Passport.query
-        .options(joinedload(Passport.user), joinedload(Passport.activity))
+        .options(joinedload(Passport.user), joinedload(Passport.activity), joinedload(Passport.passport_type))
         .filter(
             Passport.activity_id == activity_id,
             or_(
