@@ -2816,7 +2816,7 @@ def activity_dashboard(activity_id):
     # Signup statistics
     pending_signups = [s for s in signups if s.status == 'pending']
     approved_signups = [s for s in signups if s.status == 'approved']
-    recent_signups = [s for s in signups if s.signed_up_at and s.signed_up_at >= seven_days_ago]
+    recent_signups = [s for s in signups if s.signed_up_at and is_recent(s.signed_up_at, seven_days_ago)]
     
     # Activity log entries (recent activity)
     try:
