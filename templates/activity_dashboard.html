@@ -2,295 +2,38 @@
 
 {% block title %}Activity Dashboard - {{ activity.name }}{% endblock %}
 
-{% block head %}
-<style>
-  /* Modern SaaS Dashboard Styles */
-  
-  .search-container {
-    position: relative;
-    max-width: 400px;
-  }
-  
-  .search-shortcut {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #f8f9fa;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    color: #6c757d;
-  }
-  
-  .filter-pills .nav-link {
-    border-radius: 20px;
-    padding: 0.5rem 1rem;
-    margin-right: 0.5rem;
-    color: #6c757d;
-    transition: all 0.2s ease;
-  }
-  
-  .filter-pills .nav-link:hover {
-    background: #f8f9fa;
-  }
-  
-  .filter-pills .nav-link.active {
-    background: #206bc4;
-    color: white;
-  }
-  
-  .filter-pills .badge {
-    margin-left: 0.5rem;
-    font-size: 0.75rem;
-  }
-  
-  .user-table {
-    font-size: 0.9375rem;
-  }
-  
-  .user-table th {
-    font-weight: 600;
-    color: #6c757d;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid #e9ecef;
-  }
-  
-  .user-table td {
-    vertical-align: middle;
-    padding: 1rem 0.75rem;
-  }
-  
-  .user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  
-  .sessions-progress {
-    height: 6px;
-    background: #e9ecef;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-top: 0.25rem;
-  }
-  
-  .sessions-progress-bar {
-    height: 100%;
-    transition: width 0.3s ease;
-  }
-  
-  .bulk-actions-bar {
-    background: #f0f7ff;
-    border: 1px solid #206bc4;
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    display: none;
-  }
-  
-  .bulk-actions-bar.show {
-    display: block;
-    animation: slideDown 0.3s ease;
-  }
-  
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  /* Mobile Responsive Styles */
-  @media (max-width: 768px) {
-    .activity-header-split {
-      padding: 1.5rem 1rem;
-    }
-    
-    .activity-header-split .col-lg-5 {
-      order: -1;
-      margin-bottom: 1.5rem;
-    }
-    
-    .activity-featured-image {
-      height: 180px;
-    }
-    
-    .activity-title {
-      font-size: 1.75rem;
-    }
-    
-    .activity-actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-    
-    .activity-actions .btn {
-      flex: 1;
-    }
-
-    
-    .filter-pills {
-      overflow-x: auto;
-      white-space: nowrap;
-      padding-bottom: 0.5rem;
-    }
-    
-    .filter-pills .nav-link {
-      display: inline-block;
-    }
-    
-    .search-container {
-      max-width: 100%;
-    }
-    
-    .user-card {
-      background: white;
-      border: 1px solid #e9ecef;
-      border-radius: 12px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-    }
-    
-    .user-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      margin-bottom: 0.75rem;
-    }
-    
-    .user-card-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-      margin-top: 0.75rem;
-    }
-    
-    .desktop-only {
-      display: none !important;
-    }
-    
-    .mobile-only {
-      display: block !important;
-    }
-  }
-  
-  @media (min-width: 769px) {
-    .desktop-only {
-      display: block !important;
-    }
-    
-    .mobile-only {
-      display: none !important;
-    }
-  }
-  
-  /* Split Layout Activity Header */
-  .activity-header-split {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    border: 1px solid #e9ecef;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  }
-
-  .activity-title {
-    font-size: 2.25rem;
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-    color: #1a1a1a;
-  }
-
-  .activity-description {
-    font-size: 1rem;
-    color: #6c757d;
-    margin-bottom: 1rem;
-    line-height: 1.6;
-  }
-
-  .activity-meta .badge {
-    margin-right: 0.5rem;
-    font-size: 0.8rem;
-    padding: 0.4rem 0.8rem;
-  }
-
-  .activity-image-card {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    transition: transform 0.3s ease;
-  }
-
-  .activity-image-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
-  }
-
-  .activity-featured-image {
-    width: 100%;
-    height: 240px;
-    object-fit: cover;
-    display: block;
-  }
-
-  .image-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .activity-image-card:hover .image-overlay {
-    opacity: 1;
-  }
-
-  .btn-ghost-light {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(4px);
-  }
-
-  .btn-ghost-light:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-  }
-
-  /* Loading States */
-  .skeleton-loader {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-  }
-  
-  @keyframes loading {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
+<style>
+/* Fix dropdown z-index issues in tables */
+.table-responsive {
+  overflow: visible !important;
+  position: static !important;
+}
+.table-responsive .dropdown {
+  position: relative;
+}
+.table-responsive .dropdown-menu {
+  z-index: 9999 !important;
+  position: absolute !important;
+  transform: none !important;
+  top: 100% !important;
+  left: 0 !important;
+  min-width: 160px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Ensure card doesn't clip dropdowns */
+.card {
+  overflow: visible !important;
+}
+
+/* Fix card footer background to white per style guide */
+.card-footer {
+  background-color: #fff !important;
+  border-top: 1px solid rgba(98, 105, 118, 0.16);
+}
+</style>
+
 <div class="page-wrapper">
 
   <div class="page-body">
@@ -300,24 +43,23 @@
         <div class="row g-4 align-items-center">
           <div class="col-lg-7">
             <div class="activity-info">
-              <h1 class="activity-title">Summer Hockey League 2024</h1>
-              <p class="activity-description">Professional hockey league for all skill levels • June 1 - Aug 31</p>
+              <h1 class="activity-title">{{ activity.name }}</h1>
+              <p class="activity-description">{{ activity.description or "No description provided." }}{% if activity.start_date %} • {{ activity.start_date.strftime('%b %d') }}{% if activity.end_date %} - {{ activity.end_date.strftime('%b %d, %Y') }}{% endif %}{% endif %}</p>
               <div class="activity-actions">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editActivityModal">
+                <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-primary">
                   <i class="ti ti-edit me-2"></i>Edit Activity
-                </button>
-                <button class="btn btn-success ms-2">
+                </a>
+                <a href="{{ url_for('scan_qr') }}" class="btn btn-success ms-2">
                   <i class="ti ti-scan me-2"></i>Scan Activity
-                </button>
+                </a>
               </div>
             </div>
           </div>
           <div class="col-lg-5">
             <div class="activity-image-card">
-              <!-- Use a placeholder image for now, will be replaced with actual activity image -->
-              <img src="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=400&fit=crop" 
+              <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}" 
                    class="activity-featured-image" 
-                   alt="Summer Hockey League 2024">
+                   alt="{{ activity.name }}">
               <div class="image-overlay">
                 <button class="btn btn-sm btn-ghost-light">
                   <i class="ti ti-camera me-1"></i>Change Image
@@ -347,9 +89,9 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">$4,300</div>
+              <div class="h2 mb-1">${{ "%.0f"|format(kpi_data.revenue.total) }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2">12% <i class="ti ti-trending-up"></i></div>
+                <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2">{{ kpi_data.revenue.percentage }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
                 <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
@@ -378,9 +120,9 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">55</div>
+              <div class="h2 mb-1">{{ kpi_data.active_users.total }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2">8% <i class="ti ti-trending-up"></i></div>
+                <div class="text-{{ 'success' if kpi_data.active_users.trend == 'up' else 'muted' }} me-2">{{ kpi_data.active_users.percentage }}% <i class="ti ti-trending-{{ kpi_data.active_users.trend }}"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
                 <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
@@ -427,9 +169,9 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">12</div>
+              <div class="h2 mb-1">{{ kpi_data.unpaid_passports.total }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-danger me-2">3 overdue <i class="ti ti-alert-circle"></i></div>
+                <div class="text-{{ 'danger' if kpi_data.unpaid_passports.overdue > 0 else 'muted' }} me-2">{{ kpi_data.unpaid_passports.overdue }} overdue <i class="ti ti-alert-circle"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
                 <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
@@ -458,9 +200,9 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">$3,100</div>
+              <div class="h2 mb-1">${{ "%.0f"|format(kpi_data.profit.total) }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-success me-2">72% margin <i class="ti ti-trending-up"></i></div>
+                <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2">{{ "%.0f"|format(kpi_data.profit.margin) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
                 <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
@@ -474,6 +216,7 @@
       </div>
 
       <!-- Passport List Title -->
+      {% if passes %}
       <h2 class="mt-4 mb-3">
         <i class="ti ti-activity-heartbeat me-2" style="color: #e03131;"></i>Your Activity Passport
       </h2>
@@ -498,38 +241,23 @@
       </div>
 
 
-      <!-- Bulk Actions Bar -->
-      <div class="bulk-actions-bar" id="bulkActionsBar">
-        <div class="d-flex justify-content-between align-items-center">
-          <span class="text-primary fw-bold">
-            <span id="selectedCount">0</span> users selected
-          </span>
-          <div class="btn-group">
-            <button class="btn btn-sm btn-outline-primary">
-              <i class="ti ti-mail me-1"></i>Send Reminder
-            </button>
-            <button class="btn btn-sm btn-outline-success">
-              <i class="ti ti-check me-1"></i>Mark Paid
-            </button>
-            <button class="btn btn-sm btn-outline-secondary">
-              <i class="ti ti-download me-1"></i>Export
-            </button>
-            <button class="btn btn-sm btn-outline-danger">
-              <i class="ti ti-trash me-1"></i>Delete
-            </button>
-          </div>
-        </div>
-      </div>
 
       <!-- Main Data Table (Desktop) -->
       <div class="card desktop-only">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3 class="card-title">
+            <i class="ti ti-passport me-2"></i>Digital Passes
+          </h3>
+          <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
+              <i class="ti ti-plus me-1"></i>Add New Passport
+            </a>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="table table-hover user-table">
             <thead>
               <tr>
-                <th width="40">
-                  <input type="checkbox" class="form-check-input" id="selectAll">
-                </th>
                 <th style="width: 300px;">User</th>
                 <th>Passport Status</th>
                 <th>Sessions</th>
@@ -539,207 +267,135 @@
               </tr>
             </thead>
             <tbody>
+              {% for p in passes %}
               <tr>
-                <td>
-                  <input type="checkbox" class="form-check-input user-checkbox">
-                </td>
                 <td style="vertical-align: middle;">
                   <div class="d-flex align-items-center">
-                    <img src="https://www.gravatar.com/avatar/1?d=identicon&s=40" 
+                    <img src="https://www.gravatar.com/avatar/{{ p.user.email|lower|trim|encode_md5 }}?d=identicon&s=40" 
                          class="rounded-circle me-3 user-avatar" alt="Avatar">
                     <div>
-                      <div class="fw-bold">Ken Dresdell</div>
-                      <div class="text-muted small">ken@example.com</div>
+                      <div class="fw-bold">{{ p.user.name }}</div>
+                      <div class="text-muted small">{{ p.user.email }}</div>
                     </div>
                   </div>
                 </td>
                 <td style="vertical-align: middle;">
-                  <span class="badge bg-green-lt text-green-lt-fg">Active</span>
+                  {% if p.paid and p.uses_remaining > 0 %}
+                    <span class="badge bg-green-lt text-green-lt-fg">Active</span>
+                  {% elif not p.paid %}
+                    <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
+                  {% else %}
+                    <span class="badge bg-gray-lt text-gray-lt-fg">Complete</span>
+                  {% endif %}
                 </td>
                 <td style="vertical-align: middle;">
                   <div>
-                    <div class="fw-semibold">3/5 remaining</div>
+                    {% set total_sessions = (p.passport_type.sessions_included if p.passport_type else 5) %}
+                    {% set remaining_sessions = p.uses_remaining %}
+                    <div class="fw-semibold">{{ remaining_sessions }}/{{ total_sessions }} remaining</div>
                     <div class="sessions-progress">
-                      <div class="sessions-progress-bar bg-primary" style="width: 60%"></div>
+                      <div class="sessions-progress-bar bg-primary" style="width: {{ (remaining_sessions / total_sessions * 100) if total_sessions > 0 else 0 }}%"></div>
                     </div>
                   </div>
                 </td>
                 <td style="vertical-align: middle;">
-                  <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
-                  <div class="text-muted small">$50</div>
+                  <span class="badge bg-{{ 'green' if p.paid else 'yellow' }}-lt text-{{ 'green' if p.paid else 'yellow' }}-lt-fg">{{ 'Paid' if p.paid else 'Unpaid' }}</span>
+                  <div class="text-muted small">${{ p.sold_amt }}{% if not p.paid and p.created_dt %} ({{ p.created_dt|days_ago }} days){% endif %}</div>
                 </td>
                 <td style="vertical-align: middle;">
-                  <span class="text-muted">2 days ago</span>
+                  {% if p.last_redeemed_at %}
+                    <span class="text-muted">{{ p.last_redeemed_at|days_ago }} days ago</span>
+                  {% else %}
+                    <span class="text-muted">Never</span>
+                  {% endif %}
                 </td>
                 <td style="vertical-align: middle;">
                   <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      Actions
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                      <li><a class="dropdown-item" href="#">View Profile</a></li>
-                      <li><a class="dropdown-item" href="#">Edit Passport</a></li>
-                      <li><a class="dropdown-item" href="#">Add Session</a></li>
-                      <li><a class="dropdown-item" href="#">Send Reminder</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#">Remove User</a></li>
-                    </ul>
+                    <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
+                    <div class="dropdown-menu">
+                      {% if p.uses_remaining > 0 %}
+                      <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-modal-{{ p.id }}">
+                        <i class="ti ti-check me-2"></i>Redeem
+                      </button>
+                      {% endif %}
+                      <a class="dropdown-item text-info" href="{{ url_for('show_pass', pass_code=p.pass_code) }}">
+                        <i class="ti ti-eye me-2"></i>View & Redeem
+                      </a>
+                      <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=p.id) }}">
+                        <i class="ti ti-pencil me-2"></i>Edit
+                      </a>
+                      <a class="dropdown-item" href="#">
+                        <i class="ti ti-mail me-2"></i>Send Reminder
+                      </a>
+                      {% if not p.paid %}
+                      <div class="dropdown-divider"></div>
+                      <button type="button" class="dropdown-item text-success" data-bs-toggle="modal" data-bs-target="#mark-paid-modal-{{ p.id }}">
+                        <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                      </button>
+                      {% endif %}
+                    </div>
                   </div>
                 </td>
               </tr>
-              <tr>
-                <td>
-                  <input type="checkbox" class="form-check-input user-checkbox">
-                </td>
-                <td style="vertical-align: middle;">
-                  <div class="d-flex align-items-center">
-                    <img src="https://www.gravatar.com/avatar/2?d=identicon&s=40" 
-                         class="rounded-circle me-3 user-avatar" alt="Avatar">
-                    <div>
-                      <div class="fw-bold">Marie Leblanc</div>
-                      <div class="text-muted small">marie@example.com</div>
-                    </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="badge bg-green-lt text-green-lt-fg">Active</span>
-                </td>
-                <td style="vertical-align: middle;">
-                  <div>
-                    <div class="fw-semibold">5/5 remaining</div>
-                    <div class="sessions-progress">
-                      <div class="sessions-progress-bar bg-primary" style="width: 100%"></div>
-                    </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
-                  <div class="text-muted small">$50</div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="text-muted">Never</span>
-                </td>
-                <td style="vertical-align: middle;">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      Actions
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                      <li><a class="dropdown-item" href="#">View Profile</a></li>
-                      <li><a class="dropdown-item" href="#">Edit Passport</a></li>
-                      <li><a class="dropdown-item" href="#">Add Session</a></li>
-                      <li><a class="dropdown-item" href="#">Send Reminder</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#">Remove User</a></li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
-              
-              <!-- Unpaid User Example -->
-              <tr>
-                <td>
-                  <input type="checkbox" class="form-check-input user-checkbox">
-                </td>
-                <td style="vertical-align: middle;">
-                  <div class="d-flex align-items-center">
-                    <img src="https://www.gravatar.com/avatar/3?d=identicon&s=40" 
-                         class="rounded-circle me-3 user-avatar" alt="Avatar">
-                    <div>
-                      <div class="fw-bold">John Smith</div>
-                      <div class="text-muted small">john@example.com</div>
-                    </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
-                </td>
-                <td style="vertical-align: middle;">
-                  <div>
-                    <div class="fw-semibold">0/5 remaining</div>
-                    <div class="sessions-progress">
-                      <div class="sessions-progress-bar bg-primary" style="width: 0%"></div>
-                    </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
-                  <div class="text-muted small">$50 (3 days)</div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="text-muted">5 days ago</span>
-                </td>
-                <td style="vertical-align: middle;">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      Actions
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                      <li><a class="dropdown-item" href="#">Mark as Paid</a></li>
-                      <li><a class="dropdown-item" href="#">Send Payment Reminder</a></li>
-                      <li><a class="dropdown-item" href="#">View Payment History</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#">Cancel Passport</a></li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
-              
-              <tr>
-                <td>
-                  <input type="checkbox" class="form-check-input user-checkbox">
-                </td>
-                <td style="vertical-align: middle;">
-                  <div class="d-flex align-items-center">
-                    <img src="https://www.gravatar.com/avatar/4?d=identicon&s=40" 
-                         class="rounded-circle me-3 user-avatar" alt="Avatar">
-                    <div>
-                      <div class="fw-bold">Sarah Wilson</div>
-                      <div class="text-muted small">sarah@example.com</div>
-                    </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="badge bg-green-lt text-green-lt-fg">Active</span>
-                </td>
-                <td style="vertical-align: middle;">
-                  <div>
-                    <div class="fw-semibold">1/5 remaining</div>
-                    <div class="sessions-progress">
-                      <div class="sessions-progress-bar bg-warning" style="width: 20%"></div>
-                    </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
-                  <div class="text-muted small">$50</div>
-                </td>
-                <td style="vertical-align: middle;">
-                  <span class="text-muted">Yesterday</span>
-                </td>
-                <td style="vertical-align: middle;">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      Actions
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                      <li><a class="dropdown-item" href="#">View Profile</a></li>
-                      <li><a class="dropdown-item" href="#">Edit Passport</a></li>
-                      <li><a class="dropdown-item" href="#">Add Session</a></li>
-                      <li><a class="dropdown-item" href="#">Send Reminder</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#">Remove User</a></li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
         
+        <!-- Modal dialogs for passport actions -->
+        {% for p in passes %}
+        <!-- Redeem Modal -->
+        <div class="modal modal-blur fade" id="redeem-modal-{{ p.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+          <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-status bg-primary"></div>
+              <div class="modal-body text-center py-4">
+                <i class="ti ti-check icon mb-2 text-primary" style="font-size: 2rem;"></i>
+                <h3>Redeem Session</h3>
+                <div class="text-muted">Redeem 1 session from {{ p.user.name }}'s passport?</div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('redeem_passport', pass_code=p.pass_code) }}" class="w-100">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-primary w-100">Yes, Redeem</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if not p.paid %}
+        <!-- Mark as Paid Modal -->
+        <div class="modal modal-blur fade" id="mark-paid-modal-{{ p.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+          <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-status bg-success"></div>
+              <div class="modal-body text-center py-4">
+                <i class="ti ti-currency-dollar icon mb-2 text-success" style="font-size: 2rem;"></i>
+                <h3>Confirm Payment</h3>
+                <div class="text-muted">Mark {{ p.user.name }}'s passport as paid?</div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('mark_passport_paid', passport_id=p.id) }}" class="w-100">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-success w-100">Yes, mark as paid</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+        
         <!-- Pagination -->
         <div class="card-footer d-flex justify-content-between align-items-center">
-          <span class="text-muted">Showing 1 to 10 of 55 entries</span>
+          <span class="text-muted">Showing 1 to {{ passes|length }} of {{ dashboard_stats.total_passports if dashboard_stats else passes|length }} entries</span>
+          {% set total_items = dashboard_stats.total_passports if dashboard_stats else passes|length %}
+          {% set items_per_page = 10 %}
+          {% set total_pages = ((total_items - 1) // items_per_page) + 1 if total_items > 0 else 1 %}
+          {% if total_pages > 1 %}
           <nav aria-label="User table pagination">
             <ul class="pagination pagination-sm mb-0">
               <li class="page-item disabled">
@@ -747,11 +403,13 @@
                   <i class="ti ti-chevron-left"></i>
                 </a>
               </li>
-              <li class="page-item active"><a class="page-link" href="#">1</a></li>
-              <li class="page-item"><a class="page-link" href="#">2</a></li>
-              <li class="page-item"><a class="page-link" href="#">3</a></li>
-              <li class="page-item"><a class="page-link" href="#">4</a></li>
-              <li class="page-item"><a class="page-link" href="#">5</a></li>
+              {% for page_num in range(1, total_pages + 1) %}
+                {% if page_num <= 5 %}
+                <li class="page-item {% if page_num == 1 %}active{% endif %}">
+                  <a class="page-link" href="#">{{ page_num }}</a>
+                </li>
+                {% endif %}
+              {% endfor %}
               <li class="page-item">
                 <a class="page-link" href="#">
                   <i class="ti ti-chevron-right"></i>
@@ -759,13 +417,12 @@
               </li>
             </ul>
           </nav>
+          {% endif %}
         </div>
       </div>
+      {% endif %}
 
       <!-- Pending Signups Section -->
-      <h2 class="mt-4 mb-3">
-        <i class="ti ti-hand-stop me-2" style="color: #e03131;"></i>Pending Signups
-      </h2>
 
 
 
@@ -775,9 +432,17 @@
 
 
       <!-- Pending Signups Table -->
-      <div class="component-demo">
+      {% set pending_signups = signups | selectattr('status', 'equalto', 'pending') | list %}
+      {% if pending_signups %}
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3 class="card-title">
+            <i class="ti ti-hand-stop me-2"></i>Pending Signups
+          </h3>
+          <span class="badge bg-warning">{{ pending_signups|length }} pending</span>
+        </div>
         <div class="table-responsive">
-          <table class="table table-hover">
+          <table class="table card-table table-vcenter" id="signupTable">
             <thead>
               <tr>
                 <th style="width: 300px;">User</th>
@@ -790,148 +455,87 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td style="vertical-align: middle;">
-                  <div class="d-flex align-items-center">
-                    <img src="https://www.gravatar.com/avatar/9?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
-                    <div>
-                      <div class="fw-bold">Alex Thompson</div>
-                      <div class="text-muted small">alex@example.com</div>
+              {% for signup in pending_signups %}
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <div class="d-flex align-items-center">
+                      <img src="https://www.gravatar.com/avatar/{{ signup.user.email|lower|trim|encode_md5 }}?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
+                      <div>
+                        <div class="fw-bold">{{ signup.user.name }}</div>
+                        <div class="text-muted small">{{ signup.user.email }}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">3 days ago</td>
-                <td style="vertical-align: middle;">Summer Hockey League</td>
-                <td style="vertical-align: middle;"><span class="badge bg-yellow-lt text-yellow-lt-fg">Pending Approval</span></td>
-                <td style="vertical-align: middle;">$50</td>
-                <td style="vertical-align: middle;">3 days</td>
-                <td style="vertical-align: middle;">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      Actions
-                    </button>
-                    <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="#">Approve</a></li>
-                      <li><a class="dropdown-item" href="#">Contact User</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#">Reject</a></li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td style="vertical-align: middle;">
-                  <div class="d-flex align-items-center">
-                    <img src="https://www.gravatar.com/avatar/10?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
-                    <div>
-                      <div class="fw-bold">Michelle Parker</div>
-                      <div class="text-muted small">michelle@example.com</div>
+                  </td>
+                  <td style="vertical-align: middle;">{{ signup.signed_up_at.strftime('%Y-%m-%d') if signup.signed_up_at else 'Unknown' }}</td>
+                  <td style="vertical-align: middle;">{{ activity.name }}</td>
+                  <td style="vertical-align: middle;">
+                    <span class="badge bg-{{ 'yellow' if signup.status == 'pending' else 'orange' if not signup.paid else 'red' }}-lt text-{{ 'yellow' if signup.status == 'pending' else 'orange' if not signup.paid else 'red' }}-lt-fg">
+                      {% if signup.status == 'pending' %}Pending Approval{% elif not signup.paid %}Payment Required{% else %}Overdue Payment{% endif %}
+                    </span>
+                  </td>
+                  <td style="vertical-align: middle;">
+                    {% if signup.passport_type %}
+                      ${{ signup.passport_type.price_per_user }}
+                    {% else %}
+                      {% set default_price = activity.passport_types[0].price_per_user if activity.passport_types else 50 %}
+                      ${{ default_price }}
+                    {% endif %}
+                  </td>
+                  <td style="vertical-align: middle;">{{ signup.signed_up_at|days_ago if signup.signed_up_at else 0 }} days</td>
+                  <td style="vertical-align: middle;">
+                    <div class="dropdown">
+                      <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
+                      <div class="dropdown-menu">
+                        <a class="dropdown-item text-success" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}">
+                          <i class="ti ti-check me-2"></i>Approve & Create Pass
+                        </a>
+                        <a class="dropdown-item" href="#">
+                          <i class="ti ti-mail me-2"></i>Contact User
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item text-danger" href="{{ url_for('update_signup_status', signup_id=signup.id) }}" onclick="event.preventDefault(); if(confirm('Reject this signup?')) { var form = document.createElement('form'); form.method = 'POST'; form.action = this.href; var statusInput = document.createElement('input'); statusInput.type = 'hidden'; statusInput.name = 'status'; statusInput.value = 'rejected'; form.appendChild(statusInput); var csrfInput = document.createElement('input'); csrfInput.type = 'hidden'; csrfInput.name = 'csrf_token'; csrfInput.value = '{{ csrf_token() }}'; form.appendChild(csrfInput); document.body.appendChild(form); form.submit(); }">
+                          <i class="ti ti-x me-2"></i>Reject
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">1 day ago</td>
-                <td style="vertical-align: middle;">Weekend Workshop</td>
-                <td style="vertical-align: middle;"><span class="badge bg-orange-lt text-orange-lt-fg">Payment Required</span></td>
-                <td style="vertical-align: middle;">$75</td>
-                <td style="vertical-align: middle;">1 day</td>
-                <td style="vertical-align: middle;">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      Actions
-                    </button>
-                    <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="#">Send Payment Link</a></li>
-                      <li><a class="dropdown-item" href="#">View Details</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#">Cancel Signup</a></li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td style="vertical-align: middle;">
-                  <div class="d-flex align-items-center">
-                    <img src="https://www.gravatar.com/avatar/11?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
-                    <div>
-                      <div class="fw-bold">Robert Kim</div>
-                      <div class="text-muted small">robert@example.com</div>
-                    </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">5 days ago</td>
-                <td style="vertical-align: middle;">Tennis Lessons</td>
-                <td style="vertical-align: middle;"><span class="badge bg-red-lt text-red-lt-fg">Overdue Payment</span></td>
-                <td style="vertical-align: middle;">$120</td>
-                <td style="vertical-align: middle;">5 days</td>
-                <td style="vertical-align: middle;">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      Actions
-                    </button>
-                    <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="#">Send Reminder</a></li>
-                      <li><a class="dropdown-item" href="#">Payment History</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#">Cancel & Refund</a></li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td style="vertical-align: middle;">
-                  <div class="d-flex align-items-center">
-                    <img src="https://www.gravatar.com/avatar/12?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
-                    <div>
-                      <div class="fw-bold">Jennifer Lee</div>
-                      <div class="text-muted small">jennifer@example.com</div>
-                    </div>
-                  </div>
-                </td>
-                <td style="vertical-align: middle;">Today</td>
-                <td style="vertical-align: middle;">Dance Workshop</td>
-                <td style="vertical-align: middle;"><span class="badge bg-blue-lt text-blue-lt-fg">Waitlisted</span></td>
-                <td style="vertical-align: middle;">$60</td>
-                <td style="vertical-align: middle;">0 days</td>
-                <td style="vertical-align: middle;">
-                  <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      Actions
-                    </button>
-                    <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="#">Move to Active</a></li>
-                      <li><a class="dropdown-item" href="#">Contact User</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#">Remove from Waitlist</a></li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
-        
-        <!-- Pagination for Pending Signups -->
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          <span class="text-muted">Showing 1 to 4 of 4 pending signups</span>
-          <nav aria-label="Pending signups pagination">
-            <ul class="pagination pagination-sm mb-0">
-              <li class="page-item disabled">
-                <a class="page-link" href="#" tabindex="-1">
-                  <i class="ti ti-chevron-left"></i>
-                </a>
+        <div class="card-footer d-flex align-items-center">
+          <p class="m-0 text-muted">Showing 1 to {{ pending_signups|length }} of {{ dashboard_stats.pending_signups if dashboard_stats else pending_signups|length }} pending signups</p>
+          {% set signup_total_items = dashboard_stats.pending_signups if dashboard_stats else pending_signups|length %}
+          {% set signup_items_per_page = 10 %}
+          {% set signup_total_pages = ((signup_total_items - 1) // signup_items_per_page) + 1 if signup_total_items > 0 else 1 %}
+          {% if signup_total_pages > 1 %}
+          <ul class="pagination m-0 ms-auto">
+            <li class="page-item disabled">
+              <a class="page-link" href="#" tabindex="-1">
+                <i class="ti ti-chevron-left"></i>
+              </a>
+            </li>
+            {% for page_num in range(1, signup_total_pages + 1) %}
+              {% if page_num <= 5 %}
+              <li class="page-item {% if page_num == 1 %}active{% endif %}">
+                <a class="page-link" href="#">{{ page_num }}</a>
               </li>
-              <li class="page-item active"><a class="page-link" href="#">1</a></li>
-              <li class="page-item disabled">
-                <a class="page-link" href="#">
-                  <i class="ti ti-chevron-right"></i>
-                </a>
-              </li>
-            </ul>
-          </nav>
+              {% endif %}
+            {% endfor %}
+            <li class="page-item">
+              <a class="page-link" href="#">
+                <i class="ti ti-chevron-right"></i>
+              </a>
+            </li>
+          </ul>
+          {% endif %}
         </div>
       </div>
+      {% endif %}
 
       <!-- What's Happening Section -->
+      {% if activity_logs %}
       <h3 class="mt-5 mb-3">
         <i class="ti ti-cardboards me-2" style="color: #2fb344;"></i>What's Happening in Your Activity
       </h3>
@@ -951,118 +555,75 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>2024-08-12 14:30</td>
-                <td data-type="Passport Redeemed">
-                  <i class="ti ti-ticket text-danger"></i>
-                  Passport Redeemed
-                </td>
-                <td>Ken Dresdell redeemed a session for Summer Hockey League</td>
-              </tr>
-              <tr>
-                <td>2024-08-12 13:15</td>
-                <td data-type="Signup Submitted">
-                  <i class="ti ti-user-plus text-success"></i>
-                  Signup Submitted
-                </td>
-                <td>New signup from Alex Thompson for Summer Hockey League</td>
-              </tr>
-              <tr>
-                <td>2024-08-12 11:45</td>
-                <td data-type="Passport Created">
-                  <i class="ti ti-id text-lime"></i>
-                  Passport Created
-                </td>
-                <td>Michelle Parker purchased a passport for Summer Hockey League</td>
-              </tr>
-              <tr>
-                <td>2024-08-12 10:20</td>
-                <td data-type="Email Sent">
-                  <i class="ti ti-mail text-info"></i>
-                  Email Sent
-                </td>
-                <td>Reminder email sent to 5 participants about upcoming sessions</td>
-              </tr>
-              <tr>
-                <td>2024-08-11 16:30</td>
-                <td data-type="Signup Approved">
-                  <i class="ti ti-user-check text-green"></i>
-                  Signup Approved
-                </td>
-                <td>Jennifer Lee's signup approved for Summer Hockey League</td>
-              </tr>
-              <tr>
-                <td>2024-08-11 15:10</td>
-                <td data-type="Interact Payment">
-                  <i class="ti ti-currency-dollar text-success"></i>
-                  Payment Received
-                </td>
-                <td>$50 payment received from Robert Kim via Interac</td>
-              </tr>
-              <tr>
-                <td>2024-08-11 14:25</td>
-                <td data-type="Passport Redeemed">
-                  <i class="ti ti-ticket text-danger"></i>
-                  Passport Redeemed
-                </td>
-                <td>Sarah Wilson redeemed a session for Summer Hockey League</td>
-              </tr>
-              <tr>
-                <td>2024-08-11 12:00</td>
-                <td data-type="Admin Action">
-                  <i class="ti ti-settings text-muted"></i>
-                  Admin Action
-                </td>
-                <td>Activity settings updated - session capacity increased to 25</td>
-              </tr>
-              <tr>
-                <td>2024-08-11 09:30</td>
-                <td data-type="Signup Submitted">
-                  <i class="ti ti-user-plus text-success"></i>
-                  Signup Submitted
-                </td>
-                <td>New signup from David Brown for Summer Hockey League</td>
-              </tr>
-              <tr>
-                <td>2024-08-10 17:45</td>
-                <td data-type="Reminder Sent">
-                  <i class="ti ti-bell text-purple"></i>
-                  Reminder Sent
-                </td>
-                <td>Payment reminder sent to 3 users with pending payments</td>
-              </tr>
+              {% for log in activity_logs %}
+                <tr>
+                  <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') if log.timestamp else 'Unknown' }}</td>
+                  <td>
+                    {% set action_lower = log.action.lower() %}
+                    {% if 'redeem' in action_lower %}
+                      <i class="ti ti-ticket text-danger"></i>
+                      Passport Redeemed
+                    {% elif 'signup' in action_lower %}
+                      <i class="ti ti-user-plus text-success"></i>
+                      Signup Activity
+                    {% elif 'created' in action_lower %}
+                      <i class="ti ti-id text-lime"></i>
+                      Passport Created
+                    {% elif 'email' in action_lower %}
+                      <i class="ti ti-mail text-info"></i>
+                      Email Activity
+                    {% elif 'payment' in action_lower %}
+                      <i class="ti ti-currency-dollar text-success"></i>
+                      Payment Activity
+                    {% else %}
+                      <i class="ti ti-settings text-muted"></i>
+                      Admin Action
+                    {% endif %}
+                  </td>
+                  <td>{{ log.action }}</td>
+                </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
         
         <!-- Pagination -->
         <div class="card-footer d-flex align-items-center">
-          <p class="m-0 text-muted">Showing <span id="activityShowingCount">10</span> of 45 activity logs</p>
+          <p class="m-0 text-muted">Showing <span id="activityShowingCount">{{ activity_logs|length if activity_logs else 0 }}</span> of {{ activity_logs|length if activity_logs else 0 }} activity logs</p>
+          {% set log_total_items = activity_logs|length if activity_logs else 0 %}
+          {% set log_items_per_page = 10 %}
+          {% set log_total_pages = ((log_total_items - 1) // log_items_per_page) + 1 if log_total_items > 0 else 1 %}
+          {% if log_total_pages > 1 %}
           <ul class="pagination m-0 ms-auto" id="activityPaginationControls">
-            <li class="page-item active"><a href="#" class="page-link">1</a></li>
-            <li class="page-item"><a href="#" class="page-link">2</a></li>
-            <li class="page-item"><a href="#" class="page-link">3</a></li>
-            <li class="page-item disabled"><a href="#" class="page-link">...</a></li>
-            <li class="page-item"><a href="#" class="page-link">5</a></li>
+            {% for page_num in range(1, log_total_pages + 1) %}
+              {% if page_num <= 5 %}
+              <li class="page-item {% if page_num == 1 %}active{% endif %}">
+                <a href="#" class="page-link">{{ page_num }}</a>
+              </li>
+              {% endif %}
+            {% endfor %}
           </ul>
+          {% endif %}
         </div>
       </div>
+      {% endif %}
 
       <!-- Mobile Card Layout -->
       <div class="mobile-only" style="display: none;">
+        {% for p in passes[:3] %}
         <div class="user-card">
           <div class="user-card-header">
             <div>
-              <h5 class="mb-1">Ken Dresdell</h5>
-              <small class="text-muted">ken@example.com</small>
+              <h5 class="mb-1">{{ p.user.name }}</h5>
+              <small class="text-muted">{{ p.user.email }}</small>
             </div>
             <div class="dropdown">
               <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown">
                 <i class="ti ti-dots-vertical"></i>
               </button>
               <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="#">View Profile</a></li>
-                <li><a class="dropdown-item" href="#">Edit Passport</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('show_pass', pass_code=p.pass_code) }}">View Profile</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=p.id) }}">Edit Passport</a></li>
                 <li><a class="dropdown-item" href="#">Send Reminder</a></li>
               </ul>
             </div>
@@ -1070,153 +631,25 @@
           <div class="user-card-stats">
             <div>
               <small class="text-muted d-block">Sessions</small>
-              <strong>3/5 remaining</strong>
+              {% set total_sessions = (p.passport_type.sessions_included if p.passport_type else 5) %}
+              <strong>{{ p.uses_remaining }}/{{ total_sessions }} remaining</strong>
               <div class="sessions-progress mt-1">
-                <div class="sessions-progress-bar bg-primary" style="width: 60%"></div>
+                <div class="sessions-progress-bar bg-primary" style="width: {{ (p.uses_remaining / total_sessions * 100) if total_sessions > 0 else 0 }}%"></div>
               </div>
             </div>
             <div>
               <small class="text-muted d-block">Payment</small>
-              <span class="badge bg-success">Paid</span>
+              <span class="badge bg-{{ 'success' if p.paid else 'warning' }}">{{ 'Paid' if p.paid else 'Unpaid' }}</span>
             </div>
           </div>
         </div>
+        {% endfor %}
 
-        <div class="user-card">
-          <div class="user-card-header">
-            <div>
-              <h5 class="mb-1">Marie Leblanc</h5>
-              <small class="text-muted">marie@example.com</small>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown">
-                <i class="ti ti-dots-vertical"></i>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="#">View Profile</a></li>
-                <li><a class="dropdown-item" href="#">Edit Passport</a></li>
-                <li><a class="dropdown-item" href="#">Send Reminder</a></li>
-              </ul>
-            </div>
-          </div>
-          <div class="user-card-stats">
-            <div>
-              <small class="text-muted d-block">Sessions</small>
-              <strong>5/5 remaining</strong>
-              <div class="sessions-progress mt-1">
-                <div class="sessions-progress-bar bg-primary" style="width: 100%"></div>
-              </div>
-            </div>
-            <div>
-              <small class="text-muted d-block">Payment</small>
-              <span class="badge bg-success">Paid</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="user-card">
-          <div class="user-card-header">
-            <div>
-              <h5 class="mb-1">John Smith</h5>
-              <small class="text-muted">john@example.com</small>
-            </div>
-            <div class="dropdown">
-              <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown">
-                <i class="ti ti-dots-vertical"></i>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="#">Mark as Paid</a></li>
-                <li><a class="dropdown-item" href="#">Send Payment Reminder</a></li>
-                <li><a class="dropdown-item" href="#">View Payment History</a></li>
-              </ul>
-            </div>
-          </div>
-          <div class="user-card-stats">
-            <div>
-              <small class="text-muted d-block">Sessions</small>
-              <strong>0/5 remaining</strong>
-              <div class="sessions-progress mt-1">
-                <div class="sessions-progress-bar bg-primary" style="width: 0%"></div>
-              </div>
-            </div>
-            <div>
-              <small class="text-muted d-block">Payment</small>
-              <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Edit Activity Modal -->
-<div class="modal fade" id="editActivityModal" tabindex="-1" aria-labelledby="editActivityModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="editActivityModalLabel">Edit Activity</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="editActivityForm">
-          <div class="mb-3">
-            <label class="form-label">Activity Name</label>
-            <input type="text" class="form-control" id="activityName" value="Summer Hockey League 2024">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Description</label>
-            <textarea class="form-control" id="activityDescription" rows="3">Professional hockey league for all skill levels</textarea>
-          </div>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Start Date</label>
-                <input type="date" class="form-control" id="startDate" value="2024-06-01">
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">End Date</label>
-                <input type="date" class="form-control" id="endDate" value="2024-08-31">
-              </div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Price per Passport</label>
-                <div class="input-group">
-                  <span class="input-group-text">$</span>
-                  <input type="number" class="form-control" id="passportPrice" value="50">
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Sessions per Passport</label>
-                <input type="number" class="form-control" id="sessionsPerPassport" value="5">
-              </div>
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Status</label>
-            <select class="form-select" id="activityStatus">
-              <option selected>Registration Open</option>
-              <option>Registration Closed</option>
-              <option>Activity Completed</option>
-              <option>Cancelled</option>
-            </select>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="saveActivityChanges()">Save Changes</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1236,21 +669,16 @@ function initializeActivityDashboard() {
     tab.addEventListener('click', handleFilterChange);
   });
   
-  // Bulk selection
-  const selectAllCheckbox = document.getElementById('selectAll');
-  if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener('change', handleSelectAll);
-  }
   
-  document.querySelectorAll('.user-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', updateBulkActionsBar);
-  });
+  // KPI dropdowns
+  initializeKPIDropdowns();
   
   // Keyboard shortcuts
   document.addEventListener('keydown', handleKeyboardShortcuts);
   
-  // Dropdown actions
-  document.querySelectorAll('.dropdown-item').forEach(item => {
+  // Most dropdown actions now use direct navigation via href attributes
+  // Only add click handlers for specific client-side actions
+  document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
     item.addEventListener('click', handleUserAction);
   });
 }
@@ -1320,27 +748,6 @@ function applyFilter(filter) {
   updateResultCount();
 }
 
-// Bulk selection
-function handleSelectAll(e) {
-  const isChecked = e.target.checked;
-  document.querySelectorAll('.user-checkbox').forEach(checkbox => {
-    checkbox.checked = isChecked;
-  });
-  updateBulkActionsBar();
-}
-
-function updateBulkActionsBar() {
-  const selectedCount = document.querySelectorAll('.user-checkbox:checked').length;
-  const bulkBar = document.getElementById('bulkActionsBar');
-  const countSpan = document.getElementById('selectedCount');
-  
-  if (selectedCount > 0) {
-    bulkBar.classList.add('show');
-    countSpan.textContent = selectedCount;
-  } else {
-    bulkBar.classList.remove('show');
-  }
-}
 
 // Update result count
 function updateResultCount() {
@@ -1371,79 +778,26 @@ function handleKeyboardShortcuts(e) {
     }
   }
   
-  // Select all with Ctrl+A
-  if (e.ctrlKey && e.key === 'a' && e.target.tagName !== 'INPUT') {
-    e.preventDefault();
-    const selectAll = document.getElementById('selectAll');
-    if (selectAll) {
-      selectAll.checked = !selectAll.checked;
-      handleSelectAll({ target: selectAll });
-    }
-  }
 }
 
-// User actions
+// User actions - now handled by individual links with proper URLs
 function handleUserAction(e) {
-  e.preventDefault();
   const action = e.target.textContent.trim();
-  const row = e.target.closest('tr');
-  const userName = row?.querySelector('.fw-bold')?.textContent || 'User';
+  const userName = e.target.closest('tr')?.querySelector('.fw-bold')?.textContent || 'User';
   
-  // Show notification (placeholder for real implementation)
-  console.log(`Action: ${action} for ${userName}`);
-  
-  // You would implement actual API calls here
+  // Most actions now use direct links to Flask routes
+  // Only handle client-side actions here
   switch(action) {
-    case 'View Profile':
-      // Navigate to user profile
-      break;
-    case 'Edit Passport':
-      // Open edit modal
-      break;
-    case 'Add Session':
-      // Add session logic
-      break;
     case 'Send Reminder':
-      // Send email reminder
-      showNotification('success', `Reminder sent to ${userName}`);
-      break;
-    case 'Mark as Paid':
-      // Update payment status
-      showNotification('success', `${userName} marked as paid`);
+      showNotification('info', `Reminder request sent for ${userName}`);
       break;
     case 'Remove User':
-      if (confirm(`Remove ${userName} from this activity?`)) {
-        row.remove();
-        showNotification('success', `${userName} removed`);
-        updateResultCount();
-      }
+      // This would be handled by a DELETE request to the backend
+      showNotification('info', `Remove action triggered for ${userName}`);
       break;
   }
 }
 
-// Save activity changes
-function saveActivityChanges() {
-  // Gather form data
-  const formData = {
-    name: document.getElementById('activityName').value,
-    description: document.getElementById('activityDescription').value,
-    startDate: document.getElementById('startDate').value,
-    endDate: document.getElementById('endDate').value,
-    price: document.getElementById('passportPrice').value,
-    sessions: document.getElementById('sessionsPerPassport').value,
-    status: document.getElementById('activityStatus').value
-  };
-  
-  // API call would go here
-  console.log('Saving activity:', formData);
-  
-  // Close modal
-  const modal = bootstrap.Modal.getInstance(document.getElementById('editActivityModal'));
-  modal?.hide();
-  
-  // Show success notification
-  showNotification('success', 'Activity updated successfully');
-}
 
 // Utility functions
 function debounce(func, wait) {
@@ -1461,15 +815,20 @@ function debounce(func, wait) {
 function showNotification(type, message) {
   // Create notification element
   const notification = document.createElement('div');
-  notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible position-fixed top-0 end-0 m-3`;
+  const typeClass = type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'info' ? 'info' : 'danger';
+  const icon = type === 'success' ? 'check' : type === 'warning' ? 'alert-triangle' : type === 'info' ? 'info-circle' : 'alert-circle';
+  const title = type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : type === 'info' ? 'Info' : 'Error!';
+  
+  notification.className = `alert alert-${typeClass} alert-dismissible position-fixed top-0 end-0 m-3`;
   notification.style.zIndex = '9999';
+  notification.style.minWidth = '300px';
   notification.innerHTML = `
     <div class="d-flex">
       <div>
-        <i class="ti ti-${type === 'success' ? 'check' : 'alert-circle'} alert-icon"></i>
+        <i class="ti ti-${icon} alert-icon"></i>
       </div>
       <div>
-        <h4 class="alert-title">${type === 'success' ? 'Success!' : 'Error!'}</h4>
+        <h4 class="alert-title">${title}</h4>
         <div class="text-muted">${message}</div>
       </div>
     </div>
@@ -1480,8 +839,235 @@ function showNotification(type, message) {
   
   // Auto-remove after 5 seconds
   setTimeout(() => {
-    notification.remove();
+    if (notification.parentNode) {
+      notification.remove();
+    }
   }, 5000);
+}
+
+// Enhanced search with URL updates and better filtering
+function enhancedSearch(query) {
+  const rows = document.querySelectorAll('tbody tr');
+  let visibleCount = 0;
+  
+  rows.forEach(row => {
+    const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+    const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+    const activityName = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+    
+    const searchText = query.toLowerCase();
+    const isVisible = userName.includes(searchText) || 
+                     userEmail.includes(searchText) || 
+                     activityName.includes(searchText);
+    
+    row.style.display = isVisible ? '' : 'none';
+    if (isVisible) visibleCount++;
+  });
+  
+  // Update result count display
+  const resultInfo = document.querySelector('.card-footer .text-muted');
+  if (resultInfo) {
+    const totalRows = rows.length;
+    resultInfo.textContent = `Showing ${visibleCount} of ${totalRows} entries`;
+  }
+  
+  // Update URL without page reload for better UX
+  if (history.pushState) {
+    const url = new URL(window.location);
+    if (query) {
+      url.searchParams.set('search', query);
+    } else {
+      url.searchParams.delete('search');
+    }
+    history.pushState(null, '', url);
+  }
+  
+  return visibleCount;
+}
+
+// KPI Dropdown Functionality
+function initializeKPIDropdowns() {
+  // Add event listeners to all KPI dropdown items
+  document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
+    // Only handle KPI dropdowns (those with period data)
+    if (item.textContent.includes('days')) {
+      item.addEventListener('click', handleKPITimeChange);
+    }
+  });
+}
+
+function handleKPITimeChange(event) {
+  event.preventDefault();
+  
+  const clickedItem = event.target;
+  const dropdown = clickedItem.closest('.dropdown');
+  const dropdownButton = dropdown.querySelector('.dropdown-toggle');
+  const kpiCard = clickedItem.closest('.card');
+  
+  // Extract period from text (e.g., "Last 7 days" -> 7)
+  const periodText = clickedItem.textContent.trim();
+  const periodMatch = periodText.match(/(\d+)\s+days/);
+  if (!periodMatch) return;
+  
+  const period = parseInt(periodMatch[1]);
+  
+  // Update dropdown button text
+  dropdownButton.textContent = periodText;
+  
+  // Show loading state
+  showKPILoading(kpiCard);
+  
+  // Make AJAX request to update KPI data
+  updateKPIData(period, kpiCard);
+}
+
+function showKPILoading(kpiCard) {
+  const valueElement = kpiCard.querySelector('.h2');
+  const trendElement = kpiCard.querySelector('.text-success, .text-muted');
+  
+  if (valueElement) {
+    valueElement.style.opacity = '0.5';
+  }
+  if (trendElement) {
+    trendElement.style.opacity = '0.5';
+  }
+}
+
+function hideKPILoading(kpiCard) {
+  const valueElement = kpiCard.querySelector('.h2');
+  const trendElement = kpiCard.querySelector('.text-success, .text-muted');
+  
+  if (valueElement) {
+    valueElement.style.opacity = '1';
+  }
+  if (trendElement) {
+    trendElement.style.opacity = '1';
+  }
+}
+
+function updateKPIData(period, kpiCard) {
+  // Get activity ID from current URL
+  const pathParts = window.location.pathname.split('/');
+  const activityId = pathParts[pathParts.length - 1];
+  
+  // For now, simulate API call with mock data
+  // TODO: Replace with actual API endpoint when available
+  setTimeout(() => {
+    updateKPIDisplay(kpiCard, period);
+    hideKPILoading(kpiCard);
+  }, 500);
+  
+  // Uncomment this when the API endpoint is available:
+  /*
+  fetch(`/api/activity-kpis/${activityId}?period=${period}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        updateKPIDisplayFromAPI(kpiCard, data.kpi_data);
+      } else {
+        console.error('Failed to fetch KPI data:', data.error);
+        showNotification('error', 'Failed to update KPI data');
+      }
+      hideKPILoading(kpiCard);
+    })
+    .catch(error => {
+      console.error('Error fetching KPI data:', error);
+      showNotification('error', 'Failed to update KPI data');
+      hideKPILoading(kpiCard);
+    });
+  */
+}
+
+function updateKPIDisplay(kpiCard, period) {
+  const titleElement = kpiCard.querySelector('.text-uppercase');
+  const valueElement = kpiCard.querySelector('.h2');
+  const trendElement = kpiCard.querySelector('.text-success, .text-muted');
+  
+  if (!titleElement || !valueElement) return;
+  
+  const kpiType = titleElement.textContent.toLowerCase();
+  
+  // Mock data based on period and KPI type
+  let mockData = getMockKPIData(kpiType, period);
+  
+  // Update display
+  if (kpiType.includes('revenue')) {
+    valueElement.textContent = `$${mockData.value}`;
+  } else {
+    valueElement.textContent = mockData.value;
+  }
+  
+  if (trendElement) {
+    const trendIcon = trendElement.querySelector('i');
+    trendElement.className = `text-${mockData.trend === 'up' ? 'success' : 'muted'} me-2`;
+    trendElement.innerHTML = `${mockData.percentage}% <i class="ti ti-trending-${mockData.trend}"></i>`;
+  }
+}
+
+function getMockKPIData(kpiType, period) {
+  // Generate realistic mock data based on period
+  const baseMultiplier = period === 7 ? 1 : period === 30 ? 3.8 : 11.5;
+  
+  switch (kpiType) {
+    case 'revenue':
+      return {
+        value: Math.round(1200 * baseMultiplier),
+        percentage: Math.round(5 + (period / 10)),
+        trend: 'up'
+      };
+    case 'active users':
+      return {
+        value: Math.round(25 * baseMultiplier),
+        percentage: Math.round(8 + (period / 15)),
+        trend: 'up'
+      };
+    case 'unpaid passports':
+      return {
+        value: Math.round(3 * Math.max(1, baseMultiplier * 0.3)),
+        percentage: Math.round(2 + (period / 20)),
+        trend: period > 30 ? 'up' : 'down'
+      };
+    case 'activity profit':
+      return {
+        value: Math.round(800 * baseMultiplier),
+        percentage: Math.round(85 + (period / 30)),
+        trend: 'up'
+      };
+    default:
+      return { value: 0, percentage: 0, trend: 'stable' };
+  }
+}
+
+function updateKPIDisplayFromAPI(kpiCard, kpiData) {
+  // This function will be used when the actual API is integrated
+  const titleElement = kpiCard.querySelector('.text-uppercase');
+  const valueElement = kpiCard.querySelector('.h2');
+  const trendElement = kpiCard.querySelector('.text-success, .text-muted');
+  
+  if (!titleElement || !valueElement) return;
+  
+  const kpiType = titleElement.textContent.toLowerCase();
+  let data;
+  
+  // Map KPI types to API response data
+  if (kpiType.includes('revenue')) {
+    data = kpiData.revenue;
+    valueElement.textContent = `$${Math.round(data.total)}`;
+  } else if (kpiType.includes('active users')) {
+    data = kpiData.active_users;
+    valueElement.textContent = data.total;
+  } else if (kpiType.includes('unpaid')) {
+    data = kpiData.unpaid_passports;
+    valueElement.textContent = data.total;
+  } else if (kpiType.includes('profit')) {
+    data = kpiData.profit;
+    valueElement.textContent = `$${Math.round(data.total)}`;
+  }
+  
+  if (data && trendElement) {
+    trendElement.className = `text-${data.trend === 'up' ? 'success' : 'muted'} me-2`;
+    trendElement.innerHTML = `${Math.round(data.percentage)}% <i class="ti ti-trending-${data.trend}"></i>`;
+  }
 }
 </script>
 {% endblock %}
