@@ -52,20 +52,21 @@
 div.card.kpi-card-rounded,
 .card.kpi-card-rounded,
 .row .col-sm-6 .card.kpi-card-rounded,
-.row .col-lg-3 .card.kpi-card-rounded {
-  border-radius: 8px !important;
-  -webkit-border-radius: 8px !important;
-  -moz-border-radius: 8px !important;
-  overflow: visible !important;
-  border-top-left-radius: 8px !important;
-  border-top-right-radius: 8px !important;
-  border-bottom-left-radius: 8px !important;
-  border-bottom-right-radius: 8px !important;
+.row .col-lg-3 .card.kpi-card-rounded,
+.row .col-md-3 .card.kpi-card-rounded {
+  border-radius: 10px !important;
+  -webkit-border-radius: 10px !important;
+  -moz-border-radius: 10px !important;
+  overflow: hidden !important;
+  border-top-left-radius: 10px !important;
+  border-top-right-radius: 10px !important;
+  border-bottom-left-radius: 10px !important;
+  border-bottom-right-radius: 10px !important;
   position: relative;
 }
 
 .kpi-card-rounded .card-body {
-  border-radius: 8px !important;
+  border-radius: 10px !important;
 }
 
 /* Fix dropdown z-index and positioning */
