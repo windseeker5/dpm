@@ -581,23 +581,93 @@
 const kpiData = {{ kpi_data | tojson | safe }};
 let currentPeriod = '7d';
 
-// Function to generate line chart SVG path
-function generateLineChart(data, width = 300, height = 40) {
-  if (!data || data.length === 0) return '';
+// Function to generate interactive line chart with hover points
+function generateInteractiveLineChart(data, width = 300, height = 40, chartId = '') {
+  if (!data || data.length === 0) return { path: '', points: [] };
   
   // Find min and max for scaling
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
   
-  // Generate path coordinates
-  const points = data.map((value, index) => {
+  // Generate path coordinates and hover points
+  const coordinates = [];
+  const hoverPoints = [];
+  
+  data.forEach((value, index) => {
     const x = (index / (data.length - 1)) * width;
     const y = height - ((value - min) / range) * (height - 10) - 5;
-    return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
+    
+    coordinates.push(`${index === 0 ? 'M' : 'L'} ${x},${y}`);
+    hoverPoints.push({ x, y, value, index });
   });
   
-  return points.join(' ');
+  return {
+    path: coordinates.join(' '),
+    points: hoverPoints
+  };
+}
+
+// Legacy function for backward compatibility
+function generateLineChart(data, width = 300, height = 40) {
+  const result = generateInteractiveLineChart(data, width, height);
+  return result.path;
+}
+
+// Tooltip management functions
+function createTooltip() {
+  let tooltip = document.getElementById('chart-tooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'chart-tooltip';
+    tooltip.className = 'chart-tooltip';
+    tooltip.style.cssText = `
+      position: absolute;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      white-space: nowrap;
+    `;
+    document.body.appendChild(tooltip);
+  }
+  return tooltip;
+}
+
+function showTooltip(x, y, value, period, index) {
+  const tooltip = createTooltip();
+  const formattedValue = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+  
+  // Calculate the date based on period and index
+  const daysAgo = parseInt(period) - index - 1;
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  const formattedDate = date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric'
+  });
+  
+  tooltip.innerHTML = `${formattedValue}<br><small>${formattedDate}</small>`;
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y - 10}px`;
+  tooltip.style.opacity = '1';
+}
+
+function hideTooltip() {
+  const tooltip = document.getElementById('chart-tooltip');
+  if (tooltip) {
+    tooltip.style.opacity = '0';
+  }
 }
 
 // Function to generate bar chart SVG rectangles
@@ -618,18 +688,54 @@ function generateBarChart(data, width = 300, height = 40) {
   return svg;
 }
 
-// Update all charts with real data
+// Update all charts with real data with smooth animations
 function updateCharts(period = '7d') {
   const periodData = kpiData[period];
   if (!periodData) return;
   
-  // Update Revenue Line Chart (both desktop and mobile)
-  const revenuePath = generateLineChart(periodData.revenue_trend);
+  // Add fade-out animation to existing charts
+  const allCharts = document.querySelectorAll('.card svg');
+  allCharts.forEach(chart => {
+    chart.style.transition = 'opacity 0.3s ease';
+    chart.style.opacity = '0.3';
+  });
+  
+  // Delay the chart update for smooth transition
+  setTimeout(() => {
+  
+  // Update Revenue Line Chart (both desktop and mobile) with interactive tooltips
+  const revenueChartData = generateInteractiveLineChart(periodData.revenue_trend, 300, 40, 'revenue');
   const revenueCharts = ['#revenue-chart', '#mobile-revenue-chart'];
   revenueCharts.forEach(selector => {
     const chart = document.querySelector(selector);
-    if (chart && revenuePath) {
-      chart.innerHTML = `<path d="${revenuePath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    if (chart && revenueChartData.path) {
+      // Create SVG with path and invisible hover zones
+      chart.innerHTML = `
+        <path d="${revenueChartData.path}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        ${revenueChartData.points.map((point, index) => 
+          `<circle cx="${point.x}" cy="${point.y}" r="6" fill="transparent" 
+                   data-value="${point.value}" data-index="${index}" 
+                   class="chart-hover-point" style="cursor: pointer;" />`
+        ).join('')}
+      `;
+      
+      // Add hover event listeners for revenue tooltips
+      chart.querySelectorAll('.chart-hover-point').forEach(point => {
+        point.addEventListener('mouseenter', function(e) {
+          const rect = chart.getBoundingClientRect();
+          const value = parseFloat(this.getAttribute('data-value'));
+          const index = parseInt(this.getAttribute('data-index'));
+          showTooltip(
+            rect.left + parseFloat(this.getAttribute('cx')) + window.scrollX,
+            rect.top + parseFloat(this.getAttribute('cy')) + window.scrollY - 50,
+            value, 
+            period, 
+            index
+          );
+        });
+        
+        point.addEventListener('mouseleave', hideTooltip);
+      });
     }
   });
   
@@ -662,14 +768,69 @@ function updateCharts(period = '7d') {
       chart.innerHTML = pendingSignupsBars;
     }
   });
+  
+  // Update KPI values and performance indicators
+  updateKpiValues(period, periodData);
+  
+  // Add fade-in animation to updated charts
+  setTimeout(() => {
+    const allCharts = document.querySelectorAll('.card svg');
+    allCharts.forEach(chart => {
+      chart.style.opacity = '1';
+    });
+  }, 50);
+  
+  }, 150); // End of main setTimeout for smooth transition
 }
 
-// Handle period dropdown clicks
+// Function to update KPI values and performance indicators
+function updateKpiValues(period, periodData) {
+  // Update Revenue KPI
+  if (periodData.revenue_value !== undefined) {
+    const revenueValue = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(periodData.revenue_value);
+    
+    // Update both desktop and mobile revenue values
+    const revenueElements = document.querySelectorAll('[data-kpi="revenue"] .kpi-value, [data-kpi="revenue"] .card-title');
+    revenueElements.forEach(el => {
+      if (el.textContent.includes('$') || el.classList.contains('kpi-value')) {
+        el.textContent = revenueValue;
+      }
+    });
+    
+    // Update performance indicator for revenue
+    if (periodData.revenue_performance !== undefined) {
+      const performanceText = periodData.revenue_performance > 0 
+        ? `+${periodData.revenue_performance.toFixed(1)}%` 
+        : `${periodData.revenue_performance.toFixed(1)}%`;
+      const performanceClass = periodData.revenue_performance >= 0 ? 'text-success' : 'text-danger';
+      
+      const performanceElements = document.querySelectorAll('[data-kpi="revenue"] .performance-indicator, [data-kpi="revenue"] .text-success, [data-kpi="revenue"] .text-danger');
+      performanceElements.forEach(el => {
+        el.textContent = performanceText;
+        el.className = performanceClass;
+      });
+    }
+  }
+  
+  // Update other KPIs similarly if needed in the future
+  // This structure allows for easy extension to other KPIs
+}
+
+// Handle period dropdown clicks with smooth transitions
 function attachDropdownHandlers() {
   // Find all dropdown items in KPI cards
   document.querySelectorAll('.card .dropdown-menu .dropdown-item').forEach(item => {
     item.addEventListener('click', function(e) {
       e.preventDefault();
+      
+      // Prevent multiple rapid clicks
+      if (this.classList.contains('loading')) return;
+      this.classList.add('loading');
       
       // Get period from text
       const text = this.textContent.trim();
@@ -677,13 +838,28 @@ function attachDropdownHandlers() {
       if (text.includes('30')) period = '30d';
       else if (text.includes('90')) period = '90d';
       
-      // Update button text
+      // Update button text with loading state
       const button = this.closest('.dropdown').querySelector('.dropdown-toggle');
-      if (button) button.textContent = text;
+      const originalText = button ? button.textContent : '';
+      if (button) {
+        button.style.opacity = '0.7';
+        button.textContent = text + ' ...';
+      }
       
-      // Update charts
+      // Update current period
       currentPeriod = period;
+      
+      // Update charts with animation
       updateCharts(period);
+      
+      // Reset loading state and button text
+      setTimeout(() => {
+        this.classList.remove('loading');
+        if (button) {
+          button.style.opacity = '1';
+          button.textContent = text;
+        }
+      }, 400);
     });
   });
 }
