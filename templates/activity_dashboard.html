@@ -25,8 +25,9 @@
   left: auto !important;
 }
 
-/* Ensure card doesn't clip dropdowns */
-.card {
+/* Ensure cards with dropdowns don't clip dropdowns */
+.table-responsive .card,
+.card:has(.dropdown-menu) {
   overflow: visible !important;
 }
 
@@ -60,12 +61,6 @@
   display: none; /* Chrome/Safari */
 }
 
-/* Hover effects for cards */
-.card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
-  transition: all 0.2s ease-in-out;
-}
 
 /* Mobile scroll indicators */
 @media (max-width: 767.98px) {
@@ -112,10 +107,10 @@
       </div>
 
       <!-- KPI Cards Section - Desktop Layout -->
-      <div class="row row-cards mb-4 d-none d-md-flex">
+      <div class="row mb-4 d-none d-md-flex">
         <!-- Revenue Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; overflow: hidden;">
+          <div class="card kpi-card-rounded">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">REVENUE</div>
@@ -146,7 +141,7 @@
 
         <!-- Active Users Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; overflow: hidden;">
+          <div class="card kpi-card-rounded">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">ACTIVE USERS</div>
@@ -183,7 +178,7 @@
 
         <!-- Unpaid Passports Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; overflow: hidden;">
+          <div class="card kpi-card-rounded">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
@@ -220,7 +215,7 @@
 
         <!-- Activity Profit Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; overflow: hidden;">
+          <div class="card kpi-card-rounded">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">ACTIVITY PROFIT</div>
@@ -255,7 +250,7 @@
         <div class="d-flex overflow-auto pb-2" style="scroll-snap-type: x mandatory;">
           <!-- Revenue Card -->
           <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
-            <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card kpi-card-rounded">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <div class="text-muted small text-uppercase">REVENUE</div>
@@ -286,7 +281,7 @@
 
           <!-- Active Users Card -->
           <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
-            <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card kpi-card-rounded">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <div class="text-muted small text-uppercase">ACTIVE USERS</div>
@@ -323,7 +318,7 @@
 
           <!-- Unpaid Passports Card -->
           <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
-            <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card kpi-card-rounded">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
@@ -360,7 +355,7 @@
 
           <!-- Activity Profit Card -->
           <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
-            <div class="card" style="border-radius: 12px; overflow: hidden;">
+            <div class="card kpi-card-rounded">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <div class="text-muted small text-uppercase">ACTIVITY PROFIT</div>
