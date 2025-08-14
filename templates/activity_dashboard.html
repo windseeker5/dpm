@@ -49,6 +49,30 @@
 .table-responsive .table th:last-child {
   padding-right: 1.5rem !important;
 }
+
+/* Mobile scroll snap styles for KPI cards */
+.d-flex.overflow-auto {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.d-flex.overflow-auto::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Hover effects for cards */
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Mobile scroll indicators */
+@media (max-width: 767.98px) {
+  .flex-shrink-0 {
+    scroll-snap-align: start;
+  }
+}
 </style>
 
 <div class="page-wrapper">
@@ -87,10 +111,10 @@
         </div>
       </div>
 
-      <!-- KPI Metrics Row -->
-      <div class="row row-cards mb-4">
+      <!-- KPI Cards Section - Desktop Layout -->
+      <div class="row row-cards mb-4 d-none d-md-flex">
         <!-- Revenue Card -->
-        <div class="col-sm-6 col-lg-3">
+        <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
@@ -100,18 +124,18 @@
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">${{ "%.0f"|format(kpi_data.revenue.total) }}</div>
+              <div class="h2 mb-1" id="revenue-value">${{ "%.0f"|format(kpi_data.revenue.total) }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2">{{ kpi_data.revenue.percentage }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
+                <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2" id="revenue-trend">{{ kpi_data.revenue.percentage }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
-                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="revenue-chart">
                   <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
                         fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
@@ -121,7 +145,7 @@
         </div>
 
         <!-- Active Users Card -->
-        <div class="col-sm-6 col-lg-3">
+        <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
@@ -131,18 +155,18 @@
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">{{ kpi_data.active_users.total }}</div>
+              <div class="h2 mb-1" id="active-users-value">{{ kpi_data.active_users.total }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-{{ 'success' if kpi_data.active_users.trend == 'up' else 'muted' }} me-2">{{ kpi_data.active_users.percentage }}% <i class="ti ti-trending-{{ kpi_data.active_users.trend }}"></i></div>
+                <div class="text-{{ 'success' if kpi_data.active_users.trend == 'up' else 'muted' }} me-2" id="active-users-trend">{{ kpi_data.active_users.percentage }}% <i class="ti ti-trending-{{ kpi_data.active_users.trend }}"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
-                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="active-users-chart">
                   <!-- Bar chart for active users -->
                   <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
                   <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
@@ -151,18 +175,6 @@
                   <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
                   <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
                   <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
-                  <rect x="115" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                  <rect x="130" y="12" width="8" height="28" fill="#206bc4" opacity="0.8" />
-                  <rect x="145" y="16" width="8" height="24" fill="#206bc4" opacity="0.8" />
-                  <rect x="160" y="10" width="8" height="30" fill="#206bc4" opacity="0.8" />
-                  <rect x="175" y="14" width="8" height="26" fill="#206bc4" opacity="0.8" />
-                  <rect x="190" y="18" width="8" height="22" fill="#206bc4" opacity="0.8" />
-                  <rect x="205" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
-                  <rect x="220" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
-                  <rect x="235" y="24" width="8" height="16" fill="#206bc4" opacity="0.8" />
-                  <rect x="250" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
-                  <rect x="265" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
-                  <rect x="280" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
                 </svg>
               </div>
             </div>
@@ -170,7 +182,7 @@
         </div>
 
         <!-- Unpaid Passports Card -->
-        <div class="col-sm-6 col-lg-3">
+        <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
@@ -180,20 +192,26 @@
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">{{ kpi_data.unpaid_passports.total }}</div>
+              <div class="h2 mb-1" id="unpaid-passports-value">{{ kpi_data.unpaid_passports.total }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-{{ 'danger' if kpi_data.unpaid_passports.overdue > 0 else 'muted' }} me-2">{{ kpi_data.unpaid_passports.overdue }} overdue <i class="ti ti-alert-circle"></i></div>
+                <div class="text-{{ 'danger' if kpi_data.unpaid_passports.overdue > 0 else 'muted' }} me-2" id="unpaid-passports-trend">{{ kpi_data.unpaid_passports.overdue }} overdue <i class="ti ti-alert-circle"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
-                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
-                  <path d="M 0,25 L 30,28 L 60,26 L 90,30 L 120,32 L 150,29 L 180,31 L 210,28 L 240,30 L 270,27 L 300,29" 
-                        fill="none" stroke="#f76707" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="unpaid-passports-chart">
+                  <!-- Bar chart for unpaid passports -->
+                  <rect x="10" y="30" width="8" height="10" fill="#f76707" opacity="0.8" />
+                  <rect x="25" y="28" width="8" height="12" fill="#f76707" opacity="0.8" />
+                  <rect x="40" y="32" width="8" height="8" fill="#f76707" opacity="0.8" />
+                  <rect x="55" y="26" width="8" height="14" fill="#f76707" opacity="0.8" />
+                  <rect x="70" y="24" width="8" height="16" fill="#f76707" opacity="0.8" />
+                  <rect x="85" y="29" width="8" height="11" fill="#f76707" opacity="0.8" />
+                  <rect x="100" y="27" width="8" height="13" fill="#f76707" opacity="0.8" />
                 </svg>
               </div>
             </div>
@@ -201,7 +219,7 @@
         </div>
 
         <!-- Activity Profit Card -->
-        <div class="col-sm-6 col-lg-3">
+        <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; overflow: hidden;">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
@@ -211,24 +229,172 @@
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">${{ "%.0f"|format(kpi_data.profit.total) }}</div>
+              <div class="h2 mb-1" id="profit-value">${{ "%.0f"|format(kpi_data.profit.total) }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2">{{ "%.0f"|format(kpi_data.profit.margin) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
+                <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2" id="profit-trend">{{ "%.0f"|format(kpi_data.profit.margin) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
-                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="profit-chart">
                   <path d="M 0,30 L 30,28 L 60,25 L 90,22 L 120,20 L 150,18 L 180,15 L 210,12 L 240,10 L 270,8 L 300,5" 
                         fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- KPI Cards Section - Mobile Carousel -->
+      <div class="d-md-none mb-4">
+        <div class="d-flex overflow-auto pb-2" style="scroll-snap-type: x mandatory;">
+          <!-- Revenue Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">REVENUE</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="h2 mb-1" id="mobile-revenue-value">${{ "%.0f"|format(kpi_data.revenue.total) }}</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2" id="mobile-revenue-trend">{{ kpi_data.revenue.percentage }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-revenue-chart">
+                    <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
+                          fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Users Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">ACTIVE USERS</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="h2 mb-1" id="mobile-active-users-value">{{ kpi_data.active_users.total }}</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-{{ 'success' if kpi_data.active_users.trend == 'up' else 'muted' }} me-2" id="mobile-active-users-trend">{{ kpi_data.active_users.percentage }}% <i class="ti ti-trending-{{ kpi_data.active_users.trend }}"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-active-users-chart">
+                    <!-- Bar chart for active users -->
+                    <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                    <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                    <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                    <rect x="55" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                    <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                    <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                    <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Unpaid Passports Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="h2 mb-1" id="mobile-unpaid-passports-value">{{ kpi_data.unpaid_passports.total }}</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-{{ 'danger' if kpi_data.unpaid_passports.overdue > 0 else 'muted' }} me-2" id="mobile-unpaid-passports-trend">{{ kpi_data.unpaid_passports.overdue }} overdue <i class="ti ti-alert-circle"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-unpaid-passports-chart">
+                    <!-- Bar chart for unpaid passports -->
+                    <rect x="10" y="30" width="8" height="10" fill="#f76707" opacity="0.8" />
+                    <rect x="25" y="28" width="8" height="12" fill="#f76707" opacity="0.8" />
+                    <rect x="40" y="32" width="8" height="8" fill="#f76707" opacity="0.8" />
+                    <rect x="55" y="26" width="8" height="14" fill="#f76707" opacity="0.8" />
+                    <rect x="70" y="24" width="8" height="16" fill="#f76707" opacity="0.8" />
+                    <rect x="85" y="29" width="8" height="11" fill="#f76707" opacity="0.8" />
+                    <rect x="100" y="27" width="8" height="13" fill="#f76707" opacity="0.8" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Profit Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">ACTIVITY PROFIT</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="h2 mb-1" id="mobile-profit-value">${{ "%.0f"|format(kpi_data.profit.total) }}</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2" id="mobile-profit-trend">{{ "%.0f"|format(kpi_data.profit.margin) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-profit-chart">
+                    <path d="M 0,30 L 30,28 L 60,25 L 90,22 L 120,20 L 150,18 L 180,15 L 210,12 L 240,10 L 270,8 L 300,5" 
+                          fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Scroll indicators -->
+        <div class="text-center mt-2">
+          <span class="badge bg-primary me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light" style="width: 8px; height: 8px; border-radius: 50%;"></span>
         </div>
       </div>
 
@@ -880,14 +1046,62 @@ function enhancedSearch(query) {
   return visibleCount;
 }
 
+// Chart generation functions
+function generateLineChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) return '';
+  
+  const max = Math.max(...data) || 1;
+  const min = Math.min(...data) || 0;
+  const range = max - min || 1;
+  
+  const points = data.map((value, index) => {
+    const x = (index / (data.length - 1)) * width;
+    const y = height - ((value - min) / range) * (height - 10) - 5;
+    return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
+  });
+  
+  return points.join(' ');
+}
+
+function generateBarChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) return '';
+  
+  const max = Math.max(...data) || 1;
+  const barWidth = (width - (data.length - 1) * 2) / data.length;
+  
+  let svg = '';
+  data.forEach((value, index) => {
+    const barHeight = (value / max) * (height - 5);
+    const x = index * (barWidth + 2);
+    const y = height - barHeight;
+    svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#206bc4" opacity="0.8" />`;
+  });
+  
+  return svg;
+}
+
+function generateUnpaidBarChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) return '';
+  
+  const max = Math.max(...data) || 1;
+  const barWidth = (width - (data.length - 1) * 2) / data.length;
+  
+  let svg = '';
+  data.forEach((value, index) => {
+    const barHeight = (value / max) * (height - 5);
+    const x = index * (barWidth + 2);
+    const y = height - barHeight;
+    svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#f76707" opacity="0.8" />`;
+  });
+  
+  return svg;
+}
+
 // KPI Dropdown Functionality
 function initializeKPIDropdowns() {
-  // Add event listeners to all KPI dropdown items
-  document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
-    // Only handle KPI dropdowns (those with period data)
-    if (item.textContent.includes('days')) {
-      item.addEventListener('click', handleKPITimeChange);
-    }
+  // Add event listeners to all KPI dropdown items with the kpi-period-btn class
+  document.querySelectorAll('.kpi-period-btn').forEach(item => {
+    item.addEventListener('click', handleKPITimeChange);
   });
 }
 
@@ -895,173 +1109,150 @@ function handleKPITimeChange(event) {
   event.preventDefault();
   
   const clickedItem = event.target;
+  const period = parseInt(clickedItem.dataset.period);
   const dropdown = clickedItem.closest('.dropdown');
   const dropdownButton = dropdown.querySelector('.dropdown-toggle');
   const kpiCard = clickedItem.closest('.card');
   
-  // Extract period from text (e.g., "Last 7 days" -> 7)
-  const periodText = clickedItem.textContent.trim();
-  const periodMatch = periodText.match(/(\d+)\s+days/);
-  if (!periodMatch) return;
-  
-  const period = parseInt(periodMatch[1]);
-  
   // Update dropdown button text
-  dropdownButton.textContent = periodText;
+  dropdownButton.textContent = clickedItem.textContent.trim();
+  
+  // Update all dropdown buttons with same period
+  document.querySelectorAll('.dropdown-toggle').forEach(btn => {
+    if (btn.textContent.includes('days')) {
+      btn.textContent = clickedItem.textContent.trim();
+    }
+  });
   
   // Show loading state
-  showKPILoading(kpiCard);
+  showKPILoading();
   
   // Make AJAX request to update KPI data
-  updateKPIData(period, kpiCard);
+  updateAllKPIData(period);
 }
 
-function showKPILoading(kpiCard) {
-  const valueElement = kpiCard.querySelector('.h2');
-  const trendElement = kpiCard.querySelector('.text-success, .text-muted');
-  
-  if (valueElement) {
-    valueElement.style.opacity = '0.5';
-  }
-  if (trendElement) {
-    trendElement.style.opacity = '0.5';
-  }
+function showKPILoading() {
+  // Show loading for all KPI cards
+  document.querySelectorAll('.card .h2').forEach(el => {
+    el.style.opacity = '0.5';
+  });
+  document.querySelectorAll('.card .text-success, .card .text-danger, .card .text-muted').forEach(el => {
+    if (el.closest('.card')) {
+      el.style.opacity = '0.5';
+    }
+  });
 }
 
-function hideKPILoading(kpiCard) {
-  const valueElement = kpiCard.querySelector('.h2');
-  const trendElement = kpiCard.querySelector('.text-success, .text-muted');
-  
-  if (valueElement) {
-    valueElement.style.opacity = '1';
-  }
-  if (trendElement) {
-    trendElement.style.opacity = '1';
-  }
+function hideKPILoading() {
+  // Hide loading for all KPI cards
+  document.querySelectorAll('.card .h2').forEach(el => {
+    el.style.opacity = '1';
+  });
+  document.querySelectorAll('.card .text-success, .card .text-danger, .card .text-muted').forEach(el => {
+    if (el.closest('.card')) {
+      el.style.opacity = '1';
+    }
+  });
 }
 
-function updateKPIData(period, kpiCard) {
+function updateAllKPIData(period) {
   // Get activity ID from current URL
   const pathParts = window.location.pathname.split('/');
   const activityId = pathParts[pathParts.length - 1];
   
-  // For now, simulate API call with mock data
-  // TODO: Replace with actual API endpoint when available
-  setTimeout(() => {
-    updateKPIDisplay(kpiCard, period);
-    hideKPILoading(kpiCard);
-  }, 500);
-  
-  // Uncomment this when the API endpoint is available:
-  /*
+  // Make API call to get updated KPI data
   fetch(`/api/activity-kpis/${activityId}?period=${period}`)
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        updateKPIDisplayFromAPI(kpiCard, data.kpi_data);
+        updateAllKPIDisplays(data.kpi_data, period);
       } else {
         console.error('Failed to fetch KPI data:', data.error);
         showNotification('error', 'Failed to update KPI data');
       }
-      hideKPILoading(kpiCard);
+      hideKPILoading();
     })
     .catch(error => {
       console.error('Error fetching KPI data:', error);
       showNotification('error', 'Failed to update KPI data');
-      hideKPILoading(kpiCard);
+      hideKPILoading();
     });
-  */
 }
 
-function updateKPIDisplay(kpiCard, period) {
-  const titleElement = kpiCard.querySelector('.text-uppercase');
-  const valueElement = kpiCard.querySelector('.h2');
-  const trendElement = kpiCard.querySelector('.text-success, .text-muted');
+function updateAllKPIDisplays(kpiData, period) {
+  // Update Revenue
+  updateKPICard('revenue', kpiData.revenue, 'line', period);
+  updateKPICard('mobile-revenue', kpiData.revenue, 'line', period);
   
-  if (!titleElement || !valueElement) return;
+  // Update Active Users
+  updateKPICard('active-users', kpiData.active_users, 'bar', period);
+  updateKPICard('mobile-active-users', kpiData.active_users, 'bar', period);
   
-  const kpiType = titleElement.textContent.toLowerCase();
+  // Update Unpaid Passports
+  updateKPICard('unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
+  updateKPICard('mobile-unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
   
-  // Mock data based on period and KPI type
-  let mockData = getMockKPIData(kpiType, period);
-  
-  // Update display
-  if (kpiType.includes('revenue')) {
-    valueElement.textContent = `$${mockData.value}`;
-  } else {
-    valueElement.textContent = mockData.value;
-  }
-  
-  if (trendElement) {
-    const trendIcon = trendElement.querySelector('i');
-    trendElement.className = `text-${mockData.trend === 'up' ? 'success' : 'muted'} me-2`;
-    trendElement.innerHTML = `${mockData.percentage}% <i class="ti ti-trending-${mockData.trend}"></i>`;
-  }
+  // Update Profit
+  updateKPICard('profit', kpiData.profit, 'line', period);
+  updateKPICard('mobile-profit', kpiData.profit, 'line', period);
 }
 
-function getMockKPIData(kpiType, period) {
-  // Generate realistic mock data based on period
-  const baseMultiplier = period === 7 ? 1 : period === 30 ? 3.8 : 11.5;
-  
-  switch (kpiType) {
-    case 'revenue':
-      return {
-        value: Math.round(1200 * baseMultiplier),
-        percentage: Math.round(5 + (period / 10)),
-        trend: 'up'
-      };
-    case 'active users':
-      return {
-        value: Math.round(25 * baseMultiplier),
-        percentage: Math.round(8 + (period / 15)),
-        trend: 'up'
-      };
-    case 'unpaid passports':
-      return {
-        value: Math.round(3 * Math.max(1, baseMultiplier * 0.3)),
-        percentage: Math.round(2 + (period / 20)),
-        trend: period > 30 ? 'up' : 'down'
-      };
-    case 'activity profit':
-      return {
-        value: Math.round(800 * baseMultiplier),
-        percentage: Math.round(85 + (period / 30)),
-        trend: 'up'
-      };
-    default:
-      return { value: 0, percentage: 0, trend: 'stable' };
-  }
-}
-
-function updateKPIDisplayFromAPI(kpiCard, kpiData) {
-  // This function will be used when the actual API is integrated
-  const titleElement = kpiCard.querySelector('.text-uppercase');
-  const valueElement = kpiCard.querySelector('.h2');
-  const trendElement = kpiCard.querySelector('.text-success, .text-muted');
-  
-  if (!titleElement || !valueElement) return;
-  
-  const kpiType = titleElement.textContent.toLowerCase();
-  let data;
-  
-  // Map KPI types to API response data
-  if (kpiType.includes('revenue')) {
-    data = kpiData.revenue;
-    valueElement.textContent = `$${Math.round(data.total)}`;
-  } else if (kpiType.includes('active users')) {
-    data = kpiData.active_users;
-    valueElement.textContent = data.total;
-  } else if (kpiType.includes('unpaid')) {
-    data = kpiData.unpaid_passports;
-    valueElement.textContent = data.total;
-  } else if (kpiType.includes('profit')) {
-    data = kpiData.profit;
-    valueElement.textContent = `$${Math.round(data.total)}`;
+function updateKPICard(prefix, data, chartType, period) {
+  // Update value
+  const valueEl = document.getElementById(`${prefix}-value`);
+  if (valueEl) {
+    if (prefix.includes('revenue') || prefix.includes('profit')) {
+      valueEl.textContent = `$${Math.round(data.total)}`;
+    } else {
+      valueEl.textContent = data.total;
+    }
   }
   
-  if (data && trendElement) {
-    trendElement.className = `text-${data.trend === 'up' ? 'success' : 'muted'} me-2`;
-    trendElement.innerHTML = `${Math.round(data.percentage)}% <i class="ti ti-trending-${data.trend}"></i>`;
+  // Update trend
+  const trendEl = document.getElementById(`${prefix}-trend`);
+  if (trendEl) {
+    let trendClass = '';
+    let icon = '';
+    
+    if (data.trend === 'up') {
+      trendClass = 'text-success';
+      icon = 'ti-trending-up';
+    } else if (data.trend === 'down') {
+      trendClass = 'text-danger';
+      icon = 'ti-trending-down';
+    } else {
+      trendClass = 'text-muted';
+      icon = 'ti-minus';
+    }
+    
+    if (prefix.includes('unpaid-passports')) {
+      trendEl.innerHTML = `${data.overdue} overdue <i class="ti ti-alert-circle"></i>`;
+      trendEl.className = `${data.overdue > 0 ? 'text-danger' : 'text-muted'} me-2`;
+    } else if (prefix.includes('profit')) {
+      trendEl.innerHTML = `${Math.round(data.margin)}% margin <i class="${icon}"></i>`;
+      trendEl.className = `${trendClass} me-2`;
+    } else {
+      trendEl.innerHTML = `${data.percentage}% <i class="${icon}"></i>`;
+      trendEl.className = `${trendClass} me-2`;
+    }
+  }
+  
+  // Update chart
+  const chartEl = document.getElementById(`${prefix}-chart`);
+  if (chartEl && data.trend_data) {
+    let chartContent = '';
+    
+    if (chartType === 'line') {
+      const path = generateLineChart(data.trend_data);
+      const color = prefix.includes('revenue') ? '#206bc4' : '#2fb344';
+      chartContent = `<path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    } else if (chartType === 'bar') {
+      chartContent = generateBarChart(data.trend_data);
+    } else if (chartType === 'unpaid-bar') {
+      chartContent = generateUnpaidBarChart(data.trend_data);
+    }
+    
+    chartEl.innerHTML = chartContent;
   }
 }
 </script>
