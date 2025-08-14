@@ -335,24 +335,28 @@ def get_kpi_stats():
             return trend
         
         def build_revenue_series(days=7):
-            """Build daily revenue series from paid passports"""
+            """Build daily revenue series from paid passports using paid_date"""
             trend = []
             for i in reversed(range(days)):
                 start = now - timedelta(days=i+1)
                 end = now - timedelta(days=i)
+                # Use paid_date for accurate revenue tracking, fallback to created_dt if null
                 passports = Passport.query.filter(
-                    Passport.created_dt >= start, 
-                    Passport.created_dt < end,
                     Passport.paid == True
+                ).filter(
+                    db.or_(
+                        db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= start, Passport.paid_date < end),
+                        db.and_(Passport.paid_date.is_(None), Passport.created_dt >= start, Passport.created_dt < end)
+                    )
                 ).all()
-                daily_revenue = sum(p.sold_amt for p in passports)
+                daily_revenue = sum(p.sold_amt for p in passports if p.sold_amt is not None)
                 trend.append(round(daily_revenue, 2))
             return trend
 
         ranges = {
             "7d": (now - timedelta(days=7), now, 7),
             "30d": (now - timedelta(days=30), now, 30),
-            "90d": (now - timedelta(days=90), now, 30),
+            "90d": (now - timedelta(days=90), now, 90),
             "all": (datetime.min.replace(tzinfo=timezone.utc), now, 30),
         }
         previous_ranges = {
@@ -367,18 +371,41 @@ def get_kpi_stats():
         for label, (start, end, trend_days) in ranges.items():
             prev_start, prev_end = previous_ranges[label]
 
+            # Get current period paid passports using paid_date (with fallback to created_dt)
+            current_revenue_passports = Passport.query.filter(
+                Passport.paid == True
+            ).filter(
+                db.or_(
+                    db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= start, Passport.paid_date <= end),
+                    db.and_(Passport.paid_date.is_(None), Passport.created_dt >= start, Passport.created_dt <= end)
+                )
+            ).all()
+            
+            # Get previous period paid passports using paid_date (with fallback to created_dt)
+            previous_revenue_passports = Passport.query.filter(
+                Passport.paid == True
+            ).filter(
+                db.or_(
+                    db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= prev_start, Passport.paid_date <= prev_end),
+                    db.and_(Passport.paid_date.is_(None), Passport.created_dt >= prev_start, Passport.created_dt <= prev_end)
+                )
+            ).all()
+            
+            # For other metrics, use created_dt as they track passport creation, not revenue
             current_passports = Passport.query.filter(Passport.created_dt >= start, Passport.created_dt <= end).all()
             previous_passports = Passport.query.filter(Passport.created_dt >= prev_start, Passport.created_dt <= prev_end).all()
 
-            def total(passports): return sum(p.sold_amt for p in passports if p.paid)
+            def revenue_total(passports): return sum(p.sold_amt for p in passports if p.sold_amt is not None)
             def created(passports): return len(passports)
             def active(passports): return len([p for p in passports if p.uses_remaining > 0])
             def pending_signups_count(): return Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= start, Signup.signed_up_at <= end).count()
 
             # Calculate percentage changes
             revenue_change = 0
-            if total(previous_passports) > 0:
-                revenue_change = round(((total(current_passports) - total(previous_passports)) / total(previous_passports)) * 100, 1)
+            current_revenue = revenue_total(current_revenue_passports)
+            previous_revenue = revenue_total(previous_revenue_passports)
+            if previous_revenue > 0:
+                revenue_change = round(((current_revenue - previous_revenue) / previous_revenue) * 100, 1)
             
             passport_change = 0
             if active(previous_passports) > 0:
@@ -394,8 +421,8 @@ def get_kpi_stats():
                 signup_change = round(((pending_signups_count() - prev_signups) / prev_signups) * 100, 1)
             
             kpis[label] = {
-                "revenue": round(total(current_passports), 2),
-                "revenue_prev": round(total(previous_passports), 2),
+                "revenue": round(current_revenue, 2),
+                "revenue_prev": round(previous_revenue, 2),
                 "revenue_change": revenue_change,
                 "pass_created": created(current_passports),
                 "pass_created_prev": created(previous_passports),
