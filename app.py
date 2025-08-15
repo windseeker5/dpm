@@ -631,6 +631,37 @@ def alerts_test():
     '''.strip()
 
 
+@app.route("/alerts-demo")
+def alerts_demo():
+    """Enhanced alert system demonstration with multiple notification types"""
+    # Flash different types of messages for demonstration
+    flash("Your activity has been successfully created and is now live!", "success")
+    flash("Please review the payment details before proceeding.", "warning")
+    flash("Failed to connect to payment processor. Please try again.", "error")
+    flash("New features are available in the latest update.", "info")
+    flash("Your digital pass has been generated and sent via email.", "success")
+    
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/alerts-test-single/<alert_type>")
+def alerts_test_single(alert_type):
+    """Test single alert type for focused UX testing"""
+    messages = {
+        "success": "Operation completed successfully! Your changes have been saved.",
+        "error": "Something went wrong. Please check your input and try again.",
+        "warning": "This action cannot be undone. Please confirm before proceeding.",
+        "info": "Did you know? You can use keyboard shortcuts to navigate faster."
+    }
+    
+    if alert_type in messages:
+        flash(messages[alert_type], alert_type)
+    else:
+        flash("Invalid alert type specified", "error")
+    
+    return redirect(url_for("dashboard"))
+
+
 @app.route("/dashboard")
 def dashboard():
     if "admin" not in session:
@@ -3045,101 +3076,154 @@ def get_activity_kpis_api(activity_id):
     from models import Activity, Passport
     from datetime import datetime, timezone, timedelta
     from utils import get_kpi_stats
+    import math
     
-    # Get period from query parameters (default to 7 days)
-    period = int(request.args.get('period', 7))
-    
-    activity = Activity.query.get(activity_id)
-    if not activity:
-        return jsonify({"success": False, "error": "Activity not found"}), 404
-    
-    # Use the enhanced get_kpi_stats function with activity filtering
-    kpi_stats = get_kpi_stats(activity_id=activity_id)
-    
-    # Map period to the correct key
-    period_key = '7d'
-    if period == 30:
-        period_key = '30d'
-    elif period == 90:
-        period_key = '90d'
-    
-    # Get the KPI data for the requested period
-    period_data = kpi_stats.get(period_key, {})
-    
-    # Calculate additional activity-specific metrics
-    now = datetime.now(timezone.utc)
-    three_days_ago = now - timedelta(days=3)
-    
-    # Get all passports for unpaid statistics
-    all_passports = Passport.query.filter_by(activity_id=activity_id).all()
-    unpaid_passports = [p for p in all_passports if not p.paid]
-    unpaid_count = len(unpaid_passports)
-    
-    # Helper function to safely compare dates
-    def is_recent(dt, cutoff_date):
-        if not dt:
-            return False
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt >= cutoff_date
-    
-    overdue_count = len([p for p in unpaid_passports if p.created_dt and not is_recent(p.created_dt, three_days_ago)])
-    
-    # Calculate profit (combining revenue with expenses/income)
     try:
-        activity_expenses = sum(e.amount for e in activity.expenses) if hasattr(activity, 'expenses') else 0
-        activity_income = sum(i.amount for i in activity.incomes) if hasattr(activity, 'incomes') else 0
-        total_income = period_data.get('revenue', 0) + activity_income
-        profit = total_income - activity_expenses
-        profit_margin = (profit / total_income * 100) if total_income > 0 else 0
+        # Get period from query parameters (default to 7 days)
+        period = int(request.args.get('period', 7))
         
-        # Previous period profit for comparison
-        previous_total_income = period_data.get('revenue_prev', 0) + activity_income
-        previous_profit = previous_total_income - activity_expenses
-        profit_change = ((profit - previous_profit) / previous_profit * 100) if previous_profit > 0 else 0
-    except:
-        profit = period_data.get('revenue', 0)
-        profit_margin = 100
-        profit_change = period_data.get('revenue_change', 0)
-    
-    kpi_data = {
-        'revenue': {
-            'total': period_data.get('revenue', 0),
-            'change': period_data.get('revenue_change', 0),
-            'trend': 'up' if period_data.get('revenue_change', 0) > 0 else 'down' if period_data.get('revenue_change', 0) < 0 else 'stable',
-            'percentage': abs(period_data.get('revenue_change', 0)),
-            'trend_data': period_data.get('revenue_trend', [])
-        },
-        'active_users': {
-            'total': period_data.get('active_users', 0),
-            'change': period_data.get('passport_change', 0),
-            'trend': 'up' if period_data.get('passport_change', 0) > 0 else 'down' if period_data.get('passport_change', 0) < 0 else 'stable',
-            'percentage': abs(period_data.get('passport_change', 0)),
-            'trend_data': period_data.get('active_users_trend', [])
-        },
-        'unpaid_passports': {
-            'total': unpaid_count,
-            'change': 0,  # We don't track unpaid changes in the base KPI function
-            'trend': 'stable',
-            'percentage': 0,
-            'overdue': overdue_count,
-            'trend_data': [unpaid_count] * len(period_data.get('revenue_trend', []))  # Simple placeholder
-        },
-        'profit': {
-            'total': profit,
-            'margin': profit_margin,
-            'change': profit_change,
-            'trend': 'up' if profit_change > 0 else 'down' if profit_change < 0 else 'stable',
-            'percentage': abs(profit_change),
-            'trend_data': period_data.get('revenue_trend', [])  # Use revenue trend as proxy for profit
+        activity = Activity.query.get(activity_id)
+        if not activity:
+            return jsonify({"success": False, "error": "Activity not found"}), 404
+        
+        # Use the enhanced get_kpi_stats function with activity filtering
+        kpi_stats = get_kpi_stats(activity_id=activity_id)
+        
+        # Map period to the correct key
+        period_key = '7d'
+        if period == 30:
+            period_key = '30d'
+        elif period == 90:
+            period_key = '90d'
+        
+        # Get the KPI data for the requested period
+        period_data = kpi_stats.get(period_key, {})
+        
+        # Helper function to safely validate and clean numeric values
+        def safe_float(value, default=0.0):
+            """Convert value to float, handling None, NaN, and invalid values"""
+            try:
+                if value is None:
+                    return default
+                float_val = float(value)
+                if math.isnan(float_val) or math.isinf(float_val):
+                    return default
+                return round(float_val, 2)
+            except (TypeError, ValueError):
+                return default
+        
+        # Helper function to validate and clean trend data arrays
+        def clean_trend_data(trend_data, default_length=7):
+            """Clean trend data array, ensuring all values are valid numbers"""
+            if not isinstance(trend_data, list):
+                return [0] * default_length
+            
+            cleaned = []
+            for value in trend_data:
+                cleaned.append(safe_float(value, 0))
+            
+            # Ensure we have the right number of data points
+            if len(cleaned) < default_length:
+                cleaned.extend([0] * (default_length - len(cleaned)))
+            elif len(cleaned) > default_length:
+                cleaned = cleaned[-default_length:]
+                
+            return cleaned
+        
+        # Calculate additional activity-specific metrics
+        now = datetime.now(timezone.utc)
+        three_days_ago = now - timedelta(days=3)
+        
+        # Get all passports for unpaid statistics with proper error handling
+        try:
+            all_passports = Passport.query.filter_by(activity_id=activity_id).all()
+            unpaid_passports = [p for p in all_passports if not p.paid]
+            unpaid_count = len(unpaid_passports)
+            
+            # Helper function to safely compare dates
+            def is_recent(dt, cutoff_date):
+                if not dt:
+                    return False
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt >= cutoff_date
+            
+            overdue_count = len([p for p in unpaid_passports if p.created_dt and not is_recent(p.created_dt, three_days_ago)])
+        except Exception as e:
+            print(f"Error calculating unpaid passports for activity {activity_id}: {e}")
+            unpaid_count = 0
+            overdue_count = 0
+        
+        # Calculate profit (combining revenue with expenses/income)
+        try:
+            activity_expenses = sum(safe_float(e.amount) for e in getattr(activity, 'expenses', []))
+            activity_income = sum(safe_float(i.amount) for i in getattr(activity, 'incomes', []))
+            current_revenue = safe_float(period_data.get('revenue', 0))
+            total_income = current_revenue + activity_income
+            profit = total_income - activity_expenses
+            profit_margin = (profit / total_income * 100) if total_income > 0 else 0
+            
+            # Previous period profit for comparison
+            previous_revenue = safe_float(period_data.get('revenue_prev', 0))
+            previous_total_income = previous_revenue + activity_income
+            previous_profit = previous_total_income - activity_expenses
+            profit_change = ((profit - previous_profit) / previous_profit * 100) if previous_profit > 0 else 0
+        except Exception as e:
+            print(f"Error calculating profit for activity {activity_id}: {e}")
+            profit = safe_float(period_data.get('revenue', 0))
+            profit_margin = 100 if profit > 0 else 0
+            profit_change = safe_float(period_data.get('revenue_change', 0))
+        
+        # Get and clean trend data length based on period
+        trend_length = period if period in [7, 30, 90] else 7
+        
+        # Build KPI data with proper validation and cleaning
+        kpi_data = {
+            'revenue': {
+                'total': safe_float(period_data.get('revenue', 0)),
+                'change': safe_float(period_data.get('revenue_change', 0)),
+                'trend': 'up' if safe_float(period_data.get('revenue_change', 0)) > 0 else 'down' if safe_float(period_data.get('revenue_change', 0)) < 0 else 'stable',
+                'percentage': abs(safe_float(period_data.get('revenue_change', 0))),
+                'trend_data': clean_trend_data(period_data.get('revenue_trend', []), trend_length)
+            },
+            'active_users': {
+                'total': int(safe_float(period_data.get('active_users', 0))),
+                'change': safe_float(period_data.get('passport_change', 0)),
+                'trend': 'up' if safe_float(period_data.get('passport_change', 0)) > 0 else 'down' if safe_float(period_data.get('passport_change', 0)) < 0 else 'stable',
+                'percentage': abs(safe_float(period_data.get('passport_change', 0))),
+                'trend_data': clean_trend_data(period_data.get('active_users_trend', []), trend_length)
+            },
+            'unpaid_passports': {
+                'total': unpaid_count,
+                'change': 0,  # We don't track unpaid changes in the base KPI function
+                'trend': 'stable',
+                'percentage': 0,
+                'overdue': overdue_count,
+                'trend_data': [unpaid_count] * trend_length  # Simple placeholder with correct length
+            },
+            'profit': {
+                'total': safe_float(profit),
+                'margin': safe_float(profit_margin),
+                'change': safe_float(profit_change),
+                'trend': 'up' if safe_float(profit_change) > 0 else 'down' if safe_float(profit_change) < 0 else 'stable',
+                'percentage': abs(safe_float(profit_change)),
+                'trend_data': clean_trend_data(period_data.get('revenue_trend', []), trend_length)  # Use revenue trend as proxy for profit
+            }
         }
-    }
-    
-    return jsonify({
-        "success": True,
-        "period": period,
-        "kpi_data": kpi_data
-    })
+        
+        return jsonify({
+            "success": True,
+            "period": period,
+            "kpi_data": kpi_data
+        })
+        
+    except Exception as e:
+        print(f"Error in get_activity_kpis_api for activity {activity_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Internal server error",
+            "details": str(e) if app.debug else "Please try again later"
+        }), 500
 
 
 @app.route("/api/global-kpis")

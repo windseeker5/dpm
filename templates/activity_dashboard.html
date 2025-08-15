@@ -805,16 +805,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize charts with current page data
 function initializeChartsWithData() {
-  // Check if kpiData is available and log for debugging
-  console.log('Initializing charts with KPI data:', kpiData);
-  
   // Initialize revenue charts with default 7-day data
   if (kpiData && kpiData.revenue && kpiData.revenue.trend_data) {
-    console.log('Using revenue trend data:', kpiData.revenue.trend_data);
     const revenueData = kpiData.revenue.trend_data;
     initializeRevenueChart(revenueData);
   } else {
-    console.log('Using fallback revenue data');
     // Fallback: create default chart with sample data for 7 days
     const defaultData = [150, 200, 180, 220, 190, 250, 280];
     initializeRevenueChart(defaultData);
@@ -822,11 +817,9 @@ function initializeChartsWithData() {
   
   // Initialize profit charts if data is available
   if (kpiData && kpiData.profit && kpiData.profit.trend_data) {
-    console.log('Using profit trend data:', kpiData.profit.trend_data);
     const profitData = kpiData.profit.trend_data;
     initializeProfitChart(profitData);
   } else {
-    console.log('Using fallback profit data');
     // Fallback: create default profit chart
     const defaultProfitData = [80, 120, 95, 140, 110, 160, 180];
     initializeProfitChart(defaultProfitData);
@@ -837,16 +830,18 @@ function initializeChartsWithData() {
 function initializeRevenueChart(data) {
   const chartPath = generateCleanLineChart(data, 300, 40);
   
-  // Update desktop chart
-  const desktopChart = document.getElementById('revenue-chart');
-  if (desktopChart && chartPath) {
-    desktopChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
-  }
-  
-  // Update mobile chart
-  const mobileChart = document.getElementById('mobile-revenue-chart');
-  if (mobileChart && chartPath) {
-    mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+  if (chartPath && chartPath.trim() !== '') {
+    // Update desktop chart
+    const desktopChart = document.getElementById('revenue-chart');
+    if (desktopChart) {
+      desktopChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+    
+    // Update mobile chart
+    const mobileChart = document.getElementById('mobile-revenue-chart');
+    if (mobileChart) {
+      mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
   }
 }
 
@@ -854,16 +849,18 @@ function initializeRevenueChart(data) {
 function initializeProfitChart(data) {
   const chartPath = generateCleanLineChart(data, 300, 40);
   
-  // Update desktop chart
-  const desktopChart = document.getElementById('profit-chart');
-  if (desktopChart && chartPath) {
-    desktopChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
-  }
-  
-  // Update mobile chart
-  const mobileChart = document.getElementById('mobile-profit-chart');
-  if (mobileChart && chartPath) {
-    mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+  if (chartPath && chartPath.trim() !== '') {
+    // Update desktop chart
+    const desktopChart = document.getElementById('profit-chart');
+    if (desktopChart) {
+      desktopChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+    
+    // Update mobile chart
+    const mobileChart = document.getElementById('mobile-profit-chart');
+    if (mobileChart) {
+      mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
   }
 }
 
@@ -1324,8 +1321,9 @@ function handleKPITimeChange(event) {
   
   // Update only the clicked dropdown button text with loading state
   const originalText = dropdownButton.textContent;
+  const newText = clickedItem.textContent.trim();
   dropdownButton.style.opacity = '0.7';
-  dropdownButton.textContent = clickedItem.textContent.trim() + ' ...';
+  dropdownButton.textContent = newText + ' ...';
   
   // Determine which KPI card to update based on the clicked dropdown
   const kpiCard = dropdown.closest('.card');
@@ -1335,13 +1333,13 @@ function handleKPITimeChange(event) {
   showKPILoading(kpiCard);
   
   // Make AJAX request to update only this specific KPI data
-  updateSingleKPIData(period, kpiType, kpiCard);
+  updateSingleKPIData(period, kpiType, kpiCard, newText);
   
   // Reset loading state for this dropdown only after completion
   setTimeout(() => {
     clickedItem.classList.remove('loading');
     if (dropdownButton.textContent.includes('...')) {
-      dropdownButton.textContent = clickedItem.textContent.trim();
+      dropdownButton.textContent = newText;
       dropdownButton.style.opacity = '1';
     }
   }, 800);
@@ -1387,7 +1385,7 @@ function determineKPIType(cardElement) {
   return 'revenue'; // fallback
 }
 
-function updateSingleKPIData(period, kpiType, cardElement) {
+function updateSingleKPIData(period, kpiType, cardElement, periodText) {
   // Get activity ID from current URL
   const pathParts = window.location.pathname.split('/');
   const activityId = pathParts[pathParts.length - 1];
@@ -1401,6 +1399,8 @@ function updateSingleKPIData(period, kpiType, cardElement) {
     .then(data => {
       if (data.success) {
         updateSingleKPIDisplay(data.kpi_data, period, kpiType, cardElement);
+        // Update all dropdowns with same KPI type to show consistent period
+        updateAllDropdownsForKPIType(kpiType, periodText);
       } else {
         console.error('Failed to fetch KPI data:', data.error);
         showNotification('error', 'Failed to update KPI data');
@@ -1415,6 +1415,27 @@ function updateSingleKPIData(period, kpiType, cardElement) {
       showNotification('error', 'Failed to update KPI data');
       hideKPILoading(cardElement);
     });
+}
+
+// Update all dropdown buttons for the same KPI type (desktop and mobile)
+function updateAllDropdownsForKPIType(kpiType, periodText) {
+  let selectorPattern;
+  if (kpiType === 'revenue') {
+    selectorPattern = '[id*="revenue"]';
+  } else if (kpiType === 'active_users') {
+    selectorPattern = '[id*="active-users"]';
+  } else if (kpiType === 'unpaid_passports') {
+    selectorPattern = '[id*="unpaid-passports"]';
+  } else if (kpiType === 'profit') {
+    selectorPattern = '[id*="profit"]';
+  }
+  
+  if (selectorPattern) {
+    document.querySelectorAll(`.card:has(${selectorPattern}) .dropdown-toggle`).forEach(button => {
+      button.textContent = periodText;
+      button.style.opacity = '1';
+    });
+  }
 }
 
 function updateSingleKPIDisplay(kpiData, period, kpiType, cardElement) {
