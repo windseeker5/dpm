@@ -4402,6 +4402,13 @@ def delete_survey(survey_id):
     return redirect(url_for("list_surveys"))
 
 
+@app.route("/typography-preview")
+def typography_preview():
+    """Display typography options for comparison"""
+    if "admin" not in session:
+        return redirect(url_for("admin_login"))
+    return render_template("typography_preview.html")
+
 if __name__ == "__main__":
     port = 8890
     print(f"🚀 Running on port {port}")
