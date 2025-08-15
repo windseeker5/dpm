@@ -17,7 +17,7 @@
   <!-- Font Preconnects -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
@@ -250,6 +250,27 @@
     .flash-alert:focus-within {
       outline: 2px solid rgba(255, 255, 255, 0.8);
       outline-offset: 2px;
+    }
+  </style>
+  
+  <!-- Typography System - Roboto Slab for H1, Inter for H2 -->
+  <style>
+    h1 {
+      font-family: 'Roboto Slab', serif !important;
+      font-weight: 600 !important;
+      font-size: 2rem !important;
+      color: #1a1f36 !important;
+      letter-spacing: -0.02em !important;
+      line-height: 1.2 !important;
+    }
+    
+    h2 {
+      font-family: 'Inter', sans-serif !important;
+      font-weight: 600 !important;
+      font-size: 1.5rem !important;
+      color: #2d3748 !important;
+      letter-spacing: -0.02em !important;
+      line-height: 1.3 !important;
     }
   </style>
   
