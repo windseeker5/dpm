@@ -282,7 +282,7 @@ html {
 .minipass-sidebar {
   width: 260px;
   background: white;
-  border-right: 1px solid #e9ecef;
+  /* border-right: 1px solid #e9ecef; - Removed gray line */
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -311,7 +311,7 @@ html {
 .minipass-org-header {
   height: 64px;
   background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  /* border-bottom: 1px solid #e9ecef; - Removed gray line */
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -408,7 +408,7 @@ html {
 .minipass-sidebar-brand {
   height: 64px;
   padding: 0 24px;
-  border-bottom: 1px solid #e9ecef;
+  /* border-bottom: 1px solid #e9ecef; - Removed gray line */
   display: flex;
   align-items: center;
   box-sizing: border-box;
@@ -1267,8 +1267,8 @@ main.minipass-content {
   justify-content: space-between;
   align-items: center;
   padding: 0;
-  background: var(--tblr-bg-surface, white);
-  border-bottom: 1px solid var(--tblr-border-color, #e9ecef);
+  background: #f8f9fa; /* Match main content background */
+  /* border-bottom: 1px solid var(--tblr-border-color, #e9ecef); - Removed gray line */
   height: 64px;
   min-height: 64px;
   flex-shrink: 0;
@@ -1283,38 +1283,15 @@ main.minipass-content {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
+  max-width: 1400px; /* Match dashboard container */
+  margin: 0 auto; /* Center the container */
+  padding: 0 1.5rem; /* Match dashboard padding */
 }
 
-@media (min-width: 576px) {
-  .minipass-header-container {
-    padding: 0;
-  }
-}
-
-@media (min-width: 768px) {
-  .minipass-header-container {
-    padding: 0;
-  }
-}
-
+/* Keep header container padding consistent with dashboard container */
 @media (min-width: 992px) {
   .minipass-header-container {
-    padding: 0;
-  }
-}
-
-@media (min-width: 1200px) {
-  .minipass-header-container {
-    padding: 0;
-  }
-}
-
-@media (min-width: 1400px) {
-  .minipass-header-container {
-    padding: 0;
+    padding: 0 1.5rem; /* Match dashboard container padding */
   }
 }
 
@@ -1325,7 +1302,6 @@ main.minipass-content {
   color: var(--tblr-primary, var(--minipass-primary-600));
   text-align: left;
   margin: 0;
-  margin-left: 2rem; /* Match dashboard content padding */
   font-family: 'Anton', sans-serif;
   background: linear-gradient(135deg, #2d3436, #ff6b35);
   -webkit-background-clip: text;
@@ -1342,13 +1318,36 @@ main.minipass-content {
 .minipass-header-user {
   display: flex;
   align-items: center;
+  justify-content: center;
   margin-left: auto;
-  margin-right: 2rem; /* Match dashboard content padding */
+  margin-right: 0; /* Remove extra margin since container handles padding */
+  height: 64px; /* Match header height */
+}
+
+.minipass-header-user .dropdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.minipass-header-user .avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
 }
 
 .minipass-header .header-user-link {
   text-decoration: none;
   color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  height: 32px;
+  width: 32px;
 }
 
 .minipass-header .header-menu-toggle {
@@ -1360,6 +1359,11 @@ main.minipass-content {
   border-radius: 0.25rem;
   transition: background-color 0.15s ease;
   order: -1;
+  height: 40px;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .minipass-header .header-menu-toggle:hover {
@@ -1380,9 +1384,10 @@ main.minipass-content {
 /* Dashboard Container - Matches header alignment */
 .dashboard-container {
   width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
 }
 
 /* Option B: Footer at End of Content (Not Sticky) */
@@ -1489,10 +1494,7 @@ html, body {
     width: 100%;
   }
   
-  /* Dashboard specific container with consistent padding */
-  .dashboard-container {
-    padding: 0 2rem;
-  }
+  /* Dashboard container inherits proper alignment from base styles */
 }
 
 /* Option B Mobile Layout - Stack Structure with Centered Content */
@@ -1530,17 +1532,18 @@ html, body {
   .minipass-header-container {
     padding: 0 1rem;
     max-width: none;
+    margin: 0;
   }
   
   .minipass-header .minipass-org-name {
     font-size: 1.1rem;
     text-align: center;
     flex: 1;
-    margin-left: 0; /* Reset margin for mobile */
+    margin: 0; /* Reset margin for mobile */
   }
   
   .minipass-header-user {
-    margin-right: 0; /* Reset margin for mobile */
+    margin-right: 0; /* Already set to 0 in base styles */
   }
   
   .minipass-content {
