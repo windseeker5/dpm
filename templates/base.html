@@ -255,6 +255,53 @@
   
   <!-- Typography System - Roboto Slab for H1, Inter for H2 -->
   <style>
+    /* Vibrant Gradient Organization Name */
+    .org-name-gradient {
+      font-family: 'Anton', sans-serif;
+      font-weight: 400;
+      font-size: 2rem;
+      background: linear-gradient(90deg, #1a73e8 0%, #6c4edb 50%, #db4ed4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-fill-color: transparent;
+      letter-spacing: 0.02em;
+      position: relative;
+      display: inline-block;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+      transition: all 0.3s ease;
+    }
+    
+    /* Subtle hover effect */
+    .org-name-gradient:hover {
+      filter: drop-shadow(0 3px 8px rgba(108, 78, 219, 0.25));
+      transform: translateY(-1px);
+    }
+    
+    /* Enhanced gradient animation on hover (optional) */
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    .org-name-gradient:hover {
+      background: linear-gradient(90deg, #1a73e8 0%, #6c4edb 25%, #db4ed4 50%, #6c4edb 75%, #1a73e8 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-fill-color: transparent;
+      animation: gradientShift 3s ease infinite;
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .org-name-gradient {
+        font-size: 1.5rem;
+      }
+    }
+    
     h1 {
       font-family: 'Roboto Slab', serif !important;
       font-weight: 600 !important;
@@ -459,7 +506,9 @@
           
           <!-- Organization Name (left-aligned to match content) -->
           <div class="minipass-org-name d-flex align-items-center">
-            {{ ORG_NAME if ORG_NAME else "Minipass" }}
+            <span class="org-name-gradient">
+              {{ ORG_NAME if ORG_NAME else "Minipass" }}
+            </span>
           </div>
           
           <!-- User Avatar Section -->
