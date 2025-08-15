@@ -1538,13 +1538,13 @@ function updateKPICard(prefix, data, chartType, period) {
     
     if (data.trend === 'up') {
       trendClass = 'text-success';
-      icon = 'ti-trending-up';
+      icon = 'ti ti-trending-up';
     } else if (data.trend === 'down') {
       trendClass = 'text-danger';
-      icon = 'ti-trending-down';
+      icon = 'ti ti-trending-down';
     } else {
       trendClass = 'text-muted';
-      icon = 'ti-minus';
+      icon = 'ti ti-minus';
     }
     
     if (prefix.includes('unpaid-passports')) {

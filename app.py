@@ -493,6 +493,12 @@ def style_guide():
         return redirect(url_for("login"))
     return render_template("style_guide.html")
 
+@app.route("/components")
+def components():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    return render_template("components.html")
+
 
 @app.route("/hello-world")
 def hello_world():
@@ -3233,55 +3239,100 @@ def get_global_kpis_api():
         return jsonify({"success": False, "error": "Unauthorized"}), 401
     
     from utils import get_kpi_stats
+    import math
     
-    # Get period from query parameters (default to 7d)
-    period = request.args.get('period', '7d')
-    
-    # Get global KPI stats
-    kpi_stats = get_kpi_stats()
-    
-    # Get the requested period data
-    period_data = kpi_stats.get(period, {})
-    if not period_data:
-        return jsonify({"success": False, "error": f"No data available for period: {period}"}), 404
-    
-    # Format the response to match the frontend expectations
-    kpi_data = {
-        'revenue': {
-            'total': period_data.get('revenue', 0),
-            'change': period_data.get('revenue_change', 0),
-            'trend': 'up' if period_data.get('revenue_change', 0) > 0 else 'down' if period_data.get('revenue_change', 0) < 0 else 'stable',
-            'percentage': abs(period_data.get('revenue_change', 0)),
-            'trend_data': period_data.get('revenue_trend', [])
-        },
-        'active_passports': {
-            'total': period_data.get('active_users', 0),
-            'change': period_data.get('passport_change', 0),
-            'trend': 'up' if period_data.get('passport_change', 0) > 0 else 'down' if period_data.get('passport_change', 0) < 0 else 'stable',
-            'percentage': abs(period_data.get('passport_change', 0)),
-            'trend_data': period_data.get('active_users_trend', [])
-        },
-        'passports_created': {
-            'total': period_data.get('pass_created', 0),
-            'change': period_data.get('new_passports_change', 0),
-            'trend': 'up' if period_data.get('new_passports_change', 0) > 0 else 'down' if period_data.get('new_passports_change', 0) < 0 else 'stable',
-            'percentage': abs(period_data.get('new_passports_change', 0)),
-            'trend_data': period_data.get('pass_created_trend', [])
-        },
-        'pending_signups': {
-            'total': period_data.get('pending_signups', 0),
-            'change': period_data.get('signup_change', 0),
-            'trend': 'up' if period_data.get('signup_change', 0) > 0 else 'down' if period_data.get('signup_change', 0) < 0 else 'stable',
-            'percentage': abs(period_data.get('signup_change', 0)),
-            'trend_data': period_data.get('pending_signups_trend', [])
+    try:
+        # Get period from query parameters (default to 7d)
+        period = request.args.get('period', '7d')
+        
+        # Get global KPI stats
+        kpi_stats = get_kpi_stats()
+        
+        # Get the requested period data
+        period_data = kpi_stats.get(period, {})
+        if not period_data:
+            return jsonify({"success": False, "error": f"No data available for period: {period}"}), 404
+        
+        # Helper function to safely validate and clean numeric values
+        def safe_float(value, default=0.0):
+            """Convert value to float, handling None, NaN, and invalid values"""
+            try:
+                if value is None:
+                    return default
+                float_val = float(value)
+                if math.isnan(float_val) or math.isinf(float_val):
+                    return default
+                return round(float_val, 2)
+            except (TypeError, ValueError):
+                return default
+        
+        # Helper function to validate and clean trend data arrays
+        def clean_trend_data(trend_data, default_length=7):
+            """Clean trend data array, ensuring all values are valid numbers"""
+            if not isinstance(trend_data, list):
+                return [0] * default_length
+            
+            cleaned = []
+            for value in trend_data:
+                cleaned.append(safe_float(value, 0))
+            
+            # Ensure we have the right number of data points
+            if len(cleaned) < default_length:
+                cleaned.extend([0] * (default_length - len(cleaned)))
+            elif len(cleaned) > default_length:
+                cleaned = cleaned[-default_length:]
+                
+            return cleaned
+        
+        # Determine trend data length based on period
+        period_days = {'7d': 7, '30d': 30, '90d': 90}
+        trend_length = period_days.get(period, 7)
+        
+        # Format the response to match the frontend expectations with data validation
+        kpi_data = {
+            'revenue': {
+                'total': safe_float(period_data.get('revenue', 0)),
+                'change': safe_float(period_data.get('revenue_change', 0)),
+                'trend': 'up' if safe_float(period_data.get('revenue_change', 0)) > 0 else 'down' if safe_float(period_data.get('revenue_change', 0)) < 0 else 'stable',
+                'percentage': abs(safe_float(period_data.get('revenue_change', 0))),
+                'trend_data': clean_trend_data(period_data.get('revenue_trend', []), trend_length)
+            },
+            'active_passports': {
+                'total': int(safe_float(period_data.get('active_users', 0))),
+                'change': safe_float(period_data.get('passport_change', 0)),
+                'trend': 'up' if safe_float(period_data.get('passport_change', 0)) > 0 else 'down' if safe_float(period_data.get('passport_change', 0)) < 0 else 'stable',
+                'percentage': abs(safe_float(period_data.get('passport_change', 0))),
+                'trend_data': clean_trend_data(period_data.get('active_users_trend', []), trend_length)
+            },
+            'passports_created': {
+                'total': int(safe_float(period_data.get('pass_created', 0))),
+                'change': safe_float(period_data.get('new_passports_change', 0)),
+                'trend': 'up' if safe_float(period_data.get('new_passports_change', 0)) > 0 else 'down' if safe_float(period_data.get('new_passports_change', 0)) < 0 else 'stable',
+                'percentage': abs(safe_float(period_data.get('new_passports_change', 0))),
+                'trend_data': clean_trend_data(period_data.get('pass_created_trend', []), trend_length)
+            },
+            'pending_signups': {
+                'total': int(safe_float(period_data.get('pending_signups', 0))),
+                'change': safe_float(period_data.get('signup_change', 0)),
+                'trend': 'up' if safe_float(period_data.get('signup_change', 0)) > 0 else 'down' if safe_float(period_data.get('signup_change', 0)) < 0 else 'stable',
+                'percentage': abs(safe_float(period_data.get('signup_change', 0))),
+                'trend_data': clean_trend_data(period_data.get('pending_signups_trend', []), trend_length)
+            }
         }
-    }
-    
-    return jsonify({
-        "success": True,
-        "period": period,
-        "kpi_data": kpi_data
-    })
+        
+        return jsonify({
+            "success": True,
+            "period": period,
+            "kpi_data": kpi_data
+        })
+        
+    except Exception as e:
+        print(f"Error in get_global_kpis_api: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Internal server error",
+            "details": str(e) if app.debug else "Please try again later"
+        }), 500
 
 
 @app.template_filter("from_json")

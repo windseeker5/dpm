@@ -402,6 +402,16 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="{{ url_for('components') }}" 
+                 class="nav-link {{ 'active' if request.endpoint == 'components' }}">
+                <i class="nav-icon ti ti-components"></i>
+                <span class="nav-text">Components</span>
+                {% if request.endpoint == 'components' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="{{ url_for('setup') }}" 
                  class="nav-link {{ 'active' if request.endpoint == 'setup' }}">
                 <i class="nav-icon ti ti-settings"></i>
@@ -422,12 +432,12 @@
       <header class="minipass-header">
         <div class="minipass-header-container">
           <!-- Mobile menu toggle -->
-          <button class="header-menu-toggle d-lg-none" type="button" id="sidebarToggle">
+          <button class="header-menu-toggle d-lg-none d-flex align-items-center justify-content-center" type="button" id="sidebarToggle">
             <i class="ti ti-menu-2"></i>
           </button>
           
           <!-- Organization Name (left-aligned to match content) -->
-          <div class="minipass-org-name">
+          <div class="minipass-org-name d-flex align-items-center">
             {{ ORG_NAME if ORG_NAME else "Minipass" }}
           </div>
           
@@ -435,7 +445,7 @@
           {% if session.get("admin") %}
           <div class="minipass-header-user">
             <div class="dropdown">
-              <a href="#" class="header-user-link" data-bs-toggle="dropdown">
+              <a href="#" class="header-user-link d-flex align-items-center" data-bs-toggle="dropdown">
                 <span class="avatar avatar-sm" 
                       style="background-image: url('https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon')">
                 </span>
