@@ -16,6 +16,13 @@ Minipass is a Flask-based SAAS PWA application for end-to-end activities managem
 - Debug mode auto-reloads on file changes
 - To test changes: Simply navigate to http://127.0.0.1:8890
 
+### ⚠️ PLAYWRIGHT MCP SERVER STATUS
+**PLAYWRIGHT MCP SERVER IS ALREADY INSTALLED AND CONFIGURED**
+- **DO NOT** attempt to install or configure Playwright MCP
+- **DO NOT** run any Playwright installation commands
+- The Playwright MCP tools are ALREADY available and working
+- Simply use the mcp__playwright__* tools directly for browser automation
+
 ### Development Access
 - **URL**: http://127.0.0.1:8890
 - **Login**: kdresdell@gmail.com / admin123

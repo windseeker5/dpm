@@ -125,14 +125,13 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1" id="revenue-value">${{ "%.0f"|format(kpi_data.revenue.total) }}</div>
+              <div class="h2 mb-1" id="revenue-value">${{ "{:.0f}".format(kpi_data.revenue.total|float) }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2" id="revenue-trend">{{ kpi_data.revenue.percentage }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
+                <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2" id="revenue-trend">{{ "{:.0f}".format(kpi_data.revenue.percentage|float) }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
                 <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="revenue-chart">
-                  <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
-                        fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <!-- Chart will be populated by JavaScript -->
                 </svg>
               </div>
             </div>
@@ -230,14 +229,13 @@
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1" id="profit-value">${{ "%.0f"|format(kpi_data.profit.total) }}</div>
+              <div class="h2 mb-1" id="profit-value">${{ "{:.0f}".format(kpi_data.profit.total|float) }}</div>
               <div class="d-flex align-items-center mb-3">
-                <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2" id="profit-trend">{{ "%.0f"|format(kpi_data.profit.margin) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
+                <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2" id="profit-trend">{{ "{:.0f}".format(kpi_data.profit.margin|float) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
                 <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="profit-chart">
-                  <path d="M 0,30 L 30,28 L 60,25 L 90,22 L 120,20 L 150,18 L 180,15 L 210,12 L 240,10 L 270,8 L 300,5" 
-                        fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <!-- Chart will be populated by JavaScript -->
                 </svg>
               </div>
             </div>
@@ -265,14 +263,13 @@
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1" id="mobile-revenue-value">${{ "%.0f"|format(kpi_data.revenue.total) }}</div>
+                <div class="h2 mb-1" id="mobile-revenue-value">${{ "{:.0f}".format(kpi_data.revenue.total|float) }}</div>
                 <div class="d-flex align-items-center mb-3">
-                  <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2" id="mobile-revenue-trend">{{ kpi_data.revenue.percentage }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
+                  <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2" id="mobile-revenue-trend">{{ "{:.0f}".format(kpi_data.revenue.percentage|float) }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
                   <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-revenue-chart">
-                    <path d="M 0,32 L 15,30 L 30,31 L 45,28 L 60,29 L 75,26 L 90,27 L 105,24 L 120,25 L 135,22 L 150,24 L 165,21 L 180,22 L 195,19 L 210,20 L 225,18 L 240,19 L 255,17 L 270,18 L 285,16 L 300,17" 
-                          fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <!-- Chart will be populated by JavaScript -->
                   </svg>
                 </div>
               </div>
@@ -370,14 +367,13 @@
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1" id="mobile-profit-value">${{ "%.0f"|format(kpi_data.profit.total) }}</div>
+                <div class="h2 mb-1" id="mobile-profit-value">${{ "{:.0f}".format(kpi_data.profit.total|float) }}</div>
                 <div class="d-flex align-items-center mb-3">
-                  <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2" id="mobile-profit-trend">{{ "%.0f"|format(kpi_data.profit.margin) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
+                  <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2" id="mobile-profit-trend">{{ "{:.0f}".format(kpi_data.profit.margin|float) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
                   <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-profit-chart">
-                    <path d="M 0,30 L 30,28 L 60,25 L 90,22 L 120,20 L 150,18 L 180,15 L 210,12 L 240,10 L 270,8 L 300,5" 
-                          fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <!-- Chart will be populated by JavaScript -->
                   </svg>
                 </div>
               </div>
@@ -797,10 +793,79 @@
 
 
 <script>
+// Store KPI data from backend for JavaScript access
+const kpiData = {{ kpi_data | tojson | safe }};
+
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize dashboard
   initializeActivityDashboard();
+  // Initialize charts with current data
+  initializeChartsWithData();
 });
+
+// Initialize charts with current page data
+function initializeChartsWithData() {
+  // Check if kpiData is available and log for debugging
+  console.log('Initializing charts with KPI data:', kpiData);
+  
+  // Initialize revenue charts with default 7-day data
+  if (kpiData && kpiData.revenue && kpiData.revenue.trend_data) {
+    console.log('Using revenue trend data:', kpiData.revenue.trend_data);
+    const revenueData = kpiData.revenue.trend_data;
+    initializeRevenueChart(revenueData);
+  } else {
+    console.log('Using fallback revenue data');
+    // Fallback: create default chart with sample data for 7 days
+    const defaultData = [150, 200, 180, 220, 190, 250, 280];
+    initializeRevenueChart(defaultData);
+  }
+  
+  // Initialize profit charts if data is available
+  if (kpiData && kpiData.profit && kpiData.profit.trend_data) {
+    console.log('Using profit trend data:', kpiData.profit.trend_data);
+    const profitData = kpiData.profit.trend_data;
+    initializeProfitChart(profitData);
+  } else {
+    console.log('Using fallback profit data');
+    // Fallback: create default profit chart
+    const defaultProfitData = [80, 120, 95, 140, 110, 160, 180];
+    initializeProfitChart(defaultProfitData);
+  }
+}
+
+// Initialize revenue chart for both desktop and mobile
+function initializeRevenueChart(data) {
+  const chartPath = generateCleanLineChart(data, 300, 40);
+  
+  // Update desktop chart
+  const desktopChart = document.getElementById('revenue-chart');
+  if (desktopChart && chartPath) {
+    desktopChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+  }
+  
+  // Update mobile chart
+  const mobileChart = document.getElementById('mobile-revenue-chart');
+  if (mobileChart && chartPath) {
+    mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+  }
+}
+
+// Initialize profit chart for both desktop and mobile
+function initializeProfitChart(data) {
+  const chartPath = generateCleanLineChart(data, 300, 40);
+  
+  // Update desktop chart
+  const desktopChart = document.getElementById('profit-chart');
+  if (desktopChart && chartPath) {
+    desktopChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+  }
+  
+  // Update mobile chart
+  const mobileChart = document.getElementById('mobile-profit-chart');
+  if (mobileChart && chartPath) {
+    mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+  }
+}
 
 function initializeActivityDashboard() {
   // Search functionality
@@ -1041,32 +1106,112 @@ function enhancedSearch(query) {
   return visibleCount;
 }
 
-// Chart generation functions
-function generateLineChart(data, width = 300, height = 40) {
-  if (!data || data.length === 0) return '';
+// Function to generate interactive line chart with hover points
+function generateInteractiveLineChart(data, width = 300, height = 40, chartId = '') {
+  if (!data || data.length === 0) {
+    return { path: '', points: [] };
+  }
   
-  const max = Math.max(...data) || 1;
-  const min = Math.min(...data) || 0;
-  const range = max - min || 1;
-  
-  const points = data.map((value, index) => {
-    const x = (index / (data.length - 1)) * width;
-    const y = height - ((value - min) / range) * (height - 10) - 5;
-    return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
+  // Ensure data is properly formatted and clean
+  const cleanData = data.map(val => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
   });
   
-  return points.join(' ');
+  if (cleanData.length === 0) {
+    return { path: '', points: [] };
+  }
+  
+  // Find min and max for scaling
+  const max = Math.max(...cleanData);
+  const min = Math.min(...cleanData);
+  const range = max - min || 1;
+  
+  // Generate path coordinates and hover points
+  const coordinates = [];
+  const hoverPoints = [];
+  
+  cleanData.forEach((value, index) => {
+    const x = cleanData.length === 1 ? width / 2 : (index / (cleanData.length - 1)) * width;
+    const y = height - ((value - min) / range) * (height - 10) - 5;
+    
+    // Ensure coordinates are valid numbers
+    const cleanX = isNaN(x) ? 0 : Math.round(x * 100) / 100;
+    const cleanY = isNaN(y) ? height / 2 : Math.round(y * 100) / 100;
+    
+    coordinates.push(`${index === 0 ? 'M' : 'L'} ${cleanX},${cleanY}`);
+    hoverPoints.push({ 
+      x: cleanX, 
+      y: cleanY, 
+      value: value, 
+      index: index 
+    });
+  });
+  
+  return {
+    path: coordinates.join(' '),
+    points: hoverPoints
+  };
+}
+
+// Clean line chart generator that ensures proper SVG path format
+function generateCleanLineChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) {
+    return `M 0,${height/2} L ${width},${height/2}`;
+  }
+  
+  // Ensure data is properly formatted and clean
+  const cleanData = data.map(val => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  });
+  
+  if (cleanData.length === 0) {
+    return `M 0,${height/2} L ${width},${height/2}`;
+  }
+  
+  // Calculate scaling
+  const max = Math.max(...cleanData);
+  const min = Math.min(...cleanData);
+  const range = max - min || 1;
+  
+  // Generate clean coordinates
+  const points = [];
+  for (let i = 0; i < cleanData.length; i++) {
+    const x = cleanData.length === 1 ? width / 2 : (i / (cleanData.length - 1)) * width;
+    const y = height - ((cleanData[i] - min) / range) * (height - 10) - 5;
+    
+    // Ensure coordinates are valid numbers
+    const cleanX = isNaN(x) ? 0 : Math.round(x * 100) / 100;
+    const cleanY = isNaN(y) ? height / 2 : Math.round(y * 100) / 100;
+    
+    points.push({
+      x: cleanX,
+      y: cleanY,
+      command: i === 0 ? 'M' : 'L'
+    });
+  }
+  
+  // Build SVG path string
+  return points.map(point => `${point.command} ${point.x},${point.y}`).join(' ');
+}
+
+// Legacy function for backward compatibility - generates simple line charts
+function generateLineChart(data, width = 300, height = 40) {
+  return generateCleanLineChart(data, width, height);
 }
 
 function generateBarChart(data, width = 300, height = 40) {
   if (!data || data.length === 0) return '';
   
-  const max = Math.max(...data) || 1;
-  const barWidth = (width - (data.length - 1) * 2) / data.length;
+  // Ensure data is properly formatted
+  const cleanData = data.map(val => parseFloat(val) || 0);
+  const max = Math.max(...cleanData) || 1;
+  const barWidth = Math.max(8, (width - (cleanData.length - 1) * 2) / cleanData.length);
   
   let svg = '';
-  data.forEach((value, index) => {
-    const barHeight = (value / max) * (height - 5);
+  cleanData.forEach((value, index) => {
+    const barHeight = Math.max(1, (value / max) * (height - 5));
     const x = index * (barWidth + 2);
     const y = height - barHeight;
     svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#206bc4" opacity="0.8" />`;
@@ -1078,18 +1223,83 @@ function generateBarChart(data, width = 300, height = 40) {
 function generateUnpaidBarChart(data, width = 300, height = 40) {
   if (!data || data.length === 0) return '';
   
-  const max = Math.max(...data) || 1;
-  const barWidth = (width - (data.length - 1) * 2) / data.length;
+  // Ensure data is properly formatted
+  const cleanData = data.map(val => parseFloat(val) || 0);
+  const max = Math.max(...cleanData) || 1;
+  const barWidth = Math.max(8, (width - (cleanData.length - 1) * 2) / cleanData.length);
   
   let svg = '';
-  data.forEach((value, index) => {
-    const barHeight = (value / max) * (height - 5);
+  cleanData.forEach((value, index) => {
+    const barHeight = Math.max(1, (value / max) * (height - 5));
     const x = index * (barWidth + 2);
     const y = height - barHeight;
     svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#f76707" opacity="0.8" />`;
   });
   
   return svg;
+}
+
+// Tooltip management functions
+function createTooltip() {
+  let tooltip = document.getElementById('chart-tooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'chart-tooltip';
+    tooltip.className = 'chart-tooltip';
+    tooltip.style.cssText = `
+      position: absolute;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      white-space: nowrap;
+    `;
+    document.body.appendChild(tooltip);
+  }
+  return tooltip;
+}
+
+function showTooltip(x, y, value, period, index, chartType = 'revenue') {
+  const tooltip = createTooltip();
+  
+  // Format value based on chart type
+  let formattedValue;
+  if (chartType === 'revenue' || chartType === 'profit') {
+    formattedValue = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  } else {
+    formattedValue = Math.round(value).toString();
+  }
+  
+  // Calculate the date based on period and index
+  const daysAgo = parseInt(period) - index - 1;
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  const formattedDate = date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric'
+  });
+  
+  tooltip.innerHTML = `${formattedValue}<br><small>${formattedDate}</small>`;
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y - 10}px`;
+  tooltip.style.opacity = '1';
+}
+
+function hideTooltip() {
+  const tooltip = document.getElementById('chart-tooltip');
+  if (tooltip) {
+    tooltip.style.opacity = '0';
+  }
 }
 
 // KPI Dropdown Functionality
@@ -1107,47 +1317,125 @@ function handleKPITimeChange(event) {
   const period = parseInt(clickedItem.dataset.period);
   const dropdown = clickedItem.closest('.dropdown');
   const dropdownButton = dropdown.querySelector('.dropdown-toggle');
-  const kpiCard = clickedItem.closest('.card');
   
-  // Update dropdown button text
-  dropdownButton.textContent = clickedItem.textContent.trim();
+  // Prevent multiple rapid clicks
+  if (clickedItem.classList.contains('loading')) return;
+  clickedItem.classList.add('loading');
   
-  // Update all dropdown buttons with same period
-  document.querySelectorAll('.dropdown-toggle').forEach(btn => {
-    if (btn.textContent.includes('days')) {
-      btn.textContent = clickedItem.textContent.trim();
+  // Update only the clicked dropdown button text with loading state
+  const originalText = dropdownButton.textContent;
+  dropdownButton.style.opacity = '0.7';
+  dropdownButton.textContent = clickedItem.textContent.trim() + ' ...';
+  
+  // Determine which KPI card to update based on the clicked dropdown
+  const kpiCard = dropdown.closest('.card');
+  const kpiType = determineKPIType(kpiCard);
+  
+  // Show loading state for this card only
+  showKPILoading(kpiCard);
+  
+  // Make AJAX request to update only this specific KPI data
+  updateSingleKPIData(period, kpiType, kpiCard);
+  
+  // Reset loading state for this dropdown only after completion
+  setTimeout(() => {
+    clickedItem.classList.remove('loading');
+    if (dropdownButton.textContent.includes('...')) {
+      dropdownButton.textContent = clickedItem.textContent.trim();
+      dropdownButton.style.opacity = '1';
     }
-  });
-  
-  // Show loading state
-  showKPILoading();
-  
-  // Make AJAX request to update KPI data
-  updateAllKPIData(period);
+  }, 800);
 }
 
-function showKPILoading() {
-  // Show loading for all KPI cards
-  document.querySelectorAll('.card .h2').forEach(el => {
-    el.style.opacity = '0.5';
-  });
-  document.querySelectorAll('.card .text-success, .card .text-danger, .card .text-muted').forEach(el => {
-    if (el.closest('.card')) {
-      el.style.opacity = '0.5';
-    }
+function showKPILoading(cardElement = null) {
+  // Show loading for specific card or all KPI cards
+  const targetCards = cardElement ? [cardElement] : document.querySelectorAll('.kpi-card-rounded');
+  
+  targetCards.forEach(card => {
+    const valueEl = card.querySelector('.h2');
+    const trendEl = card.querySelector('.text-success, .text-danger, .text-muted');
+    const chartEl = card.querySelector('svg');
+    
+    if (valueEl) valueEl.style.opacity = '0.6';
+    if (trendEl) trendEl.style.opacity = '0.6';
+    if (chartEl) chartEl.style.opacity = '0.3';
   });
 }
 
-function hideKPILoading() {
-  // Hide loading for all KPI cards
-  document.querySelectorAll('.card .h2').forEach(el => {
-    el.style.opacity = '1';
+function hideKPILoading(cardElement = null) {
+  // Hide loading for specific card or all KPI cards
+  const targetCards = cardElement ? [cardElement] : document.querySelectorAll('.kpi-card-rounded');
+  
+  targetCards.forEach(card => {
+    const valueEl = card.querySelector('.h2');
+    const trendEl = card.querySelector('.text-success, .text-danger, .text-muted');
+    const chartEl = card.querySelector('svg');
+    
+    if (valueEl) valueEl.style.opacity = '1';
+    if (trendEl) trendEl.style.opacity = '1';
+    if (chartEl) chartEl.style.opacity = '1';
   });
-  document.querySelectorAll('.card .text-success, .card .text-danger, .card .text-muted').forEach(el => {
-    if (el.closest('.card')) {
-      el.style.opacity = '1';
-    }
-  });
+}
+
+function determineKPIType(cardElement) {
+  // Determine KPI type based on card content
+  const cardText = cardElement.textContent.toLowerCase();
+  if (cardText.includes('revenue')) return 'revenue';
+  if (cardText.includes('active users')) return 'active_users';
+  if (cardText.includes('unpaid')) return 'unpaid_passports';
+  if (cardText.includes('profit')) return 'profit';
+  return 'revenue'; // fallback
+}
+
+function updateSingleKPIData(period, kpiType, cardElement) {
+  // Get activity ID from current URL
+  const pathParts = window.location.pathname.split('/');
+  const activityId = pathParts[pathParts.length - 1];
+  
+  // Show loading state for this card only
+  showKPILoading(cardElement);
+  
+  // Make API call to get updated KPI data
+  fetch(`/api/activity-kpis/${activityId}?period=${period}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        updateSingleKPIDisplay(data.kpi_data, period, kpiType, cardElement);
+      } else {
+        console.error('Failed to fetch KPI data:', data.error);
+        showNotification('error', 'Failed to update KPI data');
+      }
+      // Hide loading state
+      setTimeout(() => {
+        hideKPILoading(cardElement);
+      }, 200);
+    })
+    .catch(error => {
+      console.error('Error fetching KPI data:', error);
+      showNotification('error', 'Failed to update KPI data');
+      hideKPILoading(cardElement);
+    });
+}
+
+function updateSingleKPIDisplay(kpiData, period, kpiType, cardElement) {
+  // Update only the specific KPI card
+  const kpiTypeData = kpiData[kpiType];
+  if (!kpiTypeData) return;
+  
+  // Determine chart type and prefix based on KPI type
+  let chartType = 'line';
+  let prefix = kpiType;
+  
+  if (kpiType === 'active_users') {
+    chartType = 'bar';
+    prefix = 'active-users';
+  } else if (kpiType === 'unpaid_passports') {
+    chartType = 'unpaid-bar';
+    prefix = 'unpaid-passports';
+  }
+  
+  // Update the specific card
+  updateKPICard(prefix, kpiTypeData, chartType, period);
 }
 
 function updateAllKPIData(period) {
@@ -1175,21 +1463,39 @@ function updateAllKPIData(period) {
 }
 
 function updateAllKPIDisplays(kpiData, period) {
-  // Update Revenue
-  updateKPICard('revenue', kpiData.revenue, 'line', period);
-  updateKPICard('mobile-revenue', kpiData.revenue, 'line', period);
+  // Add fade-out animation to existing charts
+  const allCharts = document.querySelectorAll('.card svg');
+  allCharts.forEach(chart => {
+    chart.style.transition = 'opacity 0.3s ease';
+    chart.style.opacity = '0.3';
+  });
   
-  // Update Active Users
-  updateKPICard('active-users', kpiData.active_users, 'bar', period);
-  updateKPICard('mobile-active-users', kpiData.active_users, 'bar', period);
-  
-  // Update Unpaid Passports
-  updateKPICard('unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
-  updateKPICard('mobile-unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
-  
-  // Update Profit
-  updateKPICard('profit', kpiData.profit, 'line', period);
-  updateKPICard('mobile-profit', kpiData.profit, 'line', period);
+  // Delay the chart update for smooth transition
+  setTimeout(() => {
+    // Update Revenue with interactive tooltips
+    updateKPICard('revenue', kpiData.revenue, 'line', period);
+    updateKPICard('mobile-revenue', kpiData.revenue, 'line', period);
+    
+    // Update Active Users
+    updateKPICard('active-users', kpiData.active_users, 'bar', period);
+    updateKPICard('mobile-active-users', kpiData.active_users, 'bar', period);
+    
+    // Update Unpaid Passports
+    updateKPICard('unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
+    updateKPICard('mobile-unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
+    
+    // Update Profit with interactive tooltips
+    updateKPICard('profit', kpiData.profit, 'line', period);
+    updateKPICard('mobile-profit', kpiData.profit, 'line', period);
+    
+    // Add fade-in animation to updated charts
+    setTimeout(() => {
+      const allCharts = document.querySelectorAll('.card svg');
+      allCharts.forEach(chart => {
+        chart.style.opacity = '1';
+      });
+    }, 100);
+  }, 300);
 }
 
 function updateKPICard(prefix, data, chartType, period) {
@@ -1197,9 +1503,9 @@ function updateKPICard(prefix, data, chartType, period) {
   const valueEl = document.getElementById(`${prefix}-value`);
   if (valueEl) {
     if (prefix.includes('revenue') || prefix.includes('profit')) {
-      valueEl.textContent = `$${Math.round(data.total)}`;
+      valueEl.textContent = `$${Math.round(parseFloat(data.total) || 0)}`;
     } else {
-      valueEl.textContent = data.total;
+      valueEl.textContent = Math.round(parseFloat(data.total) || 0);
     }
   }
   
@@ -1224,23 +1530,58 @@ function updateKPICard(prefix, data, chartType, period) {
       trendEl.innerHTML = `${data.overdue} overdue <i class="ti ti-alert-circle"></i>`;
       trendEl.className = `${data.overdue > 0 ? 'text-danger' : 'text-muted'} me-2`;
     } else if (prefix.includes('profit')) {
-      trendEl.innerHTML = `${Math.round(data.margin)}% margin <i class="${icon}"></i>`;
+      const safeMargin = Math.round(parseFloat(data.margin) || 0);
+      trendEl.innerHTML = `${safeMargin}% margin <i class="${icon}"></i>`;
       trendEl.className = `${trendClass} me-2`;
     } else {
-      trendEl.innerHTML = `${data.percentage}% <i class="${icon}"></i>`;
+      const safePercentage = Math.round(parseFloat(data.percentage) || 0);
+      trendEl.innerHTML = `${safePercentage}% <i class="${icon}"></i>`;
       trendEl.className = `${trendClass} me-2`;
     }
   }
   
-  // Update chart
+  // Update chart with appropriate complexity based on period
   const chartEl = document.getElementById(`${prefix}-chart`);
   if (chartEl && data.trend_data) {
     let chartContent = '';
     
     if (chartType === 'line') {
-      const path = generateLineChart(data.trend_data);
       const color = prefix.includes('revenue') ? '#206bc4' : '#2fb344';
-      chartContent = `<path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+      
+      // Get current period from dropdown to determine chart complexity
+      const dropdown = chartEl.closest('.card').querySelector('.dropdown-toggle');
+      const periodText = dropdown ? dropdown.textContent : 'Last 7 days';
+      const periodDays = parseInt(periodText.match(/\d+/)?.[0] || '7');
+      
+      // Always use clean chart generation to avoid encoding issues
+      const cleanPath = generateCleanLineChart(data.trend_data, 300, 40);
+      
+      if (cleanPath && cleanPath.trim() !== '') {
+        if (periodDays <= 7) {
+          // Simple line chart for 7 days or less
+          chartContent = `<path d="${cleanPath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+        } else {
+          // Interactive chart for longer periods
+          const chartData = generateInteractiveLineChart(data.trend_data, 300, 40, prefix);
+          
+          if (chartData && chartData.path && chartData.path.trim() !== '') {
+            chartContent = `
+              <path d="${chartData.path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              ${chartData.points.map((point, index) => 
+                `<circle cx="${point.x}" cy="${point.y}" r="4" fill="transparent" 
+                         data-value="${point.value}" data-index="${index}" 
+                         class="chart-hover-point" style="cursor: pointer;" />`
+              ).join('')}
+            `;
+          } else {
+            // Fallback to simple path if interactive generation fails
+            chartContent = `<path d="${cleanPath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+          }
+        }
+      } else {
+        // Final fallback - create a simple horizontal line
+        chartContent = `<path d="M 0,20 L 300,20" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+      }
     } else if (chartType === 'bar') {
       chartContent = generateBarChart(data.trend_data);
     } else if (chartType === 'unpaid-bar') {
@@ -1248,6 +1589,32 @@ function updateKPICard(prefix, data, chartType, period) {
     }
     
     chartEl.innerHTML = chartContent;
+    
+    // Add hover event listeners only for interactive charts (30+ days)
+    const dropdown = chartEl.closest('.card').querySelector('.dropdown-toggle');
+    const periodText = dropdown ? dropdown.textContent : 'Last 7 days';
+    const periodDays = parseInt(periodText.match(/\d+/)?.[0] || '7');
+    
+    if ((prefix.includes('revenue') || prefix.includes('profit')) && chartType === 'line' && periodDays > 7) {
+      chartEl.querySelectorAll('.chart-hover-point').forEach(point => {
+        point.addEventListener('mouseenter', function(e) {
+          const rect = chartEl.getBoundingClientRect();
+          const value = parseFloat(this.getAttribute('data-value'));
+          const index = parseInt(this.getAttribute('data-index'));
+          const chartType = prefix.includes('revenue') ? 'revenue' : 'profit';
+          showTooltip(
+            rect.left + parseFloat(this.getAttribute('cx')) + window.scrollX,
+            rect.top + parseFloat(this.getAttribute('cy')) + window.scrollY - 50,
+            value, 
+            periodDays, 
+            index,
+            chartType
+          );
+        });
+        
+        point.addEventListener('mouseleave', hideTooltip);
+      });
+    }
   }
 }
 </script>

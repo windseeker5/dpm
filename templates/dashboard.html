@@ -47,24 +47,24 @@
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#">Last 7 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                    <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}</div>
+              <div class="h2 mb-1" id="revenue-value">${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}</div>
               <div class="d-flex align-items-center mb-3">
                 {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('revenue_change') %}
                   {% if kpi_data['7d']['revenue_change'] > 0 %}
-                    <div class="text-success me-2">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-up"></i></div>
+                    <div class="text-success me-2" id="revenue-trend">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-up"></i></div>
                   {% elif kpi_data['7d']['revenue_change'] < 0 %}
-                    <div class="text-danger me-2">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-down"></i></div>
+                    <div class="text-danger me-2" id="revenue-trend">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-down"></i></div>
                   {% else %}
-                    <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="revenue-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
                 {% else %}
-                  <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                  <div class="text-muted me-2" id="revenue-trend">-- <i class="ti ti-minus"></i></div>
                 {% endif %}
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
@@ -211,24 +211,24 @@
                       Last 7 days
                     </button>
                     <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="#">Last 7 days</a></li>
-                      <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                      <li><a class="dropdown-item" href="#">Last 90 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1">${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}</div>
+                <div class="h2 mb-1" id="mobile-revenue-value">${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}</div>
                 <div class="d-flex align-items-center mb-3">
                   {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('revenue_change') %}
                     {% if kpi_data['7d']['revenue_change'] > 0 %}
-                      <div class="text-success me-2">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-up"></i></div>
+                      <div class="text-success me-2" id="mobile-revenue-trend">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-up"></i></div>
                     {% elif kpi_data['7d']['revenue_change'] < 0 %}
-                      <div class="text-danger me-2">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-down"></i></div>
+                      <div class="text-danger me-2" id="mobile-revenue-trend">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-down"></i></div>
                     {% else %}
-                      <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                      <div class="text-muted me-2" id="mobile-revenue-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
                   {% else %}
-                    <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="mobile-revenue-trend">-- <i class="ti ti-minus"></i></div>
                   {% endif %}
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
@@ -785,40 +785,45 @@ function updateCharts(period = '7d') {
 
 // Function to update KPI values and performance indicators
 function updateKpiValues(period, periodData) {
-  // Update Revenue KPI
-  if (periodData.revenue_value !== undefined) {
-    const revenueValue = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(periodData.revenue_value);
-    
-    // Update both desktop and mobile revenue values
-    const revenueElements = document.querySelectorAll('[data-kpi="revenue"] .kpi-value, [data-kpi="revenue"] .card-title');
-    revenueElements.forEach(el => {
-      if (el.textContent.includes('$') || el.classList.contains('kpi-value')) {
-        el.textContent = revenueValue;
-      }
-    });
-    
-    // Update performance indicator for revenue
-    if (periodData.revenue_performance !== undefined) {
-      const performanceText = periodData.revenue_performance > 0 
-        ? `+${periodData.revenue_performance.toFixed(1)}%` 
-        : `${periodData.revenue_performance.toFixed(1)}%`;
-      const performanceClass = periodData.revenue_performance >= 0 ? 'text-success' : 'text-danger';
-      
-      const performanceElements = document.querySelectorAll('[data-kpi="revenue"] .performance-indicator, [data-kpi="revenue"] .text-success, [data-kpi="revenue"] .text-danger');
-      performanceElements.forEach(el => {
-        el.textContent = performanceText;
-        el.className = performanceClass;
-      });
-    }
+  // Update Revenue KPI value
+  const revenueValueEl = document.getElementById('revenue-value');
+  const mobileRevenueValueEl = document.getElementById('mobile-revenue-value');
+  
+  if (periodData.revenue !== undefined) {
+    const revenueValue = `$${Math.round(periodData.revenue).toLocaleString()}`;
+    if (revenueValueEl) revenueValueEl.textContent = revenueValue;
+    if (mobileRevenueValueEl) mobileRevenueValueEl.textContent = revenueValue;
   }
   
-  // Update other KPIs similarly if needed in the future
-  // This structure allows for easy extension to other KPIs
+  // Update Revenue trend percentage
+  const revenueTrendEl = document.getElementById('revenue-trend');
+  const mobileRevenueTrendEl = document.getElementById('mobile-revenue-trend');
+  
+  if (periodData.revenue_change !== undefined) {
+    const change = periodData.revenue_change;
+    let trendClass = 'text-muted';
+    let icon = 'ti-minus';
+    
+    if (change > 0) {
+      trendClass = 'text-success';
+      icon = 'ti-trending-up';
+    } else if (change < 0) {
+      trendClass = 'text-danger';
+      icon = 'ti-trending-down';
+    }
+    
+    const trendHTML = `${Math.round(Math.abs(change))}% <i class="ti ${icon}"></i>`;
+    const trendClass2 = `${trendClass} me-2`;
+    
+    if (revenueTrendEl) {
+      revenueTrendEl.className = trendClass2;
+      revenueTrendEl.innerHTML = trendHTML;
+    }
+    if (mobileRevenueTrendEl) {
+      mobileRevenueTrendEl.className = trendClass2;
+      mobileRevenueTrendEl.innerHTML = trendHTML;
+    }
+  }
 }
 
 // Handle period dropdown clicks with smooth transitions
@@ -864,10 +869,167 @@ function attachDropdownHandlers() {
   });
 }
 
+// KPI Dropdown Functionality for Main Dashboard
+function initializeKPIDropdowns() {
+  // Add event listeners to all KPI dropdown items with the kpi-period-btn class
+  document.querySelectorAll('.kpi-period-btn').forEach(item => {
+    item.addEventListener('click', handleKPITimeChange);
+  });
+}
+
+function handleKPITimeChange(event) {
+  event.preventDefault();
+  
+  const clickedItem = event.target;
+  const period = clickedItem.dataset.period;
+  const dropdown = clickedItem.closest('.dropdown');
+  const dropdownButton = dropdown.querySelector('.dropdown-toggle');
+  
+  // Prevent multiple rapid clicks
+  if (clickedItem.classList.contains('loading')) return;
+  clickedItem.classList.add('loading');
+  
+  // Update dropdown button text with loading state
+  dropdownButton.style.opacity = '0.7';
+  dropdownButton.textContent = clickedItem.textContent.trim() + ' ...';
+  
+  // Update all dropdown buttons with same period
+  document.querySelectorAll('.dropdown-toggle').forEach(btn => {
+    if (btn.textContent.includes('days') || btn.textContent.includes('...')) {
+      btn.textContent = clickedItem.textContent.trim() + ' ...';
+      btn.style.opacity = '0.7';
+    }
+  });
+  
+  // Show loading state
+  showKPILoading();
+  
+  // Update KPI data and charts
+  updateMainDashboardKPIs(period);
+  
+  // Reset loading state after completion
+  setTimeout(() => {
+    clickedItem.classList.remove('loading');
+    document.querySelectorAll('.dropdown-toggle').forEach(btn => {
+      if (btn.textContent.includes('...')) {
+        btn.textContent = clickedItem.textContent.trim();
+        btn.style.opacity = '1';
+      }
+    });
+  }, 600);
+}
+
+function showKPILoading() {
+  // Show loading for all KPI cards
+  document.querySelectorAll('.card .h2').forEach(el => {
+    el.style.opacity = '0.5';
+  });
+  document.querySelectorAll('.card .text-success, .card .text-danger, .card .text-muted').forEach(el => {
+    if (el.closest('.card')) {
+      el.style.opacity = '0.5';
+    }
+  });
+}
+
+function hideKPILoading() {
+  // Hide loading for all KPI cards
+  document.querySelectorAll('.card .h2').forEach(el => {
+    el.style.opacity = '1';
+  });
+  document.querySelectorAll('.card .text-success, .card .text-danger, .card .text-muted').forEach(el => {
+    if (el.closest('.card')) {
+      el.style.opacity = '1';
+    }
+  });
+}
+
+function updateMainDashboardKPIs(period) {
+  // First, try to use existing KPI data for immediate feedback
+  const existingData = kpiData[period];
+  if (existingData) {
+    updateKPIValues(period, existingData);
+  }
+  
+  // Then fetch fresh data from the API
+  fetch(`/api/global-kpis?period=${period}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        updateKPIDisplays(data.kpi_data, period);
+        updateCharts(period);
+      } else {
+        console.error('Failed to fetch KPI data:', data.error);
+        // Fall back to existing data if API fails
+        if (existingData) {
+          updateKPIValues(period, existingData);
+          updateCharts(period);
+        }
+      }
+      hideKPILoading();
+    })
+    .catch(error => {
+      console.error('Error fetching KPI data:', error);
+      // Fall back to existing data if API fails
+      if (existingData) {
+        updateKPIValues(period, existingData);
+        updateCharts(period);
+      }
+      hideKPILoading();
+    });
+}
+
+function updateKPIDisplays(kpiData, period) {
+  // Update Revenue - pass the full period data which contains revenue and revenue_change
+  updateKPICard('revenue', kpiData);
+  updateKPICard('mobile-revenue', kpiData);
+  
+  // Update Active Passports (we don't have exact counts in API, so skip for now)
+  // updateKPICard('active-passports', kpiData.active_passports);
+  
+  // Update Passports Created (we don't have exact counts in API, so skip for now)
+  // updateKPICard('passports-created', kpiData.passports_created);
+  
+  // Update Pending Signups (we don't have exact counts in API, so skip for now)
+  // updateKPICard('pending-signups', kpiData.pending_signups);
+}
+
+function updateKPICard(prefix, data) {
+  // Update value
+  const valueEl = document.getElementById(`${prefix}-value`);
+  if (valueEl && data) {
+    if (prefix.includes('revenue')) {
+      valueEl.textContent = `$${Math.round(data.revenue || 0).toLocaleString()}`;
+    } else {
+      valueEl.textContent = Math.round(data.total || 0);
+    }
+  }
+  
+  // Update trend
+  const trendEl = document.getElementById(`${prefix}-trend`);
+  if (trendEl && data) {
+    // Use revenue_change for revenue cards, change for others
+    const change = prefix.includes('revenue') ? (data.revenue_change || 0) : (data.change || 0);
+    let trendClass = 'text-muted';
+    let icon = 'ti-minus';
+    
+    if (change > 0) {
+      trendClass = 'text-success';
+      icon = 'ti-trending-up';
+    } else if (change < 0) {
+      trendClass = 'text-danger';
+      icon = 'ti-trending-down';
+    }
+    
+    trendEl.className = `${trendClass} me-2`;
+    trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="ti ${icon}"></i>`;
+  }
+}
+
 // Initialize charts on page load
 document.addEventListener('DOMContentLoaded', function() {
   updateCharts('7d');
   attachDropdownHandlers();
+  initializeKPIDropdowns();
 });
 </script>
 {% endblock %}

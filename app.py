@@ -501,6 +501,136 @@ def hello_world():
     return render_template("hello_world.html")
 
 
+@app.route("/alerts-test")
+def alerts_test():
+    """Public route to test alerts display without authentication"""
+    return '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerts Test - Public Access</title>
+    <link href="/static/tabler/css/tabler.min.css" rel="stylesheet"/>
+    <link href="/static/tabler/icons/tabler-icons.min.css" rel="stylesheet"/>
+    <style>
+        body { padding: 2rem; background: var(--tblr-body-bg); }
+        .test-container { background: white; padding: 2rem; border-radius: var(--tblr-border-radius); box-shadow: var(--tblr-box-shadow); }
+        .alert { margin-bottom: 1rem !important; }
+        
+        /* Enhanced Tabler alerts with proper background colors */
+        .alert-primary { 
+            background-color: var(--tblr-primary-bg-subtle); 
+            border-color: var(--tblr-primary-border-subtle); 
+            color: var(--tblr-primary-text-emphasis); 
+        }
+        .alert-success { 
+            background-color: var(--tblr-success-bg-subtle); 
+            border-color: var(--tblr-success-border-subtle); 
+            color: var(--tblr-success-text-emphasis); 
+        }
+        .alert-warning { 
+            background-color: var(--tblr-warning-bg-subtle); 
+            border-color: var(--tblr-warning-border-subtle); 
+            color: var(--tblr-warning-text-emphasis); 
+        }
+        .alert-danger { 
+            background-color: var(--tblr-danger-bg-subtle); 
+            border-color: var(--tblr-danger-border-subtle); 
+            color: var(--tblr-danger-text-emphasis); 
+        }
+        .alert-info { 
+            background-color: var(--tblr-info-bg-subtle); 
+            border-color: var(--tblr-info-border-subtle); 
+            color: var(--tblr-info-text-emphasis); 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="test-container">
+            <h1 class="mb-4">🚨 Alerts Test - Public Access</h1>
+            <p class="text-muted mb-4">This page tests alerts without requiring authentication.</p>
+            
+            <h3>If you can see colorful alert boxes below, the alerts are working:</h3>
+            
+            <div class="alert alert-primary alert-important" role="alert">
+                <div class="d-flex">
+                    <div>
+                        <i class="ti ti-info-circle alert-icon"></i>
+                    </div>
+                    <div>
+                        <h4 class="alert-title">Primary Alert:</h4>
+                        <div class="text-secondary">This should be blue!</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-success alert-important" role="alert">
+                <div class="d-flex">
+                    <div>
+                        <i class="ti ti-check-circle alert-icon"></i>
+                    </div>
+                    <div>
+                        <h4 class="alert-title">Success Alert:</h4>
+                        <div class="text-secondary">This should be green!</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-warning alert-important" role="alert">
+                <div class="d-flex">
+                    <div>
+                        <i class="ti ti-alert-triangle alert-icon"></i>
+                    </div>
+                    <div>
+                        <h4 class="alert-title">Warning Alert:</h4>
+                        <div class="text-secondary">This should be yellow/orange!</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-danger alert-important" role="alert">
+                <div class="d-flex">
+                    <div>
+                        <i class="ti ti-alert-circle alert-icon"></i>
+                    </div>
+                    <div>
+                        <h4 class="alert-title">Danger Alert:</h4>
+                        <div class="text-secondary">This should be red!</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info alert-important" role="alert">
+                <div class="d-flex">
+                    <div>
+                        <i class="ti ti-info-circle alert-icon"></i>
+                    </div>
+                    <div>
+                        <h4 class="alert-title">Info Alert:</h4>
+                        <div class="text-secondary">This should be light blue!</div>
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <h3>Next Steps:</h3>
+            <div class="alert alert-info alert-important" role="alert">
+                <strong>If alerts are visible here:</strong> The issue is likely authentication-related on the main style guide.
+                <br><strong>If alerts are NOT visible:</strong> There may be a CSS loading issue.
+            </div>
+            
+            <p><a href="/style-guide" class="btn btn-primary">Go to Main Style Guide</a></p>
+            <p><small class="text-muted">Main style guide requires admin login</small></p>
+        </div>
+    </div>
+</body>
+</html>
+    '''.strip()
+
+
 @app.route("/dashboard")
 def dashboard():
     if "admin" not in session:
@@ -2770,11 +2900,18 @@ def activity_dashboard(activity_id):
         .all()
     )
 
-    # Calculate KPI data for the dashboard
-    now = datetime.now(timezone.utc)
-    seven_days_ago = now - timedelta(days=7)
+    # Use the enhanced get_kpi_stats function with activity filtering
+    from utils import get_kpi_stats
+    kpi_stats = get_kpi_stats(activity_id=activity_id)
     
-    # Get all passports for this activity for calculations
+    # Get the 7-day KPI data by default (this will be the initial view)
+    current_kpi = kpi_stats.get('7d', {})
+    
+    # Calculate additional activity-specific metrics
+    now = datetime.now(timezone.utc)
+    three_days_ago = now - timedelta(days=3)
+    
+    # Get all passports for this activity for additional calculations
     all_passports = Passport.query.filter_by(activity_id=activity_id).all()
     
     # Helper function to safely compare dates
@@ -2786,37 +2923,25 @@ def activity_dashboard(activity_id):
             dt = dt.replace(tzinfo=timezone.utc)
         return dt >= cutoff_date
     
-    # Revenue calculations
-    total_revenue = sum(p.sold_amt for p in all_passports if p.paid)
-    pending_revenue = sum(p.sold_amt for p in all_passports if not p.paid)
-    revenue_7d = sum(p.sold_amt for p in all_passports if p.paid and is_recent(p.created_dt, seven_days_ago))
-    
-    # User statistics
-    active_users = len([p for p in all_passports if p.paid and p.uses_remaining > 0])
-    total_users = len(set(p.user_id for p in all_passports))
-    active_users_7d = len([p for p in all_passports if is_recent(p.created_dt, seven_days_ago)])
-    
     # Unpaid passport statistics
     unpaid_passports = [p for p in all_passports if not p.paid]
     unpaid_count = len(unpaid_passports)
-    three_days_ago = now - timedelta(days=3)
     overdue_count = len([p for p in unpaid_passports if p.created_dt and not is_recent(p.created_dt, three_days_ago)])
     
-    # Activity profit calculation
+    # Activity profit calculation (combining revenue with expenses/income)
     try:
         activity_expenses = sum(e.amount for e in activity.expenses) if hasattr(activity, 'expenses') else 0
         activity_income = sum(i.amount for i in activity.incomes) if hasattr(activity, 'incomes') else 0
-        total_income = total_revenue + activity_income
+        total_income = current_kpi.get('revenue', 0) + activity_income
         profit = total_income - activity_expenses
         profit_margin = (profit / total_income * 100) if total_income > 0 else 0
     except:
-        profit = total_revenue  # Fallback to just revenue if expenses not tracked
+        profit = current_kpi.get('revenue', 0)  # Fallback to just revenue if expenses not tracked
         profit_margin = 100
     
     # Signup statistics
     pending_signups = [s for s in signups if s.status == 'pending']
     approved_signups = [s for s in signups if s.status == 'approved']
-    recent_signups = [s for s in signups if s.signed_up_at and is_recent(s.signed_up_at, seven_days_ago)]
     
     # Activity log entries (recent activity)
     try:
@@ -2830,44 +2955,51 @@ def activity_dashboard(activity_id):
     except:
         activity_logs = []
 
-    # KPI data structure for the dashboard
+    # KPI data structure for the dashboard template
     kpi_data = {
         'revenue': {
-            'total': total_revenue,
-            'change_7d': revenue_7d,
-            'trend': 'up' if revenue_7d > 0 else 'stable',
-            'percentage': 12 if revenue_7d > 0 else 0  # Could calculate actual percentage
+            'total': current_kpi.get('revenue', 0),
+            'change_7d': current_kpi.get('revenue_change', 0),
+            'trend': 'up' if current_kpi.get('revenue_change', 0) > 0 else 'down' if current_kpi.get('revenue_change', 0) < 0 else 'stable',
+            'percentage': current_kpi.get('revenue_change', 0),
+            'trend_data': current_kpi.get('revenue_trend', [])
         },
         'active_users': {
-            'total': active_users,
-            'change_7d': active_users_7d,
-            'trend': 'up' if active_users_7d > 0 else 'stable',
-            'percentage': 8 if active_users_7d > 0 else 0
+            'total': current_kpi.get('active_users', 0),
+            'change_7d': current_kpi.get('passport_change', 0),
+            'trend': 'up' if current_kpi.get('passport_change', 0) > 0 else 'down' if current_kpi.get('passport_change', 0) < 0 else 'stable',
+            'percentage': current_kpi.get('passport_change', 0),
+            'trend_data': current_kpi.get('active_users_trend', [])
         },
         'unpaid_passports': {
             'total': unpaid_count,
             'overdue': overdue_count,
             'trend': 'down' if overdue_count == 0 else 'up',
-            'percentage': overdue_count
+            'percentage': overdue_count,
+            'trend_data': [unpaid_count] * 7  # Simple placeholder for now
         },
         'profit': {
             'total': profit,
             'margin': profit_margin,
-            'trend': 'up' if profit > 0 else 'stable',
-            'percentage': profit_margin
+            'trend': 'up' if profit > 0 else 'down' if profit < 0 else 'stable',
+            'percentage': profit_margin,
+            'trend_data': current_kpi.get('revenue_trend', [])  # Use revenue trend for now
         }
     }
+    
+    # Store the full KPI stats for JavaScript access
+    kpi_data['all_periods'] = kpi_stats
     
     # Dashboard statistics
     dashboard_stats = {
         'total_passports': len(all_passports),
         'paid_passports': len([p for p in all_passports if p.paid]),
         'unpaid_passports': unpaid_count,
-        'active_passports': active_users,
+        'active_passports': current_kpi.get('active_users', 0),
         'pending_signups': len(pending_signups),
         'approved_signups': len(approved_signups),
-        'recent_signups': len(recent_signups),
-        'total_users': total_users
+        'recent_signups': current_kpi.get('pending_signups', 0),
+        'total_users': len(set(p.user_id for p in all_passports))
     }
 
     # Load surveys for this activity (handle case where tables might not exist yet)
@@ -2912,8 +3044,7 @@ def get_activity_kpis_api(activity_id):
     
     from models import Activity, Passport
     from datetime import datetime, timezone, timedelta
-    from sqlalchemy import or_
-    import random
+    from utils import get_kpi_stats
     
     # Get period from query parameters (default to 7 days)
     period = int(request.args.get('period', 7))
@@ -2922,98 +3053,77 @@ def get_activity_kpis_api(activity_id):
     if not activity:
         return jsonify({"success": False, "error": "Activity not found"}), 404
     
-    # Calculate date range
-    now = datetime.now(timezone.utc)
-    period_start = now - timedelta(days=period)
-    previous_period_start = period_start - timedelta(days=period)
+    # Use the enhanced get_kpi_stats function with activity filtering
+    kpi_stats = get_kpi_stats(activity_id=activity_id)
     
-    # Get all passports for this activity
+    # Map period to the correct key
+    period_key = '7d'
+    if period == 30:
+        period_key = '30d'
+    elif period == 90:
+        period_key = '90d'
+    
+    # Get the KPI data for the requested period
+    period_data = kpi_stats.get(period_key, {})
+    
+    # Calculate additional activity-specific metrics
+    now = datetime.now(timezone.utc)
+    three_days_ago = now - timedelta(days=3)
+    
+    # Get all passports for unpaid statistics
     all_passports = Passport.query.filter_by(activity_id=activity_id).all()
+    unpaid_passports = [p for p in all_passports if not p.paid]
+    unpaid_count = len(unpaid_passports)
     
     # Helper function to safely compare dates
-    def is_in_period(dt, start_date, end_date):
+    def is_recent(dt, cutoff_date):
         if not dt:
             return False
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
-        return start_date <= dt <= end_date
+        return dt >= cutoff_date
     
-    # Current period data
-    current_revenue = sum(p.sold_amt for p in all_passports if p.paid and is_in_period(p.created_dt, period_start, now))
-    current_active_users = len([p for p in all_passports if p.paid and p.uses_remaining > 0 and is_in_period(p.created_dt, period_start, now)])
-    current_unpaid = len([p for p in all_passports if not p.paid and is_in_period(p.created_dt, period_start, now)])
+    overdue_count = len([p for p in unpaid_passports if p.created_dt and not is_recent(p.created_dt, three_days_ago)])
     
-    # Previous period data for comparison
-    previous_revenue = sum(p.sold_amt for p in all_passports if p.paid and is_in_period(p.created_dt, previous_period_start, period_start))
-    previous_active_users = len([p for p in all_passports if p.paid and p.uses_remaining > 0 and is_in_period(p.created_dt, previous_period_start, period_start)])
-    previous_unpaid = len([p for p in all_passports if not p.paid and is_in_period(p.created_dt, previous_period_start, period_start)])
-    
-    # Calculate percentage changes
-    def calculate_change(current, previous):
-        if previous == 0:
-            return 100 if current > 0 else 0
-        return round(((current - previous) / previous) * 100, 1)
-    
-    revenue_change = calculate_change(current_revenue, previous_revenue)
-    users_change = calculate_change(current_active_users, previous_active_users)
-    unpaid_change = calculate_change(current_unpaid, previous_unpaid)
-    
-    # Calculate profit (simplified)
+    # Calculate profit (combining revenue with expenses/income)
     try:
         activity_expenses = sum(e.amount for e in activity.expenses) if hasattr(activity, 'expenses') else 0
         activity_income = sum(i.amount for i in activity.incomes) if hasattr(activity, 'incomes') else 0
-        total_income = current_revenue + activity_income
+        total_income = period_data.get('revenue', 0) + activity_income
         profit = total_income - activity_expenses
         profit_margin = (profit / total_income * 100) if total_income > 0 else 0
         
         # Previous period profit for comparison
-        previous_total_income = previous_revenue + activity_income
+        previous_total_income = period_data.get('revenue_prev', 0) + activity_income
         previous_profit = previous_total_income - activity_expenses
-        profit_change = calculate_change(profit, previous_profit)
+        profit_change = ((profit - previous_profit) / previous_profit * 100) if previous_profit > 0 else 0
     except:
-        profit = current_revenue
+        profit = period_data.get('revenue', 0)
         profit_margin = 100
-        profit_change = revenue_change
-    
-    # Generate trend data arrays for charts
-    def generate_trend_data(period_days, base_value):
-        """Generate realistic trend data for the specified period"""
-        data = []
-        for i in range(period_days):
-            # Add some realistic variation
-            variation = random.uniform(0.8, 1.2)
-            value = max(0, int(base_value * variation))
-            data.append(value)
-        return data
-    
-    # Create trend data
-    revenue_trend = generate_trend_data(period, current_revenue / period if period > 0 else 0)
-    active_users_trend = generate_trend_data(period, current_active_users / period if period > 0 else 0)
-    unpaid_trend = generate_trend_data(period, current_unpaid / period if period > 0 else 0)
-    profit_trend = generate_trend_data(period, profit / period if period > 0 else 0)
+        profit_change = period_data.get('revenue_change', 0)
     
     kpi_data = {
         'revenue': {
-            'total': current_revenue,
-            'change': revenue_change,
-            'trend': 'up' if revenue_change > 0 else 'down' if revenue_change < 0 else 'stable',
-            'percentage': abs(revenue_change),
-            'trend_data': revenue_trend
+            'total': period_data.get('revenue', 0),
+            'change': period_data.get('revenue_change', 0),
+            'trend': 'up' if period_data.get('revenue_change', 0) > 0 else 'down' if period_data.get('revenue_change', 0) < 0 else 'stable',
+            'percentage': abs(period_data.get('revenue_change', 0)),
+            'trend_data': period_data.get('revenue_trend', [])
         },
         'active_users': {
-            'total': current_active_users,
-            'change': users_change,
-            'trend': 'up' if users_change > 0 else 'down' if users_change < 0 else 'stable',
-            'percentage': abs(users_change),
-            'trend_data': active_users_trend
+            'total': period_data.get('active_users', 0),
+            'change': period_data.get('passport_change', 0),
+            'trend': 'up' if period_data.get('passport_change', 0) > 0 else 'down' if period_data.get('passport_change', 0) < 0 else 'stable',
+            'percentage': abs(period_data.get('passport_change', 0)),
+            'trend_data': period_data.get('active_users_trend', [])
         },
         'unpaid_passports': {
-            'total': current_unpaid,
-            'change': unpaid_change,
-            'trend': 'up' if unpaid_change > 0 else 'down' if unpaid_change < 0 else 'stable',
-            'percentage': abs(unpaid_change),
-            'overdue': len([p for p in all_passports if not p.paid and p.created_dt and not is_in_period(p.created_dt, now - timedelta(days=3), now)]),
-            'trend_data': unpaid_trend
+            'total': unpaid_count,
+            'change': 0,  # We don't track unpaid changes in the base KPI function
+            'trend': 'stable',
+            'percentage': 0,
+            'overdue': overdue_count,
+            'trend_data': [unpaid_count] * len(period_data.get('revenue_trend', []))  # Simple placeholder
         },
         'profit': {
             'total': profit,
@@ -3021,7 +3131,7 @@ def get_activity_kpis_api(activity_id):
             'change': profit_change,
             'trend': 'up' if profit_change > 0 else 'down' if profit_change < 0 else 'stable',
             'percentage': abs(profit_change),
-            'trend_data': profit_trend
+            'trend_data': period_data.get('revenue_trend', [])  # Use revenue trend as proxy for profit
         }
     }
     
@@ -3032,7 +3142,62 @@ def get_activity_kpis_api(activity_id):
     })
 
 
-
+@app.route("/api/global-kpis")
+def get_global_kpis_api():
+    """API endpoint to get global KPI data for a specific period"""
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    
+    from utils import get_kpi_stats
+    
+    # Get period from query parameters (default to 7d)
+    period = request.args.get('period', '7d')
+    
+    # Get global KPI stats
+    kpi_stats = get_kpi_stats()
+    
+    # Get the requested period data
+    period_data = kpi_stats.get(period, {})
+    if not period_data:
+        return jsonify({"success": False, "error": f"No data available for period: {period}"}), 404
+    
+    # Format the response to match the frontend expectations
+    kpi_data = {
+        'revenue': {
+            'total': period_data.get('revenue', 0),
+            'change': period_data.get('revenue_change', 0),
+            'trend': 'up' if period_data.get('revenue_change', 0) > 0 else 'down' if period_data.get('revenue_change', 0) < 0 else 'stable',
+            'percentage': abs(period_data.get('revenue_change', 0)),
+            'trend_data': period_data.get('revenue_trend', [])
+        },
+        'active_passports': {
+            'total': period_data.get('active_users', 0),
+            'change': period_data.get('passport_change', 0),
+            'trend': 'up' if period_data.get('passport_change', 0) > 0 else 'down' if period_data.get('passport_change', 0) < 0 else 'stable',
+            'percentage': abs(period_data.get('passport_change', 0)),
+            'trend_data': period_data.get('active_users_trend', [])
+        },
+        'passports_created': {
+            'total': period_data.get('pass_created', 0),
+            'change': period_data.get('new_passports_change', 0),
+            'trend': 'up' if period_data.get('new_passports_change', 0) > 0 else 'down' if period_data.get('new_passports_change', 0) < 0 else 'stable',
+            'percentage': abs(period_data.get('new_passports_change', 0)),
+            'trend_data': period_data.get('pass_created_trend', [])
+        },
+        'pending_signups': {
+            'total': period_data.get('pending_signups', 0),
+            'change': period_data.get('signup_change', 0),
+            'trend': 'up' if period_data.get('signup_change', 0) > 0 else 'down' if period_data.get('signup_change', 0) < 0 else 'stable',
+            'percentage': abs(period_data.get('signup_change', 0)),
+            'trend_data': period_data.get('pending_signups_trend', [])
+        }
+    }
+    
+    return jsonify({
+        "success": True,
+        "period": period,
+        "kpi_data": kpi_data
+    })
 
 
 @app.template_filter("from_json")

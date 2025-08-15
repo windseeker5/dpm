@@ -27,12 +27,130 @@
   <link href="{{ url_for('static', filename='minipass.css') }}?v=20250624110800" rel="stylesheet">
   <link href="{{ url_for('static', filename='minipass-redesign.css') }}?v={{ range(1000000, 9999999) | random }}" rel="stylesheet">
   
+  <!-- Flash Alert Overlay Styles -->
+  <style>
+    /* Fixed position flash alert overlay system */
+    .flash-alert-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+      pointer-events: none;
+      padding: 1rem;
+    }
+    
+    .flash-alert-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .flash-alert {
+      pointer-events: auto;
+      margin-bottom: 0.75rem;
+      transform: translateY(-100%);
+      opacity: 0;
+      transition: all 0.3s ease-in-out;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-radius: 0.5rem;
+    }
+    
+    .flash-alert.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .flash-alert.hide {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    
+    /* Enhanced alert styling with proper colors */
+    .flash-alert.alert-success {
+      background-color: var(--tblr-success-bg-subtle) !important;
+      border-color: var(--tblr-success-border-subtle) !important;
+      color: var(--tblr-success-text-emphasis) !important;
+    }
+    
+    .flash-alert.alert-danger {
+      background-color: var(--tblr-danger-bg-subtle) !important;
+      border-color: var(--tblr-danger-border-subtle) !important;
+      color: var(--tblr-danger-text-emphasis) !important;
+    }
+    
+    .flash-alert.alert-warning {
+      background-color: var(--tblr-warning-bg-subtle) !important;
+      border-color: var(--tblr-warning-border-subtle) !important;
+      color: var(--tblr-warning-text-emphasis) !important;
+    }
+    
+    .flash-alert.alert-info {
+      background-color: var(--tblr-info-bg-subtle) !important;
+      border-color: var(--tblr-info-border-subtle) !important;
+      color: var(--tblr-info-text-emphasis) !important;
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .flash-alert-overlay {
+        padding: 0.75rem;
+      }
+      
+      .flash-alert {
+        margin-bottom: 0.5rem;
+        border-radius: 0.375rem;
+      }
+    }
+  </style>
+  
   {% block head %}{% endblock %}
 </head>
 <body class="antialiased">
 
   <!-- Skip Navigation for Accessibility -->
   <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
+  
+  <!-- Fixed Position Flash Alert Overlay -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-alert-overlay" id="flashAlertOverlay">
+        <div class="flash-alert-container">
+          {% for category, message in messages %}
+            <div class="flash-alert alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'warning' if category == 'warning' else 'info' }} alert-dismissible fade" role="alert">
+              <div class="d-flex align-items-start">
+                <div class="me-3">
+                  {% if category == 'success' %}
+                    <i class="ti ti-check-circle fs-4"></i>
+                  {% elif category == 'error' %}
+                    <i class="ti ti-alert-circle fs-4"></i>
+                  {% elif category == 'warning' %}
+                    <i class="ti ti-alert-triangle fs-4"></i>
+                  {% else %}
+                    <i class="ti ti-info-circle fs-4"></i>
+                  {% endif %}
+                </div>
+                <div class="flex-fill">
+                  <div class="fw-bold mb-1">
+                    {% if category == 'success' %}
+                      Success!
+                    {% elif category == 'error' %}
+                      Error!
+                    {% elif category == 'warning' %}
+                      Warning!
+                    {% else %}
+                      Info
+                    {% endif %}
+                  </div>
+                  <div>{{ message }}</div>
+                </div>
+                <button type="button" class="btn-close ms-3" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
 
   <!-- Main Application Container -->
   <div class="minipass-app">
@@ -42,7 +160,7 @@
       <!-- Brand Section -->
       <div class="minipass-sidebar-brand">
         <a href="{{ url_for('dashboard') }}" class="brand-link">
-          <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" 
+          <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" 
                alt="Minipass" class="brand-logo">
         </a>
       </div>
@@ -192,32 +310,6 @@
       <!-- Scrollable Main Content with Footer at End -->
       <main class="minipass-content" id="main-content">
         <div class="minipass-content-wrapper">
-          <!-- Flash Messages -->
-          {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-              <div class="minipass-alerts">
-                {% for category, message in messages %}
-                  <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible" role="alert">
-                    <div class="d-flex">
-                      <div>
-                        {% if category == 'success' %}
-                        <i class="ti ti-check alert-icon"></i>
-                        {% else %}
-                        <i class="ti ti-alert-circle alert-icon"></i>
-                        {% endif %}
-                      </div>
-                      <div>
-                        <h4 class="alert-title">{{ 'Success!' if category == 'success' else 'Error!' }}</h4>
-                        <div class="text-muted">{{ message }}</div>
-                      </div>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                  </div>
-                {% endfor %}
-              </div>
-            {% endif %}
-          {% endwith %}
-          
           <!-- Page Content -->
           {% block content %}{% endblock %}
           
@@ -283,14 +375,49 @@
         });
       }
       
-      // Auto-dismiss alerts
-      const alerts = document.querySelectorAll(".alert");
-      alerts.forEach(alert => {
+      // Enhanced flash alert system
+      const flashOverlay = document.getElementById('flashAlertOverlay');
+      if (flashOverlay) {
+        const flashAlerts = flashOverlay.querySelectorAll('.flash-alert');
+        
+        // Show alerts with staggered animation
+        flashAlerts.forEach((alert, index) => {
+          setTimeout(() => {
+            alert.classList.add('show');
+          }, index * 150); // Stagger by 150ms
+          
+          // Auto-dismiss after 5 seconds
+          setTimeout(() => {
+            dismissFlashAlert(alert);
+          }, 5000 + (index * 150));
+        });
+        
+        // Handle manual dismiss
+        flashAlerts.forEach(alert => {
+          const closeBtn = alert.querySelector('.btn-close');
+          if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+              dismissFlashAlert(alert);
+            });
+          }
+        });
+      }
+      
+      function dismissFlashAlert(alert) {
+        alert.classList.add('hide');
+        alert.classList.remove('show');
+        
+        // Remove from DOM after animation
         setTimeout(() => {
-          const bsAlert = new bootstrap.Alert(alert);
-          bsAlert.close();
-        }, 5000);
-      });
+          alert.remove();
+          
+          // Remove overlay if no alerts left
+          const overlay = document.getElementById('flashAlertOverlay');
+          if (overlay && overlay.querySelectorAll('.flash-alert').length === 0) {
+            overlay.remove();
+          }
+        }, 300);
+      }
       
       // Mobile sidebar toggle
       const sidebarToggle = document.getElementById('sidebarToggle');
