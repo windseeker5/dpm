@@ -112,6 +112,7 @@ Multi-provider AI chatbot with modular architecture:
 ### Tabler.io Component Usage
 - **MANDATORY**: Use ONLY Tabler.io components - already installed in `static/tabler/`
 - **Reference**: http://127.0.0.1:8890/style-guide for live component examples
+- **Component Library**: http://127.0.0.1:8890/components for working implementations
 - **CSS Classes**: Use Tabler's utility classes (e.g., `card`, `btn`, `avatar`, `badge`)
 - **Icons**: Tabler icons available in `static/tabler/icons/`
 - **No Custom Frameworks**: Do not add Bootstrap, Tailwind, or other CSS libraries
@@ -121,6 +122,48 @@ Multi-provider AI chatbot with modular architecture:
 - **Partials**: Reusable components in `templates/partials/`
 - **Mobile-First**: Test responsive design at all breakpoints
 - **Testing**: Use Playwright MCP to test on http://127.0.0.1:8890
+
+## ⚠️ Critical KPI Card Implementation Notes
+
+### Icon Class Format
+- **MUST USE**: Full icon class format `ti ti-trending-up`
+- **NEVER USE**: Partial format like `ti-trending-up` (causes encoding issues: â��)
+- **Example**: `<i class="ti ti-trending-up"></i>` ✓ CORRECT
+- **Example**: `<i class="ti-trending-up"></i>` ✗ WRONG
+
+### CSS Selector Pitfalls
+- **DANGER**: Never use broad selectors like `.text-muted` for updates
+- **PROBLEM**: `.text-muted` matches BOTH title elements AND trend indicators
+- **SOLUTION**: Use specific ID selectors: `#revenue-trend`, `#revenue-value`
+- **Example WRONG**: `cardElement.querySelector('.text-muted')` - Can overwrite titles!
+- **Example RIGHT**: `document.getElementById('revenue-trend')` - Targets exact element
+
+### Individual Card Updates
+- **RULE**: Each KPI card MUST update independently
+- **NEVER**: Call `updateCharts()` which updates ALL charts globally
+- **ALWAYS**: Use `updateSingleKPICard()` or card-specific functions
+- **Pattern**: Identify card → Determine type → Update only that card
+
+### Dashboard vs Activity Dashboard Differences
+| Aspect | Dashboard (`dashboard.html`) | Activity Dashboard (`activity_dashboard.html`) |
+|--------|------------------------------|-----------------------------------------------|
+| Data Source | Pre-loaded `kpiData` object | API endpoint `/api/activity-kpis/{id}` |
+| Scope | Global (all activities) | Activity-specific |
+| API Calls | None (uses template data) | Makes API calls for updates |
+| Data Fields | `revenue_change`, `passport_change` | `revenue.percentage`, `active_users.trend` |
+
+### Common Bugs and Fixes
+1. **Title Overwrite Bug**: Revenue shows "0% -" instead of "REVENUE"
+   - Cause: Selector too broad, matching title element
+   - Fix: Use ID-based selectors for trend elements
+
+2. **Chart Cross-Contamination**: All cards update when one changes
+   - Cause: Global update functions being called
+   - Fix: Implement individual card update logic
+
+3. **Icon Encoding Issues**: Shows â�� instead of icons
+   - Cause: Incomplete icon class names
+   - Fix: Always use full `ti ti-*` format
 
 ## Database Schema
 

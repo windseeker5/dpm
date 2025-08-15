@@ -143,6 +143,7 @@
                 <a class="nav-link" href="#common-patterns">Common Patterns</a>
                 <a class="nav-link" href="#javascript-functions">JavaScript Functions</a>
                 <a class="nav-link" href="#mobile-responsive">Mobile Responsive</a>
+                <a class="nav-link" href="#common-pitfalls">Common Pitfalls & Solutions</a>
               </nav>
             </div>
           </div>
@@ -807,6 +808,264 @@ function handleKPITimeChange(event) {
                     <li>Mobile cards have fixed width of 280px for consistent scrolling</li>
                     <li>Scroll snap ensures cards align properly during horizontal scrolling</li>
                   </ul>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          <!-- Common Pitfalls & Solutions Section -->
+          <section id="common-pitfalls" class="components-section">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="ti ti-alert-triangle text-warning me-2"></i>
+                  Common Pitfalls & Solutions
+                </h3>
+                <div class="card-subtitle">Critical issues we've encountered and their solutions</div>
+              </div>
+              <div class="card-body">
+                
+                <!-- The Title Overwrite Bug -->
+                <div class="alert alert-danger" role="alert">
+                  <div class="d-flex">
+                    <div>
+                      <i class="ti ti-bug alert-icon"></i>
+                    </div>
+                    <div>
+                      <h4 class="alert-title">The Title Overwrite Bug</h4>
+                      <div class="text-muted mb-2">
+                        <strong>Symptom:</strong> Revenue title shows "0% -" instead of "REVENUE"
+                      </div>
+                      <div class="text-muted mb-2">
+                        <strong>Cause:</strong> CSS selector <code>.text-muted</code> too broad, matches title elements
+                      </div>
+                      <div class="text-muted mb-3">
+                        <strong>Solution:</strong> Use specific IDs like <code>#revenue-trend</code>
+                      </div>
+                      
+                      <div class="code-preview">
+                        <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                          <i class="ti ti-copy"></i>
+                        </button>
+                        <pre><code class="language-html">&lt;!-- WRONG: This will update ALL .text-muted elements --&gt;
+&lt;div class="text-muted small text-uppercase"&gt;REVENUE&lt;/div&gt;
+&lt;div class="text-muted me-2"&gt;12% &lt;i class="ti ti-trending-up"&gt;&lt;/i&gt;&lt;/div&gt;
+
+&lt;!-- RIGHT: Use specific IDs for trend elements --&gt;
+&lt;div class="text-muted small text-uppercase"&gt;REVENUE&lt;/div&gt;
+&lt;div class="text-success me-2" id="revenue-trend"&gt;12% &lt;i class="ti ti-trending-up"&gt;&lt;/i&gt;&lt;/div&gt;
+
+&lt;!-- JavaScript update --&gt;
+const trendEl = document.getElementById('revenue-trend'); // Specific element
+// NOT: document.querySelector('.text-muted'); // Too broad!</code></pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Chart Cross-Contamination -->
+                <div class="alert alert-warning" role="alert">
+                  <div class="d-flex">
+                    <div>
+                      <i class="ti ti-refresh alert-icon"></i>
+                    </div>
+                    <div>
+                      <h4 class="alert-title">Chart Cross-Contamination</h4>
+                      <div class="text-muted mb-2">
+                        <strong>Symptom:</strong> All KPI cards update when changing one period
+                      </div>
+                      <div class="text-muted mb-2">
+                        <strong>Cause:</strong> Calling global <code>updateCharts()</code> function
+                      </div>
+                      <div class="text-muted mb-3">
+                        <strong>Solution:</strong> Use <code>updateSingleKPICard()</code> for individual updates
+                      </div>
+                      
+                      <div class="code-preview">
+                        <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                          <i class="ti ti-copy"></i>
+                        </button>
+                        <pre><code class="language-javascript">// WRONG: Updates all charts globally
+function handleKPITimeChange(event) {
+  const period = parseInt(event.target.dataset.period);
+  updateCharts(period); // This affects ALL KPI cards!
+}
+
+// RIGHT: Update only the specific card
+function handleKPITimeChange(event) {
+  const clickedItem = event.target;
+  const period = parseInt(clickedItem.dataset.period);
+  const dropdown = clickedItem.closest('.dropdown');
+  const kpiCard = dropdown.closest('.card');
+  const kpiType = determineKPIType(kpiCard);
+  
+  // Update only this specific card
+  updateSingleKPIData(period, kpiType, kpiCard, clickedItem.textContent.trim());
+}</code></pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Icon Encoding Issues -->
+                <div class="alert alert-info" role="alert">
+                  <div class="d-flex">
+                    <div>
+                      <i class="ti ti-icons alert-icon"></i>
+                    </div>
+                    <div>
+                      <h4 class="alert-title">Icon Encoding Issues</h4>
+                      <div class="text-muted mb-2">
+                        <strong>Symptom:</strong> Shows "â��" instead of trend icons
+                      </div>
+                      <div class="text-muted mb-2">
+                        <strong>Cause:</strong> Incomplete icon class names
+                      </div>
+                      <div class="text-muted mb-3">
+                        <strong>Solution:</strong> Always use full format <code>ti ti-trending-up</code>
+                      </div>
+                      
+                      <div class="code-preview">
+                        <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                          <i class="ti ti-copy"></i>
+                        </button>
+                        <pre><code class="language-html">&lt;!-- WRONG: Missing 'ti' prefix --&gt;
+&lt;i class="ti-trending-up"&gt;&lt;/i&gt;
+&lt;i class="trending-up"&gt;&lt;/i&gt;
+
+&lt;!-- WRONG: Inconsistent format --&gt;
+&lt;i class="tabler-trending-up"&gt;&lt;/i&gt;
+
+&lt;!-- RIGHT: Always use full Tabler format --&gt;
+&lt;i class="ti ti-trending-up"&gt;&lt;/i&gt;
+&lt;i class="ti ti-trending-down"&gt;&lt;/i&gt;
+&lt;i class="ti ti-alert-circle"&gt;&lt;/i&gt;
+
+&lt;!-- JavaScript icon updates --&gt;
+let icon = `ti ti-trending-${data.trend || 'up'}`; // Ensures 'ti ti-' prefix
+trendEl.innerHTML = `${value} &lt;i class="${icon}"&gt;&lt;/i&gt;`;</code></pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Testing Checklist -->
+                <div class="card mt-4">
+                  <div class="card-header">
+                    <h4 class="card-title">
+                      <i class="ti ti-checklist text-success me-2"></i>
+                      Testing Checklist for KPI Changes
+                    </h4>
+                  </div>
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <h6>Functional Tests</h6>
+                        <div class="list-group list-group-flush">
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <span class="status-dot status-dot-animated bg-success"></span>
+                              </div>
+                              <div class="col text-truncate">
+                                <strong>Change period on one card</strong> - only that card updates
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <span class="status-dot status-dot-animated bg-success"></span>
+                              </div>
+                              <div class="col text-truncate">
+                                <strong>Titles remain unchanged</strong> when updating values
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <span class="status-dot status-dot-animated bg-success"></span>
+                              </div>
+                              <div class="col text-truncate">
+                                <strong>Icons display correctly</strong> (no weird characters)
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <span class="status-dot status-dot-animated bg-success"></span>
+                              </div>
+                              <div class="col text-truncate">
+                                <strong>Charts update independently</strong>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <h6>Visual Tests</h6>
+                        <div class="list-group list-group-flush">
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <span class="status-dot status-dot-animated bg-info"></span>
+                              </div>
+                              <div class="col text-truncate">
+                                <strong>Desktop layout</strong> displays 4 cards in row
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <span class="status-dot status-dot-animated bg-info"></span>
+                              </div>
+                              <div class="col text-truncate">
+                                <strong>Mobile carousel</strong> scrolls horizontally
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <span class="status-dot status-dot-animated bg-info"></span>
+                              </div>
+                              <div class="col text-truncate">
+                                <strong>Loading states</strong> show during updates
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <span class="status-dot status-dot-animated bg-info"></span>
+                              </div>
+                              <div class="col text-truncate">
+                                <strong>Hover effects</strong> work on card interactions
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                      <div class="alert alert-primary" role="alert">
+                        <div class="d-flex">
+                          <div>
+                            <i class="ti ti-lightbulb alert-icon"></i>
+                          </div>
+                          <div>
+                            <h4 class="alert-title">Pro Tip</h4>
+                            Test KPI changes on both desktop and mobile views. Use browser dev tools to simulate different screen sizes and ensure the mobile carousel works smoothly.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
               </div>

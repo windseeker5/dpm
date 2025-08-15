@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Typography Preview - Minipass{% endblock %}
+
+{% block head %}
+<!-- Additional Google Fonts for Typography Preview -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* Option 1: Inter (Already included in base.html) */
+  .option-inter h1 {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 2rem;
+    color: #0f172a;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+  
+  .option-inter h2 {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #1e293b;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    margin-bottom: 0.75rem;
+  }
+  
+  .option-inter p, .option-inter .body-text {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 1rem;
+    color: #475569;
+    line-height: 1.6;
+  }
+  
+  /* Option 2: Plus Jakarta Sans */
+  .option-jakarta h1 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    font-size: 2rem;
+    color: #18181b;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+  
+  .option-jakarta h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #27272a;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    margin-bottom: 0.75rem;
+  }
+  
+  .option-jakarta p, .option-jakarta .body-text {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 1rem;
+    color: #52525b;
+    line-height: 1.6;
+  }
+  
+  /* Option 3: Roboto Slab + Inter Hybrid */
+  .option-hybrid h1 {
+    font-family: 'Roboto Slab', serif;
+    font-weight: 600;
+    font-size: 2rem;
+    color: #1a1f36;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+  
+  .option-hybrid h2 {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #2d3748;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    margin-bottom: 0.75rem;
+  }
+  
+  .option-hybrid p, .option-hybrid .body-text {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 1rem;
+    color: #4a5568;
+    line-height: 1.6;
+  }
+  
+  /* Alternative Color Systems */
+  .color-deep-navy h1 { color: #0f172a; }
+  .color-deep-navy h2 { color: #1e293b; }
+  
+  .color-warm-charcoal h1 { color: #18181b; }
+  .color-warm-charcoal h2 { color: #3f3f46; }
+  
+  /* Typography preview specific styles */
+  .typography-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .option-label {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #206bc4;
+    color: white;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+  
+  .sample-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+  
+  .kpi-sample {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+  
+  .kpi-value {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+  
+  .kpi-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+  }
+  
+  .nav-preview {
+    display: flex;
+    gap: 2rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+  }
+  
+  .nav-item-preview {
+    font-weight: 500;
+    color: #4b5563;
+    text-decoration: none;
+  }
+  
+  .nav-item-preview:hover {
+    color: #206bc4;
+  }
+  
+  .activity-card-preview {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  
+  .badge-preview {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+  }
+  
+  .badge-active { background: #d1fae5; color: #065f46; }
+  .badge-pending { background: #fed7aa; color: #92400e; }
+  .badge-created { background: #dbeafe; color: #1e40af; }
+  
+  .btn-primary-preview {
+    background: #206bc4;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    margin-top: 1rem;
+  }
+  
+  .btn-primary-preview:hover {
+    background: #1a5aa3;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div class="container-xl">
+    <!-- Page header -->
+    <div class="page-header d-print-none">
+      <div class="row align-items-center">
+        <div class="col">
+          <h2 class="page-title">Typography Options for Minipass</h2>
+          <div class="text-muted mt-1">Compare different font combinations for your application</div>
+        </div>
+        <div class="col-auto">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+            <i class="ti ti-arrow-left"></i> Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Option 1: Inter (Recommended) -->
+    <div class="typography-section option-inter">
+      <span class="option-label">Option 1: Inter (Recommended)</span>
+      <h1>Welcome back, Kdresdell!</h1>
+      <p class="body-text">Here's what's happening with your activities today.</p>
+      
+      <h2>Key Performance Indicators</h2>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="sample-card">
+            <div class="kpi-label">REVENUE</div>
+            <div class="kpi-value">$200</div>
+            <div style="color: #10b981; font-size: 0.875rem;">
+              <i class="ti ti-trending-up"></i> 300%
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="sample-card">
+            <div class="kpi-label">ACTIVE PASSPORTS</div>
+            <div class="kpi-value">6</div>
+            <div style="color: #10b981; font-size: 0.875rem;">
+              <i class="ti ti-trending-up"></i> 400%
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <h2 class="mt-4">Your Activities</h2>
+      <div class="activity-card-preview">
+        <h3 style="font-family: 'Inter', sans-serif; font-weight: 600; font-size: 1.125rem; color: #1e293b;">Ligue Hockey Gagnon Image</h3>
+        <p class="body-text">Manage and monitor your active programs</p>
+        <div>
+          <span class="badge-preview badge-active">4 active</span>
+          <span class="badge-preview badge-pending">1 pending</span>
+          <span class="badge-preview badge-created">5 created</span>
+        </div>
+        <a href="#" class="btn-primary-preview">Manage Activity</a>
+      </div>
+      
+      <div class="nav-preview mt-4">
+        <a href="#" class="nav-item-preview" style="font-family: 'Inter', sans-serif;">Dashboard</a>
+        <a href="#" class="nav-item-preview" style="font-family: 'Inter', sans-serif;">Activities</a>
+        <a href="#" class="nav-item-preview" style="font-family: 'Inter', sans-serif;">Signups</a>
+        <a href="#" class="nav-item-preview" style="font-family: 'Inter', sans-serif;">Passports</a>
+      </div>
+    </div>
+    
+    <!-- Option 2: Plus Jakarta Sans -->
+    <div class="typography-section option-jakarta">
+      <span class="option-label">Option 2: Plus Jakarta Sans</span>
+      <h1>Welcome back, Kdresdell!</h1>
+      <p class="body-text">Here's what's happening with your activities today.</p>
+      
+      <h2>Key Performance Indicators</h2>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="sample-card">
+            <div class="kpi-label" style="font-family: 'Plus Jakarta Sans', sans-serif;">REVENUE</div>
+            <div class="kpi-value" style="font-family: 'Plus Jakarta Sans', sans-serif;">$200</div>
+            <div style="color: #10b981; font-size: 0.875rem; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <i class="ti ti-trending-up"></i> 300%
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="sample-card">
+            <div class="kpi-label" style="font-family: 'Plus Jakarta Sans', sans-serif;">ACTIVE PASSPORTS</div>
+            <div class="kpi-value" style="font-family: 'Plus Jakarta Sans', sans-serif;">6</div>
+            <div style="color: #10b981; font-size: 0.875rem; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <i class="ti ti-trending-up"></i> 400%
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <h2 class="mt-4">Your Activities</h2>
+      <div class="activity-card-preview">
+        <h3 style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 1.125rem; color: #27272a;">Ligue Hockey Gagnon Image</h3>
+        <p class="body-text">Manage and monitor your active programs</p>
+        <div>
+          <span class="badge-preview badge-active">4 active</span>
+          <span class="badge-preview badge-pending">1 pending</span>
+          <span class="badge-preview badge-created">5 created</span>
+        </div>
+        <a href="#" class="btn-primary-preview">Manage Activity</a>
+      </div>
+      
+      <div class="nav-preview mt-4">
+        <a href="#" class="nav-item-preview" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dashboard</a>
+        <a href="#" class="nav-item-preview" style="font-family: 'Plus Jakarta Sans', sans-serif;">Activities</a>
+        <a href="#" class="nav-item-preview" style="font-family: 'Plus Jakarta Sans', sans-serif;">Signups</a>
+        <a href="#" class="nav-item-preview" style="font-family: 'Plus Jakarta Sans', sans-serif;">Passports</a>
+      </div>
+    </div>
+    
+    <!-- Option 3: Roboto Slab + Inter Hybrid -->
+    <div class="typography-section option-hybrid">
+      <span class="option-label">Option 3: Roboto Slab + Inter Hybrid</span>
+      <h1>Welcome back, Kdresdell!</h1>
+      <p class="body-text">Here's what's happening with your activities today.</p>
+      
+      <h2>Key Performance Indicators</h2>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="sample-card">
+            <div class="kpi-label">REVENUE</div>
+            <div class="kpi-value" style="font-family: 'Roboto Slab', serif; color: #1a1f36;">$200</div>
+            <div style="color: #10b981; font-size: 0.875rem;">
+              <i class="ti ti-trending-up"></i> 300%
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="sample-card">
+            <div class="kpi-label">ACTIVE PASSPORTS</div>
+            <div class="kpi-value" style="font-family: 'Roboto Slab', serif; color: #1a1f36;">6</div>
+            <div style="color: #10b981; font-size: 0.875rem;">
+              <i class="ti ti-trending-up"></i> 400%
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <h2 class="mt-4">Your Activities</h2>
+      <div class="activity-card-preview">
+        <h3 style="font-family: 'Inter', sans-serif; font-weight: 600; font-size: 1.125rem; color: #2d3748;">Ligue Hockey Gagnon Image</h3>
+        <p class="body-text">Manage and monitor your active programs</p>
+        <div>
+          <span class="badge-preview badge-active">4 active</span>
+          <span class="badge-preview badge-pending">1 pending</span>
+          <span class="badge-preview badge-created">5 created</span>
+        </div>
+        <a href="#" class="btn-primary-preview">Manage Activity</a>
+      </div>
+      
+      <div class="nav-preview mt-4">
+        <a href="#" class="nav-item-preview">Dashboard</a>
+        <a href="#" class="nav-item-preview">Activities</a>
+        <a href="#" class="nav-item-preview">Signups</a>
+        <a href="#" class="nav-item-preview">Passports</a>
+      </div>
+    </div>
+    
+    <!-- Side-by-Side Comparison -->
+    <h2 class="mt-5 mb-3">Side-by-Side Comparison</h2>
+    <div class="comparison-grid">
+      <!-- Inter -->
+      <div class="typography-section option-inter">
+        <span class="option-label">Inter</span>
+        <h1>Activity Dashboard</h1>
+        <h2>Registration Overview</h2>
+        <p class="body-text">Track your business metrics at a glance</p>
+        <div class="kpi-sample">
+          <span class="kpi-value">$4,300</span>
+          <span class="kpi-label">MONTHLY REVENUE</span>
+        </div>
+        <a href="#" class="btn-primary-preview">View Details</a>
+      </div>
+      
+      <!-- Plus Jakarta Sans -->
+      <div class="typography-section option-jakarta">
+        <span class="option-label">Plus Jakarta Sans</span>
+        <h1>Activity Dashboard</h1>
+        <h2>Registration Overview</h2>
+        <p class="body-text">Track your business metrics at a glance</p>
+        <div class="kpi-sample">
+          <span class="kpi-value" style="font-family: 'Plus Jakarta Sans', sans-serif;">$4,300</span>
+          <span class="kpi-label" style="font-family: 'Plus Jakarta Sans', sans-serif;">MONTHLY REVENUE</span>
+        </div>
+        <a href="#" class="btn-primary-preview">View Details</a>
+      </div>
+      
+      <!-- Roboto Slab + Inter -->
+      <div class="typography-section option-hybrid">
+        <span class="option-label">Roboto Slab + Inter</span>
+        <h1>Activity Dashboard</h1>
+        <h2>Registration Overview</h2>
+        <p class="body-text">Track your business metrics at a glance</p>
+        <div class="kpi-sample">
+          <span class="kpi-value" style="font-family: 'Roboto Slab', serif; color: #1a1f36;">$4,300</span>
+          <span class="kpi-label">MONTHLY REVENUE</span>
+        </div>
+        <a href="#" class="btn-primary-preview">View Details</a>
+      </div>
+    </div>
+    
+    <!-- Color System Variations -->
+    <h2 class="mt-5 mb-3">Color System Variations</h2>
+    <div class="row g-3">
+      <!-- Deep Navy System -->
+      <div class="col-md-6">
+        <div class="typography-section option-inter color-deep-navy">
+          <span class="option-label">Deep Navy System</span>
+          <h1>Professional Dashboard</h1>
+          <h2>Analytics & Insights</h2>
+          <p class="body-text">Monitor your key performance indicators</p>
+          <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <div style="padding: 0.5rem 1rem; background: #f8fafc; border-radius: 6px;">
+              <div style="color: #0f172a; font-weight: 600;">H1: #0f172a</div>
+            </div>
+            <div style="padding: 0.5rem 1rem; background: #f8fafc; border-radius: 6px;">
+              <div style="color: #1e293b; font-weight: 600;">H2: #1e293b</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Warm Charcoal System -->
+      <div class="col-md-6">
+        <div class="typography-section option-inter color-warm-charcoal">
+          <span class="option-label">Warm Charcoal System</span>
+          <h1>Professional Dashboard</h1>
+          <h2>Analytics & Insights</h2>
+          <p class="body-text">Monitor your key performance indicators</p>
+          <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <div style="padding: 0.5rem 1rem; background: #f8fafc; border-radius: 6px;">
+              <div style="color: #18181b; font-weight: 600;">H1: #18181b</div>
+            </div>
+            <div style="padding: 0.5rem 1rem; background: #f8fafc; border-radius: 6px;">
+              <div style="color: #3f3f46; font-weight: 600;">H2: #3f3f46</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Integration with Minipass Brand -->
+    <h2 class="mt-5 mb-3">Integration with Minipass Brand Color (#206bc4)</h2>
+    <div class="typography-section">
+      <div class="row g-3">
+        <!-- Inter with brand -->
+        <div class="col-md-4 option-inter">
+          <h2>Inter Typography</h2>
+          <p class="body-text">Clean and professional design</p>
+          <a href="#" class="btn-primary-preview">Brand Button</a>
+          <div style="margin-top: 1rem;">
+            <a href="#" style="color: #206bc4; text-decoration: none; font-weight: 500;">Brand Link →</a>
+          </div>
+        </div>
+        
+        <!-- Plus Jakarta with brand -->
+        <div class="col-md-4 option-jakarta">
+          <h2>Plus Jakarta Sans</h2>
+          <p class="body-text">Modern and distinctive</p>
+          <a href="#" class="btn-primary-preview">Brand Button</a>
+          <div style="margin-top: 1rem;">
+            <a href="#" style="color: #206bc4; text-decoration: none; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif;">Brand Link →</a>
+          </div>
+        </div>
+        
+        <!-- Hybrid with brand -->
+        <div class="col-md-4 option-hybrid">
+          <h2>Roboto Slab + Inter</h2>
+          <p class="body-text">Sophisticated contrast</p>
+          <a href="#" class="btn-primary-preview">Brand Button</a>
+          <div style="margin-top: 1rem;">
+            <a href="#" style="color: #206bc4; text-decoration: none; font-weight: 500;">Brand Link →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Mobile Preview Note -->
+    <div class="alert alert-info mt-4">
+      <div class="d-flex">
+        <div>
+          <i class="ti ti-info-circle alert-icon"></i>
+        </div>
+        <div>
+          <h4 class="alert-title">Mobile Responsiveness</h4>
+          <div class="text-muted">All typography options are fully responsive. Resize your browser window to see how each option adapts to different screen sizes.</div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+{% endblock %}

@@ -1152,6 +1152,8 @@ function generateInteractiveLineChart(data, width = 300, height = 40, chartId = 
 }
 
 // Clean line chart generator that ensures proper SVG path format
+// CRITICAL: Always use this function to avoid encoding issues (â��)
+// This validates and cleans data to prevent chart rendering failures
 function generateCleanLineChart(data, width = 300, height = 40) {
   if (!data || data.length === 0) {
     return `M 0,${height/2} L ${width},${height/2}`;
@@ -1307,6 +1309,8 @@ function initializeKPIDropdowns() {
   });
 }
 
+// WARNING: This handler must update ONLY the clicked KPI card
+// Never call global update functions that affect all cards
 function handleKPITimeChange(event) {
   event.preventDefault();
   
@@ -1519,6 +1523,8 @@ function updateAllKPIDisplays(kpiData, period) {
   }, 300);
 }
 
+// WARNING: Icon classes MUST use full format: 'ti ti-trending-up' not 'ti-trending-up'
+// Using incomplete class names causes encoding issues (â��)
 function updateKPICard(prefix, data, chartType, period) {
   // Update value
   const valueEl = document.getElementById(`${prefix}-value`);

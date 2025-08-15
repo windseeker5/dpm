@@ -1048,10 +1048,12 @@ function updateKpiValues(period, periodData) {
   }
 }
 
-// Handle period dropdown clicks with smooth transitions
+// Handle period dropdown clicks with smooth transitions for DASHBOARD (not activity dashboard)
+// WARNING: Do NOT call updateCharts() here - it updates ALL cards globally!
+// Each dropdown must only update its own specific KPI card
 function attachDropdownHandlers() {
   // Find all dropdown items in KPI cards
-  document.querySelectorAll('.card .dropdown-menu .dropdown-item').forEach(item => {
+  document.querySelectorAll('.kpi-period-btn').forEach(item => {
     item.addEventListener('click', function(e) {
       e.preventDefault();
       
@@ -1059,25 +1061,23 @@ function attachDropdownHandlers() {
       if (this.classList.contains('loading')) return;
       this.classList.add('loading');
       
-      // Get period from text
+      // Get period from data attribute
+      const period = this.getAttribute('data-period');
       const text = this.textContent.trim();
-      let period = '7d';
-      if (text.includes('30')) period = '30d';
-      else if (text.includes('90')) period = '90d';
+      
+      // Find the specific KPI card this dropdown belongs to
+      const cardElement = this.closest('.card');
+      const kpiType = determineKPIType(cardElement);
       
       // Update button text with loading state
       const button = this.closest('.dropdown').querySelector('.dropdown-toggle');
-      const originalText = button ? button.textContent : '';
       if (button) {
         button.style.opacity = '0.7';
         button.textContent = text + ' ...';
       }
       
-      // Update current period
-      currentPeriod = period;
-      
-      // Update charts with animation
-      updateCharts(period);
+      // Update ONLY this specific KPI card using existing kpiData
+      updateDashboardKPICard(period, kpiType, cardElement);
       
       // Reset loading state and button text
       setTimeout(() => {
@@ -1086,61 +1086,17 @@ function attachDropdownHandlers() {
           button.style.opacity = '1';
           button.textContent = text;
         }
-      }, 400);
+      }, 300);
     });
   });
 }
 
-// KPI Dropdown Functionality for Main Dashboard
-function initializeKPIDropdowns() {
-  // Add event listeners to all KPI dropdown items with the kpi-period-btn class
-  document.querySelectorAll('.kpi-period-btn').forEach(item => {
-    item.addEventListener('click', handleKPITimeChange);
-  });
-}
-
-function handleKPITimeChange(event) {
-  event.preventDefault();
-  
-  const clickedItem = event.target;
-  const period = clickedItem.dataset.period;
-  const dropdown = clickedItem.closest('.dropdown');
-  const dropdownButton = dropdown.querySelector('.dropdown-toggle');
-  
-  // Prevent multiple rapid clicks
-  if (clickedItem.classList.contains('loading')) return;
-  clickedItem.classList.add('loading');
-  
-  // Update only the clicked dropdown button text with loading state
-  const originalText = dropdownButton.textContent;
-  const newText = clickedItem.textContent.trim();
-  dropdownButton.style.opacity = '0.7';
-  dropdownButton.textContent = newText + ' ...';
-  
-  // Determine which KPI card to update based on the clicked dropdown
-  const kpiCard = dropdown.closest('.card');
-  const kpiType = determineKPIType(kpiCard);
-  
-  // Show loading state for this card only
-  showKPILoadingForCard(kpiCard);
-  
-  // Update only this specific KPI card
-  updateSingleKPICard(period, kpiType, kpiCard, newText);
-  
-  // Reset loading state for this dropdown only after completion
-  setTimeout(() => {
-    clickedItem.classList.remove('loading');
-    if (dropdownButton.textContent.includes('...')) {
-      dropdownButton.textContent = newText;
-      dropdownButton.style.opacity = '1';
-    }
-  }, 600);
-}
 
 function showKPILoadingForCard(cardElement) {
   // Show loading for specific card only
   const valueEl = cardElement.querySelector('.h2');
-  const trendEl = cardElement.querySelector('.text-success, .text-danger, .text-muted');
+  // Use more specific selector to avoid matching title elements
+  const trendEl = cardElement.querySelector('.d-flex .text-success, .d-flex .text-danger, .d-flex .text-muted');
   const chartEl = cardElement.querySelector('svg');
   
   if (valueEl) valueEl.style.opacity = '0.6';
@@ -1163,7 +1119,8 @@ function showKPILoading() {
 function hideKPILoadingForCard(cardElement) {
   // Hide loading for specific card only
   const valueEl = cardElement.querySelector('.h2');
-  const trendEl = cardElement.querySelector('.text-success, .text-danger, .text-muted');
+  // Use more specific selector to avoid matching title elements
+  const trendEl = cardElement.querySelector('.d-flex .text-success, .d-flex .text-danger, .d-flex .text-muted');
   const chartEl = cardElement.querySelector('svg');
   
   if (valueEl) valueEl.style.opacity = '1';
@@ -1183,6 +1140,8 @@ function hideKPILoading() {
   });
 }
 
+// CRITICAL: This function ensures individual card updates without cross-contamination
+// It identifies which specific KPI card was clicked to enable targeted updates
 function determineKPIType(cardElement) {
   // Determine KPI type based on card content
   const cardText = cardElement.textContent.toLowerCase();
@@ -1193,51 +1152,45 @@ function determineKPIType(cardElement) {
   return 'revenue'; // fallback
 }
 
-function updateSingleKPICard(period, kpiType, cardElement, periodText) {
+// Update single KPI card for DASHBOARD using existing kpiData (no API calls)
+function updateDashboardKPICard(period, kpiType, cardElement) {
+  console.log(`Updating dashboard KPI card: ${kpiType} for period: ${period}`);
+  
   // Show loading state for this card only
   showKPILoadingForCard(cardElement);
   
-  // First, try to use existing KPI data for immediate feedback
-  const existingData = kpiData[period];
-  if (existingData) {
-    updateSingleKPIValues(kpiType, cardElement, period, existingData);
+  // Use existing KPI data from template
+  const periodData = kpiData[period];
+  if (periodData) {
+    console.log(`Found data for ${period}:`, periodData);
+    // Update the specific KPI card with existing data
+    updateSingleKPIValues(kpiType, cardElement, period, periodData);
+    updateSingleKPIChart(kpiType, cardElement, period, periodData);
+  } else {
+    console.warn(`No data available for period: ${period}`);
+    console.log('Available periods in kpiData:', Object.keys(kpiData));
   }
   
-  // Then fetch fresh data from the API
-  fetch(`/api/global-kpis?period=${period}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        updateSingleKPIValues(kpiType, cardElement, period, data.kpi_data);
-        updateSingleKPIChart(kpiType, cardElement, period, data.kpi_data);
-      } else {
-        console.error('Failed to fetch KPI data:', data.error);
-        // Fall back to existing data if API fails
-        if (existingData) {
-          updateSingleKPIValues(kpiType, cardElement, period, existingData);
-          updateSingleKPIChart(kpiType, cardElement, period, existingData);
-        }
-      }
-      // Hide loading state
-      setTimeout(() => {
-        hideKPILoadingForCard(cardElement);
-      }, 200);
-    })
-    .catch(error => {
-      console.error('Error fetching KPI data:', error);
-      // Fall back to existing data if API fails
-      if (existingData) {
-        updateSingleKPIValues(kpiType, cardElement, period, existingData);
-        updateSingleKPIChart(kpiType, cardElement, period, existingData);
-      }
-      hideKPILoadingForCard(cardElement);
-    });
+  // Hide loading state
+  setTimeout(() => {
+    hideKPILoadingForCard(cardElement);
+  }, 200);
 }
 
+// WARNING: Must use specific ID selectors for revenue cards (#revenue-trend, #mobile-revenue-trend)
+// Using broad selectors like '.text-muted' will overwrite title elements!
 function updateSingleKPIValues(kpiType, cardElement, period, periodData) {
   // Update value and trend for the specific card only
   const valueEl = cardElement.querySelector('.h2');
-  const trendEl = cardElement.querySelector('.text-success, .text-danger, .text-muted');
+  // Use specific ID selectors for trend elements to avoid matching title elements
+  let trendEl = null;
+  if (kpiType === 'revenue') {
+    trendEl = cardElement.querySelector('#revenue-trend, #mobile-revenue-trend');
+  } else {
+    // For other KPI types, find the trend element by looking for elements with specific IDs
+    // or fall back to more specific selector that excludes the title
+    trendEl = cardElement.querySelector('.d-flex .text-success, .d-flex .text-danger, .d-flex .text-muted');
+  }
   
   if (kpiType === 'revenue' && periodData.revenue !== undefined) {
     const revenueValue = `$${Math.round(periodData.revenue).toLocaleString()}`;
@@ -1259,8 +1212,64 @@ function updateSingleKPIValues(kpiType, cardElement, period, periodData) {
       trendEl.className = `${trendClass} me-2`;
       trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="ti ${icon}"></i>`;
     }
+  } else if (kpiType === 'active_passports' && periodData.active_passports !== undefined) {
+    if (valueEl) valueEl.textContent = Math.round(periodData.active_passports);
+    
+    if (trendEl && periodData.passport_change !== undefined) {
+      const change = periodData.passport_change;
+      let trendClass = 'text-muted';
+      let icon = 'ti-minus';
+      
+      if (change > 0) {
+        trendClass = 'text-success';
+        icon = 'ti-trending-up';
+      } else if (change < 0) {
+        trendClass = 'text-danger';
+        icon = 'ti-trending-down';
+      }
+      
+      trendEl.className = `${trendClass} me-2`;
+      trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="ti ${icon}"></i>`;
+    }
+  } else if (kpiType === 'passports_created' && periodData.new_passports !== undefined) {
+    if (valueEl) valueEl.textContent = Math.round(periodData.new_passports);
+    
+    if (trendEl && periodData.new_passports_change !== undefined) {
+      const change = periodData.new_passports_change;
+      let trendClass = 'text-muted';
+      let icon = 'ti-minus';
+      
+      if (change > 0) {
+        trendClass = 'text-success';
+        icon = 'ti-trending-up';
+      } else if (change < 0) {
+        trendClass = 'text-danger';
+        icon = 'ti-trending-down';
+      }
+      
+      trendEl.className = `${trendClass} me-2`;
+      trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="ti ${icon}"></i>`;
+    }
+  } else if (kpiType === 'pending_signups' && periodData.pending_signups !== undefined) {
+    if (valueEl) valueEl.textContent = Math.round(periodData.pending_signups);
+    
+    if (trendEl && periodData.signup_change !== undefined) {
+      const change = periodData.signup_change;
+      let trendClass = 'text-muted';
+      let icon = 'ti-minus';
+      
+      if (change > 0) {
+        trendClass = 'text-success';
+        icon = 'ti-trending-up';
+      } else if (change < 0) {
+        trendClass = 'text-danger';
+        icon = 'ti-trending-down';
+      }
+      
+      trendEl.className = `${trendClass} me-2`;
+      trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="ti ${icon}"></i>`;
+    }
   }
-  // Add other KPI types when data becomes available
 }
 
 function updateSingleKPIChart(kpiType, cardElement, period, periodData) {
@@ -1298,8 +1307,16 @@ function updateSingleKPIChart(kpiType, cardElement, period, periodData) {
         point.addEventListener('mouseleave', hideTooltip);
       });
     }
+  } else if (kpiType === 'active_passports' && periodData.active_users_trend) {
+    const activePassportsBars = generateBarChart(periodData.active_users_trend);
+    chartEl.innerHTML = activePassportsBars;
+  } else if (kpiType === 'passports_created' && periodData.pass_created_trend) {
+    const passportsCreatedPath = generateLineChart(periodData.pass_created_trend);
+    chartEl.innerHTML = `<path d="${passportsCreatedPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+  } else if (kpiType === 'pending_signups' && periodData.pending_signups_trend) {
+    const pendingSignupsBars = generateBarChart(periodData.pending_signups_trend);
+    chartEl.innerHTML = pendingSignupsBars;
   }
-  // Add other chart types when data becomes available
 }
 
 function updateMainDashboardKPIs(period) {
@@ -1388,7 +1405,6 @@ function updateKPICard(prefix, data) {
 document.addEventListener('DOMContentLoaded', function() {
   updateCharts('7d');
   attachDropdownHandlers();
-  initializeKPIDropdowns();
 });
 </script>
 {% endblock %}
