@@ -308,7 +308,7 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
 
 
 
-def get_kpi_stats():
+def get_kpi_stats(activity_id=None):
     from datetime import datetime, timedelta, timezone
     from models import Passport, Signup
     from flask import current_app
@@ -322,6 +322,11 @@ def get_kpi_stats():
                 start = now - timedelta(days=i+1)
                 end = now - timedelta(days=i)
                 query = model.query.filter(getattr(model, date_attr) >= start, getattr(model, date_attr) < end)
+                
+                # Add activity filter if activity_id is provided
+                if activity_id and hasattr(model, 'activity_id'):
+                    query = query.filter(model.activity_id == activity_id)
+                
                 if filter_fn:
                     query = query.filter(filter_fn)
                 
@@ -341,9 +346,13 @@ def get_kpi_stats():
                 start = now - timedelta(days=i+1)
                 end = now - timedelta(days=i)
                 # Use paid_date for accurate revenue tracking, fallback to created_dt if null
-                passports = Passport.query.filter(
-                    Passport.paid == True
-                ).filter(
+                query = Passport.query.filter(Passport.paid == True)
+                
+                # Add activity filter if activity_id is provided
+                if activity_id:
+                    query = query.filter(Passport.activity_id == activity_id)
+                
+                passports = query.filter(
                     db.or_(
                         db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= start, Passport.paid_date < end),
                         db.and_(Passport.paid_date.is_(None), Passport.created_dt >= start, Passport.created_dt < end)
@@ -372,9 +381,10 @@ def get_kpi_stats():
             prev_start, prev_end = previous_ranges[label]
 
             # Get current period paid passports using paid_date (with fallback to created_dt)
-            current_revenue_passports = Passport.query.filter(
-                Passport.paid == True
-            ).filter(
+            current_revenue_query = Passport.query.filter(Passport.paid == True)
+            if activity_id:
+                current_revenue_query = current_revenue_query.filter(Passport.activity_id == activity_id)
+            current_revenue_passports = current_revenue_query.filter(
                 db.or_(
                     db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= start, Passport.paid_date <= end),
                     db.and_(Passport.paid_date.is_(None), Passport.created_dt >= start, Passport.created_dt <= end)
@@ -382,9 +392,10 @@ def get_kpi_stats():
             ).all()
             
             # Get previous period paid passports using paid_date (with fallback to created_dt)
-            previous_revenue_passports = Passport.query.filter(
-                Passport.paid == True
-            ).filter(
+            previous_revenue_query = Passport.query.filter(Passport.paid == True)
+            if activity_id:
+                previous_revenue_query = previous_revenue_query.filter(Passport.activity_id == activity_id)
+            previous_revenue_passports = previous_revenue_query.filter(
                 db.or_(
                     db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= prev_start, Passport.paid_date <= prev_end),
                     db.and_(Passport.paid_date.is_(None), Passport.created_dt >= prev_start, Passport.created_dt <= prev_end)
@@ -392,13 +403,22 @@ def get_kpi_stats():
             ).all()
             
             # For other metrics, use created_dt as they track passport creation, not revenue
-            current_passports = Passport.query.filter(Passport.created_dt >= start, Passport.created_dt <= end).all()
-            previous_passports = Passport.query.filter(Passport.created_dt >= prev_start, Passport.created_dt <= prev_end).all()
+            current_passports_query = Passport.query.filter(Passport.created_dt >= start, Passport.created_dt <= end)
+            previous_passports_query = Passport.query.filter(Passport.created_dt >= prev_start, Passport.created_dt <= prev_end)
+            if activity_id:
+                current_passports_query = current_passports_query.filter(Passport.activity_id == activity_id)
+                previous_passports_query = previous_passports_query.filter(Passport.activity_id == activity_id)
+            current_passports = current_passports_query.all()
+            previous_passports = previous_passports_query.all()
 
             def revenue_total(passports): return sum(p.sold_amt for p in passports if p.sold_amt is not None)
             def created(passports): return len(passports)
             def active(passports): return len([p for p in passports if p.uses_remaining > 0])
-            def pending_signups_count(): return Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= start, Signup.signed_up_at <= end).count()
+            def pending_signups_count(): 
+                query = Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= start, Signup.signed_up_at <= end)
+                if activity_id:
+                    query = query.filter(Signup.activity_id == activity_id)
+                return query.count()
 
             # Calculate percentage changes
             revenue_change = 0
@@ -415,7 +435,10 @@ def get_kpi_stats():
             if created(previous_passports) > 0:
                 new_passports_change = round(((created(current_passports) - created(previous_passports)) / created(previous_passports)) * 100, 1)
             
-            prev_signups = Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= prev_start, Signup.signed_up_at <= prev_end).count()
+            prev_signups_query = Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= prev_start, Signup.signed_up_at <= prev_end)
+            if activity_id:
+                prev_signups_query = prev_signups_query.filter(Signup.activity_id == activity_id)
+            prev_signups = prev_signups_query.count()
             signup_change = 0
             if prev_signups > 0:
                 signup_change = round(((pending_signups_count() - prev_signups) / prev_signups) * 100, 1)

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerts Test - Minipass Style Guide</title>
+    
+    <!-- Tabler CSS -->
+    <link href="tabler/css/tabler.min.css" rel="stylesheet"/>
+    <link href="tabler/icons/tabler-icons.min.css" rel="stylesheet"/>
+    
+    <style>
+        body {
+            padding: 2rem;
+            background: #f8f9fa;
+        }
+        .test-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .alert {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Alerts Test Page</h1>
+        <p class="text-muted mb-4">This page tests if Tabler alerts are rendering correctly outside the main application.</p>
+        
+        <div class="test-section">
+            <h2>Basic Bootstrap/Tabler Alerts</h2>
+            
+            <div class="alert alert-primary" role="alert">
+                A simple primary alert—check it out!
+            </div>
+            
+            <div class="alert alert-secondary" role="alert">
+                A simple secondary alert—check it out!
+            </div>
+            
+            <div class="alert alert-success" role="alert">
+                A simple success alert—check it out!
+            </div>
+            
+            <div class="alert alert-danger" role="alert">
+                A simple danger alert—check it out!
+            </div>
+            
+            <div class="alert alert-warning" role="alert">
+                A simple warning alert—check it out!
+            </div>
+            
+            <div class="alert alert-info" role="alert">
+                A simple info alert—check it out!
+            </div>
+            
+            <div class="alert alert-light" role="alert">
+                A simple light alert—check it out!
+            </div>
+            
+            <div class="alert alert-dark" role="alert">
+                A simple dark alert—check it out!
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Alerts with Icons</h2>
+            
+            <div class="alert alert-success" role="alert">
+                <i class="ti ti-check-circle me-2"></i>
+                <strong>Success!</strong> Your operation completed successfully.
+            </div>
+            
+            <div class="alert alert-danger" role="alert">
+                <i class="ti ti-alert-circle me-2"></i>
+                <strong>Error!</strong> Something went wrong with your request.
+            </div>
+            
+            <div class="alert alert-warning" role="alert">
+                <i class="ti ti-alert-triangle me-2"></i>
+                <strong>Warning!</strong> Please check your input before proceeding.
+            </div>
+            
+            <div class="alert alert-info" role="alert">
+                <i class="ti ti-info-circle me-2"></i>
+                <strong>Info!</strong> Here's some additional information you should know.
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Dismissible Alerts</h2>
+            
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="ti ti-alert-triangle me-2"></i>
+                <strong>Holy guacamole!</strong> You should check in on some of those fields below.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="ti ti-info-circle me-2"></i>
+                <strong>Heads up!</strong> This alert needs your attention, but it's not super important.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Troubleshooting Guide</h2>
+            <div class="alert alert-info" role="alert">
+                <h4 class="alert-heading">If alerts are not displaying correctly:</h4>
+                <ul class="mb-0">
+                    <li>Check that you're logged in as admin on the main site</li>
+                    <li>Try hard refresh (Ctrl+F5 / Cmd+Shift+R)</li>
+                    <li>Open browser developer tools and check console for errors</li>
+                    <li>Verify Tabler CSS files are loading in the Network tab</li>
+                    <li>This test page should work independent of authentication</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS for dismissible alerts -->
+    <script src="tabler/js/tabler.min.js"></script>
+</body>
+</html>

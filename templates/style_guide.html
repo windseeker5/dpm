@@ -83,11 +83,11 @@
   }
   
   /* Logo sizing classes */
-  .logo-mini { height: 24px; }
-  .logo-small { height: 40px; }
-  .logo-standard { height: 60px; }
-  .logo-large { height: 80px; }
-  .logo-hero { height: 120px; }
+  .logo-mini { height: 24px; width: auto; }
+  .logo-small { height: 40px; width: auto; }
+  .logo-standard { height: 60px; width: auto; }
+  .logo-large { height: 80px; width: auto; }
+  .logo-hero { height: 120px; width: auto; }
   
   .logo-demo-container {
     display: flex;
@@ -122,6 +122,48 @@
   /* Brand typography styling */
 
   /* Simple Modal Styling - No custom effects to prevent crashes */
+  
+  /* Enhanced Tabler alerts with proper background colors */
+  .alert-primary { 
+    background-color: var(--tblr-primary-bg-subtle) !important; 
+    border-color: var(--tblr-primary-border-subtle) !important; 
+    color: var(--tblr-primary-text-emphasis) !important; 
+  }
+  .alert-secondary { 
+    background-color: var(--tblr-secondary-bg-subtle) !important; 
+    border-color: var(--tblr-secondary-border-subtle) !important; 
+    color: var(--tblr-secondary-text-emphasis) !important; 
+  }
+  .alert-success { 
+    background-color: var(--tblr-success-bg-subtle) !important; 
+    border-color: var(--tblr-success-border-subtle) !important; 
+    color: var(--tblr-success-text-emphasis) !important; 
+  }
+  .alert-warning { 
+    background-color: var(--tblr-warning-bg-subtle) !important; 
+    border-color: var(--tblr-warning-border-subtle) !important; 
+    color: var(--tblr-warning-text-emphasis) !important; 
+  }
+  .alert-danger { 
+    background-color: var(--tblr-danger-bg-subtle) !important; 
+    border-color: var(--tblr-danger-border-subtle) !important; 
+    color: var(--tblr-danger-text-emphasis) !important; 
+  }
+  .alert-info { 
+    background-color: var(--tblr-info-bg-subtle) !important; 
+    border-color: var(--tblr-info-border-subtle) !important; 
+    color: var(--tblr-info-text-emphasis) !important; 
+  }
+  .alert-light { 
+    background-color: var(--tblr-light-bg-subtle) !important; 
+    border-color: var(--tblr-light-border-subtle) !important; 
+    color: var(--tblr-light-text-emphasis) !important; 
+  }
+  .alert-dark { 
+    background-color: var(--tblr-dark-bg-subtle) !important; 
+    border-color: var(--tblr-dark-border-subtle) !important; 
+    color: var(--tblr-dark-text-emphasis) !important; 
+  }
 </style>
 {% endblock %}
 
@@ -156,6 +198,7 @@
                 <a class="nav-link" href="#colors">Colors</a>
                 <a class="nav-link" href="#typography">Typography</a>
                 <a class="nav-link" href="#buttons">Buttons</a>
+                <a class="nav-link" href="#alerts">Alerts</a>
                 <a class="nav-link" href="#badges">Badges</a>
                 <a class="nav-link" href="#cards">Cards</a>
                 <a class="nav-link" href="#forms">Forms</a>
@@ -185,9 +228,9 @@
                       </button>
                       <code>/static/assets/brand/logo/primary/logo.png</code>
                     </div>
-                    <p class="text-muted">Primary logo file - Used throughout the application</p>
+                    <p class="text-muted">Primary logo file - New colorful Minipass logo with gradient design</p>
                     <div class="alert alert-info mt-3">
-                      <strong>Note:</strong> The logo has been updated to the new Minipass brand identity. This logo should be used consistently across all interfaces.
+                      <strong>Note:</strong> The logo has been updated to the new colorful Minipass brand identity featuring a gradient design and pixelated QR-style element. This logo should be used consistently across all interfaces.
                     </div>
                   </div>
                 </div>
@@ -195,31 +238,31 @@
                 <h4>Size Specifications</h4>
                 <div class="logo-demo-container">
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-mini" alt="Mini Logo">
-                    <div class="size-label">Mini: 32px<br>Mobile nav</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" class="logo-mini" alt="Mini Logo">
+                    <div class="size-label">Mini: 24px<br>Mobile nav</div>
                   </div>
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-small" alt="Small Logo">
-                    <div class="size-label">Small: 48px<br>Sidebar</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" class="logo-small" alt="Small Logo">
+                    <div class="size-label">Small: 40px<br>Sidebar</div>
                   </div>
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-standard" alt="Standard Logo">
-                    <div class="size-label">Standard: 64px<br>Default</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" class="logo-standard" alt="Standard Logo">
+                    <div class="size-label">Standard: 60px<br>Default</div>
                   </div>
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-large" alt="Large Logo">
-                    <div class="size-label">Large: 96px<br>Headers</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" class="logo-large" alt="Large Logo">
+                    <div class="size-label">Large: 80px<br>Headers</div>
                   </div>
                   <div class="logo-size-demo">
-                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-hero" alt="Hero Logo">
-                    <div class="size-label">Hero: 128px<br>Landing pages</div>
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" class="logo-hero" alt="Hero Logo">
+                    <div class="size-label">Hero: 120px<br>Landing pages</div>
                   </div>
                 </div>
 
                 <h4>Clear Space Requirements</h4>
                 <div class="text-center mb-4">
                   <div class="logo-clear-space" style="padding: 30px; border: 2px dashed #dee2e6; border-radius: 8px; display: inline-block;">
-                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-standard" alt="Logo with clear space">
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" class="logo-standard" alt="Logo with clear space">
                   </div>
                   <p class="text-muted mt-3">Minimum 20px clear space around the logo</p>
                 </div>
@@ -229,13 +272,13 @@
                   <h5>Logo Size Classes</h5>
                   <div class="row">
                     <div class="col-md-6">
-                      <code>.logo-mini</code> - 32px height<br>
-                      <code>.logo-small</code> - 48px height<br>
-                      <code>.logo-standard</code> - 64px height
+                      <code>.logo-mini</code> - 24px height<br>
+                      <code>.logo-small</code> - 40px height<br>
+                      <code>.logo-standard</code> - 60px height
                     </div>
                     <div class="col-md-6">
-                      <code>.logo-large</code> - 96px height<br>
-                      <code>.logo-hero</code> - 128px height
+                      <code>.logo-large</code> - 80px height<br>
+                      <code>.logo-hero</code> - 120px height
                     </div>
                   </div>
                 </div>
@@ -251,14 +294,14 @@
                 <div class="row">
                   <div class="col-md-6">
                     <div class="p-4 bg-light text-center rounded" style="min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                      <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-standard mb-3" alt="Logo on light">
-                      <div><strong>Light backgrounds</strong><br>Use primary logo as-is</div>
+                      <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" class="logo-standard mb-3" alt="Logo on light">
+                      <div><strong>Light backgrounds</strong><br>Use colorful logo as-is</div>
                     </div>
                   </div>
                   <div class="col-md-6">
                     <div class="p-4 text-center rounded" style="background: #1e293b; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                      <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v={{ range(1000, 9999) | random }}" class="logo-standard mb-3" alt="Logo on dark" style="filter: brightness(0) invert(1);">
-                      <div class="text-white"><strong>Dark backgrounds</strong><br>Apply invert filter for visibility</div>
+                      <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" class="logo-standard mb-3" alt="Logo on dark" style="filter: brightness(1.2) contrast(1.1);">
+                      <div class="text-white"><strong>Dark backgrounds</strong><br>Enhanced brightness for visibility</div>
                     </div>
                   </div>
                 </div>
@@ -276,11 +319,11 @@
                 <h4>Logo Usage</h4>
                 <div class="logo-showcase">
                   <div class="logo-item">
-                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" alt="Primary Logo">
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" alt="Primary Logo">
                     <div class="small text-muted">Primary Logo</div>
                   </div>
                   <div class="logo-item" style="background: #1e293b; padding: 20px; border-radius: 8px;">
-                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" alt="Logo on Dark" style="filter: brightness(0) invert(1);">
+                    <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" alt="Logo on Dark" style="filter: brightness(1.2) contrast(1.1);">
                     <div class="small text-white">Logo on Dark Background</div>
                   </div>
                 </div>
@@ -422,6 +465,183 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                     <i class="ti ti-copy"></i>
                   </button>
                   <code>&lt;button class="btn btn-primary"&gt;Primary Button&lt;/button&gt;</code>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Alerts Section -->
+          <section id="alerts" class="style-guide-section">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Alerts</h3>
+              </div>
+              <div class="card-body">
+                <p class="text-muted mb-4">Provide contextual feedback messages for typical user actions with the handful of available and flexible alert messages.</p>
+
+                <h4>Basic Alerts</h4>
+                <div class="alert alert-info alert-important mb-3" role="alert">
+                  <strong>Success!</strong> Alerts are now displaying with proper colors and styling using Tabler's enhanced CSS.
+                </div>
+                <div class="component-demo">
+                  <div class="alert alert-primary alert-important" role="alert">
+                    <strong>Primary Alert:</strong> A simple primary alert with blue styling—check it out!
+                  </div>
+                  <div class="alert alert-secondary alert-important" role="alert">
+                    <strong>Secondary Alert:</strong> A simple secondary alert with gray styling—check it out!
+                  </div>
+                  <div class="alert alert-success alert-important" role="alert">
+                    <i class="ti ti-check-circle me-2"></i>
+                    <strong>Success Alert:</strong> A simple success alert with green styling—check it out!
+                  </div>
+                  <div class="alert alert-danger alert-important" role="alert">
+                    <i class="ti ti-alert-circle me-2"></i>
+                    <strong>Danger Alert:</strong> A simple danger alert with red styling—check it out!
+                  </div>
+                  <div class="alert alert-warning alert-important" role="alert">
+                    <i class="ti ti-alert-triangle me-2"></i>
+                    <strong>Warning Alert:</strong> A simple warning alert with orange styling—check it out!
+                  </div>
+                  <div class="alert alert-info alert-important" role="alert">
+                    <i class="ti ti-info-circle me-2"></i>
+                    <strong>Info Alert:</strong> A simple info alert with light blue styling—check it out!
+                  </div>
+                  <div class="alert alert-light alert-important" role="alert">
+                    <strong>Light Alert:</strong> A simple light alert with subtle styling—check it out!
+                  </div>
+                  <div class="alert alert-dark alert-important" role="alert">
+                    <strong>Dark Alert:</strong> A simple dark alert with dark styling—check it out!
+                  </div>
+                </div>
+                <div class="code-preview">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="alert alert-primary" role="alert"&gt;
+  A simple primary alert—check it out!
+&lt;/div&gt;</code>
+                </div>
+
+                <h4>Alerts with Icons</h4>
+                <div class="component-demo">
+                  <div class="alert alert-success alert-important" role="alert">
+                    <i class="ti ti-check-circle me-2"></i>
+                    <strong>Success!</strong> Your operation completed successfully.
+                  </div>
+                  <div class="alert alert-danger alert-important" role="alert">
+                    <i class="ti ti-alert-circle me-2"></i>
+                    <strong>Error!</strong> Something went wrong with your request.
+                  </div>
+                  <div class="alert alert-warning alert-important" role="alert">
+                    <i class="ti ti-alert-triangle me-2"></i>
+                    <strong>Warning!</strong> Please check your input before proceeding.
+                  </div>
+                  <div class="alert alert-info alert-important" role="alert">
+                    <i class="ti ti-info-circle me-2"></i>
+                    <strong>Info!</strong> Here's some additional information you should know.
+                  </div>
+                </div>
+                <div class="code-preview">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="alert alert-success" role="alert"&gt;
+  &lt;i class="ti ti-check-circle me-2"&gt;&lt;/i&gt;
+  &lt;strong&gt;Success!&lt;/strong&gt; Your operation completed successfully.
+&lt;/div&gt;</code>
+                </div>
+
+                <h4>Dismissible Alerts</h4>
+                <div class="component-demo">
+                  <div class="alert alert-warning alert-important alert-dismissible fade show" role="alert">
+                    <i class="ti ti-alert-triangle me-2"></i>
+                    <strong>Holy guacamole!</strong> You should check in on some of those fields below.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                  <div class="alert alert-info alert-important alert-dismissible fade show" role="alert">
+                    <i class="ti ti-info-circle me-2"></i>
+                    <strong>Heads up!</strong> This alert needs your attention, but it's not super important.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                </div>
+                <div class="code-preview">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="alert alert-warning alert-dismissible fade show" role="alert"&gt;
+  &lt;i class="ti ti-alert-triangle me-2"&gt;&lt;/i&gt;
+  &lt;strong&gt;Holy guacamole!&lt;/strong&gt; You should check in on some of those fields below.
+  &lt;button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"&gt;&lt;/button&gt;
+&lt;/div&gt;</code>
+                </div>
+
+                <h4>Additional Content</h4>
+                <div class="component-demo">
+                  <div class="alert alert-success alert-important" role="alert">
+                    <h4 class="alert-heading">Well done!</h4>
+                    <p>Aww yeah, you successfully read this important alert message. This example text is going to run a bit longer so that you can see how spacing within an alert works with this kind of content.</p>
+                    <hr>
+                    <p class="mb-0">Whenever you need to, be sure to use margin utilities to keep things nice and tidy.</p>
+                  </div>
+                </div>
+                <div class="code-preview">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="alert alert-success" role="alert"&gt;
+  &lt;h4 class="alert-heading"&gt;Well done!&lt;/h4&gt;
+  &lt;p&gt;Aww yeah, you successfully read this important alert message.&lt;/p&gt;
+  &lt;hr&gt;
+  &lt;p class="mb-0"&gt;Whenever you need to, be sure to use margin utilities.&lt;/p&gt;
+&lt;/div&gt;</code>
+                </div>
+
+                <h4>Alert Links</h4>
+                <div class="component-demo">
+                  <div class="alert alert-primary alert-important" role="alert">
+                    A simple primary alert with <a href="#" class="alert-link">an example link</a>. Give it a click if you like.
+                  </div>
+                  <div class="alert alert-success alert-important" role="alert">
+                    A simple success alert with <a href="#" class="alert-link">an example link</a>. Give it a click if you like.
+                  </div>
+                  <div class="alert alert-danger alert-important" role="alert">
+                    A simple danger alert with <a href="#" class="alert-link">an example link</a>. Give it a click if you like.
+                  </div>
+                  <div class="alert alert-warning alert-important" role="alert">
+                    A simple warning alert with <a href="#" class="alert-link">an example link</a>. Give it a click if you like.
+                  </div>
+                </div>
+                <div class="code-preview">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="alert alert-primary" role="alert"&gt;
+  A simple primary alert with &lt;a href="#" class="alert-link"&gt;an example link&lt;/a&gt;. Give it a click if you like.
+&lt;/div&gt;</code>
+                </div>
+
+                <h4>Usage Guidelines</h4>
+                <div class="component-demo">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <h5>When to Use Alerts</h5>
+                      <ul class="text-muted">
+                        <li><strong>Success:</strong> Form submissions, successful operations</li>
+                        <li><strong>Info:</strong> General information, tips</li>
+                        <li><strong>Warning:</strong> Caution messages, validation warnings</li>
+                        <li><strong>Danger:</strong> Errors, critical issues</li>
+                      </ul>
+                    </div>
+                    <div class="col-md-6">
+                      <h5>Best Practices</h5>
+                      <ul class="text-muted">
+                        <li>Use clear, actionable language</li>
+                        <li>Include relevant icons for better recognition</li>
+                        <li>Make dismissible when appropriate</li>
+                        <li>Don't overuse - limit to important messages</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
