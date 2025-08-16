@@ -374,17 +374,16 @@
             <div class="d-flex align-items-center justify-content-between">
               <div>
                 <h2 class="section-title-large mb-1 d-flex align-items-center" style="font-size: 2rem; font-weight: 700;">
-                  <i class="ti ti-activity-heartbeat text-danger me-3"></i>
-                  Your Active Activities 
+                  <i class="ti ti-activity-heartbeat text-danger me-3"></i>Your Active Activities 
                 </h2>
-                <p class="section-subtitle text-muted mb-0">Manage and monitor your active programs</p>
+         
               </div>
               <div>
-                <a href="{{ url_for('create_activity') }}" class="btn btn-primary d-none d-md-inline-block">
+                <a href="{{ url_for('create_activity') }}" class="btn btn-success d-none d-md-inline-block">
                   <i class="ti ti-plus"></i>
                   New Activity
                 </a>
-                <a href="{{ url_for('create_activity') }}" class="btn btn-primary d-md-none btn-icon" aria-label="New Activity">
+                <a href="{{ url_for('create_activity') }}" class="btn btn-success d-md-none btn-icon" aria-label="New Activity">
                   <i class="ti ti-plus"></i>
                 </a>
               </div>
@@ -422,6 +421,31 @@
               </div>
             </div>
             {% endfor %}
+            {% if activities|length < 4 %}
+            <!-- Add Activity Placeholder - Skeleton design with clickable card -->
+            <div class="col-md-3 mb-3 d-none d-md-block">
+              <a href="{{ url_for('create_activity') }}" style="text-decoration: none;">
+                <div class="card" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; height: 276.84px; cursor: pointer;">
+                  <!-- Placeholder Image with large plus icon -->
+                  <div class="img-responsive img-responsive-21x9 card-img-top" 
+                       style="background-color: #f1f5f9; position: relative;">
+                    <i class="ti ti-plus" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: #94a3b8;"></i>
+                  </div>
+                  <div class="card-body" style="background-color: #f1f5f9;">
+                    <div class="mb-2">
+                      <!-- Title placeholder - grey rectangle -->
+                      <div style="background-color: #e2e8f0; height: 24px; width: 120px; border-radius: 4px;"></div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap mb-3">
+                      <!-- Empty div for badge spacing to match real cards -->
+                    </div>
+                    <!-- Button placeholder - grey rectangle positioned at bottom like real cards -->
+                    <div style="background-color: #e2e8f0; height: 36px; width: 80px; border-radius: 6px;"></div>
+                  </div>
+                </div>
+              </a>
+            </div>
+            {% endif %}
           </div>
         </div>
         
@@ -455,6 +479,28 @@
               </div>
             </div>
             {% endfor %}
+            {% if activities|length == 0 %}
+            <!-- Mobile placeholder for when no activities exist -->
+            <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+              <a href="{{ url_for('create_activity') }}" style="text-decoration: none;">
+                <div class="card" style="border-radius: 12px; overflow: hidden; border: 2px dashed #e2e8f0; background-color: #f8fafc;">
+                  <div class="img-responsive img-responsive-21x9 card-img-top" 
+                       style="background-color: #f1f5f9; display: flex; align-items: center; justify-content: center;">
+                    <i class="ti ti-plus" style="font-size: 2.5rem; color: #94a3b8;"></i>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-2">
+                      <h3 class="card-title mb-0" style="color: #64748b;">Add Activity</h3>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap mb-3">
+                      <span class="badge bg-light text-muted">Create new</span>
+                    </div>
+                    <div class="btn btn-outline-secondary disabled">+ Create</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+            {% endif %}
           </div>
           <!-- Scroll indicators for activities -->
           <div class="text-center mt-2">
@@ -472,15 +518,16 @@
       <div class="activity-log-section mb-5">
         <div class="row mb-3">
           <div class="col">
-            <h3 class="section-title mb-0">Activity Timeline</h3>
-            <p class="section-subtitle text-muted mb-0">Recent events and system updates</p>
+            <h2 class="section-title mb-0"><i class="ti ti-file-description text-blue me-2"></i>Recent system events</h2>
+
+  
           </div>
         </div>
         <div class="row">
           <div class="col-12">
             <div class="card">
               <div class="card-header border-0 pb-0">
-                <h4 class="card-title mb-0">What's Happening?</h4>
+                
               </div>
             <div class="table-responsive">
               <table class="table card-table table-vcenter" id="logTable">
@@ -492,55 +539,16 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for log in logs[:25] %}
-                  <tr>
-                    <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
-                    <td data-type="{{ log.type }}">
-                      {% if log.type == 'Passport Redeemed' %}
-                        <i class="ti ti-ticket text-danger"></i>
-                      {% elif log.type == 'Email Sent' %}
-                        <i class="ti ti-mail text-info"></i>
-                      {% elif log.type == 'Passport Created' %}
-                        <i class="ti ti-id text-lime"></i>
-                      {% elif log.type == 'Interact Payment' %}
-                        <i class="ti ti-currency-dollar text-success"></i>  
-                      {% elif log.type == 'Marked Paid' %}
-                        <i class="ti ti-check text-green"></i>  
-                      {% elif log.type == 'Reminder Sent' %}
-                        <i class="ti ti-bell text-purple"></i>
-                      {% elif log.type == 'Signup Submitted' %}
-                        <i class="ti ti-user-plus text-success"></i>  
-                      {% elif log.type == 'Signup Approved' %}
-                        <i class="ti ti-user-check text-green"></i>
-                      {% elif log.type == 'Signup Rejected' %}
-                        <i class="ti ti-user-x text-danger"></i>
-                      {% elif log.type == 'Signup Cancelled' %}
-                        <i class="ti ti-user-x text-danger"></i>
-                      {% elif log.type == 'Activity Created' %}
-                        <i class="ti ti-target text-orange"></i>
-                      {% elif log.type == 'Admin Action' %}
-                        <i class="ti ti-settings text-muted"></i>
-                      {% else %}
-                        <i class="ti ti-activity text-muted"></i>  
-                      {% endif %}
-                      {{ log.type }}
-                    </td>
-                    <td>{{ log.details }}</td>
-                  </tr>
-                  {% endfor %}
+                  <!-- Table content will be populated by JavaScript pagination -->
                 </tbody>
               </table>
             </div>
             
             <!-- Pagination -->
             <div class="card-footer d-flex align-items-center">
-              <p class="m-0 text-muted">Showing <span id="showingCount">{{ logs[:25]|length }}</span> of {{ logs|length }}</p>
+              <p class="m-0 text-muted">Showing <span id="showingCount">0</span> of {{ logs[:10]|length }}</p>
               <ul class="pagination m-0 ms-auto" id="paginationControls">
-                <li class="page-item active"><a href="#" class="page-link">1</a></li>
-                <li class="page-item"><a href="#" class="page-link">2</a></li>
-                <li class="page-item"><a href="#" class="page-link">3</a></li>
-                <li class="page-item disabled"><a href="#" class="page-link">...</a></li>
-                <li class="page-item"><a href="#" class="page-link">{{ (logs|length / 25)|round(0, 'ceil')|int }}</a></li>
+                <!-- Pagination controls will be populated by JavaScript -->
               </ul>
             </div>
             </div>
@@ -773,6 +781,35 @@
   transform: translateY(-1px);
 }
 
+/* Green Success Button Styling */
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  color: white;
+}
+
+/* Tabler.io Placeholder Component */
+.placeholder {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+}
+
+.placeholder-image {
+  background-color: #e9ecef;
+  width: 100%;
+  height: 100%;
+}
+
 /* Activity Log Table Styling */
 .table {
   background-color: transparent !important;
@@ -812,6 +849,16 @@
   padding-top: 3rem !important; /* 48px */
 }
 
+/* Placeholder Card Styling - Minimal design */
+.placeholder-card {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.placeholder-card:hover {
+  transform: translateY(-2px);
+}
+
 /* Mobile scroll indicators */
 @media (max-width: 767.98px) {
   .flex-shrink-0 {
@@ -840,6 +887,50 @@
     font-weight: 700 !important;
   }
 }
+
+/* Pagination Enhancements */
+.pagination .page-link {
+  border: none;
+  color: #6c757d;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0.125rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+  color: #0d6efd;
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+.pagination .page-item.disabled .page-link {
+  color: #adb5bd;
+  background-color: transparent;
+  cursor: not-allowed;
+}
+
+/* Table Loading State */
+.table tbody tr td {
+  transition: all 0.3s ease;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* Pagination Info Text */
+.card-footer p {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
 </style>
 {% endblock %}
 
@@ -847,6 +938,9 @@
 <script>
 // Store KPI data from backend
 const kpiData = {{ kpi_data | tojson | safe }};
+
+// Store logs data for pagination
+const allLogs = {{ logs | tojson | safe }};
 let currentPeriod = '7d';
 
 // Function to generate interactive line chart with hover points
@@ -1447,10 +1541,229 @@ function updateKPICard(prefix, data) {
   }
 }
 
-// Initialize charts on page load
+// Pagination functionality for logs table
+class LogsPagination {
+  constructor(logs, itemsPerPage = 10) {
+    this.logs = logs;
+    this.itemsPerPage = itemsPerPage;
+    this.currentPage = 1;
+    this.totalPages = Math.ceil(logs.length / itemsPerPage);
+    this.tableBody = document.querySelector('#logTable tbody');
+    this.paginationControls = document.getElementById('paginationControls');
+    this.showingCount = document.getElementById('showingCount');
+  }
+
+  getPageData(pageNumber) {
+    const startIndex = (pageNumber - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    return this.logs.slice(startIndex, endIndex);
+  }
+
+  renderTable(pageNumber) {
+    const pageData = this.getPageData(pageNumber);
+    const tbody = this.tableBody;
+    
+    tbody.innerHTML = '';
+    
+    pageData.forEach(log => {
+      const row = document.createElement('tr');
+      
+      // Format timestamp - handle both ISO string and object formats
+      let formattedDate = 'Invalid Date';
+      try {
+        let timestamp;
+        if (typeof log.timestamp === 'string') {
+          timestamp = new Date(log.timestamp);
+        } else {
+          // If it's already a Date object or timestamp object
+          timestamp = new Date(log.timestamp);
+        }
+        
+        // Check if date is valid
+        if (!isNaN(timestamp.getTime())) {
+          // Format date to match the original format (YYYY-MM-DD HH:MM)
+          const year = timestamp.getFullYear();
+          const month = String(timestamp.getMonth() + 1).padStart(2, '0');
+          const day = String(timestamp.getDate()).padStart(2, '0');
+          const hours = String(timestamp.getHours()).padStart(2, '0');
+          const minutes = String(timestamp.getMinutes()).padStart(2, '0');
+          formattedDate = `${year}-${month}-${day} ${hours}:${minutes}`;
+        }
+      } catch (e) {
+        console.warn('Error formatting date for log:', log, e);
+        formattedDate = 'Invalid Date';
+      }
+      
+      // Get icon based on log type
+      const iconMap = {
+        'Passport Redeemed': '<i class="ti ti-ticket text-danger"></i>',
+        'Email Sent': '<i class="ti ti-mail text-info"></i>',
+        'Passport Created': '<i class="ti ti-id text-lime"></i>',
+        'Interact Payment': '<i class="ti ti-currency-dollar text-success"></i>',
+        'Marked Paid': '<i class="ti ti-check text-green"></i>',
+        'Reminder Sent': '<i class="ti ti-bell text-purple"></i>',
+        'Signup Submitted': '<i class="ti ti-user-plus text-success"></i>',
+        'Signup Approved': '<i class="ti ti-user-check text-green"></i>',
+        'Signup Rejected': '<i class="ti ti-user-x text-danger"></i>',
+        'Signup Cancelled': '<i class="ti ti-user-x text-danger"></i>',
+        'Activity Created': '<i class="ti ti-target text-orange"></i>',
+        'Admin Action': '<i class="ti ti-settings text-muted"></i>'
+      };
+      
+      const icon = iconMap[log.type] || '<i class="ti ti-activity text-muted"></i>';
+      
+      row.innerHTML = `
+        <td>${formattedDate}</td>
+        <td data-type="${log.type}">${icon} ${log.type}</td>
+        <td>${log.details}</td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+    
+    this.updateShowingText();
+  }
+
+  updateShowingText() {
+    const start = (this.currentPage - 1) * this.itemsPerPage + 1;
+    const end = Math.min(this.currentPage * this.itemsPerPage, this.logs.length);
+    this.showingCount.textContent = `${start}-${end}`;
+  }
+
+  renderPagination() {
+    const pagination = this.paginationControls;
+    pagination.innerHTML = '';
+    
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${this.currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a href="#" class="page-link" data-page="${this.currentPage - 1}">Previous</a>`;
+    pagination.appendChild(prevLi);
+    
+    // Page numbers logic
+    const maxVisiblePages = 5;
+    let startPage, endPage;
+    
+    if (this.totalPages <= maxVisiblePages) {
+      startPage = 1;
+      endPage = this.totalPages;
+    } else {
+      if (this.currentPage <= 3) {
+        startPage = 1;
+        endPage = maxVisiblePages;
+      } else if (this.currentPage >= this.totalPages - 2) {
+        startPage = this.totalPages - maxVisiblePages + 1;
+        endPage = this.totalPages;
+      } else {
+        startPage = this.currentPage - 2;
+        endPage = this.currentPage + 2;
+      }
+    }
+    
+    // First page + ellipsis if needed
+    if (startPage > 1) {
+      const firstLi = document.createElement('li');
+      firstLi.className = 'page-item';
+      firstLi.innerHTML = '<a href="#" class="page-link" data-page="1">1</a>';
+      pagination.appendChild(firstLi);
+      
+      if (startPage > 2) {
+        const ellipsisLi = document.createElement('li');
+        ellipsisLi.className = 'page-item disabled';
+        ellipsisLi.innerHTML = '<a href="#" class="page-link">...</a>';
+        pagination.appendChild(ellipsisLi);
+      }
+    }
+    
+    // Main page numbers
+    for (let i = startPage; i <= endPage; i++) {
+      const li = document.createElement('li');
+      li.className = `page-item ${i === this.currentPage ? 'active' : ''}`;
+      li.innerHTML = `<a href="#" class="page-link" data-page="${i}">${i}</a>`;
+      pagination.appendChild(li);
+    }
+    
+    // Last page + ellipsis if needed
+    if (endPage < this.totalPages) {
+      if (endPage < this.totalPages - 1) {
+        const ellipsisLi = document.createElement('li');
+        ellipsisLi.className = 'page-item disabled';
+        ellipsisLi.innerHTML = '<a href="#" class="page-link">...</a>';
+        pagination.appendChild(ellipsisLi);
+      }
+      
+      const lastLi = document.createElement('li');
+      lastLi.className = 'page-item';
+      lastLi.innerHTML = `<a href="#" class="page-link" data-page="${this.totalPages}">${this.totalPages}</a>`;
+      pagination.appendChild(lastLi);
+    }
+    
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${this.currentPage === this.totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a href="#" class="page-link" data-page="${this.currentPage + 1}">Next</a>`;
+    pagination.appendChild(nextLi);
+    
+    // Add click event listeners
+    pagination.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (e.target.classList.contains('page-link') && !e.target.parentElement.classList.contains('disabled')) {
+        const page = parseInt(e.target.dataset.page);
+        if (page && page !== this.currentPage) {
+          this.goToPage(page);
+        }
+      }
+    });
+  }
+
+  goToPage(pageNumber) {
+    if (pageNumber >= 1 && pageNumber <= this.totalPages) {
+      this.currentPage = pageNumber;
+      this.renderTable(pageNumber);
+      this.renderPagination();
+    }
+  }
+
+  init() {
+    // Add loading state
+    this.tableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4"><div class="spinner-border spinner-border-sm text-muted me-2" role="status"></div>Loading events...</td></tr>';
+    
+    // Small delay to show loading state, then render content
+    setTimeout(() => {
+      this.renderTable(1);
+      this.renderPagination();
+    }, 100);
+  }
+}
+
+// Initialize pagination instance
+let logsPagination;
+
+// Initialize charts and pagination on page load
 document.addEventListener('DOMContentLoaded', function() {
   updateCharts('7d');
   attachDropdownHandlers();
+  
+  // Initialize logs pagination
+  if (allLogs && allLogs.length > 0) {
+    logsPagination = new LogsPagination(allLogs, 10);
+    logsPagination.init();
+  } else {
+    // Handle case where there are no logs
+    const tbody = document.querySelector('#logTable tbody');
+    const showingCount = document.getElementById('showingCount');
+    const paginationControls = document.getElementById('paginationControls');
+    
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">No system events found</td></tr>';
+    }
+    if (showingCount) {
+      showingCount.textContent = '0';
+    }
+    if (paginationControls) {
+      paginationControls.innerHTML = '';
+    }
+  }
 });
 </script>
 {% endblock %}
