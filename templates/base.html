@@ -319,6 +319,30 @@
       letter-spacing: -0.02em !important;
       line-height: 1.3 !important;
     }
+    
+    /* Logo sizing and static hover state override */
+    .brand-logo-static {
+      width: auto !important;
+      height: 23px !important; /* Reduced by ~18% from 28px */
+      max-width: 150px !important;
+      max-height: 23px !important;
+      object-fit: contain;
+      transition: none !important; /* Remove all transitions */
+      display: block;
+      margin: 0;
+    }
+    
+    /* Remove hover effects on brand link when logo is static */
+    .brand-link:hover {
+      background: none !important;
+      transform: none !important;
+    }
+    
+    /* Remove hover effects specifically on the static logo */
+    .brand-link:hover .brand-logo-static {
+      transform: none !important;
+      transition: none !important;
+    }
   </style>
   
   {% block head %}{% endblock %}
@@ -380,7 +404,7 @@
       <div class="minipass-sidebar-brand">
         <a href="{{ url_for('dashboard') }}" class="brand-link">
           <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" 
-               alt="Minipass" class="brand-logo">
+               alt="Minipass" class="brand-logo brand-logo-static">
         </a>
       </div>
       
