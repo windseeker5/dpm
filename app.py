@@ -245,11 +245,22 @@ def get_git_branch():
 @app.context_processor
 def inject_globals_and_csrf():
     from flask_wtf.csrf import generate_csrf
+    
+    # Calculate pending signups count for sidebar badge
+    pending_signups_count = 0
+    try:
+        if "admin" in session:  # Only calculate if admin is logged in
+            pending_signups_count = Signup.query.filter_by(status='pending').count()
+    except Exception:
+        # If there's any database error, default to 0
+        pending_signups_count = 0
+    
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
         'git_branch': get_git_branch(),
-        'csrf_token': generate_csrf  # returns the raw CSRF token
+        'csrf_token': generate_csrf,  # returns the raw CSRF token
+        'pending_signups_count': pending_signups_count
     }
 
 
@@ -3069,7 +3080,8 @@ def activity_dashboard(activity_id):
         survey_templates=survey_templates,
         kpi_data=kpi_data,
         dashboard_stats=dashboard_stats,
-        activity_logs=activity_logs
+        activity_logs=activity_logs,
+        current_datetime=datetime.now()
     )
 
 
