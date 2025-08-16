@@ -120,9 +120,40 @@
     <!-- Main Table -->
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">
-          <i class="ti ti-users me-2"></i>All Signups
-        </h3>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <h3 class="card-title mb-0">
+            <i class="ti ti-users me-2"></i>Signups Management
+          </h3>
+          
+          <!-- Filter Buttons -->
+          <div class="btn-group" role="group" aria-label="Signup filters">
+            <a href="{{ url_for('list_signups') }}" 
+               class="btn btn-sm {{ 'btn-primary' if not current_filters.payment_status and not current_filters.status else 'btn-outline-primary' }}">
+              All Signups
+              <span class="badge bg-white text-dark ms-1">{{ statistics.total }}</span>
+            </a>
+            <a href="{{ url_for('list_signups', payment_status='unpaid') }}" 
+               class="btn btn-sm {{ 'btn-primary' if current_filters.payment_status == 'unpaid' else 'btn-outline-primary' }}">
+              Unpaid
+              <span class="badge bg-white text-dark ms-1">{{ statistics.unpaid }}</span>
+            </a>
+            <a href="{{ url_for('list_signups', payment_status='paid') }}" 
+               class="btn btn-sm {{ 'btn-primary' if current_filters.payment_status == 'paid' else 'btn-outline-primary' }}">
+              Paid
+              <span class="badge bg-white text-dark ms-1">{{ statistics.paid }}</span>
+            </a>
+            <a href="{{ url_for('list_signups', status='pending') }}" 
+               class="btn btn-sm {{ 'btn-primary' if current_filters.status == 'pending' else 'btn-outline-primary' }}">
+              Pending
+              <span class="badge bg-white text-dark ms-1">{{ statistics.pending }}</span>
+            </a>
+            <a href="{{ url_for('list_signups', status='approved') }}" 
+               class="btn btn-sm {{ 'btn-primary' if current_filters.status == 'approved' else 'btn-outline-primary' }}">
+              Approved
+              <span class="badge bg-white text-dark ms-1">{{ statistics.approved }}</span>
+            </a>
+          </div>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="table table-hover">
@@ -424,12 +455,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         setLoadingState(true);
         
-        // Build URL with search query
+        // Build URL with search query while preserving filter parameters
         const url = new URL(window.location.href);
         if (query && query.trim().length >= 3) {
             url.searchParams.set('q', query.trim());
         } else {
             url.searchParams.delete('q');
+        }
+        // Preserve existing filter parameters
+        const currentPaymentStatus = new URLSearchParams(window.location.search).get('payment_status');
+        const currentStatus = new URLSearchParams(window.location.search).get('status');
+        if (currentPaymentStatus && !url.searchParams.has('payment_status')) {
+            url.searchParams.set('payment_status', currentPaymentStatus);
+        }
+        if (currentStatus && !url.searchParams.has('status')) {
+            url.searchParams.set('status', currentStatus);
         }
         
         // Navigate to the search URL - this will reload the page with results
@@ -542,6 +582,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize character counter on page load
     updateSearchFeedback(enhancedSearchInput.value);
+
+    // Filter button functionality
+    document.querySelectorAll('.btn-group a').forEach(filterBtn => {
+        filterBtn.addEventListener('click', function(e) {
+            // Preserve search query when switching filters
+            const currentQuery = enhancedSearchInput.value.trim();
+            if (currentQuery && currentQuery.length >= 3) {
+                const url = new URL(this.href);
+                url.searchParams.set('q', currentQuery);
+                this.href = url.toString();
+            }
+        });
+    });
 
     // Initialize
     updateBulkActions();
@@ -919,6 +972,104 @@ document.addEventListener('DOMContentLoaded', function() {
 .input-icon:has(#enhancedSearchInput:focus) {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter Buttons Styling */
+.btn-group .btn {
+  border-radius: 0;
+  border-right: 1px solid rgba(98, 105, 118, 0.16);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.btn-group .btn:first-child {
+  border-top-left-radius: 0.375rem;
+  border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+  border-right: none;
+}
+
+.btn-group .btn-primary {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
+  z-index: 2;
+}
+
+.btn-group .btn-outline-primary {
+  background-color: white;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.btn-group .btn-outline-primary:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+  z-index: 1;
+}
+
+.btn-group .btn .badge {
+  font-size: 0.65rem;
+  padding: 0.25em 0.5em;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.btn-group .btn-primary .badge {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+}
+
+.btn-group .btn-outline-primary .badge {
+  background-color: #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+/* Card header responsiveness */
+@media (max-width: 991px) {
+  .card-header .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+  
+  .btn-group {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+    min-width: calc(50% - 1px);
+    border-radius: 0.375rem !important;
+    border-right: none !important;
+    margin-bottom: 0.25rem;
+    margin-right: 0.25rem;
+  }
+  
+  .btn-group .btn:nth-child(2n) {
+    margin-right: 0;
+  }
 }
 </style>
 {% endblock %}
