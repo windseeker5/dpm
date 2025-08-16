@@ -415,7 +415,9 @@
                  class="nav-link {{ 'active' if request.endpoint == 'list_signups' }}">
                 <i class="nav-icon ti ti-user-check"></i>
                 <span class="nav-text">Signups</span>
-                <span class="nav-badge">12</span>
+                {% if pending_signups_count > 0 %}
+                <span class="nav-badge">{{ pending_signups_count }}</span>
+                {% endif %}
                 {% if request.endpoint == 'list_signups' %}
                 <span class="nav-indicator"></span>
                 {% endif %}

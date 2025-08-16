@@ -68,38 +68,488 @@
     scroll-snap-align: start;
   }
 }
+
+/* Modern Activity Header Styles */
+.activity-header-modern {
+  background: #ffffff;
+  border: 1px solid rgba(98, 105, 118, 0.16);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.activity-header-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #206bc4 0%, #ed2988 100%);
+}
+
+.breadcrumb-modern {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.breadcrumb-modern .breadcrumb-item {
+  color: #626976;
+  font-size: 0.875rem;
+}
+
+.breadcrumb-modern .breadcrumb-item.active {
+  color: #2d3436;
+  font-weight: 500;
+}
+
+.breadcrumb-modern .breadcrumb-item + .breadcrumb-item::before {
+  color: #98a0ac;
+  content: ">";
+  padding: 0 0.5rem;
+}
+
+.activity-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-right: 0.75rem;
+}
+
+.activity-status-badge.status-active {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.activity-status-badge.status-upcoming {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.activity-status-badge.status-completed {
+  background: rgba(156, 163, 175, 0.1);
+  color: #6b7280;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.pulse-indicator {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.activity-quick-stats {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.quick-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #626976;
+  font-size: 0.875rem;
+}
+
+.quick-stat-item i {
+  font-size: 1.125rem;
+  color: #206bc4;
+}
+
+.activity-title-modern {
+  color: #2d3436;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.activity-meta-modern {
+  color: #626976;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.activity-actions-modern {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.participant-avatars {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.avatar-stack {
+  display: flex;
+  margin-right: 0.75rem;
+}
+
+.avatar-stack .avatar {
+  width: 36px;
+  height: 36px;
+  border: 2px solid white;
+  margin-left: -0.75rem;
+  transition: transform 0.2s;
+}
+
+.avatar-stack .avatar:first-child {
+  margin-left: 0;
+}
+
+.avatar-stack .avatar:hover {
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+.participant-count {
+  color: #626976;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.activity-image-modern {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  height: 320px;
+  background: #f8f9fa;
+  box-shadow: 0 0.375rem 1.5rem rgba(0, 0, 0, 0.08);
+}
+
+.activity-image-modern img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.activity-image-modern:hover img {
+  transform: scale(1.02);
+}
+
+.image-overlay-modern {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.activity-image-modern:hover .image-overlay-modern {
+  opacity: 1;
+}
+
+.floating-action-menu {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
+}
+
+.progress-indicator {
+  background: #f1f3f5;
+  border-radius: 100px;
+  height: 6px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.progress-bar-modern {
+  height: 100%;
+  background: linear-gradient(90deg, #206bc4 0%, #ed2988 100%);
+  border-radius: 100px;
+  transition: width 0.3s ease;
+}
+
+.next-session-banner {
+  background: #f8f9fa;
+  border: 1px solid rgba(98, 105, 118, 0.16);
+  border-radius: 8px;
+  padding: 0.875rem 1.25rem;
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.next-session-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #2d3436;
+}
+
+.next-session-info i {
+  font-size: 1.25rem;
+  color: #206bc4;
+}
+
+.session-time {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #2d3436;
+}
+
+.session-countdown {
+  font-size: 0.875rem;
+  color: #626976;
+}
+
+@media (max-width: 991.98px) {
+  .activity-header-modern {
+    padding: 1.5rem;
+  }
+  
+  .activity-title-modern {
+    font-size: 1.5rem;
+  }
+  
+  .activity-quick-stats {
+    gap: 1rem;
+  }
+  
+  .participant-avatars {
+    margin-left: 0;
+    margin-top: 1rem;
+    width: 100%;
+  }
+  
+  .activity-image-modern {
+    height: 200px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .activity-quick-stats {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .activity-actions-modern {
+    width: 100%;
+  }
+  
+  .activity-actions-modern .btn {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .next-session-banner {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}
+
+.share-button {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
+}
+
+.share-button .btn-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid rgba(98, 105, 118, 0.16);
+  border-radius: 8px;
+  color: #626976;
+  transition: all 0.2s;
+}
+
+.share-button .btn-icon:hover {
+  background: #206bc4;
+  color: white;
+  border-color: #206bc4;
+  transform: translateY(-2px);
+  box-shadow: 0 0.25rem 0.75rem rgba(32, 107, 196, 0.2);
+}
 </style>
 
 <div class="page-wrapper">
 
   <div class="page-body">
     <div class="dashboard-container">
-      <!-- Split Layout Header with Activity Image -->
-      <div class="activity-header-split">
-        <div class="row g-4 align-items-center">
+      <!-- Modern Activity Header with Enhanced UI -->
+      <div class="activity-header-modern">
+        <!-- Share Button -->
+        <div class="share-button">
+          <button class="btn btn-icon" onclick="shareActivity()" data-bs-toggle="tooltip" data-bs-placement="left" title="Share signup link">
+            <i class="ti ti-share"></i>
+          </button>
+        </div>
+
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb breadcrumb-modern">
+            <li class="breadcrumb-item"><a href="{{ url_for('list_activities') }}" style="color: #626976;">Activities</a></li>
+            <li class="breadcrumb-item active">{{ activity.name }}</li>
+          </ol>
+        </nav>
+
+        <div class="row g-4">
           <div class="col-lg-7">
-            <div class="activity-info">
-              <h1 class="activity-title">{{ activity.name }}</h1>
-              <p class="activity-description">{{ activity.description or "No description provided." }}{% if activity.start_date %} • {{ activity.start_date.strftime('%b %d') }}{% if activity.end_date %} - {{ activity.end_date.strftime('%b %d, %Y') }}{% endif %}{% endif %}</p>
-              <div class="activity-actions">
-                <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-primary">
-                  <i class="ti ti-edit me-2"></i>Edit Activity
-                </a>
-                <a href="{{ url_for('scan_qr') }}" class="btn btn-success ms-2">
-                  <i class="ti ti-scan me-2"></i>Scan Activity
-                </a>
+            <!-- Activity Status -->
+            <div class="d-flex align-items-center flex-wrap mb-3">
+              {% set now = current_datetime if current_datetime is defined else none %}
+              {% if activity.end_date and now and activity.end_date < now %}
+              <span class="activity-status-badge status-completed">
+                <i class="ti ti-check"></i> Completed
+              </span>
+              {% elif activity.start_date and now and activity.start_date <= now %}
+              <span class="activity-status-badge status-active">
+                <span class="pulse-indicator"></span> Active
+              </span>
+              {% elif activity.start_date %}
+              <span class="activity-status-badge status-upcoming">
+                <i class="ti ti-clock"></i> Upcoming
+              </span>
+              {% else %}
+              <span class="activity-status-badge status-active">
+                <span class="pulse-indicator"></span> Active
+              </span>
+              {% endif %}
+            </div>
+
+            <h1 class="activity-title-modern">{{ activity.name }}</h1>
+            
+            <p class="activity-meta-modern">
+              {{ activity.description or "Transform your game with professional coaching and structured training sessions." }}
+            </p>
+
+            <!-- Quick Stats Bar -->
+            <div class="activity-quick-stats">
+              <div class="quick-stat-item">
+                <i class="ti ti-users"></i>
+                <span><strong>{{ passes|length }}</strong> / {{ activity.max_participants or 30 }} participants</span>
+              </div>
+              <div class="quick-stat-item">
+                <i class="ti ti-calendar-event"></i>
+                <span><strong>{{ activity.sessions_completed or 0 }}</strong> / {{ activity.total_sessions or 12 }} sessions</span>
+              </div>
+              <div class="quick-stat-item">
+                <i class="ti ti-star-filled"></i>
+                <span><strong>4.8</strong> rating</span>
+              </div>
+              {% if activity.price %}
+              <div class="quick-stat-item">
+                <i class="ti ti-currency-dollar"></i>
+                <span><strong>${{ activity.price }}</strong> per session</span>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Progress Indicator -->
+            <div class="progress-indicator">
+              <div class="progress-bar-modern" style="width: {{ ((activity.sessions_completed or 0) / (activity.total_sessions or 12) * 100) }}%"></div>
+            </div>
+
+            <!-- Action Buttons and Participant Avatars -->
+            <div class="activity-actions-modern mt-4">
+              <a href="{{ url_for('scan_qr') }}" class="btn btn-primary">
+                <i class="ti ti-scan me-2"></i>Check-in Participants
+              </a>
+              <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-secondary">
+                <i class="ti ti-edit me-2"></i>Edit Activity
+              </a>
+              <button class="btn btn-outline-secondary">
+                <i class="ti ti-chart-bar me-2"></i>Analytics
+              </button>
+
+              <!-- Participant Avatars -->
+              <div class="participant-avatars">
+                <div class="avatar-stack">
+                  {% for p in passes[:5] %}
+                  <img src="https://www.gravatar.com/avatar/{{ p.user.email|lower|trim|encode_md5 }}?d=identicon&s=72" 
+                       class="avatar rounded-circle" 
+                       alt="{{ p.user.name }}"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="{{ p.user.name }}">
+                  {% endfor %}
+                </div>
+                {% if passes|length > 5 %}
+                <span class="participant-count">+{{ passes|length - 5 }} more</span>
+                {% endif %}
               </div>
             </div>
+
+            <!-- Next Session Banner -->
+            {% if activity.next_session_date %}
+            <div class="next-session-banner">
+              <div class="next-session-info">
+                <i class="ti ti-calendar-time"></i>
+                <div>
+                  <div class="session-time">Next Session: {{ activity.next_session_date.strftime('%A, %B %d at %I:%M %p') }}</div>
+                  <div class="session-countdown" id="countdown-timer">In 2 days, 14 hours</div>
+                </div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="ti ti-bell me-1"></i>Set Reminder
+              </button>
+            </div>
+            {% endif %}
           </div>
+
           <div class="col-lg-5">
-            <div class="activity-image-card">
+            <!-- Enhanced Activity Image -->
+            <div class="activity-image-modern">
               <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}" 
-                   class="activity-featured-image" 
                    alt="{{ activity.name }}">
-              <div class="image-overlay">
-                <button class="btn btn-sm btn-ghost-light">
-                  <i class="ti ti-camera me-1"></i>Change Image
-                </button>
+              <div class="image-overlay-modern">
+                <div class="d-flex justify-content-between align-items-end">
+                  <div>
+                    <div class="text-white mb-1">
+                      <i class="ti ti-map-pin me-1"></i>{{ activity.location or 'Sports Complex' }}
+                    </div>
+                    <div class="text-white-50 small">
+                      <i class="ti ti-clock me-1"></i>{{ activity.duration or '90' }} minutes per session
+                    </div>
+                  </div>
+                  <button class="btn btn-sm btn-light">
+                    <i class="ti ti-camera me-1"></i>Change Cover
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -801,6 +1251,8 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeActivityDashboard();
   // Initialize charts with current data
   initializeChartsWithData();
+  // Initialize modern header features
+  initializeModernHeader();
 });
 
 // Initialize charts with current page data
@@ -861,6 +1313,97 @@ function initializeProfitChart(data) {
     if (mobileChart) {
       mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
     }
+  }
+}
+
+// Initialize modern header features
+function initializeModernHeader() {
+  // Initialize Bootstrap tooltips for participant avatars
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
+  // Countdown timer for next session
+  const countdownElement = document.getElementById('countdown-timer');
+  if (countdownElement) {
+    updateCountdown();
+    setInterval(updateCountdown, 60000); // Update every minute
+  }
+
+  // Smooth scroll for progress indicator
+  animateProgressBar();
+}
+
+// Share activity function
+function shareActivity() {
+  const activityId = {{ activity.id }};
+  const signupUrl = window.location.origin + '/signup/' + activityId;
+  
+  navigator.clipboard.writeText(signupUrl).then(function() {
+    showNotification('success', 'Signup link copied to clipboard!');
+  }).catch(function(err) {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = signupUrl;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showNotification('success', 'Signup link copied to clipboard!');
+    } catch (err) {
+      showNotification('error', 'Failed to copy link');
+    }
+    document.body.removeChild(textArea);
+  });
+}
+
+// Update countdown timer
+function updateCountdown() {
+  const countdownElement = document.getElementById('countdown-timer');
+  if (!countdownElement) return;
+
+  // This would typically calculate from the actual next session date
+  // For demo purposes, showing a static countdown
+  const nextSessionDate = new Date();
+  nextSessionDate.setDate(nextSessionDate.getDate() + 2);
+  nextSessionDate.setHours(15, 0, 0, 0);
+
+  const now = new Date();
+  const diff = nextSessionDate - now;
+
+  if (diff > 0) {
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    let countdownText = '';
+    if (days > 0) {
+      countdownText = `In ${days} day${days > 1 ? 's' : ''}, ${hours} hour${hours > 1 ? 's' : ''}`;
+    } else if (hours > 0) {
+      countdownText = `In ${hours} hour${hours > 1 ? 's' : ''}, ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    } else {
+      countdownText = `In ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    }
+
+    countdownElement.textContent = countdownText;
+  } else {
+    countdownElement.textContent = 'Session in progress';
+    countdownElement.classList.add('text-success');
+  }
+}
+
+// Animate progress bar on load
+function animateProgressBar() {
+  const progressBar = document.querySelector('.progress-bar-modern');
+  if (progressBar) {
+    const targetWidth = progressBar.style.width;
+    progressBar.style.width = '0%';
+    setTimeout(() => {
+      progressBar.style.width = targetWidth;
+    }, 100);
   }
 }
 
