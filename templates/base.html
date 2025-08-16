@@ -521,8 +521,8 @@
             <i class="ti ti-menu-2"></i>
           </button>
           
-          <!-- Organization Name (left-aligned to match content) -->
-          <div class="minipass-org-name d-flex align-items-center">
+          <!-- Organization Name (centered on mobile, left-aligned on desktop) -->
+          <div class="minipass-org-name d-flex align-items-center justify-content-center justify-content-lg-start flex-grow-1 flex-lg-grow-0">
             <span class="org-name-gradient">
               {{ ORG_NAME if ORG_NAME else "Minipass" }}
             </span>

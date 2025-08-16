@@ -122,36 +122,31 @@
       <div class="card-header">
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
-          <div class="btn-group" role="group" aria-label="Signup filters" style="justify-content: center;">
+          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
             <a href="{{ url_for('list_signups') }}" 
-               class="btn filter-btn {{ 'filter-btn-active' if not current_filters.payment_status and not current_filters.status else 'filter-btn-inactive' }}"
-               style="{{ 'background-color: #6c757d !important; color: white !important; border-color: #6c757d !important;' if not current_filters.payment_status and not current_filters.status else 'background-color: #f8f9fa !important; color: #6c757d !important; border-color: #e9ecef !important;' }}">
-              <i class="ti ti-users me-2"></i>All Signups
-              <span class="badge filter-badge ms-2">{{ statistics.total }}</span>
+               class="github-filter-btn {% if not current_filters.payment_status and not current_filters.status %}active{% endif %}"
+               style="{% if not current_filters.payment_status and not current_filters.status %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: transparent; color: #586069; border-right: 1px solid #d1d5da; margin: 0;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Signups <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total }})</span>
             </a>
             <a href="{{ url_for('list_signups', payment_status='unpaid') }}" 
-               class="btn filter-btn {{ 'filter-btn-active' if current_filters.payment_status == 'unpaid' else 'filter-btn-inactive' }}"
-               style="{{ 'background-color: #6c757d !important; color: white !important; border-color: #6c757d !important;' if current_filters.payment_status == 'unpaid' else 'background-color: #f8f9fa !important; color: #6c757d !important; border-color: #e9ecef !important;' }}">
-              <i class="ti ti-clock me-2"></i>Unpaid
-              <span class="badge filter-badge ms-2">{{ statistics.unpaid }}</span>
+               class="github-filter-btn {% if current_filters.payment_status == 'unpaid' %}active{% endif %}"
+               style="{% if current_filters.payment_status == 'unpaid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: transparent; color: #586069; border-right: 1px solid #d1d5da; margin: 0;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"></i>Unpaid <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.unpaid }})</span>
             </a>
             <a href="{{ url_for('list_signups', payment_status='paid') }}" 
-               class="btn filter-btn {{ 'filter-btn-active' if current_filters.payment_status == 'paid' else 'filter-btn-inactive' }}"
-               style="{{ 'background-color: #6c757d !important; color: white !important; border-color: #6c757d !important;' if current_filters.payment_status == 'paid' else 'background-color: #f8f9fa !important; color: #6c757d !important; border-color: #e9ecef !important;' }}">
-              <i class="ti ti-circle-check me-2"></i>Paid
-              <span class="badge filter-badge ms-2">{{ statistics.paid }}</span>
+               class="github-filter-btn {% if current_filters.payment_status == 'paid' %}active{% endif %}"
+               style="{% if current_filters.payment_status == 'paid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: transparent; color: #586069; border-right: 1px solid #d1d5da; margin: 0;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-circle-check" style="font-size: 16px; margin-right: 4px;"></i>Paid <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.paid }})</span>
             </a>
             <a href="{{ url_for('list_signups', status='pending') }}" 
-               class="btn filter-btn {{ 'filter-btn-active' if current_filters.status == 'pending' else 'filter-btn-inactive' }}"
-               style="{{ 'background-color: #6c757d !important; color: white !important; border-color: #6c757d !important;' if current_filters.status == 'pending' else 'background-color: #f8f9fa !important; color: #6c757d !important; border-color: #e9ecef !important;' }}">
-              <i class="ti ti-alert-circle me-2"></i>Pending
-              <span class="badge filter-badge ms-2">{{ statistics.pending }}</span>
+               class="github-filter-btn {% if current_filters.status == 'pending' %}active{% endif %}"
+               style="{% if current_filters.status == 'pending' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: transparent; color: #586069; border-right: 1px solid #d1d5da; margin: 0;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-alert-circle" style="font-size: 16px; margin-right: 4px;"></i>Pending <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.pending }})</span>
             </a>
             <a href="{{ url_for('list_signups', status='approved') }}" 
-               class="btn filter-btn {{ 'filter-btn-active' if current_filters.status == 'approved' else 'filter-btn-inactive' }}"
-               style="{{ 'background-color: #6c757d !important; color: white !important; border-color: #6c757d !important;' if current_filters.status == 'approved' else 'background-color: #f8f9fa !important; color: #6c757d !important; border-color: #e9ecef !important;' }}">
-              <i class="ti ti-thumb-up me-2"></i>Approved
-              <span class="badge filter-badge ms-2">{{ statistics.approved }}</span>
+               class="github-filter-btn {% if current_filters.status == 'approved' %}active{% endif %}"
+               style="{% if current_filters.status == 'approved' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: transparent; color: #586069; margin: 0;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-thumb-up" style="font-size: 16px; margin-right: 4px;"></i>Approved <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.approved }})</span>
             </a>
           </div>
         </div>
@@ -585,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateSearchFeedback(enhancedSearchInput.value);
 
     // Filter button functionality
-    document.querySelectorAll('.btn-group a').forEach(filterBtn => {
+    document.querySelectorAll('.github-filter-btn').forEach(filterBtn => {
         filterBtn.addEventListener('click', function(e) {
             // Preserve search query when switching filters
             const currentQuery = enhancedSearchInput.value.trim();
@@ -975,7 +970,7 @@ document.addEventListener('DOMContentLoaded', function() {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Filter Button Container - Perfect Center Alignment */
+/* Filter Button Group Styling */
 .card-header .d-flex {
   justify-content: center !important;
   align-items: center !important;
@@ -984,203 +979,151 @@ document.addEventListener('DOMContentLoaded', function() {
   padding: 0 !important;
 }
 
-.btn-group {
-  margin: 0 auto !important;
-  display: flex !important;
-  justify-content: center !important;
+/* GitHub-style filter buttons */
+.github-filter-group {
+  display: inline-flex;
+  align-items: center;
+  background: #e1e4e8;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 1px;
 }
 
-/* Enhanced Filter Buttons Styling - Further Reduced Size (10-15% smaller) */
-/* ULTRA HIGH specificity to override ALL Tabler defaults */
-.card-header .btn-group .btn.filter-btn,
-.card-header .btn-group a.btn.filter-btn,
-.card-header .btn-group .filter-btn,
-.btn-group .btn.filter-btn,
-.btn-group a.btn.filter-btn,
-.btn-group .filter-btn {
-  border-radius: 0 !important;
-  border-right: 1px solid rgba(98, 105, 118, 0.12) !important;
-  position: relative !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  padding: 0.36rem 0.675rem !important; /* Reduced by 10% from 0.4rem 0.75rem */
-  font-weight: 500 !important;
-  font-size: 0.63rem !important; /* Reduced by 10% from 0.7rem */
-  white-space: nowrap !important;
-  border: 1px solid #e9ecef !important;
-  /* Ensure buttons have a default appearance */
-  text-decoration: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  /* FORCE LIGHT GRAY BACKGROUND - override ALL Tabler defaults */
-  background-color: #f8f9fa !important;
-  background-image: none !important;
-  background: #f8f9fa !important;
-  color: #6c757d !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
-}
-
-.btn-group .btn.filter-btn:first-child,
-.btn-group a.btn.filter-btn:first-child,
-.btn-group .filter-btn:first-child {
-  border-top-left-radius: 0.5rem !important;
-  border-bottom-left-radius: 0.5rem !important;
-}
-
-.btn-group .btn.filter-btn:last-child,
-.btn-group a.btn.filter-btn:last-child,
-.btn-group .filter-btn:last-child {
-  border-top-right-radius: 0.5rem !important;
-  border-bottom-right-radius: 0.5rem !important;
-  border-right: 1px solid transparent !important;
-}
-
-/* Active State - FORCE DARK GRAY with Subtle 3D Effect */
-.card-header .btn-group .filter-btn-active,
-.card-header .btn-group .filter-btn.filter-btn-active,
-.card-header .btn-group .btn.filter-btn-active,
-.card-header .btn-group a.btn.filter-btn-active,
-.btn-group .filter-btn-active,
-.btn-group .filter-btn.filter-btn-active,
-.btn-group .btn.filter-btn-active,
-.btn-group a.btn.filter-btn-active {
-  background-color: #6c757d !important;
-  background-image: none !important;
-  background: #6c757d !important;
-  border-color: #6c757d !important;
-  color: white !important;
-  z-index: 2 !important;
-  box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Inactive State - FORCE LIGHT GRAY */
-.card-header .btn-group .filter-btn-inactive,
-.card-header .btn-group .filter-btn.filter-btn-inactive,
-.card-header .btn-group .btn.filter-btn-inactive,
-.card-header .btn-group a.btn.filter-btn-inactive,
-.btn-group .filter-btn-inactive,
-.btn-group .filter-btn.filter-btn-inactive,
-.btn-group .btn.filter-btn-inactive,
-.btn-group a.btn.filter-btn-inactive {
-  background-color: #f8f9fa !important;
-  background-image: none !important;
-  background: #f8f9fa !important;
-  border-color: #e9ecef !important;
-  color: #6c757d !important;
-  box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
-}
-
-/* Hover Effects with Subtle 3D Lift */
-.btn-group .btn.filter-btn:hover,
-.btn-group a.btn.filter-btn:hover,
-.btn-group .filter-btn:hover {
-  transform: translateY(-1px) !important;
-  z-index: 3 !important;
-  transition: all 0.15s ease-out !important;
-}
-
-.btn-group .filter-btn-active:hover,
-.btn-group .filter-btn.filter-btn-active:hover,
-.btn-group .btn.filter-btn-active:hover,
-.btn-group a.btn.filter-btn-active:hover {
-  background-color: #5a6268 !important;
-  background-image: none !important;
-  border-color: #5a6268 !important;
-  color: white !important;
-  box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-}
-
-.btn-group .filter-btn-inactive:hover,
-.btn-group .filter-btn.filter-btn-inactive:hover,
-.btn-group .btn.filter-btn-inactive:hover,
-.btn-group a.btn.filter-btn-inactive:hover {
-  background-color: #e9ecef !important;
-  background-image: none !important;
-  border-color: #dee2e6 !important;
-  color: #495057 !important;
-  box-shadow: 
-    0 3px 6px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-}
-
-/* Badge Styling - Monochrome and Smaller */
-.btn-group .filter-btn .filter-badge {
-  font-size: 0.495rem; /* Reduced by 10% from 0.55rem */
-  padding: 0.18em 0.36em; /* Reduced by 10% from 0.2em 0.4em */
-  border-radius: 7.2px; /* Reduced by 10% from 8px */
-  font-weight: 600;
-  line-height: 1;
+.github-filter-btn {
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #24292e;
+  background: transparent;
   border: none;
+  border-radius: 0;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
-/* Active Button Badge - White/Semi-transparent */
-.btn-group .filter-btn-active .filter-badge,
-.btn-group .filter-btn.filter-btn-active .filter-badge {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-  color: rgba(255, 255, 255, 0.9) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+/* Inactive state - darker gray background */
+.github-filter-btn:not(.active) {
+  background: #e1e4e8;
+  color: #586069;
 }
 
-/* Inactive Button Badge - Gray Tones */
-.btn-group .filter-btn-inactive .filter-badge,
-.btn-group .filter-btn.filter-btn-inactive .filter-badge {
-  background-color: rgba(108, 117, 125, 0.1) !important;
-  color: #6c757d !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+.github-filter-btn:not(.active):hover {
+  background: #d1d5da;
+  color: #24292e;
+  text-decoration: none;
 }
 
-/* Badge Hover Effects */
-.btn-group .filter-btn-active:hover .filter-badge,
-.btn-group .filter-btn.filter-btn-active:hover .filter-badge {
-  background-color: rgba(255, 255, 255, 0.25) !important;
-  color: white !important;
+/* Active state - white/light background with rounded corners */
+.github-filter-btn.active {
+  background: #ffffff;
+  color: #24292e;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
+  font-weight: 600;
+  z-index: 1;
 }
 
-.btn-group .filter-btn-inactive:hover .filter-badge,
-.btn-group .filter-btn.filter-btn-inactive:hover .filter-badge {
-  background-color: rgba(108, 117, 125, 0.15) !important;
-  color: #495057 !important;
+.github-filter-btn.active:hover {
+  background: #ffffff;
+  text-decoration: none;
 }
 
-/* Card header responsiveness - Updated for further reduced buttons */
+/* Icons styling */
+.github-filter-btn i {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.github-filter-btn.active i {
+  opacity: 1;
+}
+
+/* Old btn-group styles - keeping for reference */
+.btn-group .btn {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 0;
+  border: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  color: #495057;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+/* First and last button rounded corners */
+.btn-group .btn:first-child {
+  border-top-left-radius: 0.375rem;
+  border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+}
+
+/* Remove borders between buttons */
+.btn-group .btn:not(:first-child) {
+  border-left: none;
+}
+
+/* Active state - primary button styling */
+.btn-group .btn-primary {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+}
+
+.btn-group .btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  color: #fff;
+}
+
+/* Inactive state - outline styling */
+.btn-group .btn-outline-secondary {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  color: #6c757d;
+}
+
+.btn-group .btn-outline-secondary:hover {
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+  color: #495057;
+}
+
+/* Ensure icons are properly spaced */
+.btn-group .btn i {
+  font-size: 14px;
+  color: inherit;
+}
+
+/* Responsive Design for Filter Buttons */
 @media (max-width: 1200px) {
-  .card-header .d-flex {
-    justify-content: center;
-  }
-  
   .btn-group {
+    flex-wrap: nowrap;
     overflow-x: auto;
-    white-space: nowrap;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
   }
   
-  .btn-group::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .btn-group .filter-btn {
+  .btn-group .btn {
+    font-size: 13px;
+    padding: 6px 10px;
     min-width: max-content;
-    padding: 0.315rem 0.585rem; /* Reduced by 10% from 0.35rem 0.65rem */
-    font-size: 0.585rem; /* Reduced by 10% from 0.65rem */
   }
 }
 
 @media (max-width: 991px) {
-  .card-header .d-flex {
-    justify-content: center;
-  }
-  
-  .btn-group .filter-btn {
-    padding: 0.27rem 0.495rem; /* Reduced by 10% from 0.3rem 0.55rem */
-    font-size: 0.54rem; /* Reduced by 10% from 0.6rem */
+  .btn-group .btn {
+    font-size: 12px;
+    padding: 6px 8px;
   }
 }
 
@@ -1190,47 +1133,33 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   .btn-group {
-    display: flex;
     flex-wrap: wrap;
     width: 100%;
-    gap: 0.4rem;
   }
   
-  .btn-group .filter-btn {
+  .btn-group .btn {
     flex: 1;
-    min-width: calc(50% - 0.2rem);
-    border-radius: 0.5rem !important;
-    border-right: 1px solid transparent !important;
-    margin: 0;
-    padding: 0.405rem 0.315rem; /* Reduced by 10% from 0.45rem 0.35rem */
-    font-size: 0.495rem; /* Reduced by 10% from 0.55rem */
+    min-width: calc(50% - 2px);
+    margin-bottom: 4px;
+    border-radius: 0.375rem !important;
+    font-size: 11px;
+    padding: 6px 8px;
   }
   
-  .btn-group .filter-btn .filter-badge {
-    font-size: 0.45rem; /* Reduced by 10% from 0.5rem */
-    padding: 0.135em 0.315em; /* Reduced by 10% from 0.15em 0.35em */
-  }
-  
-  /* Ensure All Signups takes full width on small screens */
-  .btn-group .filter-btn:first-child {
-    flex-basis: 100%;
-    margin-bottom: 0.4rem;
+  /* Reset borders for mobile wrapped layout */
+  .btn-group .btn:not(:first-child) {
+    border-left: 1px solid #dee2e6;
   }
 }
 
 @media (max-width: 480px) {
-  .btn-group .filter-btn {
-    font-size: 0.45rem; /* Reduced by 10% from 0.5rem */
-    padding: 0.315rem 0.225rem; /* Reduced by 10% from 0.35rem 0.25rem */
+  .btn-group .btn {
+    font-size: 10px;
+    padding: 5px 6px;
   }
   
-  .btn-group .filter-btn i {
-    font-size: 0.63rem; /* Reduced by 10% from 0.7rem */
-  }
-  
-  .btn-group .filter-btn .filter-badge {
-    font-size: 0.405rem; /* Reduced by 10% from 0.45rem */
-    margin-left: 0.135rem !important; /* Reduced by 10% from 0.15rem */
+  .btn-group .btn i {
+    font-size: 12px;
   }
 }
 </style>
