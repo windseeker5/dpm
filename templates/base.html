@@ -260,7 +260,8 @@
       font-family: 'Anton', sans-serif;
       font-weight: 400;
       font-size: 1.8rem;
-      background: linear-gradient(90deg, #1a73e8 0%, #6c4edb 50%, #db4ed4 100%);
+      background: linear-gradient(90deg, #1a73e8 0%, #6c4edb 25%, #db4ed4 50%, #6c4edb 75%, #1a73e8 100%);
+      background-size: 200% 200%;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -268,31 +269,15 @@
       letter-spacing: 0.02em;
       position: relative;
       display: inline-block;
-      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
-      transition: all 0.3s ease;
+      filter: drop-shadow(1px 1px 0px rgba(160, 160, 160, 0.8));
+      animation: gradientShift 7s ease infinite;
     }
     
-    /* Subtle hover effect */
-    .org-name-gradient:hover {
-      filter: drop-shadow(0 3px 8px rgba(108, 78, 219, 0.25));
-      transform: translateY(-1px);
-    }
-    
-    /* Enhanced gradient animation on hover (optional) */
+    /* Gradient animation keyframes */
     @keyframes gradientShift {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
-    }
-    
-    .org-name-gradient:hover {
-      background: linear-gradient(90deg, #1a73e8 0%, #6c4edb 25%, #db4ed4 50%, #6c4edb 75%, #1a73e8 100%);
-      background-size: 200% 200%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-fill-color: transparent;
-      animation: gradientShift 3s ease infinite;
     }
     
     /* Mobile responsiveness */
