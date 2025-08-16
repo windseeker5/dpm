@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Height Test</title>
+    <link href="http://127.0.0.1:8890/static/tabler/dist/css/tabler.min.css" rel="stylesheet">
+    <style>
+        .test-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .height-indicator {
+            position: absolute;
+            right: -10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: red;
+        }
+        .card-wrapper {
+            position: relative;
+            width: 280px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <!-- Regular activity card -->
+        <div class="card-wrapper">
+            <div class="card" style="border-radius: 12px; overflow: hidden;">
+                <div class="img-responsive img-responsive-21x9 card-img-top" 
+                     style="background: linear-gradient(45deg, #e3f2fd 0%, #2196f3 100%); display: flex; align-items: center; justify-content: center;">
+                  <i class="ti ti-calendar-event" style="font-size: 3rem; color: #1976d2; opacity: 0.8;"></i>
+                </div>
+                <div class="card-body">
+                  <div class="mb-2">
+                    <h3 class="card-title mb-0">Sample Activity</h3>
+                  </div>
+                  <div class="d-flex gap-2 flex-wrap mb-3">
+                    <span class="badge bg-green-lt">4 active</span>
+                    <span class="badge bg-yellow-lt">3 pending</span>
+                  </div>
+                  <a href="#" class="btn btn-secondary">Manage</a>
+                </div>
+            </div>
+            <div class="height-indicator"></div>
+        </div>
+
+        <!-- Placeholder card -->
+        <div class="card-wrapper">
+            <div class="card" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; cursor: pointer;">
+                <div class="img-responsive img-responsive-21x9 card-img-top" 
+                     style="background-color: #f1f5f9; position: relative;">
+                  <i class="ti ti-plus" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: #94a3b8;"></i>
+                </div>
+                <div class="card-body" style="background-color: #f1f5f9;">
+                  <div class="mb-2">
+                    <div style="background-color: #e2e8f0; height: 28px; width: 120px; border-radius: 4px;"></div>
+                  </div>
+                  <div class="d-flex gap-2 flex-wrap mb-3">
+                    <span class="badge bg-green-lt" style="visibility: hidden;">4 active</span>
+                    <span class="badge bg-yellow-lt" style="visibility: hidden;">3 pending</span>
+                  </div>
+                  <div style="background-color: #e2e8f0; height: 36px; width: 80px; border-radius: 6px;"></div>
+                </div>
+            </div>
+            <div class="height-indicator"></div>
+        </div>
+    </div>
+</body>
+</html>

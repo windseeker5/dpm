@@ -437,7 +437,9 @@
                       <div style="background-color: #e2e8f0; height: 24px; width: 120px; border-radius: 4px;"></div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap mb-3">
-                      <!-- Empty div for badge spacing to match real cards -->
+                      <!-- Invisible badges using exact same classes and text length to maintain height -->
+                      <span class="badge bg-green-lt" style="visibility: hidden;">4 active</span>
+                      <span class="badge bg-yellow-lt" style="visibility: hidden;">3 pending</span>
                     </div>
                     <!-- Button placeholder - grey rectangle positioned at bottom like real cards -->
                     <div style="background-color: #e2e8f0; height: 36px; width: 80px; border-radius: 6px;"></div>
@@ -479,32 +481,35 @@
               </div>
             </div>
             {% endfor %}
-            {% if activities|length == 0 %}
-            <!-- Mobile placeholder for when no activities exist -->
+            <!-- Mobile placeholder - always shown as last card -->
             <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
               <a href="{{ url_for('create_activity') }}" style="text-decoration: none;">
-                <div class="card" style="border-radius: 12px; overflow: hidden; border: 2px dashed #e2e8f0; background-color: #f8fafc;">
+                <div class="card" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; cursor: pointer;">
+                  <!-- Placeholder Image with large plus icon -->
                   <div class="img-responsive img-responsive-21x9 card-img-top" 
-                       style="background-color: #f1f5f9; display: flex; align-items: center; justify-content: center;">
-                    <i class="ti ti-plus" style="font-size: 2.5rem; color: #94a3b8;"></i>
+                       style="background-color: #f1f5f9; position: relative;">
+                    <i class="ti ti-plus" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: #94a3b8;"></i>
                   </div>
-                  <div class="card-body">
+                  <div class="card-body" style="background-color: #f1f5f9;">
                     <div class="mb-2">
-                      <h3 class="card-title mb-0" style="color: #64748b;">Add Activity</h3>
+                      <!-- Using actual h3 element with same class for exact height matching -->
+                      <h3 class="card-title mb-0" style="background-color: #e2e8f0; height: 28px; width: 120px; border-radius: 4px;"></h3>
                     </div>
                     <div class="d-flex gap-2 flex-wrap mb-3">
-                      <span class="badge bg-light text-muted">Create new</span>
+                      <!-- Invisible badges using exact same classes and text length to maintain height -->
+                      <span class="badge bg-green-lt" style="visibility: hidden;">4 active</span>
+                      <span class="badge bg-yellow-lt" style="visibility: hidden;">3 pending</span>
                     </div>
-                    <div class="btn btn-outline-secondary disabled">+ Create</div>
+                    <!-- Using actual button element with same class for exact height matching -->
+                    <a class="btn btn-secondary" style="background-color: #e2e8f0; border: none; color: transparent; pointer-events: none;">Manage</a>
                   </div>
                 </div>
               </a>
             </div>
-            {% endif %}
           </div>
           <!-- Scroll indicators for activities -->
           <div class="text-center mt-2">
-            {% set activity_count = activities|length %}
+            {% set activity_count = activities|length + 1 %} <!-- +1 for placeholder card -->
             {% set max_indicators = 4 if activity_count > 4 else activity_count %}
             {% for i in range(max_indicators) %}
               <span class="badge {% if i == 0 %}bg-primary{% else %}bg-light{% endif %} me-1" 
