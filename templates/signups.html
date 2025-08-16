@@ -8,7 +8,7 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title"><i class="ti ti-folder-symlink text-orange me-2"></i>Digital Sign up</h1>
+          <h1 class="page-title"><i class="ti ti-edit text-orange me-2"></i>Digital Sign up</h1>
         </div>
       </div>
     </div>
@@ -17,54 +17,6 @@
   <!-- Page Body -->
   <div class="page-body">
     <div class="dashboard-container">
-    
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-      <div class="col-md-3 mb-3">
-        <div class="card" style="border-radius: 12px; overflow: hidden;">
-          <div class="card-body text-center">
-            <div class="text-muted small text-uppercase mb-2">Total Signups</div>
-            <div class="h3 mb-1">{{ statistics.total }}</div>
-            <div class="text-muted small">
-              <i class="ti ti-users me-1"></i>{{ statistics.recent }} in last 7 days
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3 mb-3">
-        <div class="card" style="border-radius: 12px; overflow: hidden;">
-          <div class="card-body text-center">
-            <div class="text-muted small text-uppercase mb-2">Paid</div>
-            <div class="h3 mb-1 text-success">{{ statistics.paid }}</div>
-            <div class="text-success small">
-              <i class="ti ti-trending-up me-1"></i>{{ '{:.0f}%'.format((statistics.paid / statistics.total * 100) if statistics.total > 0 else 0) }}%
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3 mb-3">
-        <div class="card" style="border-radius: 12px; overflow: hidden;">
-          <div class="card-body text-center">
-            <div class="text-muted small text-uppercase mb-2">Unpaid</div>
-            <div class="h3 mb-1 text-danger">{{ statistics.unpaid }}</div>
-            <div class="text-danger small">
-              <i class="ti ti-clock me-1"></i>Awaiting payment
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3 mb-3">
-        <div class="card" style="border-radius: 12px; overflow: hidden;">
-          <div class="card-body text-center">
-            <div class="text-muted small text-uppercase mb-2">Pending Review</div>
-            <div class="h3 mb-1 text-warning">{{ statistics.pending }}</div>
-            <div class="text-warning small">
-              <i class="ti ti-alert-circle me-1"></i>Need approval
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Enhanced Dynamic Search -->
     <form method="GET" action="{{ url_for('list_signups') }}" class="mb-4" id="dynamicSearchForm">
@@ -151,7 +103,7 @@
           </div>
         </div>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive" style="margin-top: 2rem;">
         <table class="table table-hover">
         <thead>
           <tr>
@@ -592,6 +544,42 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Fix dropdown clipping issue in table - dynamic overflow control
+    const tableResponsive = document.querySelector('.table-responsive');
+    const card = document.querySelector('.card');
+    
+    // Listen for all dropdown events to manage overflow
+    document.addEventListener('show.bs.dropdown', function(e) {
+        // When any dropdown opens, remove overflow restrictions
+        if (tableResponsive) {
+            tableResponsive.style.overflow = 'visible';
+        }
+        if (card) {
+            card.style.overflow = 'visible';
+        }
+    });
+    
+    document.addEventListener('hide.bs.dropdown', function(e) {
+        // When dropdown closes, restore overflow settings
+        if (tableResponsive) {
+            tableResponsive.style.overflowX = 'auto';
+            tableResponsive.style.overflowY = 'visible';
+        }
+        if (card) {
+            card.style.overflow = 'visible';
+        }
+    });
+    
+    // Ensure dropdowns position correctly
+    document.addEventListener('shown.bs.dropdown', function(e) {
+        const dropdownMenu = e.target.querySelector('.dropdown-menu');
+        if (dropdownMenu) {
+            // Force proper z-index and positioning
+            dropdownMenu.style.zIndex = '1060';
+            dropdownMenu.style.position = 'absolute';
+        }
+    });
+
     // Initialize
     updateBulkActions();
     
@@ -600,30 +588,47 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endblock %}
 {% block styles %}
 <style>
-/* Fix dropdown z-index issues in tables */
+/* Fix dropdown positioning in tables - CRITICAL: Use dynamic overflow control */
 .table-responsive {
-  overflow: visible !important;
-  position: static !important;
-}
-.table-responsive .dropdown {
-  position: relative;
-}
-.table-responsive .dropdown-menu {
-  z-index: 9999 !important;
-  position: absolute !important;
-  transform: none !important;
-  top: 100% !important;
-  min-width: 160px;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-}
-.table-responsive .dropdown-menu.dropdown-menu-end {
-  right: 0 !important;
-  left: auto !important;
+  /* Default state: horizontal scroll, vertical visible */
+  overflow-x: auto;
+  overflow-y: visible;
+  margin-top: 2rem;
+  /* Will be dynamically changed to 'visible' when dropdowns open */
 }
 
-/* Ensure cards with dropdowns don't clip dropdowns */
-.table-responsive .card,
-.card:has(.dropdown-menu) {
+/* Ensure dropdown container can expand outside table bounds */
+.table-responsive .dropdown {
+  position: static; /* Changed from relative to static for better positioning */
+}
+
+/* Enhanced dropdown styling with higher z-index */
+.dropdown-menu {
+  z-index: 1060 !important; /* Higher than Bootstrap default */
+  position: absolute !important;
+  min-width: 180px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 0.5rem;
+  background-color: #fff;
+  /* Ensure proper positioning */
+  transform-origin: top right;
+  will-change: transform, opacity;
+}
+
+/* Dropdown positioning - ensure it appears properly */
+.dropdown-menu-end {
+  right: 0;
+  left: auto;
+}
+
+/* CRITICAL: Card container must allow dropdowns to overflow */
+.card {
+  overflow: visible !important;
+}
+
+/* Table wrapper overflow management */
+.table-responsive.dropdown-open {
   overflow: visible !important;
 }
 
@@ -825,13 +830,52 @@ document.addEventListener('DOMContentLoaded', function() {
   color: #64748b;
 }
 
-/* Dropdown Improvements */
+/* Enhanced Dropdown Improvements - NEVER CLIP DROPDOWNS */
 .dropdown-menu {
-  z-index: 1050;
+  z-index: 1060 !important; /* Higher z-index to ensure visibility */
   min-width: 180px;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  border: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.125);
   border-radius: 8px;
+  /* Use transform for smooth animations */
+  transform-origin: top right;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  /* Ensure it's always on top */
+  position: absolute !important;
+  will-change: transform, opacity;
+}
+
+/* Dropdown item hover effects */
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  transition: background-color 0.15s ease;
+}
+
+/* Ensure dropdown appears above other content with proper visibility */
+.dropdown.show .dropdown-menu {
+  display: block !important;
+  opacity: 1;
+  transform: scale(1);
+  z-index: 1060 !important;
+}
+
+/* Hide dropdown with smooth animation */
+.dropdown .dropdown-menu {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* CRITICAL: Force all parent containers to allow overflow when dropdown is open */
+.dropdown.show {
+  position: static;
+}
+
+/* Ensure table cells don't clip dropdown content */
+.table td.dropdown-open,
+.table th.dropdown-open {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1061;
 }
 
 /* Loading state */

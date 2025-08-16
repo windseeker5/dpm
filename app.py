@@ -1,6 +1,7 @@
 # 📦 Core Python Modules
 import os
 import io
+import re
 import uuid
 import json
 import base64
@@ -16,7 +17,7 @@ from datetime import datetime, timezone, timedelta
 # 🌐 Flask Core
 from flask import (
     Flask, render_template, render_template_string, request, redirect,
-    url_for, session, flash, get_flashed_messages, jsonify, current_app, make_response
+    url_for, session, flash, get_flashed_messages, jsonify, current_app, make_response, Response
 )
 
 
@@ -3733,6 +3734,60 @@ def create_survey():
         return redirect(url_for("activity_dashboard", activity_id=activity_id))
 
 
+@app.route("/create-quick-survey", methods=["POST"])
+def create_quick_survey():
+    """Create a quick survey using the default Post-Activity Feedback template"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        activity_id = request.form.get("activity_id")
+        survey_name = request.form.get("survey_name", "").strip()
+        
+        if not activity_id or not survey_name:
+            flash("❌ Activity and survey name are required", "error")
+            return redirect(url_for("activity_dashboard", activity_id=activity_id or 1))
+        
+        # Verify activity exists
+        activity = Activity.query.get(activity_id)
+        if not activity:
+            flash("❌ Activity not found", "error")
+            return redirect(url_for("dashboard"))
+        
+        # Get or create the default template
+        default_template = create_default_survey_template()
+        if not default_template:
+            flash("❌ Error creating default survey template", "error")
+            return redirect(url_for("activity_dashboard", activity_id=activity_id))
+        
+        # Generate unique survey token
+        survey_token = generate_survey_token()
+        
+        # Create the survey
+        survey = Survey(
+            activity_id=activity_id,
+            template_id=default_template.id,
+            name=survey_name,
+            description=f"Post-activity feedback survey for {activity.name}",
+            survey_token=survey_token,
+            status="active"
+        )
+        
+        db.session.add(survey)
+        db.session.commit()
+        
+        # Log the action
+        log_admin_action(f"Created quick survey '{survey_name}' for activity '{activity.name}' using default template")
+        
+        flash(f"✅ Quick survey '{survey_name}' created successfully using default template", "success")
+        return redirect(url_for("survey_results", survey_id=survey.id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"❌ Error creating quick survey: {str(e)}", "error")
+        return redirect(url_for("activity_dashboard", activity_id=activity_id))
+
+
 @app.route("/survey/<survey_token>")
 def take_survey(survey_token):
     """Public survey taking page"""
@@ -3922,6 +3977,98 @@ def get_or_create_survey_template(template_id, template_data):
         db.session.flush()  # To get the ID
     
     return template
+
+
+def create_default_survey_template():
+    """Create and seed the default Post-Activity Feedback survey template"""
+    template_name = "Post-Activity Feedback"
+    
+    # Check if template already exists
+    existing_template = SurveyTemplate.query.filter_by(name=template_name).first()
+    if existing_template:
+        return existing_template
+    
+    # Create the default survey questions
+    default_questions = [
+        {
+            "id": 1,
+            "text": "How would you rate your overall satisfaction with this activity?",
+            "type": "rating",
+            "required": True,
+            "min_rating": 1,
+            "max_rating": 5,
+            "labels": {
+                "1": "Very Dissatisfied",
+                "2": "Dissatisfied", 
+                "3": "Neutral",
+                "4": "Satisfied",
+                "5": "Very Satisfied"
+            }
+        },
+        {
+            "id": 2,
+            "text": "How would you rate the instructor/facilitator?",
+            "type": "rating",
+            "required": True,
+            "min_rating": 1,
+            "max_rating": 5,
+            "labels": {
+                "1": "Poor",
+                "2": "Fair",
+                "3": "Good", 
+                "4": "Very Good",
+                "5": "Excellent"
+            }
+        },
+        {
+            "id": 3,
+            "text": "What did you enjoy most about this activity?",
+            "type": "text",
+            "required": False,
+            "max_length": 500,
+            "placeholder": "Please share what you enjoyed most..."
+        },
+        {
+            "id": 4,
+            "text": "What could be improved for future activities?",
+            "type": "text",
+            "required": False,
+            "max_length": 500,
+            "placeholder": "Please share your suggestions for improvement..."
+        },
+        {
+            "id": 5,
+            "text": "Would you recommend this activity to others?",
+            "type": "multiple_choice",
+            "required": True,
+            "allow_multiple": False,
+            "options": [
+                {"value": "definitely_yes", "text": "Definitely yes"},
+                {"value": "probably_yes", "text": "Probably yes"},
+                {"value": "not_sure", "text": "Not sure"},
+                {"value": "probably_no", "text": "Probably no"},
+                {"value": "definitely_no", "text": "Definitely no"}
+            ]
+        }
+    ]
+    
+    # Create the template
+    template = SurveyTemplate(
+        name=template_name,
+        description="Standard post-activity feedback survey with ratings, open feedback, and recommendation questions",
+        questions=json.dumps({"questions": default_questions}),
+        status="active"
+    )
+    
+    try:
+        db.session.add(template)
+        db.session.commit()
+        print(f"✅ Default survey template '{template_name}' created successfully")
+        return template
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error creating default survey template: {str(e)}")
+        return None
 
 
 
@@ -4358,9 +4505,96 @@ def export_survey_results(survey_id):
     if "admin" not in session:
         return redirect(url_for("login"))
     
-    # TODO: Implement CSV/Excel export functionality
-    flash("Export functionality will be implemented", "info")
-    return redirect(url_for("survey_results", survey_id=survey_id))
+    try:
+        # Get survey and its responses
+        survey = Survey.query.get_or_404(survey_id)
+        responses = SurveyResponse.query.filter_by(survey_id=survey_id, completed=True).all()
+        
+        if not responses:
+            flash("No completed responses found for this survey", "info")
+            return redirect(url_for("survey_results", survey_id=survey_id))
+        
+        # Get survey questions from template
+        import json
+        template_data = json.loads(survey.template.questions)
+        
+        # Handle both old and new template formats
+        if isinstance(template_data, list):
+            template_questions = template_data  # Old format: direct array
+        else:
+            template_questions = template_data.get('questions', [])  # New format: wrapped in object
+        
+        # Create CSV content
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write headers
+        headers = [
+            'Response ID', 'User Name', 'User Email', 'Passport ID',
+            'Started Date', 'Completed Date', 'IP Address'
+        ]
+        
+        # Add question headers
+        for question in template_questions:
+            headers.append(f"Q{question['id']}: {question['text']}")
+        
+        writer.writerow(headers)
+        
+        # Write response data
+        for response in responses:
+            response_data = json.loads(response.responses) if response.responses else {}
+            
+            row = [
+                response.id,
+                response.user.name if response.user else 'N/A',
+                response.user.email if response.user else 'N/A',
+                response.passport_id or 'N/A',
+                response.started_dt.strftime('%Y-%m-%d %H:%M:%S') if response.started_dt else 'N/A',
+                response.completed_dt.strftime('%Y-%m-%d %H:%M:%S') if response.completed_dt else 'N/A',
+                response.ip_address or 'N/A'
+            ]
+            
+            # Add answer data for each question
+            for question in template_questions:
+                question_id = str(question['id'])
+                answer = response_data.get(question_id, 'No response')
+                
+                # Format answer based on question type
+                if question['type'] == 'rating':
+                    if isinstance(answer, (int, float)):
+                        row.append(f"{answer}/{question.get('max_rating', 5)}")
+                    else:
+                        row.append(answer)
+                elif question['type'] == 'multiple_choice':
+                    if isinstance(answer, list):
+                        row.append('; '.join(answer))
+                    else:
+                        row.append(answer)
+                else:
+                    row.append(str(answer) if answer else 'No response')
+            
+            writer.writerow(row)
+        
+        # Create response
+        csv_content = output.getvalue()
+        output.close()
+        
+        # Generate filename
+        safe_survey_name = re.sub(r'[^\w\s-]', '', survey.name).strip()
+        safe_survey_name = re.sub(r'[-\s]+', '-', safe_survey_name)
+        filename = f"survey-{survey_id}-{safe_survey_name}-{datetime.now().strftime('%Y%m%d')}.csv"
+        
+        # Return CSV file
+        return Response(
+            csv_content,
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        )
+        
+    except Exception as e:
+        print(f"Export error: {str(e)}")
+        flash("Error exporting survey results", "error")
+        return redirect(url_for("survey_results", survey_id=survey_id))
 
 
 @app.route("/survey/<int:survey_id>/close", methods=["POST"])
@@ -4426,6 +4660,13 @@ def typography_preview():
     if "admin" not in session:
         return redirect(url_for("admin_login"))
     return render_template("typography_preview.html")
+
+# Initialize default survey template on startup
+with app.app_context():
+    try:
+        create_default_survey_template()
+    except Exception as e:
+        print(f"Warning: Could not initialize default survey template: {str(e)}")
 
 if __name__ == "__main__":
     port = 8890
