@@ -1,355 +1,76 @@
 {% extends "base.html" %}
 {% block title %}Signups Management{% endblock %}
 
-{% block head %}
-<style>
-/* Clean, modern styles following Tabler design system */
-.page-header {
-  margin-bottom: 1.5rem;
-}
-
-/* Statistics Cards */
-.stat-card {
-  transition: all 0.3s ease;
-  border: 1px solid var(--tblr-border-color);
-  height: 100%;
-}
-.stat-card:hover {
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-.stat-value {
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--tblr-body-color);
-}
-.stat-subtitle {
-  font-size: 0.875rem;
-  color: var(--tblr-muted);
-  margin-top: 0.25rem;
-}
-.stat-icon {
-  width: 3rem;
-  height: 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem;
-  font-size: 1.5rem;
-}
-
-/* Filter System */
-.filter-bar {
-  background: var(--tblr-bg-surface);
-  border: 1px solid var(--tblr-border-color);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-.filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-.filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.75rem;
-  background: var(--tblr-bg-surface-secondary);
-  border: 1px solid var(--tblr-border-color);
-  border-radius: 1rem;
-  font-size: 0.875rem;
-}
-.filter-chip .btn-close {
-  width: 1rem;
-  height: 1rem;
-  padding: 0;
-  background-size: 0.5rem;
-  opacity: 0.5;
-}
-.filter-chip .btn-close:hover {
-  opacity: 1;
-}
-/* Table Improvements */
-.table-signups {
-  margin-bottom: 0;
-}
-.table-signups thead th {
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--tblr-muted);
-  border-bottom: 2px solid var(--tblr-border-color);
-  padding: 0.75rem 1rem;
-}
-.table-signups tbody tr {
-  transition: background-color 0.15s ease;
-}
-.table-signups tbody tr:hover {
-  background-color: var(--tblr-bg-surface);
-}
-.table-signups td {
-  padding: 1rem;
-  vertical-align: middle;
-}
-
-/* User Cell */
-.user-cell {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.user-info {
-  min-width: 0;
-}
-.user-name {
-  font-weight: 500;
-  color: var(--tblr-body-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.user-email {
-  font-size: 0.875rem;
-  color: var(--tblr-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Status Badges */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-/* Dropdown Improvements */
-.dropdown-menu {
-  z-index: 1050;
-  min-width: 180px;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-/* Bulk Actions Bar */
-.bulk-actions {
-  background: var(--tblr-warning-bg-subtle);
-  border: 1px solid var(--tblr-warning-border-subtle);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  animation: slideDown 0.3s ease;
-}
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.bulk-actions-count {
-  font-weight: 500;
-  color: var(--tblr-body-color);
-}
-.bulk-actions-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* Empty State */
-.empty {
-  padding: 3rem 1rem;
-  text-align: center;
-}
-.empty-icon {
-  font-size: 3rem;
-  color: var(--tblr-muted);
-  margin-bottom: 1rem;
-}
-.empty-title {
-  font-size: 1.25rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-.empty-subtitle {
-  color: var(--tblr-muted);
-}
-
-/* Responsive Design */
-@media (max-width: 991px) {
-  .stat-card {
-    margin-bottom: 1rem;
-  }
-  
-  .filter-bar .row > div {
-    margin-bottom: 0.5rem;
-  }
-  
-  .table-signups .d-none-mobile {
-    display: none !important;
-  }
-}
-
-@media (max-width: 767px) {
-  .page-header .page-title {
-    font-size: 1.25rem;
-  }
-  
-  .stat-value {
-    font-size: 1.5rem;
-  }
-  
-  .bulk-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  
-  .bulk-actions-buttons {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-  
-  .bulk-actions-buttons .btn {
-    flex: 1;
-    min-width: calc(50% - 0.25rem);
-  }
-}
-
-/* Ensure proper checkbox alignment */
-.form-check-input {
-  margin-top: 0;
-}
-
-/* Loading state */
-.table-loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.6;
-}
-.table-loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 2rem;
-  height: 2rem;
-  margin: -1rem 0 0 -1rem;
-  border: 0.25rem solid var(--tblr-primary);
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: rotate 0.75s linear infinite;
-}
-@keyframes rotate {
-  to { transform: rotate(360deg); }
-}
-</style>
-{% endblock %}
-
 {% block content %}
-<!-- Page Header -->
-<div class="page-header d-print-none">
-  <div class="container-xl">
-    <div class="row g-2 align-items-center">
-      <div class="col">
-        <div class="page-pretitle">Management</div>
-        <h2 class="page-title">
-          Signups
-        </h2>
-      </div>
-      <div class="col-auto ms-auto d-print-none">
-        <div class="btn-list">
-          <a href="{{ url_for('export_signups') }}?{{ request.query_string.decode() }}" class="btn btn-white">
-            <i class="ti ti-download"></i>
-            Export
-          </a>
+<div class="page-wrapper">
+  <!-- Page Header -->
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <div class="page-pretitle">Management</div>
+          <h2 class="page-title">
+            Signups
+          </h2>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+          <div class="btn-list">
+            <a href="{{ url_for('export_signups') }}?{{ request.query_string.decode() }}" class="btn btn-white">
+              <i class="ti ti-download"></i>
+              Export
+            </a>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Page Body -->
-<div class="page-body">
-  <div class="container-xl">
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="dashboard-container">
     
     <!-- Statistics Cards -->
-    <div class="row row-cards mb-3">
-      <div class="col-sm-6 col-lg-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-fill">
-                <div class="subheader">Total Signups</div>
-                <div class="stat-value">{{ statistics.total }}</div>
-                <div class="stat-subtitle">{{ statistics.recent }} in last 7 days</div>
-              </div>
-              <div class="stat-icon bg-blue-lt text-blue">
-                <i class="ti ti-users"></i>
-              </div>
+    <div class="row mb-4">
+      <div class="col-md-3 mb-3">
+        <div class="card" style="border-radius: 12px; overflow: hidden;">
+          <div class="card-body text-center">
+            <div class="text-muted small text-uppercase mb-2">Total Signups</div>
+            <div class="h3 mb-1">{{ statistics.total }}</div>
+            <div class="text-muted small">
+              <i class="ti ti-users me-1"></i>{{ statistics.recent }} in last 7 days
             </div>
           </div>
         </div>
       </div>
-      <div class="col-sm-6 col-lg-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-fill">
-                <div class="subheader">Paid</div>
-                <div class="stat-value text-success">{{ statistics.paid }}</div>
-                <div class="stat-subtitle">{{ '{:.0f}%'.format((statistics.paid / statistics.total * 100) if statistics.total > 0 else 0) }} of total</div>
-              </div>
-              <div class="stat-icon bg-success-lt text-success">
-                <i class="ti ti-check"></i>
-              </div>
+      <div class="col-md-3 mb-3">
+        <div class="card" style="border-radius: 12px; overflow: hidden;">
+          <div class="card-body text-center">
+            <div class="text-muted small text-uppercase mb-2">Paid</div>
+            <div class="h3 mb-1 text-success">{{ statistics.paid }}</div>
+            <div class="text-success small">
+              <i class="ti ti-trending-up me-1"></i>{{ '{:.0f}%'.format((statistics.paid / statistics.total * 100) if statistics.total > 0 else 0) }}%
             </div>
           </div>
         </div>
       </div>
-      <div class="col-sm-6 col-lg-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-fill">
-                <div class="subheader">Unpaid</div>
-                <div class="stat-value text-danger">{{ statistics.unpaid }}</div>
-                <div class="stat-subtitle">Awaiting payment</div>
-              </div>
-              <div class="stat-icon bg-danger-lt text-danger">
-                <i class="ti ti-clock"></i>
-              </div>
+      <div class="col-md-3 mb-3">
+        <div class="card" style="border-radius: 12px; overflow: hidden;">
+          <div class="card-body text-center">
+            <div class="text-muted small text-uppercase mb-2">Unpaid</div>
+            <div class="h3 mb-1 text-danger">{{ statistics.unpaid }}</div>
+            <div class="text-danger small">
+              <i class="ti ti-clock me-1"></i>Awaiting payment
             </div>
           </div>
         </div>
       </div>
-      <div class="col-sm-6 col-lg-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-fill">
-                <div class="subheader">Pending Review</div>
-                <div class="stat-value text-warning">{{ statistics.pending }}</div>
-                <div class="stat-subtitle">Need approval</div>
-              </div>
-              <div class="stat-icon bg-warning-lt text-warning">
-                <i class="ti ti-alert-circle"></i>
-              </div>
+      <div class="col-md-3 mb-3">
+        <div class="card" style="border-radius: 12px; overflow: hidden;">
+          <div class="card-body text-center">
+            <div class="text-muted small text-uppercase mb-2">Pending Review</div>
+            <div class="h3 mb-1 text-warning">{{ statistics.pending }}</div>
+            <div class="text-warning small">
+              <i class="ti ti-alert-circle me-1"></i>Need approval
             </div>
           </div>
         </div>
@@ -358,7 +79,7 @@
 
 
     <!-- Search and Filter Bar -->
-    <div class="card filter-bar">
+    <div class="card filter-bar mb-4">
       <form method="GET" action="{{ url_for('list_signups') }}" id="filterForm">
         <div class="row g-2">
           <!-- Search -->
@@ -499,19 +220,25 @@
 
     <!-- Main Table -->
     <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="ti ti-users me-2"></i>All Signups
+        </h3>
+      </div>
       <div class="table-responsive">
-        <table class="table table-vcenter table-signups">
+        <table class="table table-hover">
         <thead>
           <tr>
             <th class="w-1">
               <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
             </th>
-            <th>User</th>
-            <th>Activity</th>
-            <th class="d-none d-lg-table-cell">Pass Type</th>
-            <th class="text-center">Status</th>
-            <th class="d-none d-md-table-cell">Date</th>
-            <th class="w-1"></th>
+            <th style="width: 300px;">User</th>
+            <th class="d-none d-md-table-cell">Created</th>
+            <th class="d-none d-md-table-cell">Activity</th>
+            <th class="d-none d-lg-table-cell text-center">Status</th>
+            <th class="d-none d-md-table-cell text-center">Amount</th>
+            <th class="d-none d-md-table-cell text-center">Remain</th>
+            <th style="width: 120px;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -525,33 +252,43 @@
                      form="bulkForm"
                      aria-label="Select signup {{ signup.id }}">
             </td>
-            <td>
-              <div class="user-cell">
-                <span class="avatar avatar-sm" style="background-image: url('https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon')"></span>
-                <div class="user-info">
-                  <div class="user-name">{{ signup.user.name or 'Anonymous' }}</div>
-                  <div class="user-email">{{ signup.user.email or 'No email' }}</div>
+            <td style="vertical-align: middle;">
+              <div class="d-flex align-items-center">
+                <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+                     class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+                <div>
+                  <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
+                  <div class="text-muted small">{{ signup.user.email or 'No email' }}</div>
                 </div>
               </div>
             </td>
-            <td>
-              <div>
-                <span class="badge badge-outline text-blue">{{ signup.activity.name if signup.activity else 'Unknown' }}</span>
-              </div>
-              {% if signup.passport_type_id %}
-                {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
-                {% if passport_type %}
-                  <div class="text-muted small mt-1">
-                    ${{ "%.0f"|format(passport_type.price_per_user or 0) }} • {{ passport_type.sessions_included }} sessions
-                  </div>
-                {% endif %}
+            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+              {% if signup.signed_up_at %}
+                {{ signup.signed_up_at.strftime('%Y-%m-%d') }}
+              {% else %}
+                <span class="text-muted">Unknown</span>
               {% endif %}
             </td>
-            <td class="d-none d-lg-table-cell">
+            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+              {{ signup.activity.name if signup.activity else 'Unknown' }}
+            </td>
+            <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
+              {% set status = signup.status or 'pending' %}
+              {% if status == 'approved' %}
+                <span class="badge bg-green-lt text-green-lt-fg">Approved</span>
+              {% elif status == 'pending' %}
+                <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending</span>
+              {% elif status == 'rejected' %}
+                <span class="badge bg-red-lt text-red-lt-fg">Rejected</span>
+              {% else %}
+                <span class="badge bg-secondary-lt">{{ status.title() }}</span>
+              {% endif %}
+            </td>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
               {% if signup.passport_type_id %}
                 {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
                 {% if passport_type %}
-                  <span class="badge bg-purple-lt">{{ passport_type.name }}</span>
+                  ${{ "%.0f"|format(passport_type.price_per_user or 0) }}
                 {% else %}
                   <span class="text-muted">-</span>
                 {% endif %}
@@ -559,62 +296,50 @@
                 <span class="text-muted">-</span>
               {% endif %}
             </td>
-            <td class="text-center">
-              <div class="d-flex flex-column align-items-center gap-1">
-                {% set status = signup.status or 'pending' %}
-                {% if status == 'approved' %}
-                  <span class="badge bg-success">Approved</span>
-                {% elif status == 'pending' %}
-                  <span class="badge bg-warning">Pending</span>
-                {% elif status == 'rejected' %}
-                  <span class="badge bg-danger">Rejected</span>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+              {% if signup.passport_type_id %}
+                {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+                {% if passport_type %}
+                  {{ passport_type.sessions_included }}
                 {% else %}
-                  <span class="badge bg-secondary">{{ status.title() }}</span>
+                  <span class="text-muted">-</span>
                 {% endif %}
-                
-                {% if signup.paid %}
-                  <span class="badge bg-success-lt">Paid</span>
-                {% else %}
-                  <span class="badge bg-danger-lt">Unpaid</span>
-                {% endif %}
-              </div>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
             </td>
-            <td class="d-none d-md-table-cell">
-              <div class="text-nowrap">
-                {{ signup.signed_up_at.strftime('%b %d, %Y') if signup.signed_up_at else 'Unknown' }}
-              </div>
-              <div class="text-muted small">
-                {{ signup.signed_up_at.strftime('%I:%M %p') if signup.signed_up_at else '' }}
-              </div>
-            </td>
-            <td>
+            <td style="vertical-align: middle;">
               <div class="dropdown">
-                <button class="btn btn-ghost-secondary btn-icon dropdown-toggle" data-bs-toggle="dropdown" aria-label="Actions">
-                  <i class="ti ti-dots-vertical"></i>
-                </button>
+                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                  <span class="d-none d-md-inline">Actions</span>
+                  <i class="ti ti-menu-2 d-md-none"></i>
+                </a>
                 <div class="dropdown-menu dropdown-menu-end">
                   <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
-                    <i class="ti ti-edit me-2"></i> Edit Details
+                    <i class="ti ti-pencil me-2"></i>Edit Details
                   </a>
                   {% if not signup.paid %}
-                  <a class="dropdown-item" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}" 
+                  <a class="dropdown-item text-success" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}" 
                      onclick="return confirm('Mark this signup as paid?')">
-                    <i class="ti ti-check me-2"></i> Mark as Paid
+                    <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
                   </a>
                   {% endif %}
                   {% if signup.status == 'pending' %}
-                  <a class="dropdown-item" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
+                  <a class="dropdown-item text-primary" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
                      onclick="return confirm('Approve and create passport?')">
-                    <i class="ti ti-thumb-up me-2"></i> Approve & Create Pass
+                    <i class="ti ti-check me-2"></i>Approve & Create Pass
                   </a>
                   {% endif %}
+                  <a class="dropdown-item" href="#">
+                    <i class="ti ti-mail me-2"></i>Send Reminder
+                  </a>
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#" 
                      onclick="if(confirm('Delete this signup?')) { 
                        var form = document.getElementById('deleteForm{{ signup.id }}'); 
                        if(form) form.submit(); 
                      }">
-                    <i class="ti ti-trash me-2"></i> Delete
+                    <i class="ti ti-trash me-2"></i>Delete
                   </a>
                 </div>
               </div>
@@ -629,8 +354,36 @@
         </tbody>
       </table>
       </div>
+      
+      <!-- Pagination -->
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <span class="text-muted">Showing 1 to {{ signups|length }} of {{ signups|length }} entries</span>
+        <nav>
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item disabled">
+              <a class="page-link" href="#" tabindex="-1">
+                <i class="ti ti-chevron-left"></i>
+              </a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="#">
+                <i class="ti ti-chevron-right"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      </div>
     </div>
-
 
     <!-- Empty State -->
     {% if signups|length == 0 %}
@@ -651,6 +404,7 @@
     </div>
     {% endif %}
 
+    </div>
   </div>
 </div>
 
@@ -750,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('filterForm');
     if (filterForm) {
         filterForm.addEventListener('submit', function() {
-            const table = document.querySelector('.table-signups');
+            const table = document.querySelector('.table-hover');
             if (table) {
                 table.classList.add('table-loading');
             }
@@ -758,4 +512,355 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+{% endblock %}
+{% block styles %}
+<style>
+/* Fix dropdown z-index issues in tables */
+.table-responsive {
+  overflow: visible !important;
+  position: static !important;
+}
+.table-responsive .dropdown {
+  position: relative;
+}
+.table-responsive .dropdown-menu {
+  z-index: 9999 !important;
+  position: absolute !important;
+  transform: none !important;
+  top: 100% !important;
+  min-width: 160px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+.table-responsive .dropdown-menu.dropdown-menu-end {
+  right: 0 !important;
+  left: auto !important;
+}
+
+/* Ensure cards with dropdowns don't clip dropdowns */
+.table-responsive .card,
+.card:has(.dropdown-menu) {
+  overflow: visible !important;
+}
+
+/* Fix card footer background to white per style guide */
+.card-footer {
+  background-color: #fff !important;
+  border-top: 1px solid rgba(98, 105, 118, 0.16);
+}
+
+/* Add proper table padding for alignment with card margins */
+.table-responsive .table td:first-child {
+  padding-left: 1.5rem !important;
+}
+.table-responsive .table td:last-child {
+  padding-right: 1.5rem !important;
+}
+.table-responsive .table th:first-child {
+  padding-left: 1.5rem !important;
+}
+.table-responsive .table th:last-child {
+  padding-right: 1.5rem !important;
+}
+
+/* Dashboard Container Styling to match other pages */
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Enhanced Card Design matching dashboard style */
+.card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced Hover Effects */
+.card:hover {
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px) scale(1.01);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* KPI Card Enhancements */
+.card .card-body {
+  padding: 1.75rem 1.5rem;
+  position: relative;
+}
+
+.card .text-uppercase {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.card .h3 {
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  color: #0f172a;
+  margin-bottom: 0.75rem;
+}
+
+/* Page Header Styling */
+.page-header {
+  background: transparent;
+  border: none;
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 2.25rem;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+/* Table Improvements following Tabler style guide */
+.table {
+  background-color: transparent !important;
+}
+
+.table th {
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* User Cell */
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-info {
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 0.875rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Filter System */
+.filter-bar {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+}
+
+.filter-chip .btn-close {
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  background-size: 0.5rem;
+  opacity: 0.5;
+}
+
+.filter-chip .btn-close:hover {
+  opacity: 1;
+}
+
+/* Bulk Actions Bar */
+.bulk-actions {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulk-actions-count {
+  font-weight: 500;
+  color: #334155;
+}
+
+.bulk-actions-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Empty State */
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+.empty-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.empty-subtitle {
+  color: #64748b;
+}
+
+/* Dropdown Improvements */
+.dropdown-menu {
+  z-index: 1050;
+  min-width: 180px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  border: none;
+  border-radius: 8px;
+}
+
+/* Loading state */
+.table-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.table-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2rem;
+  height: 2rem;
+  margin: -1rem 0 0 -1rem;
+  border: 0.25rem solid #3b82f6;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: rotate 0.75s linear infinite;
+}
+
+@keyframes rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 991px) {
+  .filter-bar .row > div {
+    margin-bottom: 0.5rem;
+  }
+  
+  .table .d-none-mobile {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-container {
+    padding: 0 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+  }
+  
+  .bulk-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .bulk-actions-buttons {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .bulk-actions-buttons .btn {
+    flex: 1;
+    min-width: calc(50% - 0.25rem);
+  }
+}
+
+/* Form improvements */
+.form-check-input {
+  margin-top: 0;
+}
+
+/* User avatar styling */
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+</style>
 {% endblock %}
