@@ -823,12 +823,15 @@ def list_signups():
     
     # Apply text search filter
     if q:
+        # Escape special characters for LIKE queries to prevent issues
+        escaped_q = q.replace('%', '\%').replace('_', '\_')
         search_filter = db.or_(
-            User.name.ilike(f'%{q}%'),
-            User.email.ilike(f'%{q}%'),
-            Signup.subject.ilike(f'%{q}%'),
-            Signup.description.ilike(f'%{q}%'),
-            Activity.name.ilike(f'%{q}%')
+            User.name.ilike(f'%{escaped_q}%', escape='\\'),
+            User.email.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.subject.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.description.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.form_data.ilike(f'%{escaped_q}%', escape='\\'),
+            Activity.name.ilike(f'%{escaped_q}%', escape='\\')
         )
         query = query.join(User).join(Activity).filter(search_filter)
     else:
@@ -1056,12 +1059,15 @@ def export_signups():
     
     # Apply filters (same logic as list_signups)
     if q:
+        # Escape special characters for LIKE queries to prevent issues
+        escaped_q = q.replace('%', '\%').replace('_', '\_')
         search_filter = db.or_(
-            User.name.ilike(f'%{q}%'),
-            User.email.ilike(f'%{q}%'),
-            Signup.subject.ilike(f'%{q}%'),
-            Signup.description.ilike(f'%{q}%'),
-            Activity.name.ilike(f'%{q}%')
+            User.name.ilike(f'%{escaped_q}%', escape='\\'),
+            User.email.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.subject.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.description.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.form_data.ilike(f'%{escaped_q}%', escape='\\'),
+            Activity.name.ilike(f'%{escaped_q}%', escape='\\')
         )
         query = query.join(User).join(Activity).filter(search_filter)
     else:

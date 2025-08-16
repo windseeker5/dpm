@@ -8,18 +8,7 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <div class="page-pretitle">Management</div>
-          <h2 class="page-title">
-            Signups
-          </h2>
-        </div>
-        <div class="col-auto ms-auto d-print-none">
-          <div class="btn-list">
-            <a href="{{ url_for('export_signups') }}?{{ request.query_string.decode() }}" class="btn btn-white">
-              <i class="ti ti-download"></i>
-              Export
-            </a>
-          </div>
+          <h1 class="page-title"><i class="ti ti-folder-symlink text-orange me-2"></i>Digital Sign up</h1>
         </div>
       </div>
     </div>
@@ -77,117 +66,27 @@
       </div>
     </div>
 
+    <!-- Enhanced Dynamic Search -->
+    <form method="GET" action="{{ url_for('list_signups') }}" class="mb-4" id="dynamicSearchForm">
+      <div class="input-icon position-relative">
+        <span class="input-icon-addon">
+          <i class="ti ti-search fs-3"></i>
+        </span>
+        <input type="text" 
+               name="q"
+               id="enhancedSearchInput"
+               class="form-control form-control-lg shadow-sm" 
+               placeholder="Start typing to search signups instantly..." 
+               value="{{ current_filters.q or '' }}"
+               style="padding-right: 100px; border-radius: 0.5rem;"
+               autocomplete="off">
+        <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
+          <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
+          <kbd class="text-muted">ctrl + k</kbd>
+        </div>
+      </div>
+    </form>
 
-    <!-- Search and Filter Bar -->
-    <div class="card filter-bar mb-4">
-      <form method="GET" action="{{ url_for('list_signups') }}" id="filterForm">
-        <div class="row g-2">
-          <!-- Search -->
-          <div class="col-12 col-md-4">
-            <div class="input-icon">
-              <span class="input-icon-addon">
-                <i class="ti ti-search"></i>
-              </span>
-              <input type="text" name="q" class="form-control" placeholder="Search users, activities..." 
-                     value="{{ current_filters.q or '' }}" id="searchInput">
-            </div>
-          </div>
-          
-          <!-- Activity Filter -->
-          <div class="col-6 col-md-3">
-            <select name="activity_id" class="form-select" onchange="document.getElementById('filterForm').submit();">
-              <option value="">All Activities</option>
-              {% for activity in activities %}
-                <option value="{{ activity.id }}" 
-                        {% if current_filters.activity_id == activity.id|string %}selected{% endif %}>
-                  {{ activity.name }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-          
-          <!-- Status Filter -->
-          <div class="col-6 col-md-2">
-            <select name="status" class="form-select" onchange="document.getElementById('filterForm').submit();">
-              <option value="">All Status</option>
-              {% for status in statuses %}
-                <option value="{{ status }}" 
-                        {% if current_filters.status == status %}selected{% endif %}>
-                  {{ status.title() }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-          
-          <!-- Payment Filter -->
-          <div class="col-6 col-md-2">
-            <select name="payment_status" class="form-select" onchange="document.getElementById('filterForm').submit();">
-              <option value="">Payment</option>
-              <option value="paid" {% if current_filters.payment_status == 'paid' %}selected{% endif %}>Paid</option>
-              <option value="unpaid" {% if current_filters.payment_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
-            </select>
-          </div>
-          
-          <!-- Advanced Filters Toggle -->
-          <div class="col-6 col-md-1">
-            <button type="button" class="btn btn-icon w-100" data-bs-toggle="collapse" data-bs-target="#advancedFilters" 
-                    aria-expanded="false" aria-controls="advancedFilters" title="Advanced filters">
-              <i class="ti ti-adjustments"></i>
-            </button>
-          </div>
-        </div>
-        
-        <!-- Advanced Filters (Collapsible) -->
-        <div class="collapse mt-3" id="advancedFilters">
-          <div class="row g-2 pt-3 border-top">
-            <div class="col-md-3">
-              <label class="form-label small text-muted">Start Date</label>
-              <input type="date" name="start_date" class="form-control" 
-                     value="{{ current_filters.start_date or '' }}" onchange="document.getElementById('filterForm').submit();">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label small text-muted">End Date</label>
-              <input type="date" name="end_date" class="form-control" 
-                     value="{{ current_filters.end_date or '' }}" onchange="document.getElementById('filterForm').submit();">
-            </div>
-          </div>
-        </div>
-        
-        <!-- Active Filters Display -->
-        {% if current_filters.q or current_filters.activity_id or current_filters.payment_status or current_filters.status or current_filters.start_date or current_filters.end_date %}
-        <div class="filter-chips">
-          <span class="text-muted small me-2">Active filters:</span>
-          {% if current_filters.q %}
-          <span class="filter-chip">
-            Search: {{ current_filters.q }}
-            <a href="{{ url_for('list_signups', activity_id=current_filters.activity_id, status=current_filters.status, payment_status=current_filters.payment_status, start_date=current_filters.start_date, end_date=current_filters.end_date) }}" class="btn-close"></a>
-          </span>
-          {% endif %}
-          {% if current_filters.activity_id %}
-          <span class="filter-chip">
-            Activity: {{ activities|selectattr('id', 'equalto', current_filters.activity_id|int)|map(attribute='name')|first }}
-            <a href="{{ url_for('list_signups', q=current_filters.q, status=current_filters.status, payment_status=current_filters.payment_status, start_date=current_filters.start_date, end_date=current_filters.end_date) }}" class="btn-close"></a>
-          </span>
-          {% endif %}
-          {% if current_filters.status %}
-          <span class="filter-chip">
-            Status: {{ current_filters.status.title() }}
-            <a href="{{ url_for('list_signups', q=current_filters.q, activity_id=current_filters.activity_id, payment_status=current_filters.payment_status, start_date=current_filters.start_date, end_date=current_filters.end_date) }}" class="btn-close"></a>
-          </span>
-          {% endif %}
-          {% if current_filters.payment_status %}
-          <span class="filter-chip">
-            Payment: {{ current_filters.payment_status.title() }}
-            <a href="{{ url_for('list_signups', q=current_filters.q, activity_id=current_filters.activity_id, status=current_filters.status, start_date=current_filters.start_date, end_date=current_filters.end_date) }}" class="btn-close"></a>
-          </span>
-          {% endif %}
-          <a href="{{ url_for('list_signups') }}" class="btn btn-sm btn-ghost-secondary">
-            Clear all
-          </a>
-        </div>
-        {% endif %}
-      </form>
-    </div>
 
     <!-- Bulk Actions Bar -->
     <div class="bulk-actions" id="bulkActions" style="display: none;">
@@ -394,8 +293,8 @@
         </div>
         <p class="empty-title">No signups found</p>
         <p class="empty-subtitle">
-          {% if current_filters.q or current_filters.activity_id or current_filters.payment_status or current_filters.status %}
-            Try adjusting your filters or <a href="{{ url_for('list_signups') }}">clear all filters</a>
+          {% if current_filters.q %}
+            Try adjusting your search or <a href="{{ url_for('list_signups') }}">clear search</a>
           {% else %}
             Signups will appear here when users register for activities
           {% endif %}
@@ -462,54 +361,191 @@ document.addEventListener('DOMContentLoaded', function() {
         checkbox.addEventListener('change', updateBulkActions);
     });
 
-    // Search field - submit on Enter
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('filterForm').submit();
+    // Enhanced dynamic search functionality
+    const enhancedSearchInput = document.getElementById('enhancedSearchInput');
+    const searchForm = enhancedSearchInput.closest('form');
+    const tableContainer = document.querySelector('.table-responsive');
+    let searchTimeout;
+    let isSearching = false;
+
+    // Create loading indicator
+    function createLoadingIndicator() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'searchLoadingIndicator';
+        loadingDiv.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center p-3">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="text-muted">Searching...</span>
+            </div>
+        `;
+        loadingDiv.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+            display: none;
+        `;
+        return loadingDiv;
+    }
+
+    const loadingIndicator = createLoadingIndicator();
+    tableContainer.style.position = 'relative';
+    tableContainer.appendChild(loadingIndicator);
+
+    // Show/hide loading state
+    function setLoadingState(loading) {
+        isSearching = loading;
+        if (loading) {
+            loadingIndicator.style.display = 'flex';
+            enhancedSearchInput.style.opacity = '0.8';
+            enhancedSearchInput.classList.add('searching-pulse');
+            if (charCounter) {
+                charCounter.style.display = 'inline';
+                charCounter.textContent = 'searching...';
+                charCounter.className = 'text-primary fw-bold';
             }
-        });
-        
-        // Auto-focus search on page load if no filters active
-        const hasActiveFilters = window.location.search.length > 1;
-        if (!hasActiveFilters) {
-            searchInput.focus();
+        } else {
+            loadingIndicator.style.display = 'none';
+            enhancedSearchInput.style.opacity = '1';
+            enhancedSearchInput.classList.remove('searching-pulse');
+            // Reset character counter based on current input
+            updateSearchFeedback(enhancedSearchInput.value);
         }
     }
 
-    // Smooth collapse animation for advanced filters
-    const advancedFilters = document.getElementById('advancedFilters');
-    if (advancedFilters) {
-        advancedFilters.addEventListener('show.bs.collapse', function() {
-            const toggleBtn = document.querySelector('[data-bs-target="#advancedFilters"]');
-            if (toggleBtn) {
-                toggleBtn.querySelector('i').classList.add('ti-rotate-90');
-            }
-        });
+    // Perform search by navigating to URL with query params
+    function performSearch(query) {
+        if (isSearching) return; // Prevent multiple simultaneous searches
         
-        advancedFilters.addEventListener('hide.bs.collapse', function() {
-            const toggleBtn = document.querySelector('[data-bs-target="#advancedFilters"]');
-            if (toggleBtn) {
-                toggleBtn.querySelector('i').classList.remove('ti-rotate-90');
-            }
-        });
+        setLoadingState(true);
+        
+        // Build URL with search query
+        const url = new URL(window.location.href);
+        if (query && query.trim().length >= 3) {
+            url.searchParams.set('q', query.trim());
+        } else {
+            url.searchParams.delete('q');
+        }
+        
+        // Navigate to the search URL - this will reload the page with results
+        window.location.href = url.toString();
     }
+
+    // Debounced search function
+    function debouncedSearch(query) {
+        clearTimeout(searchTimeout);
+        
+        // If query is empty, clear search immediately
+        if (!query || query.trim().length === 0) {
+            searchTimeout = setTimeout(() => performSearch(''), 150);
+            return;
+        }
+        
+        // If query is less than 3 characters, don't search yet
+        if (query.trim().length < 3) {
+            return;
+        }
+        
+        // Debounce search for queries with 3+ characters
+        searchTimeout = setTimeout(() => {
+            performSearch(query);
+        }, 250); // 250ms debounce delay for more responsive feel
+    }
+
+    // Ctrl+K keyboard shortcut to focus search
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            enhancedSearchInput.focus();
+            enhancedSearchInput.select();
+        }
+    });
+    
+    // Character counter element
+    const charCounter = document.getElementById('searchCharCounter');
+    
+    // Update character counter and provide visual feedback
+    function updateSearchFeedback(query) {
+        const length = query.trim().length;
+        
+        if (length === 0) {
+            charCounter.style.display = 'none';
+            enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+        } else if (length < 3) {
+            charCounter.style.display = 'inline';
+            charCounter.textContent = `${3 - length} more char${3 - length === 1 ? '' : 's'}`;
+            charCounter.className = 'text-muted';
+            enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+        } else {
+            charCounter.style.display = 'inline';
+            charCounter.textContent = 'ready to search';
+            charCounter.className = 'text-success fw-bold';
+            enhancedSearchInput.classList.add('is-valid');
+            enhancedSearchInput.classList.remove('is-invalid');
+        }
+    }
+
+    // Handle input changes with debouncing
+    enhancedSearchInput.addEventListener('input', function(e) {
+        const query = e.target.value;
+        updateSearchFeedback(query);
+        debouncedSearch(query);
+    });
+    
+    // Handle Enter key for immediate search
+    enhancedSearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+            if (query.trim().length >= 3 || query.trim().length === 0) {
+                performSearch(query);
+            }
+        }
+    });
+    
+    // Handle browser back/forward navigation
+    window.addEventListener('popstate', function(e) {
+        // Page will reload automatically, just ensure we're not in a loading state
+        setLoadingState(false);
+    });
+    
+    // Prevent form submission (we handle it with JavaScript)
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const query = enhancedSearchInput.value;
+        if (query.trim().length >= 3 || query.trim().length === 0) {
+            performSearch(query);
+        }
+    });
+    
+    // Add visual feedback for minimum character requirement
+    enhancedSearchInput.addEventListener('focus', function() {
+        if (this.value.length > 0 && this.value.length < 3) {
+            this.setAttribute('title', 'Type at least 3 characters to search');
+        }
+        updateSearchFeedback(this.value);
+    });
+    
+    enhancedSearchInput.addEventListener('blur', function() {
+        this.removeAttribute('title');
+        // Hide counter when not focused unless searching
+        if (!isSearching && this.value.trim().length < 3) {
+            if (charCounter) charCounter.style.display = 'none';
+        }
+    });
+    
+    // Initialize character counter on page load
+    updateSearchFeedback(enhancedSearchInput.value);
 
     // Initialize
     updateBulkActions();
     
-    // Add loading state to form submissions
-    const filterForm = document.getElementById('filterForm');
-    if (filterForm) {
-        filterForm.addEventListener('submit', function() {
-            const table = document.querySelector('.table-hover');
-            if (table) {
-                table.classList.add('table-loading');
-            }
-        });
-    }
 });
 </script>
 {% endblock %}
@@ -682,46 +718,6 @@ document.addEventListener('DOMContentLoaded', function() {
   text-overflow: ellipsis;
 }
 
-/* Filter System */
-.filter-bar {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.05),
-    0 4px 16px rgba(0, 0, 0, 0.04);
-}
-
-.filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.75rem;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  font-size: 0.875rem;
-}
-
-.filter-chip .btn-close {
-  width: 1rem;
-  height: 1rem;
-  padding: 0;
-  background-size: 0.5rem;
-  opacity: 0.5;
-}
-
-.filter-chip .btn-close:hover {
-  opacity: 1;
-}
 
 /* Bulk Actions Bar */
 .bulk-actions {
@@ -816,9 +812,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Responsive Design */
 @media (max-width: 991px) {
-  .filter-bar .row > div {
-    margin-bottom: 0.5rem;
-  }
   
   .table .d-none-mobile {
     display: none !important;
@@ -861,6 +854,71 @@ document.addEventListener('DOMContentLoaded', function() {
   width: 40px;
   height: 40px;
   object-fit: cover;
+}
+
+/* Enhanced search styling */
+#enhancedSearchInput {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#enhancedSearchInput:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+
+#enhancedSearchInput.is-valid {
+  border-color: #198754;
+  background-image: none;
+}
+
+#enhancedSearchInput.is-valid:focus {
+  border-color: #198754;
+  box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+#searchCharCounter {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+#searchCharCounter.fw-bold {
+  font-weight: 600;
+}
+
+/* Search loading indicator */
+#searchLoadingIndicator {
+  border-radius: inherit;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+#searchLoadingIndicator .spinner-border-sm {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Enhanced loading animation */
+.searching-pulse {
+  animation: searchPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes searchPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Smooth transitions for search feedback */
+.input-icon {
+  transition: all 0.2s ease;
+}
+
+.input-icon:has(#enhancedSearchInput:focus) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 </style>
 {% endblock %}
