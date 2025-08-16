@@ -252,6 +252,7 @@
                 <a class="nav-link" href="#colors">Colors</a>
                 <a class="nav-link" href="#typography">Typography</a>
                 <a class="nav-link" href="#buttons">Buttons</a>
+                <a class="nav-link" href="#filter-buttons">Filter Buttons</a>
                 <a class="nav-link" href="#alerts">Alerts</a>
                 <a class="nav-link" href="#badges">Badges</a>
                 <a class="nav-link" href="#cards">Cards</a>
@@ -519,6 +520,158 @@ background: linear-gradient(135deg, #2d3436, #ff6b35);
                     <i class="ti ti-copy"></i>
                   </button>
                   <code>&lt;button class="btn btn-primary"&gt;Primary Button&lt;/button&gt;</code>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- GitHub-Style Filter Buttons Section -->
+          <section id="filter-buttons" class="style-guide-section">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">GitHub-Style Filter Buttons</h3>
+                <div class="card-subtitle">Advanced filter component with segmented button design</div>
+              </div>
+              <div class="card-body">
+                <div class="alert alert-info mb-4">
+                  <i class="ti ti-info-circle me-2"></i>
+                  <strong>Development Time:</strong> 2+ hours of intensive development to perfectly replicate GitHub's design pattern with partial-height dividers and precise styling.
+                </div>
+
+                <h4>Live Example</h4>
+                <div class="component-demo bg-light p-4 rounded">
+                  <!-- Example filter buttons with sample data -->
+                  <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+                    <a href="#" class="github-filter-btn active" style="background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                      <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Items <span style="opacity: 0.6; margin-left: 4px;">(12)</span>
+                    </a>
+                    <a href="#" class="github-filter-btn" style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                      <i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"></i>Pending <span style="opacity: 0.6; margin-left: 4px;">(3)</span>
+                    </a>
+                    <a href="#" class="github-filter-btn" style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                      <i class="ti ti-circle-check" style="font-size: 16px; margin-right: 4px;"></i>Complete <span style="opacity: 0.6; margin-left: 4px;">(9)</span>
+                    </a>
+                    <a href="#" class="github-filter-btn" style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                      <i class="ti ti-archive" style="font-size: 16px; margin-right: 4px;"></i>Archived <span style="opacity: 0.6; margin-left: 4px;">(0)</span>
+                    </a>
+                  </div>
+                </div>
+
+                <h4>Key Features</h4>
+                <ul class="mb-4">
+                  <li><strong>Partial-Height Dividers:</strong> Uses CSS linear-gradient to create pipe-like separators (60% height) between inactive buttons</li>
+                  <li><strong>Subtle Grey Background:</strong> Inactive buttons have <code>rgba(0, 0, 0, 0.03)</code> for better visibility</li>
+                  <li><strong>Active State:</strong> White background with border, shadow, and elevated appearance</li>
+                  <li><strong>Numbers in Brackets:</strong> Count display for each filter option</li>
+                  <li><strong>Icons:</strong> Tabler icons for visual identification</li>
+                  <li><strong>Responsive:</strong> Maintains design integrity across screen sizes</li>
+                </ul>
+
+                <h4>Implementation</h4>
+                <div class="code-preview">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;!-- Filter Buttons Container --&gt;
+&lt;div class="github-filter-group" role="group" aria-label="Filter buttons" 
+     style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;"&gt;
+  
+  &lt;!-- Active Filter Button --&gt;
+  &lt;a href="#" 
+     class="github-filter-btn active"
+     style="background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;"&gt;
+    &lt;i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"&gt;&lt;/i&gt;All Items &lt;span style="opacity: 0.6; margin-left: 4px;"&gt;(12)&lt;/span&gt;
+  &lt;/a&gt;
+  
+  &lt;!-- Inactive Filter Button with Partial Divider --&gt;
+  &lt;a href="#" 
+     class="github-filter-btn"
+     style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;"&gt;
+    &lt;i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"&gt;&lt;/i&gt;Pending &lt;span style="opacity: 0.6; margin-left: 4px;"&gt;(3)&lt;/span&gt;
+  &lt;/a&gt;
+  
+  &lt;!-- Last Button (No Divider) --&gt;
+  &lt;a href="#" 
+     class="github-filter-btn"
+     style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;"&gt;
+    &lt;i class="ti ti-archive" style="font-size: 16px; margin-right: 4px;"&gt;&lt;/i&gt;Archived &lt;span style="opacity: 0.6; margin-left: 4px;"&gt;(0)&lt;/span&gt;
+  &lt;/a&gt;
+&lt;/div&gt;</code>
+                </div>
+
+                <h4>Flask/Jinja2 Dynamic Implementation</h4>
+                <div class="code-preview">
+                  <button class="btn btn-sm btn-outline-secondary code-copy-btn" onclick="copyCode(this)">
+                    <i class="ti ti-copy"></i>
+                  </button>
+                  <code>&lt;div class="github-filter-group" role="group" aria-label="Filter buttons" 
+     style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;"&gt;
+  
+  &lt;a href="/signups" 
+     class="github-filter-btn active"
+     style="background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;"&gt;
+    &lt;i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"&gt;&lt;/i&gt;All Signups &lt;span style="opacity: 0.6; margin-left: 4px;"&gt;(15)&lt;/span&gt;
+  &lt;/a&gt;
+  
+  &lt;a href="/signups?payment_status=unpaid" 
+     class="github-filter-btn"
+     style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;"&gt;
+    &lt;i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"&gt;&lt;/i&gt;Unpaid &lt;span style="opacity: 0.6; margin-left: 4px;"&gt;(4)&lt;/span&gt;
+  &lt;/a&gt;
+  
+  &lt;a href="/signups?payment_status=paid" 
+     class="github-filter-btn"
+     style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;"&gt;
+    &lt;i class="ti ti-check" style="font-size: 16px; margin-right: 4px;"&gt;&lt;/i&gt;Paid &lt;span style="opacity: 0.6; margin-left: 4px;"&gt;(8)&lt;/span&gt;
+  &lt;/a&gt;
+  
+  &lt;!-- Repeat pattern for other buttons --&gt;
+&lt;/div&gt;</code>
+                </div>
+
+                <h4>Technical Details</h4>
+                <div class="row">
+                  <div class="col-md-6">
+                    <h5>Partial Divider Technique</h5>
+                    <p class="text-muted">The partial-height dividers are created using a clever CSS linear-gradient technique:</p>
+                    <ul class="small">
+                      <li><code>linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%)</code></li>
+                      <li>Creates a 60% height divider (from 20% to 80%)</li>
+                      <li>Applied as background-image on the right edge</li>
+                      <li>Only visible on inactive buttons</li>
+                    </ul>
+                  </div>
+                  <div class="col-md-6">
+                    <h5>Color Specifications</h5>
+                    <ul class="small">
+                      <li><strong>Container:</strong> <code>#f6f8fa</code> background</li>
+                      <li><strong>Active Button:</strong> <code>#ffffff</code> background</li>
+                      <li><strong>Inactive Button:</strong> <code>rgba(0, 0, 0, 0.03)</code> background</li>
+                      <li><strong>Divider:</strong> <code>#d1d5da</code> color</li>
+                      <li><strong>Border:</strong> <code>#d1d5da</code> container border</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h4>Usage Examples</h4>
+                <div class="alert alert-success">
+                  <i class="ti ti-check-circle me-2"></i>
+                  <strong>Live Implementation:</strong> See this component in action on the <a href="/signups" class="alert-link">Signups Management</a> page where it filters signups by payment status and approval status.
+                </div>
+
+                <h4>Best Practices</h4>
+                <ul>
+                  <li>Always include count numbers in brackets for better UX</li>
+                  <li>Use meaningful icons from Tabler icon set</li>
+                  <li>Ensure the last button doesn't have a right divider</li>
+                  <li>Test active state transitions to ensure dividers appear/disappear correctly</li>
+                  <li>Use semantic HTML with proper <code>role</code> and <code>aria-label</code> attributes</li>
+                  <li>Maintain consistent icon sizing (16px) and spacing (4px margin-right)</li>
+                </ul>
+
+                <div class="alert alert-warning">
+                  <i class="ti ti-alert-triangle me-2"></i>
+                  <strong>Important:</strong> The inline styles are necessary to override Tabler.io's CSS framework. Consider extracting to a CSS class if using this component frequently across your application.
                 </div>
               </div>
             </div>
