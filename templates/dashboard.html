@@ -9,7 +9,7 @@
       <div class="row g-2 align-items-center">
         <div class="col">
           <h1 class="page-title mb-3">
-            Welcome back{% if session.get("admin") %}, {{ session['admin'].split('@')[0].title() }}{% endif %}!
+            Welcome back !
           </h1>
           <p class="text-muted mb-0">
             Here's what's happening with your activities today.
@@ -403,16 +403,12 @@
                 </div>
                 {% endif %}
                 <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h3 class="card-title mb-0">{{ activity.name[:20] }}{% if activity.name|length > 20 %}...{% endif %}</h3>
-                    {% if activity.days_left != "N/A" %}
-                    <small class="text-muted">{{ activity.days_left }}d left</small>
-                    {% endif %}
+                  <div class="mb-2">
+                    <h3 class="card-title mb-0">{{ activity.name }}</h3>
                   </div>
                   <div class="d-flex gap-2 flex-wrap mb-3">
                     <span class="badge bg-green-lt">{{ activity.active_passports }} active</span>
                     <span class="badge bg-yellow-lt">{{ activity.pending_signups }} pending</span>
-                    <span class="badge bg-blue-lt">{{ activity.passports }} created</span>
                   </div>
                   <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-secondary">Manage</a>
                 </div>
@@ -440,16 +436,12 @@
                 </div>
                 {% endif %}
                 <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="mb-2">
                     <h3 class="card-title mb-0">{{ activity.name }}</h3>
-                    {% if activity.days_left != "N/A" %}
-                    <small class="text-muted">{{ activity.days_left }}d left</small>
-                    {% endif %}
                   </div>
                   <div class="d-flex gap-2 flex-wrap mb-3">
                     <span class="badge bg-green-lt">{{ activity.active_passports }} active</span>
                     <span class="badge bg-yellow-lt">{{ activity.pending_signups }} pending</span>
-                    <span class="badge bg-blue-lt">{{ activity.passports }} created</span>
                   </div>
                   <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-secondary">Manage</a>
                 </div>
