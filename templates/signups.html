@@ -34,7 +34,10 @@
                autocomplete="off">
         <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
           <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
-          <kbd class="text-muted">ctrl + k</kbd>
+          <kbd id="searchKbdHint" class="text-muted">ctrl + k</kbd>
+          <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
+            <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
+          </button>
         </div>
       </div>
     </form>
@@ -88,7 +91,7 @@
     </div>
 
     <!-- Main Table -->
-    <div class="card">
+    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
       <div class="card-header">
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
@@ -392,6 +395,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let searchTimeout;
     let isSearching = false;
 
+    // Create audio element for sound effect
+    const searchSound = new Audio('/static/beep.wav');
+    searchSound.volume = 0.3; // 30% volume
+    
     // Create loading indicator
     function createLoadingIndicator() {
         const loadingDiv = document.createElement('div');
@@ -490,14 +497,55 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 250); // 250ms debounce delay for more responsive feel
     }
 
-    // Ctrl+K keyboard shortcut to focus search
+    // Get elements for clear button functionality
+    const kbdHint = document.getElementById('searchKbdHint');
+    const clearBtn = document.getElementById('searchClearBtn');
+    
+    // Ctrl+K keyboard shortcut to focus search with glow effect
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
             enhancedSearchInput.focus();
             enhancedSearchInput.select();
+            
+            // Add pink glow effect
+            enhancedSearchInput.classList.add('search-glow-active');
+            
+            // Play sound effect
+            try {
+                searchSound.currentTime = 0;
+                searchSound.play().catch(() => {
+                    // Silently fail if audio can't play
+                });
+            } catch (err) {
+                // Ignore audio errors
+            }
+            
+            // Remove glow after animation
+            setTimeout(() => {
+                enhancedSearchInput.classList.remove('search-glow-active');
+            }, 800);
         }
     });
+    
+    // Clear button functionality
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            enhancedSearchInput.value = '';
+            enhancedSearchInput.focus();
+            updateSearchFeedback('');
+            
+            // Show pink glow on clear
+            enhancedSearchInput.classList.add('search-glow-active');
+            setTimeout(() => {
+                enhancedSearchInput.classList.remove('search-glow-active');
+            }, 800);
+            
+            // Trigger search to clear results
+            performSearch('');
+        });
+    }
     
     // Character counter element
     const charCounter = document.getElementById('searchCharCounter');
@@ -506,20 +554,29 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateSearchFeedback(query) {
         const length = query.trim().length;
         
+        // Toggle between kbd hint and clear button
         if (length === 0) {
             charCounter.style.display = 'none';
             enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
-        } else if (length < 3) {
-            charCounter.style.display = 'inline';
-            charCounter.textContent = `${3 - length} more char${3 - length === 1 ? '' : 's'}`;
-            charCounter.className = 'text-muted';
-            enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+            // Show kbd hint, hide clear button
+            if (kbdHint) kbdHint.style.display = 'inline-block';
+            if (clearBtn) clearBtn.style.display = 'none';
         } else {
-            charCounter.style.display = 'inline';
-            charCounter.textContent = 'ready to search';
-            charCounter.className = 'text-success fw-bold';
-            enhancedSearchInput.classList.add('is-valid');
-            enhancedSearchInput.classList.remove('is-invalid');
+            // Hide kbd hint, show clear button
+            if (kbdHint) kbdHint.style.display = 'none';
+            if (clearBtn) clearBtn.style.display = 'inline-flex';
+            
+            if (length < 3) {
+                charCounter.style.display = 'inline';
+                charCounter.textContent = `${3 - length} more char${3 - length === 1 ? '' : 's'}`;
+                charCounter.className = 'text-muted';
+                enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+            } else {
+                // Only show green border, no text
+                charCounter.style.display = 'none';
+                enhancedSearchInput.classList.add('is-valid');
+                enhancedSearchInput.classList.remove('is-invalid');
+            }
         }
     }
 
@@ -563,10 +620,16 @@ document.addEventListener('DOMContentLoaded', function() {
             this.setAttribute('title', 'Type at least 3 characters to search');
         }
         updateSearchFeedback(this.value);
+        
+        // Add subtle glow on regular focus (not as intense as Ctrl+K)
+        if (this.value.length === 0) {
+            this.classList.add('search-focus-glow');
+        }
     });
     
     enhancedSearchInput.addEventListener('blur', function() {
         this.removeAttribute('title');
+        this.classList.remove('search-focus-glow');
         // Hide counter when not focused unless searching
         if (!isSearching && this.value.trim().length < 3) {
             if (charCounter) charCounter.style.display = 'none';
@@ -589,91 +652,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Fix dropdown clipping issue in table - enhanced dropdown management
-    const tableResponsive = document.querySelector('.table-responsive');
-    const card = document.querySelector('.card');
-    let currentOpenDropdown = null;
+    // Note: Dropdown management is now handled by the global dropdown-fix.js
+    // All dropdown behavior (closing on click outside, ESC key, single dropdown) 
+    // is managed by the global system - no local management needed
     
-    // Close any open dropdown before opening a new one
-    function closeAllDropdowns() {
-        document.querySelectorAll('.dropdown.show').forEach(dropdown => {
-            const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
-            if (toggle) {
-                bootstrap.Dropdown.getInstance(toggle)?.hide();
-            }
-        });
-        currentOpenDropdown = null;
-    }
-    
-    // Listen for dropdown events to manage overflow and positioning
-    document.addEventListener('show.bs.dropdown', function(e) {
-        // Close any previously open dropdown first
-        if (currentOpenDropdown && currentOpenDropdown !== e.target) {
-            closeAllDropdowns();
-        }
-        
-        // Set current dropdown
-        currentOpenDropdown = e.target;
-        
-        // When any dropdown opens, remove overflow restrictions
-        if (tableResponsive) {
-            tableResponsive.style.overflow = 'visible';
-            tableResponsive.style.position = 'static';
-        }
-        if (card) {
-            card.style.overflow = 'visible';
-        }
-        
-        // Ensure dropdown container is properly positioned
-        const dropdownContainer = e.target;
-        dropdownContainer.style.position = 'relative';
-        dropdownContainer.style.zIndex = '1000';
-    });
-    
-    document.addEventListener('shown.bs.dropdown', function(e) {
-        const dropdownMenu = e.target.querySelector('.dropdown-menu');
-        if (dropdownMenu) {
-            // Force proper z-index and positioning
-            dropdownMenu.style.zIndex = '1060';
-            dropdownMenu.style.position = 'absolute';
-            
-            // Ensure proper positioning context
-            const dropdownParent = e.target;
-            dropdownParent.style.position = 'relative';
-            
-            // Clear any transform that might interfere
-            dropdownMenu.style.transform = '';
-        }
-    });
-    
-    document.addEventListener('hide.bs.dropdown', function(e) {
-        // When dropdown closes, restore overflow settings
-        if (tableResponsive) {
-            tableResponsive.style.overflowX = 'auto';
-            tableResponsive.style.overflowY = 'visible';
-            tableResponsive.style.position = '';
-        }
-        if (card) {
-            card.style.overflow = 'visible';
-        }
-        
-        // Reset dropdown container positioning
-        const dropdownContainer = e.target;
-        dropdownContainer.style.position = '';
-        dropdownContainer.style.zIndex = '';
-        
-        // Clear current dropdown if it's the one being closed
-        if (currentOpenDropdown === e.target) {
-            currentOpenDropdown = null;
-        }
-    });
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        if (currentOpenDropdown && !currentOpenDropdown.contains(e.target)) {
-            closeAllDropdowns();
-        }
-    });
+    // Validation for debugging
+    console.log('📋 Signups page loaded');
+    console.log('🔧 Global dropdown fix available:', typeof window.dropdownFix !== 'undefined');
+    console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
+    console.log('🔍 Dropdown toggles found:', document.querySelectorAll('[data-bs-toggle="dropdown"]').length);
 
     // Debug: Check if Bootstrap is properly loaded
     if (typeof bootstrap === 'undefined') {
@@ -731,51 +718,34 @@ body #bulkActions.card {
   border-radius: 8px !important;
 }
 
-/* Fix dropdown positioning in tables - CRITICAL: Use dynamic overflow control */
+/* Table positioning - let global dropdown-fix.css handle the dropdowns */
 .table-responsive {
-  /* Default state: horizontal scroll, vertical visible */
-  overflow-x: auto;
-  overflow-y: visible;
   margin-top: 2rem;
-  /* Will be dynamically changed to 'visible' when dropdowns open */
+  /* Overflow management is handled by global dropdown-fix.css */
 }
 
-/* Ensure dropdown container can expand outside table bounds */
-.table-responsive .dropdown {
-  position: relative; /* Relative positioning for proper dropdown placement */
-}
-
-/* Enhanced dropdown styling with higher z-index */
+/* Minor dropdown styling improvements that don't conflict with global fix */
 .dropdown-menu {
-  z-index: 1060 !important; /* Higher than Bootstrap default */
-  position: absolute !important;
   min-width: 180px;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(0, 0, 0, 0.125);
   border-radius: 0.5rem;
   background-color: #fff;
-  /* Ensure proper positioning */
-  transform-origin: top right;
-  will-change: transform, opacity;
-  /* Prevent positioning conflicts */
-  margin-top: 0 !important;
-  inset: auto !important;
 }
 
-/* Dropdown positioning - ensure it appears properly */
-.dropdown-menu-end {
-  right: 0;
-  left: auto;
-}
-
-/* CRITICAL: Card container must allow dropdowns to overflow */
+/* Card container - let global dropdown-fix.css handle overflow */
 .card {
-  overflow: visible !important;
+  /* Overflow management is handled by global dropdown-fix.css */
 }
 
-/* Table wrapper overflow management */
-.table-responsive.dropdown-open {
-  overflow: visible !important;
+/* Ensure main table card has proper spacing when following bulk actions */
+.main-table-card {
+  margin-top: 0 !important;
+}
+
+/* Add extra spacing between bulk actions and main table */
+.bulk-actions-container + .main-table-card {
+  margin-top: 1rem !important;
 }
 
 /* Fix card footer background to white per style guide */
@@ -930,7 +900,7 @@ div.bulk-actions-container .card.bulk-actions-card,
 .bulk-actions-container .card.bulk-actions-card,
 .card.bulk-actions-card {
   margin-top: 1.5rem !important;
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 2.5rem !important;
   /* Force light green background - CRITICAL: Override minipass.css white background */
   background: #f0fdf4 !important;
   background-color: #f0fdf4 !important;
@@ -1233,6 +1203,38 @@ div.bulk-actions-container .card.bulk-actions-card .card-body,
   box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
+/* Pink glow effect for Ctrl+K */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.3rem rgba(255, 105, 180, 0.4), 
+              0 0 20px rgba(255, 105, 180, 0.6),
+              0 0 40px rgba(255, 105, 180, 0.3) !important;
+  transform: scale(1.02);
+}
+
+/* Subtle glow on regular focus */
+#enhancedSearchInput.search-focus-glow {
+  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+              0 0 15px rgba(255, 105, 180, 0.15);
+}
+
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.7),
+                0 0 0 0 rgba(255, 105, 180, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 0.4rem rgba(255, 105, 180, 0.3),
+                0 0 30px rgba(255, 105, 180, 0.6),
+                0 0 50px rgba(255, 105, 180, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 0.3rem rgba(255, 105, 180, 0.4),
+                0 0 20px rgba(255, 105, 180, 0.6),
+                0 0 40px rgba(255, 105, 180, 0.3);
+  }
+}
 
 #enhancedSearchInput.is-valid {
   border-color: #198754;
@@ -1242,6 +1244,31 @@ div.bulk-actions-container .card.bulk-actions-card .card-body,
 #enhancedSearchInput.is-valid:focus {
   border-color: #198754;
   box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* Clear button styling */
+#searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+#searchClearBtn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+#searchClearBtn:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* Smooth transitions for kbd hint and clear button */
+#searchKbdHint, #searchClearBtn {
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 #searchCharCounter {
@@ -1270,12 +1297,23 @@ div.bulk-actions-container .card.bulk-actions-card .card-body,
 
 /* Enhanced loading animation */
 .searching-pulse {
-  animation: searchPulse 1.5s ease-in-out infinite;
+  animation: blueSearchPulse 1.5s ease-in-out infinite;
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+              0 0 15px rgba(13, 110, 253, 0.4) !important;
 }
 
-@keyframes searchPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+@keyframes blueSearchPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+                0 0 15px rgba(13, 110, 253, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
+                0 0 25px rgba(13, 110, 253, 0.5);
+  }
 }
 
 /* Smooth transitions for search feedback */

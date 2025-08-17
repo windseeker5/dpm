@@ -42,7 +42,6 @@ div.card.kpi-card-rounded,
   border-radius: 10px !important;
   -webkit-border-radius: 10px !important;
   -moz-border-radius: 10px !important;
-  overflow: hidden !important;
   border-top-left-radius: 10px !important;
   border-top-right-radius: 10px !important;
   border-bottom-left-radius: 10px !important;
@@ -50,18 +49,44 @@ div.card.kpi-card-rounded,
   position: relative;
 }
 
+/* Only apply overflow hidden when dropdown is NOT open */
+.kpi-card-rounded:not(.dropdown-open) {
+  overflow: hidden !important;
+}
+
+/* When dropdown is open, allow overflow visible */
+.kpi-card-rounded.dropdown-open {
+  overflow: visible !important;
+  z-index: 1080 !important;
+}
+
 .kpi-card-rounded .card-body {
   border-radius: 10px !important;
+}
+
+/* Allow overflow in card body when dropdown is open */
+.kpi-card-rounded.dropdown-open .card-body {
+  overflow: visible !important;
 }
 
 /* Fix dropdown z-index and positioning */
 .kpi-card-rounded .dropdown {
   position: relative;
-  z-index: 1050;
+  z-index: 1080;
+}
+
+.kpi-card-rounded .dropdown.show {
+  z-index: 1081 !important;
 }
 
 .kpi-card-rounded .dropdown-menu {
-  z-index: 1055 !important;
+  z-index: 1082 !important;
+  min-width: 160px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+}
+
+.kpi-card-rounded .dropdown.show .dropdown-menu {
+  z-index: 1083 !important;
   position: absolute !important;
 }
 

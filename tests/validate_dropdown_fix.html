@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropdown Fix Validation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Dropdown Fix Validation Tool</h1>
+    <p>This tool helps validate that the dropdown fix is working correctly on the signups page.</p>
+    
+    <div class="test-section">
+        <h2>📋 Instructions</h2>
+        <ol>
+            <li>Open the <a href="http://127.0.0.1:8890/signups" target="_blank">signups page</a> in a new tab</li>
+            <li>Log in with: <code>kdresdell@gmail.com</code> / <code>admin123</code></li>
+            <li>Copy and paste the test script below into the browser console</li>
+            <li>Follow the automated test prompts</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>🧪 Test Script (Copy & Paste in Console)</h2>
+        <textarea id="testScript" readonly style="width: 100%; height: 400px; font-family: monospace; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+// Dropdown Validation Test Script
+// Paste this into the browser console on the signups page
+
+console.log('🧪 Starting Dropdown Fix Validation...');
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function validateDropdownBehavior() {
+    const results = {
+        globalFixLoaded: false,
+        bootstrapLoaded: false,
+        dropdownsFound: 0,
+        testResults: []
+    };
+    
+    // Test 1: Check if global dropdown fix is loaded
+    console.log('🔍 Test 1: Checking if global dropdown fix is loaded...');
+    if (typeof window.dropdownFix !== 'undefined') {
+        results.globalFixLoaded = true;
+        console.log('✅ Global dropdown fix is loaded');
+    } else {
+        console.log('❌ Global dropdown fix NOT loaded');
+    }
+    
+    // Test 2: Check if Bootstrap is loaded
+    console.log('🔍 Test 2: Checking if Bootstrap is loaded...');
+    if (typeof bootstrap !== 'undefined') {
+        results.bootstrapLoaded = true;
+        console.log('✅ Bootstrap is loaded');
+    } else {
+        console.log('❌ Bootstrap NOT loaded');
+    }
+    
+    // Test 3: Find all dropdowns
+    console.log('🔍 Test 3: Finding all dropdown toggles...');
+    const dropdownToggles = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+    results.dropdownsFound = dropdownToggles.length;
+    console.log(`📊 Found ${dropdownToggles.length} dropdown toggles`);
+    
+    if (dropdownToggles.length < 2) {
+        console.log('⚠️  Warning: Need at least 2 dropdowns to test behavior properly');
+        return results;
+    }
+    
+    // Test 4: Test opening first dropdown
+    console.log('🔍 Test 4: Testing first dropdown...');
+    dropdownToggles[0].click();
+    await delay(500);
+    
+    let openDropdowns = document.querySelectorAll('.dropdown.show').length;
+    console.log(`📊 After opening first dropdown: ${openDropdowns} dropdowns open`);
+    results.testResults.push({
+        test: 'First dropdown open',
+        expected: 1,
+        actual: openDropdowns,
+        passed: openDropdowns === 1
+    });
+    
+    // Test 5: Test opening second dropdown (should close first)
+    console.log('🔍 Test 5: Testing second dropdown (should close first)...');
+    dropdownToggles[1].click();
+    await delay(500);
+    
+    openDropdowns = document.querySelectorAll('.dropdown.show').length;
+    console.log(`📊 After opening second dropdown: ${openDropdowns} dropdowns open`);
+    results.testResults.push({
+        test: 'Second dropdown open (first should close)',
+        expected: 1,
+        actual: openDropdowns,
+        passed: openDropdowns === 1
+    });
+    
+    // Test 6: Test clicking outside to close
+    console.log('🔍 Test 6: Testing click outside to close...');
+    document.body.click();
+    await delay(500);
+    
+    openDropdowns = document.querySelectorAll('.dropdown.show').length;
+    console.log(`📊 After clicking outside: ${openDropdowns} dropdowns open`);
+    results.testResults.push({
+        test: 'Click outside to close',
+        expected: 0,
+        actual: openDropdowns,
+        passed: openDropdowns === 0
+    });
+    
+    // Test 7: Test Escape key
+    console.log('🔍 Test 7: Testing Escape key...');
+    dropdownToggles[0].click();
+    await delay(300);
+    
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await delay(500);
+    
+    openDropdowns = document.querySelectorAll('.dropdown.show').length;
+    console.log(`📊 After pressing Escape: ${openDropdowns} dropdowns open`);
+    results.testResults.push({
+        test: 'Escape key to close',
+        expected: 0,
+        actual: openDropdowns,
+        passed: openDropdowns === 0
+    });
+    
+    // Summary
+    console.log('\n📋 Test Summary:');
+    console.log('================');
+    console.log(`Global Fix Loaded: ${results.globalFixLoaded ? '✅' : '❌'}`);
+    console.log(`Bootstrap Loaded: ${results.bootstrapLoaded ? '✅' : '❌'}`);
+    console.log(`Dropdowns Found: ${results.dropdownsFound}`);
+    console.log('\nIndividual Tests:');
+    
+    let allPassed = true;
+    results.testResults.forEach(test => {
+        const status = test.passed ? '✅' : '❌';
+        console.log(`${status} ${test.test}: Expected ${test.expected}, Got ${test.actual}`);
+        if (!test.passed) allPassed = false;
+    });
+    
+    console.log(`\n🎯 Overall Result: ${allPassed ? '✅ ALL TESTS PASSED' : '❌ SOME TESTS FAILED'}`);
+    
+    if (!allPassed) {
+        console.log('\n🔧 Troubleshooting:');
+        if (!results.globalFixLoaded) {
+            console.log('- Global dropdown fix not loaded. Check if dropdown-fix.js is included in base.html');
+        }
+        if (!results.bootstrapLoaded) {
+            console.log('- Bootstrap not loaded. Check if Bootstrap JS is included');
+        }
+        if (results.testResults.some(t => !t.passed)) {
+            console.log('- Dropdown behavior tests failed. There may be conflicting JS code');
+        }
+    }
+    
+    return results;
+}
+
+// Run the validation
+validateDropdownBehavior().then(results => {
+    console.log('\n🏁 Validation complete!');
+});
+        </textarea>
+        <button onclick="copyTestScript()">📋 Copy Test Script</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎯 Expected Results</h2>
+        <div class="status success">
+            <strong>✅ All tests should pass:</strong>
+            <ul>
+                <li>Global dropdown fix should be loaded</li>
+                <li>Bootstrap should be loaded</li>
+                <li>Only one dropdown should be open at a time</li>
+                <li>Clicking outside should close dropdowns</li>
+                <li>Escape key should close dropdowns</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🐛 Common Issues</h2>
+        <div class="status warning">
+            <strong>If tests fail:</strong>
+            <ul>
+                <li><strong>Multiple dropdowns open:</strong> There's conflicting JS code managing dropdowns</li>
+                <li><strong>Dropdowns don't close:</strong> Event listeners aren't working properly</li>
+                <li><strong>Global fix not loaded:</strong> Check if dropdown-fix.js is included in base.html</li>
+                <li><strong>Bootstrap not loaded:</strong> Check if Bootstrap JS is included properly</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function copyTestScript() {
+            const textarea = document.getElementById('testScript');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Test script copied to clipboard! Paste it in the browser console on the signups page.');
+        }
+    </script>
+</body>
+</html>

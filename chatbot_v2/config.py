@@ -22,6 +22,14 @@ MAX_QUERY_TIMEOUT_SECONDS = 30
 MAX_RESULT_ROWS = 1000
 DEFAULT_AI_MODEL = 'dolphin-mistral:latest'
 
+# Model preferences (in order of preference)
+PREFERRED_MODELS = [
+    'dolphin-mistral:latest',
+    'codellama:7b-instruct', 
+    'deepseek-coder:6.7b',
+    'deepseek-r1:8b'
+]
+
 # Security Settings
 ALLOWED_SQL_KEYWORDS = ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT']
 BLOCKED_SQL_KEYWORDS = ['DELETE', 'DROP', 'INSERT', 'UPDATE', 'ALTER', 'CREATE', 'TRUNCATE']

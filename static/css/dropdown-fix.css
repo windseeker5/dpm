@@ -1,185 +1,227 @@
 /**
- * Global Dropdown Fix CSS for Tabler.io/Bootstrap 5 Dropdowns
+ * SIMPLIFIED BULLETPROOF DROPDOWN FIX v3.0
  * 
- * This stylesheet fixes dropdown display issues, especially in tables
- * where positioning and z-index conflicts can cause display problems.
- * 
- * Features:
- * - Fixes positioning context for table dropdowns
- * - Manages z-index stacking properly
- * - Ensures dropdown menus appear above other content
- * - Handles overflow issues in responsive tables
+ * This CSS file fixes ALL dropdown issues with maximum specificity and nuclear approach.
+ * Issues addressed:
+ * 1. Multiple dropdowns staying open (handled by JS)
+ * 2. Transparent/invisible backgrounds
+ * 3. Poor positioning and cut-off dropdowns
+ * 4. Header gravatar dropdown positioning
+ * 5. KPI card dropdown visibility
  */
 
-/* Fix dropdown positioning in tables */
-.table-responsive .dropdown {
-    position: relative !important; /* Changed from static */
+/* ===== CORE DROPDOWN STRUCTURE ===== */
+
+/* Ensure dropdown containers have proper positioning */
+.dropdown {
+    position: relative !important;
 }
 
-/* Ensure dropdown menu appears with proper visibility */
-.dropdown.show .dropdown-menu {
+/* NUCLEAR DROPDOWN MENU VISIBILITY - MAXIMUM SPECIFICITY */
+.dropdown-menu,
+.dropdown .dropdown-menu,
+.card .dropdown-menu,
+.table .dropdown-menu,
+.navbar .dropdown-menu,
+.minipass-header .dropdown-menu {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    z-index: 1070 !important;
+    display: none !important;
+    min-width: 10rem !important;
+    margin: 0 !important;
+    font-size: 0.875rem !important;
+    color: #1f2937 !important;
+    text-align: left !important;
+    list-style: none !important;
+    background-color: #ffffff !important;
+    background-clip: padding-box !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    padding: 0.5rem 0 !important;
+}
+
+/* FORCE VISIBILITY FOR SHOWN DROPDOWNS - NUCLEAR APPROACH */
+.dropdown-menu.show,
+.dropdown.show .dropdown-menu,
+.card .dropdown-menu.show,
+.card .dropdown.show .dropdown-menu,
+.table .dropdown-menu.show,
+.table .dropdown.show .dropdown-menu,
+.navbar .dropdown-menu.show,
+.navbar .dropdown.show .dropdown-menu,
+.minipass-header .dropdown-menu.show,
+.minipass-header .dropdown.show .dropdown-menu,
+body .dropdown-menu.show,
+body .dropdown.show .dropdown-menu,
+html body .dropdown-menu.show,
+html body .dropdown.show .dropdown-menu {
     display: block !important;
-    opacity: 1;
-    transform: scale(1);
-    visibility: visible;
-    z-index: 1062; /* Above other UI elements */
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    z-index: 9999 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    min-width: 10rem !important;
+    margin: 0 !important;
+    padding: 0.5rem 0 !important;
+    color: #1f2937 !important;
+    font-size: 0.875rem !important;
 }
 
-/* Smooth transition for dropdown appearance */
-.dropdown-menu {
-    transition: opacity 0.15s ease, transform 0.15s ease;
-    opacity: 0;
-    transform: scale(0.95);
+/* ===== SPECIAL CONTEXTS ===== */
+
+/* Header dropdown positioning */
+.minipass-header .dropdown-menu {
+    z-index: 2000 !important;
 }
 
-/* Force parent containers to allow overflow when dropdown is open */
-.dropdown.show {
-    position: relative;
-    z-index: 1061;
-}
-
-/* Table cells with open dropdowns should allow overflow */
-.table td:has(.dropdown.show),
-.table th:has(.dropdown.show) {
-    overflow: visible !important;
-    position: relative;
-    z-index: 1061;
-}
-
-/* For browsers that don't support :has() selector */
-.table td.dropdown-active,
-.table th.dropdown-active {
-    overflow: visible !important;
-    position: relative;
-    z-index: 1061;
-}
-
-/* Ensure table doesn't clip dropdown content */
-.table-responsive {
-    overflow: visible !important; /* Allow dropdowns to extend outside */
-    min-height: 0.01%; /* Maintain IE10/11 compatibility */
-}
-
-/* When dropdown needs to appear above (near bottom of viewport) */
-.dropdown-menu.dropdown-menu-up {
-    bottom: 100%;
-    top: auto !important;
-    margin-bottom: 0.125rem;
-    margin-top: 0;
-}
-
-/* Fix for nested dropdown positioning */
-.dropdown .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: auto;
-}
-
-/* Right-aligned dropdown menus */
-.dropdown-menu-end {
+/* Header dropdown end alignment - FIXED FOR GRAVATAR */
+.minipass-header .dropdown-menu-end {
     right: 0 !important;
     left: auto !important;
 }
 
-/* Dropdown in table headers */
-.table thead .dropdown-menu {
-    z-index: 1063; /* Higher than body dropdowns */
+/* Specific fix for gravatar dropdown positioning */
+.minipass-header-user .dropdown-menu,
+.minipass-header-user .dropdown-menu.dropdown-menu-end {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    z-index: 2000 !important;
+    margin-top: 0.25rem !important;
+    transform: translateX(0) !important;
 }
 
-/* Mobile responsive adjustments */
+/* Ensure gravatar dropdown container has proper positioning */
+.minipass-header-user .dropdown {
+    position: relative !important;
+}
+
+/* Force correct positioning even if other styles interfere */
+.minipass-header-user .dropdown.show .dropdown-menu {
+    right: 0 !important;
+    left: auto !important;
+    transform: translateX(0) !important;
+}
+
+/* KPI Cards - ensure proper overflow */
+.card.dropdown-open,
+.card:has(.dropdown.show) {
+    position: relative !important;
+    overflow: visible !important;
+    z-index: 1080 !important;
+}
+
+.card .dropdown.show {
+    z-index: 1081 !important;
+}
+
+.card .dropdown.show .dropdown-menu {
+    z-index: 1082 !important;
+}
+
+/* Table containers - ensure overflow visible */
+.table-responsive {
+    overflow: visible !important;
+}
+
+.table .dropdown.show {
+    z-index: 1071 !important;
+}
+
+/* Smooth animation for dropdowns */
+.dropdown-menu {
+    transition: all 0.1s ease !important;
+}
+
+/* Dropdown items styling */
+.dropdown-item {
+    display: block !important;
+    width: 100% !important;
+    padding: 0.5rem 1rem !important;
+    clear: both !important;
+    font-weight: 400 !important;
+    color: #1f2937 !important;
+    text-align: inherit !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    transition: all 0.1s ease !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    color: #1f2937 !important;
+    background-color: #f8f9fa !important;
+    text-decoration: none !important;
+}
+
+/* ===== RIGHT-ALIGNED DROPDOWNS ===== */
+
+.dropdown-menu-end,
+.dropdown-menu.dropdown-menu-end {
+    right: 0 !important;
+    left: auto !important;
+}
+
+/* ===== MOBILE FIXES ===== */
+
 @media (max-width: 768px) {
-    /* On mobile, ensure dropdowns don't exceed viewport */
-    .dropdown-menu {
-        max-width: calc(100vw - 2rem);
-        overflow-x: auto;
+    .dropdown-menu,
+    .dropdown-menu.show {
+        max-width: calc(100vw - 2rem) !important;
+        min-width: 160px !important;
     }
     
-    /* Adjust dropdown position on mobile */
-    .table .dropdown-menu {
-        position: fixed !important;
-        left: 50% !important;
-        transform: translateX(-50%);
-        min-width: 200px;
-    }
-    
-    /* Ensure proper z-index on mobile */
-    .dropdown.show {
-        z-index: 1065 !important;
+    /* Force right alignment on small screens for KPI cards */
+    .card .dropdown-menu,
+    .card .dropdown-menu.show {
+        right: 0 !important;
+        left: auto !important;
     }
 }
 
-/* Fix for dropdowns in modal dialogs */
-.modal .dropdown-menu {
-    z-index: 1072; /* Above modal backdrop */
+/* ===== ACCESSIBILITY ===== */
+
+.dropdown-toggle:focus {
+    outline: 2px solid #0054a6 !important;
+    outline-offset: 2px !important;
 }
 
-/* Fix for dropdowns in fixed headers */
-.fixed-top .dropdown-menu,
-.sticky-top .dropdown-menu {
-    position: fixed;
+/* ===== NUCLEAR OVERRIDE FOR BROKEN DROPDOWNS ===== */
+
+/* If a dropdown menu has any of these problematic styles, force correct them */
+[class*="dropdown-menu"][style*="display: none"].show {
+    display: block !important;
 }
 
-/* Ensure dropdown toggle buttons have proper cursor */
-[data-bs-toggle="dropdown"] {
-    cursor: pointer;
-    user-select: none;
+[class*="dropdown-menu"][style*="opacity: 0"].show {
+    opacity: 1 !important;
 }
 
-/* Active dropdown toggle styling */
-[data-bs-toggle="dropdown"][aria-expanded="true"] {
-    background-color: rgba(0, 0, 0, 0.05);
+[class*="dropdown-menu"][style*="visibility: hidden"].show {
+    visibility: visible !important;
 }
 
-/* Dark mode support (if using Tabler dark theme) */
-[data-bs-theme="dark"] .dropdown-menu {
-    background-color: var(--tblr-bg-surface-dark, #1e293b);
-    border-color: var(--tblr-border-color-dark, #475569);
+/* ===== DEBUGGING (remove in production) ===== */
+/*
+.dropdown.show {
+    outline: 2px solid green !important;
 }
 
-[data-bs-theme="dark"] .dropdown-item:hover {
-    background-color: var(--tblr-bg-surface-secondary-dark, #334155);
+.dropdown-menu.show {
+    outline: 2px solid blue !important;
 }
-
-/* Print styles - hide dropdowns when printing */
-@media print {
-    .dropdown-menu {
-        display: none !important;
-    }
-    
-    [data-bs-toggle="dropdown"] {
-        pointer-events: none;
-    }
-}
-
-/* Accessibility improvements */
-.dropdown-menu:focus-within {
-    outline: 2px solid var(--tblr-primary, #206bc4);
-    outline-offset: 2px;
-}
-
-/* Animation for dropdown appearance */
-@keyframes dropdownSlideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.dropdown.show .dropdown-menu {
-    animation: dropdownSlideDown 0.2s ease forwards;
-}
-
-/* Fix for dropdown in card headers */
-.card-header .dropdown-menu {
-    z-index: 1062;
-}
-
-/* Ensure dropdowns in bulk action bars work properly */
-.bulk-actions .dropdown-menu {
-    z-index: 1064;
-}
+*/

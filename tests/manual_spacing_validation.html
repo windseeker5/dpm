@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Actions Spacing - Manual Validation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .validation-box {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            background: #f8fafc;
+        }
+        .step {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .step h3 {
+            margin: 0 0 0.5rem 0;
+            color: #1e293b;
+        }
+        .expected {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+        .issue {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+        .code {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.875rem;
+        }
+        .screenshot-area {
+            border: 2px dashed #94a3b8;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-style: italic;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Bulk Actions Card Spacing - Manual Validation</h1>
+    
+    <div class="validation-box">
+        <h2>🎯 Objective</h2>
+        <p>Verify that the green bulk actions card has <strong>equal visual spacing</strong> above and below it when displayed.</p>
+    </div>
+
+    <div class="validation-box issue">
+        <h2>❌ Previous Issue</h2>
+        <p>The green bulk actions card had unequal spacing - white space above but no visible space below, causing it to appear "stuck" to the table card.</p>
+    </div>
+
+    <div class="validation-box expected">
+        <h2>✅ Expected Fix</h2>
+        <p>After the CSS changes, the green card should have:</p>
+        <ul>
+            <li><strong>Top margin:</strong> 1.5rem (consistent with before)</li>
+            <li><strong>Bottom margin:</strong> 2rem (increased from 1.5rem)</li>
+            <li><strong>Additional separation:</strong> 1rem from main table (via adjacent sibling selector)</li>
+            <li><strong>Total visual gap below:</strong> ~3rem of visible space</li>
+        </ul>
+    </div>
+
+    <h2>📋 Validation Steps</h2>
+
+    <div class="step">
+        <h3>Step 1: Navigate to Signups Page</h3>
+        <p>Open your browser and go to:</p>
+        <div class="code">http://127.0.0.1:8890/signups</div>
+    </div>
+
+    <div class="step">
+        <h3>Step 2: Login</h3>
+        <p>Use the admin credentials:</p>
+        <div class="code">
+Username: kdresdell@gmail.com<br>
+Password: admin123
+        </div>
+    </div>
+
+    <div class="step">
+        <h3>Step 3: Trigger Bulk Actions Card</h3>
+        <p>Select one or more checkboxes in the signups table to make the green bulk actions card appear.</p>
+        <p><em>The card should slide down with a smooth animation.</em></p>
+    </div>
+
+    <div class="step">
+        <h3>Step 4: Visual Inspection</h3>
+        <p>Check the spacing around the green bulk actions card:</p>
+        <ul>
+            <li>✅ Space above the card (between search box and green card)</li>
+            <li>✅ Space below the card (between green card and table)</li>
+            <li>✅ The spaces should appear <strong>visually equal</strong></li>
+            <li>✅ No "touching" or cramped appearance</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h3>Step 5: Compare with Screenshot</h3>
+        <p>Compare with the original issue screenshot:</p>
+        <div class="code">swappy-20250817-114505.png</div>
+        <p>The green card should now have visible separation from the table below.</p>
+    </div>
+
+    <h2>📸 Validation Results</h2>
+    
+    <div class="validation-box">
+        <h3>Before Fix:</h3>
+        <div class="screenshot-area">
+            Original screenshot shows green card touching table below
+        </div>
+        
+        <h3>After Fix:</h3>
+        <div class="screenshot-area">
+            Paste screenshot here showing equal spacing above and below
+        </div>
+    </div>
+
+    <h2>🔧 Technical Details</h2>
+    
+    <div class="validation-box">
+        <h3>CSS Changes Applied:</h3>
+        <div class="code">
+/* Increased bottom margin on bulk actions card */<br>
+margin-bottom: 2rem !important;<br><br>
+/* Added class to main table card */<br>
+class="card main-table-card"<br><br>
+/* Added adjacent sibling selector for extra spacing */<br>
+.bulk-actions-container + .main-table-card {<br>
+&nbsp;&nbsp;margin-top: 1rem !important;<br>
+}
+        </div>
+    </div>
+
+    <div class="validation-box expected">
+        <h3>✅ Success Criteria:</h3>
+        <ul>
+            <li>Green card has visible space above it</li>
+            <li>Green card has visible space below it</li>
+            <li>Spacing appears balanced and equal</li>
+            <li>No cramped or "touching" appearance</li>
+            <li>Professional, polished visual presentation</li>
+        </ul>
+    </div>
+
+    <div class="validation-box issue">
+        <h3>🚨 If Issues Persist:</h3>
+        <p>If the spacing still appears unequal:</p>
+        <ol>
+            <li>Check browser developer tools for CSS conflicts</li>
+            <li>Verify the Flask server auto-reloaded the changes</li>
+            <li>Clear browser cache and reload</li>
+            <li>Check console for any JavaScript errors</li>
+        </ol>
+    </div>
+
+    <script>
+        // Add timestamp for when validation was performed
+        document.addEventListener('DOMContentLoaded', function() {
+            const timestamp = new Date().toLocaleString();
+            const footer = document.createElement('div');
+            footer.style.cssText = 'text-align: center; margin-top: 2rem; padding: 1rem; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 0.875rem;';
+            footer.innerHTML = `Validation performed on: ${timestamp}`;
+            document.body.appendChild(footer);
+        });
+    </script>
+</body>
+</html>
