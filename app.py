@@ -150,11 +150,11 @@ app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
-# 🤖 Register Chatbot Blueprint
+# 🤖 Register Chatbot Blueprint - Using simplified version
 try:
-    from chatbot_v2 import chatbot_bp
+    from chatbot_v2.routes_simple import chatbot_bp
     app.register_blueprint(chatbot_bp)
-    print("✅ Chatbot v2 registered successfully")
+    print("✅ Simplified chatbot registered successfully")
     
     # List routes to verify
     for rule in app.url_map.iter_rules():

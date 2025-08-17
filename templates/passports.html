@@ -1,888 +1,1560 @@
 {% extends "base.html" %}
-{% block title %}Passports Management{% endblock %}
-
-{% block head %}
-<style>
-.passport-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border: 1px solid rgba(0,0,0,0.1);
-}
-.passport-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-  border-color: rgba(0,0,0,0.2);
-}
-.user-avatar {
-  height: 40px;
-  width: 40px;
-  object-fit: cover;
-  border-radius: 50%;
-}
-.filter-panel {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-.stats-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-.stat-item {
-  text-align: center;
-  padding: 0.5rem;
-}
-.stat-number {
-  font-size: 2rem;
-  font-weight: bold;
-  display: block;
-}
-.stat-label {
-  font-size: 0.875rem;
-  opacity: 0.9;
-}
-.passport-actions {
-  opacity: 1 !important;
-  transition: opacity 0.2s ease;
-}
-
-/* Enhanced table row transitions */
-.table tbody tr {
-  transition: background-color 0.2s ease, transform 0.1s ease;
-}
-.table tbody tr:hover {
-  background-color: rgba(0,0,0,0.02);
-  transform: scale(1.001);
-}
-
-/* Quick filter buttons styling */
-.btn-group .btn.active {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  transform: translateY(-1px);
-}
-
-/* Badge improvements */
-.badge {
-  font-weight: 600;
-  letter-spacing: 0.025em;
-  border: 1px solid rgba(255,255,255,0.2);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* Loading state for search */
-.search-loading {
-  position: relative;
-}
-.search-loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  width: 16px;
-  height: 16px;
-  margin-top: -8px;
-  border: 2px solid #ccc;
-  border-radius: 50%;
-  border-top-color: #007bff;
-  animation: spin 1s ease-in-out infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-.bulk-actions {
-  background: #fff;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  display: none;
-}
-.bulk-actions.show {
-  display: block;
-}
-
-/* Badge visibility fixes */
-.badge.bg-success { background-color: #28a745 !important; color: white !important; }
-.badge.bg-danger { background-color: #dc3545 !important; color: white !important; }
-.badge.bg-warning { background-color: #ffc107 !important; color: black !important; }
-.badge.bg-info { background-color: #007bff !important; color: white !important; }
-.badge.bg-secondary { background-color: #6c757d !important; color: white !important; }
-
-@media (max-width: 768px) {
-  .passport-table {
-    display: none;
-  }
-  .passport-cards {
-    display: block;
-  }
-  .filter-panel {
-    padding: 0.75rem;
-  }
-  .stats-card {
-    padding: 1rem;
-  }
-  .stat-number {
-    font-size: 1.5rem;
-  }
-  
-  /* Enhanced mobile card design */
-  .passport-card {
-    margin-bottom: 1rem;
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .passport-card .card-body {
-    padding: 1.25rem;
-  }
-  
-  /* Mobile-friendly buttons */
-  .btn-sm {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-  }
-  
-  /* Quick filters on mobile */
-  .btn-group {
-    flex-direction: column;
-    width: 100%;
-    gap: 0.5rem;
-  }
-  .btn-group .btn {
-    margin-bottom: 0.25rem;
-    width: 100%;
-    justify-content: flex-start;
-  }
-}
-@media (min-width: 769px) {
-  .passport-table {
-    display: block;
-  }
-  .passport-cards {
-    display: none;
-  }
-}
-
-/* White background for all cards and tables */
-.card {
-  background-color: #fff !important;
-}
-
-.table {
-  background-color: #fff !important;
-}
-
-.passport-card {
-  background-color: #fff !important;
-}
-
-.passport-table {
-  background-color: #fff !important;
-}
-</style>
-{% endblock %}
+{% block title %}Digital Passports{% endblock %}
 
 {% block content %}
-<div class="container-xl mt-4">
+<!-- Critical Search Bar Fix Styles -->
+<style>
+/* Pink glow effect for Ctrl+K - subtle and elegant */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out !important;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
+              0 0 8px rgba(255, 105, 180, 0.35),
+              0 0 15px rgba(255, 105, 180, 0.15) !important;
+  transform: scale(1.005) !important;
+  background-image: none !important;
+  z-index: 1000;
+  position: relative;
+}
 
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
+                0 0 0 0 rgba(255, 105, 180, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+                0 0 10px rgba(255, 105, 180, 0.35),
+                0 0 18px rgba(255, 105, 180, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
+                0 0 8px rgba(255, 105, 180, 0.35),
+                0 0 15px rgba(255, 105, 180, 0.15);
+  }
+}
+
+/* Disable Bootstrap validation styling completely */
+#enhancedSearchInput.is-valid,
+#enhancedSearchInput.is-invalid {
+  border-color: #ced4da !important;
+  background-image: none !important;
+  padding-right: 100px !important;
+}
+
+#enhancedSearchInput.is-valid:focus,
+#enhancedSearchInput.is-invalid:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+  background-image: none !important;
+}
+
+/* Force remove validation feedback icons */
+#enhancedSearchInput {
+  background-image: none !important;
+}
+</style>
+
+<div class="page-wrapper">
   <!-- Page Header -->
-  <div class="page-header mb-4">
-    <div class="row align-items-center">
-      <div class="col">
-        <h2 class="page-pretitle text-muted text-uppercase mb-1">Management</h2>
-        <h1 class="page-title mb-0">Passports Dashboard</h1>
-      </div>
-      <div class="col-auto">
-        <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
-          <i class="ti ti-plus"></i> New Passport
-        </a>
-        <a href="{{ url_for('export_passports', **current_filters) }}" class="btn btn-outline-secondary ms-2">
-          <i class="ti ti-download"></i> Export
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Statistics Cards -->
-  <div class="stats-card">
-    <div class="row">
-      <div class="col-6 col-md-2">
-        <div class="stat-item">
-          <span class="stat-number">{{ statistics.total_passports }}</span>
-          <span class="stat-label">Total Passports</span>
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title"><i class="ti ti-ticket text-orange me-2"></i>Digital Passports</h1>
         </div>
-      </div>
-      <div class="col-6 col-md-2">
-        <div class="stat-item">
-          <span class="stat-number">{{ statistics.paid_passports }}</span>
-          <span class="stat-label">Paid</span>
-        </div>
-      </div>
-      <div class="col-6 col-md-2">
-        <div class="stat-item">
-          <span class="stat-number">{{ statistics.unpaid_passports }}</span>
-          <span class="stat-label">Unpaid</span>
-        </div>
-      </div>
-      <div class="col-6 col-md-2">
-        <div class="stat-item">
-          <span class="stat-number">{{ statistics.active_passports }}</span>
-          <span class="stat-label">Active</span>
-        </div>
-      </div>
-      <div class="col-6 col-md-2">
-        <div class="stat-item">
-          <span class="stat-number">${{ "{:,.0f}".format(statistics.total_revenue) }}</span>
-          <span class="stat-label">Total Revenue</span>
-        </div>
-      </div>
-      <div class="col-6 col-md-2">
-        <div class="stat-item">
-          <span class="stat-number">${{ "{:,.0f}".format(statistics.pending_revenue) }}</span>
-          <span class="stat-label">Pending Revenue</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quick Filter Buttons -->
-  <div class="row mb-3">
-    <div class="col">
-      <div class="btn-group flex-wrap" role="group">
-        <a href="{{ url_for('list_passports') }}" class="btn btn-outline-secondary btn-sm {% if not current_filters.payment_status %}active{% endif %}">
-          <i class="ti ti-list"></i> All Passports
-        </a>
-        <a href="{{ url_for('list_passports', payment_status='unpaid') }}" class="btn btn-outline-danger btn-sm {% if current_filters.payment_status == 'unpaid' %}active{% endif %}">
-          <i class="ti ti-alert-circle"></i> Unpaid ({{ statistics.unpaid_passports }})
-        </a>
-        <a href="{{ url_for('list_passports', payment_status='paid') }}" class="btn btn-outline-success btn-sm {% if current_filters.payment_status == 'paid' %}active{% endif %}">
-          <i class="ti ti-check"></i> Paid ({{ statistics.paid_passports }})
-        </a>
-        <a href="{{ url_for('list_passports') }}?uses_remaining=gt_0" class="btn btn-outline-info btn-sm">
-          <i class="ti ti-ticket"></i> Active ({{ statistics.active_passports }})
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Enhanced Search and Filters -->
-  <div class="filter-panel">
-    <form method="GET" id="filterForm">
-      <div class="row g-3">
-        <!-- Search -->
-        <div class="col-md-3">
-          <div class="input-group">
-            <input type="text" name="q" class="form-control" placeholder="Search users, emails, codes..." 
-                   value="{{ current_filters.q }}" id="searchInput">
-            <button type="submit" class="btn btn-outline-secondary">
-              <i class="ti ti-search"></i>
-            </button>
+        <div class="col-auto ms-auto d-print-none">
+          <div class="btn-list">
+            <a href="{{ url_for('create_passport') }}" class="btn btn-primary shadow-sm">
+              <i class="ti ti-plus me-2"></i> Create Passport
+            </a>
           </div>
         </div>
-        
-        <!-- Activity Filter -->
-        <div class="col-md-2">
-          <select name="activity" class="form-select" onchange="document.getElementById('filterForm').submit();">
-            <option value="">All Activities</option>
-            {% for activity in activities %}
-            <option value="{{ activity.id }}" {% if current_filters.activity == activity.id|string %}selected{% endif %}>
-              {{ activity.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        
-        <!-- Payment Status Filter -->
-        <div class="col-md-2">
-          <select name="payment_status" class="form-select" onchange="document.getElementById('filterForm').submit();">
-            <option value="">All Status</option>
-            <option value="paid" {% if current_filters.payment_status == 'paid' %}selected{% endif %}>Paid</option>
-            <option value="unpaid" {% if current_filters.payment_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
-          </select>
-        </div>
-        
-        <!-- Date Range -->
-        <div class="col-md-2">
-          <input type="date" name="start_date" class="form-control" placeholder="Start Date" 
-                 value="{{ current_filters.start_date }}" onchange="document.getElementById('filterForm').submit();">
-        </div>
-        <div class="col-md-2">
-          <input type="date" name="end_date" class="form-control" placeholder="End Date" 
-                 value="{{ current_filters.end_date }}" onchange="document.getElementById('filterForm').submit();">
-        </div>
       </div>
-      
-      <!-- Amount Range -->
-      <div class="row g-3 mt-2">
-        <div class="col-md-2">
-          <input type="number" name="min_amount" class="form-control" placeholder="Min Amount" step="0.01"
-                 value="{{ current_filters.min_amount }}" onchange="document.getElementById('filterForm').submit();">
-        </div>
-        <div class="col-md-2">
-          <input type="number" name="max_amount" class="form-control" placeholder="Max Amount" step="0.01"
-                 value="{{ current_filters.max_amount }}" onchange="document.getElementById('filterForm').submit();">
-        </div>
-        
-        <!-- Clear Filters -->
-        {% if current_filters.q or current_filters.activity or current_filters.payment_status or current_filters.start_date or current_filters.end_date or current_filters.min_amount or current_filters.max_amount %}
-        <div class="col-md-2">
-          <a href="{{ url_for('list_passports') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="ti ti-x"></i> Clear Filters
-          </a>
-        </div>
-        {% endif %}
-      </div>
-    </form>
+    </div>
   </div>
 
-  <!-- Bulk Actions (Hidden by default) -->
-  <div class="bulk-actions" id="bulkActions">
-    <form method="POST" action="{{ url_for('passports_bulk_action') }}" id="bulkForm">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="row align-items-center">
-        <div class="col">
-          <span id="selectedCount">0</span> passports selected
-        </div>
-        <div class="col-auto">
-          <button type="button" class="btn btn-sm btn-success me-2" onclick="bulkAction('mark_paid')">
-            <i class="ti ti-currency-dollar"></i> Mark Paid
-          </button>
-          <button type="button" class="btn btn-sm btn-warning me-2" onclick="bulkAction('send_reminders')">
-            <i class="ti ti-mail"></i> Send Reminders
-          </button>
-          <button type="button" class="btn btn-sm btn-danger" onclick="bulkAction('delete')">
-            <i class="ti ti-trash"></i> Delete
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="dashboard-container">
+
+    <!-- Enhanced Dynamic Search -->
+    <form method="GET" action="{{ url_for('list_passports') }}" class="mb-4" id="dynamicSearchForm">
+      <div class="input-icon position-relative">
+        <span class="input-icon-addon">
+          <i class="ti ti-search fs-3"></i>
+        </span>
+        <input type="text" 
+               name="q"
+               id="enhancedSearchInput"
+               class="form-control form-control-lg shadow-sm" 
+               placeholder="Start typing to search passports instantly..." 
+               value="{{ current_filters.q or '' }}"
+               style="padding-right: 100px; border-radius: 0.5rem;"
+               autocomplete="off"
+               data-bs-toggle="false">
+        <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
+          <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
+          <kbd id="searchKbdHint" class="text-muted">ctrl + k</kbd>
+          <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
+            <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
           </button>
         </div>
       </div>
     </form>
-  </div>
 
-  <!-- Desktop Table View -->
-  <div class="card passport-table">
-    <div class="table-responsive">
-      <table class="table card-table table-hover table-vcenter">
+
+    <!-- Bulk Actions Bar - Separate Card Above Table -->
+    <div class="bulk-actions-container">
+      <div class="card bulk-actions-card" id="bulkActions" style="display: none; background-color: #f0fdf4 !important; background: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; border-radius: 8px !important;">
+        <div class="card-body p-3">
+          <form method="POST" action="{{ url_for('passports_bulk_action') }}" id="bulkForm">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="bulk-actions-count">
+                <i class="ti ti-checkbox me-2"></i>
+                <span id="selectedCount">0</span> passports selected
+              </div>
+              <div class="bulk-actions-buttons">
+                <div class="dropdown">
+                  <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Actions
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <button type="submit" name="action" value="mark_paid" class="dropdown-item text-success">
+                        <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                      </button>
+                    </li>
+                    <li>
+                      <button type="submit" name="action" value="send_reminders" class="dropdown-item text-warning">
+                        <i class="ti ti-mail me-2"></i>Send Reminder
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button type="submit" name="action" value="delete" class="dropdown-item text-danger" 
+                              onclick="return confirm('Delete ' + document.querySelectorAll('.passport-checkbox:checked').length + ' selected passports?')">
+                        <i class="ti ti-trash me-2"></i>Delete Selected
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+      <div class="card-header">
+        <div class="d-flex justify-content-center align-items-center w-100">
+          <!-- Filter Buttons -->
+          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+            <a href="{{ url_for('list_passports') }}" 
+               class="github-filter-btn {% if not current_filters.payment_status and not current_filters.status %}active{% endif %}"
+               style="{% if not current_filters.payment_status and not current_filters.status %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Passports <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_passports|default(0) }})</span>
+            </a>
+            <a href="{{ url_for('list_passports', payment_status='unpaid') }}" 
+               class="github-filter-btn {% if current_filters.payment_status == 'unpaid' %}active{% endif %}"
+               style="{% if current_filters.payment_status == 'unpaid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"></i>Unpaid <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.unpaid_passports|default(0) }})</span>
+            </a>
+            <a href="{{ url_for('list_passports', payment_status='paid') }}" 
+               class="github-filter-btn {% if current_filters.payment_status == 'paid' %}active{% endif %}"
+               style="{% if current_filters.payment_status == 'paid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-circle-check" style="font-size: 16px; margin-right: 4px;"></i>Paid <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.paid_passports|default(0) }})</span>
+            </a>
+            <a href="{{ url_for('list_passports', status='active') }}" 
+               class="github-filter-btn {% if current_filters.status == 'active' %}active{% endif %}"
+               style="{% if current_filters.status == 'active' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-activity" style="font-size: 16px; margin-right: 4px;"></i>Active <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.active_passports|default(0) }})</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
         <thead>
           <tr>
-            <th style="width: 40px;">
-              <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleAll()">
+            <th class="w-1">
+              <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
             </th>
             <th>User</th>
-            <th>Activity</th>
-            <th>Passport Type</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Uses Remaining</th>
-            <th>Created Date</th>
-            <th>Actions</th>
+            <th class="d-none d-md-table-cell">Activity</th>
+            <th class="d-none d-lg-table-cell">Passport Type</th>
+            <th class="d-none d-md-table-cell text-center">Amount</th>
+            <th class="d-none d-lg-table-cell text-center">Status</th>
+            <th class="d-none d-md-table-cell text-center">Uses Remaining</th>
+            <th class="d-none d-md-table-cell">Created</th>
+            <th class="text-end">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for passport in passports %}
-          <tr class="passport-row">
-            <td>
-              <input type="checkbox" class="form-check-input passport-checkbox" value="{{ passport.id }}" onchange="updateBulkActions()">
-            </td>
-            <td>
-              <div class="d-flex align-items-center">
-                <span class="avatar avatar-sm me-3" style="background-image: url('https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon')"></span>
-                <div>
-                  <strong>{{ passport.user.name or 'Anonymous' }}</strong>
-                  <br>
-                  <span class="text-muted small">{{ passport.user.email or '-' }}</span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div>
-                <strong>{{ passport.activity.name if passport.activity else '-' }}</strong>
-                <br>
-                <span class="text-muted small">{{ passport.pass_code }}</span>
-              </div>
-            </td>
-            <td>
-              {% if passport.passport_type %}
-              <span class="badge bg-blue-lt text-blue">{{ passport.passport_type.name }}</span>
-              {% elif passport.passport_type_name %}
-              <span class="badge bg-gray-lt text-gray">{{ passport.passport_type_name }}</span>
-              {% else %}
-              <span class="badge bg-gray-lt text-gray">No Type</span>
-              {% endif %}
-            </td>
-            <td>
-              <strong>${{ "{:,.2f}".format(passport.sold_amt) }}</strong>
-            </td>
-            <td>
-              {% if passport.paid %}
-              <span class="badge bg-green-lt">Paid</span>
-              {% else %}
-              <span class="badge bg-red-lt">Unpaid</span>
-              {% endif %}
-            </td>
-            <td>
-              <span class="badge bg-blue-lt">{{ passport.uses_remaining }}</span>
-            </td>
-            <td>
-              <span class="text-muted small">{{ passport.created_dt.strftime('%Y-%m-%d') if passport.created_dt else '-' }}</span>
-            </td>
-            <td>
-              <div class="passport-actions">
-                <a href="{{ url_for('edit_passport', passport_id=passport.id) }}" class="btn btn-sm btn-primary me-1" title="Edit Passport">
-                  <i class="ti ti-pencil"></i>
-                </a>
-                <div class="btn-group">
-                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="More Actions">
-                    <i class="ti ti-dots-vertical"></i>
-                  </button>
-                  <div class="dropdown-menu">
-                    <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
-                      <i class="ti ti-pencil me-2"></i>Edit Passport
-                    </a>
-                    <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
-                      <i class="ti ti-qrcode me-2"></i>View QR Code
-                    </a>
-                    {% if not passport.paid %}
-                    <a class="dropdown-item" href="#" onclick="markAsPaid({{ passport.id }})">
-                      <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-                    </a>
-                    {% endif %}
-                    {% if passport.uses_remaining > 0 %}
-                    <a class="dropdown-item" href="#" onclick="redeemPassport('{{ passport.pass_code }}')">
-                      <i class="ti ti-check me-2"></i>Redeem Session
-                    </a>
-                    {% endif %}
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}')">
-                      <i class="ti ti-trash me-2"></i>Delete Passport
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% else %}
           <tr>
-            <td colspan="9" class="text-center py-5">
-              <div class="empty">
-                <div class="empty-img">
-                  <i class="ti ti-ticket" style="font-size: 4rem; color: #ccc;"></i>
+            <td>
+              <input type="checkbox" 
+                     class="form-check-input passport-checkbox" 
+                     name="selected_passports" 
+                     value="{{ passport.id }}" 
+                     form="bulkForm"
+                     data-status="{{ 'active' if passport.uses_remaining > 0 else 'expired' }}"
+                     data-paid="{{ 'true' if passport.paid else 'false' }}"
+                     aria-label="Select passport {{ passport.id }}">
+            </td>
+            <td style="vertical-align: middle;">
+              <div class="d-flex align-items-center">
+                <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+                     class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+                <div>
+                  <div class="fw-bold">{{ passport.user.name or 'Anonymous' }}</div>
+                  <div class="text-muted small">{{ passport.user.email or 'No email' }}</div>
                 </div>
-                <p class="empty-title">No passports found</p>
-                <p class="empty-subtitle text-muted">
-                  {% if current_filters.q or current_filters.activity or current_filters.payment_status %}
-                    Try adjusting your search filters or <a href="{{ url_for('list_passports') }}">clear all filters</a>
-                  {% else %}
-                    Get started by creating your first passport
+              </div>
+            </td>
+            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+              <div>
+                <div class="fw-bold">{{ passport.activity.name if passport.activity else 'Unknown' }}</div>
+                <div class="text-muted small">{{ passport.pass_code or 'No code' }}</div>
+              </div>
+            </td>
+            <td class="d-none d-lg-table-cell" style="vertical-align: middle;">
+              <span class="badge bg-blue-lt text-blue-lt-fg">{{ passport.passport_type.name if passport.passport_type else 'Standard' }}</span>
+            </td>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+              {% if passport.sold_amt %}
+                ${{ "%.0f"|format(passport.sold_amt) }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
+              {% if passport.paid %}
+                <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
+              {% else %}
+                <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
+              {% endif %}
+            </td>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+              <span class="fw-bold {% if passport.uses_remaining > 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ passport.uses_remaining or 0 }}
+              </span>
+            </td>
+            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+              {% if passport.created_dt %}
+                {{ passport.created_dt.strftime('%Y-%m-%d') }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td style="vertical-align: middle;">
+              <div class="dropdown">
+                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                  <span class="d-none d-md-inline">Actions</span>
+                  <i class="ti ti-menu-2 d-md-none"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
+                    <i class="ti ti-pencil me-2"></i>Edit Details
+                  </a>
+                  {% if not passport.paid %}
+                  <a class="dropdown-item text-success" href="{{ url_for('mark_passport_paid', passport_id=passport.id) }}" 
+                     onclick="return confirm('Mark this passport as paid?')">
+                    <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                  </a>
                   {% endif %}
-                </p>
-                <div class="empty-action">
-                  <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
-                    <i class="ti ti-plus"></i> Create Passport
+                  <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
+                    <i class="ti ti-qrcode me-2"></i>View QR Code
+                  </a>
+                  <a class="dropdown-item" href="#">
+                    <i class="ti ti-mail me-2"></i>Send Reminder
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-danger" href="#" 
+                     onclick="if(confirm('Delete this passport?')) { 
+                       var form = document.getElementById('deleteForm{{ passport.id }}'); 
+                       if(form) form.submit(); 
+                     }">
+                    <i class="ti ti-trash me-2"></i>Delete
                   </a>
                 </div>
               </div>
+              <!-- Hidden delete form -->
+              <form id="deleteForm{{ passport.id }}" method="POST" action="{{ url_for('passports_bulk_action') }}" style="display: none;">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="selected_passports" value="{{ passport.id }}">
+              </form>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-    </div>
-  </div>
-
-  <!-- Mobile Card View -->
-  <div class="passport-cards">
-    {% for passport in passports %}
-    <div class="card passport-card mb-3">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-auto">
-            <input type="checkbox" class="form-check-input passport-checkbox" value="{{ passport.id }}" onchange="updateBulkActions()">
-          </div>
-          <div class="col-auto">
-            <span class="avatar avatar-md" style="background-image: url('https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon')"></span>
-          </div>
-          <div class="col">
-            <h4 class="card-title mb-1">{{ passport.user.name or 'Anonymous' }}</h4>
-            <div class="mb-2">
-              {% if passport.paid %}
-              <span class="badge bg-green-lt">Paid</span>
-              {% else %}
-              <span class="badge bg-red-lt">Unpaid</span>
-              {% endif %}
-              {% if passport.passport_type %}
-              <span class="badge bg-blue-lt text-blue">{{ passport.passport_type.name }}</span>
-              {% elif passport.passport_type_name %}
-              <span class="badge bg-gray-lt text-gray">{{ passport.passport_type_name }}</span>
-              {% endif %}
-              <span class="badge bg-gray-lt">{{ passport.uses_remaining }} uses</span>
-            </div>
-            <div class="row text-center">
-              <div class="col-4">
-                <div class="stat-number small">${{ "{:,.0f}".format(passport.sold_amt) }}</div>
-                <div class="stat-label">Amount</div>
-              </div>
-              <div class="col-4">
-                <div class="stat-number small">{{ passport.activity.name[:10] if passport.activity else '-' }}...</div>
-                <div class="stat-label">Activity</div>
-              </div>
-              <div class="col-4">
-                <div class="stat-number small">{{ passport.pass_code[:8] }}...</div>
-                <div class="stat-label">Code</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-auto">
-            <a href="{{ url_for('edit_passport', passport_id=passport.id) }}" class="btn btn-primary btn-sm me-1" title="Edit Passport">
-              <i class="ti ti-pencil"></i>
-            </a>
-            <div class="dropdown d-inline-block">
-              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <i class="ti ti-dots-vertical"></i>
-              </button>
-              <div class="dropdown-menu">
-                <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
-                  <i class="ti ti-pencil me-2"></i>Edit Passport
-                </a>
-                <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
-                  <i class="ti ti-qrcode me-2"></i>View QR Code
-                </a>
-                {% if not passport.paid %}
-                <a class="dropdown-item" href="#" onclick="markAsPaid({{ passport.id }})">
-                  <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-                </a>
-                {% endif %}
-                {% if passport.uses_remaining > 0 %}
-                <a class="dropdown-item" href="#" onclick="redeemPassport('{{ passport.pass_code }}')">
-                  <i class="ti ti-check me-2"></i>Redeem Session
-                </a>
-                {% endif %}
-                <div class="dropdown-divider"></div>
-                <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}')">
-                  <i class="ti ti-trash me-2"></i>Delete Passport
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-    </div>
-    {% else %}
-    <div class="empty py-5">
-      <div class="empty-img">
-        <i class="ti ti-ticket" style="font-size: 4rem; color: #ccc;"></i>
-      </div>
-      <p class="empty-title">No passports found</p>
-      <p class="empty-subtitle text-muted">
-        {% if current_filters.q or current_filters.activity or current_filters.payment_status %}
-          Try adjusting your search filters or <a href="{{ url_for('list_passports') }}">clear all filters</a>
+      
+      <!-- Pagination -->
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        {% if passports|length > 0 %}
+          <span class="text-muted">Showing {{ passports|length }} of {{ statistics.total_passports|default(0) }} entries</span>
+          <!-- Pagination will be enabled when backend implements it -->
         {% else %}
-          Get started by creating your first passport
+          <span class="text-muted">No entries found</span>
         {% endif %}
-      </p>
-      <div class="empty-action">
-        <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
-          <i class="ti ti-plus"></i> Create Passport
-        </a>
+      </div>
       </div>
     </div>
-    {% endfor %}
-  </div>
 
-</div>
+    <!-- Empty State - Only show when there are NO passports at all in the database -->
+    {% if statistics.total_passports == 0 %}
+    <div class="card">
+      <div class="empty">
+        <div class="empty-icon">
+          <i class="ti ti-ticket-off"></i>
+        </div>
+        <p class="empty-title">No passports found</p>
+        <p class="empty-subtitle">
+          Digital passports will appear here when created from approved signups
+        </p>
+      </div>
+    </div>
+    {% endif %}
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Confirm Delete</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p>Are you sure you want to delete the passport for <strong id="deletePassportUser"></strong>?</p>
-        <p class="text-muted">This action cannot be undone.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <form method="POST" id="deleteForm" class="d-inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-danger">Delete Passport</button>
-        </form>
-      </div>
     </div>
   </div>
 </div>
 
-<!-- Mark as Paid Modal -->
-<div class="modal fade" id="markPaidModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Mark as Paid</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p>Are you sure you want to mark this passport as paid?</p>
-        <p class="text-muted">This will send a payment confirmation email to the user.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <form method="POST" id="markPaidForm" class="d-inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-success">Mark as Paid</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Redeem Session Modal -->
-<div class="modal fade" id="redeemModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Redeem Session</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p>Are you sure you want to redeem one session for this passport?</p>
-        <p class="text-muted">This will reduce the uses remaining by 1 and send a confirmation email.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <form method="POST" id="redeemForm" class="d-inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary">Redeem Session</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
 <script>
-// Search only on Enter key press or button click (no real-time search)
-document.getElementById('searchInput').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    document.getElementById('filterForm').submit();
-  }
-});
-
-// Bulk selection functionality
-function toggleAll() {
-  const selectAll = document.getElementById('selectAll');
-  const checkboxes = document.querySelectorAll('.passport-checkbox');
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = selectAll.checked;
-  });
-  updateBulkActions();
-}
-
-function updateBulkActions() {
-  const checkboxes = document.querySelectorAll('.passport-checkbox:checked');
-  const bulkActions = document.getElementById('bulkActions');
-  const selectedCount = document.getElementById('selectedCount');
-  
-  if (checkboxes.length > 0) {
-    bulkActions.classList.add('show');
-    selectedCount.textContent = checkboxes.length;
-  } else {
-    bulkActions.classList.remove('show');
-  }
-  
-  // Update select all checkbox
-  const allCheckboxes = document.querySelectorAll('.passport-checkbox');
-  const selectAll = document.getElementById('selectAll');
-  selectAll.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
-  selectAll.checked = checkboxes.length === allCheckboxes.length;
-}
-
-// Bulk actions
-function bulkAction(action) {
-  const selectedIds = Array.from(document.querySelectorAll('.passport-checkbox:checked')).map(cb => cb.value);
-  if (selectedIds.length === 0) return;
-  
-  let message = '';
-  switch(action) {
-    case 'mark_paid':
-      message = `Mark ${selectedIds.length} passports as paid?`;
-      break;
-    case 'send_reminders':
-      message = `Send payment reminders to ${selectedIds.length} unpaid passports?`;
-      break;
-    case 'delete':
-      message = `Delete ${selectedIds.length} passports? This cannot be undone.`;
-      break;
-  }
-  
-  if (confirm(message)) {
-    const form = document.getElementById('bulkForm');
-    
-    // Remove existing passport ID inputs
-    const existingInputs = form.querySelectorAll('input[name="passport_ids[]"]');
-    existingInputs.forEach(input => input.remove());
-    
-    // Add selected passport IDs
-    selectedIds.forEach(id => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'passport_ids[]';
-      input.value = id;
-      form.appendChild(input);
-    });
-    
-    // Set action
-    const actionInput = document.createElement('input');
-    actionInput.type = 'hidden';
-    actionInput.name = 'action';
-    actionInput.value = action;
-    form.appendChild(actionInput);
-    
-    form.submit();
-  }
-}
-
-// Delete confirmation
-function confirmDelete(passportId, userName) {
-  document.getElementById('deletePassportUser').textContent = userName;
-  document.getElementById('deleteForm').action = `/passports/bulk-action`;
-  
-  // Clear existing inputs
-  const form = document.getElementById('deleteForm');
-  const existingInputs = form.querySelectorAll('input[name="passport_ids[]"], input[name="action"]');
-  existingInputs.forEach(input => input.remove());
-  
-  // Add passport ID and action
-  const idInput = document.createElement('input');
-  idInput.type = 'hidden';
-  idInput.name = 'passport_ids[]';
-  idInput.value = passportId;
-  form.appendChild(idInput);
-  
-  const actionInput = document.createElement('input');
-  actionInput.type = 'hidden';
-  actionInput.name = 'action';
-  actionInput.value = 'delete';
-  form.appendChild(actionInput);
-  
-  new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
-
-// Mark as paid
-function markAsPaid(passportId) {
-  document.getElementById('markPaidForm').action = `/mark-passport-paid/${passportId}`;
-  new bootstrap.Modal(document.getElementById('markPaidModal')).show();
-}
-
-// Redeem session
-function redeemPassport(passCode) {
-  document.getElementById('redeemForm').action = `/redeem/${passCode}`;
-  new bootstrap.Modal(document.getElementById('redeemModal')).show();
-}
-
-// Initialize tooltips and other Bootstrap components
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize tooltips
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-  
-  // Add loading state to search
-  const searchInput = document.getElementById('searchInput');
-  const filterForm = document.getElementById('filterForm');
-  
-  searchInput.addEventListener('focus', function() {
-    this.style.borderColor = '#007bff';
-    this.style.boxShadow = '0 0 0 0.2rem rgba(0,123,255,.25)';
-  });
-  
-  searchInput.addEventListener('blur', function() {
-    this.style.borderColor = '';
-    this.style.boxShadow = '';
-  });
-  
-  // Enhanced filter form submission with loading state
-  filterForm.addEventListener('submit', function() {
-    const searchBtn = this.querySelector('button[type="submit"]');
-    searchBtn.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm"></i>';
-    searchBtn.disabled = true;
-  });
-  
-  // Add better visual feedback for cards
-  document.querySelectorAll('.passport-card').forEach(card => {
-    card.addEventListener('mouseenter', function() {
-      this.style.transform = 'translateY(-4px)';
-      this.style.boxShadow = '0 12px 30px rgba(0,0,0,0.2)';
-    });
-    card.addEventListener('mouseleave', function() {
-      this.style.transform = 'translateY(-2px)';
-      this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-    });
-  });
-  
-  // Enhanced button interactions
-  document.querySelectorAll('.btn').forEach(btn => {
-    btn.addEventListener('mouseenter', function() {
-      if (!this.disabled) {
-        this.style.transform = 'translateY(-1px)';
-        this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-      }
-    });
-    btn.addEventListener('mouseleave', function() {
-      this.style.transform = 'translateY(0)';
-      this.style.boxShadow = '';
-    });
-  });
-  
-  // Add ripple effect to buttons
-  document.querySelectorAll('.btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      if (this.disabled) return;
-      
-      const ripple = document.createElement('span');
-      const rect = this.getBoundingClientRect();
-      const size = Math.max(rect.width, rect.height);
-      const x = e.clientX - rect.left - size / 2;
-      const y = e.clientY - rect.top - size / 2;
-      
-      ripple.style.cssText = `
-        position: absolute;
-        width: ${size}px;
-        height: ${size}px;
-        left: ${x}px;
-        top: ${y}px;
-        background: rgba(255,255,255,0.5);
-        border-radius: 50%;
-        pointer-events: none;
-        transform: scale(0);
-        animation: ripple 0.6s linear;
-      `;
-      
-      this.style.position = 'relative';
-      this.style.overflow = 'hidden';
-      this.appendChild(ripple);
-      
-      setTimeout(() => ripple.remove(), 600);
-    });
-  });
-  
-  // Add ripple animation keyframes
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes ripple {
-      to {
-        transform: scale(4);
-        opacity: 0;
-      }
+    // Bulk selection functionality
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const passportCheckboxes = document.querySelectorAll('.passport-checkbox');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+
+    function updateBulkActions() {
+        const checkedBoxes = document.querySelectorAll('.passport-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCount.textContent = count;
+        
+        // Smooth show/hide animation
+        if (count > 0 && bulkActions.style.display === 'none') {
+            bulkActions.style.display = 'block';
+            bulkActions.classList.add('show');
+        } else if (count === 0 && bulkActions.style.display !== 'none') {
+            bulkActions.classList.remove('show');
+            setTimeout(() => {
+                bulkActions.style.display = 'none';
+            }, 300);
+        }
+        
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            if (count === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (count === passportCheckboxes.length && passportCheckboxes.length > 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+        
+        // Update available bulk actions based on selected items
+        updateAvailableActions(checkedBoxes);
     }
-  `;
-  document.head.appendChild(style);
+    
+    // Function to determine and update available bulk actions
+    function updateAvailableActions(checkedBoxes) {
+        // Get all action buttons in the dropdown
+        const markPaidBtn = document.querySelector('button[value="mark_paid"]');
+        const approveBtn = document.querySelector('button[value="approve"]');
+        const sendRemindersBtn = document.querySelector('button[value="send_reminders"]');
+        const deleteBtn = document.querySelector('button[value="delete"]');
+        
+        if (checkedBoxes.length === 0) return;
+        
+        // Analyze the states of all selected passports
+        let hasUnpaid = false;
+        let hasActive = false;
+        let hasExpired = false;
+        let allActive = true;
+        let allPaid = true;
+        
+        checkedBoxes.forEach(checkbox => {
+            const status = checkbox.dataset.status;
+            const isPaid = checkbox.dataset.paid === 'true';
+            
+            if (!isPaid) {
+                hasUnpaid = true;
+                allPaid = false;
+            }
+            
+            if (status === 'active') {
+                hasActive = true;
+            } else if (status === 'expired') {
+                hasExpired = true;
+                allActive = false;
+            } else {
+                allActive = false;
+            }
+        });
+        
+        // Update action visibility based on states
+        // Mark as Paid - show only if at least one is unpaid
+        if (markPaidBtn) {
+            if (hasUnpaid) {
+                markPaidBtn.parentElement.style.display = '';
+                markPaidBtn.disabled = false;
+            } else {
+                markPaidBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        
+        // Send Reminder - show only if at least one is unpaid
+        if (sendRemindersBtn) {
+            if (hasUnpaid) {
+                sendRemindersBtn.parentElement.style.display = '';
+                sendRemindersBtn.disabled = false;
+            } else {
+                sendRemindersBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Delete - always available
+        if (deleteBtn) {
+            deleteBtn.parentElement.style.display = '';
+            deleteBtn.disabled = false;
+        }
+        
+        // Update dropdown button text to indicate filtered actions
+        const dropdownToggle = document.querySelector('.bulk-actions-card .dropdown-toggle');
+        if (dropdownToggle) {
+            // Count visible actions
+            const visibleActions = document.querySelectorAll('.bulk-actions-card .dropdown-menu li:not([style*="display: none"])').length - 1; // -1 for divider
+            if (visibleActions < 4) {
+                dropdownToggle.innerHTML = `Actions <small class="text-muted">(${visibleActions})</small>`;
+            } else {
+                dropdownToggle.textContent = 'Actions';
+            }
+        }
+    }
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            passportCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    // Individual checkbox functionality
+    passportCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Enhanced dynamic search functionality
+    const enhancedSearchInput = document.getElementById('enhancedSearchInput');
+    const searchForm = enhancedSearchInput.closest('form');
+    const tableContainer = document.querySelector('.table-responsive');
+    let searchTimeout;
+    let isSearching = false;
+
+    // Create audio element for sound effect
+    const searchSound = new Audio('/static/beep.wav');
+    searchSound.volume = 0.3; // 30% volume
+    
+    // Create loading indicator
+    function createLoadingIndicator() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'searchLoadingIndicator';
+        loadingDiv.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center p-3">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="text-muted">Searching...</span>
+            </div>
+        `;
+        loadingDiv.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+            display: none;
+        `;
+        return loadingDiv;
+    }
+
+    const loadingIndicator = createLoadingIndicator();
+    tableContainer.style.position = 'relative';
+    tableContainer.appendChild(loadingIndicator);
+
+    // Show/hide loading state
+    function setLoadingState(loading) {
+        isSearching = loading;
+        if (loading) {
+            loadingIndicator.style.display = 'flex';
+            enhancedSearchInput.style.opacity = '0.8';
+            enhancedSearchInput.classList.add('searching-pulse');
+            if (charCounter) {
+                charCounter.style.display = 'inline';
+                charCounter.textContent = 'searching...';
+                charCounter.className = 'text-primary fw-bold';
+            }
+        } else {
+            loadingIndicator.style.display = 'none';
+            enhancedSearchInput.style.opacity = '1';
+            enhancedSearchInput.classList.remove('searching-pulse');
+            // Reset character counter based on current input
+            updateSearchFeedback(enhancedSearchInput.value);
+        }
+    }
+
+    // Perform search by navigating to URL with query params
+    function performSearch(query) {
+        if (isSearching) return; // Prevent multiple simultaneous searches
+        
+        setLoadingState(true);
+        
+        // Build URL with search query while preserving filter parameters
+        const url = new URL(window.location.href);
+        if (query && query.trim().length >= 3) {
+            url.searchParams.set('q', query.trim());
+        } else {
+            url.searchParams.delete('q');
+        }
+        // Preserve existing filter parameters
+        const currentPaymentStatus = new URLSearchParams(window.location.search).get('payment_status');
+        const currentStatus = new URLSearchParams(window.location.search).get('status');
+        if (currentPaymentStatus && !url.searchParams.has('payment_status')) {
+            url.searchParams.set('payment_status', currentPaymentStatus);
+        }
+        if (currentStatus && !url.searchParams.has('status')) {
+            url.searchParams.set('status', currentStatus);
+        }
+        
+        // Navigate to the search URL - this will reload the page with results
+        window.location.href = url.toString();
+    }
+
+    // Debounced search function
+    function debouncedSearch(query) {
+        clearTimeout(searchTimeout);
+        
+        // If query is empty, clear search immediately
+        if (!query || query.trim().length === 0) {
+            searchTimeout = setTimeout(() => performSearch(''), 150);
+            return;
+        }
+        
+        // If query is less than 3 characters, don't search yet
+        if (query.trim().length < 3) {
+            return;
+        }
+        
+        // Debounce search for queries with 3+ characters
+        searchTimeout = setTimeout(() => {
+            performSearch(query);
+        }, 250); // 250ms debounce delay for more responsive feel
+    }
+
+    // Get elements for clear button functionality
+    const kbdHint = document.getElementById('searchKbdHint');
+    const clearBtn = document.getElementById('searchClearBtn');
+    
+    // Ctrl+K keyboard shortcut to focus search with glow effect
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            enhancedSearchInput.focus();
+            enhancedSearchInput.select();
+            
+            // Add pink glow effect
+            enhancedSearchInput.classList.add('search-glow-active');
+            
+            // Play sound effect
+            try {
+                searchSound.currentTime = 0;
+                searchSound.play().catch(() => {
+                    // Silently fail if audio can't play
+                });
+            } catch (err) {
+                // Ignore audio errors
+            }
+            
+            // Remove glow after animation
+            setTimeout(() => {
+                enhancedSearchInput.classList.remove('search-glow-active');
+            }, 800);
+        }
+    });
+    
+    // Clear button functionality
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            enhancedSearchInput.value = '';
+            enhancedSearchInput.focus();
+            updateSearchFeedback('');
+            
+            // Show pink glow on clear
+            enhancedSearchInput.classList.add('search-glow-active');
+            setTimeout(() => {
+                enhancedSearchInput.classList.remove('search-glow-active');
+            }, 800);
+            
+            // Trigger search to clear results
+            performSearch('');
+        });
+    }
+    
+    // Character counter element
+    const charCounter = document.getElementById('searchCharCounter');
+    
+    // Update character counter and provide visual feedback
+    function updateSearchFeedback(query) {
+        const length = query.trim().length;
+        
+        // Toggle between kbd hint and clear button
+        if (length === 0) {
+            charCounter.style.display = 'none';
+            enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+            // Show kbd hint, hide clear button
+            if (kbdHint) kbdHint.style.display = 'inline-block';
+            if (clearBtn) clearBtn.style.display = 'none';
+        } else {
+            // Hide kbd hint, show clear button
+            if (kbdHint) kbdHint.style.display = 'none';
+            if (clearBtn) clearBtn.style.display = 'inline-flex';
+            
+            if (length < 3) {
+                charCounter.style.display = 'inline';
+                charCounter.textContent = `${3 - length} more char${3 - length === 1 ? '' : 's'}`;
+                charCounter.className = 'text-muted';
+                enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+            } else {
+                // Ready to search - hide counter, no Bootstrap validation styling
+                charCounter.style.display = 'none';
+                enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+            }
+        }
+    }
+
+    // Handle input changes with debouncing
+    enhancedSearchInput.addEventListener('input', function(e) {
+        const query = e.target.value;
+        updateSearchFeedback(query);
+        debouncedSearch(query);
+    });
+    
+    // Handle Enter key for immediate search
+    enhancedSearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+            if (query.trim().length >= 3 || query.trim().length === 0) {
+                performSearch(query);
+            }
+        }
+    });
+    
+    // Handle browser back/forward navigation
+    window.addEventListener('popstate', function(e) {
+        // Page will reload automatically, just ensure we're not in a loading state
+        setLoadingState(false);
+    });
+    
+    // Prevent form submission (we handle it with JavaScript)
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const query = enhancedSearchInput.value;
+        if (query.trim().length >= 3 || query.trim().length === 0) {
+            performSearch(query);
+        }
+    });
+    
+    // Add visual feedback for minimum character requirement
+    enhancedSearchInput.addEventListener('focus', function() {
+        if (this.value.length > 0 && this.value.length < 3) {
+            this.setAttribute('title', 'Type at least 3 characters to search');
+        }
+        updateSearchFeedback(this.value);
+        
+        // Add subtle glow on regular focus (not as intense as Ctrl+K)
+        if (this.value.length === 0) {
+            this.classList.add('search-focus-glow');
+        }
+    });
+    
+    enhancedSearchInput.addEventListener('blur', function() {
+        this.removeAttribute('title');
+        this.classList.remove('search-focus-glow');
+        // Hide counter when not focused unless searching
+        if (!isSearching && this.value.trim().length < 3) {
+            if (charCounter) charCounter.style.display = 'none';
+        }
+    });
+    
+    // Initialize character counter on page load
+    updateSearchFeedback(enhancedSearchInput.value);
+
+    // Filter button functionality
+    document.querySelectorAll('.github-filter-btn').forEach(filterBtn => {
+        filterBtn.addEventListener('click', function(e) {
+            // Preserve search query when switching filters
+            const currentQuery = enhancedSearchInput.value.trim();
+            if (currentQuery && currentQuery.length >= 3) {
+                const url = new URL(this.href);
+                url.searchParams.set('q', currentQuery);
+                this.href = url.toString();
+            }
+        });
+    });
+
+    // Note: Dropdown management is now handled by the global dropdown-fix.js
+    // All dropdown behavior (closing on click outside, ESC key, single dropdown) 
+    // is managed by the global system - no local management needed
+    
+    // Validation for debugging
+    console.log('🎫 Passports page loaded');
+    console.log('🔧 Global dropdown fix available:', typeof window.dropdownFix !== 'undefined');
+    console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
+    console.log('🔍 Dropdown toggles found:', document.querySelectorAll('[data-bs-toggle="dropdown"]').length);
+
+    // Debug: Check if Bootstrap is properly loaded
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded! Dropdown functionality may not work.');
+    } else {
+        console.log('Bootstrap is loaded. Dropdown functionality should work.');
+    }
+    
+    // Initialize
+    updateBulkActions();
+    
 });
 </script>
+{% endblock %}
+{% block styles %}
+<style>
+/* CRITICAL CSS FIX: Override minipass.css white background rule for bulk actions cards */
+/* This rule specifically counters: .card { background-color: #fff !important; } in minipass.css */
+html body .page-wrapper .page-body .dashboard-container .bulk-actions-container .card.bulk-actions-card {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Fallback with even higher specificity if needed */
+html body div[class*="page"] div[class*="bulk-actions"] .card[class*="bulk-actions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* NUCLEAR OPTION: Override EVERYTHING for bulk actions cards */
+[id="bulkActions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Target by ID with maximum specificity */
+body #bulkActions.card {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Inline style override simulation */
+.card[id="bulkActions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Table positioning - let global dropdown-fix.css handle the dropdowns */
+.table-responsive {
+  /* Overflow management is handled by global dropdown-fix.css */
+}
+
+/* Minor dropdown styling improvements that don't conflict with global fix */
+.dropdown-menu {
+  min-width: 180px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 0.5rem;
+  background-color: #fff;
+}
+
+/* Card container - let global dropdown-fix.css handle overflow */
+.card {
+  /* Overflow management is handled by global dropdown-fix.css */
+}
+
+/* Ensure main table card has proper spacing when following bulk actions */
+.main-table-card {
+  margin-top: 0 !important;
+}
+
+/* Add extra spacing between bulk actions and main table */
+.bulk-actions-container + .main-table-card {
+  margin-top: 1rem !important;
+}
+
+/* Fix card footer background to white per style guide */
+.card-footer {
+  background-color: #fff !important;
+  border-top: 1px solid rgba(98, 105, 118, 0.16);
+}
+
+/* Add proper table padding for alignment with card margins */
+.table-responsive .table td:first-child {
+  padding-left: 1.5rem !important;
+}
+.table-responsive .table td:last-child {
+  padding-right: 1.5rem !important;
+}
+.table-responsive .table th:first-child {
+  padding-left: 1.5rem !important;
+}
+.table-responsive .table th:last-child {
+  padding-right: 1.5rem !important;
+}
+
+/* Dashboard Container Styling to match other pages */
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Enhanced Card Design matching dashboard style - EXCLUDE BULK ACTIONS CARD */
+.card:not(.bulk-actions-card) {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced Hover Effects - EXCLUDE BULK ACTIONS CARD */
+.card:not(.bulk-actions-card):hover {
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px) scale(1.01);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* KPI Card Enhancements - EXCLUDE BULK ACTIONS CARD */
+.card:not(.bulk-actions-card) .card-body {
+  padding: 1.75rem 1.5rem;
+  position: relative;
+}
+
+.card .text-uppercase {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.card .h3 {
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  color: #0f172a;
+  margin-bottom: 0.75rem;
+}
+
+/* Page Header Styling */
+.page-header {
+  background: transparent;
+  border: none;
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 2.25rem;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+/* Table Improvements following Tabler style guide */
+.table {
+  background-color: transparent !important;
+}
+
+.table th {
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* User Cell */
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-info {
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 0.875rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* Bulk Actions Bar - MAXIMUM SPECIFICITY TO FORCE GREEN THEME */
+/* CRITICAL FIX: Counter the minipass.css .card { background-color: #fff !important; } rule */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card,
+body .page-body div.bulk-actions-container .card.bulk-actions-card,
+body div.bulk-actions-container .card.bulk-actions-card,
+body .bulk-actions-container .card.bulk-actions-card,
+body .card.bulk-actions-card,
+div.bulk-actions-container .card.bulk-actions-card,
+.bulk-actions-container .card.bulk-actions-card,
+.card.bulk-actions-card {
+  margin-top: 1.5rem !important;
+  margin-bottom: 2.5rem !important;
+  /* Force light green background - CRITICAL: Override minipass.css white background */
+  background: #f0fdf4 !important;
+  background-color: #f0fdf4 !important;
+  background-image: none !important;
+  /* Green border */
+  border: 1px solid #bbf7d0 !important;
+  border-color: #bbf7d0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  animation: slideDown 0.3s ease;
+  /* Override all backdrop and transform effects */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  transition: none !important;
+  /* Ensure visibility */
+  overflow: visible !important;
+}
+
+/* Override hover effects for bulk actions card with maximum specificity */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card:hover,
+body .page-body div.bulk-actions-container .card.bulk-actions-card:hover,
+body div.bulk-actions-container .card.bulk-actions-card:hover,
+body .bulk-actions-container .card.bulk-actions-card:hover,
+body .card.bulk-actions-card:hover,
+div.bulk-actions-container .card.bulk-actions-card:hover,
+.bulk-actions-container .card.bulk-actions-card:hover,
+.card.bulk-actions-card:hover {
+  background: #f0fdf4 !important;
+  background-color: #f0fdf4 !important;
+  background-image: none !important;
+  border: 1px solid #bbf7d0 !important;
+  border-color: #bbf7d0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transform: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Card body styling for bulk actions */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card .card-body,
+body .page-body div.bulk-actions-container .card.bulk-actions-card .card-body,
+body div.bulk-actions-container .card.bulk-actions-card .card-body,
+body .bulk-actions-container .card.bulk-actions-card .card-body,
+body .card.bulk-actions-card .card-body,
+div.bulk-actions-container .card.bulk-actions-card .card-body,
+.bulk-actions-container .card.bulk-actions-card .card-body,
+.card.bulk-actions-card .card-body {
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 1rem 1.25rem !important;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulk-actions-count {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+}
+
+.bulk-actions-count i {
+  color: #0d6efd;
+  font-size: 1.125rem;
+}
+
+.bulk-actions-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Dropdown button styling */
+.bulk-actions-card .dropdown-toggle {
+  border-color: #dee2e6;
+  color: #495057;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.bulk-actions-card .dropdown-toggle:hover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+  color: #212529;
+}
+
+.bulk-actions-card .dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Dropdown menu items */
+.bulk-actions-card .dropdown-item {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  transition: background-color 0.15s ease;
+}
+
+.bulk-actions-card .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.bulk-actions-card .dropdown-item i {
+  width: 1.25rem;
+  text-align: center;
+}
+
+/* Empty State */
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+.empty-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.empty-subtitle {
+  color: #64748b;
+}
+
+/* Enhanced Dropdown Improvements - NEVER CLIP DROPDOWNS */
+.dropdown-menu {
+  z-index: 1060 !important; /* Higher z-index to ensure visibility */
+  min-width: 180px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 8px;
+  /* Use transform for smooth animations */
+  transform-origin: top right;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  /* Ensure it's always on top */
+  position: absolute !important;
+  will-change: transform, opacity;
+}
+
+/* Dropdown item hover effects */
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  transition: background-color 0.15s ease;
+}
+
+/* Ensure dropdown appears above other content with proper visibility */
+.dropdown.show .dropdown-menu {
+  display: block !important;
+  opacity: 1;
+  transform: scale(1);
+  z-index: 1060 !important;
+}
+
+/* Hide dropdown with smooth animation */
+.dropdown .dropdown-menu {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* CRITICAL: Force all parent containers to allow overflow when dropdown is open */
+.dropdown.show {
+  position: relative;
+  z-index: 1000;
+}
+
+/* Ensure table cells don't clip dropdown content */
+.table td:has(.dropdown.show),
+.table th:has(.dropdown.show) {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1061;
+}
+
+/* Legacy support for browsers without :has() */
+.table td.dropdown-open,
+.table th.dropdown-open {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1061;
+}
+
+/* Ensure dropdown positioning within table cells */
+.table .dropdown {
+  position: relative;
+}
+
+/* Force proper dropdown menu positioning */
+.table .dropdown-menu {
+  position: absolute !important;
+  top: 100% !important;
+  right: 0 !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+/* Loading state */
+.table-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.table-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2rem;
+  height: 2rem;
+  margin: -1rem 0 0 -1rem;
+  border: 0.25rem solid #3b82f6;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: rotate 0.75s linear infinite;
+}
+
+@keyframes rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 991px) {
+  
+  .table .d-none-mobile {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-container {
+    padding: 0 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+  }
+  
+  .bulk-actions-card .card-body {
+    padding: 0.875rem 1rem !important;
+  }
+  
+  .bulk-actions-card .d-flex {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  
+  .bulk-actions-count {
+    font-size: 0.875rem;
+  }
+  
+  .bulk-actions-count span {
+    display: inline;
+  }
+  
+  .bulk-actions-card .dropdown-toggle {
+    padding: 0.325rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Form improvements */
+.form-check-input {
+  margin-top: 0;
+}
+
+/* User avatar styling */
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+/* Enhanced search styling */
+#enhancedSearchInput {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#enhancedSearchInput:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Pink glow effect moved inline for immediate loading */
+
+/* Subtle glow on regular focus */
+#enhancedSearchInput.search-focus-glow {
+  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+              0 0 15px rgba(255, 105, 180, 0.15);
+}
+
+/* Keyframes moved inline for immediate loading */
+
+/* Bootstrap validation override moved inline for immediate loading */
+
+/* Clear button styling */
+#searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+#searchClearBtn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+#searchClearBtn:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* Smooth transitions for kbd hint and clear button */
+#searchKbdHint, #searchClearBtn {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#searchCharCounter {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+#searchCharCounter.fw-bold {
+  font-weight: 600;
+}
+
+/* Search loading indicator */
+#searchLoadingIndicator {
+  border-radius: inherit;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+#searchLoadingIndicator .spinner-border-sm {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Enhanced loading animation */
+.searching-pulse {
+  animation: blueSearchPulse 1.5s ease-in-out infinite;
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+              0 0 15px rgba(13, 110, 253, 0.4) !important;
+}
+
+@keyframes blueSearchPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+                0 0 15px rgba(13, 110, 253, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
+                0 0 25px rgba(13, 110, 253, 0.5);
+  }
+}
+
+/* Smooth transitions for search feedback */
+.input-icon {
+  transition: all 0.2s ease;
+}
+
+.input-icon:has(#enhancedSearchInput:focus) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter Button Group Styling */
+.card-header .d-flex {
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* GitHub-style filter buttons */
+.github-filter-group {
+  display: inline-flex;
+  align-items: center;
+  background: #e1e4e8;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.github-filter-btn {
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #24292e;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Inactive state - darker gray background */
+.github-filter-btn:not(.active) {
+  background: #e1e4e8;
+  color: #586069;
+}
+
+.github-filter-btn:not(.active):hover {
+  background: #d1d5da;
+  color: #24292e;
+  text-decoration: none;
+}
+
+/* Active state - white/light background with rounded corners */
+.github-filter-btn.active {
+  background: #ffffff;
+  color: #24292e;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
+  font-weight: 600;
+  z-index: 1;
+}
+
+.github-filter-btn.active:hover {
+  background: #ffffff;
+  text-decoration: none;
+}
+
+/* Icons styling */
+.github-filter-btn i {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.github-filter-btn.active i {
+  opacity: 1;
+}
+
+/* Old btn-group styles - keeping for reference */
+.btn-group .btn {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 0;
+  border: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  color: #495057;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+/* First and last button rounded corners */
+.btn-group .btn:first-child {
+  border-top-left-radius: 0.375rem;
+  border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+}
+
+/* Remove borders between buttons */
+.btn-group .btn:not(:first-child) {
+  border-left: none;
+}
+
+/* Active state - primary button styling */
+.btn-group .btn-primary {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+}
+
+.btn-group .btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  color: #fff;
+}
+
+/* Inactive state - outline styling */
+.btn-group .btn-outline-secondary {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  color: #6c757d;
+}
+
+.btn-group .btn-outline-secondary:hover {
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+  color: #495057;
+}
+
+/* Ensure icons are properly spaced */
+.btn-group .btn i {
+  font-size: 14px;
+  color: inherit;
+}
+
+/* Responsive Design for Filter Buttons */
+@media (max-width: 1200px) {
+  .btn-group {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .btn-group .btn {
+    font-size: 13px;
+    padding: 6px 10px;
+    min-width: max-content;
+  }
+}
+
+@media (max-width: 991px) {
+  .btn-group .btn {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 767px) {
+  .card-header {
+    padding: 1rem;
+  }
+  
+  .btn-group {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+    min-width: calc(50% - 2px);
+    margin-bottom: 4px;
+    border-radius: 0.375rem !important;
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+  
+  /* Reset borders for mobile wrapped layout */
+  .btn-group .btn:not(:first-child) {
+    border-left: 1px solid #dee2e6;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-group .btn {
+    font-size: 10px;
+    padding: 5px 6px;
+  }
+  
+  .btn-group .btn i {
+    font-size: 12px;
+  }
+}
+</style>
 {% endblock %}
