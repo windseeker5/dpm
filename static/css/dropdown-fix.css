@@ -1,0 +1,185 @@
+/**
+ * Global Dropdown Fix CSS for Tabler.io/Bootstrap 5 Dropdowns
+ * 
+ * This stylesheet fixes dropdown display issues, especially in tables
+ * where positioning and z-index conflicts can cause display problems.
+ * 
+ * Features:
+ * - Fixes positioning context for table dropdowns
+ * - Manages z-index stacking properly
+ * - Ensures dropdown menus appear above other content
+ * - Handles overflow issues in responsive tables
+ */
+
+/* Fix dropdown positioning in tables */
+.table-responsive .dropdown {
+    position: relative !important; /* Changed from static */
+}
+
+/* Ensure dropdown menu appears with proper visibility */
+.dropdown.show .dropdown-menu {
+    display: block !important;
+    opacity: 1;
+    transform: scale(1);
+    visibility: visible;
+    z-index: 1062; /* Above other UI elements */
+}
+
+/* Smooth transition for dropdown appearance */
+.dropdown-menu {
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+/* Force parent containers to allow overflow when dropdown is open */
+.dropdown.show {
+    position: relative;
+    z-index: 1061;
+}
+
+/* Table cells with open dropdowns should allow overflow */
+.table td:has(.dropdown.show),
+.table th:has(.dropdown.show) {
+    overflow: visible !important;
+    position: relative;
+    z-index: 1061;
+}
+
+/* For browsers that don't support :has() selector */
+.table td.dropdown-active,
+.table th.dropdown-active {
+    overflow: visible !important;
+    position: relative;
+    z-index: 1061;
+}
+
+/* Ensure table doesn't clip dropdown content */
+.table-responsive {
+    overflow: visible !important; /* Allow dropdowns to extend outside */
+    min-height: 0.01%; /* Maintain IE10/11 compatibility */
+}
+
+/* When dropdown needs to appear above (near bottom of viewport) */
+.dropdown-menu.dropdown-menu-up {
+    bottom: 100%;
+    top: auto !important;
+    margin-bottom: 0.125rem;
+    margin-top: 0;
+}
+
+/* Fix for nested dropdown positioning */
+.dropdown .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: auto;
+}
+
+/* Right-aligned dropdown menus */
+.dropdown-menu-end {
+    right: 0 !important;
+    left: auto !important;
+}
+
+/* Dropdown in table headers */
+.table thead .dropdown-menu {
+    z-index: 1063; /* Higher than body dropdowns */
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    /* On mobile, ensure dropdowns don't exceed viewport */
+    .dropdown-menu {
+        max-width: calc(100vw - 2rem);
+        overflow-x: auto;
+    }
+    
+    /* Adjust dropdown position on mobile */
+    .table .dropdown-menu {
+        position: fixed !important;
+        left: 50% !important;
+        transform: translateX(-50%);
+        min-width: 200px;
+    }
+    
+    /* Ensure proper z-index on mobile */
+    .dropdown.show {
+        z-index: 1065 !important;
+    }
+}
+
+/* Fix for dropdowns in modal dialogs */
+.modal .dropdown-menu {
+    z-index: 1072; /* Above modal backdrop */
+}
+
+/* Fix for dropdowns in fixed headers */
+.fixed-top .dropdown-menu,
+.sticky-top .dropdown-menu {
+    position: fixed;
+}
+
+/* Ensure dropdown toggle buttons have proper cursor */
+[data-bs-toggle="dropdown"] {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Active dropdown toggle styling */
+[data-bs-toggle="dropdown"][aria-expanded="true"] {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode support (if using Tabler dark theme) */
+[data-bs-theme="dark"] .dropdown-menu {
+    background-color: var(--tblr-bg-surface-dark, #1e293b);
+    border-color: var(--tblr-border-color-dark, #475569);
+}
+
+[data-bs-theme="dark"] .dropdown-item:hover {
+    background-color: var(--tblr-bg-surface-secondary-dark, #334155);
+}
+
+/* Print styles - hide dropdowns when printing */
+@media print {
+    .dropdown-menu {
+        display: none !important;
+    }
+    
+    [data-bs-toggle="dropdown"] {
+        pointer-events: none;
+    }
+}
+
+/* Accessibility improvements */
+.dropdown-menu:focus-within {
+    outline: 2px solid var(--tblr-primary, #206bc4);
+    outline-offset: 2px;
+}
+
+/* Animation for dropdown appearance */
+@keyframes dropdownSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown.show .dropdown-menu {
+    animation: dropdownSlideDown 0.2s ease forwards;
+}
+
+/* Fix for dropdown in card headers */
+.card-header .dropdown-menu {
+    z-index: 1062;
+}
+
+/* Ensure dropdowns in bulk action bars work properly */
+.bulk-actions .dropdown-menu {
+    z-index: 1064;
+}

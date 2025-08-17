@@ -67,8 +67,8 @@
           <a href="{{ url_for('list_surveys') }}" class="btn btn-outline-secondary">
             <i class="ti ti-arrow-left"></i> Back to Surveys
           </a>
-          <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
-            <i class="ti ti-plus"></i> New Template
+          <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary btn-pill">
+            <i class="ti ti-plus"></i> Create New Template
           </a>
         </div>
       </div>
@@ -118,11 +118,16 @@
           <tr class="template-row">
             <td>
               <div class="d-flex align-items-center">
-                <div class="avatar avatar-md me-3" style="background-color: #0054a6;">
+                <div class="avatar avatar-md me-3" style="background-color: {% if template.name == 'Post-Activity Feedback' %}#28a745{% else %}#0054a6{% endif %};">
                   <i class="ti ti-template text-white"></i>
                 </div>
                 <div>
-                  <strong>{{ template.name }}</strong>
+                  <div class="d-flex align-items-center">
+                    <strong>{{ template.name }}</strong>
+                    {% if template.name == 'Post-Activity Feedback' %}
+                    <span class="badge bg-success-lt text-success ms-2">Recommended</span>
+                    {% endif %}
+                  </div>
                   <br>
                   {% if template.description %}
                   <span class="text-muted small">{{ template.description|truncate(60) }}</span>
@@ -159,6 +164,11 @@
                   <a class="dropdown-item" href="#" onclick="showPreview({{ template.id }}, '{{ template.name }}', {{ template.questions|e }})">
                     <i class="ti ti-eye me-2"></i>Preview Questions
                   </a>
+                  {% if template.name == 'Post-Activity Feedback' %}
+                  <a class="dropdown-item" href="#" onclick="showDefaultPreview()">
+                    <i class="ti ti-star me-2"></i>Show Default Template
+                  </a>
+                  {% endif %}
                   <div class="dropdown-divider"></div>
                   {% if template.usage_count == 0 %}
                   <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}')">
@@ -206,15 +216,20 @@
   <div class="template-cards">
     {% for template in templates %}
     <div class="card template-card mb-3">
-      <div class="card-body">
+      <div class="card-body p-2 p-md-3">
         <div class="row align-items-center">
           <div class="col-auto">
-            <div class="avatar avatar-md" style="background-color: #0054a6;">
+            <div class="avatar avatar-md" style="background-color: {% if template.name == 'Post-Activity Feedback' %}#28a745{% else %}#0054a6{% endif %};">
               <i class="ti ti-template text-white"></i>
             </div>
           </div>
           <div class="col">
-            <h4 class="card-title mb-1">{{ template.name }}</h4>
+            <div class="d-flex align-items-center mb-1">
+              <h4 class="card-title mb-0">{{ template.name }}</h4>
+              {% if template.name == 'Post-Activity Feedback' %}
+              <span class="badge bg-success-lt text-success ms-2">Recommended</span>
+              {% endif %}
+            </div>
             <div class="mb-2">
               <span class="badge bg-blue-lt text-blue">{{ template.question_count }} questions</span>
               {% if template.usage_count > 0 %}
@@ -240,6 +255,11 @@
                 <a class="dropdown-item" href="#" onclick="showPreview({{ template.id }}, '{{ template.name }}', {{ template.questions|e }})">
                   <i class="ti ti-eye me-2"></i>Preview Questions
                 </a>
+                {% if template.name == 'Post-Activity Feedback' %}
+                <a class="dropdown-item" href="#" onclick="showDefaultPreview()">
+                  <i class="ti ti-star me-2"></i>Show Default Template
+                </a>
+                {% endif %}
                 <div class="dropdown-divider"></div>
                 {% if template.usage_count == 0 %}
                 <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}')">
@@ -379,6 +399,68 @@ function showPreview(templateId, templateName, questionsJson) {
     document.getElementById('previewContent').innerHTML = '<div class="text-danger">Error loading template questions.</div>';
   }
   
+  new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+// Show default template preview
+function showDefaultPreview() {
+  document.getElementById('previewTemplateName').textContent = 'Post-Activity Feedback (Default Template)';
+  
+  const defaultQuestions = [
+    {
+      question: 'How would you rate your overall experience with this activity?',
+      type: 'multiple_choice',
+      required: true,
+      options: ['Excellent', 'Very Good', 'Good', 'Fair', 'Poor']
+    },
+    {
+      question: 'What did you enjoy most about this activity?',
+      type: 'open_ended',
+      required: false,
+      max_length: 500
+    },
+    {
+      question: 'Is there anything you would like us to improve?',
+      type: 'open_ended',
+      required: false,
+      max_length: 500
+    },
+    {
+      question: 'Would you recommend this activity to others?',
+      type: 'multiple_choice',
+      required: true,
+      options: ['Definitely Yes', 'Probably Yes', 'Not Sure', 'Probably No', 'Definitely No']
+    }
+  ];
+  
+  let previewHtml = '<div class="alert alert-info"><i class="ti ti-info-circle me-2"></i>This is the recommended default template for post-activity feedback surveys.</div>';
+  
+  defaultQuestions.forEach((question, index) => {
+    previewHtml += `
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="d-flex align-items-start mb-2">
+            <span class="badge bg-success me-2">${index + 1}</span>
+            <div class="flex-grow-1">
+              <h6 class="card-title mb-1">${question.question}</h6>
+              <div class="text-muted small mb-2">
+                Type: ${question.type === 'multiple_choice' ? 'Multiple Choice' : 'Open-ended'}
+                ${question.required ? ' • Required' : ' • Optional'}
+              </div>
+              ${question.type === 'multiple_choice' && question.options ? 
+                `<div class="ms-3">
+                  ${question.options.map(option => `<div class="text-muted small">• ${option}</div>`).join('')}
+                </div>` : ''}
+              ${question.type === 'open_ended' && question.max_length ? 
+                `<div class="text-muted small">Maximum ${question.max_length} characters</div>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  document.getElementById('previewContent').innerHTML = previewHtml;
   new bootstrap.Modal(document.getElementById('previewModal')).show();
 }
 

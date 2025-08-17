@@ -40,33 +40,49 @@
     </form>
 
 
-    <!-- Bulk Actions Bar -->
-    <div class="bulk-actions" id="bulkActions" style="display: none;">
-      <form method="POST" action="{{ url_for('bulk_signup_action') }}" id="bulkForm">
-        <div class="bulk-actions-count">
-          <i class="ti ti-checkbox me-2"></i>
-          <span id="selectedCount">0</span> signups selected
-        </div>
-        <div class="bulk-actions-buttons">
-          <button type="submit" name="action" value="mark_paid" class="btn btn-sm btn-success">
-            <i class="ti ti-check"></i>
-            <span class="d-none d-sm-inline ms-1">Mark Paid</span>
-          </button>
-          <button type="submit" name="action" value="approve" class="btn btn-sm btn-info">
-            <i class="ti ti-thumb-up"></i>
-            <span class="d-none d-sm-inline ms-1">Approve</span>
-          </button>
-          <button type="submit" name="action" value="send_reminders" class="btn btn-sm btn-warning">
-            <i class="ti ti-mail"></i>
-            <span class="d-none d-sm-inline ms-1">Remind</span>
-          </button>
-          <button type="submit" name="action" value="delete" class="btn btn-sm btn-danger" 
-                  onclick="return confirm('Delete ' + document.querySelectorAll('.signup-checkbox:checked').length + ' selected signups?')">
-            <i class="ti ti-trash"></i>
-            <span class="d-none d-sm-inline ms-1">Delete</span>
-          </button>
-        </div>
-      </form>
+    <!-- Bulk Actions Bar - Separate Card Above Table -->
+    <div class="card bulk-actions-card" id="bulkActions" style="display: none;">
+      <div class="card-body p-3">
+        <form method="POST" action="{{ url_for('bulk_signup_action') }}" id="bulkForm">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="bulk-actions-count">
+              <i class="ti ti-checkbox me-2"></i>
+              <span id="selectedCount">0</span> signups selected
+            </div>
+            <div class="bulk-actions-buttons">
+              <div class="dropdown">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                  Actions
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <button type="submit" name="action" value="mark_paid" class="dropdown-item text-success">
+                      <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                    </button>
+                  </li>
+                  <li>
+                    <button type="submit" name="action" value="approve" class="dropdown-item text-info">
+                      <i class="ti ti-thumb-up me-2"></i>Approve
+                    </button>
+                  </li>
+                  <li>
+                    <button type="submit" name="action" value="send_reminders" class="dropdown-item text-warning">
+                      <i class="ti ti-mail me-2"></i>Send Reminder
+                    </button>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <button type="submit" name="action" value="delete" class="dropdown-item text-danger" 
+                            onclick="return confirm('Delete ' + document.querySelectorAll('.signup-checkbox:checked').length + ' selected signups?')">
+                      <i class="ti ti-trash me-2"></i>Delete Selected
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- Main Table -->
@@ -235,36 +251,67 @@
       
       <!-- Pagination -->
       <div class="card-footer d-flex justify-content-between align-items-center">
-        <span class="text-muted">Showing 1 to {{ signups|length }} of {{ signups|length }} entries</span>
-        <nav>
-          <ul class="pagination pagination-sm mb-0">
-            <li class="page-item disabled">
-              <a class="page-link" href="#" tabindex="-1">
-                <i class="ti ti-chevron-left"></i>
-              </a>
-            </li>
-            <li class="page-item active">
-              <a class="page-link" href="#">1</a>
-            </li>
-            <li class="page-item">
-              <a class="page-link" href="#">2</a>
-            </li>
-            <li class="page-item">
-              <a class="page-link" href="#">3</a>
-            </li>
-            <li class="page-item">
-              <a class="page-link" href="#">
-                <i class="ti ti-chevron-right"></i>
-              </a>
-            </li>
-          </ul>
-        </nav>
+        {% if pagination and pagination.total > 0 %}
+          <span class="text-muted">Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ ((pagination.page - 1) * pagination.per_page) + signups|length }} of {{ pagination.total }} entries</span>
+          {% if pagination.pages > 1 %}
+            <nav>
+              <ul class="pagination pagination-sm mb-0">
+                <!-- Previous page -->
+                <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                  {% if pagination.has_prev %}
+                    <a class="page-link" href="{{ url_for(request.endpoint, page=pagination.prev_num, **current_filters) }}" aria-label="Previous">
+                      <i class="ti ti-chevron-left"></i>
+                    </a>
+                  {% else %}
+                    <span class="page-link" aria-label="Previous">
+                      <i class="ti ti-chevron-left"></i>
+                    </span>
+                  {% endif %}
+                </li>
+                
+                <!-- Page numbers -->
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                  {% if page_num %}
+                    {% if page_num != pagination.page %}
+                      <li class="page-item">
+                        <a class="page-link" href="{{ url_for(request.endpoint, page=page_num, **current_filters) }}">{{ page_num }}</a>
+                      </li>
+                    {% else %}
+                      <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                      </li>
+                    {% endif %}
+                  {% else %}
+                    <li class="page-item disabled">
+                      <span class="page-link">…</span>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                
+                <!-- Next page -->
+                <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                  {% if pagination.has_next %}
+                    <a class="page-link" href="{{ url_for(request.endpoint, page=pagination.next_num, **current_filters) }}" aria-label="Next">
+                      <i class="ti ti-chevron-right"></i>
+                    </a>
+                  {% else %}
+                    <span class="page-link" aria-label="Next">
+                      <i class="ti ti-chevron-right"></i>
+                    </span>
+                  {% endif %}
+                </li>
+              </ul>
+            </nav>
+          {% endif %}
+        {% else %}
+          <span class="text-muted">No entries found</span>
+        {% endif %}
       </div>
       </div>
     </div>
 
-    <!-- Empty State -->
-    {% if signups|length == 0 %}
+    <!-- Empty State - Only show when there are NO signups at all in the database -->
+    {% if statistics.total == 0 %}
     <div class="card">
       <div class="empty">
         <div class="empty-icon">
@@ -272,11 +319,7 @@
         </div>
         <p class="empty-title">No signups found</p>
         <p class="empty-subtitle">
-          {% if current_filters.q %}
-            Try adjusting your search or <a href="{{ url_for('list_signups') }}">clear search</a>
-          {% else %}
-            Signups will appear here when users register for activities
-          {% endif %}
+          Signups will appear here when users register for activities
         </p>
       </div>
     </div>
@@ -302,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Smooth show/hide animation
         if (count > 0 && bulkActions.style.display === 'none') {
-            bulkActions.style.display = 'flex';
+            bulkActions.style.display = 'block';
             bulkActions.classList.add('show');
         } else if (count === 0 && bulkActions.style.display !== 'none') {
             bulkActions.classList.remove('show');
@@ -544,18 +587,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Fix dropdown clipping issue in table - dynamic overflow control
+    // Fix dropdown clipping issue in table - enhanced dropdown management
     const tableResponsive = document.querySelector('.table-responsive');
     const card = document.querySelector('.card');
+    let currentOpenDropdown = null;
     
-    // Listen for all dropdown events to manage overflow
+    // Close any open dropdown before opening a new one
+    function closeAllDropdowns() {
+        document.querySelectorAll('.dropdown.show').forEach(dropdown => {
+            const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+            if (toggle) {
+                bootstrap.Dropdown.getInstance(toggle)?.hide();
+            }
+        });
+        currentOpenDropdown = null;
+    }
+    
+    // Listen for dropdown events to manage overflow and positioning
     document.addEventListener('show.bs.dropdown', function(e) {
+        // Close any previously open dropdown first
+        if (currentOpenDropdown && currentOpenDropdown !== e.target) {
+            closeAllDropdowns();
+        }
+        
+        // Set current dropdown
+        currentOpenDropdown = e.target;
+        
         // When any dropdown opens, remove overflow restrictions
         if (tableResponsive) {
             tableResponsive.style.overflow = 'visible';
+            tableResponsive.style.position = 'static';
         }
         if (card) {
             card.style.overflow = 'visible';
+        }
+        
+        // Ensure dropdown container is properly positioned
+        const dropdownContainer = e.target;
+        dropdownContainer.style.position = 'relative';
+        dropdownContainer.style.zIndex = '1000';
+    });
+    
+    document.addEventListener('shown.bs.dropdown', function(e) {
+        const dropdownMenu = e.target.querySelector('.dropdown-menu');
+        if (dropdownMenu) {
+            // Force proper z-index and positioning
+            dropdownMenu.style.zIndex = '1060';
+            dropdownMenu.style.position = 'absolute';
+            
+            // Ensure proper positioning context
+            const dropdownParent = e.target;
+            dropdownParent.style.position = 'relative';
+            
+            // Clear any transform that might interfere
+            dropdownMenu.style.transform = '';
         }
     });
     
@@ -564,22 +649,37 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tableResponsive) {
             tableResponsive.style.overflowX = 'auto';
             tableResponsive.style.overflowY = 'visible';
+            tableResponsive.style.position = '';
         }
         if (card) {
             card.style.overflow = 'visible';
         }
+        
+        // Reset dropdown container positioning
+        const dropdownContainer = e.target;
+        dropdownContainer.style.position = '';
+        dropdownContainer.style.zIndex = '';
+        
+        // Clear current dropdown if it's the one being closed
+        if (currentOpenDropdown === e.target) {
+            currentOpenDropdown = null;
+        }
     });
     
-    // Ensure dropdowns position correctly
-    document.addEventListener('shown.bs.dropdown', function(e) {
-        const dropdownMenu = e.target.querySelector('.dropdown-menu');
-        if (dropdownMenu) {
-            // Force proper z-index and positioning
-            dropdownMenu.style.zIndex = '1060';
-            dropdownMenu.style.position = 'absolute';
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (currentOpenDropdown && !currentOpenDropdown.contains(e.target)) {
+            closeAllDropdowns();
         }
     });
 
+    // Debug: Check if Bootstrap is properly loaded
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded! Dropdown functionality may not work.');
+    } else {
+        console.log('Bootstrap is loaded. Dropdown functionality should work.');
+    }
+    
     // Initialize
     updateBulkActions();
     
@@ -599,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Ensure dropdown container can expand outside table bounds */
 .table-responsive .dropdown {
-  position: static; /* Changed from relative to static for better positioning */
+  position: relative; /* Relative positioning for proper dropdown placement */
 }
 
 /* Enhanced dropdown styling with higher z-index */
@@ -614,6 +714,9 @@ document.addEventListener('DOMContentLoaded', function() {
   /* Ensure proper positioning */
   transform-origin: top right;
   will-change: transform, opacity;
+  /* Prevent positioning conflicts */
+  margin-top: 0 !important;
+  inset: auto !important;
 }
 
 /* Dropdown positioning - ensure it appears properly */
@@ -773,18 +876,19 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 
-/* Bulk Actions Bar */
-.bulk-actions {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 12px;
-  padding: 1rem;
-  margin-top: 1rem;
+/* Bulk Actions Bar - Separate Card Design */
+.bulk-actions-card {
+  margin-top: 1.5rem;
   margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   animation: slideDown 0.3s ease;
+}
+
+.bulk-actions-card .card-body {
+  padding: 1rem 1.25rem !important;
 }
 
 @keyframes slideDown {
@@ -800,12 +904,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .bulk-actions-count {
   font-weight: 500;
-  color: #334155;
+  color: #495057;
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+}
+
+.bulk-actions-count i {
+  color: #0d6efd;
+  font-size: 1.125rem;
 }
 
 .bulk-actions-buttons {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Dropdown button styling */
+.bulk-actions-card .dropdown-toggle {
+  border-color: #dee2e6;
+  color: #495057;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.bulk-actions-card .dropdown-toggle:hover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+  color: #212529;
+}
+
+.bulk-actions-card .dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Dropdown menu items */
+.bulk-actions-card .dropdown-item {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  transition: background-color 0.15s ease;
+}
+
+.bulk-actions-card .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.bulk-actions-card .dropdown-item i {
+  width: 1.25rem;
+  text-align: center;
 }
 
 /* Empty State */
@@ -867,15 +1015,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* CRITICAL: Force all parent containers to allow overflow when dropdown is open */
 .dropdown.show {
-  position: static;
+  position: relative;
+  z-index: 1000;
 }
 
 /* Ensure table cells don't clip dropdown content */
+.table td:has(.dropdown.show),
+.table th:has(.dropdown.show) {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1061;
+}
+
+/* Legacy support for browsers without :has() */
 .table td.dropdown-open,
 .table th.dropdown-open {
   overflow: visible !important;
   position: relative;
   z-index: 1061;
+}
+
+/* Ensure dropdown positioning within table cells */
+.table .dropdown {
+  position: relative;
+}
+
+/* Force proper dropdown menu positioning */
+.table .dropdown-menu {
+  position: absolute !important;
+  top: 100% !important;
+  right: 0 !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 !important;
 }
 
 /* Loading state */
@@ -920,20 +1092,28 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 1.75rem;
   }
   
-  .bulk-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+  .bulk-actions-card .card-body {
+    padding: 0.875rem 1rem !important;
   }
   
-  .bulk-actions-buttons {
-    width: 100%;
-    flex-wrap: wrap;
+  .bulk-actions-card .d-flex {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
   }
   
-  .bulk-actions-buttons .btn {
-    flex: 1;
-    min-width: calc(50% - 0.25rem);
+  .bulk-actions-count {
+    font-size: 0.875rem;
+  }
+  
+  .bulk-actions-count span {
+    display: inline;
+  }
+  
+  .bulk-actions-card .dropdown-toggle {
+    padding: 0.325rem 0.625rem;
+    font-size: 0.8125rem;
   }
 }
 
