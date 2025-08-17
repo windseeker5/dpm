@@ -2,6 +2,59 @@
 {% block title %}Signups Management{% endblock %}
 
 {% block content %}
+<!-- Critical Search Bar Fix Styles -->
+<style>
+/* Pink glow effect for Ctrl+K - subtle and elegant */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out !important;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
+              0 0 8px rgba(255, 105, 180, 0.35),
+              0 0 15px rgba(255, 105, 180, 0.15) !important;
+  transform: scale(1.005) !important;
+  background-image: none !important;
+  z-index: 1000;
+  position: relative;
+}
+
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
+                0 0 0 0 rgba(255, 105, 180, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+                0 0 10px rgba(255, 105, 180, 0.35),
+                0 0 18px rgba(255, 105, 180, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
+                0 0 8px rgba(255, 105, 180, 0.35),
+                0 0 15px rgba(255, 105, 180, 0.15);
+  }
+}
+
+/* Disable Bootstrap validation styling completely */
+#enhancedSearchInput.is-valid,
+#enhancedSearchInput.is-invalid {
+  border-color: #ced4da !important;
+  background-image: none !important;
+  padding-right: 100px !important;
+}
+
+#enhancedSearchInput.is-valid:focus,
+#enhancedSearchInput.is-invalid:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+  background-image: none !important;
+}
+
+/* Force remove validation feedback icons */
+#enhancedSearchInput {
+  background-image: none !important;
+}
+</style>
+
 <div class="page-wrapper">
   <!-- Page Header -->
   <div class="page-header d-print-none" style="padding-top: 2rem;">
@@ -31,7 +84,8 @@
                placeholder="Start typing to search signups instantly..." 
                value="{{ current_filters.q or '' }}"
                style="padding-right: 100px; border-radius: 0.5rem;"
-               autocomplete="off">
+               autocomplete="off"
+               data-bs-toggle="false">
         <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
           <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
           <kbd id="searchKbdHint" class="text-muted">ctrl + k</kbd>
@@ -149,6 +203,8 @@
                      name="selected_signups" 
                      value="{{ signup.id }}" 
                      form="bulkForm"
+                     data-status="{{ signup.status or 'pending' }}"
+                     data-paid="{{ 'true' if signup.paid else 'false' }}"
                      aria-label="Select signup {{ signup.id }}">
             </td>
             <td style="vertical-align: middle;">
@@ -371,6 +427,95 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectAllCheckbox.indeterminate = true;
             }
         }
+        
+        // Update available bulk actions based on selected items
+        updateAvailableActions(checkedBoxes);
+    }
+    
+    // Function to determine and update available bulk actions
+    function updateAvailableActions(checkedBoxes) {
+        // Get all action buttons in the dropdown
+        const markPaidBtn = document.querySelector('button[value="mark_paid"]');
+        const approveBtn = document.querySelector('button[value="approve"]');
+        const sendRemindersBtn = document.querySelector('button[value="send_reminders"]');
+        const deleteBtn = document.querySelector('button[value="delete"]');
+        
+        if (checkedBoxes.length === 0) return;
+        
+        // Analyze the states of all selected signups
+        let hasUnpaid = false;
+        let hasPending = false;
+        let hasApproved = false;
+        let allPending = true;
+        let allPaid = true;
+        
+        checkedBoxes.forEach(checkbox => {
+            const status = checkbox.dataset.status;
+            const isPaid = checkbox.dataset.paid === 'true';
+            
+            if (!isPaid) {
+                hasUnpaid = true;
+                allPaid = false;
+            }
+            
+            if (status === 'pending') {
+                hasPending = true;
+            } else if (status === 'approved') {
+                hasApproved = true;
+                allPending = false;
+            } else {
+                allPending = false;
+            }
+        });
+        
+        // Update action visibility based on states
+        // Mark as Paid - show only if at least one is unpaid
+        if (markPaidBtn) {
+            if (hasUnpaid) {
+                markPaidBtn.parentElement.style.display = '';
+                markPaidBtn.disabled = false;
+            } else {
+                markPaidBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Approve - show only if ALL selected are pending
+        if (approveBtn) {
+            if (allPending && hasPending) {
+                approveBtn.parentElement.style.display = '';
+                approveBtn.disabled = false;
+            } else {
+                approveBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Send Reminder - show only if at least one is unpaid
+        if (sendRemindersBtn) {
+            if (hasUnpaid) {
+                sendRemindersBtn.parentElement.style.display = '';
+                sendRemindersBtn.disabled = false;
+            } else {
+                sendRemindersBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Delete - always available
+        if (deleteBtn) {
+            deleteBtn.parentElement.style.display = '';
+            deleteBtn.disabled = false;
+        }
+        
+        // Update dropdown button text to indicate filtered actions
+        const dropdownToggle = document.querySelector('.bulk-actions-card .dropdown-toggle');
+        if (dropdownToggle) {
+            // Count visible actions
+            const visibleActions = document.querySelectorAll('.bulk-actions-card .dropdown-menu li:not([style*="display: none"])').length - 1; // -1 for divider
+            if (visibleActions < 4) {
+                dropdownToggle.innerHTML = `Actions <small class="text-muted">(${visibleActions})</small>`;
+            } else {
+                dropdownToggle.textContent = 'Actions';
+            }
+        }
     }
 
     // Select all functionality
@@ -572,10 +717,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 charCounter.className = 'text-muted';
                 enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
             } else {
-                // Only show green border, no text
+                // Ready to search - hide counter, no Bootstrap validation styling
                 charCounter.style.display = 'none';
-                enhancedSearchInput.classList.add('is-valid');
-                enhancedSearchInput.classList.remove('is-invalid');
+                enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
             }
         }
     }
@@ -1203,15 +1347,7 @@ div.bulk-actions-container .card.bulk-actions-card .card-body,
   box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
-/* Pink glow effect for Ctrl+K */
-#enhancedSearchInput.search-glow-active {
-  animation: pinkGlowPulse 0.8s ease-out;
-  border-color: #ff69b4 !important;
-  box-shadow: 0 0 0 0.3rem rgba(255, 105, 180, 0.4), 
-              0 0 20px rgba(255, 105, 180, 0.6),
-              0 0 40px rgba(255, 105, 180, 0.3) !important;
-  transform: scale(1.02);
-}
+/* Pink glow effect moved inline for immediate loading */
 
 /* Subtle glow on regular focus */
 #enhancedSearchInput.search-focus-glow {
@@ -1219,32 +1355,9 @@ div.bulk-actions-container .card.bulk-actions-card .card-body,
               0 0 15px rgba(255, 105, 180, 0.15);
 }
 
-@keyframes pinkGlowPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.7),
-                0 0 0 0 rgba(255, 105, 180, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 0 0.4rem rgba(255, 105, 180, 0.3),
-                0 0 30px rgba(255, 105, 180, 0.6),
-                0 0 50px rgba(255, 105, 180, 0.4);
-  }
-  100% {
-    box-shadow: 0 0 0 0.3rem rgba(255, 105, 180, 0.4),
-                0 0 20px rgba(255, 105, 180, 0.6),
-                0 0 40px rgba(255, 105, 180, 0.3);
-  }
-}
+/* Keyframes moved inline for immediate loading */
 
-#enhancedSearchInput.is-valid {
-  border-color: #198754;
-  background-image: none;
-}
-
-#enhancedSearchInput.is-valid:focus {
-  border-color: #198754;
-  box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
-}
+/* Bootstrap validation override moved inline for immediate loading */
 
 /* Clear button styling */
 #searchClearBtn {
