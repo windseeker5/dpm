@@ -312,26 +312,6 @@ def trim_email(email):
 ##
 
   
-@app.route("/preview-email/<event>")
-def preview_email(event):
-    from utils import notify_pass_event
-    from models import Pass
-    from flask import current_app
-
-    sample_pass = Pass.query.filter(Pass.user_email.isnot(None)).order_by(Pass.id.desc()).first()
-
-    if not sample_pass:
-        return "❌ No sample pass with email found in DB.", 404
-
-    notify_pass_event(
-        app=current_app._get_current_object(),
-        event_type=event,
-        hockey_pass=sample_pass,
-        admin_email="preview@test",
-    )
-
-    return f"✅ Preview email sent using event type: {event}"
-
 
 
 @app.route("/retry-failed-emails")
@@ -380,27 +360,6 @@ def retry_failed_emails():
 
 
 
-@app.route("/test-reminders")
-def test_reminders():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    from utils import send_unpaid_reminders
-    send_unpaid_reminders(app)
-    flash("✅ Test run of send_unpaid_reminders() executed. Check logs and emails.", "success")
-    return redirect(url_for("dashboard"))
-
-
-
-@app.route("/test-email-match")
-def test_email_match():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    from utils import match_gmail_payments_to_passes
-    match_gmail_payments_to_passes()
-    flash("✅ Gmail payment match test executed. Check logs and DB.", "success")
-    return redirect(url_for("dashboard"))
 
 
 
@@ -415,62 +374,6 @@ def test_email_match():
 
 
 # 🔵 Unsplash Search API
-@app.route("/unsplash-search")
-def unsplash_search():
-    query = request.args.get("q", "")
-    page = int(request.args.get("page", 1))  # ✅ Get page from query string
-
-    if not query:
-        return jsonify([])
-
-    access_key = "DpPe0DZwUlYsEjrnZf-E5njVC0VLePUmHmRAhBELgWc"  # 🔥 Replace this with your real key
-    url = f"https://api.unsplash.com/search/photos?query={query}&page={page}&per_page=9&client_id={access_key}"  # ✅ Add `page`
-
-    try:
-        resp = requests.get(url)
-        data = resp.json()
-
-        results = []
-        for result in data.get("results", []):
-            results.append({
-                "thumb": result["urls"]["small"],
-                "full": result["urls"]["full"]
-            })
-
-        return jsonify(results)
-    except Exception as e:
-        print("❌ Unsplash API error:", e)
-        return jsonify([])
-
-
-
-
-
-
-# 🔵 Download and Save Selected Unsplash Image
-@app.route("/download-unsplash-image")
-def download_unsplash_image():
-    image_url = request.args.get("url")
-    if not image_url:
-        return jsonify({"success": False})
-
-    try:
-        resp = requests.get(image_url)
-        if resp.status_code != 200:
-            return jsonify({"success": False})
-
-        # Save the file locally
-        os.makedirs("static/uploads/activity_images", exist_ok=True)
-        filename = f"activity_{uuid.uuid4().hex[:10]}.jpg"
-        filepath = os.path.join("static/uploads/activity_images", filename)
-
-        with open(filepath, "wb") as f:
-            f.write(resp.content)
-
-        return jsonify({"success": True, "filename": filename})
-    except Exception as e:
-        print("❌ Error downloading Unsplash image:", e)
-        return jsonify({"success": False})
 
 
 
@@ -519,172 +422,9 @@ def components():
     return render_template("components.html")
 
 
-@app.route("/hello-world")
-def hello_world():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    return render_template("hello_world.html")
 
 
-@app.route("/alerts-test")
-def alerts_test():
-    """Public route to test alerts display without authentication"""
-    return '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alerts Test - Public Access</title>
-    <link href="/static/tabler/css/tabler.min.css" rel="stylesheet"/>
-    <link href="/static/tabler/icons/tabler-icons.min.css" rel="stylesheet"/>
-    <style>
-        body { padding: 2rem; background: var(--tblr-body-bg); }
-        .test-container { background: white; padding: 2rem; border-radius: var(--tblr-border-radius); box-shadow: var(--tblr-box-shadow); }
-        .alert { margin-bottom: 1rem !important; }
-        
-        /* Enhanced Tabler alerts with proper background colors */
-        .alert-primary { 
-            background-color: var(--tblr-primary-bg-subtle); 
-            border-color: var(--tblr-primary-border-subtle); 
-            color: var(--tblr-primary-text-emphasis); 
-        }
-        .alert-success { 
-            background-color: var(--tblr-success-bg-subtle); 
-            border-color: var(--tblr-success-border-subtle); 
-            color: var(--tblr-success-text-emphasis); 
-        }
-        .alert-warning { 
-            background-color: var(--tblr-warning-bg-subtle); 
-            border-color: var(--tblr-warning-border-subtle); 
-            color: var(--tblr-warning-text-emphasis); 
-        }
-        .alert-danger { 
-            background-color: var(--tblr-danger-bg-subtle); 
-            border-color: var(--tblr-danger-border-subtle); 
-            color: var(--tblr-danger-text-emphasis); 
-        }
-        .alert-info { 
-            background-color: var(--tblr-info-bg-subtle); 
-            border-color: var(--tblr-info-border-subtle); 
-            color: var(--tblr-info-text-emphasis); 
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="test-container">
-            <h1 class="mb-4">🚨 Alerts Test - Public Access</h1>
-            <p class="text-muted mb-4">This page tests alerts without requiring authentication.</p>
-            
-            <h3>If you can see colorful alert boxes below, the alerts are working:</h3>
-            
-            <div class="alert alert-primary alert-important" role="alert">
-                <div class="d-flex">
-                    <div>
-                        <i class="ti ti-info-circle alert-icon"></i>
-                    </div>
-                    <div>
-                        <h4 class="alert-title">Primary Alert:</h4>
-                        <div class="text-secondary">This should be blue!</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="alert alert-success alert-important" role="alert">
-                <div class="d-flex">
-                    <div>
-                        <i class="ti ti-check-circle alert-icon"></i>
-                    </div>
-                    <div>
-                        <h4 class="alert-title">Success Alert:</h4>
-                        <div class="text-secondary">This should be green!</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="alert alert-warning alert-important" role="alert">
-                <div class="d-flex">
-                    <div>
-                        <i class="ti ti-alert-triangle alert-icon"></i>
-                    </div>
-                    <div>
-                        <h4 class="alert-title">Warning Alert:</h4>
-                        <div class="text-secondary">This should be yellow/orange!</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="alert alert-danger alert-important" role="alert">
-                <div class="d-flex">
-                    <div>
-                        <i class="ti ti-alert-circle alert-icon"></i>
-                    </div>
-                    <div>
-                        <h4 class="alert-title">Danger Alert:</h4>
-                        <div class="text-secondary">This should be red!</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="alert alert-info alert-important" role="alert">
-                <div class="d-flex">
-                    <div>
-                        <i class="ti ti-info-circle alert-icon"></i>
-                    </div>
-                    <div>
-                        <h4 class="alert-title">Info Alert:</h4>
-                        <div class="text-secondary">This should be light blue!</div>
-                    </div>
-                </div>
-            </div>
-            
-            <hr class="my-4">
-            
-            <h3>Next Steps:</h3>
-            <div class="alert alert-info alert-important" role="alert">
-                <strong>If alerts are visible here:</strong> The issue is likely authentication-related on the main style guide.
-                <br><strong>If alerts are NOT visible:</strong> There may be a CSS loading issue.
-            </div>
-            
-            <p><a href="/style-guide" class="btn btn-primary">Go to Main Style Guide</a></p>
-            <p><small class="text-muted">Main style guide requires admin login</small></p>
-        </div>
-    </div>
-</body>
-</html>
-    '''.strip()
 
-
-@app.route("/alerts-demo")
-def alerts_demo():
-    """Enhanced alert system demonstration with multiple notification types"""
-    # Flash different types of messages for demonstration
-    flash("Your activity has been successfully created and is now live!", "success")
-    flash("Please review the payment details before proceeding.", "warning")
-    flash("Failed to connect to payment processor. Please try again.", "error")
-    flash("New features are available in the latest update.", "info")
-    flash("Your digital pass has been generated and sent via email.", "success")
-    
-    return redirect(url_for("dashboard"))
-
-
-@app.route("/alerts-test-single/<alert_type>")
-def alerts_test_single(alert_type):
-    """Test single alert type for focused UX testing"""
-    messages = {
-        "success": "Operation completed successfully! Your changes have been saved.",
-        "error": "Something went wrong. Please check your input and try again.",
-        "warning": "This action cannot be undone. Please confirm before proceeding.",
-        "info": "Did you know? You can use keyboard shortcuts to navigate faster."
-    }
-    
-    if alert_type in messages:
-        flash(messages[alert_type], alert_type)
-    else:
-        flash("Invalid alert type specified", "error")
-    
-    return redirect(url_for("dashboard"))
 
 
 @app.route("/dashboard")
@@ -4671,17 +4411,6 @@ def delete_survey(survey_id):
     return redirect(url_for("list_surveys"))
 
 
-@app.route("/typography-preview")
-def typography_preview():
-    """Display typography options for comparison"""
-    if "admin" not in session:
-        return redirect(url_for("admin_login"))
-    return render_template("typography_preview.html")
-
-@app.route("/test-status-led")
-def test_status_led():
-    """Test page for status LED implementation"""
-    return render_template("test_status_led.html")
 
 # Initialize default survey template on startup
 with app.app_context():
