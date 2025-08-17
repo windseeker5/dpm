@@ -49,6 +49,19 @@
   background-color: #fff !important;
 }
 
+/* Modal touch targets for mobile */
+.modal .btn {
+  min-height: 44px;
+}
+
+.modal .form-control {
+  min-height: 44px;
+}
+
+.modal .form-select {
+  min-height: 44px;
+}
+
 /* Form buttons in dropdowns should look like dropdown items */
 .dropdown-menu form {
   margin: 0;
@@ -83,6 +96,9 @@
           <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-primary">
             <i class="ti ti-template"></i> Manage Templates
           </a>
+          <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
+            <i class="ti ti-zap"></i> Quick Survey
+          </button>
           <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
             <i class="ti ti-plus"></i> New Template
           </a>
@@ -192,12 +208,9 @@
           <!-- Quick Survey Button -->
           <div class="col-md-1">
             <label class="form-label small text-muted">Quick Action</label>
-            <form method="POST" action="{{ url_for('create_quick_survey') }}" style="display: inline;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="btn btn-success w-100" title="Create Quick Survey">
-                <i class="ti ti-plus"></i>
-              </button>
-            </form>
+            <button type="button" class="btn btn-success w-100" title="Create Quick Survey" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
+              <i class="ti ti-plus"></i>
+            </button>
           </div>
         </div>
         
@@ -337,27 +350,27 @@
                   {% if survey.status == 'active' %}
                   <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="dropdown-item" onclick="return confirm('Send survey invitations to new participants?')">
+                    <button type="submit" class="dropdown-item" onclick="return confirmSendInvitations('{{ survey.name }}', '{{ survey.activity.name if survey.activity else 'Unknown' }}')">
                       <i class="ti ti-mail me-2"></i>Send Invitations
                     </button>
                   </form>
                   <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="resend_all" value="true">
-                    <button type="submit" class="dropdown-item" onclick="return confirm('Resend invitations to ALL participants (including already invited)?')">
+                    <button type="submit" class="dropdown-item" onclick="return confirmResendAll('{{ survey.name }}')">
                       <i class="ti ti-refresh me-2"></i>Resend All Invitations
                     </button>
                   </form>
                   <form method="POST" action="{{ url_for('close_survey', survey_id=survey.id) }}" style="display: inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="dropdown-item" onclick="return confirm('Close this survey?')">
+                    <button type="submit" class="dropdown-item" onclick="return confirmCloseSurvey('{{ survey.name }}')">
                       <i class="ti ti-pause me-2"></i>Close Survey
                     </button>
                   </form>
                   {% elif survey.status == 'closed' %}
                   <form method="POST" action="{{ url_for('reopen_survey', survey_id=survey.id) }}" style="display: inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="dropdown-item" onclick="return confirm('Reopen this survey?')">
+                    <button type="submit" class="dropdown-item" onclick="return confirmReopenSurvey('{{ survey.name }}')">
                       <i class="ti ti-play me-2"></i>Reopen Survey
                     </button>
                   </form>
@@ -408,7 +421,7 @@
   <div class="survey-cards">
     {% for survey in surveys %}
     <div class="card survey-card mb-3">
-      <div class="card-body">
+      <div class="card-body p-2 p-md-3">
         <div class="row align-items-center">
           <div class="col-auto">
             <input type="checkbox" class="form-check-input survey-checkbox" value="{{ survey.id }}" onchange="updateBulkActions()">
@@ -463,14 +476,14 @@
                 {% if survey.status == 'active' %}
                 <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="dropdown-item" onclick="return confirm('Send survey invitations to new participants?')">
+                  <button type="submit" class="dropdown-item" onclick="return confirmSendInvitations('{{ survey.name }}', '{{ survey.activity.name if survey.activity else 'Unknown' }}')">
                     <i class="ti ti-mail me-2"></i>Send Invitations
                   </button>
                 </form>
                 <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="resend_all" value="true">
-                  <button type="submit" class="dropdown-item" onclick="return confirm('Resend invitations to ALL participants (including already invited)?')">
+                  <button type="submit" class="dropdown-item" onclick="return confirmResendAll('{{ survey.name }}')">
                     <i class="ti ti-refresh me-2"></i>Resend All
                   </button>
                 </form>
@@ -512,6 +525,182 @@
     {% endfor %}
   </div>
 
+</div>
+
+<!-- Quick Survey Creation Modal -->
+<div class="modal modal-blur fade" id="quickSurveyModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-zap me-2 text-success"></i>Create Quick Survey
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('create_quick_survey') }}" id="quickSurveyForm">
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <!-- Template Preview -->
+          <div class="alert alert-success d-flex align-items-center mb-4">
+            <i class="ti ti-star me-2"></i>
+            <div>
+              <strong>Using "Post-Activity Feedback" Template</strong>
+              <div class="text-muted small mt-1">Our recommended template with 4 essential feedback questions</div>
+            </div>
+            <button type="button" class="btn btn-outline-success btn-sm ms-auto" onclick="showQuickPreview()">
+              <i class="ti ti-eye me-1"></i>Preview
+            </button>
+          </div>
+          
+          <!-- Survey Name -->
+          <div class="mb-4">
+            <label class="form-label required">Survey Name</label>
+            <input type="text" name="survey_name" class="form-control form-control-lg" 
+                   placeholder="e.g., Yoga Session Feedback" 
+                   required maxlength="100" id="surveyNameInput">
+            <div class="form-hint">Give your survey a clear, descriptive name</div>
+          </div>
+          
+          <!-- Activity Selection -->
+          <div class="mb-4">
+            <label class="form-label required">Select Activity</label>
+            <select name="activity_id" class="form-select form-select-lg" required id="activitySelect">
+              <option value="">Choose an activity...</option>
+              {% for activity in activities %}
+              <option value="{{ activity.id }}">{{ activity.name }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-hint">The survey will be sent to participants of this activity</div>
+          </div>
+          
+          <!-- Preview Section -->
+          <div class="card d-none" id="surveyPreview">
+            <div class="card-header">
+              <h4 class="card-title">Survey Preview</h4>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <strong>Survey:</strong> <span id="previewSurveyName">-</span>
+              </div>
+              <div class="mb-3">
+                <strong>Activity:</strong> <span id="previewActivityName">-</span>
+              </div>
+              <div class="mb-3">
+                <strong>Template:</strong> Post-Activity Feedback (4 questions)
+              </div>
+              <div class="alert alert-info">
+                <i class="ti ti-info-circle me-2"></i>
+                <strong>Next steps after creation:</strong>
+                <ul class="mb-0 mt-2">
+                  <li>Review survey questions</li>
+                  <li>Send invitations to participants</li>
+                  <li>Monitor responses in real-time</li>
+                  <li>Export results when complete</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="previewBtn" onclick="showPreview()" disabled>
+            <i class="ti ti-eye me-1"></i>Preview Survey
+          </button>
+          <button type="submit" class="btn btn-success" id="createBtn" disabled>
+            <i class="ti ti-check me-1"></i>Create Survey
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Template Preview Modal -->
+<div class="modal modal-blur fade" id="templatePreviewModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-template me-2"></i>Post-Activity Feedback Template
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-success">
+          <i class="ti ti-star me-2"></i>
+          This is our recommended template for gathering feedback after activities.
+        </div>
+        
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-start mb-2">
+              <span class="badge bg-success me-2">1</span>
+              <div class="flex-grow-1">
+                <h6 class="card-title mb-1">How would you rate your overall experience with this activity?</h6>
+                <div class="text-muted small mb-2">Type: Multiple Choice • Required</div>
+                <div class="ms-3">
+                  <div class="text-muted small">• Excellent</div>
+                  <div class="text-muted small">• Very Good</div>
+                  <div class="text-muted small">• Good</div>
+                  <div class="text-muted small">• Fair</div>
+                  <div class="text-muted small">• Poor</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-start mb-2">
+              <span class="badge bg-success me-2">2</span>
+              <div class="flex-grow-1">
+                <h6 class="card-title mb-1">What did you enjoy most about this activity?</h6>
+                <div class="text-muted small mb-2">Type: Open-ended • Optional</div>
+                <div class="text-muted small">Maximum 500 characters</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-start mb-2">
+              <span class="badge bg-success me-2">3</span>
+              <div class="flex-grow-1">
+                <h6 class="card-title mb-1">Is there anything you would like us to improve?</h6>
+                <div class="text-muted small mb-2">Type: Open-ended • Optional</div>
+                <div class="text-muted small">Maximum 500 characters</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-start mb-2">
+              <span class="badge bg-success me-2">4</span>
+              <div class="flex-grow-1">
+                <h6 class="card-title mb-1">Would you recommend this activity to others?</h6>
+                <div class="text-muted small mb-2">Type: Multiple Choice • Required</div>
+                <div class="ms-3">
+                  <div class="text-muted small">• Definitely Yes</div>
+                  <div class="text-muted small">• Probably Yes</div>
+                  <div class="text-muted small">• Not Sure</div>
+                  <div class="text-muted small">• Probably No</div>
+                  <div class="text-muted small">• Definitely No</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
@@ -582,9 +771,33 @@ function bulkAction(action) {
   const selectedIds = Array.from(document.querySelectorAll('.survey-checkbox:checked')).map(cb => cb.value);
   if (selectedIds.length === 0) return;
   
-  if (confirm(`Are you sure you want to ${action} ${selectedIds.length} surveys?`)) {
+  if (confirmBulkAction(action, selectedIds.length)) {
     // Here you would make an AJAX call to perform the bulk action
-    alert(`Bulk ${action} functionality would be implemented here`);
+    const actionText = action.charAt(0).toUpperCase() + action.slice(1);
+    
+    // Show loading state
+    const bulkButtons = document.querySelectorAll('#bulkActions .btn');
+    bulkButtons.forEach(btn => {
+      btn.disabled = true;
+      if (btn.textContent.toLowerCase().includes(action)) {
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${actionText}ing...`;
+      }
+    });
+    
+    // Simulate API call (replace with actual implementation)
+    setTimeout(() => {
+      alert(`${actionText} operation completed for ${selectedIds.length} surveys.\n\nNote: This is a demo - actual implementation would perform the ${action} operation.`);
+      
+      // Reset buttons
+      bulkButtons.forEach(btn => {
+        btn.disabled = false;
+        btn.innerHTML = btn.innerHTML.replace(/.*ing\.\.\./, btn.textContent);
+      });
+      
+      // Clear selections
+      document.querySelectorAll('.survey-checkbox:checked').forEach(cb => cb.checked = false);
+      updateBulkActions();
+    }, 2000);
   }
 }
 
@@ -612,6 +825,112 @@ document.addEventListener('DOMContentLoaded', function() {
       this.style.transform = 'translateY(0)';
     });
   });
+  
+  // Quick survey form validation
+  const surveyNameInput = document.getElementById('surveyNameInput');
+  const activitySelect = document.getElementById('activitySelect');
+  const previewBtn = document.getElementById('previewBtn');
+  const createBtn = document.getElementById('createBtn');
+  
+  function validateQuickSurveyForm() {
+    const hasName = surveyNameInput && surveyNameInput.value.trim().length > 0;
+    const hasActivity = activitySelect && activitySelect.value;
+    const isValid = hasName && hasActivity;
+    
+    if (previewBtn) previewBtn.disabled = !isValid;
+    if (createBtn) createBtn.disabled = !isValid;
+    
+    return isValid;
+  }
+  
+  if (surveyNameInput) {
+    surveyNameInput.addEventListener('input', validateQuickSurveyForm);
+  }
+  if (activitySelect) {
+    activitySelect.addEventListener('change', validateQuickSurveyForm);
+  }
 });
+
+// Quick survey modal functions
+function showPreview() {
+  const surveyName = document.getElementById('surveyNameInput').value.trim();
+  const activitySelect = document.getElementById('activitySelect');
+  const activityName = activitySelect.options[activitySelect.selectedIndex].text;
+  
+  document.getElementById('previewSurveyName').textContent = surveyName;
+  document.getElementById('previewActivityName').textContent = activityName;
+  
+  const previewCard = document.getElementById('surveyPreview');
+  previewCard.classList.remove('d-none');
+  
+  // Smooth scroll to preview
+  previewCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showQuickPreview() {
+  new bootstrap.Modal(document.getElementById('templatePreviewModal')).show();
+}
+
+// Reset modal when closed
+document.getElementById('quickSurveyModal').addEventListener('hidden.bs.modal', function() {
+  // Reset form
+  document.getElementById('quickSurveyForm').reset();
+  document.getElementById('surveyPreview').classList.add('d-none');
+  
+  // Reset button states
+  document.getElementById('previewBtn').disabled = true;
+  document.getElementById('createBtn').disabled = true;
+});
+
+// Add confirmation for survey creation
+document.getElementById('quickSurveyForm').addEventListener('submit', function(e) {
+  const surveyName = document.getElementById('surveyNameInput').value.trim();
+  const activitySelect = document.getElementById('activitySelect');
+  const activityName = activitySelect.options[activitySelect.selectedIndex].text;
+  
+  if (confirm(`Create survey "${surveyName}" for activity "${activityName}"?\n\nAfter creation, you can send invitations to all participants.`)) {
+    // Show loading state
+    const createBtn = document.getElementById('createBtn');
+    const previewBtn = document.getElementById('previewBtn');
+    
+    createBtn.disabled = true;
+    previewBtn.disabled = true;
+    createBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating Survey...';
+    
+    // Disable form inputs
+    document.getElementById('surveyNameInput').disabled = true;
+    document.getElementById('activitySelect').disabled = true;
+  } else {
+    e.preventDefault();
+  }
+});
+
+// Enhanced confirmation functions for better UX
+function confirmSendInvitations(surveyName, activityName) {
+  return confirm(`Send survey invitations for "${surveyName}"?\n\nThis will send email invitations to all participants of "${activityName}" who haven't been invited yet.\n\nNote: Only new participants will receive invitations.`);
+}
+
+function confirmResendAll(surveyName) {
+  return confirm(`Resend ALL invitations for "${surveyName}"?\n\nThis will send invitations to ALL participants, including those who have already been invited.\n\nCaution: Participants may receive duplicate emails.`);
+}
+
+function confirmCloseSurvey(surveyName) {
+  return confirm(`Close survey "${surveyName}"?\n\nThis will:\n• Stop accepting new responses\n• Make the survey inactive\n• Prevent sending more invitations\n\nYou can reopen it later if needed.`);
+}
+
+function confirmReopenSurvey(surveyName) {
+  return confirm(`Reopen survey "${surveyName}"?\n\nThis will:\n• Allow new responses again\n• Make the survey active\n• Enable sending invitations`);
+}
+
+// Bulk action confirmations
+function confirmBulkAction(action, count) {
+  const actionText = {
+    'activate': 'activate',
+    'close': 'close', 
+    'delete': 'permanently delete'
+  }[action] || action;
+  
+  return confirm(`Are you sure you want to ${actionText} ${count} survey${count > 1 ? 's' : ''}?\n\n${action === 'delete' ? 'This action cannot be undone and will delete all responses.' : ''}`);
+}
 </script>
 {% endblock %}

@@ -872,8 +872,17 @@ def list_signups():
         except ValueError:
             pass
     
-    # Execute query
-    signups = query.all()
+    # Pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Items per page - optimized for better UX with less scrolling
+    
+    # Execute query with pagination
+    signups_pagination = query.paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    signups = signups_pagination.items
     
     # Calculate statistics
     all_signups = Signup.query.count()
@@ -906,6 +915,7 @@ def list_signups():
     
     return render_template('signups.html', 
                          signups=signups, 
+                         pagination=signups_pagination,
                          activities=activities,
                          statuses=statuses,
                          passport_types=passport_types,

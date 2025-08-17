@@ -184,6 +184,38 @@ Passport (1) ──> (N) Redemptions (tracked in passport.used_sessions)
 - **Audit Trail**: AdminLog tracks all admin actions
 - **Financial Tracking**: Expense/Income models link to activities
 
+## Common UI Fixes
+
+### Dropdown Menu Sequential Click Bug Fix
+**Problem**: When clicking dropdown menus in sequence (especially in tables), clicking a dropdown above a previously opened one causes display issues.
+
+**Solution**: A global fix has been implemented through:
+- `/static/js/dropdown-fix.js` - JavaScript handler for dropdown behavior
+- `/static/css/dropdown-fix.css` - CSS fixes for positioning and z-index
+
+**How it works**:
+1. Ensures only one dropdown is open at a time
+2. Fixes CSS positioning context (changed from `position: static` to `relative`)
+3. Manages z-index stacking properly
+4. Handles click-outside to close dropdowns
+5. Compatible with dynamically loaded content (AJAX)
+
+**Implementation**: The fix is automatically applied to ALL pages via `base.html`. No individual page modifications needed.
+
+**For new pages with dropdowns**:
+- Just use standard Tabler/Bootstrap dropdown markup
+- The fix will automatically apply
+- Example:
+```html
+<div class="dropdown">
+  <button class="btn dropdown-toggle" data-bs-toggle="dropdown">Actions</button>
+  <div class="dropdown-menu">
+    <a class="dropdown-item" href="#">Edit</a>
+    <a class="dropdown-item" href="#">Delete</a>
+  </div>
+</div>
+```
+
 ## Project Structure
 
 ```
@@ -197,6 +229,10 @@ Passport (1) ──> (N) Redemptions (tracked in passport.used_sessions)
 │   ├── partials/           # Reusable components
 │   └── email_templates/    # Email HTML templates
 ├── static/                  # Static assets
+│   ├── css/                # Custom CSS
+│   │   └── dropdown-fix.css # Global dropdown fixes
+│   ├── js/                 # Custom JavaScript
+│   │   └── dropdown-fix.js # Global dropdown handler
 │   ├── tabler/             # Tabler.io framework
 │   ├── tinymce/            # Rich text editor
 │   └── uploads/            # User uploads

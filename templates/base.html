@@ -27,6 +27,9 @@
   <link href="{{ url_for('static', filename='minipass.css') }}?v=20250624110800" rel="stylesheet">
   <link href="{{ url_for('static', filename='minipass-redesign.css') }}?v={{ range(1000000, 9999999) | random }}" rel="stylesheet">
   
+  <!-- Global Dropdown Fix -->
+  <link href="{{ url_for('static', filename='css/dropdown-fix.css') }}?v=1.0" rel="stylesheet">
+  
   <!-- Enhanced Flash Alert Overlay Styles -->
   <style>
     /* Modern notification system with enhanced design */
@@ -466,7 +469,7 @@
           <div class="nav-section-title">Tools</div>
           <ul class="nav-list">
             <li class="nav-item">
-              <a href="{{ url_for('chatbot.index') }}" 
+              <a href="/chatbot/" 
                  class="nav-link {{ 'active' if 'chatbot' in request.endpoint }}">
                 <i class="nav-icon ti ti-message-chatbot"></i>
                 <span class="nav-text">AI Analytics</span>
@@ -752,6 +755,9 @@
   
   <!-- Tabler Core JS -->
   <script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
+  
+  <!-- Global Dropdown Fix -->
+  <script src="{{ url_for('static', filename='js/dropdown-fix.js') }}?v=1.0"></script>
   
   {% block scripts %}{% endblock %}
 </body>
