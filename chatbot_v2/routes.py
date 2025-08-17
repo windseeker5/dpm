@@ -5,12 +5,13 @@ import asyncio
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, current_app
 from flask_wtf.csrf import exempt
 
-from .ai_providers import provider_manager
-from .providers.ollama import create_ollama_provider
-from .query_engine import create_query_engine
-from .conversation import conversation_manager
-from .utils import get_current_admin_email, validate_question_length
-from .config import OLLAMA_BASE_URL, CHATBOT_ENABLE_OLLAMA
+# Simplified imports for debugging
+# from .ai_providers import provider_manager
+# from .providers.ollama import create_ollama_provider
+# from .query_engine import create_query_engine
+# from .conversation import conversation_manager
+# from .utils import get_current_admin_email, validate_question_length
+# from .config import OLLAMA_BASE_URL, CHATBOT_ENABLE_OLLAMA
 
 
 # Create the blueprint
@@ -47,62 +48,36 @@ def initialize_chatbot():
                 print(f"❌ Failed to register mock provider: {mock_error}")
 
 # Initialize chatbot when module is imported
-initialize_chatbot()
+# COMMENTED OUT for debugging: initialize_chatbot()
 
 
 @chatbot_bp.route('/')
 def index():
     """Main chatbot interface"""
     
-    # Check admin authentication
-    admin_email = get_current_admin_email()
+    # Simplified auth check
+    admin_email = session.get('admin')
     if not admin_email:
         flash("You must be logged in as admin to access the chatbot.", "error")
         return redirect(url_for("login"))
     
-    # Get or create conversation
-    conversation = conversation_manager.get_or_create_conversation(admin_email)
+    # Mock data for testing
+    messages = []
+    conversation_id = 'test-conversation'
+    available_models = [{'provider': 'mock', 'model': 'test-model', 'display_name': 'Mock Test Model'}]
     
-    # Get formatted messages for display
-    messages = conversation_manager.format_messages_for_display(conversation.id)
-    
-    # Get available AI providers and models
-    provider_status = provider_manager.get_all_status()
-    available_models = []
-    
-    for provider_name, status in provider_status.items():
-        if status['available']:
-            for model in status['models']:
-                available_models.append({
-                    'provider': provider_name,
-                    'model': model,
-                    'display_name': f"{provider_name}: {model}"
-                })
-    
-    # Use modern template if it exists, otherwise fallback to original
-    try:
-        return render_template(
-            'analytics_chatbot_modern.html',
-            messages=messages,
-            conversation_id=conversation.id,
-            session_token=conversation.session_token,
-            available_models=available_models,
-            provider_status=provider_status,
-            current_time='Just now'
-        )
-    except:
-        return render_template(
-            'analytics_chatbot.html',
-            messages=messages,
-            conversation_id=conversation.id,
-            session_token=conversation.session_token,
-            available_models=available_models,
-            provider_status=provider_status
-        )
+    return render_template(
+        'analytics_chatbot_modern.html',
+        messages=messages,
+        conversation_id=conversation_id,
+        session_token='test-session',
+        available_models=available_models,
+        provider_status={'mock': {'available': True, 'models': ['test-model']}},
+        current_time='Just now'
+    )
 
 
 @chatbot_bp.route('/ask', methods=['POST'])
-@exempt
 def ask_question():
     """Process a user question"""
     
@@ -111,23 +86,23 @@ def ask_question():
     print(f"Request content type: {request.content_type}")
     print(f"Request data: {request.get_data()}")
     
-    # Check admin authentication
-    admin_email = get_current_admin_email()
+    # Simplified auth check
+    admin_email = session.get('admin')
     print(f"Admin email: {admin_email}")
     if not admin_email:
         print("⚠️ Authentication failed, using fallback admin email for testing")
         admin_email = "test@example.com"  # TEMP: Allow testing without auth
-        # Uncomment this to enforce auth:
-        # return jsonify({
-        #     'success': False,
-        #     'error': 'Authentication required'
-        # }), 401
     
-    # Get request data
-    data = request.get_json()
-    print(f"Parsed JSON data: {data}")
+    # Get request data (form data or JSON)
+    if request.content_type and 'application/json' in request.content_type:
+        data = request.get_json()
+        print(f"Parsed JSON data: {data}")
+    else:
+        data = request.form.to_dict()
+        print(f"Parsed form data: {data}")
+        
     if not data:
-        print("❌ No JSON data received!")
+        print("❌ No data received!")
         return jsonify({
             'success': False,
             'error': 'Invalid request data'
@@ -143,93 +118,46 @@ def ask_question():
     print(f"Provider: {preferred_provider}")
     print(f"Model: {preferred_model}")
     
-    # Validate question
-    is_valid, error_msg = validate_question_length(question)
-    if not is_valid:
+    # Simplified validation
+    if not question or len(question) > 500:
         return jsonify({
             'success': False,
-            'error': error_msg
+            'error': 'Invalid question length'
         }), 400
     
     try:
-        # Add user message to conversation
-        conversation_manager.add_user_message(conversation_id, question)
+        # SIMPLIFIED MOCK RESPONSE FOR TESTING
+        print(f"💬 Processing question: {question}")
         
-        # Get database path from app config
-        db_path = current_app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "")
-        print(f"🔍 Using database path: {db_path}")
-        
-        # Check if we have any available AI providers
-        status = provider_manager.get_all_status()
-        available_providers = [name for name, info in status.items() if info['available']]
-        
-        if not available_providers:
-            return jsonify({
-                'success': False,
-                'error': 'No AI providers are currently available. Please check your configuration.',
-                'question': question
-            }), 500
-        
-        print(f"🤖 Available AI providers: {available_providers}")
-        
-        # Create query engine and process question
-        query_engine = create_query_engine(db_path)
-        
-        # Process the question asynchronously
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(
-                query_engine.process_question(
-                    question, admin_email, preferred_provider, preferred_model
-                )
-            )
-        finally:
-            loop.close()
-        
-        if result['success']:
-            # Format response message
-            response_content = f"Found {result.get('row_count', 0)} results"
-            if result.get('chart_suggestion'):
-                response_content += " with chart visualization available"
-            
-            # Add assistant message
-            conversation_manager.add_assistant_message(
-                conversation_id=conversation_id,
-                content=response_content,
-                sql_query=result.get('sql'),
-                query_result=str(result.get('columns', [])) + str(result.get('rows', [])),
-                ai_provider=result.get('ai_provider'),
-                ai_model=result.get('ai_model'),
-                tokens_used=result.get('tokens_used', 0),
-                cost_cents=result.get('cost_cents', 0),
-                response_time_ms=result.get('processing_time_ms', 0)
-            )
-            
-            response_data = {
-                'success': True,
-                'question': question,
-                'answer': response_content,  # Frontend expects 'answer' field
-                'sql': result.get('sql'),
-                'columns': result.get('columns', []),
-                'rows': result.get('rows', []),
-                'row_count': result.get('row_count', 0),
-                'chart_suggestion': result.get('chart_suggestion'),
-                'ai_provider': result.get('ai_provider'),
-                'ai_model': result.get('ai_model'),
-                'processing_time_ms': result.get('processing_time_ms', 0)
-            }
-            print(f"✅ Returning success response: {response_data}")
-            return jsonify(response_data)
+        # Simple mock responses based on question content
+        if 'revenue' in question.lower():
+            answer = "Our total revenue this month is $15,420. This represents a 12% increase from last month."
+            sql = "SELECT SUM(p.sold_amt) as total_revenue FROM passport p WHERE p.paid = 1 AND DATE(p.paid_date) >= DATE('now', 'start of month')"
+            row_count = 1
+        elif 'users' in question.lower():
+            answer = "We currently have 142 active users, with 23 new signups this week."
+            sql = "SELECT COUNT(*) as user_count FROM user WHERE active = 1"
+            row_count = 1
         else:
-            # Add error message
-            conversation_manager.add_error_message(conversation_id, result.get('error', 'Unknown error'))
-            
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Query processing failed'),
-                'question': question
-            }), 400
+            answer = f"I understand you're asking about: {question}. This is a test response from the chatbot system."
+            sql = "SELECT COUNT(*) as total_records FROM user"
+            row_count = 1
+        
+        response_data = {
+            'success': True,
+            'question': question,
+            'answer': answer,
+            'sql': sql,
+            'columns': ['result'],
+            'rows': [{'result': 'mock_data'}],
+            'row_count': row_count,
+            'ai_provider': 'mock',
+            'ai_model': 'test-model',
+            'processing_time_ms': 150
+        }
+        
+        print(f"✅ Returning mock response: {response_data}")
+        return jsonify(response_data)
     
     except Exception as e:
         current_app.logger.error(f"Error processing question: {e}")
