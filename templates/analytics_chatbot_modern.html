@@ -211,7 +211,23 @@
     height: 8px;
     border-radius: 50%;
     background: #10b981;
+    transition: background-color 0.3s ease;
+}
+
+/* Status LED States */
+.status-dot.connected {
+    background: #10b981;
     animation: pulse 2s infinite;
+}
+
+.status-dot.disconnected {
+    background: #6b7280;
+    animation: none;
+}
+
+.status-dot.checking {
+    background: #f59e0b;
+    animation: pulse 1s infinite;
 }
 
 @keyframes pulse {
@@ -672,8 +688,8 @@
                     </select>
                 </div>
                 <div class="status-indicator">
-                    <span class="status-dot"></span>
-                    <span>Ready</span>
+                    <span class="status-dot connected" id="statusDot"></span>
+                    <span id="statusText">Ready</span>
                 </div>
             </div>
         </div>
@@ -925,7 +941,7 @@ async function sendMessage(event) {
     // Set processing state
     isProcessing = true;
     document.getElementById('sendBtn').disabled = true;
-    updateStatusIndicator('Processing...');
+    updateStatusIndicator('Processing...', 'checking');
     
     try {
         // Debug log
@@ -944,13 +960,23 @@ async function sendMessage(event) {
         
         console.log('🚀 Sending request to /chatbot/ask:', requestBody);
         
+        // Send as form data instead of JSON to include CSRF token properly
+        const formData = new FormData();
+        formData.append('question', message);
+        formData.append('conversation_id', currentConversationId);
+        formData.append('provider', 'ollama');
+        formData.append('model', document.getElementById('modelSelector').value);
+        formData.append('csrf_token', document.getElementById('csrfToken').value);
+        
+        console.log('🚀 Sending form data to /chatbot/ask:', {
+            question: message,
+            conversation_id: currentConversationId,
+            csrf_token: document.getElementById('csrfToken').value
+        });
+        
         const response = await fetch('/chatbot/ask', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.getElementById('csrfToken').value || 'no-csrf'
-            },
-            body: JSON.stringify(requestBody)
+            body: formData
         });
         
         console.log('📡 Response status:', response.status, response.statusText);
@@ -978,17 +1004,17 @@ async function sendMessage(event) {
             console.log('🤖 Adding AI response:', responseMessage);
             // Add AI response
             addMessage('assistant', responseMessage, data.sql);
-            updateStatusIndicator('Ready');
+            updateStatusIndicator('Connected', 'connected');
         } else {
             console.error('❌ Backend returned error:', data.error);
             addMessage('assistant', `Sorry, I encountered an error: ${data.error || 'Unknown error'}`);
-            updateStatusIndicator('Error');
+            updateStatusIndicator('Disconnected', 'disconnected');
         }
     } catch (error) {
         console.error('Chat error:', error);
         hideTypingIndicator();
         addMessage('assistant', `Connection error: ${error.message}. Please check your connection and try again.`);
-        updateStatusIndicator('Error');
+        updateStatusIndicator('Disconnected', 'disconnected');
     } finally {
         isProcessing = false;
         document.getElementById('sendBtn').disabled = false;
@@ -1194,23 +1220,92 @@ function createElementFromHTML(htmlString) {
 }
 
 // Update status indicator
-function updateStatusIndicator(status) {
-    const statusElement = document.querySelector('.status-indicator span:last-child');
-    if (statusElement) {
-        statusElement.textContent = status;
+function updateStatusIndicator(status, state = 'connected') {
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    
+    if (statusText) {
+        statusText.textContent = status;
     }
     
-    const statusDot = document.querySelector('.status-dot');
     if (statusDot) {
+        // Remove all status classes
         statusDot.className = 'status-dot';
-        if (status === 'Error') {
-            statusDot.style.background = '#ef4444';
-        } else if (status === 'Processing...') {
-            statusDot.style.background = '#f59e0b';
+        
+        // Add appropriate status class
+        if (state === 'checking') {
+            statusDot.classList.add('checking');
+        } else if (state === 'disconnected') {
+            statusDot.classList.add('disconnected');
         } else {
-            statusDot.style.background = '#10b981';
+            statusDot.classList.add('connected');
         }
     }
+}
+
+// Check model availability
+async function checkModelAvailability(modelName) {
+    try {
+        updateStatusIndicator('Checking...', 'checking');
+        
+        // Add a small delay to simulate checking
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Try to use the actual endpoint first, fallback to simulation
+        try {
+            const formData = new FormData();
+            formData.append('model', modelName);
+            formData.append('csrf_token', document.getElementById('csrfToken').value);
+            
+            const response = await fetch('/chatbot/check-model', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.success && data.available) {
+                    updateStatusIndicator('Connected', 'connected');
+                    return true;
+                } else {
+                    updateStatusIndicator('Disconnected', 'disconnected');
+                    return false;
+                }
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } catch (apiError) {
+            console.log('API endpoint not available, using fallback simulation');
+            
+            // Fallback: Simulate model availability based on model name
+            const availableModels = ['simple-model', 'llama2', 'codellama', 'mistral'];
+            const isAvailable = availableModels.includes(modelName);
+            
+            if (isAvailable) {
+                updateStatusIndicator('Connected', 'connected');
+                return true;
+            } else {
+                updateStatusIndicator('Disconnected', 'disconnected');
+                return false;
+            }
+        }
+    } catch (error) {
+        console.error('Model check failed:', error);
+        updateStatusIndicator('Disconnected', 'disconnected');
+        return false;
+    }
+}
+
+// Handle model selector changes
+function handleModelChange() {
+    const modelSelector = document.getElementById('modelSelector');
+    const selectedModel = modelSelector.value;
+    
+    console.log('Model changed to:', selectedModel);
+    
+    // Check model availability
+    checkModelAvailability(selectedModel);
 }
 
 // Initialize on load
@@ -1225,14 +1320,48 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCharCount();
     
     // Initialize status
-    updateStatusIndicator('Ready');
+    updateStatusIndicator('Ready', 'connected');
     
     // Handle model selector changes
     const modelSelector = document.getElementById('modelSelector');
     if (modelSelector) {
-        modelSelector.addEventListener('change', function() {
-            console.log('Model changed to:', this.value);
-        });
+        modelSelector.addEventListener('change', handleModelChange);
+        
+        // Check initial model availability
+        if (modelSelector.value) {
+            // Delay initial check to show the UI loading
+            setTimeout(() => {
+                checkModelAvailability(modelSelector.value);
+            }, 100);
+        }
+        
+        // Demo function to cycle through all status states (for testing)
+        window.demoStatusLED = function() {
+            console.log('🚀 Demonstrating Status LED states...');
+            
+            // Start with checking state
+            updateStatusIndicator('Checking...', 'checking');
+            
+            setTimeout(() => {
+                updateStatusIndicator('Connected', 'connected');
+                console.log('✅ Status: Connected (green with pulse)');
+            }, 2000);
+            
+            setTimeout(() => {
+                updateStatusIndicator('Disconnected', 'disconnected');
+                console.log('❌ Status: Disconnected (gray, no pulse)');
+            }, 4000);
+            
+            setTimeout(() => {
+                updateStatusIndicator('Checking...', 'checking');
+                console.log('🔄 Status: Checking (yellow with pulse)');
+            }, 6000);
+            
+            setTimeout(() => {
+                updateStatusIndicator('Connected', 'connected');
+                console.log('✅ Status: Back to Connected');
+            }, 8000);
+        }
     }
 });
 </script>

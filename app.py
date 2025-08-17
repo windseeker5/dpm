@@ -150,13 +150,20 @@ app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
-# 🤖 Register AI Analytics Chatbot Blueprint
+# 🤖 Register Simple Chatbot Blueprint
 try:
-    from chatbot_v2 import chatbot_bp
-    app.register_blueprint(chatbot_bp)
-    print("✅ AI Analytics Chatbot registered successfully")
-except ImportError as e:
-    print(f"⚠️  AI Analytics Chatbot not available: {e}")
+    from simple_chatbot import simple_chatbot_bp
+    app.register_blueprint(simple_chatbot_bp)
+    print("✅ Simple Chatbot registered successfully")
+    
+    # List routes to verify
+    for rule in app.url_map.iter_rules():
+        if 'chatbot' in rule.rule:
+            print(f"  🗗 {rule.rule} -> {rule.endpoint}")
+except Exception as e:
+    print(f"❌ Simple Chatbot registration failed: {e}")
+    import traceback
+    traceback.print_exc()
 
 import hashlib
 
@@ -4670,6 +4677,11 @@ def typography_preview():
     if "admin" not in session:
         return redirect(url_for("admin_login"))
     return render_template("typography_preview.html")
+
+@app.route("/test-status-led")
+def test_status_led():
+    """Test page for status LED implementation"""
+    return render_template("test_status_led.html")
 
 # Initialize default survey template on startup
 with app.app_context():
