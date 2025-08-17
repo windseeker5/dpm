@@ -150,16 +150,20 @@ app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
-# 🤖 Register Simple Chatbot Blueprint
+# 🤖 Register Chatbot Blueprint
 try:
-    from simple_chatbot import simple_chatbot_bp
-    app.register_blueprint(simple_chatbot_bp)
-    print("✅ Simple Chatbot registered successfully")
+    from chatbot_v2 import chatbot_bp
+    app.register_blueprint(chatbot_bp)
+    print("✅ Chatbot v2 registered successfully")
     
     # List routes to verify
     for rule in app.url_map.iter_rules():
         if 'chatbot' in rule.rule:
             print(f"  🗗 {rule.rule} -> {rule.endpoint}")
+    
+    # Exempt chatbot API from CSRF for testing
+    csrf.exempt(chatbot_bp)
+    print("✅ Chatbot API exempted from CSRF")
 except Exception as e:
     print(f"❌ Simple Chatbot registration failed: {e}")
     import traceback

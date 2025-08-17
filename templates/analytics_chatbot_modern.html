@@ -198,20 +198,22 @@
 .status-indicator {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0.75rem;
-    background: rgba(16, 185, 129, 0.1);
-    border-radius: 16px;
-    font-size: 0.875rem;
-    color: #059669;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    background: transparent;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: var(--chat-text-secondary);
+    border: 1px solid var(--chat-border);
 }
 
 .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #10b981;
     transition: background-color 0.3s ease;
+    flex-shrink: 0;
 }
 
 /* Status LED States */
@@ -600,8 +602,12 @@
     }
     
     .status-indicator {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
+        padding: 0.125rem 0.375rem;
+    }
+    
+    .status-dot {
+        width: 5px;
+        height: 5px;
     }
 }
 
@@ -687,9 +693,8 @@
                         {% endif %}
                     </select>
                 </div>
-                <div class="status-indicator">
+                <div class="status-indicator" title="Connection Status">
                     <span class="status-dot connected" id="statusDot"></span>
-                    <span id="statusText">Ready</span>
                 </div>
             </div>
         </div>
@@ -941,7 +946,7 @@ async function sendMessage(event) {
     // Set processing state
     isProcessing = true;
     document.getElementById('sendBtn').disabled = true;
-    updateStatusIndicator('Processing...', 'checking');
+    updateStatusIndicator('Processing request...', 'checking');
     
     try {
         // Debug log
@@ -1221,12 +1226,8 @@ function createElementFromHTML(htmlString) {
 
 // Update status indicator
 function updateStatusIndicator(status, state = 'connected') {
-    const statusText = document.getElementById('statusText');
     const statusDot = document.getElementById('statusDot');
-    
-    if (statusText) {
-        statusText.textContent = status;
-    }
+    const statusIndicator = statusDot?.parentElement;
     
     if (statusDot) {
         // Remove all status classes
@@ -1240,6 +1241,11 @@ function updateStatusIndicator(status, state = 'connected') {
         } else {
             statusDot.classList.add('connected');
         }
+    }
+    
+    // Update tooltip
+    if (statusIndicator) {
+        statusIndicator.title = status;
     }
 }
 
@@ -1279,7 +1285,7 @@ async function checkModelAvailability(modelName) {
             console.log('API endpoint not available, using fallback simulation');
             
             // Fallback: Simulate model availability based on model name
-            const availableModels = ['simple-model', 'llama2', 'codellama', 'mistral'];
+            const availableModels = ['database-query', 'codellama:7b-instruct', 'deepseek-coder:6.7b', 'dolphin-mistral:latest', 'deepseek-r1:8b'];
             const isAvailable = availableModels.includes(modelName);
             
             if (isAvailable) {
@@ -1320,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCharCount();
     
     // Initialize status
-    updateStatusIndicator('Ready', 'connected');
+    updateStatusIndicator('Initializing...', 'checking');
     
     // Handle model selector changes
     const modelSelector = document.getElementById('modelSelector');

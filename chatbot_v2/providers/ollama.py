@@ -130,9 +130,8 @@ class OllamaProvider(AIProvider):
                 
                 # Cache for 5 minutes
                 self.available_models_cache = models
-                self.cache_expiry = datetime.now().replace(
-                    minute=datetime.now().minute + 5
-                )
+                from datetime import timedelta
+                self.cache_expiry = datetime.now() + timedelta(minutes=5)
                 
                 return models
         except Exception:
