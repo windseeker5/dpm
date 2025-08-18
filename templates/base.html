@@ -445,6 +445,9 @@
                  class="nav-link {{ 'active' if request.endpoint == 'list_passports' }}">
                 <i class="nav-icon ti ti-ticket"></i>
                 <span class="nav-text">Passports</span>
+                {% if active_passport_count and active_passport_count > 0 %}
+                <span class="nav-badge bg-green">{{ active_passport_count }}</span>
+                {% endif %}
                 {% if request.endpoint == 'list_passports' %}
                 <span class="nav-indicator"></span>
                 {% endif %}

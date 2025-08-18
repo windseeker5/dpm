@@ -528,39 +528,66 @@
         <div class="row mb-3">
           <div class="col">
             <h2 class="section-title mb-0"><i class="ti ti-file-description text-blue me-2"></i>Recent system events</h2>
-
-  
           </div>
         </div>
-        <div class="row">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-header border-0 pb-0">
-                
+        
+        <!-- Main Events Table -->
+        <div class="card main-table-card">
+          <div class="card-header">
+            <div class="d-flex justify-content-center align-items-center w-100">
+              <!-- Filter Buttons -->
+              <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+                <a href="#" onclick="filterLogs('all')" 
+                   class="github-filter-btn active" id="filter-all"
+                   style="background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                  <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Events <span style="opacity: 0.6; margin-left: 4px;" id="count-all">({{ logs|length }})</span>
+                </a>
+                <a href="#" onclick="filterLogs('passport')" 
+                   class="github-filter-btn" id="filter-passport"
+                   style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                  <i class="ti ti-id-badge-2" style="font-size: 16px; margin-right: 4px;"></i>Passports <span class="badge bg-green-lt ms-2" id="count-passport">{{ active_passport_count|default(0) }}</span>
+                </a>
+                <a href="#" onclick="filterLogs('signup')" 
+                   class="github-filter-btn" id="filter-signup"
+                   style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                  <i class="ti ti-user-plus" style="font-size: 16px; margin-right: 4px;"></i>Signups <span style="opacity: 0.6; margin-left: 4px;" id="count-signup">(0)</span>
+                </a>
+                <a href="#" onclick="filterLogs('payment')" 
+                   class="github-filter-btn" id="filter-payment"
+                   style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                  <i class="ti ti-currency-dollar" style="font-size: 16px; margin-right: 4px;"></i>Payments <span style="opacity: 0.6; margin-left: 4px;" id="count-payment">(0)</span>
+                </a>
+                <a href="#" onclick="filterLogs('admin')" 
+                   class="github-filter-btn" id="filter-admin"
+                   style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                  <i class="ti ti-settings" style="font-size: 16px; margin-right: 4px;"></i>Admin <span style="opacity: 0.6; margin-left: 4px;" id="count-admin">(0)</span>
+                </a>
               </div>
-            <div class="table-responsive">
-              <table class="table card-table table-vcenter" id="logTable">
-                <thead>
-                  <tr>
-                    <th scope="col" class="text-muted">Date/Time</th>
-                    <th scope="col" class="text-muted">Type</th>
-                    <th scope="col" class="text-muted">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Table content will be populated by JavaScript pagination -->
-                </tbody>
-              </table>
             </div>
-            
-            <!-- Pagination -->
-            <div class="card-footer d-flex align-items-center">
-              <p class="m-0 text-muted">Showing <span id="showingCount">0</span> of {{ logs[:10]|length }}</p>
-              <ul class="pagination m-0 ms-auto" id="paginationControls">
-                <!-- Pagination controls will be populated by JavaScript -->
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover" id="logTable">
+            <thead>
+              <tr>
+                <th>Date/Time</th>
+                <th class="d-none d-md-table-cell">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Table content will be populated by JavaScript -->
+            </tbody>
+          </table>
+          </div>
+          
+          <!-- Pagination -->
+          <div class="card-footer d-flex justify-content-between align-items-center">
+            <span class="text-muted" id="entriesInfo">Showing <span id="showingCount">1-{{ [logs|length, 10]|min }}</span> of {{ logs|length }} entries</span>
+            <nav id="paginationNav">
+              <ul class="pagination pagination-sm mb-0" id="paginationControls">
+                <!-- Pagination will be populated by JavaScript -->
               </ul>
-            </div>
-            </div>
+            </nav>
           </div>
         </div>
       </div>
@@ -948,6 +975,143 @@
 .card-footer p {
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+/* GitHub-style Filter Buttons for Events Table */
+.card-header .d-flex {
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.github-filter-group {
+  display: inline-flex;
+  align-items: center;
+  background: #e1e4e8;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.github-filter-btn {
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #24292e;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Inactive state - darker gray background */
+.github-filter-btn:not(.active) {
+  background: #e1e4e8;
+  color: #586069;
+}
+
+.github-filter-btn:not(.active):hover {
+  background: #d1d5da;
+  color: #24292e;
+  text-decoration: none;
+}
+
+/* Active state - white/light background with rounded corners */
+.github-filter-btn.active {
+  background: #ffffff;
+  color: #24292e;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
+  font-weight: 600;
+  z-index: 1;
+}
+
+.github-filter-btn.active:hover {
+  background: #ffffff;
+  text-decoration: none;
+}
+
+/* Icons styling */
+.github-filter-btn i {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.github-filter-btn.active i {
+  opacity: 1;
+}
+
+/* Main table card styling */
+.main-table-card {
+  margin-top: 0 !important;
+}
+
+/* Table styling improvements */
+.table th {
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* Badge styling for log types */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Responsive Design for Filter Buttons */
+@media (max-width: 767px) {
+  .github-filter-group {
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 2px;
+  }
+  
+  .github-filter-btn {
+    flex: 1;
+    min-width: calc(50% - 2px);
+    margin-bottom: 2px;
+    border-radius: 6px !important;
+    font-size: 12px;
+    padding: 6px 8px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .github-filter-btn {
+    font-size: 11px;
+    padding: 5px 6px;
+  }
+  
+  .github-filter-btn i {
+    font-size: 12px;
+  }
 }
 </style>
 {% endblock %}
@@ -1612,28 +1776,39 @@ class LogsPagination {
         formattedDate = 'Invalid Date';
       }
       
-      // Get icon based on log type
+      // Get icon based on log type - using original emoji icons
       const iconMap = {
-        'Passport Redeemed': '<i class="ti ti-ticket text-danger"></i>',
-        'Email Sent': '<i class="ti ti-mail text-info"></i>',
-        'Passport Created': '<i class="ti ti-id text-lime"></i>',
-        'Interact Payment': '<i class="ti ti-currency-dollar text-success"></i>',
-        'Marked Paid': '<i class="ti ti-check text-green"></i>',
-        'Reminder Sent': '<i class="ti ti-bell text-purple"></i>',
-        'Signup Submitted': '<i class="ti ti-user-plus text-success"></i>',
-        'Signup Approved': '<i class="ti ti-user-check text-green"></i>',
-        'Signup Rejected': '<i class="ti ti-user-x text-danger"></i>',
-        'Signup Cancelled': '<i class="ti ti-user-x text-danger"></i>',
-        'Activity Created': '<i class="ti ti-target text-orange"></i>',
-        'Admin Action': '<i class="ti ti-settings text-muted"></i>'
+        'Passport Redeemed': '🎫',
+        'Email Sent': '✉️',
+        'Passport Created': '🆔',
+        'Interact Payment': '💳',
+        'Marked Paid': '✅',
+        'Reminder Sent': '🔔',
+        'Signup Submitted': '🙋‍♂️',
+        'Signup Approved': '👍',
+        'Signup Rejected': '❌',
+        'Signup Cancelled': '❌',
+        'Activity Created': '🎯',
+        'Admin Action': '⚙️'
       };
       
-      const icon = iconMap[log.type] || '<i class="ti ti-activity text-muted"></i>';
+      const icon = iconMap[log.type] || '📝';
+      
+      row.className = 'log-row';
+      row.setAttribute('data-type', log.type.toLowerCase().replace(' ', '-'));
       
       row.innerHTML = `
-        <td>${formattedDate}</td>
-        <td data-type="${log.type}">${icon} ${log.type}</td>
-        <td>${log.details}</td>
+        <td style="vertical-align: middle;">
+          <div class="text-nowrap">
+            ${formattedDate}
+          </div>
+        </td>
+        <td class="d-none d-md-table-cell" style="vertical-align: middle;">${icon} ${log.type}</td>
+        <td style="vertical-align: middle;">
+          <div class="text-truncate" style="max-width: 300px;" title="${log.details || ''}">
+            ${log.details || ''}
+          </div>
+        </td>
       `;
       
       tbody.appendChild(row);
@@ -1646,6 +1821,13 @@ class LogsPagination {
     const start = (this.currentPage - 1) * this.itemsPerPage + 1;
     const end = Math.min(this.currentPage * this.itemsPerPage, this.logs.length);
     this.showingCount.textContent = `${start}-${end}`;
+    
+    // Update total entries info
+    const entriesInfo = document.getElementById('entriesInfo');
+    if (entriesInfo) {
+      const totalText = entriesInfo.textContent.split(' of ')[1];
+      entriesInfo.innerHTML = `Showing <span id="showingCount">${start}-${end}</span> of ${this.logs.length} entries`;
+    }
   }
 
   renderPagination() {
@@ -1746,6 +1928,12 @@ class LogsPagination {
     // Add loading state
     this.tableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4"><div class="spinner-border spinner-border-sm text-muted me-2" role="status"></div>Loading events...</td></tr>';
     
+    // Show/hide pagination based on number of pages
+    const paginationNav = document.getElementById('paginationNav');
+    if (paginationNav) {
+      paginationNav.style.display = this.totalPages > 1 ? 'block' : 'none';
+    }
+    
     // Small delay to show loading state, then render content
     setTimeout(() => {
       this.renderTable(1);
@@ -1754,34 +1942,139 @@ class LogsPagination {
   }
 }
 
+// Logs data is already available as allLogs from line 1125
+
 // Initialize pagination instance
 let logsPagination;
 
-// Initialize charts and pagination on page load
+// Initialize charts and filtering on page load
 document.addEventListener('DOMContentLoaded', function() {
   updateCharts('7d');
   attachDropdownHandlers();
   
-  // Initialize logs pagination
-  if (allLogs && allLogs.length > 0) {
-    logsPagination = new LogsPagination(allLogs, 10);
-    logsPagination.init();
-  } else {
-    // Handle case where there are no logs
+  // Initialize filter counts and functionality
+  updateFilterCounts();
+  
+  // Handle case where there are no logs
+  if (!allLogs || allLogs.length === 0) {
     const tbody = document.querySelector('#logTable tbody');
-    const showingCount = document.getElementById('showingCount');
-    const paginationControls = document.getElementById('paginationControls');
+    const entriesInfo = document.getElementById('entriesInfo');
     
     if (tbody) {
       tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">No system events found</td></tr>';
     }
-    if (showingCount) {
-      showingCount.textContent = '0';
-    }
-    if (paginationControls) {
-      paginationControls.innerHTML = '';
+    if (entriesInfo) {
+      entriesInfo.textContent = 'No entries found';
     }
   }
+  
+  // Initial setup - show all logs
+  if (allLogs && allLogs.length > 0) {
+    filterLogs('all');
+  }
 });
+
+// Filter functionality
+window.filterLogs = function(filterType) {
+    const filterButtons = document.querySelectorAll('.github-filter-btn');
+    
+    // Update button states
+    filterButtons.forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.cssText = btn.style.cssText.replace(/background: #ffffff[^;]*;/, 'background: rgba(0, 0, 0, 0.03);')
+                                          .replace(/color: #24292e[^;]*;/, 'color: #586069;')
+                                          .replace(/font-weight: 600[^;]*;/, '')
+                                          .replace(/border: 1px solid #d1d5da[^;]*;/, '')
+                                          .replace(/margin: -1px[^;]*;/, 'margin: 0;')
+                                          .replace(/z-index: 1[^;]*;/, '')
+                                          .replace(/border-radius: 6px[^;]*;/, '')
+                                          .replace(/box-shadow: 0 1px 0 rgba\(27,31,35,0\.04\)[^;]*;/, '');
+        
+        // Add background pattern for inactive buttons (except last one)
+        if (!btn.id.includes('admin')) {
+            btn.style.backgroundImage = 'linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%)';
+            btn.style.backgroundSize = '100% 100%, 1px 100%';
+            btn.style.backgroundPosition = 'center, right center';
+            btn.style.backgroundRepeat = 'no-repeat';
+            btn.style.borderRight = '1px solid transparent';
+            btn.style.backgroundClip = 'padding-box';
+        }
+    });
+    
+    // Activate selected button
+    const activeButton = document.getElementById(`filter-${filterType}`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+        activeButton.style.background = '#ffffff';
+        activeButton.style.color = '#24292e';
+        activeButton.style.fontWeight = '600';
+        activeButton.style.border = '1px solid #d1d5da';
+        activeButton.style.margin = '-1px';
+        activeButton.style.zIndex = '1';
+        activeButton.style.borderRadius = '6px';
+        activeButton.style.boxShadow = '0 1px 0 rgba(27,31,35,0.04)';
+        activeButton.style.backgroundImage = 'none';
+        activeButton.style.borderRight = 'none';
+    }
+    
+    // Filter logs data
+    let filteredLogs = allLogs.filter(log => {
+        const logType = log.type.toLowerCase();
+        
+        if (filterType === 'all') {
+            return true;
+        } else if (filterType === 'passport') {
+            return logType.includes('passport');
+        } else if (filterType === 'signup') {
+            return logType.includes('signup');
+        } else if (filterType === 'payment') {
+            return logType.includes('paid') || logType.includes('payment');
+        } else if (filterType === 'admin') {
+            return logType.includes('admin') || logType.includes('activity');
+        }
+        return false;
+    });
+    
+    // Create new pagination with filtered data
+    logsPagination = new LogsPagination(filteredLogs, 10);
+    logsPagination.init();
+    
+    return false; // Prevent navigation
+};
+
+function updateFilterCounts() {
+    const counts = {
+        all: allLogs.length,
+        passport: 0,
+        signup: 0,
+        payment: 0,
+        admin: 0
+    };
+    
+    allLogs.forEach(log => {
+        const logType = log.type.toLowerCase();
+        
+        if (logType.includes('passport')) {
+            counts.passport++;
+        }
+        if (logType.includes('signup')) {
+            counts.signup++;
+        }
+        if (logType.includes('paid') || logType.includes('payment')) {
+            counts.payment++;
+        }
+        if (logType.includes('admin') || logType.includes('activity')) {
+            counts.admin++;
+        }
+    });
+    
+    // Update count displays
+    Object.keys(counts).forEach(type => {
+        const countElement = document.getElementById(`count-${type}`);
+        if (countElement) {
+            countElement.textContent = `(${counts[type]})`;
+        }
+    });
+}
 </script>
 {% endblock %}
