@@ -66,23 +66,56 @@ def utc_to_local(dt_utc):
 
 
 def get_setting(key, default=""):
+    """
+    Legacy function for backwards compatibility.
+    New code should use SettingsManager.get() instead.
+    """
     with current_app.app_context():
-        setting = Setting.query.filter_by(key=key).first()
-        if setting and setting.value not in [None, ""]:
-            return setting.value
-    return default
+        try:
+            from models.settings import SettingsManager
+            return SettingsManager.get(key, default)
+        except ImportError:
+            # Fallback to old method if new settings system not available
+            setting = Setting.query.filter_by(key=key).first()
+            if setting and setting.value not in [None, ""]:
+                return setting.value
+            return default
 
 
 
-def save_setting(key, value):
+def save_setting(key, value, changed_by=None, change_reason=None):
+    """
+    Legacy function for backwards compatibility.
+    New code should use SettingsManager.set() instead.
+    """
     with current_app.app_context():
-        setting = Setting.query.filter_by(key=key).first()
-        if setting:
-            setting.value = value
-        else:
-            setting = Setting(key=key, value=value)
-            db.session.add(setting)
-        db.session.commit()
+        try:
+            from models.settings import SettingsManager
+            from flask import request
+            
+            request_info = None
+            if request:
+                request_info = {
+                    'ip': request.remote_addr,
+                    'user_agent': request.headers.get('User-Agent')
+                }
+            
+            return SettingsManager.set(
+                key, value, 
+                changed_by=changed_by or 'legacy_function',
+                change_reason=change_reason or 'Legacy save_setting call',
+                request_info=request_info
+            )
+        except ImportError:
+            # Fallback to old method if new settings system not available
+            setting = Setting.query.filter_by(key=key).first()
+            if setting:
+                setting.value = value
+            else:
+                setting = Setting(key=key, value=value)
+                db.session.add(setting)
+            db.session.commit()
+            return value
 
 
 
