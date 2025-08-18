@@ -264,19 +264,24 @@ def inject_globals_and_csrf():
     
     # Calculate pending signups count for sidebar badge
     pending_signups_count = 0
+    active_passport_count = 0
     try:
         if "admin" in session:  # Only calculate if admin is logged in
             pending_signups_count = Signup.query.filter_by(status='pending').count()
+            # Calculate active passports (uses_remaining > 0)
+            active_passport_count = Passport.query.filter(Passport.uses_remaining > 0).count()
     except Exception:
         # If there's any database error, default to 0
         pending_signups_count = 0
+        active_passport_count = 0
     
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
         'git_branch': get_git_branch(),
         'csrf_token': generate_csrf,  # returns the raw CSRF token
-        'pending_signups_count': pending_signups_count
+        'pending_signups_count': pending_signups_count,
+        'active_passport_count': active_passport_count
     }
 
 
@@ -637,9 +642,11 @@ def dashboard():
         'recent_signups': len([s for s in all_signups if s.signed_up_at and s.signed_up_at.replace(tzinfo=timezone.utc) >= seven_days_ago]),
     }
 
-    # ✅ Use working helper function
+    # ✅ Use working helper function - Get all logs for pagination
     all_logs = get_all_activity_logs()
-    recent_logs = all_logs[:20]  # last 20 logs only
+
+    # ✅ Extract active passport count for the dashboard badge
+    active_passport_count = passport_stats['active_passports']
 
     return render_template(
         "dashboard.html",
@@ -647,7 +654,8 @@ def dashboard():
         kpi_data=kpi_data,
         passport_stats=passport_stats,
         signup_stats=signup_stats,
-        logs=recent_logs
+        active_passport_count=active_passport_count,
+        logs=all_logs
     )
 
 

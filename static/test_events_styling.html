@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events Table Styling Test</title>
+    <link href="/static/tabler/css/tabler.min.css" rel="stylesheet"/>
+    <link href="/static/tabler/css/tabler-icons.min.css" rel="stylesheet"/>
+    <style>
+        body { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); min-height: 100vh; }
+        .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
+        
+        /* GitHub-style Filter Buttons */
+        .card-header .d-flex {
+          justify-content: center !important;
+          align-items: center !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        .github-filter-group {
+          display: inline-flex;
+          align-items: center;
+          background: #e1e4e8;
+          border-radius: 6px;
+          padding: 2px;
+          gap: 1px;
+        }
+
+        .github-filter-btn {
+          padding: 5px 16px;
+          font-size: 14px;
+          font-weight: 500;
+          line-height: 20px;
+          color: #24292e;
+          background: transparent;
+          border: none;
+          border-radius: 0;
+          text-decoration: none;
+          transition: all 0.2s ease;
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          white-space: nowrap;
+          cursor: pointer;
+        }
+
+        /* Inactive state */
+        .github-filter-btn:not(.active) {
+          background: #e1e4e8;
+          color: #586069;
+        }
+
+        .github-filter-btn:not(.active):hover {
+          background: #d1d5da;
+          color: #24292e;
+          text-decoration: none;
+        }
+
+        /* Active state */
+        .github-filter-btn.active {
+          background: #ffffff;
+          color: #24292e;
+          border-radius: 6px;
+          box-shadow: 0 1px 0 rgba(27,31,35,0.04);
+          font-weight: 600;
+          z-index: 1;
+        }
+
+        .github-filter-btn.active:hover {
+          background: #ffffff;
+          text-decoration: none;
+        }
+
+        .github-filter-btn i {
+          font-size: 14px;
+          opacity: 0.7;
+        }
+
+        .github-filter-btn.active i {
+          opacity: 1;
+        }
+        
+        .card {
+          background: rgba(255, 255, 255, 0.95) !important;
+          border: none !important;
+          border-radius: 16px !important;
+          box-shadow: 
+            0 1px 3px rgba(0, 0, 0, 0.05),
+            0 4px 16px rgba(0, 0, 0, 0.04),
+            0 0 0 1px rgba(255, 255, 255, 0.8);
+        }
+        
+        .table th {
+          border-bottom: 2px solid #e2e8f0;
+          font-weight: 600;
+          color: #475569;
+          font-size: 0.875rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding: 1rem;
+        }
+
+        .table td {
+          border-bottom: 1px solid #f1f5f9;
+          padding: 1rem;
+          color: #334155;
+          vertical-align: middle;
+        }
+
+        .table tbody tr:hover {
+          background-color: rgba(13, 110, 253, 0.04);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container mt-4">
+        <h2 class="section-title mb-4"><i class="ti ti-file-description text-blue me-2"></i>Recent system events</h2>
+        
+        <!-- Main Events Table -->
+        <div class="card main-table-card">
+          <div class="card-header">
+            <div class="d-flex justify-content-center align-items-center w-100">
+              <!-- Filter Buttons -->
+              <div class="github-filter-group" role="group" aria-label="Filter buttons">
+                <a href="#" onclick="setActive(this)" class="github-filter-btn active" id="filter-all">
+                  <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Events <span style="opacity: 0.6; margin-left: 4px;">(15)</span>
+                </a>
+                <a href="#" onclick="setActive(this)" class="github-filter-btn" id="filter-passport">
+                  <i class="ti ti-id-badge-2" style="font-size: 16px; margin-right: 4px;"></i>Passports <span style="opacity: 0.6; margin-left: 4px;">(8)</span>
+                </a>
+                <a href="#" onclick="setActive(this)" class="github-filter-btn" id="filter-signup">
+                  <i class="ti ti-user-plus" style="font-size: 16px; margin-right: 4px;"></i>Signups <span style="opacity: 0.6; margin-left: 4px;">(4)</span>
+                </a>
+                <a href="#" onclick="setActive(this)" class="github-filter-btn" id="filter-payment">
+                  <i class="ti ti-currency-dollar" style="font-size: 16px; margin-right: 4px;"></i>Payments <span style="opacity: 0.6; margin-left: 4px;">(2)</span>
+                </a>
+                <a href="#" onclick="setActive(this)" class="github-filter-btn" id="filter-admin">
+                  <i class="ti ti-settings" style="font-size: 16px; margin-right: 4px;"></i>Admin <span style="opacity: 0.6; margin-left: 4px;">(1)</span>
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Date/Time</th>
+                <th class="d-none d-md-table-cell">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="log-row" data-type="passport-created">
+                <td style="vertical-align: middle;">
+                  <div class="text-nowrap">
+                    <div class="fw-bold">08/18</div>
+                    <div class="text-muted small">14:30</div>
+                  </div>
+                </td>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  <span class="badge bg-green-lt text-green-lt-fg">Passport Created</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="text-truncate" style="max-width: 300px;" title="New passport created for user John Doe">
+                    New passport created for user John Doe
+                  </div>
+                </td>
+              </tr>
+              <tr class="log-row" data-type="signup-approved">
+                <td style="vertical-align: middle;">
+                  <div class="text-nowrap">
+                    <div class="fw-bold">08/18</div>
+                    <div class="text-muted small">13:45</div>
+                  </div>
+                </td>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  <span class="badge bg-green-lt text-green-lt-fg">Signup Approved</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="text-truncate" style="max-width: 300px;" title="Signup for Ligue Hockey Gagnon approved">
+                    Signup for Ligue Hockey Gagnon approved
+                  </div>
+                </td>
+              </tr>
+              <tr class="log-row" data-type="marked-paid">
+                <td style="vertical-align: middle;">
+                  <div class="text-nowrap">
+                    <div class="fw-bold">08/18</div>
+                    <div class="text-muted small">12:15</div>
+                  </div>
+                </td>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  <span class="badge bg-green-lt text-green-lt-fg">Marked Paid</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="text-truncate" style="max-width: 300px;" title="Payment marked as paid for $50">
+                    Payment marked as paid for $50
+                  </div>
+                </td>
+              </tr>
+              <tr class="log-row" data-type="passport-redeemed">
+                <td style="vertical-align: middle;">
+                  <div class="text-nowrap">
+                    <div class="fw-bold">08/17</div>
+                    <div class="text-muted small">16:20</div>
+                  </div>
+                </td>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  <span class="badge bg-blue-lt text-blue-lt-fg">Passport Redeemed</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="text-truncate" style="max-width: 300px;" title="Passport session redeemed">
+                    Passport session redeemed
+                  </div>
+                </td>
+              </tr>
+              <tr class="log-row" data-type="admin-action">
+                <td style="vertical-align: middle;">
+                  <div class="text-nowrap">
+                    <div class="fw-bold">08/17</div>
+                    <div class="text-muted small">10:30</div>
+                  </div>
+                </td>
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  <span class="badge bg-purple-lt text-purple-lt-fg">Admin Action</span>
+                </td>
+                <td style="vertical-align: middle;">
+                  <div class="text-truncate" style="max-width: 300px;" title="Activity settings updated">
+                    Activity settings updated
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+          
+          <!-- Pagination -->
+          <div class="card-footer d-flex justify-content-between align-items-center">
+            <span class="text-muted">Showing 1 to 5 of 15 entries</span>
+            <nav>
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item disabled">
+                  <span class="page-link"><i class="ti ti-chevron-left"></i></span>
+                </li>
+                <li class="page-item active">
+                  <span class="page-link">1</span>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="#">2</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="#">3</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="#"><i class="ti ti-chevron-right"></i></a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+    </div>
+    
+    <script>
+        function setActive(clickedBtn) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.github-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            clickedBtn.classList.add('active');
+            
+            // Prevent navigation
+            return false;
+        }
+    </script>
+</body>
+</html>

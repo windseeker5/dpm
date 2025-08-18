@@ -2,7 +2,27 @@
 {% block title %}Settings | Minipass{% endblock %}
 {% block content %}
 
-<div class="container-xl mt-4">
+<div class="page-wrapper">
+  <!-- Page Header -->
+  <div class="page-header d-print-none">
+    <div class="settings-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title mb-1">
+            <i class="ti ti-settings me-2"></i>
+            Settings
+          </h1>
+          <p class="text-muted mb-0">
+            Manage your business settings, admin accounts, and data
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="settings-container">
   <form method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -27,6 +47,9 @@
               </a>
               <a href="#tab-data" class="list-group-item list-group-item-action" data-bs-toggle="tab">
                 Your Data
+              </a>
+              <a href="#tab-backup" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                Backup & Restore
               </a>
             </div>
           </div>
@@ -100,51 +123,145 @@
 
               <!-- Your Data Tab -->
               <div class="tab-pane fade" id="tab-data">
-                <h3 class="mb-3">Danger Zone: Your Data</h3>
-                <p class="text-muted">This will permanently erase all passes, emails, redemptions, e-bank logs, and reminders.</p>
-
-                <button type="button" class="btn btn-danger mb-3" data-bs-toggle="modal" data-bs-target="#confirmEraseModal">
-                  <i class="ti ti-alert-circle"></i> Erase All App Data
-                </button>
+                <div class="row">
+                  <div class="col-lg-8">
+                    <h3 class="mb-4">
+                      <i class="ti ti-alert-triangle text-danger me-2"></i>
+                      Danger Zone
+                    </h3>
+                    
+                    <div class="card border-danger">
+                      <div class="card-header bg-danger-lt">
+                        <h4 class="card-title text-danger mb-0">
+                          <i class="ti ti-trash me-2"></i>
+                          Erase All Application Data
+                        </h4>
+                      </div>
+                      <div class="card-body">
+                        <p class="text-muted mb-3">
+                          This action will permanently delete all user passes, redemptions, reminders, 
+                          e-bank logs, and email logs. This cannot be undone.
+                        </p>
+                        
+                        <div class="alert alert-danger" role="alert">
+                          <div class="d-flex">
+                            <div>
+                              <i class="ti ti-alert-circle me-2"></i>
+                            </div>
+                            <div>
+                              <h4 class="alert-title">Warning!</h4>
+                              <div class="text-muted">
+                                Make sure you have created a backup before proceeding with this action.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmEraseModal">
+                          <i class="ti ti-trash me-2"></i>
+                          Erase All App Data
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <!-- Backup Section -->
-              <div class="mt-5">
-                <h3 class="mb-3">Manual Backup</h3>
-                <p class="text-muted">Generate a one-click backup of your current database. Includes all active data but no settings or admin passwords.</p>
-
-                <button type="button" class="btn btn-outline-primary" onclick="location.href='{{ url_for('generate_backup') }}'">
-                  <i class="ti ti-database-export"></i> Backup Database
-                </button>
-
-                {% if backup_files %}
-                  <div class="mt-4">
-                    <strong>📁 Available Backups:</strong>
-                    <ul class="list-unstyled mt-2">
-                      {% for file in backup_files %}
-                        <li>
-                          <a href="{{ url_for('static', filename='backups/' ~ file) }}" download>{{ file }}</a>
-                        </li>
-                      {% endfor %}
-                    </ul>
+              <!-- Backup & Restore Tab -->
+              <div class="tab-pane fade" id="tab-backup">
+                <div class="row">
+                  <div class="col-lg-8">
+                    <h3 class="mb-4">
+                      <i class="ti ti-database me-2"></i>
+                      Database Backup & Restore
+                    </h3>
+                    
+                    <!-- Manual Backup Section -->
+                    <div class="card mb-4">
+                      <div class="card-header">
+                        <h4 class="card-title mb-0">
+                          <i class="ti ti-database-export me-2"></i>
+                          Create Backup
+                        </h4>
+                      </div>
+                      <div class="card-body">
+                        <p class="text-muted mb-3">
+                          Generate a backup of your current database. Includes all active data but excludes 
+                          settings and admin passwords for security.
+                        </p>
+                        
+                        <button type="button" class="btn btn-primary" onclick="location.href='{{ url_for('generate_backup') }}'">
+                          <i class="ti ti-database-export me-2"></i>
+                          Create Backup Now
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- Available Backups Section -->
+                    <div class="card">
+                      <div class="card-header">
+                        <h4 class="card-title mb-0">
+                          <i class="ti ti-folder me-2"></i>
+                          Available Backups
+                        </h4>
+                      </div>
+                      <div class="card-body">
+                        {% if backup_files %}
+                          <div class="list-group list-group-flush">
+                            {% for file in backup_files %}
+                              <div class="list-group-item d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                  <i class="ti ti-file-zip text-muted me-3"></i>
+                                  <div>
+                                    <div class="fw-semibold">{{ file }}</div>
+                                    <div class="text-muted small">Database backup file</div>
+                                  </div>
+                                </div>
+                                <a href="{{ url_for('static', filename='backups/' ~ file) }}" download class="btn btn-sm btn-outline-primary">
+                                  <i class="ti ti-download me-1"></i>
+                                  Download
+                                </a>
+                              </div>
+                            {% endfor %}
+                          </div>
+                        {% else %}
+                          <div class="empty">
+                            <div class="empty-icon">
+                              <i class="ti ti-folder-x"></i>
+                            </div>
+                            <p class="empty-title">No backups found</p>
+                            <p class="empty-subtitle text-muted">
+                              Create your first backup to get started
+                            </p>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
                   </div>
-                {% else %}
-                  <div class="alert alert-warning mt-3">No backups found.</div>
-                {% endif %}
+                </div>
               </div>
 
               <!-- Submit Button -->
-              <div class="text-end mt-4">
-                <button type="submit" class="btn btn-primary">
-                  <i class="ti ti-device-floppy me-2"></i> Save Settings
-                </button>
+              <div class="mt-5 pt-4 border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="text-muted small">
+                    <i class="ti ti-info-circle me-1"></i>
+                    Changes will be saved across all tabs
+                  </div>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-device-floppy me-2"></i>
+                    Save All Settings
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </form>
+    </form>
+    </div>
+  </div>
 </div>
 
 <!-- Modal -->
@@ -172,4 +289,30 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block head %}
+<!-- Settings page width fix -->
+<style>
+.settings-container {
+  max-width: 100%;
+  margin: 0 2rem;
+  padding: 0;
+}
+
+/* Match dashboard card styling */
+.card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .settings-container {
+    margin: 0 1rem;
+  }
+}
+</style>
 {% endblock %}
