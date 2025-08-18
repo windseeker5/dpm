@@ -2,7 +2,58 @@
 {% block title %}Survey Management{% endblock %}
 
 {% block head %}
+<!-- Critical Search Bar Fix Styles -->
 <style>
+/* Pink glow effect for Ctrl+K - subtle and elegant */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out !important;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
+              0 0 8px rgba(255, 105, 180, 0.35),
+              0 0 15px rgba(255, 105, 180, 0.15) !important;
+  transform: scale(1.005) !important;
+  background-image: none !important;
+  z-index: 1000;
+  position: relative;
+}
+
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
+                0 0 0 0 rgba(255, 105, 180, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+                0 0 10px rgba(255, 105, 180, 0.35),
+                0 0 18px rgba(255, 105, 180, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
+                0 0 8px rgba(255, 105, 180, 0.35),
+                0 0 15px rgba(255, 105, 180, 0.15);
+  }
+}
+
+/* Disable Bootstrap validation styling completely */
+#enhancedSearchInput.is-valid,
+#enhancedSearchInput.is-invalid {
+  border-color: #ced4da !important;
+  background-image: none !important;
+  padding-right: 100px !important;
+}
+
+#enhancedSearchInput.is-valid:focus,
+#enhancedSearchInput.is-invalid:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+  background-image: none !important;
+}
+
+/* Force remove validation feedback icons */
+#enhancedSearchInput {
+  background-image: none !important;
+}
+
 .survey-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -82,30 +133,34 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xl mt-4">
-
+<div class="page-wrapper">
   <!-- Page Header -->
-  <div class="page-header mb-4">
-    <div class="row align-items-center">
-      <div class="col">
-        <h2 class="page-pretitle text-muted text-uppercase mb-1">Management</h2>
-        <h1 class="page-title mb-0">Survey Dashboard</h1>
-      </div>
-      <div class="col-auto">
-        <div class="btn-list">
-          <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-primary">
-            <i class="ti ti-template"></i> Manage Templates
-          </a>
-          <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
-            <i class="ti ti-zap"></i> Quick Survey
-          </button>
-          <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
-            <i class="ti ti-plus"></i> New Template
-          </a>
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title"><i class="ti ti-clipboard-check text-blue me-2"></i>Survey Dashboard</h1>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-primary">
+              <i class="ti ti-template"></i> Manage Templates
+            </a>
+            <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
+              <i class="ti ti-zap"></i> Quick Survey
+            </button>
+            <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+              <i class="ti ti-plus"></i> New Template
+            </a>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="dashboard-container">
 
   <!-- Statistics Cards -->
   <div class="row g-3 mb-4">
@@ -143,126 +198,113 @@
     </div>
   </div>
 
-  <!-- Enhanced Search and Filters -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <form method="GET" id="filterForm">
-        <div class="row g-3">
-          <!-- Search -->
-          <div class="col-md-3">
-            <label class="form-label small text-muted">Search Surveys</label>
-            <div class="input-group">
-              <input type="text" name="q" class="form-control" placeholder="Search surveys..." 
-                     value="{{ current_filters.q }}" id="searchInput">
-              <button type="submit" class="btn btn-outline-primary">
-                <i class="ti ti-search"></i>
-              </button>
-            </div>
-          </div>
-          
-          <!-- Status Filter -->
-          <div class="col-md-2">
-            <label class="form-label small text-muted">Status</label>
-            <select name="status" class="form-select" onchange="document.getElementById('filterForm').submit();">
-              <option value="">All Status</option>
-              <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>Active</option>
-              <option value="closed" {% if current_filters.status == 'closed' %}selected{% endif %}>Closed</option>
-              <option value="draft" {% if current_filters.status == 'draft' %}selected{% endif %}>Draft</option>
-            </select>
-          </div>
-          
-          <!-- Activity Filter -->
-          <div class="col-md-2">
-            <label class="form-label small text-muted">Activity</label>
-            <select name="activity" class="form-select" onchange="document.getElementById('filterForm').submit();">
-              <option value="">All Activities</option>
-              {% for activity in activities %}
-              <option value="{{ activity.id }}" {% if current_filters.activity == activity.id|string %}selected{% endif %}>{{ activity.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          
-          <!-- Template Filter -->
-          <div class="col-md-2">
-            <label class="form-label small text-muted">Template</label>
-            <select name="template" class="form-select" onchange="document.getElementById('filterForm').submit();">
-              <option value="">All Templates</option>
-              {% for template in survey_templates %}
-              <option value="{{ template.id }}" {% if current_filters.template == template.id|string %}selected{% endif %}>{{ template.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          
-          <!-- Date Range -->
-          <div class="col-md-1 col-6">
-            <label class="form-label small text-muted">From</label>
-            <input type="date" name="start_date" class="form-control" 
-                   value="{{ current_filters.start_date }}" onchange="document.getElementById('filterForm').submit();">
-          </div>
-          <div class="col-md-1 col-6">
-            <label class="form-label small text-muted">To</label>
-            <input type="date" name="end_date" class="form-control" 
-                   value="{{ current_filters.end_date }}" onchange="document.getElementById('filterForm').submit();">
-          </div>
-          
-          <!-- Quick Survey Button -->
-          <div class="col-md-1">
-            <label class="form-label small text-muted">Quick Action</label>
-            <button type="button" class="btn btn-success w-100" title="Create Quick Survey" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
-              <i class="ti ti-plus"></i>
-            </button>
-          </div>
+    <!-- Enhanced Dynamic Search -->
+    <form method="GET" action="{{ url_for('list_surveys') }}" class="mb-4" id="dynamicSearchForm">
+      <div class="input-icon position-relative">
+        <span class="input-icon-addon">
+          <i class="ti ti-search fs-3"></i>
+        </span>
+        <input type="text" 
+               name="q"
+               id="enhancedSearchInput"
+               class="form-control form-control-lg shadow-sm" 
+               placeholder="Start typing to search surveys instantly..." 
+               value="{{ current_filters.q or '' }}"
+               style="padding-right: 100px; border-radius: 0.5rem;"
+               autocomplete="off"
+               data-bs-toggle="false">
+        <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
+          <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
+          <kbd id="searchKbdHint" class="text-muted">ctrl + k</kbd>
+          <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
+            <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
+          </button>
         </div>
-        
-        <!-- Clear Filters -->
-        {% if current_filters.q or current_filters.status or current_filters.activity or current_filters.template or current_filters.start_date or current_filters.end_date %}
-        <div class="row mt-3">
-          <div class="col">
-            <a href="{{ url_for('list_surveys') }}" class="btn btn-sm btn-outline-secondary">
-              <i class="ti ti-x"></i> Clear Filters
-            </a>
-          </div>
-        </div>
-        {% endif %}
-      </form>
-    </div>
-  </div>
+      </div>
+    </form>
 
-  <!-- Bulk Actions (Hidden by default) -->
-  <div class="card mb-3" id="bulkActions" style="display: none;">
-    <div class="card-body">
-      <div class="row align-items-center">
-        <div class="col">
-          <div class="d-flex align-items-center">
-            <i class="ti ti-check-box text-primary me-2"></i>
-            <strong><span id="selectedCount">0</span> surveys selected</strong>
-          </div>
-        </div>
-        <div class="col-auto">
-          <div class="btn-list">
-            <button class="btn btn-success btn-sm" onclick="bulkAction('activate')">
-              <i class="ti ti-check"></i> Activate
-            </button>
-            <button class="btn btn-warning btn-sm" onclick="bulkAction('close')">
-              <i class="ti ti-pause"></i> Close
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="bulkAction('delete')">
-              <i class="ti ti-trash"></i> Delete
-            </button>
-          </div>
+    <!-- Bulk Actions Bar - Separate Card Above Table -->
+    <div class="bulk-actions-container">
+      <div class="card bulk-actions-card" id="bulkActions" style="display: none; background-color: #f0fdf4 !important; background: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; border-radius: 8px !important;">
+        <div class="card-body p-3">
+          <form method="POST" action="{{ url_for('bulk_signup_action') }}" id="bulkForm">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="bulk-actions-count">
+                <i class="ti ti-checkbox me-2"></i>
+                <span id="selectedCount">0</span> surveys selected
+              </div>
+              <div class="bulk-actions-buttons">
+                <div class="dropdown">
+                  <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Actions
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <button type="submit" name="action" value="activate" class="dropdown-item text-success">
+                        <i class="ti ti-play me-2"></i>Activate Surveys
+                      </button>
+                    </li>
+                    <li>
+                      <button type="submit" name="action" value="close" class="dropdown-item text-warning">
+                        <i class="ti ti-pause me-2"></i>Close Surveys
+                      </button>
+                    </li>
+                    <li>
+                      <button type="submit" name="action" value="send_invitations" class="dropdown-item text-info">
+                        <i class="ti ti-mail me-2"></i>Send Invitations
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button type="submit" name="action" value="delete" class="dropdown-item text-danger" 
+                              onclick="return confirm('Delete ' + document.querySelectorAll('.survey-checkbox:checked').length + ' selected surveys?')">
+                        <i class="ti ti-trash me-2"></i>Delete Selected
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Desktop Table View -->
-  <div class="card survey-table">
-    <div class="table-responsive">
-      <table class="table card-table table-hover table-vcenter">
+    <!-- Main Table -->
+    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+      <div class="card-header">
+        <div class="d-flex justify-content-center align-items-center w-100">
+          <!-- Filter Buttons -->
+          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+            <a href="{{ url_for('list_surveys') }}" 
+               class="github-filter-btn {% if not current_filters.status and not current_filters.activity %}active{% endif %}"
+               style="{% if not current_filters.status and not current_filters.activity %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Surveys <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_surveys }})</span>
+            </a>
+            <a href="{{ url_for('list_surveys', status='active') }}" 
+               class="github-filter-btn {% if current_filters.status == 'active' %}active{% endif %}"
+               style="{% if current_filters.status == 'active' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-play" style="font-size: 16px; margin-right: 4px;"></i>Active <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.active_surveys }})</span>
+            </a>
+            <a href="{{ url_for('list_surveys', status='closed') }}" 
+               class="github-filter-btn {% if current_filters.status == 'closed' %}active{% endif %}"
+               style="{% if current_filters.status == 'closed' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-pause" style="font-size: 16px; margin-right: 4px;"></i>Closed <span style="opacity: 0.6; margin-left: 4px;"></span>
+            </a>
+            <a href="{{ url_for('list_surveys', status='draft') }}" 
+               class="github-filter-btn {% if current_filters.status == 'draft' %}active{% endif %}"
+               style="{% if current_filters.status == 'draft' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-file-text" style="font-size: 16px; margin-right: 4px;"></i>Draft <span style="opacity: 0.6; margin-left: 4px;"></span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
         <thead>
           <tr>
-            <th style="width: 40px;">
-              <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleAll()">
+            <th class="w-1">
+              <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
             </th>
             <th>Survey</th>
             <th>Activity</th>
@@ -270,14 +312,20 @@
             <th>Invitations/Responses</th>
             <th>Completion Rate</th>
             <th>Created</th>
-            <th>Actions</th>
+            <th class="text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for survey in surveys %}
-          <tr class="survey-row">
+          <tr>
             <td>
-              <input type="checkbox" class="form-check-input survey-checkbox" value="{{ survey.id }}" onchange="updateBulkActions()">
+              <input type="checkbox" 
+                     class="form-check-input survey-checkbox" 
+                     name="selected_surveys" 
+                     value="{{ survey.id }}" 
+                     form="bulkForm"
+                     data-status="{{ survey.status or 'draft' }}"
+                     aria-label="Select survey {{ survey.id }}">
             </td>
             <td>
               <div class="d-flex align-items-center">
@@ -335,10 +383,11 @@
                 {{ survey.created_dt.strftime('%Y-%m-%d') }}
               </div>
             </td>
-            <td>
-              <div class="dropdown">
+            <td class="text-center" style="vertical-align: middle;">
+              <div class="dropdown d-inline-block">
                 <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                  Actions
+                  <span class="d-none d-md-inline">Actions</span>
+                  <i class="ti ti-menu-2 d-md-none"></i>
                 </a>
                 <div class="dropdown-menu">
                   <a class="dropdown-item" href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank">
@@ -414,8 +463,70 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
+      
+      <!-- Pagination -->
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        {% if pagination and pagination.total > 0 %}
+          <span class="text-muted">Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ ((pagination.page - 1) * pagination.per_page) + surveys|length }} of {{ pagination.total }} entries</span>
+          {% if pagination.pages > 1 %}
+            <nav>
+              <ul class="pagination pagination-sm mb-0">
+                <!-- Previous page -->
+                <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                  {% if pagination.has_prev %}
+                    <a class="page-link" href="{{ url_for(request.endpoint, page=pagination.prev_num, **current_filters) }}" aria-label="Previous">
+                      <i class="ti ti-chevron-left"></i>
+                    </a>
+                  {% else %}
+                    <span class="page-link" aria-label="Previous">
+                      <i class="ti ti-chevron-left"></i>
+                    </span>
+                  {% endif %}
+                </li>
+                
+                <!-- Page numbers -->
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                  {% if page_num %}
+                    {% if page_num != pagination.page %}
+                      <li class="page-item">
+                        <a class="page-link" href="{{ url_for(request.endpoint, page=page_num, **current_filters) }}">{{ page_num }}</a>
+                      </li>
+                    {% else %}
+                      <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                      </li>
+                    {% endif %}
+                  {% else %}
+                    <li class="page-item disabled">
+                      <span class="page-link">…</span>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                
+                <!-- Next page -->
+                <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                  {% if pagination.has_next %}
+                    <a class="page-link" href="{{ url_for(request.endpoint, page=pagination.next_num, **current_filters) }}" aria-label="Next">
+                      <i class="ti ti-chevron-right"></i>
+                    </a>
+                  {% else %}
+                    <span class="page-link" aria-label="Next">
+                      <i class="ti ti-chevron-right"></i>
+                    </span>
+                  {% endif %}
+                </li>
+              </ul>
+            </nav>
+          {% endif %}
+        {% elif surveys|length > 0 %}
+          <span class="text-muted">Showing {{ surveys|length }} of {{ surveys|length }} entries</span>
+        {% else %}
+          <span class="text-muted">No entries found</span>
+        {% endif %}
+      </div>
+      </div>
     </div>
-  </div>
 
   <!-- Mobile Card View -->
   <div class="survey-cards">
@@ -525,6 +636,8 @@
     {% endfor %}
   </div>
 
+    </div>
+  </div>
 </div>
 
 <!-- Quick Survey Creation Modal -->
@@ -729,77 +842,326 @@
 
 {% block scripts %}
 <script>
-// Search only on Enter key press or button click
-document.getElementById('searchInput').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    document.getElementById('filterForm').submit();
-  }
-});
+document.addEventListener('DOMContentLoaded', function() {
+    // Bulk selection functionality
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const surveyCheckboxes = document.querySelectorAll('.survey-checkbox');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
 
-// Bulk selection functionality
-function toggleAll() {
-  const selectAll = document.getElementById('selectAll');
-  const checkboxes = document.querySelectorAll('.survey-checkbox');
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = selectAll.checked;
-  });
-  updateBulkActions();
-}
+    function updateBulkActions() {
+        const checkedBoxes = document.querySelectorAll('.survey-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCount.textContent = count;
+        
+        // Smooth show/hide animation
+        if (count > 0 && bulkActions.style.display === 'none') {
+            bulkActions.style.display = 'block';
+            bulkActions.classList.add('show');
+        } else if (count === 0 && bulkActions.style.display !== 'none') {
+            bulkActions.classList.remove('show');
+            setTimeout(() => {
+                bulkActions.style.display = 'none';
+            }, 300);
+        }
+        
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            if (count === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (count === surveyCheckboxes.length && surveyCheckboxes.length > 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+    }
 
-function updateBulkActions() {
-  const checkboxes = document.querySelectorAll('.survey-checkbox:checked');
-  const bulkActions = document.getElementById('bulkActions');
-  const selectedCount = document.getElementById('selectedCount');
-  
-  if (checkboxes.length > 0) {
-    bulkActions.style.display = 'block';
-    selectedCount.textContent = checkboxes.length;
-  } else {
-    bulkActions.style.display = 'none';
-  }
-  
-  // Update select all checkbox
-  const allCheckboxes = document.querySelectorAll('.survey-checkbox');
-  const selectAll = document.getElementById('selectAll');
-  selectAll.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
-  selectAll.checked = checkboxes.length === allCheckboxes.length;
-}
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            surveyCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
 
-// Bulk actions
-function bulkAction(action) {
-  const selectedIds = Array.from(document.querySelectorAll('.survey-checkbox:checked')).map(cb => cb.value);
-  if (selectedIds.length === 0) return;
-  
-  if (confirmBulkAction(action, selectedIds.length)) {
-    // Here you would make an AJAX call to perform the bulk action
-    const actionText = action.charAt(0).toUpperCase() + action.slice(1);
+    // Individual checkbox functionality
+    surveyCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Enhanced dynamic search functionality
+    const enhancedSearchInput = document.getElementById('enhancedSearchInput');
+    const searchForm = enhancedSearchInput.closest('form');
+    const tableContainer = document.querySelector('.table-responsive');
+    let searchTimeout;
+    let isSearching = false;
+
+    // Create audio element for sound effect
+    const searchSound = new Audio('/static/beep.wav');
+    searchSound.volume = 0.3; // 30% volume
     
-    // Show loading state
-    const bulkButtons = document.querySelectorAll('#bulkActions .btn');
-    bulkButtons.forEach(btn => {
-      btn.disabled = true;
-      if (btn.textContent.toLowerCase().includes(action)) {
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${actionText}ing...`;
-      }
+    // Create loading indicator
+    function createLoadingIndicator() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'searchLoadingIndicator';
+        loadingDiv.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center p-3">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="text-muted">Searching...</span>
+            </div>
+        `;
+        loadingDiv.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+            display: none;
+        `;
+        return loadingDiv;
+    }
+
+    const loadingIndicator = createLoadingIndicator();
+    tableContainer.style.position = 'relative';
+    tableContainer.appendChild(loadingIndicator);
+
+    // Show/hide loading state
+    function setLoadingState(loading) {
+        isSearching = loading;
+        if (loading) {
+            loadingIndicator.style.display = 'flex';
+            enhancedSearchInput.style.opacity = '0.8';
+            enhancedSearchInput.classList.add('searching-pulse');
+            if (charCounter) {
+                charCounter.style.display = 'inline';
+                charCounter.textContent = 'searching...';
+                charCounter.className = 'text-primary fw-bold';
+            }
+        } else {
+            loadingIndicator.style.display = 'none';
+            enhancedSearchInput.style.opacity = '1';
+            enhancedSearchInput.classList.remove('searching-pulse');
+            // Reset character counter based on current input
+            updateSearchFeedback(enhancedSearchInput.value);
+        }
+    }
+
+    // Perform search by navigating to URL with query params
+    function performSearch(query) {
+        if (isSearching) return; // Prevent multiple simultaneous searches
+        
+        setLoadingState(true);
+        
+        // Build URL with search query while preserving filter parameters
+        const url = new URL(window.location.href);
+        if (query && query.trim().length >= 3) {
+            url.searchParams.set('q', query.trim());
+        } else {
+            url.searchParams.delete('q');
+        }
+        // Preserve existing filter parameters
+        const currentStatus = new URLSearchParams(window.location.search).get('status');
+        const currentActivity = new URLSearchParams(window.location.search).get('activity');
+        if (currentStatus && !url.searchParams.has('status')) {
+            url.searchParams.set('status', currentStatus);
+        }
+        if (currentActivity && !url.searchParams.has('activity')) {
+            url.searchParams.set('activity', currentActivity);
+        }
+        
+        // Navigate to the search URL - this will reload the page with results
+        window.location.href = url.toString();
+    }
+
+    // Debounced search function
+    function debouncedSearch(query) {
+        clearTimeout(searchTimeout);
+        
+        // If query is empty, clear search immediately
+        if (!query || query.trim().length === 0) {
+            searchTimeout = setTimeout(() => performSearch(''), 150);
+            return;
+        }
+        
+        // If query is less than 3 characters, don't search yet
+        if (query.trim().length < 3) {
+            return;
+        }
+        
+        // Debounce search for queries with 3+ characters
+        searchTimeout = setTimeout(() => {
+            performSearch(query);
+        }, 250); // 250ms debounce delay for more responsive feel
+    }
+
+    // Get elements for clear button functionality
+    const kbdHint = document.getElementById('searchKbdHint');
+    const clearBtn = document.getElementById('searchClearBtn');
+    
+    // Ctrl+K keyboard shortcut to focus search with glow effect
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            enhancedSearchInput.focus();
+            enhancedSearchInput.select();
+            
+            // Add pink glow effect
+            enhancedSearchInput.classList.add('search-glow-active');
+            
+            // Play sound effect
+            try {
+                searchSound.currentTime = 0;
+                searchSound.play().catch(() => {
+                    // Silently fail if audio can't play
+                });
+            } catch (err) {
+                // Ignore audio errors
+            }
+            
+            // Remove glow after animation
+            setTimeout(() => {
+                enhancedSearchInput.classList.remove('search-glow-active');
+            }, 800);
+        }
     });
     
-    // Simulate API call (replace with actual implementation)
-    setTimeout(() => {
-      alert(`${actionText} operation completed for ${selectedIds.length} surveys.\n\nNote: This is a demo - actual implementation would perform the ${action} operation.`);
-      
-      // Reset buttons
-      bulkButtons.forEach(btn => {
-        btn.disabled = false;
-        btn.innerHTML = btn.innerHTML.replace(/.*ing\.\.\./, btn.textContent);
-      });
-      
-      // Clear selections
-      document.querySelectorAll('.survey-checkbox:checked').forEach(cb => cb.checked = false);
-      updateBulkActions();
-    }, 2000);
-  }
-}
+    // Clear button functionality
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            enhancedSearchInput.value = '';
+            enhancedSearchInput.focus();
+            updateSearchFeedback('');
+            
+            // Show pink glow on clear
+            enhancedSearchInput.classList.add('search-glow-active');
+            setTimeout(() => {
+                enhancedSearchInput.classList.remove('search-glow-active');
+            }, 800);
+            
+            // Trigger search to clear results
+            performSearch('');
+        });
+    }
+    
+    // Character counter element
+    const charCounter = document.getElementById('searchCharCounter');
+    
+    // Update character counter and provide visual feedback
+    function updateSearchFeedback(query) {
+        const length = query.trim().length;
+        
+        // Toggle between kbd hint and clear button
+        if (length === 0) {
+            charCounter.style.display = 'none';
+            enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+            // Show kbd hint, hide clear button
+            if (kbdHint) kbdHint.style.display = 'inline-block';
+            if (clearBtn) clearBtn.style.display = 'none';
+        } else {
+            // Hide kbd hint, show clear button
+            if (kbdHint) kbdHint.style.display = 'none';
+            if (clearBtn) clearBtn.style.display = 'inline-flex';
+            
+            if (length < 3) {
+                charCounter.style.display = 'inline';
+                charCounter.textContent = `${3 - length} more char${3 - length === 1 ? '' : 's'}`;
+                charCounter.className = 'text-muted';
+                enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+            } else {
+                // Ready to search - hide counter, no Bootstrap validation styling
+                charCounter.style.display = 'none';
+                enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+            }
+        }
+    }
+
+    // Handle input changes with debouncing
+    enhancedSearchInput.addEventListener('input', function(e) {
+        const query = e.target.value;
+        updateSearchFeedback(query);
+        debouncedSearch(query);
+    });
+    
+    // Handle Enter key for immediate search
+    enhancedSearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+            if (query.trim().length >= 3 || query.trim().length === 0) {
+                performSearch(query);
+            }
+        }
+    });
+    
+    // Handle browser back/forward navigation
+    window.addEventListener('popstate', function(e) {
+        // Page will reload automatically, just ensure we're not in a loading state
+        setLoadingState(false);
+    });
+    
+    // Prevent form submission (we handle it with JavaScript)
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const query = enhancedSearchInput.value;
+        if (query.trim().length >= 3 || query.trim().length === 0) {
+            performSearch(query);
+        }
+    });
+    
+    // Add visual feedback for minimum character requirement
+    enhancedSearchInput.addEventListener('focus', function() {
+        if (this.value.length > 0 && this.value.length < 3) {
+            this.setAttribute('title', 'Type at least 3 characters to search');
+        }
+        updateSearchFeedback(this.value);
+        
+        // Add subtle glow on regular focus (not as intense as Ctrl+K)
+        if (this.value.length === 0) {
+            this.classList.add('search-focus-glow');
+        }
+    });
+    
+    enhancedSearchInput.addEventListener('blur', function() {
+        this.removeAttribute('title');
+        this.classList.remove('search-focus-glow');
+        // Hide counter when not focused unless searching
+        if (!isSearching && this.value.trim().length < 3) {
+            if (charCounter) charCounter.style.display = 'none';
+        }
+    });
+    
+    // Initialize character counter on page load
+    updateSearchFeedback(enhancedSearchInput.value);
+
+    // Filter button functionality
+    document.querySelectorAll('.github-filter-btn').forEach(filterBtn => {
+        filterBtn.addEventListener('click', function(e) {
+            // Preserve search query when switching filters
+            const currentQuery = enhancedSearchInput.value.trim();
+            if (currentQuery && currentQuery.length >= 3) {
+                const url = new URL(this.href);
+                url.searchParams.set('q', currentQuery);
+                this.href = url.toString();
+            }
+        });
+    });
+
+    // Initialize
+    updateBulkActions();
+});
+
 
 // Delete confirmation
 function confirmDelete(surveyId, surveyName) {
@@ -933,4 +1295,372 @@ function confirmBulkAction(action, count) {
   return confirm(`Are you sure you want to ${actionText} ${count} survey${count > 1 ? 's' : ''}?\n\n${action === 'delete' ? 'This action cannot be undone and will delete all responses.' : ''}`);
 }
 </script>
+{% endblock %}
+{% block styles %}
+<style>
+/* CRITICAL CSS FIX: Override minipass.css white background rule for bulk actions cards */
+html body .page-wrapper .page-body .dashboard-container .bulk-actions-container .card.bulk-actions-card {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Force green background with maximum specificity */
+body #bulkActions.card {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Enhanced Card Design with glassmorphism - EXCLUDE BULK ACTIONS CARD */
+.card:not(.bulk-actions-card) {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced Hover Effects - EXCLUDE BULK ACTIONS CARD */
+.card:not(.bulk-actions-card):hover {
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px) scale(1.01);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Statistics Cards Enhancement */
+.card:not(.bulk-actions-card) .card-body {
+  padding: 1.75rem 1.5rem;
+  position: relative;
+}
+
+.card .text-blue {
+  color: #3b82f6 !important;
+  font-weight: 700;
+}
+
+.card .text-green {
+  color: #10b981 !important;
+  font-weight: 700;
+}
+
+.card .text-yellow {
+  color: #f59e0b !important;
+  font-weight: 700;
+}
+
+.card .text-primary {
+  color: #6366f1 !important;
+  font-weight: 700;
+}
+
+.card .h2 {
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.card .text-muted.small {
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* Page Header Styling */
+.page-header {
+  background: transparent;
+  border: none;
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 2.25rem;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+/* Enhanced Table Styling */
+.table {
+  background-color: transparent !important;
+}
+
+.table th {
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* Bulk Actions Bar - GREEN THEME */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card,
+body .bulk-actions-container .card.bulk-actions-card,
+.bulk-actions-container .card.bulk-actions-card,
+.card.bulk-actions-card {
+  margin-top: 1.5rem !important;
+  margin-bottom: 2.5rem !important;
+  background: #f0fdf4 !important;
+  background-color: #f0fdf4 !important;
+  background-image: none !important;
+  border: 1px solid #bbf7d0 !important;
+  border-color: #bbf7d0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  animation: slideDown 0.3s ease;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulk-actions-count {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+}
+
+.bulk-actions-count i {
+  color: #0d6efd;
+  font-size: 1.125rem;
+}
+
+/* Enhanced search styling */
+#enhancedSearchInput {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#enhancedSearchInput:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Subtle glow on regular focus */
+#enhancedSearchInput.search-focus-glow {
+  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+              0 0 15px rgba(255, 105, 180, 0.15);
+}
+
+/* Clear button styling */
+#searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+#searchClearBtn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+#searchCharCounter {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+/* Enhanced loading animation */
+.searching-pulse {
+  animation: blueSearchPulse 1.5s ease-in-out infinite;
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+              0 0 15px rgba(13, 110, 253, 0.4) !important;
+}
+
+@keyframes blueSearchPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+                0 0 15px rgba(13, 110, 253, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
+                0 0 25px rgba(13, 110, 253, 0.5);
+  }
+}
+
+/* GitHub-style filter buttons */
+.card-header .d-flex {
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+.github-filter-group {
+  display: inline-flex;
+  align-items: center;
+  background: #e1e4e8;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.github-filter-btn {
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #24292e;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Inactive state */
+.github-filter-btn:not(.active) {
+  background: #e1e4e8;
+  color: #586069;
+}
+
+.github-filter-btn:not(.active):hover {
+  background: #d1d5da;
+  color: #24292e;
+  text-decoration: none;
+}
+
+/* Active state */
+.github-filter-btn.active {
+  background: #ffffff;
+  color: #24292e;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
+  font-weight: 600;
+  z-index: 1;
+}
+
+.github-filter-btn.active:hover {
+  background: #ffffff;
+  text-decoration: none;
+}
+
+/* Enhanced Dropdown Improvements */
+.dropdown-menu {
+  z-index: 1060 !important;
+  min-width: 180px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 8px;
+  transform-origin: top right;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  position: absolute !important;
+}
+
+.dropdown.show .dropdown-menu {
+  display: block !important;
+  opacity: 1;
+  transform: scale(1);
+  z-index: 1060 !important;
+}
+
+.dropdown .dropdown-menu {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Empty State */
+.empty {
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+.empty-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.empty-subtitle {
+  color: #64748b;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Page structure matching signups.html */
+.page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.page-body {
+  padding: 2rem 0;
+}
+
+/* Responsive Design */
+@media (max-width: 767px) {
+  .dashboard-container {
+    padding: 0 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+  }
+  
+  .bulk-actions-card .card-body {
+    padding: 0.875rem 1rem !important;
+  }
+}
+</style>
 {% endblock %}

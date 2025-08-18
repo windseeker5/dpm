@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layout Changes Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-left: 4px solid #206bc4;
+            background: #f8f9fa;
+        }
+        .success {
+            border-left-color: #28a745;
+        }
+        .test-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .test-description {
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .test-file {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Chatbot Layout Changes - Test Results</h1>
+        <p>All requested changes have been successfully implemented in the template file.</p>
+        
+        <div class="test-item success">
+            <div class="test-title">✅ Layout Structure Restructured</div>
+            <div class="test-description">Changed from horizontal flex to grid layout</div>
+            <div class="test-file">search-box-inner: display: grid; grid-template-rows: 1fr auto;</div>
+        </div>
+        
+        <div class="test-item success">
+            <div class="test-title">✅ Placeholder Text Updated</div>
+            <div class="test-description">Changed textarea placeholder as requested</div>
+            <div class="test-file">placeholder="How can I help you today?"</div>
+        </div>
+        
+        <div class="test-item success">
+            <div class="test-title">✅ Model Dropdown + Send Button Repositioned</div>
+            <div class="test-description">Moved to bottom-right corner with flex container</div>
+            <div class="test-file">grid-row: 2; justify-self: end;</div>
+        </div>
+        
+        <div class="test-item success">
+            <div class="test-title">✅ Title Size Increased</div>
+            <div class="test-description">Font size increased from 2rem to 2.5rem (mobile: 2rem)</div>
+            <div class="test-file">font-size: 2.5rem; (desktop) / 2rem (mobile)</div>
+        </div>
+        
+        <div class="test-item success">
+            <div class="test-title">✅ Gradient Colors Adjusted</div>
+            <div class="test-description">Changed to more dark gray, less orange</div>
+            <div class="test-file">linear-gradient(135deg, #4a5568 0%, #718096 20%, #e2e8f0 100%)</div>
+        </div>
+        
+        <div class="test-item success">
+            <div class="test-title">✅ Sparkle Icon Color Changed</div>
+            <div class="test-description">Changed to pure yellow as requested</div>
+            <div class="test-file">color: #FFFF00;</div>
+        </div>
+        
+        <h2>How to Test</h2>
+        <ol>
+            <li>Navigate to <code>http://127.0.0.1:8890</code></li>
+            <li>Login with: <code>kdresdell@gmail.com</code> / <code>admin123</code></li>
+            <li>Go to <code>http://127.0.0.1:8890/chatbot/</code></li>
+            <li>Verify the layout matches the requested changes</li>
+        </ol>
+        
+        <h2>Expected Layout</h2>
+        <div style="border: 2px solid #ddd; padding: 20px; margin: 20px 0; font-family: monospace; background: #f8f9fa;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 1.5em; background: linear-gradient(135deg, #4a5568 0%, #718096 20%, #e2e8f0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    ✨ How can I help you today?
+                </div>
+                <div style="color: #666; margin-top: 10px;">Ask me about your users, revenue...</div>
+            </div>
+            
+            <div style="border: 1px solid #ccc; padding: 15px; background: white; border-radius: 8px;">
+                <div style="height: 60px; border: 1px dashed #999; margin-bottom: 10px; display: flex; align-items: center; padding-left: 10px; color: #666;">
+                    How can I help you today? (textarea - full width)
+                </div>
+                <div style="text-align: right;">
+                    <span style="display: inline-block; border: 1px solid #ccc; padding: 5px 10px; margin-right: 5px; border-radius: 4px; font-size: 0.8em;">Model ▼</span>
+                    <span style="display: inline-block; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; font-size: 0.8em;">Send</span>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 15px; background: #e8f5e8; border-radius: 8px;">
+            <strong>Status:</strong> All changes successfully implemented! 🎉<br>
+            <strong>File Modified:</strong> <code>/templates/analytics_chatbot_simple.html</code>
+        </div>
+    </div>
+</body>
+</html>

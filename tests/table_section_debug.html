@@ -1,0 +1,167 @@
+<div class="card main-table-card" style="margin-top: 1.5rem !important;">
+      <div class="card-header">
+        <div class="d-flex justify-content-center align-items-center w-100">
+          <!-- Filter Buttons -->
+          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+            <a href="/surveys" 
+               class="github-filter-btn active"
+               style="background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Surveys <span style="opacity: 0.6; margin-left: 4px;">(3)</span>
+            </a>
+            <a href="/surveys?status=active" 
+               class="github-filter-btn "
+               style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-play" style="font-size: 16px; margin-right: 4px;"></i>Active <span style="opacity: 0.6; margin-left: 4px;">(3)</span>
+            </a>
+            <a href="/surveys?status=closed" 
+               class="github-filter-btn "
+               style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-pause" style="font-size: 16px; margin-right: 4px;"></i>Closed <span style="opacity: 0.6; margin-left: 4px;"></span>
+            </a>
+            <a href="/surveys?status=draft" 
+               class="github-filter-btn "
+               style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-file-text" style="font-size: 16px; margin-right: 4px;"></i>Draft <span style="opacity: 0.6; margin-left: 4px;"></span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+        <thead>
+          <tr>
+            <th class="w-1">
+              <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
+            </th>
+            <th>Survey</th>
+            <th>Activity</th>
+            <th>Status</th>
+            <th>Invitations/Responses</th>
+            <th>Completion Rate</th>
+            <th>Created</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr>
+            <td>
+              <input type="checkbox" 
+                     class="form-check-input survey-checkbox" 
+                     name="selected_surveys" 
+                     value="5" 
+                     form="bulkForm"
+                     data-status="active"
+                     aria-label="Select survey 5">
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar avatar-md me-3" style="background-color: #206bc4;">
+                  <i class="ti ti-clipboard-check text-white"></i>
+                </div>
+                <div>
+                  <strong>Test Quick Survey from API</strong>
+                  
+                  <span class="badge bg-gray-lt text-gray ms-2">Post-Activity Feedback</span>
+                  
+                  <br>
+                  
+                  <span class="text-muted small">Post-activity feedback survey for Ligue Hockey...</span>
+                  
+                </div>
+              </div>
+            </td>
+            <td>
+              <strong>Ligue Hockey Gagnon Image</strong>
+              
+            </td>
+            <td>
+              
+              <span class="badge bg-green-lt text-green">Active</span>
+              
+            </td>
+            <td>
+              <strong>0 invited</strong>
+              
+              
+            </td>
+            <td>
+              
+              <span class="text-muted">No invitations</span>
+              
+            </td>
+            <td>
+              <div class="small">
+                2025-08-16
+              </div>
+            </td>
+            <td class="text-center" style="vertical-align: middle;">
+              <div class="dropdown d-inline-block">
+                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                  <span class="d-none d-md-inline">Actions</span>
+                  <i class="ti ti-menu-2 d-md-none"></i>
+                </a>
+                <div class="dropdown-menu">
+                  <a class="dropdown-item" href="/survey/d3xhmAr0coWu8uqepRKKuYa4HPeSa-L-" target="_blank">
+                    <i class="ti ti-external-link me-2"></i>View Survey
+                  </a>
+                  <a class="dropdown-item" href="/survey/5/results">
+                    <i class="ti ti-chart-bar me-2"></i>View Results
+                  </a>
+                  
+                  <form method="POST" action="/survey/5/send-invitations" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="IjkyZDgzMTFmYmE4MDRjZTk3MDQwZDY3Nzg2NzhiNGE4ZTJiNDU3ZDQi.aKKFYg._nQfos1AhItnE6QWvq2jB5wGukw">
+                    <button type="submit" class="dropdown-item" onclick="return confirmSendInvitations('Test Quick Survey from API', 'Ligue Hockey Gagnon Image')">
+                      <i class="ti ti-mail me-2"></i>Send Invitations
+                    </button>
+                  </form>
+                  <form method="POST" action="/survey/5/send-invitations" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="IjkyZDgzMTFmYmE4MDRjZTk3MDQwZDY3Nzg2NzhiNGE4ZTJiNDU3ZDQi.aKKFYg._nQfos1AhItnE6QWvq2jB5wGukw">
+                    <input type="hidden" name="resend_all" value="true">
+                    <button type="submit" class="dropdown-item" onclick="return confirmResendAll('Test Quick Survey from API')">
+                      <i class="ti ti-refresh me-2"></i>Resend All Invitations
+                    </button>
+                  </form>
+                  <form method="POST" action="/survey/5/close" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="IjkyZDgzMTFmYmE4MDRjZTk3MDQwZDY3Nzg2NzhiNGE4ZTJiNDU3ZDQi.aKKFYg._nQfos1AhItnE6QWvq2jB5wGukw">
+                    <button type="submit" class="dropdown-item" onclick="return confirmCloseSurvey('Test Quick Survey from API')">
+                      <i class="ti ti-pause me-2"></i>Close Survey
+                    </button>
+                  </form>
+                  
+                  
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-danger" href="#" onclick="confirmDelete(5, 'Test Quick Survey from API')">
+                    <i class="ti ti-trash me-2"></i>Delete Survey
+                  </a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>
+              <input type="checkbox" 
+                     class="form-check-input survey-checkbox" 
+                     name="selected_surveys" 
+                     value="4" 
+                     form="bulkForm"
+                     data-status="active"
+                     aria-label="Select survey 4">
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar avatar-md me-3" style="background-color: #206bc4;">
+                  <i class="ti ti-clipboard-check text-white"></i>
+                </div>
+                <div>
+                  <strong>Test Quick Survey from API</strong>
+                  
+                  <span class="badge bg-gray-lt text-gray ms-2">Post-Activity Feedback</span>
+                  
+                  <br>
+                  
+                  <span class="text-muted small">Post-activity feedback survey for Ligue Hockey...</span>
+                  
+                </div>
+              </div>
