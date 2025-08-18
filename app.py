@@ -12,6 +12,10 @@ import stripe
 import qrcode
 import subprocess
 from datetime import datetime, timezone, timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 # 🌐 Flask Core
@@ -379,12 +383,130 @@ def retry_failed_emails():
 
 # 🔵 Unsplash Search API
 
+# Unsplash API configuration
+# Note: This is a demo/test key that may be expired. Replace with a valid Unsplash API key.
+UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY')
 
+@app.route('/unsplash-search')
+def unsplash_search():
+    """Search for images on Unsplash"""
+    import requests
+    import uuid
+    
+    query = request.args.get('q', '')
+    page = request.args.get('page', 1, type=int)
+    
+    if not query:
+        return jsonify([]), 400
+    
+    try:
+        url = "https://api.unsplash.com/search/photos"
+        params = {
+            "query": query,
+            "page": page,
+            "per_page": 9,  # 3x3 grid
+            "orientation": "landscape"
+        }
+        headers = {
+            "Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"
+        }
+        
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            results = []
+            
+            for photo in data.get('results', []):
+                results.append({
+                    'id': photo['id'],
+                    'thumb': photo['urls']['small'],
+                    'full': photo['urls']['full'],
+                    'description': photo.get('description', photo.get('alt_description', 'Image'))
+                })
+            
+            return jsonify(results)
+        elif response.status_code == 401:
+            print(f"Unsplash API authentication error: {response.text}")
+            return jsonify({
+                'error': 'Unsplash API key is invalid or expired. Please contact administrator to configure a valid API key.',
+                'code': 'AUTH_ERROR',
+                'details': 'The Unsplash API key needs to be updated in the application configuration.'
+            }), 401
+        else:
+            print(f"Unsplash API error: {response.status_code} - {response.text}")
+            return jsonify({
+                'error': f'Unsplash API returned error {response.status_code}',
+                'code': 'API_ERROR'
+            }), response.status_code
+            
+    except Exception as e:
+        print(f"Unsplash search error: {e}")
+        return jsonify({
+            'error': 'Image search service is temporarily unavailable',
+            'code': 'SERVICE_ERROR',
+            'details': 'Please try again later or contact administrator if the problem persists.'
+        }), 500
 
-
-
-
-
+@app.route('/download-unsplash-image')
+def download_unsplash_image():
+    """Download an image from Unsplash and save it locally"""
+    import requests
+    import uuid
+    import os
+    from PIL import Image
+    
+    image_url = request.args.get('url')
+    
+    if not image_url:
+        return jsonify({'success': False, 'error': 'No image URL provided'}), 400
+    
+    try:
+        # Download the image
+        response = requests.get(image_url, timeout=30)
+        
+        if response.status_code == 200:
+            # Generate unique filename
+            filename = f"unsplash_{uuid.uuid4().hex[:8]}.jpg"
+            
+            # Ensure upload directory exists
+            upload_dir = os.path.join(app.static_folder, 'uploads', 'activity_images')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            file_path = os.path.join(upload_dir, filename)
+            
+            # Save and optimize the image
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+            
+            # Optimize image size
+            try:
+                with Image.open(file_path) as img:
+                    # Convert to RGB if necessary
+                    if img.mode in ('RGBA', 'P'):
+                        img = img.convert('RGB')
+                    
+                    # Resize if too large
+                    max_size = (1200, 800)
+                    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                    
+                    # Save with optimization
+                    img.save(file_path, 'JPEG', quality=85, optimize=True)
+            except Exception as img_error:
+                print(f"Image optimization error: {img_error}")
+                # Continue with original file if optimization fails
+            
+            return jsonify({
+                'success': True,
+                'filename': filename,
+                'path': f'/static/uploads/activity_images/{filename}'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to download image'}), 500
+            
+    except Exception as e:
+        print(f"Image download error: {e}")
+        return jsonify({'success': False, 'error': 'Download failed'}), 500
 
 
 ##
