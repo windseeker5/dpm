@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#206bc4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
+  <title>AI Assistant | Minipass</title>
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  
+  <!-- Font Preconnects -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tabler Core CSS -->
+  <link href="/static/tabler/css/tabler.min.css" rel="stylesheet"/>
+  <link href="/static/tabler/icons/tabler-icons.min.css" rel="stylesheet"/>
+  
+  <!-- Custom Styles -->
+  <link href="/static/minipass.css?v=6527745" rel="stylesheet">
+  
+  <!-- Global Dropdown Fix -->
+  <link href="/static/css/dropdown-fix.css?v=3.1" rel="stylesheet">
+  
+  <!-- Enhanced Flash Alert Overlay Styles -->
+  <style>
+    /* Modern notification system with enhanced design */
+    .flash-alert-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+      pointer-events: none;
+      padding: 1.5rem;
+      padding-top: 1rem;
+    }
+    
+    .flash-alert-container {
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .flash-alert {
+      pointer-events: auto;
+      position: relative;
+      transform: translateY(-120%) scale(0.95);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border-radius: 12px;
+      border: none;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .flash-alert::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, currentColor, transparent);
+      opacity: 0.6;
+    }
+    
+    .flash-alert.show {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    
+    .flash-alert.hide {
+      transform: translateY(-120%) scale(0.95);
+      opacity: 0;
+    }
+    
+    /* Enhanced alert content layout */
+    .flash-alert .d-flex {
+      align-items: flex-start;
+      padding: 1rem 1.25rem;
+      gap: 0.875rem;
+    }
+    
+    .flash-alert .alert-icon {
+      font-size: 1.25rem;
+      margin-top: 0.125rem;
+      opacity: 0.9;
+    }
+    
+    .flash-alert .alert-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      line-height: 1.3;
+    }
+    
+    .flash-alert .alert-message {
+      font-size: 0.875rem;
+      line-height: 1.4;
+      opacity: 0.9;
+    }
+    
+    .flash-alert .btn-close {
+      opacity: 0.6;
+      transition: all 0.2s ease;
+      margin-top: 0.125rem;
+      width: 18px;
+      height: 18px;
+      background-size: 12px;
+    }
+    
+    .flash-alert .btn-close:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    
+    /* Modern color schemes with gradients */
+    .flash-alert.alert-success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.95) 100%);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .flash-alert.alert-success::before {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
+    }
+    
+    .flash-alert.alert-danger {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 0.95) 100%);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .flash-alert.alert-danger::before {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
+    }
+    
+    .flash-alert.alert-warning {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.95) 0%, rgba(217, 119, 6, 0.95) 100%);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .flash-alert.alert-warning::before {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
+    }
+    
+    .flash-alert.alert-info {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .flash-alert.alert-info::before {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
+    }
+    
+    /* Subtle hover interaction */
+    .flash-alert:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.15),
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+    
+    /* Progress bar for auto-dismiss */
+    .flash-alert-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.4);
+      transform-origin: left;
+      animation: flashProgress 5s linear;
+    }
+    
+    @keyframes flashProgress {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+    
+    /* Enhanced mobile responsiveness */
+    @media (max-width: 768px) {
+      .flash-alert-overlay {
+        padding: 1rem 0.875rem;
+        padding-top: 0.75rem;
+      }
+      
+      .flash-alert-container {
+        max-width: none;
+        gap: 0.625rem;
+      }
+      
+      .flash-alert {
+        border-radius: 10px;
+        margin: 0;
+      }
+      
+      .flash-alert .d-flex {
+        padding: 0.875rem 1rem;
+        gap: 0.75rem;
+      }
+      
+      .flash-alert .alert-title {
+        font-size: 0.9rem;
+      }
+      
+      .flash-alert .alert-message {
+        font-size: 0.8rem;
+      }
+    }
+    
+    /* Dark mode compatibility */
+    @media (prefers-color-scheme: dark) {
+      .flash-alert {
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.3),
+          0 2px 8px rgba(0, 0, 0, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+    }
+    
+    /* Accessibility enhancements */
+    @media (prefers-reduced-motion: reduce) {
+      .flash-alert {
+        transition: opacity 0.2s ease;
+        animation: none;
+      }
+      
+      .flash-alert-progress {
+        animation: none;
+      }
+    }
+    
+    /* Focus management for keyboard users */
+    .flash-alert:focus-within {
+      outline: 2px solid rgba(255, 255, 255, 0.8);
+      outline-offset: 2px;
+    }
+  </style>
+  
+  <!-- Typography System - Roboto Slab for H1, Inter for H2 -->
+  <style>
+    /* Vibrant Gradient Organization Name */
+    .org-name-gradient {
+      font-family: 'Anton', sans-serif;
+      font-weight: 400;
+      font-size: 1.8rem;
+      background: linear-gradient(90deg, #1a73e8 0%, #6c4edb 25%, #db4ed4 50%, #6c4edb 75%, #1a73e8 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-fill-color: transparent;
+      letter-spacing: 0.02em;
+      position: relative;
+      display: inline-block;
+      filter: drop-shadow(1px 1px 0px rgba(160, 160, 160, 0.8));
+      animation: gradientShift 7s ease infinite;
+    }
+    
+    /* Gradient animation keyframes */
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .org-name-gradient {
+        font-size: 1.5rem;
+      }
+      
+      /* Center organization name on mobile only */
+      .minipass-org-name {
+        justify-content: center !important;
+        flex: 1;
+      }
+    }
+    
+    h1 {
+      font-family: 'Roboto Slab', serif !important;
+      font-weight: 600 !important;
+      font-size: 2rem !important;
+      color: #1a1f36 !important;
+      letter-spacing: -0.02em !important;
+      line-height: 1.2 !important;
+    }
+    
+    h2 {
+      font-family: 'Roboto Slab', serif !important;
+      font-weight: 600 !important;
+      font-size: 1.7rem !important;
+      color: #2d3748 !important;
+      letter-spacing: -0.02em !important;
+      line-height: 1.3 !important;
+    }
+    
+    /* Logo sizing and static hover state override */
+    .brand-logo-static {
+      width: auto !important;
+      height: 23px !important; /* Reduced by ~18% from 28px */
+      max-width: 150px !important;
+      max-height: 23px !important;
+      object-fit: contain;
+      transition: none !important; /* Remove all transitions */
+      display: block;
+      margin: 0;
+    }
+    
+    /* Remove hover effects on brand link when logo is static */
+    .brand-link:hover {
+      background: none !important;
+      transform: none !important;
+    }
+    
+    /* Remove hover effects specifically on the static logo */
+    .brand-link:hover .brand-logo-static {
+      transform: none !important;
+      transition: none !important;
+    }
+  </style>
+  
+  
+<style>
+/* Claude.ai-inspired chatbot - Light theme matching Minipass */
+:root {
+    --chat-bg: #f8f9fa;
+    --chat-surface: #ffffff;
+    --chat-text: #1a1a1a;
+    --chat-text-secondary: #6b7280;
+    --chat-border: #dee2e6;
+    --chat-primary: #206bc4;
+    --message-user-bg: #e8f0fe;
+    --message-ai-bg: #ffffff;
+    --input-bg: #ffffff;
+    --status-online: #10b981;
+    --status-offline: #6b7280;
+}
+
+/* Main container */
+.chat-container {
+    max-width: 900px;
+    margin: 0 auto;
+    min-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    background: var(--chat-bg);
+    position: relative;
+    padding: 2rem;
+}
+
+/* Empty state - centered large search box */
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    max-width: 700px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.empty-state.hidden {
+    display: none;
+}
+
+/* Welcome message */
+.welcome-message {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.welcome-title {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--chat-text);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.welcome-subtitle {
+    color: var(--chat-text-secondary);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* Large search box for initial state */
+.search-box-large {
+    width: 100%;
+    background: var(--chat-surface);
+    border: 1px solid #e8eaed;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    min-height: 80px;
+}
+
+.search-box-large:focus-within {
+    border-color: #e8eaed;
+    box-shadow: none;
+}
+
+.search-box-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 60px;
+}
+
+/* Model dropdown inside search box */
+.model-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.model-select {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--chat-bg);
+    border: 1px solid #e8eaed;
+    border-radius: 8px;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    color: var(--chat-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 140px;
+}
+
+.model-select:hover {
+    background: #f8f9fa;
+    border-color: #d1d5db;
+}
+
+.model-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e8eaed;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.model-dropdown-menu.show {
+    display: block;
+}
+
+.model-option {
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.model-option:hover {
+    background: #f8f9fa;
+}
+
+.model-option.selected {
+    background: #e8f0fe;
+    color: var(--chat-primary);
+}
+
+.dropdown-arrow {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #6b7280;
+    transition: transform 0.2s ease;
+}
+
+.model-select.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.status-led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--status-online);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.model-name {
+    font-weight: 500;
+    color: var(--chat-text);
+}
+
+/* Large input field */
+.message-input-large {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    color: var(--chat-text);
+    min-height: 60px;
+    max-height: 120px;
+}
+
+.message-input-large::placeholder {
+    color: var(--chat-text-secondary);
+}
+
+/* Send button */
+.send-button-large {
+    padding: 0.5rem;
+    background: transparent;
+    color: #6b7280;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.send-button-large:hover:not(:disabled) {
+    background: #f1f3f4;
+    color: #1a1a1a;
+}
+
+.send-button-large:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Example questions */
+.example-questions {
+    margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.example-question {
+    padding: 0.625rem 1rem;
+    background: var(--chat-surface);
+    border: 1px solid var(--chat-border);
+    border-radius: 20px;
+    color: var(--chat-text);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.example-question:hover {
+    background: var(--chat-bg);
+    border-color: var(--chat-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Conversation state */
+.conversation-state {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.conversation-state.active {
+    display: flex;
+}
+
+/* Messages area */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Message styles */
+.message {
+    max-width: 70%;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user {
+    align-self: flex-end;
+}
+
+.message.assistant {
+    align-self: flex-start;
+}
+
+.message-content {
+    padding: 0.875rem 1.25rem;
+    border-radius: 18px;
+    line-height: 1.6;
+    font-size: 1rem;
+    color: var(--chat-text);
+    word-wrap: break-word;
+}
+
+.message.user .message-content {
+    background: var(--message-user-bg);
+    border-bottom-right-radius: 4px;
+}
+
+.message.assistant .message-content {
+    background: var(--message-ai-bg);
+    border: 1px solid var(--chat-border);
+    border-bottom-left-radius: 4px;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: none;
+    align-self: flex-start;
+    padding: 0.875rem 1.25rem;
+    background: var(--message-ai-bg);
+    border: 1px solid var(--chat-border);
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.typing-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--chat-text-secondary);
+    animation: typingPulse 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingPulse {
+    0%, 60%, 100% { transform: scale(1); opacity: 0.5; }
+    30% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Compact input area for conversation */
+.chat-input-compact {
+    border-top: 1px solid var(--chat-border);
+    background: var(--chat-surface);
+    padding: 1rem;
+}
+
+.input-container-compact {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+}
+
+.message-input-compact {
+    flex: 1;
+    border: 1px solid var(--chat-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    min-height: 44px;
+    max-height: 120px;
+    background: var(--input-bg);
+    color: var(--chat-text);
+    transition: border-color 0.2s ease;
+}
+
+.message-input-compact:focus {
+    border-color: #e8eaed;
+    outline: none;
+    box-shadow: none;
+}
+
+.message-input-compact::placeholder {
+    color: var(--chat-text-secondary);
+}
+
+.send-button-compact {
+    padding: 0.5rem;
+    background: transparent;
+    color: #6b7280;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.send-button-compact:hover:not(:disabled) {
+    background: #f1f3f4;
+    color: #1a1a1a;
+}
+
+.send-button-compact:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .chat-container {
+        padding: 1rem;
+    }
+    
+    .empty-state {
+        padding: 1rem;
+    }
+    
+    .welcome-title {
+        font-size: 1.5rem;
+    }
+    
+    .message {
+        max-width: 85%;
+    }
+    
+    .message-content {
+        padding: 0.75rem 1rem;
+        font-size: 0.9375rem;
+    }
+    
+    .chat-input-compact {
+        padding: 0.75rem;
+    }
+    
+    .send-button-compact span,
+    .send-button-large span {
+        display: none;
+    }
+    
+    .model-indicator {
+        padding: 0.375rem 0.625rem;
+        font-size: 0.8125rem;
+    }
+}
+
+/* Scrollbar styling */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: var(--chat-border);
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--chat-text-secondary);
+}
+</style>
+
+</head>
+<body class="antialiased">
+
+  <!-- Skip Navigation for Accessibility -->
+  <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
+  
+  <!-- Fixed Position Flash Alert Overlay -->
+  
+    
+  
+
+  <!-- Main Application Container -->
+  <div class="minipass-app">
+    
+    <!-- Clean Sidebar Navigation (NO USER PROFILE) -->
+    <nav class="minipass-sidebar" id="sidebar">
+      <!-- Brand Section -->
+      <div class="minipass-sidebar-brand">
+        <a href="/dashboard" class="brand-link">
+          <img src="/static/assets/brand/logo/primary/logo.png?v=20250815" 
+               alt="Minipass" class="brand-logo brand-logo-static">
+        </a>
+      </div>
+      
+      <!-- Main Navigation -->
+      <div class="minipass-sidebar-nav">
+        <!-- Primary Navigation -->
+        <div class="nav-section">
+          <div class="nav-section-title">Main</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="/dashboard" 
+                 class="nav-link ">
+                <i class="nav-icon ti ti-layout-dashboard"></i>
+                <span class="nav-text">Dashboard</span>
+                
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/activities" 
+                 class="nav-link ">
+                <i class="nav-icon ti ti-activity"></i>
+                <span class="nav-text">Activities</span>
+                
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/signups" 
+                 class="nav-link ">
+                <i class="nav-icon ti ti-user-check"></i>
+                <span class="nav-text">Signups</span>
+                
+                <span class="nav-badge">3</span>
+                
+                
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/passports" 
+                 class="nav-link ">
+                <i class="nav-icon ti ti-ticket"></i>
+                <span class="nav-text">Passports</span>
+                
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/surveys" 
+                 class="nav-link ">
+                <i class="nav-icon ti ti-clipboard-check"></i>
+                <span class="nav-text">Surveys</span>
+                
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        <!-- Tools Section -->
+        <div class="nav-section">
+          <div class="nav-section-title">Tools</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="/chatbot/" 
+                 class="nav-link active">
+                <i class="nav-icon ti ti-message-chatbot"></i>
+                <span class="nav-text">AI Analytics</span>
+                <span class="nav-tag">Beta</span>
+                
+                <span class="nav-indicator"></span>
+                
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/style-guide" 
+                 class="nav-link ">
+                <i class="nav-icon ti ti-palette"></i>
+                <span class="nav-text">Style Guide</span>
+                
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/components" 
+                 class="nav-link ">
+                <i class="nav-icon ti ti-components"></i>
+                <span class="nav-text">Components</span>
+                
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/setup" 
+                 class="nav-link ">
+                <i class="nav-icon ti ti-settings"></i>
+                <span class="nav-text">Settings</span>
+                
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    
+    <!-- Main Content Area -->
+    <div class="minipass-main">
+      <!-- Header with Organization Name (Left) + User Avatar (Right) -->
+      <header class="minipass-header">
+        <div class="minipass-header-container">
+          <!-- Mobile menu toggle -->
+          <button class="header-menu-toggle d-lg-none d-flex align-items-center justify-content-center" type="button" id="sidebarToggle">
+            <i class="ti ti-menu-2"></i>
+          </button>
+          
+          <!-- Organization Name (centered on mobile, left-aligned on desktop) -->
+          <div class="minipass-org-name d-flex align-items-center justify-content-center justify-content-lg-start flex-grow-1 flex-lg-grow-0">
+            <span class="org-name-gradient">
+              Hockey Gagnon Image
+            </span>
+          </div>
+          
+          <!-- User Avatar Section -->
+          
+          <div class="minipass-header-user">
+            <div class="dropdown">
+              <a href="#" class="header-user-link d-flex align-items-center" data-bs-toggle="dropdown">
+                <span class="avatar avatar-sm" 
+                      style="background-image: url('https://www.gravatar.com/avatar/aa07259e936586d554719a6a5c13144e?d=identicon')">
+                </span>
+              </a>
+              <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <a href="/activity-log" class="dropdown-item">
+                  <i class="ti ti-history me-2"></i>Activity Log
+                </a>
+                <a href="/setup" class="dropdown-item">
+                  <i class="ti ti-settings me-2"></i>Settings
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="/logout" class="dropdown-item text-danger">
+                  <i class="ti ti-logout me-2"></i>Logout
+                </a>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </header>
+      
+      <!-- Scrollable Main Content with Footer at End -->
+      <main class="minipass-content" id="main-content">
+        <div class="minipass-content-wrapper">
+          <!-- Page Content -->
+          
+<div class="page-wrapper">
+    <div class="page-body">
+        <div class="chat-container">
+            <!-- Empty state with large search box -->
+            <div class="empty-state" id="emptyState">
+                <div class="welcome-message">
+                    <div class="welcome-title">
+                        <i class="ti ti-sparkles"></i>
+                        How can I help you today?
+                    </div>
+                    <div class="welcome-subtitle">
+                        Ask me about your users, revenue, activities, or any data insights you need.
+                    </div>
+                </div>
+                
+                <form class="search-box-large" id="searchForm" onsubmit="sendMessage(event, true)">
+                    <div class="search-box-inner">
+                        <div class="model-dropdown">
+                            <div class="model-select" id="modelSelect" onclick="toggleModelDropdown()">
+                                <span class="status-led"></span>
+                                <span class="model-name" id="selectedModel">Minipass AI</span>
+                                <i class="ti ti-chevron-down dropdown-arrow"></i>
+                            </div>
+                            <div class="model-dropdown-menu" id="modelDropdown">
+                                <div class="model-option selected" data-model="minipass" onclick="selectModel('minipass', 'Minipass AI')">
+                                    <span class="status-led"></span>
+                                    <span>Minipass AI</span>
+                                </div>
+                                <div class="model-option" data-model="claude" onclick="selectModel('claude', 'Claude 3.5 Sonnet')">
+                                    <span class="status-led" style="background: #ff6b35;"></span>
+                                    <span>Claude 3.5 Sonnet</span>
+                                </div>
+                                <div class="model-option" data-model="gpt4" onclick="selectModel('gpt4', 'GPT-4')">
+                                    <span class="status-led" style="background: #10a37f;"></span>
+                                    <span>GPT-4</span>
+                                </div>
+                                <div class="model-option" data-model="ollama" onclick="selectModel('ollama', 'Ollama Local')">
+                                    <span class="status-led" style="background: #6b7280;"></span>
+                                    <span>Ollama Local</span>
+                                </div>
+                            </div>
+                        </div>
+                        <textarea 
+                            class="message-input-large" 
+                            id="messageInputLarge"
+                            placeholder="Message Minipass AI..."
+                            rows="1"
+                            maxlength="500"
+                            onkeydown="handleKeyDown(event, 'large')"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                        <button type="submit" class="send-button-large" id="sendBtnLarge">
+                            <i class="ti ti-send"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="example-questions">
+                    <div class="example-question" onclick="sendExample('Show me this month\'s revenue breakdown')">
+                        Show me this month's revenue breakdown
+                    </div>
+                    <div class="example-question" onclick="sendExample('What are my top performing activities?')">
+                        What are my top performing activities?
+                    </div>
+                    <div class="example-question" onclick="sendExample('How many new users signed up this week?')">
+                        How many new users signed up this week?
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conversation state -->
+            <div class="conversation-state" id="conversationState">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Messages will be added here -->
+                    
+                    <!-- Typing indicator -->
+                    <div class="typing-indicator" id="typingIndicator">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Compact input area -->
+                <div class="chat-input-compact">
+                    <form class="input-container-compact" id="chatForm" onsubmit="sendMessage(event, false)">
+                        <textarea 
+                            class="message-input-compact" 
+                            id="messageInputCompact"
+                            placeholder="Message Minipass AI..."
+                            rows="1"
+                            maxlength="500"
+                            onkeydown="handleKeyDown(event, 'compact')"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                        <button type="submit" class="send-button-compact" id="sendBtnCompact">
+                            <i class="ti ti-send"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden conversation ID -->
+<input type="hidden" id="conversationId" value="simple-20250817193212">
+<input type="hidden" id="csrfToken" value="IjZhN2EwOGY0NWE0M2E1NjkzMDBhZGJkOWQzNWE1NWJmNTY2YThlYTEi.aKJmfA.QQPm7M6Yi9ZAJSAClq31eAOiHO8">
+
+          
+          <!-- Footer at END of content (scrollable, not sticky) -->
+          <footer class="minipass-footer">
+            <div class="minipass-footer-content">
+              <div class="minipass-footer-text">
+                © 2025, <b>minipass.me</b> , All rights reserved. # version: v1
+              </div>
+            </div>
+          </footer>
+        </div>
+      </main>
+    </div>
+    
+    <!-- Mobile Bottom Navigation (PRESERVED EXACTLY) -->
+    
+    <nav class="minipass-mobile-nav d-lg-none">
+      <a href="/dashboard" 
+         class="mobile-nav-item ">
+        <i class="ti ti-layout-dashboard"></i>
+        <span>Home</span>
+      </a>
+      <a href="/activities" 
+         class="mobile-nav-item ">
+        <i class="ti ti-activity"></i>
+        <span>Activities</span>
+      </a>
+      <a href="/scan-qr" class="mobile-nav-item mobile-nav-center">
+        <div class="mobile-nav-center-btn">
+          <i class="ti ti-scan"></i>
+        </div>
+      </a>
+      <a href="/signups" 
+         class="mobile-nav-item ">
+        <i class="ti ti-user-check"></i>
+        <span>Signups</span>
+      </a>
+      <a href="/passports" 
+         class="mobile-nav-item ">
+        <i class="ti ti-ticket"></i>
+        <span>Passes</span>
+      </a>
+    </nav>
+    
+  </div>
+
+  <!-- TinyMCE Editor -->
+  <script src="/static/tinymce/tinymce.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Initialize TinyMCE
+      if (document.querySelector('textarea.tinymce')) {
+        tinymce.init({
+          selector: 'textarea.tinymce',
+          height: 200,
+          plugins: 'link lists code preview',
+          toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | code preview',
+          menubar: false,
+          branding: false,
+          skin: "oxide",
+          content_css: "default"
+        });
+      }
+      
+      // Enhanced modern flash alert system
+      const flashOverlay = document.getElementById('flashAlertOverlay');
+      if (flashOverlay) {
+        const flashAlerts = flashOverlay.querySelectorAll('.flash-alert');
+        
+        // Enhanced show alerts with improved staggered animation
+        flashAlerts.forEach((alert, index) => {
+          // Set initial state
+          alert.style.transitionDelay = `${index * 100}ms`;
+          
+          // Show with staggered timing
+          setTimeout(() => {
+            alert.classList.add('show');
+            
+            // Add subtle entrance sound effect (optional)
+            if (window.AudioContext) {
+              playNotificationSound(alert.classList.contains('alert-success'));
+            }
+          }, index * 120); // Slightly faster stagger
+          
+          // Auto-dismiss with progress bar
+          const progressBar = alert.querySelector('.flash-alert-progress');
+          if (progressBar) {
+            setTimeout(() => {
+              progressBar.style.animation = 'flashProgress 5s linear';
+            }, 200 + (index * 120));
+          }
+          
+          // Auto-dismiss after 6 seconds (longer for better UX)
+          setTimeout(() => {
+            dismissFlashAlert(alert);
+          }, 6000 + (index * 120));
+        });
+        
+        // Handle manual dismiss with improved interaction
+        flashAlerts.forEach(alert => {
+          const closeBtn = alert.querySelector('.btn-close');
+          if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              dismissFlashAlert(alert);
+            });
+          }
+          
+          // Pause auto-dismiss on hover
+          let autoDismissTimer;
+          alert.addEventListener('mouseenter', () => {
+            const progressBar = alert.querySelector('.flash-alert-progress');
+            if (progressBar) {
+              progressBar.style.animationPlayState = 'paused';
+            }
+          });
+          
+          alert.addEventListener('mouseleave', () => {
+            const progressBar = alert.querySelector('.flash-alert-progress');
+            if (progressBar) {
+              progressBar.style.animationPlayState = 'running';
+            }
+          });
+        });
+      }
+      
+      function dismissFlashAlert(alert) {
+        // Add hide class with improved animation
+        alert.classList.add('hide');
+        alert.classList.remove('show');
+        
+        // Improved cleanup with proper timing
+        setTimeout(() => {
+          if (alert.parentNode) {
+            alert.remove();
+          }
+          
+          // Clean up overlay if no alerts remain
+          const overlay = document.getElementById('flashAlertOverlay');
+          if (overlay && overlay.querySelectorAll('.flash-alert').length === 0) {
+            overlay.remove();
+          }
+        }, 400); // Match the transition duration
+      }
+      
+      // Optional: Subtle audio feedback for notifications
+      function playNotificationSound(isSuccess = false) {
+        try {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          // Different frequencies for different alert types
+          oscillator.frequency.setValueAtTime(isSuccess ? 800 : 600, audioContext.currentTime);
+          oscillator.type = 'sine';
+          
+          // Very subtle volume
+          gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+          gainNode.gain.linearRampToValueAtTime(0.02, audioContext.currentTime + 0.01);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (e) {
+          // Silent fail if audio is not supported
+        }
+      }
+      
+      // Mobile sidebar toggle
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebar = document.getElementById('sidebar');
+      if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function() {
+          sidebar.classList.toggle('show');
+          document.body.classList.toggle('sidebar-open');
+        });
+        
+        // Close sidebar when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
+            sidebar.classList.remove('show');
+            document.body.classList.remove('sidebar-open');
+          }
+        });
+      }
+    });
+  </script>
+  
+  <!-- Tabler Core JS -->
+  <script src="/static/tabler/js/tabler.min.js"></script>
+  
+  <!-- Global Dropdown Fix -->
+  <script src="/static/js/dropdown-fix.js?v=3.1"></script>
+  
+  
+<script>
+// Simplified chatbot JavaScript
+let isProcessing = false;
+let hasMessages = false;
+let selectedModelProvider = 'minipass';
+const conversationId = document.getElementById('conversationId').value;
+
+// Model dropdown functions
+function toggleModelDropdown() {
+    const dropdown = document.getElementById('modelDropdown');
+    const select = document.getElementById('modelSelect');
+    
+    dropdown.classList.toggle('show');
+    select.classList.toggle('open');
+}
+
+function selectModel(provider, name) {
+    selectedModelProvider = provider;
+    document.getElementById('selectedModel').textContent = name;
+    
+    // Update selected option
+    const options = document.querySelectorAll('.model-option');
+    options.forEach(option => {
+        option.classList.remove('selected');
+        if (option.dataset.model === provider) {
+            option.classList.add('selected');
+        }
+    });
+    
+    // Close dropdown
+    document.getElementById('modelDropdown').classList.remove('show');
+    document.getElementById('modelSelect').classList.remove('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('modelDropdown');
+    const select = document.getElementById('modelSelect');
+    
+    if (!select.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.remove('show');
+        select.classList.remove('open');
+    }
+});
+
+// Auto-resize textarea
+function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+}
+
+// Handle Enter key (send on Enter, new line on Shift+Enter)
+function handleKeyDown(event, inputType) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        if (inputType === 'large') {
+            document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+        } else {
+            document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+        }
+    }
+}
+
+// Send example question
+function sendExample(question) {
+    const input = document.getElementById('messageInputLarge');
+    input.value = question;
+    autoResize(input);
+    document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+}
+
+// Switch to conversation view
+function switchToConversation() {
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('conversationState').classList.add('active');
+    hasMessages = true;
+    // Focus the compact input
+    setTimeout(() => {
+        document.getElementById('messageInputCompact').focus();
+    }, 100);
+}
+
+// Send message
+async function sendMessage(event, isLargeInput) {
+    event.preventDefault();
+    
+    if (isProcessing) return;
+    
+    const inputId = isLargeInput ? 'messageInputLarge' : 'messageInputCompact';
+    const input = document.getElementById(inputId);
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    // Switch to conversation view if this is the first message
+    if (!hasMessages) {
+        switchToConversation();
+    }
+    
+    // Add user message
+    addMessage('user', message);
+    
+    // Clear input
+    input.value = '';
+    autoResize(input);
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    // Disable send buttons
+    isProcessing = true;
+    document.getElementById('sendBtnLarge').disabled = true;
+    document.getElementById('sendBtnCompact').disabled = true;
+    
+    try {
+        // Send to backend
+        const formData = new FormData();
+        formData.append('question', message);
+        formData.append('conversation_id', conversationId);
+        formData.append('model_provider', selectedModelProvider);
+        formData.append('csrf_token', document.getElementById('csrfToken').value);
+        
+        const response = await fetch('/chatbot/ask', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Hide typing indicator
+        hideTypingIndicator();
+        
+        if (data.success) {
+            // Add AI response
+            addMessage('assistant', data.answer || 'I processed your request.');
+        } else {
+            addMessage('assistant', `Sorry, I encountered an error: ${data.error || 'Unknown error'}`);
+        }
+    } catch (error) {
+        console.error('Chat error:', error);
+        hideTypingIndicator();
+        addMessage('assistant', 'Sorry, I couldn\'t process your request. Please try again.');
+    } finally {
+        isProcessing = false;
+        document.getElementById('sendBtnLarge').disabled = false;
+        document.getElementById('sendBtnCompact').disabled = false;
+        document.getElementById('messageInputCompact').focus();
+    }
+}
+
+// Add message to chat
+function addMessage(type, content) {
+    const messagesContainer = document.getElementById('chatMessages');
+    const typingIndicator = document.getElementById('typingIndicator');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.textContent = content;
+    
+    messageDiv.appendChild(contentDiv);
+    
+    // Insert before typing indicator
+    messagesContainer.insertBefore(messageDiv, typingIndicator);
+    
+    // Scroll to bottom
+    scrollToBottom();
+}
+
+// Show typing indicator
+function showTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    indicator.style.display = 'block';
+    scrollToBottom();
+}
+
+// Hide typing indicator
+function hideTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    indicator.style.display = 'none';
+}
+
+// Scroll to bottom of messages
+function scrollToBottom() {
+    const container = document.querySelector('.chat-messages');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    // Focus large input
+    document.getElementById('messageInputLarge').focus();
+    
+    // Set initial textarea heights
+    const textareaLarge = document.getElementById('messageInputLarge');
+    const textareaCompact = document.getElementById('messageInputCompact');
+    if (textareaLarge) autoResize(textareaLarge);
+    if (textareaCompact) autoResize(textareaCompact);
+});
+</script>
+
+</body>
+</html>

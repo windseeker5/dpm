@@ -306,8 +306,8 @@
       </div>
     </div>
 
-    <!-- Empty State - Only show when there are NO passports at all in the database -->
-    {% if statistics.total_passports == 0 %}
+    <!-- Empty State - Only show when there are NO passports at all in the database AND no active search/filter -->
+    {% if passports|length == 0 and not current_filters.q and not current_filters.status and not current_filters.payment_status %}
     <div class="card">
       <div class="empty">
         <div class="empty-icon">
@@ -1089,9 +1089,9 @@ div.bulk-actions-container .card.bulk-actions-card .card-body,
   text-align: center;
 }
 
-/* Empty State */
+/* Empty State - Fixed padding to match signups.html */
 .empty {
-  padding: 3rem 1rem;
+  padding: 2rem 1rem;
   text-align: center;
 }
 
