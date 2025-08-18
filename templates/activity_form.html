@@ -1059,7 +1059,14 @@
       unsplashImagesDiv.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
   
       fetch(`/unsplash-search?q=${encodeURIComponent(currentQuery)}&page=${page}`)
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(errorData => {
+              throw new Error(errorData.error || 'Search failed');
+            });
+          }
+          return response.json();
+        })
         .then(data => {
           unsplashImagesDiv.innerHTML = '';
           if (data.length === 0) {
@@ -1112,7 +1119,34 @@
         })
         .catch(error => {
           console.error('Error loading images:', error);
-          unsplashImagesDiv.innerHTML = '<div class="text-center p-4"><p class="text-danger">Error loading images. Please try again.</p></div>';
+          let errorMessage = 'Error loading images. Please try again.';
+          
+          // Provide more specific error messages
+          if (error.message.includes('API key')) {
+            errorMessage = 'Image search is not available. The API key needs to be configured by an administrator.';
+          } else if (error.message.includes('temporarily unavailable')) {
+            errorMessage = 'Image search service is temporarily unavailable. Please try again later.';
+          }
+          
+          unsplashImagesDiv.innerHTML = `
+            <div class="text-center p-4">
+              <div class="alert alert-warning border-warning mb-3">
+                <div class="d-flex align-items-center">
+                  <i class="ti ti-alert-triangle me-2"></i>
+                  <strong>Image Search Unavailable</strong>
+                </div>
+                <p class="mb-0 mt-2">${errorMessage}</p>
+              </div>
+              <div class="text-muted small">
+                <p class="mb-2"><strong>Alternative options:</strong></p>
+                <ul class="list-unstyled">
+                  <li>• Use the "Upload your own image" option instead</li>
+                  <li>• Contact your administrator to configure image search</li>
+                  <li>• Proceed without an image for now</li>
+                </ul>
+              </div>
+            </div>
+          `;
           paginationControls.style.display = 'none';
         });
     }

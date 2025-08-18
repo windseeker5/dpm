@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Search Test</title>
+    <link href="/static/tabler/css/tabler.min.css" rel="stylesheet">
+    <style>
+        .status { padding: 1rem; margin: 1rem 0; border-radius: 0.5rem; }
+        .status.success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .status.error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .status.warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1>🧪 Image Search API Test</h1>
+                <p>This page tests the image search functionality.</p>
+                
+                <div id="authStatus" class="status warning">
+                    ⏳ Checking authentication...
+                </div>
+                
+                <div id="searchStatus" class="status warning" style="display: none;">
+                    ⏳ Testing image search...
+                </div>
+                
+                <div id="downloadStatus" class="status warning" style="display: none;">
+                    ⏳ Testing image download...
+                </div>
+                
+                <div id="results" style="display: none;">
+                    <h3>Test Results:</h3>
+                    <div id="imageGrid" class="row"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    async function runTests() {
+        const authStatus = document.getElementById('authStatus');
+        const searchStatus = document.getElementById('searchStatus');
+        const downloadStatus = document.getElementById('downloadStatus');
+        const results = document.getElementById('results');
+        const imageGrid = document.getElementById('imageGrid');
+        
+        // Test 1: Check authentication by trying search
+        try {
+            const searchResponse = await fetch('/unsplash-search?q=test&page=1');
+            
+            if (searchResponse.status === 401) {
+                authStatus.className = 'status error';
+                authStatus.innerHTML = '❌ Not authenticated. Please <a href="/login">login first</a>.';
+                return;
+            } else if (searchResponse.status === 200) {
+                authStatus.className = 'status success';
+                authStatus.innerHTML = '✅ Authentication successful';
+            } else {
+                throw new Error(`Unexpected status: ${searchResponse.status}`);
+            }
+            
+            // Test 2: Image search
+            searchStatus.style.display = 'block';
+            const images = await searchResponse.json();
+            
+            if (images && images.length > 0) {
+                searchStatus.className = 'status success';
+                searchStatus.innerHTML = `✅ Image search successful (${images.length} images)`;
+                
+                // Display some images
+                results.style.display = 'block';
+                images.slice(0, 3).forEach((image, index) => {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 mb-3';
+                    col.innerHTML = `
+                        <div class="card">
+                            <img src="${image.thumb}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Test Image ${index + 1}">
+                            <div class="card-body text-center">
+                                <button class="btn btn-primary btn-sm test-download" data-url="${image.full}">
+                                    Test Download
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    imageGrid.appendChild(col);
+                });
+                
+                // Add download test listeners
+                document.querySelectorAll('.test-download').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const url = e.target.dataset.url;
+                        downloadStatus.style.display = 'block';
+                        downloadStatus.className = 'status warning';
+                        downloadStatus.innerHTML = '⏳ Testing image download...';
+                        
+                        try {
+                            const downloadResponse = await fetch(`/download-unsplash-image?url=${encodeURIComponent(url)}`);
+                            const result = await downloadResponse.json();
+                            
+                            if (result.success) {
+                                downloadStatus.className = 'status success';
+                                downloadStatus.innerHTML = `✅ Image download successful: ${result.filename}`;
+                            } else {
+                                downloadStatus.className = 'status error';
+                                downloadStatus.innerHTML = `❌ Download failed: ${result.error}`;
+                            }
+                        } catch (error) {
+                            downloadStatus.className = 'status error';
+                            downloadStatus.innerHTML = `❌ Download error: ${error.message}`;
+                        }
+                    });
+                });
+                
+            } else {
+                searchStatus.className = 'status error';
+                searchStatus.innerHTML = '❌ No images returned from search';
+            }
+            
+        } catch (error) {
+            authStatus.className = 'status error';
+            authStatus.innerHTML = `❌ Test failed: ${error.message}`;
+        }
+    }
+    
+    // Run tests when page loads
+    document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsplash Error Handling Test</title>
+    <link href="/static/tabler/css/tabler.min.css" rel="stylesheet">
+    <link href="/static/tabler/icons/tabler-icons.min.css" rel="stylesheet">
+    <style>
+        .test-section {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-xl mt-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="ti ti-bug me-2"></i>
+                            Unsplash Error Handling Test
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        
+                        <!-- Test Section 1: Search UI -->
+                        <div class="test-section">
+                            <h5 class="mb-3">📸 Image Search Interface</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="toggleOnlineImage" checked>
+                                        <span class="form-check-label">Search images from the Web</span>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="toggleUploadImage">
+                                        <span class="form-check-label">Upload your own image</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="e.g., Hockey, Yoga, Cooking" value="golf">
+                                    <button type="button" id="searchImagesBtn" class="btn btn-primary">
+                                        <i class="ti ti-search"></i> Search
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Test Section 2: Error Display Area -->
+                        <div class="test-section">
+                            <h5 class="mb-3">❌ Error Message Display</h5>
+                            <div id="imageResults">
+                                <!-- Error message will appear here -->
+                            </div>
+                        </div>
+
+                        <!-- Test Section 3: Upload Alternative -->
+                        <div class="test-section" id="uploadSection" style="display: none;">
+                            <h5 class="mb-3">⬆️ Upload Alternative</h5>
+                            <input type="file" class="form-control" accept="image/*">
+                            <div class="text-muted small mt-2">
+                                Alternative option when image search is unavailable
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Modal for Image Results (similar to real implementation) -->
+    <div class="modal fade" id="unsplashModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ti ti-photo me-2"></i>Select an Image
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="unsplashImages">
+                        <!-- Images or error messages will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/tabler/js/tabler.min.js"></script>
+    <script>
+        // Test the error handling behavior
+        document.getElementById('searchImagesBtn').addEventListener('click', function() {
+            console.log('Search button clicked - simulating error');
+            
+            // Show loading state first
+            const resultsDiv = document.getElementById('imageResults');
+            resultsDiv.innerHTML = `
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Searching for images...</p>
+                </div>
+            `;
+            
+            // Simulate API call delay and then show error
+            setTimeout(() => {
+                showErrorMessage();
+            }, 1500);
+        });
+        
+        function showErrorMessage() {
+            const resultsDiv = document.getElementById('imageResults');
+            
+            // This is the improved error message from the actual implementation
+            resultsDiv.innerHTML = `
+                <div class="text-center p-4">
+                    <div class="alert alert-warning border-warning mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="ti ti-alert-triangle me-2"></i>
+                            <strong>Image Search Unavailable</strong>
+                        </div>
+                        <p class="mb-0 mt-2">Image search is not available. The API key needs to be configured by an administrator.</p>
+                    </div>
+                    <div class="text-muted small">
+                        <p class="mb-2"><strong>Alternative options:</strong></p>
+                        <ul class="list-unstyled">
+                            <li>• Use the "Upload your own image" option instead</li>
+                            <li>• Contact your administrator to configure the image search service</li>
+                            <li>• Try again later if this is a temporary issue</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            // Show upload alternative
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('toggleUploadImage').checked = true;
+        }
+        
+        // Toggle upload section
+        document.getElementById('toggleUploadImage').addEventListener('change', function() {
+            document.getElementById('uploadSection').style.display = this.checked ? 'block' : 'none';
+        });
+    </script>
+</body>
+</html>
