@@ -190,9 +190,10 @@
             <th>Activity Name</th>
             <th class="d-none d-md-table-cell">Type</th>
             <th class="d-none d-lg-table-cell text-center">Status</th>
+            <th class="d-none d-lg-table-cell text-center"># Types</th>
+            <th class="d-none d-md-table-cell text-center">Active</th>
             <th class="d-none d-md-table-cell text-center">Signups</th>
             <th class="d-none d-md-table-cell text-center">Revenue</th>
-            <th class="d-none d-lg-table-cell text-center">Dates</th>
             <th class="text-end">Actions</th>
           </tr>
         </thead>
@@ -210,6 +211,11 @@
             </td>
             <td style="vertical-align: middle;">
               <div class="d-flex align-items-center">
+                {% if activity.image_filename %}
+                  <span class="avatar avatar-sm me-3" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }})"></span>
+                {% else %}
+                  <span class="avatar avatar-sm bg-secondary-lt text-secondary me-3">{{ activity.name[0].upper() }}</span>
+                {% endif %}
                 <div>
                   <div class="fw-bold">{{ activity.name }}</div>
                   <div class="text-muted small">{{ activity.description[:50] }}{% if activity.description and activity.description|length > 50 %}...{% endif %}</div>
@@ -217,11 +223,7 @@
               </div>
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {% if activity.type %}
-                <span class="badge bg-blue-lt">{{ activity.type.title() }}</span>
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
+              <span class="text-muted">{{ activity.type.title() if activity.type else '-' }}</span>
             </td>
             <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
               {% set status = activity.status or 'active' %}
@@ -235,24 +237,17 @@
                 <span class="badge bg-secondary-lt">{{ status.title() }}</span>
               {% endif %}
             </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              <span class="badge bg-primary-lt">{{ activity.signup_count or 0 }}</span>
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              <span class="fw-bold text-success">${{ "%.2f"|format(activity.total_revenue or 0) }}</span>
-            </td>
             <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
-              <div class="small">
-                {% if activity.start_date %}
-                  <div>Start: {{ activity.start_date.strftime('%Y-%m-%d') }}</div>
-                {% endif %}
-                {% if activity.end_date %}
-                  <div>End: {{ activity.end_date.strftime('%Y-%m-%d') }}</div>
-                {% endif %}
-                {% if not activity.start_date and not activity.end_date %}
-                  <span class="text-muted">Not scheduled</span>
-                {% endif %}
-              </div>
+              <span class="text-muted">{{ activity.passport_types_count or 0 }}</span>
+            </td>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+              <span class="text-muted">{{ activity.active_passports_count or 0 }}</span>
+            </td>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+              <span class="text-muted">{{ activity.signup_count or 0 }}</span>
+            </td>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+              <span class="text-muted">${{ "%.2f"|format(activity.total_revenue or 0) }}</span>
             </td>
             <td style="vertical-align: middle;">
               <div class="dropdown">
@@ -264,20 +259,19 @@
                   <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
                     <i class="ti ti-pencil me-2"></i>Edit Activity
                   </a>
-                  <a class="dropdown-item" href="{{ url_for('view_activity', activity_id=activity.id) }}">
+                  <a class="dropdown-item" href="{{ url_for('activity_dashboard', activity_id=activity.id) }}">
                     <i class="ti ti-eye me-2"></i>View Details
                   </a>
                   <a class="dropdown-item" href="{{ url_for('list_signups', activity_id=activity.id) }}">
                     <i class="ti ti-users me-2"></i>View Signups
                   </a>
-                  {% if activity.status == 'draft' %}
-                  <a class="dropdown-item text-success" href="{{ url_for('activate_activity', activity_id=activity.id) }}" 
-                     onclick="return confirm('Activate this activity?')">
+                  {% if activity.status != 'active' %}
+                  <a class="dropdown-item text-success" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
                     <i class="ti ti-play me-2"></i>Activate
                   </a>
-                  {% elif activity.status == 'active' %}
-                  <a class="dropdown-item text-warning" href="{{ url_for('deactivate_activity', activity_id=activity.id) }}" 
-                     onclick="return confirm('Deactivate this activity?')">
+                  {% endif %}
+                  {% if activity.status == 'active' %}
+                  <a class="dropdown-item text-warning" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
                     <i class="ti ti-pause me-2"></i>Deactivate
                   </a>
                   {% endif %}
@@ -298,7 +292,7 @@
       <!-- Pagination -->
       <div class="card-footer d-flex justify-content-between align-items-center">
         {% if pagination and pagination.total > 0 %}
-          <span class="text-muted">Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ ((pagination.page - 1) * pagination.per_page) + signups|length }} of {{ pagination.total }} entries</span>
+          <span class="text-muted">Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ ((pagination.page - 1) * pagination.per_page) + activities|length }} of {{ pagination.total }} entries</span>
           {% if pagination.pages > 1 %}
             <nav>
               <ul class="pagination pagination-sm mb-0">
@@ -356,16 +350,16 @@
       </div>
     </div>
 
-    <!-- Empty State - Only show when there are NO signups at all in the database -->
-    {% if activities|length == 0 %}
+    <!-- Empty State - Only show when there are NO activities at all in the database AND no active search/filter -->
+    {% if activities|length == 0 and not current_filters.q and not current_filters.status %}
     <div class="card">
       <div class="empty">
         <div class="empty-icon">
-          <i class="ti ti-users-off"></i>
+          <i class="ti ti-activity"></i>
         </div>
-        <p class="empty-title">No signups found</p>
+        <p class="empty-title">No activities found</p>
         <p class="empty-subtitle">
-          Signups will appear here when users register for activities
+          Activities will appear here once you create them
         </p>
       </div>
     </div>
@@ -379,12 +373,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Bulk selection functionality
     const selectAllCheckbox = document.getElementById('selectAll');
-    const signupCheckboxes = document.querySelectorAll('.signup-checkbox');
+    const activityCheckboxes = document.querySelectorAll('.activity-checkbox');
     const bulkActions = document.getElementById('bulkActions');
     const selectedCount = document.getElementById('selectedCount');
 
     function updateBulkActions() {
-        const checkedBoxes = document.querySelectorAll('.signup-checkbox:checked');
+        const checkedBoxes = document.querySelectorAll('.activity-checkbox:checked');
         const count = checkedBoxes.length;
         
         selectedCount.textContent = count;
@@ -405,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (count === 0) {
                 selectAllCheckbox.indeterminate = false;
                 selectAllCheckbox.checked = false;
-            } else if (count === signupCheckboxes.length && signupCheckboxes.length > 0) {
+            } else if (count === activityCheckboxes.length && activityCheckboxes.length > 0) {
                 selectAllCheckbox.indeterminate = false;
                 selectAllCheckbox.checked = true;
             } else {
@@ -420,68 +414,68 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to determine and update available bulk actions
     function updateAvailableActions(checkedBoxes) {
         // Get all action buttons in the dropdown
-        const markPaidBtn = document.querySelector('button[value="mark_paid"]');
-        const approveBtn = document.querySelector('button[value="approve"]');
-        const sendRemindersBtn = document.querySelector('button[value="send_reminders"]');
+        const activateBtn = document.querySelector('button[value="activate"]');
+        const deactivateBtn = document.querySelector('button[value="deactivate"]');
+        const duplicateBtn = document.querySelector('button[value="duplicate"]');
         const deleteBtn = document.querySelector('button[value="delete"]');
         
         if (checkedBoxes.length === 0) return;
         
-        // Analyze the states of all selected signups
-        let hasUnpaid = false;
-        let hasPending = false;
-        let hasApproved = false;
-        let allPending = true;
-        let allPaid = true;
+        // Analyze the states of all selected activities
+        let hasActive = false;
+        let hasInactive = false;
+        let hasDraft = false;
+        let allActive = true;
+        let allInactive = true;
+        let allDraft = true;
         
         checkedBoxes.forEach(checkbox => {
             const status = checkbox.dataset.status;
-            const isPaid = checkbox.dataset.paid === 'true';
             
-            if (!isPaid) {
-                hasUnpaid = true;
-                allPaid = false;
-            }
-            
-            if (status === 'pending') {
-                hasPending = true;
-            } else if (status === 'approved') {
-                hasApproved = true;
-                allPending = false;
+            if (status === 'active') {
+                hasActive = true;
+                allInactive = false;
+                allDraft = false;
+            } else if (status === 'inactive') {
+                hasInactive = true;
+                allActive = false;
+                allDraft = false;
+            } else if (status === 'draft') {
+                hasDraft = true;
+                allActive = false;
+                allInactive = false;
             } else {
-                allPending = false;
+                allActive = false;
+                allInactive = false;
+                allDraft = false;
             }
         });
         
         // Update action visibility based on states
-        // Mark as Paid - show only if at least one is unpaid
-        if (markPaidBtn) {
-            if (hasUnpaid) {
-                markPaidBtn.parentElement.style.display = '';
-                markPaidBtn.disabled = false;
+        // Activate - show only if at least one is not active
+        if (activateBtn) {
+            if (!allActive) {
+                activateBtn.parentElement.style.display = '';
+                activateBtn.disabled = false;
             } else {
-                markPaidBtn.parentElement.style.display = 'none';
+                activateBtn.parentElement.style.display = 'none';
             }
         }
         
-        // Approve - show only if ALL selected are pending
-        if (approveBtn) {
-            if (allPending && hasPending) {
-                approveBtn.parentElement.style.display = '';
-                approveBtn.disabled = false;
+        // Deactivate - show only if at least one is active
+        if (deactivateBtn) {
+            if (hasActive) {
+                deactivateBtn.parentElement.style.display = '';
+                deactivateBtn.disabled = false;
             } else {
-                approveBtn.parentElement.style.display = 'none';
+                deactivateBtn.parentElement.style.display = 'none';
             }
         }
         
-        // Send Reminder - show only if at least one is unpaid
-        if (sendRemindersBtn) {
-            if (hasUnpaid) {
-                sendRemindersBtn.parentElement.style.display = '';
-                sendRemindersBtn.disabled = false;
-            } else {
-                sendRemindersBtn.parentElement.style.display = 'none';
-            }
+        // Duplicate - always available
+        if (duplicateBtn) {
+            duplicateBtn.parentElement.style.display = '';
+            duplicateBtn.disabled = false;
         }
         
         // Delete - always available
@@ -506,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Select all functionality
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function() {
-            signupCheckboxes.forEach(checkbox => {
+            activityCheckboxes.forEach(checkbox => {
                 checkbox.checked = this.checked;
             });
             updateBulkActions();
@@ -514,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Individual checkbox functionality
-    signupCheckboxes.forEach(checkbox => {
+    activityCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', updateBulkActions);
     });
 
@@ -786,7 +780,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // is managed by the global system - no local management needed
     
     // Validation for debugging
-    console.log('📋 Signups page loaded');
+    console.log('📋 Activities page loaded');
     console.log('🔧 Global dropdown fix available:', typeof window.dropdownFix !== 'undefined');
     console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
     console.log('🔍 Dropdown toggles found:', document.querySelectorAll('[data-bs-toggle="dropdown"]').length);
@@ -1148,9 +1142,9 @@ div.bulk-actions-container .card.bulk-actions-card .card-body,
   text-align: center;
 }
 
-/* Empty State */
+/* Empty State - Fixed padding to match signups.html */
 .empty {
-  padding: 3rem 1rem;
+  padding: 2rem 1rem;
   text-align: center;
 }
 

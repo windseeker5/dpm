@@ -1973,6 +1973,7 @@ def list_activities():
         activity.signup_count = len([p for p in activity.passports if p.paid])
         activity.total_revenue = sum(p.sold_amt for p in activity.passports if p.paid)
         activity.passport_types_count = len(activity.passport_types)
+        activity.active_passports_count = len([p for p in activity.passports if p.paid and p.uses_remaining > 0])
     
     # Get unique activity types for filter dropdown
     activity_types = db.session.query(Activity.type).distinct().filter(Activity.type.isnot(None)).all()
