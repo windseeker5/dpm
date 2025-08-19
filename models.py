@@ -61,6 +61,9 @@ class User(db.Model):
     # email = db.Column(db.String(100), unique=True)
 
     phone_number = db.Column(db.String(20))
+    
+    # Organization relationship for email context
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
 
     signups = db.relationship("Signup", backref="user", lazy=True)
     passports = db.relationship("Passport", backref="user", lazy=True)
@@ -79,6 +82,10 @@ class Activity(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(50), default="active")
+    
+    # Organization relationship for email context
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
+    
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 
@@ -368,6 +375,65 @@ class ChatUsage(db.Model):
         db.UniqueConstraint('admin_email', 'date', name='uq_chat_usage_admin_date'),
         db.Index('ix_chat_usage_date', 'date'),
     )
+
+
+# Organization Model for Multi-tenant Email Settings
+class Organization(db.Model):
+    """Organization model to support multi-tenant email configurations"""
+    __tablename__ = 'organizations'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    domain = db.Column(db.String(100), unique=True, nullable=False)  # e.g., 'lhgi' from lhgi@minipass.me
+    
+    # Email Configuration
+    email_enabled = db.Column(db.Boolean, default=False)
+    mail_server = db.Column(db.String(255), nullable=True)  # e.g., 'mail.minipass.me'
+    mail_port = db.Column(db.Integer, default=587)
+    mail_use_tls = db.Column(db.Boolean, default=True)
+    mail_use_ssl = db.Column(db.Boolean, default=False)
+    mail_username = db.Column(db.String(255), nullable=True)  # e.g., 'lhgi@minipass.me'
+    mail_password = db.Column(db.String(500), nullable=True)  # Encrypted password
+    mail_sender_name = db.Column(db.String(255), nullable=True)  # e.g., 'LHGI'
+    mail_sender_email = db.Column(db.String(255), nullable=True)  # Override sender email if different
+    
+    # Additional settings
+    is_active = db.Column(db.Boolean, default=True)
+    fallback_to_system_email = db.Column(db.Boolean, default=True)  # Fallback to system Gmail if org email fails
+    
+    # Audit fields
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_by = db.Column(db.String(255), nullable=True)
+    updated_by = db.Column(db.String(255), nullable=True)
+    
+    # Relationships
+    activities = db.relationship('Activity', backref='organization', lazy=True)
+    users = db.relationship('User', backref='organization', lazy=True)
+    
+    def __repr__(self):
+        return f'<Organization {self.name} ({self.domain})>'
+    
+    @property
+    def full_email_address(self):
+        """Get the full email address for this organization"""
+        return f"{self.domain}@minipass.me"
+    
+    def get_email_config(self):
+        """Get email configuration as dictionary"""
+        if not self.email_enabled:
+            return None
+        
+        return {
+            'MAIL_SERVER': self.mail_server,
+            'MAIL_PORT': self.mail_port,
+            'MAIL_USE_TLS': self.mail_use_tls,
+            'MAIL_USE_SSL': self.mail_use_ssl,
+            'MAIL_USERNAME': self.mail_username,
+            'MAIL_PASSWORD': self.mail_password,
+            'MAIL_DEFAULT_SENDER': self.mail_sender_email or self.full_email_address,
+            'SENDER_NAME': self.mail_sender_name or self.name
+        }
 
 
 # ✅ Additional indexes for chatbot performance

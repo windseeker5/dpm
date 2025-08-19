@@ -29,6 +29,7 @@ class EmailConfigSchema(Schema):
     mail_username = fields.Str()
     mail_password = fields.Str(allow_none=True)
     mail_default_sender = fields.Email()
+    mail_sender_name = fields.Str(validate=validate.Length(max=100))
 
 class OrganizationSchema(Schema):
     org_name = fields.Str(validate=validate.Length(max=255))
@@ -187,6 +188,7 @@ def get_email_config():
             'mail_use_tls': get_setting('MAIL_USE_TLS', 'True') == 'True',
             'mail_username': get_setting('MAIL_USERNAME'),
             'mail_default_sender': get_setting('MAIL_DEFAULT_SENDER'),
+            'mail_sender_name': get_setting('MAIL_SENDER_NAME', 'Minipass'),
             # Don't return password for security
         }
         return jsonify({'success': True, 'data': config})
@@ -219,6 +221,79 @@ def update_email_config():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@settings_api.route('/email/test-connection', methods=['POST'])
+@admin_required
+@rate_limit(max_requests=5, window=300)  # 5 tests per 5 minutes
+def test_email_connection():
+    """Test email server connection without sending an email"""
+    try:
+        import smtplib
+        import ssl
+        from email.mime.text import MIMEText
+        
+        # Get connection settings from request
+        data = request.json
+        mail_server = data.get('mail_server')
+        mail_port = int(data.get('mail_port', 587))
+        mail_use_tls = data.get('mail_use_tls', True)
+        mail_username = data.get('mail_username')
+        mail_password = data.get('mail_password')
+        
+        if not all([mail_server, mail_username]):
+            return jsonify({'success': False, 'error': 'Mail server and username are required'}), 400
+        
+        # Test connection
+        try:
+            # Create SMTP connection
+            if mail_port == 465:  # SSL
+                context = ssl.create_default_context()
+                server = smtplib.SMTP_SSL(mail_server, mail_port, context=context)
+            else:  # Standard or TLS
+                server = smtplib.SMTP(mail_server, mail_port)
+                if mail_use_tls:
+                    context = ssl.create_default_context()
+                    server.starttls(context=context)
+            
+            # Test authentication if password provided
+            if mail_password:
+                server.login(mail_username, mail_password)
+            
+            # Close connection
+            server.quit()
+            
+            log_admin_action(f"Successfully tested email connection to {mail_server}:{mail_port}")
+            
+            return jsonify({
+                'success': True, 
+                'message': f'Successfully connected to {mail_server}:{mail_port}'
+            })
+            
+        except smtplib.SMTPAuthenticationError:
+            return jsonify({
+                'success': False, 
+                'error': 'Authentication failed. Please check your username and password.'
+            }), 400
+        except smtplib.SMTPConnectError:
+            return jsonify({
+                'success': False, 
+                'error': f'Could not connect to {mail_server}:{mail_port}. Please check server and port.'
+            }), 400
+        except smtplib.SMTPServerDisconnected:
+            return jsonify({
+                'success': False, 
+                'error': 'Server disconnected unexpectedly. Please try again.'
+            }), 400
+        except Exception as smtp_error:
+            return jsonify({
+                'success': False, 
+                'error': f'SMTP Error: {str(smtp_error)}'
+            }), 400
+            
+    except ValueError as ve:
+        return jsonify({'success': False, 'error': f'Invalid port number: {str(ve)}'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Connection test failed: {str(e)}'}), 500
 
 @settings_api.route('/email/test', methods=['POST'])
 @admin_required

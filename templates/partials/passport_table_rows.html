@@ -1,0 +1,101 @@
+{% for passport in passes %}
+<tr data-paid="{{ 'true' if passport.paid else 'false' }}" data-active="{{ 'true' if passport.uses_remaining > 0 else 'false' }}">
+  <td>
+    <input type="checkbox" 
+           class="form-check-input passport-checkbox" 
+           name="selected_passports" 
+           value="{{ passport.id }}" 
+           form="bulkForm"
+           data-status="{{ 'active' if passport.uses_remaining > 0 else 'expired' }}"
+           data-paid="{{ 'true' if passport.paid else 'false' }}"
+           aria-label="Select passport {{ passport.id }}">
+  </td>
+  <td style="vertical-align: middle;">
+    <div class="d-flex align-items-center">
+      <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+           class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+      <div>
+        <div class="fw-bold">{{ passport.user.name or 'Anonymous' }}</div>
+        <div class="text-muted small">{{ passport.user.email or 'No email' }}</div>
+      </div>
+    </div>
+  </td>
+  <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+    <div>
+      <div class="fw-bold">{{ passport.activity.name }}</div>
+      <div class="text-muted small">{{ passport.pass_code or 'No code' }}</div>
+    </div>
+  </td>
+  <td class="d-none d-lg-table-cell" style="vertical-align: middle;">
+    <span style="color: #6c757d;">{{ passport.passport_type.name if passport.passport_type else 'Standard' }}</span>
+  </td>
+  <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+    {% if passport.sold_amt %}
+      ${{ "%.0f"|format(passport.sold_amt) }}
+    {% else %}
+      <span class="text-muted">-</span>
+    {% endif %}
+  </td>
+  <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
+    {% if passport.paid %}
+      <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
+    {% else %}
+      <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
+    {% endif %}
+  </td>
+  <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+    <span style="color: #6c757d;">
+      {{ passport.uses_remaining or 0 }}
+    </span>
+  </td>
+  <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+    {% if passport.created_dt %}
+      {{ passport.created_dt.strftime('%Y-%m-%d') }}
+    {% else %}
+      <span class="text-muted">-</span>
+    {% endif %}
+  </td>
+  <td class="text-center" style="vertical-align: middle;">
+    <div class="dropdown d-inline-block">
+      <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+        <span class="d-none d-md-inline">Actions</span>
+        <i class="ti ti-menu-2 d-md-none"></i>
+      </a>
+      <div class="dropdown-menu dropdown-menu-end">
+        {% if passport.uses_remaining > 0 %}
+        <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-modal-{{ passport.id }}">
+          <i class="ti ti-check me-2"></i>Redeem
+        </button>
+        {% endif %}
+        <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
+          <i class="ti ti-pencil me-2"></i>Edit Details
+        </a>
+        {% if not passport.paid %}
+        <button type="button" class="dropdown-item text-success" data-bs-toggle="modal" data-bs-target="#mark-paid-modal-{{ passport.id }}">
+          <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+        </button>
+        {% endif %}
+        <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
+          <i class="ti ti-qrcode me-2"></i>View QR Code
+        </a>
+        <a class="dropdown-item" href="#">
+          <i class="ti ti-mail me-2"></i>Send Reminder
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item text-danger" href="#" 
+           onclick="if(confirm('Delete this passport?')) { 
+             var form = document.getElementById('deleteForm{{ passport.id }}'); 
+             if(form) form.submit(); 
+           }">
+          <i class="ti ti-trash me-2"></i>Delete
+        </a>
+      </div>
+    </div>
+    <!-- Hidden delete form -->
+    <form id="deleteForm{{ passport.id }}" method="POST" action="{{ url_for('passports_bulk_action') }}" style="display: none;">
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="selected_passports" value="{{ passport.id }}">
+    </form>
+  </td>
+</tr>
+{% endfor %}

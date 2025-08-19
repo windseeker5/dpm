@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Fixes</title>
+    <style>
+        body {
+            height: 200vh;
+            padding: 50px;
+            font-family: Arial, sans-serif;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .failure {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Testing Activity Dashboard Fixes</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Scroll Position Preservation</h2>
+        <p>Current scroll position: <span id="scrollPos">0</span>px</p>
+        <button onclick="testScrollPreservation()">Test Filter Click</button>
+        <div id="scrollResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Ctrl+K Shortcut</h2>
+        <input type="text" id="testSearchInput" placeholder="Test search input">
+        <p>Press Ctrl+K to test the shortcut</p>
+        <div id="shortcutResult"></div>
+    </div>
+    
+    <div style="height: 100vh;">
+        <p>Scroll down area...</p>
+    </div>
+
+    <script>
+        // Monitor scroll position
+        window.addEventListener('scroll', function() {
+            document.getElementById('scrollPos').textContent = window.pageYOffset;
+        });
+
+        // Test scroll preservation
+        function testScrollPreservation() {
+            const initialScroll = window.pageYOffset;
+            window.scrollTo(0, 500);
+            
+            // Simulate filter click with hash link
+            const testLink = document.createElement('a');
+            testLink.href = '#';
+            testLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            document.body.appendChild(testLink);
+            testLink.click();
+            document.body.removeChild(testLink);
+            
+            setTimeout(() => {
+                const currentScroll = window.pageYOffset;
+                const result = document.getElementById('scrollResult');
+                if (currentScroll === 500) {
+                    result.innerHTML = '<div class="test-result success">✅ Scroll position preserved!</div>';
+                } else {
+                    result.innerHTML = '<div class="test-result failure">❌ Page scrolled to: ' + currentScroll + 'px</div>';
+                }
+            }, 100);
+        }
+
+        // Test Ctrl+K
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Focus our test input
+                document.getElementById('testSearchInput').focus();
+                
+                const result = document.getElementById('shortcutResult');
+                result.innerHTML = '<div class="test-result success">✅ Ctrl+K captured! Search input focused.</div>';
+                
+                return false;
+            }
+        });
+
+        // Detect if browser search opens (fallback)
+        window.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                if (!e.defaultPrevented) {
+                    const result = document.getElementById('shortcutResult');
+                    result.innerHTML = '<div class="test-result failure">❌ Browser search may have opened</div>';
+                }
+            }
+        }, true);
+    </script>
+</body>
+</html>

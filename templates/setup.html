@@ -233,6 +233,91 @@
   </div>
 </div>
 
+<!-- Organization Email Modal -->
+<div class="modal fade" id="orgModal" tabindex="-1" aria-labelledby="orgModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orgModalLabel">Add Organization</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="orgForm">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="orgName" class="form-label">Organization Name</label>
+                <input type="text" class="form-control" id="orgName" name="org_name" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="orgDomain" class="form-label">Email Domain</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="orgDomain" name="org_domain" required>
+                  <span class="input-group-text">@minipass.me</span>
+                </div>
+                <small class="form-text text-muted">e.g., 'lhgi' for lhgi@minipass.me</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="orgMailServer" class="form-label">Mail Server</label>
+                <input type="text" class="form-control" id="orgMailServer" name="org_mail_server" placeholder="mail.minipass.me" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="orgMailPort" class="form-label">Mail Port</label>
+                <input type="number" class="form-control" id="orgMailPort" name="org_mail_port" value="587" required>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="orgMailUsername" class="form-label">Mail Username</label>
+                <input type="email" class="form-control" id="orgMailUsername" name="org_mail_username" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="orgMailPassword" class="form-label">Mail Password</label>
+                <input type="password" class="form-control" id="orgMailPassword" name="org_mail_password" required>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="orgSenderName" class="form-label">Sender Name</label>
+                <input type="text" class="form-control" id="orgSenderName" name="org_mail_sender_name" placeholder="Organization Name">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="orgUseTLS" name="org_mail_use_tls" checked>
+                  <label class="form-check-label" for="orgUseTLS">Use TLS</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveOrganization()">Save Organization</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal -->
 <div class="modal modal-blur fade" id="confirmEraseModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
@@ -288,6 +373,9 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Email Settings JavaScript -->
+<script src="{{ url_for('static', filename='js/email-settings.js') }}"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Get the stored tab from localStorage
