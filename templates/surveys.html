@@ -226,26 +226,22 @@
       <div class="card-header">
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+          <div class="github-filter-group" role="group" aria-label="Filter buttons">
             <a href="{{ url_for('list_surveys') }}" 
-               class="github-filter-btn {% if not current_filters.status and not current_filters.activity %}active{% endif %}"
-               style="{% if not current_filters.status and not current_filters.activity %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Surveys <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_surveys }})</span>
+               class="github-filter-btn {% if not current_filters.status and not current_filters.activity %}active{% endif %}">
+              <i class="ti ti-list"></i>All Surveys <span class="filter-count">({{ statistics.total_surveys }})</span>
             </a>
             <a href="{{ url_for('list_surveys', status='active') }}" 
-               class="github-filter-btn {% if current_filters.status == 'active' %}active{% endif %}"
-               style="{% if current_filters.status == 'active' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-play" style="font-size: 16px; margin-right: 4px;"></i>Active <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.active_surveys }})</span>
+               class="github-filter-btn {% if current_filters.status == 'active' %}active{% endif %}">
+              <i class="ti ti-play"></i>Active <span class="filter-count">({{ statistics.active_surveys }})</span>
             </a>
             <a href="{{ url_for('list_surveys', status='closed') }}" 
-               class="github-filter-btn {% if current_filters.status == 'closed' %}active{% endif %}"
-               style="{% if current_filters.status == 'closed' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-pause" style="font-size: 16px; margin-right: 4px;"></i>Closed <span style="opacity: 0.6; margin-left: 4px;"></span>
+               class="github-filter-btn {% if current_filters.status == 'closed' %}active{% endif %}">
+              <i class="ti ti-pause"></i>Closed <span class="filter-count"></span>
             </a>
             <a href="{{ url_for('list_surveys', status='draft') }}" 
-               class="github-filter-btn {% if current_filters.status == 'draft' %}active{% endif %}"
-               style="{% if current_filters.status == 'draft' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-file-text" style="font-size: 16px; margin-right: 4px;"></i>Draft <span style="opacity: 0.6; margin-left: 4px;"></span>
+               class="github-filter-btn {% if current_filters.status == 'draft' %}active{% endif %}">
+              <i class="ti ti-file-text"></i>Draft <span class="filter-count"></span>
             </a>
           </div>
         </div>
