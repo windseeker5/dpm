@@ -1,0 +1,235 @@
+/**
+ * SearchComponent CSS - Reusable search styles
+ * Pink glow effects, loading animations, and enhanced search experience
+ */
+
+/* Pink glow effect for Ctrl+K - subtle and elegant */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out !important;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
+              0 0 8px rgba(255, 105, 180, 0.35),
+              0 0 15px rgba(255, 105, 180, 0.15) !important;
+  transform: scale(1.005) !important;
+  background-image: none !important;
+  z-index: 1000;
+  position: relative;
+}
+
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
+                0 0 0 0 rgba(255, 105, 180, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+                0 0 10px rgba(255, 105, 180, 0.35),
+                0 0 18px rgba(255, 105, 180, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
+                0 0 8px rgba(255, 105, 180, 0.35),
+                0 0 15px rgba(255, 105, 180, 0.15);
+  }
+}
+
+/* Disable Bootstrap validation styling completely */
+#enhancedSearchInput.is-valid,
+#enhancedSearchInput.is-invalid {
+  border-color: #ced4da !important;
+  background-image: none !important;
+  padding-right: 100px !important;
+}
+
+#enhancedSearchInput.is-valid:focus,
+#enhancedSearchInput.is-invalid:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+  background-image: none !important;
+}
+
+/* Force remove validation feedback icons */
+#enhancedSearchInput {
+  background-image: none !important;
+}
+
+/* Subtle glow on regular focus */
+#enhancedSearchInput.search-focus-glow {
+  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+              0 0 15px rgba(255, 105, 180, 0.15);
+}
+
+/* Enhanced search styling */
+#enhancedSearchInput {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#enhancedSearchInput:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Enhanced loading animation */
+.searching-pulse {
+  animation: blueSearchPulse 1.5s ease-in-out infinite;
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+              0 0 15px rgba(13, 110, 253, 0.4) !important;
+}
+
+@keyframes blueSearchPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+                0 0 15px rgba(13, 110, 253, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
+                0 0 25px rgba(13, 110, 253, 0.5);
+  }
+}
+
+/* Clear button styling */
+#searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+#searchClearBtn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+#searchClearBtn:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* Smooth transitions for kbd hint and clear button */
+#searchKbdHint, #searchClearBtn {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#searchCharCounter {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+#searchCharCounter.fw-bold {
+  font-weight: 600;
+}
+
+/* Search loading indicator */
+#searchLoadingIndicator {
+  border-radius: inherit;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+#searchLoadingIndicator .spinner-border-sm {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Smooth transitions for search feedback */
+.input-icon {
+  transition: all 0.2s ease;
+}
+
+.input-icon:has(#enhancedSearchInput:focus) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Search input container enhancements */
+.input-icon.position-relative {
+  margin-bottom: 1rem;
+}
+
+.input-icon-addon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  transition: color 0.2s ease;
+}
+
+.input-icon:has(#enhancedSearchInput:focus) .input-icon-addon {
+  color: #0d6efd;
+}
+
+/* Enhanced focus states */
+#enhancedSearchInput:focus + .position-absolute .input-icon-addon {
+  color: #0d6efd;
+}
+
+/* Character counter improvements */
+.position-absolute.end-0 {
+  z-index: 10;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #enhancedSearchInput {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  .input-icon {
+    margin-bottom: 0.75rem;
+  }
+  
+  #searchCharCounter {
+    min-width: 60px;
+    font-size: 0.7rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  #enhancedSearchInput.search-glow-active {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.4), 
+                0 0 12px rgba(255, 105, 180, 0.5),
+                0 0 20px rgba(255, 105, 180, 0.2) !important;
+  }
+  
+  .searching-pulse {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.4),
+                0 0 20px rgba(13, 110, 253, 0.5) !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  #enhancedSearchInput.search-glow-active {
+    border-width: 2px !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.8) !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  #enhancedSearchInput,
+  #searchClearBtn,
+  #searchKbdHint,
+  .input-icon {
+    transition: none;
+    animation: none;
+  }
+  
+  #enhancedSearchInput.search-glow-active {
+    animation: none;
+    transform: none !important;
+  }
+  
+  .searching-pulse {
+    animation: none;
+  }
+}
