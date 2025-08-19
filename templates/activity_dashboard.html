@@ -4,61 +4,88 @@
 
 {% block content %}
 <style>
-/* GitHub-style filter buttons */
+/* GitHub-style filter buttons - exact copy from passports.html */
 .github-filter-group {
   display: inline-flex;
   align-items: center;
-  background: #e1e4e8;
+  background: #f6f8fa;
+  border: 1px solid #d1d5da;
   border-radius: 6px;
-  padding: 2px;
-  gap: 1px;
+  padding: 0;
 }
+
 .github-filter-btn {
-  padding: 5px 16px;
+  padding: 5px 12px;
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
-  color: #24292e;
-  background: transparent;
+  color: #586069;
+  background: rgba(0, 0, 0, 0.03);
   border: none;
-  border-radius: 0;
   text-decoration: none;
   transition: all 0.2s ease;
   position: relative;
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
+  margin: 0;
+  /* Separator line between buttons */
+  border-right: 1px solid transparent;
+  background-clip: padding-box;
+  background-image: 
+    linear-gradient(to right, transparent 0%, transparent 100%), 
+    linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%);
+  background-size: 100% 100%, 1px 100%;
+  background-position: center, right center;
+  background-repeat: no-repeat;
 }
-/* Inactive state - darker gray background */
-.github-filter-btn:not(.active) {
-  background: #e1e4e8;
-  color: #586069;
+
+/* Last button - no separator */
+.github-filter-btn:last-child {
+  background-image: none;
+  border-right: none;
 }
+
+/* Hover state for inactive buttons */
 .github-filter-btn:not(.active):hover {
-  background: #d1d5da;
+  background: rgba(0, 0, 0, 0.05);
   color: #24292e;
   text-decoration: none;
 }
-/* Active state - white/light background with rounded corners */
+
+/* Active state - white background with rounded corners */
 .github-filter-btn.active {
-  background: #ffffff;
+  background: #ffffff !important;
   color: #24292e;
+  font-weight: 600;
+  border: 1px solid #d1d5da;
+  margin: -1px;
+  z-index: 1;
   border-radius: 6px;
   box-shadow: 0 1px 0 rgba(27,31,35,0.04);
-  font-weight: 600;
-  z-index: 1;
+  background-image: none !important;
 }
+
 .github-filter-btn.active:hover {
-  background: #ffffff;
+  background: #ffffff !important;
   text-decoration: none;
 }
+
 /* Icons styling */
 .github-filter-btn i {
-  font-size: 14px;
+  font-size: 16px;
+  margin-right: 4px;
   opacity: 0.7;
 }
+
 .github-filter-btn.active i {
   opacity: 1;
+}
+
+/* Filter count styling */
+.filter-count {
+  opacity: 0.6;
+  margin-left: 4px;
 }
 
 /* Fix dropdown z-index issues in tables */
@@ -1072,22 +1099,22 @@
       <div class="card-header">
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-            <a href="#" onclick="filterPassports('all')"
+          <div class="github-filter-group">
+            <a href="#" onclick="filterPassports('all'); return false;"
                class="github-filter-btn active" id="filter-all">
-              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All <span style="opacity: 0.6; margin-left: 4px;" id="count-all">({{ passes|length }})</span>
+              <i class="ti ti-list"></i>All <span class="filter-count">({{ passes|length }})</span>
             </a>
-            <a href="#" onclick="filterPassports('unpaid')"
+            <a href="#" onclick="filterPassports('unpaid'); return false;"
                class="github-filter-btn" id="filter-unpaid">
-              <i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"></i>Unpaid <span style="opacity: 0.6; margin-left: 4px;" id="count-unpaid">({{ passes|selectattr('paid', 'equalto', false)|list|length }})</span>
+              <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ passes|selectattr('paid', 'equalto', false)|list|length }})</span>
             </a>
-            <a href="#" onclick="filterPassports('paid')"
+            <a href="#" onclick="filterPassports('paid'); return false;"
                class="github-filter-btn" id="filter-paid">
-              <i class="ti ti-circle-check" style="font-size: 16px; margin-right: 4px;"></i>Paid <span style="opacity: 0.6; margin-left: 4px;" id="count-paid">({{ passes|selectattr('paid', 'equalto', true)|list|length }})</span>
+              <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ passes|selectattr('paid', 'equalto', true)|list|length }})</span>
             </a>
-            <a href="#" onclick="filterPassports('active')"
+            <a href="#" onclick="filterPassports('active'); return false;"
                class="github-filter-btn" id="filter-active">
-              <i class="ti ti-activity" style="font-size: 16px; margin-right: 4px;"></i>Active <span style="opacity: 0.6; margin-left: 4px;" id="count-active">({{ passes|selectattr('uses_remaining', 'greaterthan', 0)|list|length }})</span>
+              <i class="ti ti-activity"></i>Active <span class="filter-count">({{ passes|selectattr('uses_remaining', 'greaterthan', 0)|list|length }})</span>
             </a>
           </div>
         </div>
@@ -1667,6 +1694,53 @@ function handleSearch(e) {
   });
   
   updateResultCount();
+}
+
+// Filter passports function - handles button clicks by toggling classes only
+function filterPassports(filterType) {
+  // Get all filter buttons
+  const filterButtons = document.querySelectorAll('.github-filter-btn');
+  
+  // Update active class on buttons - let CSS handle all styling
+  filterButtons.forEach(btn => {
+    if (btn.id === `filter-${filterType}`) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  
+  // Apply the filter to the table rows
+  const rows = document.querySelectorAll('tbody tr');
+  
+  rows.forEach(row => {
+    const isPaid = row.getAttribute('data-paid') === 'true';
+    const isActive = row.getAttribute('data-active') === 'true';
+    
+    let shouldShow = false;
+    
+    switch(filterType) {
+      case 'all':
+        shouldShow = true;
+        break;
+      case 'unpaid':
+        shouldShow = !isPaid;
+        break;
+      case 'paid':
+        shouldShow = isPaid;
+        break;
+      case 'active':
+        shouldShow = isActive;
+        break;
+      default:
+        shouldShow = true;
+    }
+    
+    row.style.display = shouldShow ? '' : 'none';
+  });
+  
+  updateResultCount();
+  return false; // Prevent default link behavior
 }
 
 // Filter handling
