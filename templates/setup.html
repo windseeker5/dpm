@@ -27,37 +27,8 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="card bg-white">
-      <div class="row g-0">
-        <!-- Sidebar -->
-        <div class="col-md-3 border-end">
-          <div class="p-3">
-            <div class="mb-2 text-uppercase text-muted fs-xs fw-bold">Business Settings</div>
-            <div class="list-group list-group-flush">
-              <a href="#tab-admins" class="list-group-item list-group-item-action active" data-bs-toggle="tab">
-                Admin Accounts
-              </a>
-              <a href="#tab-org" class="list-group-item list-group-item-action" data-bs-toggle="tab">
-                Organization
-              </a>
-              <a href="#tab-email" class="list-group-item list-group-item-action" data-bs-toggle="tab">
-                Email Settings
-              </a>
-              <a href="#tab-email-templates" class="list-group-item list-group-item-action" data-bs-toggle="tab">
-                Email Notification
-              </a>
-              <a href="#tab-data" class="list-group-item list-group-item-action" data-bs-toggle="tab">
-                Your Data
-              </a>
-              <a href="#tab-backup" class="list-group-item list-group-item-action" data-bs-toggle="tab">
-                Backup & Restore
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Content Area -->
-        <div class="col-md-9">
-          <div class="card-body">
+      <!-- Content Area (Full Width) -->
+      <div class="card-body">
             <div class="tab-content">
               <!-- Admins Tab -->
               <div class="tab-pane fade show active" id="tab-admins">
@@ -256,8 +227,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </div>
     </form>
     </div>
@@ -316,4 +285,49 @@
   }
 }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Get the stored tab from localStorage
+  const storedTab = localStorage.getItem('settings-active-tab') || 'admins';
+  
+  // Function to show a specific tab
+  function showTab(tabName) {
+    // Hide all tab panes
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+      pane.classList.remove('show', 'active');
+      pane.classList.add('fade');
+    });
+    
+    // Show the selected tab
+    const targetTab = document.getElementById('tab-' + tabName);
+    if (targetTab) {
+      targetTab.classList.remove('fade');
+      targetTab.classList.add('show', 'active');
+    }
+    
+    // Update active state in sidebar submenu
+    const submenuLinks = document.querySelectorAll('#settings-submenu .nav-link');
+    submenuLinks.forEach(link => {
+      const linkTab = link.getAttribute('data-tab');
+      if (linkTab === tabName) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+  }
+  
+  // Make the function globally available for sidebar navigation
+  window.showSettingsTab = showTab;
+  
+  // Show the stored tab on page load
+  showTab(storedTab);
+  
+  // Clear localStorage after using it (so it doesn't persist across sessions)
+  localStorage.removeItem('settings-active-tab');
+});
+</script>
 {% endblock %}

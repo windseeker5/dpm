@@ -17,7 +17,34 @@
       <input type="number" name="CALL_BACK_DAYS" class="form-control" min="0" value="{{ settings.get('CALL_BACK_DAYS', '0') }}">
     </div>
 
+    <!-- Default Pass Settings -->
+    <div class="mb-3">
+      <label class="form-label">Default Pass Amount ($)</label>
+      <input type="number" name="default_pass_amount" class="form-control" min="0" value="{{ settings.get('DEFAULT_PASS_AMOUNT', '50') }}">
+    </div>
 
+    <div class="mb-3">
+      <label class="form-label">Default Session Quantity</label>
+      <input type="number" name="default_session_qt" class="form-control" min="1" value="{{ settings.get('DEFAULT_SESSION_QT', '4') }}">
+    </div>
+
+    <!-- Email Templates Text -->
+    <div class="mb-3">
+      <label class="form-label">Email Info Text</label>
+      <textarea name="email_info_text" class="form-control" rows="3" placeholder="Additional info text for emails">{{ settings.get('EMAIL_INFO_TEXT', '') }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Email Footer Text</label>
+      <textarea name="email_footer_text" class="form-control" rows="3" placeholder="Footer text for emails">{{ settings.get('EMAIL_FOOTER_TEXT', '') }}</textarea>
+    </div>
+
+    <!-- Activity Tags -->
+    <div class="mb-3">
+      <label class="form-label">Activity Tags (comma-separated)</label>
+      <input type="text" name="activities" class="form-control" value="{% if settings.get('ACTIVITY_LIST') %}{{ settings.ACTIVITY_LIST | replace('["', '') | replace('"]', '') | replace('"', '') | replace(',', ', ') }}{% endif %}" placeholder="swimming, running, cycling, yoga">
+      <div class="form-text">Enter activity categories separated by commas</div>
+    </div>
 
     <!-- Logo Upload -->
     <div class="mb-3">

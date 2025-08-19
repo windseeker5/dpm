@@ -501,15 +501,59 @@
                 {% endif %}
               </a>
             </li>
-            <li class="nav-item">
-              <a href="{{ url_for('setup') }}" 
-                 class="nav-link {{ 'active' if request.endpoint == 'setup' }}">
+            <li class="nav-item nav-item-expandable">
+              <a href="#" 
+                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint == 'setup' }}"
+                 data-bs-toggle="collapse" 
+                 data-bs-target="#settings-submenu"
+                 aria-expanded="{{ 'true' if request.endpoint == 'setup' else 'false' }}">
                 <i class="nav-icon ti ti-settings"></i>
                 <span class="nav-text">Settings</span>
+                <i class="nav-chevron ti ti-chevron-right"></i>
                 {% if request.endpoint == 'setup' %}
                 <span class="nav-indicator"></span>
                 {% endif %}
               </a>
+              <div class="collapse nav-submenu {{ 'show' if request.endpoint == 'setup' }}" id="settings-submenu">
+                <ul class="nav-list">
+                  <li class="nav-item">
+                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="admins">
+                      <i class="nav-icon ti ti-users"></i>
+                      <span class="nav-text">Admin Accounts</span>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="org">
+                      <i class="nav-icon ti ti-building"></i>
+                      <span class="nav-text">Organization</span>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="email">
+                      <i class="nav-icon ti ti-mail"></i>
+                      <span class="nav-text">Email Settings</span>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="email-templates">
+                      <i class="nav-icon ti ti-template"></i>
+                      <span class="nav-text">Email Notification</span>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="data">
+                      <i class="nav-icon ti ti-database"></i>
+                      <span class="nav-text">Your Data</span>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="backup">
+                      <i class="nav-icon ti ti-archive"></i>
+                      <span class="nav-text">Backup & Restore</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
             </li>
           </ul>
         </div>
@@ -752,6 +796,35 @@
           }
         });
       }
+      
+      // Settings submenu tab coordination
+      const settingsSubmenuLinks = document.querySelectorAll('#settings-submenu .nav-link');
+      settingsSubmenuLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+          const tabName = this.getAttribute('data-tab');
+          if (tabName) {
+            // Check if we're on the settings page
+            if (window.location.pathname === '/setup') {
+              // Prevent navigation and switch tabs directly
+              e.preventDefault();
+              
+              // Call the tab switching function if available
+              if (typeof window.showSettingsTab === 'function') {
+                window.showSettingsTab(tabName);
+              }
+              
+              // Update active states in submenu
+              settingsSubmenuLinks.forEach(l => l.classList.remove('active'));
+              this.classList.add('active');
+              
+              return false;
+            } else {
+              // Store the selected tab for navigation to settings page
+              localStorage.setItem('settings-active-tab', tabName);
+            }
+          }
+        });
+      });
     });
   </script>
   
