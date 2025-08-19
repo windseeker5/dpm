@@ -404,6 +404,121 @@
   transform: translateY(-2px);
   box-shadow: 0 0.25rem 0.75rem rgba(32, 107, 196, 0.2);
 }
+
+/* Enhanced Search Bar Styles from signups.html */
+/* Pink glow effect for Ctrl+K - subtle and elegant */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out !important;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
+              0 0 8px rgba(255, 105, 180, 0.35),
+              0 0 15px rgba(255, 105, 180, 0.15) !important;
+  transform: scale(1.005) !important;
+  background-image: none !important;
+  z-index: 1000;
+  position: relative;
+}
+
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
+                0 0 0 0 rgba(255, 105, 180, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+                0 0 10px rgba(255, 105, 180, 0.35),
+                0 0 18px rgba(255, 105, 180, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
+                0 0 8px rgba(255, 105, 180, 0.35),
+                0 0 15px rgba(255, 105, 180, 0.15);
+  }
+}
+
+/* Disable Bootstrap validation styling completely */
+#enhancedSearchInput.is-valid,
+#enhancedSearchInput.is-invalid {
+  border-color: #ced4da !important;
+  background-image: none !important;
+  padding-right: 100px !important;
+}
+
+#enhancedSearchInput.is-valid:focus,
+#enhancedSearchInput.is-invalid:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+  background-image: none !important;
+}
+
+/* Force remove validation feedback icons */
+#enhancedSearchInput {
+  background-image: none !important;
+}
+
+/* Clear button styling */
+#searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+#searchClearBtn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+#searchClearBtn:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* Smooth transitions for kbd hint and clear button */
+#searchKbdHint, #searchClearBtn {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#searchCharCounter {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+#searchCharCounter.fw-bold {
+  font-weight: 600;
+}
+
+/* Enhanced loading animation */
+.searching-pulse {
+  animation: blueSearchPulse 1.5s ease-in-out infinite;
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+              0 0 15px rgba(13, 110, 253, 0.4) !important;
+}
+
+@keyframes blueSearchPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+                0 0 15px rgba(13, 110, 253, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
+                0 0 25px rgba(13, 110, 253, 0.5);
+  }
+}
+
+/* Subtle glow on regular focus */
+#enhancedSearchInput.search-focus-glow {
+  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+              0 0 15px rgba(255, 105, 180, 0.15);
+}
 </style>
 
 <div class="page-wrapper">
@@ -826,31 +941,30 @@
         <i class="ti ti-activity-heartbeat me-2" style="color: #e03131;"></i>Your Activity Passport
       </h2>
 
-      <!-- Search Bar -->
-      <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="position-relative flex-fill me-3">
-            <div class="input-icon">
-              <span class="input-icon-addon">
-                <i class="ti ti-search fs-3"></i>
-              </span>
-              <input type="text" id="userSearch" class="form-control shadow-sm" 
-                     placeholder="Search passports and users..." 
-                     style="padding-right: 80px; border-radius: 0.5rem; transition: all 0.3s ease;"
-                     onfocus="this.style.boxShadow='0 0 0 0.25rem rgba(32, 107, 196, 0.15)'" 
-                     onblur="this.style.boxShadow='0 0.125rem 0.25rem rgba(0,0,0,0.075)'">
-              <span class="position-absolute end-0 top-50 translate-middle-y me-3 d-none d-md-block">
-                <kbd class="text-muted">ctrl + k</kbd>
-              </span>
-            </div>
-          </div>
-          <div class="flex-shrink-0">
-            <a href="{{ url_for('create_passport') }}" class="btn btn-primary">
-              <i class="ti ti-plus me-1 me-md-1"></i><span class="d-none d-md-inline">Passport</span>
-            </a>
+      <!-- Enhanced Dynamic Search -->
+      <form method="GET" action="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="mb-4" id="dynamicSearchForm">
+        <div class="input-icon position-relative">
+          <span class="input-icon-addon">
+            <i class="ti ti-search fs-3"></i>
+          </span>
+          <input type="text" 
+                 name="q"
+                 id="enhancedSearchInput"
+                 class="form-control form-control-lg shadow-sm" 
+                 placeholder="Start typing to search passports instantly..." 
+                 value="{{ request.args.get('q', '') }}"
+                 style="padding-right: 100px; border-radius: 0.5rem;"
+                 autocomplete="off"
+                 data-bs-toggle="false">
+          <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
+            <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
+            <kbd id="searchKbdHint" class="text-muted">ctrl + k</kbd>
+            <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
+              <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
+            </button>
           </div>
         </div>
-      </div>
+      </form>
 
 
 
@@ -1389,11 +1503,8 @@ function animateProgressBar() {
 }
 
 function initializeActivityDashboard() {
-  // Search functionality
-  const searchInput = document.getElementById('userSearch');
-  if (searchInput) {
-    searchInput.addEventListener('input', debounce(handleSearch, 300));
-  }
+  // Initialize enhanced search functionality
+  initializeEnhancedSearch();
   
   // Filter tabs
   document.querySelectorAll('.filter-pills .nav-link').forEach(tab => {
@@ -1403,23 +1514,11 @@ function initializeActivityDashboard() {
   // KPI dropdowns
   initializeKPIDropdowns();
   
-  // Keyboard shortcuts
-  document.addEventListener('keydown', handleKeyboardShortcuts);
-  
   // Most dropdown actions now use direct navigation via href attributes
   // Only add click handlers for specific client-side actions
   document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
     item.addEventListener('click', handleUserAction);
   });
-  
-  // Handle window resize to update search behavior (simplified since we use unified approach)
-  window.addEventListener('resize', debounce(() => {
-    // Re-trigger search to update result count
-    const searchInput = document.getElementById('userSearch');
-    if (searchInput && searchInput.value) {
-      handleSearch({ target: searchInput });
-    }
-  }, 300));
 }
 
 // Search functionality - unified approach for both mobile and desktop
@@ -1502,24 +1601,232 @@ function updateResultCount() {
   }
 }
 
-// Keyboard shortcuts
-function handleKeyboardShortcuts(e) {
-  // Focus search with Ctrl+K or /
-  if ((e.ctrlKey && e.key === 'k') || (e.key === '/' && e.target.tagName !== 'INPUT')) {
-    e.preventDefault();
-    document.getElementById('userSearch')?.focus();
+// Initialize Enhanced Search functionality (exact copy from signups.html)
+function initializeEnhancedSearch() {
+  const enhancedSearchInput = document.getElementById('enhancedSearchInput');
+  if (!enhancedSearchInput) return;
+  
+  const searchForm = enhancedSearchInput.closest('form');
+  const tableContainer = document.querySelector('.table-responsive');
+  let searchTimeout;
+  let isSearching = false;
+  
+  // Create audio element for sound effect
+  const searchSound = new Audio('/static/beep.wav');
+  searchSound.volume = 0.3; // 30% volume
+  
+  // Create loading indicator
+  function createLoadingIndicator() {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'searchLoadingIndicator';
+    loadingDiv.innerHTML = `
+      <div class="d-flex align-items-center justify-content-center p-3">
+        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="text-muted">Searching...</span>
+      </div>
+    `;
+    loadingDiv.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      z-index: 10;
+      display: none;
+    `;
+    return loadingDiv;
   }
   
-  // Clear search with Escape
-  if (e.key === 'Escape') {
-    const searchInput = document.getElementById('userSearch');
-    if (searchInput === document.activeElement) {
-      searchInput.value = '';
-      searchInput.blur();
-      handleSearch({ target: searchInput });
+  const loadingIndicator = createLoadingIndicator();
+  if (tableContainer) {
+    tableContainer.style.position = 'relative';
+    tableContainer.appendChild(loadingIndicator);
+  }
+  
+  // Get elements for clear button functionality
+  const kbdHint = document.getElementById('searchKbdHint');
+  const clearBtn = document.getElementById('searchClearBtn');
+  const charCounter = document.getElementById('searchCharCounter');
+  
+  // Show/hide loading state
+  function setLoadingState(loading) {
+    isSearching = loading;
+    if (loading) {
+      loadingIndicator.style.display = 'flex';
+      enhancedSearchInput.style.opacity = '0.8';
+      enhancedSearchInput.classList.add('searching-pulse');
+      if (charCounter) {
+        charCounter.style.display = 'inline';
+        charCounter.textContent = 'searching...';
+        charCounter.className = 'text-primary fw-bold';
+      }
+    } else {
+      loadingIndicator.style.display = 'none';
+      enhancedSearchInput.style.opacity = '1';
+      enhancedSearchInput.classList.remove('searching-pulse');
+      // Reset character counter based on current input
+      updateSearchFeedback(enhancedSearchInput.value);
     }
   }
   
+  // Perform search with table filtering (activity dashboard specific)
+  function performSearch(query) {
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+      const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+      
+      if (userName.includes(query.toLowerCase()) || userEmail.includes(query.toLowerCase())) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    
+    updateResultCount();
+  }
+  
+  // Debounced search function
+  function debouncedSearch(query) {
+    clearTimeout(searchTimeout);
+    
+    // If query is empty, clear search immediately
+    if (!query || query.trim().length === 0) {
+      searchTimeout = setTimeout(() => performSearch(''), 150);
+      return;
+    }
+    
+    // If query is less than 3 characters, don't search yet
+    if (query.trim().length < 3) {
+      return;
+    }
+    
+    // Debounce search for queries with 3+ characters
+    searchTimeout = setTimeout(() => {
+      performSearch(query);
+    }, 250); // 250ms debounce delay for more responsive feel
+  }
+  
+  // Ctrl+K keyboard shortcut to focus search with glow effect
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      enhancedSearchInput.focus();
+      enhancedSearchInput.select();
+      
+      // Add pink glow effect
+      enhancedSearchInput.classList.add('search-glow-active');
+      
+      // Play sound effect
+      try {
+        searchSound.currentTime = 0;
+        searchSound.play().catch(() => {
+          // Silently fail if audio can't play
+        });
+      } catch (err) {
+        // Ignore audio errors
+      }
+      
+      // Remove glow after animation
+      setTimeout(() => {
+        enhancedSearchInput.classList.remove('search-glow-active');
+      }, 800);
+    }
+    
+    // Clear search with Escape
+    if (e.key === 'Escape') {
+      if (enhancedSearchInput === document.activeElement) {
+        enhancedSearchInput.value = '';
+        enhancedSearchInput.blur();
+        updateSearchFeedback('');
+        performSearch('');
+      }
+    }
+  });
+  
+  // Clear button functionality
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      enhancedSearchInput.value = '';
+      enhancedSearchInput.focus();
+      updateSearchFeedback('');
+      
+      // Show pink glow on clear
+      enhancedSearchInput.classList.add('search-glow-active');
+      setTimeout(() => {
+        enhancedSearchInput.classList.remove('search-glow-active');
+      }, 800);
+      
+      // Trigger search to clear results
+      performSearch('');
+    });
+  }
+  
+  // Update character counter and provide visual feedback
+  function updateSearchFeedback(query) {
+    const length = query.trim().length;
+    
+    // Toggle between kbd hint and clear button
+    if (length === 0) {
+      if (charCounter) charCounter.style.display = 'none';
+      enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+      // Show kbd hint, hide clear button
+      if (kbdHint) kbdHint.style.display = 'inline-block';
+      if (clearBtn) clearBtn.style.display = 'none';
+    } else {
+      // Hide kbd hint, show clear button
+      if (kbdHint) kbdHint.style.display = 'none';
+      if (clearBtn) clearBtn.style.display = 'inline-flex';
+      
+      if (length < 3) {
+        if (charCounter) {
+          charCounter.style.display = 'inline';
+          charCounter.textContent = `${3 - length} more char${3 - length === 1 ? '' : 's'}`;
+          charCounter.className = 'text-muted';
+        }
+        enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+      } else {
+        // Ready to search - hide counter, no Bootstrap validation styling
+        if (charCounter) charCounter.style.display = 'none';
+        enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+      }
+    }
+  }
+  
+  // Handle input changes with debouncing
+  enhancedSearchInput.addEventListener('input', function(e) {
+    const query = e.target.value;
+    updateSearchFeedback(query);
+    debouncedSearch(query);
+  });
+  
+  // Handle Enter key for immediate search
+  enhancedSearchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(searchTimeout);
+      const query = e.target.value;
+      if (query.trim().length >= 3) {
+        performSearch(query);
+      }
+    }
+  });
+  
+  // Focus with subtle glow on regular focus
+  enhancedSearchInput.addEventListener('focus', function() {
+    this.classList.add('search-focus-glow');
+  });
+  
+  enhancedSearchInput.addEventListener('blur', function() {
+    this.classList.remove('search-focus-glow');
+  });
+  
+  // Initialize search feedback on page load
+  updateSearchFeedback(enhancedSearchInput.value || '');
 }
 
 // User actions - now handled by individual links with proper URLs
