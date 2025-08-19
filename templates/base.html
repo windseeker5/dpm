@@ -770,16 +770,6 @@
       const sidebarClose = document.getElementById('sidebarClose');
       const sidebar = document.getElementById('sidebar');
       
-      function closeSidebar() {
-        sidebar.classList.remove('show');
-        document.body.classList.remove('sidebar-open');
-      }
-      
-      function openSidebar() {
-        sidebar.classList.add('show');
-        document.body.classList.add('sidebar-open');
-      }
-      
       if (sidebarToggle && sidebar) {
         sidebarToggle.addEventListener('click', function() {
           sidebar.classList.toggle('show');
@@ -789,18 +779,18 @@
       
       if (sidebarClose && sidebar) {
         sidebarClose.addEventListener('click', function() {
-          closeSidebar();
+          sidebar.classList.remove('show');
+          document.body.classList.remove('sidebar-open');
         });
       }
       
-      if (sidebar) {
-        // Close sidebar when clicking outside
-        document.addEventListener('click', function(event) {
-          if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
-            closeSidebar();
-          }
-        });
-      }
+      // Close sidebar when clicking outside
+      document.addEventListener('click', function(event) {
+        if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
+          sidebar.classList.remove('show');
+          document.body.classList.remove('sidebar-open');
+        }
+      });
       
       // Settings submenu tab coordination
       const settingsSubmenuLinks = document.querySelectorAll('#settings-submenu .nav-link');
