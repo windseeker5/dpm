@@ -1301,114 +1301,241 @@
       </div>
       {% endif %}
 
-      <!-- Pending Signups Section -->
+      <!-- Signups Section -->
+      <h2 class="mt-5 mb-3">
+        <i class="ti ti-edit text-orange me-2"></i>Signups
+      </h2>
 
+      <!-- Bulk Actions Bar - Separate Card Above Table -->
+      <div class="bulk-actions-container">
+        <div class="card bulk-actions-card" id="bulkActions" style="display: none; background-color: #f0fdf4 !important; background: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; border-radius: 8px !important;">
+          <div class="card-body p-3">
+            <form method="POST" action="{{ url_for('bulk_signup_action') }}" id="bulkForm">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="bulk-actions-count">
+                  <i class="ti ti-checkbox me-2"></i>
+                  <span id="selectedCount">0</span> signups selected
+                </div>
+                <div class="bulk-actions-buttons">
+                  <div class="dropdown">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li>
+                        <button type="submit" name="action" value="mark_paid" class="dropdown-item text-success">
+                          <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                        </button>
+                      </li>
+                      <li>
+                        <button type="submit" name="action" value="approve" class="dropdown-item text-info">
+                          <i class="ti ti-thumb-up me-2"></i>Approve
+                        </button>
+                      </li>
+                      <li>
+                        <button type="submit" name="action" value="send_reminders" class="dropdown-item text-warning">
+                          <i class="ti ti-mail me-2"></i>Send Reminder
+                        </button>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <button type="submit" name="action" value="delete" class="dropdown-item text-danger" 
+                                onclick="return confirm('Delete ' + document.querySelectorAll('.signup-checkbox:checked').length + ' selected signups?')">
+                          <i class="ti ti-trash me-2"></i>Delete Selected
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
 
-
-
-<br><br>
-
-
-
-      <!-- Pending Signups Table -->
-      {% set pending_signups = signups | selectattr('status', 'equalto', 'pending') | list %}
-      {% if pending_signups %}
-      <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3 class="card-title">
-            <i class="ti ti-hand-stop me-2"></i>Pending Signups
-          </h3>
-          <span class="badge bg-warning">{{ pending_signups|length }} pending</span>
+      <!-- Main Signups Table -->
+      <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+        <div class="card-header">
+          <div class="d-flex justify-content-center align-items-center w-100">
+            <!-- Filter Buttons -->
+            <div class="github-filter-group">
+              <a href="#" onclick="filterSignups('all'); return false;"
+                 class="github-filter-btn active" id="signup-filter-all">
+                <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ signups|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('unpaid'); return false;"
+                 class="github-filter-btn" id="signup-filter-unpaid">
+                <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ signups|selectattr('paid', 'equalto', false)|list|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('paid'); return false;"
+                 class="github-filter-btn" id="signup-filter-paid">
+                <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ signups|selectattr('paid', 'equalto', true)|list|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('pending'); return false;"
+                 class="github-filter-btn" id="signup-filter-pending">
+                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ signups|selectattr('status', 'equalto', 'pending')|list|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('approved'); return false;"
+                 class="github-filter-btn" id="signup-filter-approved">
+                <i class="ti ti-thumb-up"></i>Approved <span class="filter-count">({{ signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
+              </a>
+            </div>
+          </div>
         </div>
         <div class="table-responsive">
-          <table class="table card-table table-vcenter" id="signupTable">
-            <thead>
-              <tr>
-                <th style="width: 300px;">User</th>
-                <th>Signup Date</th>
-                <th>Activity</th>
-                <th>Status</th>
-                <th>Payment Due</th>
-                <th>Days Pending</th>
-                <th style="width: 120px;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for signup in pending_signups %}
-                <tr>
-                  <td style="vertical-align: middle;">
-                    <div class="d-flex align-items-center">
-                      <img src="https://www.gravatar.com/avatar/{{ signup.user.email|lower|trim|encode_md5 }}?d=identicon&s=48" class="rounded-circle me-3" width="48" height="48" alt="Avatar">
-                      <div>
-                        <div class="fw-bold">{{ signup.user.name }}</div>
-                        <div class="text-muted small">{{ signup.user.email }}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style="vertical-align: middle;">{{ signup.signed_up_at.strftime('%Y-%m-%d') if signup.signed_up_at else 'Unknown' }}</td>
-                  <td style="vertical-align: middle;">{{ activity.name }}</td>
-                  <td style="vertical-align: middle;">
-                    <span class="badge bg-{{ 'yellow' if signup.status == 'pending' else 'orange' if not signup.paid else 'red' }}-lt text-{{ 'yellow' if signup.status == 'pending' else 'orange' if not signup.paid else 'red' }}-lt-fg">
-                      {% if signup.status == 'pending' %}Pending Approval{% elif not signup.paid %}Payment Required{% else %}Overdue Payment{% endif %}
-                    </span>
-                  </td>
-                  <td style="vertical-align: middle;">
-                    {% if signup.passport_type %}
-                      ${{ signup.passport_type.price_per_user }}
-                    {% else %}
-                      {% set default_price = activity.passport_types[0].price_per_user if activity.passport_types else 50 %}
-                      ${{ default_price }}
+          <table class="table table-hover">
+          <thead>
+            <tr>
+              <th class="w-1">
+                <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
+              </th>
+              <th>User</th>
+              <th class="d-none d-md-table-cell">Created</th>
+              <th class="d-none d-md-table-cell">Activity</th>
+              <th class="d-none d-lg-table-cell text-center">Status</th>
+              <th class="d-none d-md-table-cell text-center">Amount</th>
+              <th class="d-none d-md-table-cell text-center">Remain</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for signup in signups %}
+            <tr data-paid="{{ 'true' if signup.paid else 'false' }}" data-status="{{ signup.status or 'pending' }}">
+              <td>
+                <input type="checkbox" 
+                       class="form-check-input signup-checkbox" 
+                       name="selected_signups" 
+                       value="{{ signup.id }}" 
+                       form="bulkForm"
+                       data-status="{{ signup.status or 'pending' }}"
+                       data-paid="{{ 'true' if signup.paid else 'false' }}"
+                       aria-label="Select signup {{ signup.id }}">
+              </td>
+              <td style="vertical-align: middle;">
+                <div class="d-flex align-items-center">
+                  <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+                       class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+                  <div>
+                    <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
+                    <div class="text-muted small">{{ signup.user.email or 'No email' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                {% if signup.signed_up_at %}
+                  {{ signup.signed_up_at.strftime('%Y-%m-%d') }}
+                {% else %}
+                  <span class="text-muted">Unknown</span>
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                {{ signup.activity.name if signup.activity else 'Unknown' }}
+              </td>
+              <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
+                {% set status = signup.status or 'pending' %}
+                {% if status == 'approved' %}
+                  <span class="badge bg-green-lt text-green-lt-fg">Approved</span>
+                {% elif status == 'pending' %}
+                  <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending</span>
+                {% elif status == 'rejected' %}
+                  <span class="badge bg-red-lt text-red-lt-fg">Rejected</span>
+                {% else %}
+                  <span class="badge bg-secondary-lt">{{ status.title() }}</span>
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+                {% if signup.passport_type_id %}
+                  {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+                  {% if passport_type %}
+                    ${{ "%.0f"|format(passport_type.price_per_user or 0) }}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+                {% if signup.passport_type_id %}
+                  {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+                  {% if passport_type %}
+                    {{ passport_type.sessions_included }}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td class="text-center" style="vertical-align: middle;">
+                <div class="dropdown d-inline-block">
+                  <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <span class="d-none d-md-inline">Actions</span>
+                    <i class="ti ti-menu-2 d-md-none"></i>
+                  </a>
+                  <div class="dropdown-menu dropdown-menu-end">
+                    <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
+                      <i class="ti ti-pencil me-2"></i>Edit Details
+                    </a>
+                    {% if not signup.paid %}
+                    <a class="dropdown-item text-success" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}" 
+                       onclick="return confirm('Mark this signup as paid?')">
+                      <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                    </a>
                     {% endif %}
-                  </td>
-                  <td style="vertical-align: middle;">{{ signup.signed_up_at|days_ago if signup.signed_up_at else 0 }} days</td>
-                  <td style="vertical-align: middle;">
-                    <div class="dropdown">
-                      <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Actions</a>
-                      <div class="dropdown-menu dropdown-menu-end">
-                        <a class="dropdown-item text-success" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}">
-                          <i class="ti ti-check me-2"></i>Approve & Create Pass
-                        </a>
-                        <a class="dropdown-item" href="#">
-                          <i class="ti ti-mail me-2"></i>Contact User
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item text-danger" href="{{ url_for('update_signup_status', signup_id=signup.id) }}" onclick="event.preventDefault(); if(confirm('Reject this signup?')) { var form = document.createElement('form'); form.method = 'POST'; form.action = this.href; var statusInput = document.createElement('input'); statusInput.type = 'hidden'; statusInput.name = 'status'; statusInput.value = 'rejected'; form.appendChild(statusInput); var csrfInput = document.createElement('input'); csrfInput.type = 'hidden'; csrfInput.name = 'csrf_token'; csrfInput.value = '{{ csrf_token() }}'; form.appendChild(csrfInput); document.body.appendChild(form); form.submit(); }">
-                          <i class="ti ti-x me-2"></i>Reject
-                        </a>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <div class="card-footer d-flex align-items-center">
-          <p class="m-0 text-muted">Showing 1 to {{ pending_signups|length }} of {{ dashboard_stats.pending_signups if dashboard_stats else pending_signups|length }} pending signups</p>
-          {% set signup_total_items = dashboard_stats.pending_signups if dashboard_stats else pending_signups|length %}
-          {% set signup_items_per_page = 10 %}
-          {% set signup_total_pages = ((signup_total_items - 1) // signup_items_per_page) + 1 if signup_total_items > 0 else 1 %}
-          {% if signup_total_pages > 1 %}
-          <ul class="pagination m-0 ms-auto">
-            <li class="page-item disabled">
-              <a class="page-link" href="#" tabindex="-1">
-                <i class="ti ti-chevron-left"></i>
-              </a>
-            </li>
-            {% for page_num in range(1, signup_total_pages + 1) %}
-              {% if page_num <= 5 %}
-              <li class="page-item {% if page_num == 1 %}active{% endif %}">
-                <a class="page-link" href="#">{{ page_num }}</a>
-              </li>
-              {% endif %}
+                    {% if signup.status == 'pending' %}
+                    <a class="dropdown-item text-primary" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
+                       onclick="return confirm('Approve and create passport?')">
+                      <i class="ti ti-check me-2"></i>Approve & Create Pass
+                    </a>
+                    {% endif %}
+                    <a class="dropdown-item" href="#">
+                      <i class="ti ti-mail me-2"></i>Send Reminder
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="#" 
+                       onclick="if(confirm('Delete this signup?')) { 
+                         var form = document.getElementById('deleteForm{{ signup.id }}'); 
+                         if(form) form.submit(); 
+                       }">
+                      <i class="ti ti-trash me-2"></i>Delete
+                    </a>
+                  </div>
+                </div>
+                <!-- Hidden delete form -->
+                <form id="deleteForm{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="selected_signups" value="{{ signup.id }}">
+                </form>
+              </td>
+            </tr>
             {% endfor %}
-            <li class="page-item">
-              <a class="page-link" href="#">
-                <i class="ti ti-chevron-right"></i>
-              </a>
-            </li>
-          </ul>
+          </tbody>
+        </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          {% if signups|length > 0 %}
+            <span class="text-muted">Showing {{ signups|length }} of {{ signups|length }} entries</span>
+            <!-- Pagination will be enabled when backend implements it -->
+          {% else %}
+            <span class="text-muted">No entries found</span>
           {% endif %}
+        </div>
+      </div>
+
+      <!-- Empty State - Only show when there are NO signups at all for this activity -->
+      {% if signups|length == 0 %}
+      <div class="card">
+        <div class="empty">
+          <div class="empty-icon">
+            <i class="ti ti-users-off"></i>
+          </div>
+          <p class="empty-title">No signups found</p>
+          <p class="empty-subtitle">
+            Signups will appear here when users register for this activity
+          </p>
         </div>
       </div>
       {% endif %}
@@ -1496,6 +1623,50 @@
 // Store KPI data from backend for JavaScript access
 const kpiData = {{ kpi_data | tojson | safe }};
 
+// CRITICAL: Define chart generation functions FIRST before using them
+// Clean line chart generator that ensures proper SVG path format
+function generateCleanLineChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) {
+    return `M 0,${height/2} L ${width},${height/2}`;
+  }
+  
+  // Ensure data is properly formatted and clean
+  const cleanData = data.map(val => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  });
+  
+  if (cleanData.length === 0) {
+    return `M 0,${height/2} L ${width},${height/2}`;
+  }
+  
+  // Calculate scaling
+  const max = Math.max(...cleanData);
+  const min = Math.min(...cleanData);
+  const range = max - min || 1;
+  
+  // Generate clean coordinates
+  const points = [];
+  for (let i = 0; i < cleanData.length; i++) {
+    const x = cleanData.length === 1 ? width / 2 : (i / (cleanData.length - 1)) * width;
+    const y = height - ((cleanData[i] - min) / range) * (height - 10) - 5;
+    
+    // Ensure coordinates are valid numbers
+    const cleanX = isNaN(x) ? 0 : Math.round(x * 100) / 100;
+    const cleanY = isNaN(y) ? height / 2 : Math.round(y * 100) / 100;
+    
+    points.push({
+      x: cleanX,
+      y: cleanY,
+      command: i === 0 ? 'M' : 'L'
+    });
+  }
+  
+  // Build SVG path string
+  return points.map(point => `${point.command} ${point.x},${point.y}`).join(' ');
+}
+
+// Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize dashboard
   initializeActivityDashboard();
@@ -1503,7 +1674,54 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeChartsWithData();
   // Initialize modern header features
   initializeModernHeader();
+  
+  // Global Ctrl+K handler for search - MUST be outside other functions
+  setupGlobalSearchShortcut();
 });
+
+// Global search shortcut handler - works everywhere on the page
+function setupGlobalSearchShortcut() {
+  document.addEventListener('keydown', function(e) {
+    // Check for Ctrl+K or Cmd+K
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Find the search input
+      const searchInput = document.getElementById('enhancedSearchInput');
+      if (!searchInput) return;
+      
+      // Scroll to the search input smoothly
+      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Focus and select after scroll
+      setTimeout(() => {
+        searchInput.focus();
+        searchInput.select();
+        
+        // Add pink glow effect
+        searchInput.classList.add('search-glow-active');
+        
+        // Try to play sound
+        try {
+          const searchSound = new Audio('/static/beep.wav');
+          searchSound.volume = 0.3;
+          searchSound.currentTime = 0;
+          searchSound.play().catch(() => {});
+        } catch (err) {
+          // Ignore audio errors
+        }
+        
+        // Remove glow after animation
+        setTimeout(() => {
+          searchInput.classList.remove('search-glow-active');
+        }, 800);
+      }, 300);
+      
+      return false; // Extra prevention
+    }
+  });
+}
 
 // Initialize charts with current page data
 function initializeChartsWithData() {
@@ -1698,8 +1916,8 @@ function handleSearch(e) {
 
 // Filter passports function - handles button clicks by toggling classes only
 function filterPassports(filterType) {
-  // Get all filter buttons
-  const filterButtons = document.querySelectorAll('.github-filter-btn');
+  // Get all filter buttons in passport table
+  const filterButtons = document.querySelectorAll('#filter-all, #filter-unpaid, #filter-paid, #filter-active');
   
   // Update active class on buttons - let CSS handle all styling
   filterButtons.forEach(btn => {
@@ -1710,36 +1928,100 @@ function filterPassports(filterType) {
     }
   });
   
-  // Apply the filter to the table rows
-  const rows = document.querySelectorAll('tbody tr');
+  // Apply the filter to the passport table rows only
+  const passportTable = document.querySelector('.main-table-card .table');
+  if (passportTable) {
+    const rows = passportTable.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+      const isPaid = row.getAttribute('data-paid') === 'true';
+      const isActive = row.getAttribute('data-active') === 'true';
+      
+      let shouldShow = false;
+      
+      switch(filterType) {
+        case 'all':
+          shouldShow = true;
+          break;
+        case 'unpaid':
+          shouldShow = !isPaid;
+          break;
+        case 'paid':
+          shouldShow = isPaid;
+          break;
+        case 'active':
+          shouldShow = isActive;
+          break;
+        default:
+          shouldShow = true;
+      }
+      
+      row.style.display = shouldShow ? '' : 'none';
+    });
+    
+    updateResultCount();
+  }
+  return false; // Prevent default link behavior
+}
+
+// Filter signups function - handles button clicks without page reload
+function filterSignups(filterType) {
+  // Get all filter buttons in signups section
+  const filterButtons = document.querySelectorAll('#signup-filter-all, #signup-filter-unpaid, #signup-filter-paid, #signup-filter-pending, #signup-filter-approved');
   
-  rows.forEach(row => {
-    const isPaid = row.getAttribute('data-paid') === 'true';
-    const isActive = row.getAttribute('data-active') === 'true';
-    
-    let shouldShow = false;
-    
-    switch(filterType) {
-      case 'all':
-        shouldShow = true;
-        break;
-      case 'unpaid':
-        shouldShow = !isPaid;
-        break;
-      case 'paid':
-        shouldShow = isPaid;
-        break;
-      case 'active':
-        shouldShow = isActive;
-        break;
-      default:
-        shouldShow = true;
+  // Update active class on buttons
+  filterButtons.forEach(btn => {
+    if (btn.id === `signup-filter-${filterType}`) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
     }
-    
-    row.style.display = shouldShow ? '' : 'none';
   });
   
-  updateResultCount();
+  // Find the signups table (it's the second main-table-card on the page)
+  const signupCards = document.querySelectorAll('.main-table-card');
+  const signupTable = signupCards[1]; // Second table is signups
+  
+  if (signupTable) {
+    const rows = signupTable.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+      const isPaid = row.getAttribute('data-paid') === 'true';
+      const status = row.getAttribute('data-status') || 'pending';
+      
+      let shouldShow = false;
+      
+      switch(filterType) {
+        case 'all':
+          shouldShow = true;
+          break;
+        case 'unpaid':
+          shouldShow = !isPaid;
+          break;
+        case 'paid':
+          shouldShow = isPaid;
+          break;
+        case 'pending':
+          shouldShow = status === 'pending';
+          break;
+        case 'approved':
+          shouldShow = status === 'approved';
+          break;
+        default:
+          shouldShow = true;
+      }
+      
+      row.style.display = shouldShow ? '' : 'none';
+    });
+    
+    // Update count in footer
+    const visibleRows = signupTable.querySelectorAll('tbody tr:not([style*="display: none"])');
+    const totalRows = signupTable.querySelectorAll('tbody tr');
+    const footerText = signupTable.querySelector('.card-footer .text-muted');
+    if (footerText) {
+      footerText.textContent = `Showing ${visibleRows.length} of ${totalRows.length} entries`;
+    }
+  }
   return false; // Prevent default link behavior
 }
 
@@ -1792,12 +2074,16 @@ function applyFilter(filter) {
 
 // Update result count - unified approach for both mobile and desktop
 function updateResultCount() {
-  const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
-  const totalRows = document.querySelectorAll('tbody tr');
+  // Only update passport table count (first main-table-card)
+  const passportTable = document.querySelector('.main-table-card');
+  if (!passportTable) return;
+  
+  const visibleRows = passportTable.querySelectorAll('tbody tr:not([style*="display: none"])');
+  const totalRows = passportTable.querySelectorAll('tbody tr');
   const visibleCount = visibleRows.length;
   const totalCount = totalRows.length;
   
-  const footerText = document.querySelector('.card-footer .text-muted');
+  const footerText = passportTable.querySelector('.card-footer .text-muted');
   if (footerText) {
     footerText.textContent = `Showing ${visibleCount} of ${totalCount} entries`;
   }
@@ -1876,12 +2162,36 @@ function initializeEnhancedSearch() {
   
   // Perform search with table filtering (activity dashboard specific)
   function performSearch(query) {
-    const rows = document.querySelectorAll('tbody tr');
+    // Only search in the passport table (first main-table-card)
+    const passportTable = document.querySelector('.main-table-card .table');
+    if (!passportTable) return;
+    
+    const searchQuery = query.toLowerCase().trim();
+    const rows = passportTable.querySelectorAll('tbody tr');
+    
     rows.forEach(row => {
-      const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
-      const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+      // Check if this is a data row (not a modal or other element)
+      if (!row.querySelector('td')) return;
       
-      if (userName.includes(query.toLowerCase()) || userEmail.includes(query.toLowerCase())) {
+      // Get user info from the User column (2nd column)
+      const userCell = row.querySelector('td:nth-child(2)');
+      if (!userCell) return;
+      
+      // Get all text content from the user cell
+      const userName = userCell.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+      const userEmail = userCell.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+      
+      // Also check activity name and pass code
+      const activityCell = row.querySelector('td:nth-child(3)');
+      const activityName = activityCell?.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+      const passCode = activityCell?.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+      
+      // Search in all relevant fields
+      if (searchQuery === '' || 
+          userName.includes(searchQuery) || 
+          userEmail.includes(searchQuery) ||
+          activityName.includes(searchQuery) ||
+          passCode.includes(searchQuery)) {
         row.style.display = '';
       } else {
         row.style.display = 'none';
@@ -1901,44 +2211,19 @@ function initializeEnhancedSearch() {
       return;
     }
     
-    // If query is less than 3 characters, don't search yet
-    if (query.trim().length < 3) {
+    // If query is less than 2 characters, don't search yet
+    if (query.trim().length < 2) {
       return;
     }
     
-    // Debounce search for queries with 3+ characters
+    // Debounce search for queries with 2+ characters
     searchTimeout = setTimeout(() => {
       performSearch(query);
     }, 250); // 250ms debounce delay for more responsive feel
   }
   
-  // Ctrl+K keyboard shortcut to focus search with glow effect
+  // Escape key handler for clearing search
   document.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      enhancedSearchInput.focus();
-      enhancedSearchInput.select();
-      
-      // Add pink glow effect
-      enhancedSearchInput.classList.add('search-glow-active');
-      
-      // Play sound effect
-      try {
-        searchSound.currentTime = 0;
-        searchSound.play().catch(() => {
-          // Silently fail if audio can't play
-        });
-      } catch (err) {
-        // Ignore audio errors
-      }
-      
-      // Remove glow after animation
-      setTimeout(() => {
-        enhancedSearchInput.classList.remove('search-glow-active');
-      }, 800);
-    }
-    
-    // Clear search with Escape
     if (e.key === 'Escape') {
       if (enhancedSearchInput === document.activeElement) {
         enhancedSearchInput.value = '';
@@ -1948,6 +2233,8 @@ function initializeEnhancedSearch() {
       }
     }
   });
+  
+  // Note: Ctrl+K is handled globally in setupGlobalSearchShortcut()
   
   // Clear button functionality
   if (clearBtn) {
@@ -1984,10 +2271,10 @@ function initializeEnhancedSearch() {
       if (kbdHint) kbdHint.style.display = 'none';
       if (clearBtn) clearBtn.style.display = 'inline-flex';
       
-      if (length < 3) {
+      if (length < 2) {
         if (charCounter) {
           charCounter.style.display = 'inline';
-          charCounter.textContent = `${3 - length} more char${3 - length === 1 ? '' : 's'}`;
+          charCounter.textContent = `${2 - length} more char${2 - length === 1 ? '' : 's'}`;
           charCounter.className = 'text-muted';
         }
         enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
@@ -2006,15 +2293,26 @@ function initializeEnhancedSearch() {
     debouncedSearch(query);
   });
   
+  // Prevent form submission on Enter key
+  const searchForm = document.getElementById('dynamicSearchForm');
+  if (searchForm) {
+    searchForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      return false;
+    });
+  }
+  
   // Handle Enter key for immediate search
   enhancedSearchInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
+      // Prevent form submission and page jump
+      e.stopPropagation();
       clearTimeout(searchTimeout);
       const query = e.target.value;
-      if (query.trim().length >= 3) {
-        performSearch(query);
-      }
+      // Perform search regardless of length when Enter is pressed
+      performSearch(query);
+      return false;
     }
   });
   
@@ -2184,49 +2482,7 @@ function generateInteractiveLineChart(data, width = 300, height = 40, chartId = 
   };
 }
 
-// Clean line chart generator that ensures proper SVG path format
-// CRITICAL: Always use this function to avoid encoding issues (â��)
-// This validates and cleans data to prevent chart rendering failures
-function generateCleanLineChart(data, width = 300, height = 40) {
-  if (!data || data.length === 0) {
-    return `M 0,${height/2} L ${width},${height/2}`;
-  }
-  
-  // Ensure data is properly formatted and clean
-  const cleanData = data.map(val => {
-    const num = parseFloat(val);
-    return isNaN(num) ? 0 : num;
-  });
-  
-  if (cleanData.length === 0) {
-    return `M 0,${height/2} L ${width},${height/2}`;
-  }
-  
-  // Calculate scaling
-  const max = Math.max(...cleanData);
-  const min = Math.min(...cleanData);
-  const range = max - min || 1;
-  
-  // Generate clean coordinates
-  const points = [];
-  for (let i = 0; i < cleanData.length; i++) {
-    const x = cleanData.length === 1 ? width / 2 : (i / (cleanData.length - 1)) * width;
-    const y = height - ((cleanData[i] - min) / range) * (height - 10) - 5;
-    
-    // Ensure coordinates are valid numbers
-    const cleanX = isNaN(x) ? 0 : Math.round(x * 100) / 100;
-    const cleanY = isNaN(y) ? height / 2 : Math.round(y * 100) / 100;
-    
-    points.push({
-      x: cleanX,
-      y: cleanY,
-      command: i === 0 ? 'M' : 'L'
-    });
-  }
-  
-  // Build SVG path string
-  return points.map(point => `${point.command} ${point.x},${point.y}`).join(' ');
-}
+// Note: generateCleanLineChart is already defined at the top of the script
 
 // Legacy function for backward compatibility - generates simple line charts
 function generateLineChart(data, width = 300, height = 40) {
@@ -2791,54 +3047,6 @@ function initializePassportBulkSelection() {
     updateBulkActions();
 }
 
-// Filter passports function
-function filterPassports(filterType) {
-    const rows = document.querySelectorAll('.table tbody tr');
-    const filterBtns = document.querySelectorAll('.github-filter-btn');
-    
-    // Update active filter button styling
-    filterBtns.forEach(btn => {
-        btn.classList.remove('active');
-        btn.style.cssText = btn.style.cssText.replace(/background:[^;]+;/, 'background: rgba(0, 0, 0, 0.03);').replace(/color:[^;]+;/, 'color: #586069;').replace(/font-weight:[^;]+;/, '').replace(/border:[^;]+;/, '').replace(/box-shadow:[^;]+;/, '').replace(/z-index:[^;]+;/, '').replace(/border-radius:[^;]+;/, '');
-    });
-    
-    const activeBtn = document.getElementById(`filter-${filterType}`);
-    if (activeBtn) {
-        activeBtn.classList.add('active');
-        activeBtn.style.cssText = activeBtn.style.cssText.replace(/background:[^;]+;/, 'background: #ffffff;').replace(/color:[^;]+;/, 'color: #24292e;') + ' font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);';
-    }
-    
-    // Filter rows
-    rows.forEach(row => {
-        const isPaid = row.getAttribute('data-paid') === 'true';
-        const isActive = row.getAttribute('data-active') === 'true';
-        
-        let shouldShow = false;
-        
-        switch(filterType) {
-            case 'all':
-                shouldShow = true;
-                break;
-            case 'paid':
-                shouldShow = isPaid;
-                break;
-            case 'unpaid':
-                shouldShow = !isPaid;
-                break;
-            case 'active':
-                shouldShow = isActive;
-                break;
-        }
-        
-        row.style.display = shouldShow ? '' : 'none';
-    });
-    
-    // Clear any bulk selections when filtering
-    document.querySelectorAll('.passport-checkbox:checked').forEach(cb => cb.checked = false);
-    document.getElementById('bulkActions').style.display = 'none';
-    document.getElementById('selectAll').checked = false;
-    document.getElementById('selectAll').indeterminate = false;
-}
 
 // Initialize passport bulk selection when DOM is ready
 if (document.readyState === 'loading') {
@@ -2852,6 +3060,263 @@ if (document.readyState === 'loading') {
 
 {% block styles %}
 <style>
+/* Critical Search Bar Fix Styles for Signups */
+/* Pink glow effect for Ctrl+K - subtle and elegant */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out !important;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
+              0 0 8px rgba(255, 105, 180, 0.35),
+              0 0 15px rgba(255, 105, 180, 0.15) !important;
+  transform: scale(1.005) !important;
+  background-image: none !important;
+  z-index: 1000;
+  position: relative;
+}
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
+                0 0 0 0 rgba(255, 105, 180, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+                0 0 10px rgba(255, 105, 180, 0.35),
+                0 0 18px rgba(255, 105, 180, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
+                0 0 8px rgba(255, 105, 180, 0.35),
+                0 0 15px rgba(255, 105, 180, 0.15);
+  }
+}
+
+/* Disable Bootstrap validation styling completely */
+#enhancedSearchInput.is-valid,
+#enhancedSearchInput.is-invalid {
+  border-color: #ced4da !important;
+  background-image: none !important;
+  padding-right: 100px !important;
+}
+
+#enhancedSearchInput.is-valid:focus,
+#enhancedSearchInput.is-invalid:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+  background-image: none !important;
+}
+
+/* Force remove validation feedback icons */
+#enhancedSearchInput {
+  background-image: none !important;
+}
+
+/* Subtle glow on regular focus */
+#enhancedSearchInput.search-focus-glow {
+  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+              0 0 15px rgba(255, 105, 180, 0.15);
+}
+
+/* Enhanced loading animation */
+.searching-pulse {
+  animation: blueSearchPulse 1.5s ease-in-out infinite;
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+              0 0 15px rgba(13, 110, 253, 0.4) !important;
+}
+
+@keyframes blueSearchPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+                0 0 15px rgba(13, 110, 253, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
+                0 0 25px rgba(13, 110, 253, 0.5);
+  }
+}
+
+/* Clear button styling */
+#searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+#searchClearBtn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+#searchClearBtn:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* Smooth transitions for kbd hint and clear button */
+#searchKbdHint, #searchClearBtn {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#searchCharCounter {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+#searchCharCounter.fw-bold {
+  font-weight: 600;
+}
+
+/* Search loading indicator */
+#searchLoadingIndicator {
+  border-radius: inherit;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+#searchLoadingIndicator .spinner-border-sm {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* GitHub-style filter buttons */
+.github-filter-group {
+  display: inline-flex;
+  align-items: center;
+  background: #e1e4e8;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.github-filter-btn {
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #24292e;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Inactive state - darker gray background */
+.github-filter-btn:not(.active) {
+  background: #e1e4e8;
+  color: #586069;
+}
+
+.github-filter-btn:not(.active):hover {
+  background: #d1d5da;
+  color: #24292e;
+  text-decoration: none;
+}
+
+/* Active state - white/light background with rounded corners */
+.github-filter-btn.active {
+  background: #ffffff;
+  color: #24292e;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
+  font-weight: 600;
+  z-index: 1;
+}
+
+.github-filter-btn.active:hover {
+  background: #ffffff;
+  text-decoration: none;
+}
+
+/* Icons styling */
+.github-filter-btn i {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.github-filter-btn.active i {
+  opacity: 1;
+}
+
+/* User avatar styling */
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+/* Enhanced search styling */
+#enhancedSearchInput {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#enhancedSearchInput:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Form improvements */
+.form-check-input {
+  margin-top: 0;
+}
+
+/* Smooth transitions for search feedback */
+.input-icon {
+  transition: all 0.2s ease;
+}
+
+.input-icon:has(#enhancedSearchInput:focus) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter Button Group Styling */
+.card-header .d-flex {
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Table improvements */
+.table {
+  background-color: transparent !important;
+}
+
+.table th {
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
 /* Bulk Actions Bar Styling - EXACT COPY from passports.html */
 /* CRITICAL CSS FIX: Override minipass.css white background rule for bulk actions cards */
 /* This rule specifically counters: .card { background-color: #fff !important; } in minipass.css */
