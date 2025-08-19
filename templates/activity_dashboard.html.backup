@@ -1,0 +1,4046 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Dashboard - {{ activity.name }}{% endblock %}
+
+{% block content %}
+<style>
+/* GitHub-style filter buttons - exact copy from passports.html */
+.github-filter-group {
+  display: inline-flex;
+  align-items: center;
+  background: #f6f8fa;
+  border: 1px solid #d1d5da;
+  border-radius: 6px;
+  padding: 0;
+}
+
+.github-filter-btn {
+  padding: 5px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #586069;
+  background: rgba(0, 0, 0, 0.03);
+  border: none;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  margin: 0;
+  /* Separator line between buttons */
+  border-right: 1px solid transparent;
+  background-clip: padding-box;
+  background-image: 
+    linear-gradient(to right, transparent 0%, transparent 100%), 
+    linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%);
+  background-size: 100% 100%, 1px 100%;
+  background-position: center, right center;
+  background-repeat: no-repeat;
+}
+
+/* Last button - no separator */
+.github-filter-btn:last-child {
+  background-image: none;
+  border-right: none;
+}
+
+/* Hover state for inactive buttons */
+.github-filter-btn:not(.active):hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #24292e;
+  text-decoration: none;
+}
+
+/* Active state - white background with rounded corners */
+.github-filter-btn.active {
+  background: #ffffff !important;
+  color: #24292e;
+  font-weight: 600;
+  border: 1px solid #d1d5da;
+  margin: -1px;
+  z-index: 1;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
+  background-image: none !important;
+}
+
+.github-filter-btn.active:hover {
+  background: #ffffff !important;
+  text-decoration: none;
+}
+
+/* Icons styling */
+.github-filter-btn i {
+  font-size: 16px;
+  margin-right: 4px;
+  opacity: 0.7;
+}
+
+.github-filter-btn.active i {
+  opacity: 1;
+}
+
+/* Filter count styling */
+.filter-count {
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
+/* Fix dropdown z-index issues in tables */
+.table-responsive {
+  overflow: visible !important;
+  position: static !important;
+}
+.table-responsive .dropdown {
+  position: relative;
+}
+.table-responsive .dropdown-menu {
+  z-index: 9999 !important;
+  position: absolute !important;
+  transform: none !important;
+  top: 100% !important;
+  min-width: 160px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+.table-responsive .dropdown-menu.dropdown-menu-end {
+  right: 0 !important;
+  left: auto !important;
+}
+
+/* Ensure cards with dropdowns don't clip dropdowns */
+.table-responsive .card,
+.card:has(.dropdown-menu) {
+  overflow: visible !important;
+}
+
+/* Fix card footer background to white per style guide */
+.card-footer {
+  background-color: #fff !important;
+  border-top: 1px solid rgba(98, 105, 118, 0.16);
+}
+
+/* Add proper table padding for alignment with card margins */
+.table-responsive .table td:first-child {
+  padding-left: 1.5rem !important;
+}
+.table-responsive .table td:last-child {
+  padding-right: 1.5rem !important;
+}
+.table-responsive .table th:first-child {
+  padding-left: 1.5rem !important;
+}
+.table-responsive .table th:last-child {
+  padding-right: 1.5rem !important;
+}
+
+/* Mobile scroll snap styles for KPI cards */
+.d-flex.overflow-auto {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.d-flex.overflow-auto::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+
+/* Mobile scroll indicators */
+@media (max-width: 767.98px) {
+  .flex-shrink-0 {
+    scroll-snap-align: start;
+  }
+}
+
+/* Modern Activity Header Styles */
+.activity-header-modern {
+  background: #ffffff;
+  border: 1px solid rgba(98, 105, 118, 0.16);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.activity-header-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #206bc4 0%, #ed2988 100%);
+}
+
+.breadcrumb-modern {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.breadcrumb-modern .breadcrumb-item {
+  color: #626976;
+  font-size: 0.875rem;
+}
+
+.breadcrumb-modern .breadcrumb-item.active {
+  color: #2d3436;
+  font-weight: 500;
+}
+
+.breadcrumb-modern .breadcrumb-item + .breadcrumb-item::before {
+  color: #98a0ac;
+  content: ">";
+  padding: 0 0.5rem;
+}
+
+.activity-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-right: 0.75rem;
+}
+
+.activity-status-badge.status-active {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.activity-status-badge.status-upcoming {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.activity-status-badge.status-completed {
+  background: rgba(156, 163, 175, 0.1);
+  color: #6b7280;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.pulse-indicator {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.activity-quick-stats {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.quick-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #626976;
+  font-size: 0.875rem;
+}
+
+.quick-stat-item i {
+  font-size: 1.125rem;
+  color: #206bc4;
+}
+
+.activity-title-modern {
+  color: #2d3436;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.activity-meta-modern {
+  color: #626976;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.activity-actions-modern {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.avatar-stack {
+  display: flex;
+  margin-right: 0.75rem;
+}
+
+.avatar-stack .avatar {
+  width: 36px;
+  height: 36px;
+  border: 2px solid white;
+  margin-left: -0.75rem;
+  transition: transform 0.2s;
+}
+
+.avatar-stack .avatar:first-child {
+  margin-left: 0;
+}
+
+.avatar-stack .avatar:hover {
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+.participant-count {
+  color: #626976;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.activity-image-modern {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  height: 320px;
+  background: #f8f9fa;
+  box-shadow: 0 0.375rem 1.5rem rgba(0, 0, 0, 0.08);
+}
+
+.activity-image-modern img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.activity-image-modern:hover img {
+  transform: scale(1.02);
+}
+
+.image-overlay-modern {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.activity-image-modern:hover .image-overlay-modern {
+  opacity: 1;
+}
+
+.participant-avatars-overlay {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 15;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem;
+  border-radius: 50px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15);
+}
+
+.floating-action-menu {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
+}
+
+.progress-indicator {
+  background: #f1f3f5;
+  border-radius: 100px;
+  height: 6px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.progress-bar-modern {
+  height: 100%;
+  background: linear-gradient(90deg, #206bc4 0%, #ed2988 100%);
+  border-radius: 100px;
+  transition: width 0.3s ease;
+}
+
+.next-session-banner {
+  background: #f8f9fa;
+  border: 1px solid rgba(98, 105, 118, 0.16);
+  border-radius: 8px;
+  padding: 0.875rem 1.25rem;
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.next-session-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #2d3436;
+}
+
+.next-session-info i {
+  font-size: 1.25rem;
+  color: #206bc4;
+}
+
+.session-time {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #2d3436;
+}
+
+.session-countdown {
+  font-size: 0.875rem;
+  color: #626976;
+}
+
+@media (max-width: 991.98px) {
+  .activity-header-modern {
+    padding: 1.5rem;
+  }
+  
+  .activity-title-modern {
+    font-size: 1.5rem;
+  }
+  
+  .activity-quick-stats {
+    gap: 1rem;
+  }
+  
+  .activity-image-modern {
+    height: 200px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .activity-quick-stats {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .activity-actions-modern {
+    width: 100%;
+  }
+  
+  .activity-actions-modern .btn {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .next-session-banner {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}
+
+.share-button {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
+}
+
+.share-button .btn-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid rgba(98, 105, 118, 0.16);
+  border-radius: 8px;
+  color: #626976;
+  transition: all 0.2s;
+}
+
+.share-button .btn-icon:hover {
+  background: #206bc4;
+  color: white;
+  border-color: #206bc4;
+  transform: translateY(-2px);
+  box-shadow: 0 0.25rem 0.75rem rgba(32, 107, 196, 0.2);
+}
+
+/* Enhanced Search Bar Styles from signups.html */
+/* Pink glow effect for Ctrl+K - subtle and elegant */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out !important;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
+              0 0 8px rgba(255, 105, 180, 0.35),
+              0 0 15px rgba(255, 105, 180, 0.15) !important;
+  transform: scale(1.005) !important;
+  background-image: none !important;
+  z-index: 1000;
+  position: relative;
+}
+
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
+                0 0 0 0 rgba(255, 105, 180, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+                0 0 10px rgba(255, 105, 180, 0.35),
+                0 0 18px rgba(255, 105, 180, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
+                0 0 8px rgba(255, 105, 180, 0.35),
+                0 0 15px rgba(255, 105, 180, 0.15);
+  }
+}
+
+/* Disable Bootstrap validation styling completely */
+#enhancedSearchInput.is-valid,
+#enhancedSearchInput.is-invalid {
+  border-color: #ced4da !important;
+  background-image: none !important;
+  padding-right: 100px !important;
+}
+
+#enhancedSearchInput.is-valid:focus,
+#enhancedSearchInput.is-invalid:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+  background-image: none !important;
+}
+
+/* Force remove validation feedback icons */
+#enhancedSearchInput {
+  background-image: none !important;
+}
+
+/* Clear button styling */
+#searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+#searchClearBtn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+#searchClearBtn:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* Smooth transitions for kbd hint and clear button */
+#searchKbdHint, #searchClearBtn {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#searchCharCounter {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+#searchCharCounter.fw-bold {
+  font-weight: 600;
+}
+
+/* Enhanced loading animation */
+.searching-pulse {
+  animation: blueSearchPulse 1.5s ease-in-out infinite;
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+              0 0 15px rgba(13, 110, 253, 0.4) !important;
+}
+
+@keyframes blueSearchPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+                0 0 15px rgba(13, 110, 253, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
+                0 0 25px rgba(13, 110, 253, 0.5);
+  }
+}
+
+/* Subtle glow on regular focus */
+#enhancedSearchInput.search-focus-glow {
+  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+              0 0 15px rgba(255, 105, 180, 0.15);
+}
+</style>
+
+<div class="page-wrapper">
+
+  <div class="page-body">
+    <div class="dashboard-container">
+      <!-- Modern Activity Header with Enhanced UI -->
+      <div class="activity-header-modern">
+
+        <div class="row g-4">
+          <div class="col-lg-7">
+            <!-- Activity Subtitle and Status -->
+            <div class="d-flex align-items-center justify-content-between flex-wrap mb-3">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-green-lt me-3">
+                  Activities
+                  <span class="pulse-indicator ms-1"></span>
+                </span>
+              </div>
+            </div>
+
+            <div class="d-flex align-items-center mb-2">
+              <h1 class="activity-title-modern mb-0 me-auto">{{ activity.name }}</h1>
+            </div>
+            
+            <p class="activity-meta-modern">
+              {{ activity.description or "Transform your game with professional coaching and structured training sessions." }}
+            </p>
+
+            <!-- Quick Stats Bar -->
+            <div class="activity-quick-stats">
+              <div class="quick-stat-item">
+                <i class="ti ti-users"></i>
+                <span><strong>{{ passes|length }}</strong></span>
+              </div>
+              <div class="quick-stat-item">
+                <i class="ti ti-star-filled"></i>
+                <span><strong>4.8</strong> rating</span>
+              </div>
+              <div class="quick-stat-item">
+                <i class="ti ti-map-pin"></i>
+                <span>{{ activity.location or 'Location' }}</span>
+              </div>
+              <div class="quick-stat-item">
+                <i class="ti ti-share"></i>
+                <span>signups</span>
+              </div>
+              {% if activity.price %}
+              <div class="quick-stat-item">
+                <i class="ti ti-currency-dollar"></i>
+                <span><strong>${{ activity.price }}</strong> per session</span>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Progress Indicator -->
+            <div class="progress-indicator">
+              <div class="progress-bar-modern" style="width: {{ ((activity.sessions_completed or 0) / (activity.total_sessions or 12) * 100) }}%"></div>
+            </div>
+
+            <!-- Participant Avatars Section -->
+            <div class="participant-avatars-section mt-4 mb-3">
+              <div class="avatar-list avatar-list-stacked">
+                {% for p in passes[:4] %}
+                <span class="avatar avatar-sm" style="background-image: url(https://www.gravatar.com/avatar/{{ p.user.email|lower|trim|encode_md5 }}?d=identicon&s=72)"
+                      data-bs-toggle="tooltip"
+                      data-bs-placement="top"
+                      title="{{ p.user.name }}"></span>
+                {% endfor %}
+                <span class="avatar avatar-sm">+5</span>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="activity-actions-modern">
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <!-- New Action Buttons -->
+                <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-secondary">
+                  <i class="ti ti-edit me-2"></i>Edit
+                </a>
+                <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
+                  <i class="ti ti-scan me-2"></i>Scan
+                </a>
+                <button class="btn btn-primary">
+                  <i class="ti ti-plus me-2"></i>Add passport
+                </button>
+
+              </div>
+            </div>
+
+            <!-- Next Session Banner -->
+            {% if activity.next_session_date %}
+            <div class="next-session-banner">
+              <div class="next-session-info">
+                <i class="ti ti-calendar-time"></i>
+                <div>
+                  <div class="session-time">Next Session: {{ activity.next_session_date.strftime('%A, %B %d at %I:%M %p') }}</div>
+                  <div class="session-countdown" id="countdown-timer">In 2 days, 14 hours</div>
+                </div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">
+                <i class="ti ti-bell me-1"></i>Set Reminder
+              </button>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="col-lg-5">
+            <!-- Enhanced Activity Image -->
+            <div class="activity-image-modern">
+              <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}" 
+                   alt="{{ activity.name }}">
+              
+              <div class="image-overlay-modern">
+                <div class="d-flex justify-content-between align-items-end">
+                  <div>
+                    <div class="text-white mb-1">
+                      <i class="ti ti-map-pin me-1"></i>{{ activity.location or 'Sports Complex' }}
+                    </div>
+                    <div class="text-white-50 small">
+                      <i class="ti ti-clock me-1"></i>{{ activity.duration or '90' }} minutes per session
+                    </div>
+                  </div>
+                  <button class="btn btn-sm btn-light">
+                    <i class="ti ti-camera me-1"></i>Change Cover
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Cards Section - Desktop Layout -->
+      <div class="row mb-4 d-none d-md-flex">
+        <!-- Revenue Card -->
+        <div class="col-md-3 mb-3">
+          <div class="card kpi-card-rounded">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">REVENUE</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1" id="revenue-value">${{ "{:.0f}".format(kpi_data.revenue.total|float) }}</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2" id="revenue-trend">{{ "{:.0f}".format(kpi_data.revenue.percentage|float) }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
+              </div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="revenue-chart">
+                  <!-- Chart will be populated by JavaScript -->
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Users Card -->
+        <div class="col-md-3 mb-3">
+          <div class="card kpi-card-rounded">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">ACTIVE USERS</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1" id="active-users-value">{{ kpi_data.active_users.total }}</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-{{ 'success' if kpi_data.active_users.trend == 'up' else 'muted' }} me-2" id="active-users-trend">{{ kpi_data.active_users.percentage }}% <i class="ti ti-trending-{{ kpi_data.active_users.trend }}"></i></div>
+              </div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="active-users-chart">
+                  <!-- Bar chart for active users -->
+                  <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                  <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                  <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                  <rect x="55" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                  <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                  <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                  <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unpaid Passports Card -->
+        <div class="col-md-3 mb-3">
+          <div class="card kpi-card-rounded">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1" id="unpaid-passports-value">{{ kpi_data.unpaid_passports.total }}</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-{{ 'danger' if kpi_data.unpaid_passports.overdue > 0 else 'muted' }} me-2" id="unpaid-passports-trend">{{ kpi_data.unpaid_passports.overdue }} overdue <i class="ti ti-alert-circle"></i></div>
+              </div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="unpaid-passports-chart">
+                  <!-- Bar chart for unpaid passports -->
+                  <rect x="10" y="30" width="8" height="10" fill="#f76707" opacity="0.8" />
+                  <rect x="25" y="28" width="8" height="12" fill="#f76707" opacity="0.8" />
+                  <rect x="40" y="32" width="8" height="8" fill="#f76707" opacity="0.8" />
+                  <rect x="55" y="26" width="8" height="14" fill="#f76707" opacity="0.8" />
+                  <rect x="70" y="24" width="8" height="16" fill="#f76707" opacity="0.8" />
+                  <rect x="85" y="29" width="8" height="11" fill="#f76707" opacity="0.8" />
+                  <rect x="100" y="27" width="8" height="13" fill="#f76707" opacity="0.8" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Profit Card -->
+        <div class="col-md-3 mb-3">
+          <div class="card kpi-card-rounded">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">ACTIVITY PROFIT</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1" id="profit-value">${{ "{:.0f}".format(kpi_data.profit.total|float) }}</div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2" id="profit-trend">{{ "{:.0f}".format(kpi_data.profit.margin|float) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
+              </div>
+              <div style="height: 40px; position: relative; overflow: hidden;">
+                <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="profit-chart">
+                  <!-- Chart will be populated by JavaScript -->
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Cards Section - Mobile Carousel -->
+      <div class="d-md-none mb-4">
+        <div class="d-flex overflow-auto pb-2" style="scroll-snap-type: x mandatory;">
+          <!-- Revenue Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card kpi-card-rounded">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">REVENUE</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="h2 mb-1" id="mobile-revenue-value">${{ "{:.0f}".format(kpi_data.revenue.total|float) }}</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-{{ 'success' if kpi_data.revenue.trend == 'up' else 'muted' }} me-2" id="mobile-revenue-trend">{{ "{:.0f}".format(kpi_data.revenue.percentage|float) }}% <i class="ti ti-trending-{{ kpi_data.revenue.trend }}"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-revenue-chart">
+                    <!-- Chart will be populated by JavaScript -->
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Users Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card kpi-card-rounded">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">ACTIVE USERS</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="h2 mb-1" id="mobile-active-users-value">{{ kpi_data.active_users.total }}</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-{{ 'success' if kpi_data.active_users.trend == 'up' else 'muted' }} me-2" id="mobile-active-users-trend">{{ kpi_data.active_users.percentage }}% <i class="ti ti-trending-{{ kpi_data.active_users.trend }}"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-active-users-chart">
+                    <!-- Bar chart for active users -->
+                    <rect x="10" y="28" width="8" height="12" fill="#206bc4" opacity="0.8" />
+                    <rect x="25" y="25" width="8" height="15" fill="#206bc4" opacity="0.8" />
+                    <rect x="40" y="30" width="8" height="10" fill="#206bc4" opacity="0.8" />
+                    <rect x="55" y="22" width="8" height="18" fill="#206bc4" opacity="0.8" />
+                    <rect x="70" y="26" width="8" height="14" fill="#206bc4" opacity="0.8" />
+                    <rect x="85" y="20" width="8" height="20" fill="#206bc4" opacity="0.8" />
+                    <rect x="100" y="15" width="8" height="25" fill="#206bc4" opacity="0.8" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Unpaid Passports Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card kpi-card-rounded">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="h2 mb-1" id="mobile-unpaid-passports-value">{{ kpi_data.unpaid_passports.total }}</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-{{ 'danger' if kpi_data.unpaid_passports.overdue > 0 else 'muted' }} me-2" id="mobile-unpaid-passports-trend">{{ kpi_data.unpaid_passports.overdue }} overdue <i class="ti ti-alert-circle"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-unpaid-passports-chart">
+                    <!-- Bar chart for unpaid passports -->
+                    <rect x="10" y="30" width="8" height="10" fill="#f76707" opacity="0.8" />
+                    <rect x="25" y="28" width="8" height="12" fill="#f76707" opacity="0.8" />
+                    <rect x="40" y="32" width="8" height="8" fill="#f76707" opacity="0.8" />
+                    <rect x="55" y="26" width="8" height="14" fill="#f76707" opacity="0.8" />
+                    <rect x="70" y="24" width="8" height="16" fill="#f76707" opacity="0.8" />
+                    <rect x="85" y="29" width="8" height="11" fill="#f76707" opacity="0.8" />
+                    <rect x="100" y="27" width="8" height="13" fill="#f76707" opacity="0.8" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Profit Card -->
+          <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
+            <div class="card kpi-card-rounded">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="text-muted small text-uppercase">ACTIVITY PROFIT</div>
+                  <div class="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90">Last 90 days</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="h2 mb-1" id="mobile-profit-value">${{ "{:.0f}".format(kpi_data.profit.total|float) }}</div>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="text-{{ 'success' if kpi_data.profit.trend == 'up' else 'muted' }} me-2" id="mobile-profit-trend">{{ "{:.0f}".format(kpi_data.profit.margin|float) }}% margin <i class="ti ti-trending-{{ kpi_data.profit.trend }}"></i></div>
+                </div>
+                <div style="height: 40px; position: relative; overflow: hidden;">
+                  <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" id="mobile-profit-chart">
+                    <!-- Chart will be populated by JavaScript -->
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Scroll indicators -->
+        <div class="text-center mt-2">
+          <span class="badge bg-primary me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light me-1" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+          <span class="badge bg-light" style="width: 8px; height: 8px; border-radius: 50%;"></span>
+        </div>
+      </div>
+
+      <!-- Passport List Title -->
+      {% if passes %}
+      <h2 class="mt-4 mb-3">
+        <i class="ti ti-activity-heartbeat me-2" style="color: #e03131;"></i>Your Activity Passport
+      </h2>
+
+      <!-- Enhanced Dynamic Search -->
+      <form method="GET" action="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="mb-4" id="dynamicSearchForm">
+        <div class="input-icon position-relative">
+          <span class="input-icon-addon">
+            <i class="ti ti-search fs-3"></i>
+          </span>
+          <input type="text" 
+                 name="q"
+                 id="enhancedSearchInput"
+                 class="form-control form-control-lg shadow-sm" 
+                 placeholder="Start typing to search passports instantly..." 
+                 value="{{ request.args.get('q', '') }}"
+                 style="padding-right: 100px; border-radius: 0.5rem;"
+                 autocomplete="off"
+                 data-bs-toggle="false">
+          <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
+            <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
+            <kbd id="searchKbdHint" class="text-muted">ctrl + k</kbd>
+            <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
+              <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
+            </button>
+          </div>
+        </div>
+      </form>
+
+
+
+    <!-- Bulk Actions Bar - Separate Card Above Table -->
+    <div class="bulk-actions-container">
+      <div class="card bulk-actions-card" id="bulkActions" style="display: none; background-color: #f0fdf4 !important; background: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; border-radius: 8px !important;">
+        <div class="card-body p-3">
+          <form method="POST" action="{{ url_for('passports_bulk_action') }}" id="bulkForm">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="bulk-actions-count">
+                <i class="ti ti-checkbox me-2"></i>
+                <span id="selectedCount">0</span> passports selected
+              </div>
+              <div class="bulk-actions-buttons">
+                <div class="dropdown">
+                  <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Actions
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <button type="submit" name="action" value="mark_paid" class="dropdown-item text-success">
+                        <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                      </button>
+                    </li>
+                    <li>
+                      <button type="submit" name="action" value="send_reminders" class="dropdown-item text-warning">
+                        <i class="ti ti-mail me-2"></i>Send Reminder
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button type="submit" name="action" value="delete" class="dropdown-item text-danger" 
+                              onclick="return confirm('Delete ' + document.querySelectorAll('.passport-checkbox:checked').length + ' selected passports?')">
+                        <i class="ti ti-trash me-2"></i>Delete Selected
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+      <div class="card-header">
+        <div class="d-flex justify-content-center align-items-center w-100">
+          <!-- Filter Buttons -->
+          <div class="github-filter-group">
+            <a href="#" onclick="filterPassports('all'); return false;"
+               class="github-filter-btn active" id="filter-all">
+              <i class="ti ti-list"></i>All <span class="filter-count">({{ passes|length }})</span>
+            </a>
+            <a href="#" onclick="filterPassports('unpaid'); return false;"
+               class="github-filter-btn" id="filter-unpaid">
+              <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ passes|selectattr('paid', 'equalto', false)|list|length }})</span>
+            </a>
+            <a href="#" onclick="filterPassports('paid'); return false;"
+               class="github-filter-btn" id="filter-paid">
+              <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ passes|selectattr('paid', 'equalto', true)|list|length }})</span>
+            </a>
+            <a href="#" onclick="filterPassports('active'); return false;"
+               class="github-filter-btn" id="filter-active">
+              <i class="ti ti-activity"></i>Active <span class="filter-count">({{ passes|selectattr('uses_remaining', 'greaterthan', 0)|list|length }})</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+        <thead>
+          <tr>
+            <th class="w-1">
+              <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
+            </th>
+            <th>User</th>
+            <th class="d-none d-md-table-cell">Activity</th>
+            <th class="d-none d-lg-table-cell">Passport Type</th>
+            <th class="d-none d-md-table-cell text-center">Amount</th>
+            <th class="d-none d-lg-table-cell text-center">Status</th>
+            <th class="d-none d-md-table-cell text-center">Uses Remaining</th>
+            <th class="d-none d-md-table-cell">Created</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for passport in passes %}
+          <tr data-paid="{{ 'true' if passport.paid else 'false' }}" data-active="{{ 'true' if passport.uses_remaining > 0 else 'false' }}">
+            <td>
+              <input type="checkbox" 
+                     class="form-check-input passport-checkbox" 
+                     name="selected_passports" 
+                     value="{{ passport.id }}" 
+                     form="bulkForm"
+                     data-status="{{ 'active' if passport.uses_remaining > 0 else 'expired' }}"
+                     data-paid="{{ 'true' if passport.paid else 'false' }}"
+                     aria-label="Select passport {{ passport.id }}">
+            </td>
+            <td style="vertical-align: middle;">
+              <div class="d-flex align-items-center">
+                <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+                     class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+                <div>
+                  <div class="fw-bold">{{ passport.user.name or 'Anonymous' }}</div>
+                  <div class="text-muted small">{{ passport.user.email or 'No email' }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+              <div>
+                <div class="fw-bold">{{ activity.name }}</div>
+                <div class="text-muted small">{{ passport.pass_code or 'No code' }}</div>
+              </div>
+            </td>
+            <td class="d-none d-lg-table-cell" style="vertical-align: middle;">
+              <span style="color: #6c757d;">{{ passport.passport_type.name if passport.passport_type else 'Standard' }}</span>
+            </td>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+              {% if passport.sold_amt %}
+                ${{ "%.0f"|format(passport.sold_amt) }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
+              {% if passport.paid %}
+                <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
+              {% else %}
+                <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
+              {% endif %}
+            </td>
+            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+              <span style="color: #6c757d;">
+                {{ passport.uses_remaining or 0 }}
+              </span>
+            </td>
+            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+              {% if passport.created_dt %}
+                {{ passport.created_dt.strftime('%Y-%m-%d') }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td class="text-center" style="vertical-align: middle;">
+              <div class="dropdown d-inline-block">
+                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                  <span class="d-none d-md-inline">Actions</span>
+                  <i class="ti ti-menu-2 d-md-none"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  {% if passport.uses_remaining > 0 %}
+                  <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-modal-{{ passport.id }}">
+                    <i class="ti ti-check me-2"></i>Redeem
+                  </button>
+                  {% endif %}
+                  <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
+                    <i class="ti ti-pencil me-2"></i>Edit Details
+                  </a>
+                  {% if not passport.paid %}
+                  <button type="button" class="dropdown-item text-success" data-bs-toggle="modal" data-bs-target="#mark-paid-modal-{{ passport.id }}">
+                    <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                  </button>
+                  {% endif %}
+                  <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
+                    <i class="ti ti-qrcode me-2"></i>View QR Code
+                  </a>
+                  <a class="dropdown-item" href="#">
+                    <i class="ti ti-mail me-2"></i>Send Reminder
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-danger" href="#" 
+                     onclick="if(confirm('Delete this passport?')) { 
+                       var form = document.getElementById('deleteForm{{ passport.id }}'); 
+                       if(form) form.submit(); 
+                     }">
+                    <i class="ti ti-trash me-2"></i>Delete
+                  </a>
+                </div>
+              </div>
+              <!-- Hidden delete form -->
+              <form id="deleteForm{{ passport.id }}" method="POST" action="{{ url_for('passports_bulk_action') }}" style="display: none;">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="selected_passports" value="{{ passport.id }}">
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      
+      <!-- Modal dialogs for passport actions -->
+      {% for p in passes %}
+      <!-- Redeem Modal -->
+      <div class="modal modal-blur fade" id="redeem-modal-{{ p.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-status bg-primary"></div>
+            <div class="modal-body text-center py-4">
+              <i class="ti ti-check icon mb-2 text-primary" style="font-size: 2rem;"></i>
+              <h3>Redeem Session</h3>
+              <div class="text-muted">Redeem 1 session from {{ p.user.name }}'s passport?</div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              <form method="POST" action="{{ url_for('redeem_passport', pass_code=p.pass_code) }}" class="w-100">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-primary w-100">Yes, Redeem</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if not p.paid %}
+      <!-- Mark as Paid Modal -->
+      <div class="modal modal-blur fade" id="mark-paid-modal-{{ p.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-status bg-success"></div>
+            <div class="modal-body text-center py-4">
+              <i class="ti ti-currency-dollar icon mb-2 text-success" style="font-size: 2rem;"></i>
+              <h3>Confirm Payment</h3>
+              <div class="text-muted">Mark {{ p.user.name }}'s passport as paid?</div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              <form method="POST" action="{{ url_for('mark_passport_paid', passport_id=p.id) }}" class="w-100">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-success w-100">Yes, mark as paid</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+      
+      <!-- Pagination -->
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        {% if passes|length > 0 %}
+          <span class="text-muted">Showing {{ passes|length }} of {{ passes|length }} entries</span>
+          <!-- Pagination will be enabled when backend implements it -->
+        {% else %}
+          <span class="text-muted">No entries found</span>
+        {% endif %}
+      </div>
+      </div>
+      {% endif %}
+
+      <!-- Signups Section -->
+      <h2 class="mt-5 mb-3">
+        <i class="ti ti-edit text-orange me-2"></i>Signups
+      </h2>
+
+      <!-- Bulk Actions Bar - Separate Card Above Table -->
+      <div class="bulk-actions-container">
+        <div class="card bulk-actions-card" id="bulkActions" style="display: none; background-color: #f0fdf4 !important; background: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; border-radius: 8px !important;">
+          <div class="card-body p-3">
+            <form method="POST" action="{{ url_for('bulk_signup_action') }}" id="bulkForm">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="bulk-actions-count">
+                  <i class="ti ti-checkbox me-2"></i>
+                  <span id="selectedCount">0</span> signups selected
+                </div>
+                <div class="bulk-actions-buttons">
+                  <div class="dropdown">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li>
+                        <button type="submit" name="action" value="mark_paid" class="dropdown-item text-success">
+                          <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                        </button>
+                      </li>
+                      <li>
+                        <button type="submit" name="action" value="approve" class="dropdown-item text-info">
+                          <i class="ti ti-thumb-up me-2"></i>Approve
+                        </button>
+                      </li>
+                      <li>
+                        <button type="submit" name="action" value="send_reminders" class="dropdown-item text-warning">
+                          <i class="ti ti-mail me-2"></i>Send Reminder
+                        </button>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <button type="submit" name="action" value="delete" class="dropdown-item text-danger" 
+                                onclick="return confirm('Delete ' + document.querySelectorAll('.signup-checkbox:checked').length + ' selected signups?')">
+                          <i class="ti ti-trash me-2"></i>Delete Selected
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Signups Table -->
+      <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+        <div class="card-header">
+          <div class="d-flex justify-content-center align-items-center w-100">
+            <!-- Filter Buttons -->
+            <div class="github-filter-group">
+              <a href="#" onclick="filterSignups('all'); return false;"
+                 class="github-filter-btn active" id="signup-filter-all">
+                <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ signups|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('unpaid'); return false;"
+                 class="github-filter-btn" id="signup-filter-unpaid">
+                <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ signups|selectattr('paid', 'equalto', false)|list|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('paid'); return false;"
+                 class="github-filter-btn" id="signup-filter-paid">
+                <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ signups|selectattr('paid', 'equalto', true)|list|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('pending'); return false;"
+                 class="github-filter-btn" id="signup-filter-pending">
+                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ signups|selectattr('status', 'equalto', 'pending')|list|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('approved'); return false;"
+                 class="github-filter-btn" id="signup-filter-approved">
+                <i class="ti ti-thumb-up"></i>Approved <span class="filter-count">({{ signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover">
+          <thead>
+            <tr>
+              <th class="w-1">
+                <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
+              </th>
+              <th>User</th>
+              <th class="d-none d-md-table-cell">Created</th>
+              <th class="d-none d-md-table-cell">Activity</th>
+              <th class="d-none d-lg-table-cell text-center">Status</th>
+              <th class="d-none d-md-table-cell text-center">Amount</th>
+              <th class="d-none d-md-table-cell text-center">Remain</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for signup in signups %}
+            <tr data-paid="{{ 'true' if signup.paid else 'false' }}" data-status="{{ signup.status or 'pending' }}">
+              <td>
+                <input type="checkbox" 
+                       class="form-check-input signup-checkbox" 
+                       name="selected_signups" 
+                       value="{{ signup.id }}" 
+                       form="bulkForm"
+                       data-status="{{ signup.status or 'pending' }}"
+                       data-paid="{{ 'true' if signup.paid else 'false' }}"
+                       aria-label="Select signup {{ signup.id }}">
+              </td>
+              <td style="vertical-align: middle;">
+                <div class="d-flex align-items-center">
+                  <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+                       class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+                  <div>
+                    <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
+                    <div class="text-muted small">{{ signup.user.email or 'No email' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                {% if signup.signed_up_at %}
+                  {{ signup.signed_up_at.strftime('%Y-%m-%d') }}
+                {% else %}
+                  <span class="text-muted">Unknown</span>
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                {{ signup.activity.name if signup.activity else 'Unknown' }}
+              </td>
+              <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
+                {% set status = signup.status or 'pending' %}
+                {% if status == 'approved' %}
+                  <span class="badge bg-green-lt text-green-lt-fg">Approved</span>
+                {% elif status == 'pending' %}
+                  <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending</span>
+                {% elif status == 'rejected' %}
+                  <span class="badge bg-red-lt text-red-lt-fg">Rejected</span>
+                {% else %}
+                  <span class="badge bg-secondary-lt">{{ status.title() }}</span>
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+                {% if signup.passport_type_id %}
+                  {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+                  {% if passport_type %}
+                    ${{ "%.0f"|format(passport_type.price_per_user or 0) }}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+                {% if signup.passport_type_id %}
+                  {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+                  {% if passport_type %}
+                    {{ passport_type.sessions_included }}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td class="text-center" style="vertical-align: middle;">
+                <div class="dropdown d-inline-block">
+                  <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <span class="d-none d-md-inline">Actions</span>
+                    <i class="ti ti-menu-2 d-md-none"></i>
+                  </a>
+                  <div class="dropdown-menu dropdown-menu-end">
+                    <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
+                      <i class="ti ti-pencil me-2"></i>Edit Details
+                    </a>
+                    {% if not signup.paid %}
+                    <a class="dropdown-item text-success" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}" 
+                       onclick="return confirm('Mark this signup as paid?')">
+                      <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                    </a>
+                    {% endif %}
+                    {% if signup.status == 'pending' %}
+                    <a class="dropdown-item text-primary" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
+                       onclick="return confirm('Approve and create passport?')">
+                      <i class="ti ti-check me-2"></i>Approve & Create Pass
+                    </a>
+                    {% endif %}
+                    <a class="dropdown-item" href="#">
+                      <i class="ti ti-mail me-2"></i>Send Reminder
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="#" 
+                       onclick="if(confirm('Delete this signup?')) { 
+                         var form = document.getElementById('deleteForm{{ signup.id }}'); 
+                         if(form) form.submit(); 
+                       }">
+                      <i class="ti ti-trash me-2"></i>Delete
+                    </a>
+                  </div>
+                </div>
+                <!-- Hidden delete form -->
+                <form id="deleteForm{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="selected_signups" value="{{ signup.id }}">
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          {% if signups|length > 0 %}
+            <span class="text-muted">Showing {{ signups|length }} of {{ signups|length }} entries</span>
+            <!-- Pagination will be enabled when backend implements it -->
+          {% else %}
+            <span class="text-muted">No entries found</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Empty State - Only show when there are NO signups at all for this activity -->
+      {% if signups|length == 0 %}
+      <div class="card">
+        <div class="empty">
+          <div class="empty-icon">
+            <i class="ti ti-users-off"></i>
+          </div>
+          <p class="empty-title">No signups found</p>
+          <p class="empty-subtitle">
+            Signups will appear here when users register for this activity
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- What's Happening Section -->
+      {% if activity_logs %}
+      <h3 class="mt-5 mb-3">
+        <i class="ti ti-cardboards me-2" style="color: #2fb344;"></i>What's Happening in Your Activity
+      </h3>
+
+      <!-- Activity Log Table -->
+      <div class="card" style="border-radius: 12px; overflow: hidden;">
+        <div class="card-header">
+          <h4 class="card-title">Recent Activity</h4>
+        </div>
+        <div class="table-responsive">
+          <table class="table card-table table-vcenter" id="activityLogTable">
+            <thead>
+              <tr>
+                <th scope="col" class="text-muted">Date/Time</th>
+                <th scope="col" class="text-muted">Type</th>
+                <th scope="col" class="text-muted">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in activity_logs %}
+                <tr>
+                  <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') if log.timestamp else 'Unknown' }}</td>
+                  <td>
+                    {% set action_lower = log.action.lower() %}
+                    {% if 'redeem' in action_lower %}
+                      <i class="ti ti-ticket text-danger"></i>
+                      Passport Redeemed
+                    {% elif 'signup' in action_lower %}
+                      <i class="ti ti-user-plus text-success"></i>
+                      Signup Activity
+                    {% elif 'created' in action_lower %}
+                      <i class="ti ti-id text-lime"></i>
+                      Passport Created
+                    {% elif 'email' in action_lower %}
+                      <i class="ti ti-mail text-info"></i>
+                      Email Activity
+                    {% elif 'payment' in action_lower %}
+                      <i class="ti ti-currency-dollar text-success"></i>
+                      Payment Activity
+                    {% else %}
+                      <i class="ti ti-settings text-muted"></i>
+                      Admin Action
+                    {% endif %}
+                  </td>
+                  <td>{{ log.action }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="card-footer d-flex align-items-center">
+          <p class="m-0 text-muted">Showing <span id="activityShowingCount">{{ activity_logs|length if activity_logs else 0 }}</span> of {{ activity_logs|length if activity_logs else 0 }} activity logs</p>
+          {% set log_total_items = activity_logs|length if activity_logs else 0 %}
+          {% set log_items_per_page = 10 %}
+          {% set log_total_pages = ((log_total_items - 1) // log_items_per_page) + 1 if log_total_items > 0 else 1 %}
+          {% if log_total_pages > 1 %}
+          <ul class="pagination m-0 ms-auto" id="activityPaginationControls">
+            {% for page_num in range(1, log_total_pages + 1) %}
+              {% if page_num <= 5 %}
+              <li class="page-item {% if page_num == 1 %}active{% endif %}">
+                <a href="#" class="page-link">{{ page_num }}</a>
+              </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+// Store KPI data from backend for JavaScript access
+const kpiData = {{ kpi_data | tojson | safe }};
+
+// CRITICAL: Define chart generation functions FIRST before using them
+// Clean line chart generator that ensures proper SVG path format
+function generateCleanLineChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) {
+    return `M 0,${height/2} L ${width},${height/2}`;
+  }
+  
+  // Ensure data is properly formatted and clean
+  const cleanData = data.map(val => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  });
+  
+  if (cleanData.length === 0) {
+    return `M 0,${height/2} L ${width},${height/2}`;
+  }
+  
+  // Calculate scaling
+  const max = Math.max(...cleanData);
+  const min = Math.min(...cleanData);
+  const range = max - min || 1;
+  
+  // Generate clean coordinates
+  const points = [];
+  for (let i = 0; i < cleanData.length; i++) {
+    const x = cleanData.length === 1 ? width / 2 : (i / (cleanData.length - 1)) * width;
+    const y = height - ((cleanData[i] - min) / range) * (height - 10) - 5;
+    
+    // Ensure coordinates are valid numbers
+    const cleanX = isNaN(x) ? 0 : Math.round(x * 100) / 100;
+    const cleanY = isNaN(y) ? height / 2 : Math.round(y * 100) / 100;
+    
+    points.push({
+      x: cleanX,
+      y: cleanY,
+      command: i === 0 ? 'M' : 'L'
+    });
+  }
+  
+  // Build SVG path string
+  return points.map(point => `${point.command} ${point.x},${point.y}`).join(' ');
+}
+
+// Initialize everything when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize dashboard
+  initializeActivityDashboard();
+  // Initialize charts with current data
+  initializeChartsWithData();
+  // Initialize modern header features
+  initializeModernHeader();
+  
+  // Global Ctrl+K handler for search - MUST be outside other functions
+  setupGlobalSearchShortcut();
+});
+
+// Global search shortcut handler - works everywhere on the page
+function setupGlobalSearchShortcut() {
+  document.addEventListener('keydown', function(e) {
+    // Check for Ctrl+K or Cmd+K
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Find the search input
+      const searchInput = document.getElementById('enhancedSearchInput');
+      if (!searchInput) return;
+      
+      // Scroll to the search input smoothly
+      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Focus and select after scroll
+      setTimeout(() => {
+        searchInput.focus();
+        searchInput.select();
+        
+        // Add pink glow effect
+        searchInput.classList.add('search-glow-active');
+        
+        // Try to play sound
+        try {
+          const searchSound = new Audio('/static/beep.wav');
+          searchSound.volume = 0.3;
+          searchSound.currentTime = 0;
+          searchSound.play().catch(() => {});
+        } catch (err) {
+          // Ignore audio errors
+        }
+        
+        // Remove glow after animation
+        setTimeout(() => {
+          searchInput.classList.remove('search-glow-active');
+        }, 800);
+      }, 300);
+      
+      return false; // Extra prevention
+    }
+  });
+}
+
+// Initialize charts with current page data
+function initializeChartsWithData() {
+  // Initialize revenue charts with default 7-day data
+  if (kpiData && kpiData.revenue && kpiData.revenue.trend_data) {
+    const revenueData = kpiData.revenue.trend_data;
+    initializeRevenueChart(revenueData);
+  } else {
+    // Fallback: create default chart with sample data for 7 days
+    const defaultData = [150, 200, 180, 220, 190, 250, 280];
+    initializeRevenueChart(defaultData);
+  }
+  
+  // Initialize profit charts if data is available
+  if (kpiData && kpiData.profit && kpiData.profit.trend_data) {
+    const profitData = kpiData.profit.trend_data;
+    initializeProfitChart(profitData);
+  } else {
+    // Fallback: create default profit chart
+    const defaultProfitData = [80, 120, 95, 140, 110, 160, 180];
+    initializeProfitChart(defaultProfitData);
+  }
+}
+
+// Initialize revenue chart for both desktop and mobile
+function initializeRevenueChart(data) {
+  const chartPath = generateCleanLineChart(data, 300, 40);
+  
+  if (chartPath && chartPath.trim() !== '') {
+    // Update desktop chart
+    const desktopChart = document.getElementById('revenue-chart');
+    if (desktopChart) {
+      desktopChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+    
+    // Update mobile chart
+    const mobileChart = document.getElementById('mobile-revenue-chart');
+    if (mobileChart) {
+      mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+  }
+}
+
+// Initialize profit chart for both desktop and mobile
+function initializeProfitChart(data) {
+  const chartPath = generateCleanLineChart(data, 300, 40);
+  
+  if (chartPath && chartPath.trim() !== '') {
+    // Update desktop chart
+    const desktopChart = document.getElementById('profit-chart');
+    if (desktopChart) {
+      desktopChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+    
+    // Update mobile chart
+    const mobileChart = document.getElementById('mobile-profit-chart');
+    if (mobileChart) {
+      mobileChart.innerHTML = `<path d="${chartPath}" fill="none" stroke="#2fb344" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+  }
+}
+
+// Initialize modern header features
+function initializeModernHeader() {
+  // Initialize Bootstrap tooltips for participant avatars
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
+  // Countdown timer for next session
+  const countdownElement = document.getElementById('countdown-timer');
+  if (countdownElement) {
+    updateCountdown();
+    setInterval(updateCountdown, 60000); // Update every minute
+  }
+
+  // Smooth scroll for progress indicator
+  animateProgressBar();
+}
+
+// Share activity function
+function shareActivity() {
+  const activityId = {{ activity.id }};
+  const signupUrl = window.location.origin + '/signup/' + activityId;
+  
+  navigator.clipboard.writeText(signupUrl).then(function() {
+    showNotification('success', 'Signup link copied to clipboard!');
+  }).catch(function(err) {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = signupUrl;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showNotification('success', 'Signup link copied to clipboard!');
+    } catch (err) {
+      showNotification('error', 'Failed to copy link');
+    }
+    document.body.removeChild(textArea);
+  });
+}
+
+// Update countdown timer
+function updateCountdown() {
+  const countdownElement = document.getElementById('countdown-timer');
+  if (!countdownElement) return;
+
+  // This would typically calculate from the actual next session date
+  // For demo purposes, showing a static countdown
+  const nextSessionDate = new Date();
+  nextSessionDate.setDate(nextSessionDate.getDate() + 2);
+  nextSessionDate.setHours(15, 0, 0, 0);
+
+  const now = new Date();
+  const diff = nextSessionDate - now;
+
+  if (diff > 0) {
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    let countdownText = '';
+    if (days > 0) {
+      countdownText = `In ${days} day${days > 1 ? 's' : ''}, ${hours} hour${hours > 1 ? 's' : ''}`;
+    } else if (hours > 0) {
+      countdownText = `In ${hours} hour${hours > 1 ? 's' : ''}, ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    } else {
+      countdownText = `In ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    }
+
+    countdownElement.textContent = countdownText;
+  } else {
+    countdownElement.textContent = 'Session in progress';
+    countdownElement.classList.add('text-success');
+  }
+}
+
+// Animate progress bar on load
+function animateProgressBar() {
+  const progressBar = document.querySelector('.progress-bar-modern');
+  if (progressBar) {
+    const targetWidth = progressBar.style.width;
+    progressBar.style.width = '0%';
+    setTimeout(() => {
+      progressBar.style.width = targetWidth;
+    }, 100);
+  }
+}
+
+function initializeActivityDashboard() {
+  // Initialize enhanced search functionality
+  initializeEnhancedSearch();
+  
+  // Filter tabs
+  document.querySelectorAll('.filter-pills .nav-link').forEach(tab => {
+    tab.addEventListener('click', handleFilterChange);
+  });
+  
+  // KPI dropdowns
+  initializeKPIDropdowns();
+  
+  // Most dropdown actions now use direct navigation via href attributes
+  // Only add click handlers for specific client-side actions
+  document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
+    item.addEventListener('click', handleUserAction);
+  });
+}
+
+// Search functionality - unified approach for both mobile and desktop
+function handleSearch(e) {
+  const query = e.target.value.toLowerCase();
+  
+  // Use unified search logic that targets table rows (works for both mobile and desktop)
+  const rows = document.querySelectorAll('tbody tr');
+  rows.forEach(row => {
+    const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+    const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+    
+    if (userName.includes(query) || userEmail.includes(query)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  
+  updateResultCount();
+}
+
+// Filter passports function - handles button clicks by toggling classes only
+function filterPassports(filterType) {
+  // Get all filter buttons in passport table
+  const filterButtons = document.querySelectorAll('#filter-all, #filter-unpaid, #filter-paid, #filter-active');
+  
+  // Update active class on buttons - let CSS handle all styling
+  filterButtons.forEach(btn => {
+    if (btn.id === `filter-${filterType}`) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  
+  // Apply the filter to the passport table rows only
+  const passportTable = document.querySelector('.main-table-card .table');
+  if (passportTable) {
+    const rows = passportTable.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+      const isPaid = row.getAttribute('data-paid') === 'true';
+      const isActive = row.getAttribute('data-active') === 'true';
+      
+      let shouldShow = false;
+      
+      switch(filterType) {
+        case 'all':
+          shouldShow = true;
+          break;
+        case 'unpaid':
+          shouldShow = !isPaid;
+          break;
+        case 'paid':
+          shouldShow = isPaid;
+          break;
+        case 'active':
+          shouldShow = isActive;
+          break;
+        default:
+          shouldShow = true;
+      }
+      
+      row.style.display = shouldShow ? '' : 'none';
+    });
+    
+    updateResultCount();
+  }
+  return false; // Prevent default link behavior
+}
+
+// Filter signups function - handles button clicks without page reload
+function filterSignups(filterType) {
+  // Get all filter buttons in signups section
+  const filterButtons = document.querySelectorAll('#signup-filter-all, #signup-filter-unpaid, #signup-filter-paid, #signup-filter-pending, #signup-filter-approved');
+  
+  // Update active class on buttons
+  filterButtons.forEach(btn => {
+    if (btn.id === `signup-filter-${filterType}`) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  
+  // Find the signups table (it's the second main-table-card on the page)
+  const signupCards = document.querySelectorAll('.main-table-card');
+  const signupTable = signupCards[1]; // Second table is signups
+  
+  if (signupTable) {
+    const rows = signupTable.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+      const isPaid = row.getAttribute('data-paid') === 'true';
+      const status = row.getAttribute('data-status') || 'pending';
+      
+      let shouldShow = false;
+      
+      switch(filterType) {
+        case 'all':
+          shouldShow = true;
+          break;
+        case 'unpaid':
+          shouldShow = !isPaid;
+          break;
+        case 'paid':
+          shouldShow = isPaid;
+          break;
+        case 'pending':
+          shouldShow = status === 'pending';
+          break;
+        case 'approved':
+          shouldShow = status === 'approved';
+          break;
+        default:
+          shouldShow = true;
+      }
+      
+      row.style.display = shouldShow ? '' : 'none';
+    });
+    
+    // Update count in footer
+    const visibleRows = signupTable.querySelectorAll('tbody tr:not([style*="display: none"])');
+    const totalRows = signupTable.querySelectorAll('tbody tr');
+    const footerText = signupTable.querySelector('.card-footer .text-muted');
+    if (footerText) {
+      footerText.textContent = `Showing ${visibleRows.length} of ${totalRows.length} entries`;
+    }
+  }
+  return false; // Prevent default link behavior
+}
+
+// Filter handling
+function handleFilterChange(e) {
+  e.preventDefault();
+  
+  // Update active state
+  document.querySelectorAll('.filter-pills .nav-link').forEach(link => {
+    link.classList.remove('active');
+  });
+  e.target.classList.add('active');
+  
+  const filter = e.target.dataset.filter;
+  applyFilter(filter);
+}
+
+function applyFilter(filter) {
+  const rows = document.querySelectorAll('tbody tr');
+  
+  rows.forEach(row => {
+    const passportStatus = row.querySelector('td:nth-child(3) .badge')?.textContent.trim();
+    const paymentStatus = row.querySelector('td:nth-child(5) .badge')?.textContent.trim();
+    
+    let shouldShow = false;
+    
+    switch(filter) {
+      case 'all':
+        shouldShow = true;
+        break;
+      case 'active':
+        shouldShow = passportStatus === 'Active';
+        break;
+      case 'unpaid':
+        shouldShow = paymentStatus === 'Overdue' || passportStatus === 'Pending';
+        break;
+      case 'completed':
+        shouldShow = row.querySelector('.sessions-progress-bar')?.style.width === '0%';
+        break;
+      default:
+        shouldShow = true;
+    }
+    
+    row.style.display = shouldShow ? '' : 'none';
+  });
+  
+  updateResultCount();
+}
+
+
+// Update result count - unified approach for both mobile and desktop
+function updateResultCount() {
+  // Only update passport table count (first main-table-card)
+  const passportTable = document.querySelector('.main-table-card');
+  if (!passportTable) return;
+  
+  const visibleRows = passportTable.querySelectorAll('tbody tr:not([style*="display: none"])');
+  const totalRows = passportTable.querySelectorAll('tbody tr');
+  const visibleCount = visibleRows.length;
+  const totalCount = totalRows.length;
+  
+  const footerText = passportTable.querySelector('.card-footer .text-muted');
+  if (footerText) {
+    footerText.textContent = `Showing ${visibleCount} of ${totalCount} entries`;
+  }
+}
+
+// Initialize Enhanced Search functionality (exact copy from signups.html)
+function initializeEnhancedSearch() {
+  const enhancedSearchInput = document.getElementById('enhancedSearchInput');
+  if (!enhancedSearchInput) return;
+  
+  const searchForm = enhancedSearchInput.closest('form');
+  const tableContainer = document.querySelector('.table-responsive');
+  let searchTimeout;
+  let isSearching = false;
+  
+  // Create audio element for sound effect
+  const searchSound = new Audio('/static/beep.wav');
+  searchSound.volume = 0.3; // 30% volume
+  
+  // Create loading indicator
+  function createLoadingIndicator() {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'searchLoadingIndicator';
+    loadingDiv.innerHTML = `
+      <div class="d-flex align-items-center justify-content-center p-3">
+        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="text-muted">Searching...</span>
+      </div>
+    `;
+    loadingDiv.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      z-index: 10;
+      display: none;
+    `;
+    return loadingDiv;
+  }
+  
+  const loadingIndicator = createLoadingIndicator();
+  if (tableContainer) {
+    tableContainer.style.position = 'relative';
+    tableContainer.appendChild(loadingIndicator);
+  }
+  
+  // Get elements for clear button functionality
+  const kbdHint = document.getElementById('searchKbdHint');
+  const clearBtn = document.getElementById('searchClearBtn');
+  const charCounter = document.getElementById('searchCharCounter');
+  
+  // Show/hide loading state
+  function setLoadingState(loading) {
+    isSearching = loading;
+    if (loading) {
+      loadingIndicator.style.display = 'flex';
+      enhancedSearchInput.style.opacity = '0.8';
+      enhancedSearchInput.classList.add('searching-pulse');
+      if (charCounter) {
+        charCounter.style.display = 'inline';
+        charCounter.textContent = 'searching...';
+        charCounter.className = 'text-primary fw-bold';
+      }
+    } else {
+      loadingIndicator.style.display = 'none';
+      enhancedSearchInput.style.opacity = '1';
+      enhancedSearchInput.classList.remove('searching-pulse');
+      // Reset character counter based on current input
+      updateSearchFeedback(enhancedSearchInput.value);
+    }
+  }
+  
+  // Perform search with table filtering (activity dashboard specific)
+  function performSearch(query) {
+    // Only search in the passport table (first main-table-card)
+    const passportTable = document.querySelector('.main-table-card .table');
+    if (!passportTable) return;
+    
+    const searchQuery = query.toLowerCase().trim();
+    const rows = passportTable.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+      // Check if this is a data row (not a modal or other element)
+      if (!row.querySelector('td')) return;
+      
+      // Get user info from the User column (2nd column)
+      const userCell = row.querySelector('td:nth-child(2)');
+      if (!userCell) return;
+      
+      // Get all text content from the user cell
+      const userName = userCell.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+      const userEmail = userCell.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+      
+      // Also check activity name and pass code
+      const activityCell = row.querySelector('td:nth-child(3)');
+      const activityName = activityCell?.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+      const passCode = activityCell?.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+      
+      // Search in all relevant fields
+      if (searchQuery === '' || 
+          userName.includes(searchQuery) || 
+          userEmail.includes(searchQuery) ||
+          activityName.includes(searchQuery) ||
+          passCode.includes(searchQuery)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    
+    updateResultCount();
+  }
+  
+  // Debounced search function
+  function debouncedSearch(query) {
+    clearTimeout(searchTimeout);
+    
+    // If query is empty, clear search immediately
+    if (!query || query.trim().length === 0) {
+      searchTimeout = setTimeout(() => performSearch(''), 150);
+      return;
+    }
+    
+    // If query is less than 2 characters, don't search yet
+    if (query.trim().length < 2) {
+      return;
+    }
+    
+    // Debounce search for queries with 2+ characters
+    searchTimeout = setTimeout(() => {
+      performSearch(query);
+    }, 250); // 250ms debounce delay for more responsive feel
+  }
+  
+  // Escape key handler for clearing search
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (enhancedSearchInput === document.activeElement) {
+        enhancedSearchInput.value = '';
+        enhancedSearchInput.blur();
+        updateSearchFeedback('');
+        performSearch('');
+      }
+    }
+  });
+  
+  // Note: Ctrl+K is handled globally in setupGlobalSearchShortcut()
+  
+  // Clear button functionality
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      enhancedSearchInput.value = '';
+      enhancedSearchInput.focus();
+      updateSearchFeedback('');
+      
+      // Show pink glow on clear
+      enhancedSearchInput.classList.add('search-glow-active');
+      setTimeout(() => {
+        enhancedSearchInput.classList.remove('search-glow-active');
+      }, 800);
+      
+      // Trigger search to clear results
+      performSearch('');
+    });
+  }
+  
+  // Update character counter and provide visual feedback
+  function updateSearchFeedback(query) {
+    const length = query.trim().length;
+    
+    // Toggle between kbd hint and clear button
+    if (length === 0) {
+      if (charCounter) charCounter.style.display = 'none';
+      enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+      // Show kbd hint, hide clear button
+      if (kbdHint) kbdHint.style.display = 'inline-block';
+      if (clearBtn) clearBtn.style.display = 'none';
+    } else {
+      // Hide kbd hint, show clear button
+      if (kbdHint) kbdHint.style.display = 'none';
+      if (clearBtn) clearBtn.style.display = 'inline-flex';
+      
+      if (length < 2) {
+        if (charCounter) {
+          charCounter.style.display = 'inline';
+          charCounter.textContent = `${2 - length} more char${2 - length === 1 ? '' : 's'}`;
+          charCounter.className = 'text-muted';
+        }
+        enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+      } else {
+        // Ready to search - hide counter, no Bootstrap validation styling
+        if (charCounter) charCounter.style.display = 'none';
+        enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+      }
+    }
+  }
+  
+  // Handle input changes with debouncing
+  enhancedSearchInput.addEventListener('input', function(e) {
+    const query = e.target.value;
+    updateSearchFeedback(query);
+    debouncedSearch(query);
+  });
+  
+  // Prevent form submission on Enter key
+  const searchForm = document.getElementById('dynamicSearchForm');
+  if (searchForm) {
+    searchForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      return false;
+    });
+  }
+  
+  // Handle Enter key for immediate search
+  enhancedSearchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Prevent form submission and page jump
+      e.stopPropagation();
+      clearTimeout(searchTimeout);
+      const query = e.target.value;
+      // Perform search regardless of length when Enter is pressed
+      performSearch(query);
+      return false;
+    }
+  });
+  
+  // Focus with subtle glow on regular focus
+  enhancedSearchInput.addEventListener('focus', function() {
+    this.classList.add('search-focus-glow');
+  });
+  
+  enhancedSearchInput.addEventListener('blur', function() {
+    this.classList.remove('search-focus-glow');
+  });
+  
+  // Initialize search feedback on page load
+  updateSearchFeedback(enhancedSearchInput.value || '');
+}
+
+// User actions - now handled by individual links with proper URLs
+function handleUserAction(e) {
+  const action = e.target.textContent.trim();
+  const userName = e.target.closest('tr')?.querySelector('.fw-bold')?.textContent || 'User';
+  
+  // Most actions now use direct links to Flask routes
+  // Only handle client-side actions here
+  switch(action) {
+    case 'Send Reminder':
+      showNotification('info', `Reminder request sent for ${userName}`);
+      break;
+    case 'Remove User':
+      // This would be handled by a DELETE request to the backend
+      showNotification('info', `Remove action triggered for ${userName}`);
+      break;
+  }
+}
+
+
+// Utility functions
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function showNotification(type, message) {
+  // Create notification element
+  const notification = document.createElement('div');
+  const typeClass = type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'info' ? 'info' : 'danger';
+  const icon = type === 'success' ? 'check' : type === 'warning' ? 'alert-triangle' : type === 'info' ? 'info-circle' : 'alert-circle';
+  const title = type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : type === 'info' ? 'Info' : 'Error!';
+  
+  notification.className = `alert alert-${typeClass} alert-dismissible position-fixed top-0 end-0 m-3`;
+  notification.style.zIndex = '9999';
+  notification.style.minWidth = '300px';
+  notification.innerHTML = `
+    <div class="d-flex">
+      <div>
+        <i class="ti ti-${icon} alert-icon"></i>
+      </div>
+      <div>
+        <h4 class="alert-title">${title}</h4>
+        <div class="text-muted">${message}</div>
+      </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 5000);
+}
+
+// Enhanced search with URL updates and better filtering
+function enhancedSearch(query) {
+  const rows = document.querySelectorAll('tbody tr');
+  let visibleCount = 0;
+  
+  rows.forEach(row => {
+    const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
+    const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+    const activityName = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+    
+    const searchText = query.toLowerCase();
+    const isVisible = userName.includes(searchText) || 
+                     userEmail.includes(searchText) || 
+                     activityName.includes(searchText);
+    
+    row.style.display = isVisible ? '' : 'none';
+    if (isVisible) visibleCount++;
+  });
+  
+  // Update result count display
+  const resultInfo = document.querySelector('.card-footer .text-muted');
+  if (resultInfo) {
+    const totalRows = rows.length;
+    resultInfo.textContent = `Showing ${visibleCount} of ${totalRows} entries`;
+  }
+  
+  // Update URL without page reload for better UX
+  if (history.pushState) {
+    const url = new URL(window.location);
+    if (query) {
+      url.searchParams.set('search', query);
+    } else {
+      url.searchParams.delete('search');
+    }
+    history.pushState(null, '', url);
+  }
+  
+  return visibleCount;
+}
+
+// Function to generate interactive line chart with hover points
+function generateInteractiveLineChart(data, width = 300, height = 40, chartId = '') {
+  if (!data || data.length === 0) {
+    return { path: '', points: [] };
+  }
+  
+  // Ensure data is properly formatted and clean
+  const cleanData = data.map(val => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  });
+  
+  if (cleanData.length === 0) {
+    return { path: '', points: [] };
+  }
+  
+  // Find min and max for scaling
+  const max = Math.max(...cleanData);
+  const min = Math.min(...cleanData);
+  const range = max - min || 1;
+  
+  // Generate path coordinates and hover points
+  const coordinates = [];
+  const hoverPoints = [];
+  
+  cleanData.forEach((value, index) => {
+    const x = cleanData.length === 1 ? width / 2 : (index / (cleanData.length - 1)) * width;
+    const y = height - ((value - min) / range) * (height - 10) - 5;
+    
+    // Ensure coordinates are valid numbers
+    const cleanX = isNaN(x) ? 0 : Math.round(x * 100) / 100;
+    const cleanY = isNaN(y) ? height / 2 : Math.round(y * 100) / 100;
+    
+    coordinates.push(`${index === 0 ? 'M' : 'L'} ${cleanX},${cleanY}`);
+    hoverPoints.push({ 
+      x: cleanX, 
+      y: cleanY, 
+      value: value, 
+      index: index 
+    });
+  });
+  
+  return {
+    path: coordinates.join(' '),
+    points: hoverPoints
+  };
+}
+
+// Note: generateCleanLineChart is already defined at the top of the script
+
+// Legacy function for backward compatibility - generates simple line charts
+function generateLineChart(data, width = 300, height = 40) {
+  return generateCleanLineChart(data, width, height);
+}
+
+function generateBarChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) return '';
+  
+  // Ensure data is properly formatted
+  const cleanData = data.map(val => parseFloat(val) || 0);
+  const max = Math.max(...cleanData) || 1;
+  const barWidth = Math.max(8, (width - (cleanData.length - 1) * 2) / cleanData.length);
+  
+  let svg = '';
+  cleanData.forEach((value, index) => {
+    const barHeight = Math.max(1, (value / max) * (height - 5));
+    const x = index * (barWidth + 2);
+    const y = height - barHeight;
+    svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#206bc4" opacity="0.8" />`;
+  });
+  
+  return svg;
+}
+
+function generateUnpaidBarChart(data, width = 300, height = 40) {
+  if (!data || data.length === 0) return '';
+  
+  // Ensure data is properly formatted
+  const cleanData = data.map(val => parseFloat(val) || 0);
+  const max = Math.max(...cleanData) || 1;
+  const barWidth = Math.max(8, (width - (cleanData.length - 1) * 2) / cleanData.length);
+  
+  let svg = '';
+  cleanData.forEach((value, index) => {
+    const barHeight = Math.max(1, (value / max) * (height - 5));
+    const x = index * (barWidth + 2);
+    const y = height - barHeight;
+    svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#f76707" opacity="0.8" />`;
+  });
+  
+  return svg;
+}
+
+// Tooltip management functions
+function createTooltip() {
+  let tooltip = document.getElementById('chart-tooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'chart-tooltip';
+    tooltip.className = 'chart-tooltip';
+    tooltip.style.cssText = `
+      position: absolute;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      white-space: nowrap;
+    `;
+    document.body.appendChild(tooltip);
+  }
+  return tooltip;
+}
+
+function showTooltip(x, y, value, period, index, chartType = 'revenue') {
+  const tooltip = createTooltip();
+  
+  // Format value based on chart type
+  let formattedValue;
+  if (chartType === 'revenue' || chartType === 'profit') {
+    formattedValue = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  } else {
+    formattedValue = Math.round(value).toString();
+  }
+  
+  // Calculate the date based on period and index
+  const daysAgo = parseInt(period) - index - 1;
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  const formattedDate = date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric'
+  });
+  
+  tooltip.innerHTML = `${formattedValue}<br><small>${formattedDate}</small>`;
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y - 10}px`;
+  tooltip.style.opacity = '1';
+}
+
+function hideTooltip() {
+  const tooltip = document.getElementById('chart-tooltip');
+  if (tooltip) {
+    tooltip.style.opacity = '0';
+  }
+}
+
+// KPI Dropdown Functionality
+function initializeKPIDropdowns() {
+  // Add event listeners to all KPI dropdown items with the kpi-period-btn class
+  document.querySelectorAll('.kpi-period-btn').forEach(item => {
+    item.addEventListener('click', handleKPITimeChange);
+  });
+}
+
+// WARNING: This handler must update ONLY the clicked KPI card
+// Never call global update functions that affect all cards
+function handleKPITimeChange(event) {
+  event.preventDefault();
+  
+  const clickedItem = event.target;
+  const period = parseInt(clickedItem.dataset.period);
+  const dropdown = clickedItem.closest('.dropdown');
+  const dropdownButton = dropdown.querySelector('.dropdown-toggle');
+  
+  // Prevent multiple rapid clicks
+  if (clickedItem.classList.contains('loading')) return;
+  clickedItem.classList.add('loading');
+  
+  // Update only the clicked dropdown button text with loading state
+  const originalText = dropdownButton.textContent;
+  const newText = clickedItem.textContent.trim();
+  dropdownButton.style.opacity = '0.7';
+  dropdownButton.textContent = newText + ' ...';
+  
+  // Determine which KPI card to update based on the clicked dropdown
+  const kpiCard = dropdown.closest('.card');
+  const kpiType = determineKPIType(kpiCard);
+  
+  // Show loading state for this card only
+  showKPILoading(kpiCard);
+  
+  // Make AJAX request to update only this specific KPI data
+  updateSingleKPIData(period, kpiType, kpiCard, newText);
+  
+  // Reset loading state for this dropdown only after completion
+  setTimeout(() => {
+    clickedItem.classList.remove('loading');
+    if (dropdownButton.textContent.includes('...')) {
+      dropdownButton.textContent = newText;
+      dropdownButton.style.opacity = '1';
+    }
+  }, 800);
+}
+
+function showKPILoading(cardElement = null) {
+  // Show loading for specific card or all KPI cards
+  const targetCards = cardElement ? [cardElement] : document.querySelectorAll('.kpi-card-rounded');
+  
+  targetCards.forEach(card => {
+    const valueEl = card.querySelector('.h2');
+    const trendEl = card.querySelector('.text-success, .text-danger, .text-muted');
+    const chartEl = card.querySelector('svg');
+    
+    if (valueEl) valueEl.style.opacity = '0.6';
+    if (trendEl) trendEl.style.opacity = '0.6';
+    if (chartEl) chartEl.style.opacity = '0.3';
+  });
+}
+
+function hideKPILoading(cardElement = null) {
+  // Hide loading for specific card or all KPI cards
+  const targetCards = cardElement ? [cardElement] : document.querySelectorAll('.kpi-card-rounded');
+  
+  targetCards.forEach(card => {
+    const valueEl = card.querySelector('.h2');
+    const trendEl = card.querySelector('.text-success, .text-danger, .text-muted');
+    const chartEl = card.querySelector('svg');
+    
+    if (valueEl) valueEl.style.opacity = '1';
+    if (trendEl) trendEl.style.opacity = '1';
+    if (chartEl) chartEl.style.opacity = '1';
+  });
+}
+
+function determineKPIType(cardElement) {
+  // Determine KPI type based on card content
+  const cardText = cardElement.textContent.toLowerCase();
+  if (cardText.includes('revenue')) return 'revenue';
+  if (cardText.includes('active users')) return 'active_users';
+  if (cardText.includes('unpaid')) return 'unpaid_passports';
+  if (cardText.includes('profit')) return 'profit';
+  return 'revenue'; // fallback
+}
+
+function updateSingleKPIData(period, kpiType, cardElement, periodText) {
+  // Get activity ID from current URL
+  const pathParts = window.location.pathname.split('/');
+  const activityId = pathParts[pathParts.length - 1];
+  
+  // Show loading state for this card only
+  showKPILoading(cardElement);
+  
+  // Make API call to get updated KPI data
+  fetch(`/api/activity-kpis/${activityId}?period=${period}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        updateSingleKPIDisplay(data.kpi_data, period, kpiType, cardElement);
+        // Update all dropdowns with same KPI type to show consistent period
+        updateAllDropdownsForKPIType(kpiType, periodText);
+      } else {
+        console.error('Failed to fetch KPI data:', data.error);
+        showNotification('error', 'Failed to update KPI data');
+      }
+      // Hide loading state
+      setTimeout(() => {
+        hideKPILoading(cardElement);
+      }, 200);
+    })
+    .catch(error => {
+      console.error('Error fetching KPI data:', error);
+      showNotification('error', 'Failed to update KPI data');
+      hideKPILoading(cardElement);
+    });
+}
+
+// Update all dropdown buttons for the same KPI type (desktop and mobile)
+function updateAllDropdownsForKPIType(kpiType, periodText) {
+  let selectorPattern;
+  if (kpiType === 'revenue') {
+    selectorPattern = '[id*="revenue"]';
+  } else if (kpiType === 'active_users') {
+    selectorPattern = '[id*="active-users"]';
+  } else if (kpiType === 'unpaid_passports') {
+    selectorPattern = '[id*="unpaid-passports"]';
+  } else if (kpiType === 'profit') {
+    selectorPattern = '[id*="profit"]';
+  }
+  
+  if (selectorPattern) {
+    document.querySelectorAll(`.card:has(${selectorPattern}) .dropdown-toggle`).forEach(button => {
+      button.textContent = periodText;
+      button.style.opacity = '1';
+    });
+  }
+}
+
+function updateSingleKPIDisplay(kpiData, period, kpiType, cardElement) {
+  // Update only the specific KPI card
+  const kpiTypeData = kpiData[kpiType];
+  if (!kpiTypeData) return;
+  
+  // Determine chart type and prefix based on KPI type
+  let chartType = 'line';
+  let prefix = kpiType;
+  
+  if (kpiType === 'active_users') {
+    chartType = 'bar';
+    prefix = 'active-users';
+  } else if (kpiType === 'unpaid_passports') {
+    chartType = 'unpaid-bar';
+    prefix = 'unpaid-passports';
+  }
+  
+  // Update the specific card
+  updateKPICard(prefix, kpiTypeData, chartType, period);
+}
+
+function updateAllKPIData(period) {
+  // Get activity ID from current URL
+  const pathParts = window.location.pathname.split('/');
+  const activityId = pathParts[pathParts.length - 1];
+  
+  // Make API call to get updated KPI data
+  fetch(`/api/activity-kpis/${activityId}?period=${period}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        updateAllKPIDisplays(data.kpi_data, period);
+      } else {
+        console.error('Failed to fetch KPI data:', data.error);
+        showNotification('error', 'Failed to update KPI data');
+      }
+      hideKPILoading();
+    })
+    .catch(error => {
+      console.error('Error fetching KPI data:', error);
+      showNotification('error', 'Failed to update KPI data');
+      hideKPILoading();
+    });
+}
+
+function updateAllKPIDisplays(kpiData, period) {
+  // Add fade-out animation to existing charts
+  const allCharts = document.querySelectorAll('.card svg');
+  allCharts.forEach(chart => {
+    chart.style.transition = 'opacity 0.3s ease';
+    chart.style.opacity = '0.3';
+  });
+  
+  // Delay the chart update for smooth transition
+  setTimeout(() => {
+    // Update Revenue with interactive tooltips
+    updateKPICard('revenue', kpiData.revenue, 'line', period);
+    updateKPICard('mobile-revenue', kpiData.revenue, 'line', period);
+    
+    // Update Active Users
+    updateKPICard('active-users', kpiData.active_users, 'bar', period);
+    updateKPICard('mobile-active-users', kpiData.active_users, 'bar', period);
+    
+    // Update Unpaid Passports
+    updateKPICard('unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
+    updateKPICard('mobile-unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
+    
+    // Update Profit with interactive tooltips
+    updateKPICard('profit', kpiData.profit, 'line', period);
+    updateKPICard('mobile-profit', kpiData.profit, 'line', period);
+    
+    // Add fade-in animation to updated charts
+    setTimeout(() => {
+      const allCharts = document.querySelectorAll('.card svg');
+      allCharts.forEach(chart => {
+        chart.style.opacity = '1';
+      });
+    }, 100);
+  }, 300);
+}
+
+// WARNING: Icon classes MUST use full format: 'ti ti-trending-up' not 'ti-trending-up'
+// Using incomplete class names causes encoding issues (â��)
+function updateKPICard(prefix, data, chartType, period) {
+  // Update value
+  const valueEl = document.getElementById(`${prefix}-value`);
+  if (valueEl) {
+    if (prefix.includes('revenue') || prefix.includes('profit')) {
+      valueEl.textContent = `$${Math.round(parseFloat(data.total) || 0)}`;
+    } else {
+      valueEl.textContent = Math.round(parseFloat(data.total) || 0);
+    }
+  }
+  
+  // Update trend
+  const trendEl = document.getElementById(`${prefix}-trend`);
+  if (trendEl) {
+    let trendClass = '';
+    let icon = '';
+    
+    if (data.trend === 'up') {
+      trendClass = 'text-success';
+      icon = 'ti ti-trending-up';
+    } else if (data.trend === 'down') {
+      trendClass = 'text-danger';
+      icon = 'ti ti-trending-down';
+    } else {
+      trendClass = 'text-muted';
+      icon = 'ti ti-minus';
+    }
+    
+    if (prefix.includes('unpaid-passports')) {
+      trendEl.innerHTML = `${data.overdue} overdue <i class="ti ti-alert-circle"></i>`;
+      trendEl.className = `${data.overdue > 0 ? 'text-danger' : 'text-muted'} me-2`;
+    } else if (prefix.includes('profit')) {
+      const safeMargin = Math.round(parseFloat(data.margin) || 0);
+      trendEl.innerHTML = `${safeMargin}% margin <i class="${icon}"></i>`;
+      trendEl.className = `${trendClass} me-2`;
+    } else {
+      const safePercentage = Math.round(parseFloat(data.percentage) || 0);
+      trendEl.innerHTML = `${safePercentage}% <i class="${icon}"></i>`;
+      trendEl.className = `${trendClass} me-2`;
+    }
+  }
+  
+  // Update chart with appropriate complexity based on period
+  const chartEl = document.getElementById(`${prefix}-chart`);
+  if (chartEl && data.trend_data) {
+    let chartContent = '';
+    
+    if (chartType === 'line') {
+      const color = prefix.includes('revenue') ? '#206bc4' : '#2fb344';
+      
+      // Get current period from dropdown to determine chart complexity
+      const dropdown = chartEl.closest('.card').querySelector('.dropdown-toggle');
+      const periodText = dropdown ? dropdown.textContent : 'Last 7 days';
+      const periodDays = parseInt(periodText.match(/\d+/)?.[0] || '7');
+      
+      // Always use clean chart generation to avoid encoding issues
+      const cleanPath = generateCleanLineChart(data.trend_data, 300, 40);
+      
+      if (cleanPath && cleanPath.trim() !== '') {
+        if (periodDays <= 7) {
+          // Simple line chart for 7 days or less
+          chartContent = `<path d="${cleanPath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+        } else {
+          // Interactive chart for longer periods
+          const chartData = generateInteractiveLineChart(data.trend_data, 300, 40, prefix);
+          
+          if (chartData && chartData.path && chartData.path.trim() !== '') {
+            chartContent = `
+              <path d="${chartData.path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              ${chartData.points.map((point, index) => 
+                `<circle cx="${point.x}" cy="${point.y}" r="4" fill="transparent" 
+                         data-value="${point.value}" data-index="${index}" 
+                         class="chart-hover-point" style="cursor: pointer;" />`
+              ).join('')}
+            `;
+          } else {
+            // Fallback to simple path if interactive generation fails
+            chartContent = `<path d="${cleanPath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+          }
+        }
+      } else {
+        // Final fallback - create a simple horizontal line
+        chartContent = `<path d="M 0,20 L 300,20" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+      }
+    } else if (chartType === 'bar') {
+      chartContent = generateBarChart(data.trend_data);
+    } else if (chartType === 'unpaid-bar') {
+      chartContent = generateUnpaidBarChart(data.trend_data);
+    }
+    
+    chartEl.innerHTML = chartContent;
+    
+    // Add hover event listeners only for interactive charts (30+ days)
+    const dropdown = chartEl.closest('.card').querySelector('.dropdown-toggle');
+    const periodText = dropdown ? dropdown.textContent : 'Last 7 days';
+    const periodDays = parseInt(periodText.match(/\d+/)?.[0] || '7');
+    
+    if ((prefix.includes('revenue') || prefix.includes('profit')) && chartType === 'line' && periodDays > 7) {
+      chartEl.querySelectorAll('.chart-hover-point').forEach(point => {
+        point.addEventListener('mouseenter', function(e) {
+          const rect = chartEl.getBoundingClientRect();
+          const value = parseFloat(this.getAttribute('data-value'));
+          const index = parseInt(this.getAttribute('data-index'));
+          const chartType = prefix.includes('revenue') ? 'revenue' : 'profit';
+          showTooltip(
+            rect.left + parseFloat(this.getAttribute('cx')) + window.scrollX,
+            rect.top + parseFloat(this.getAttribute('cy')) + window.scrollY - 50,
+            value, 
+            periodDays, 
+            index,
+            chartType
+          );
+        });
+        
+        point.addEventListener('mouseleave', hideTooltip);
+      });
+    }
+  }
+}
+
+// Bulk selection functionality for passports table
+function initializePassportBulkSelection() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const passportCheckboxes = document.querySelectorAll('.passport-checkbox');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+
+    function updateBulkActions() {
+        const checkedBoxes = document.querySelectorAll('.passport-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCount.textContent = count;
+        
+        // Smooth show/hide animation
+        if (count > 0 && bulkActions.style.display === 'none') {
+            bulkActions.style.display = 'block';
+            bulkActions.classList.add('show');
+        } else if (count === 0 && bulkActions.style.display !== 'none') {
+            bulkActions.classList.remove('show');
+            setTimeout(() => {
+                bulkActions.style.display = 'none';
+            }, 300);
+        }
+        
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            if (count === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (count === passportCheckboxes.length && passportCheckboxes.length > 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+        
+        // Update available bulk actions based on selected items
+        updateAvailableActions(checkedBoxes);
+    }
+    
+    // Function to determine and update available bulk actions
+    function updateAvailableActions(checkedBoxes) {
+        // Get all action buttons in the dropdown
+        const markPaidBtn = document.querySelector('button[value="mark_paid"]');
+        const sendRemindersBtn = document.querySelector('button[value="send_reminders"]');
+        const deleteBtn = document.querySelector('button[value="delete"]');
+        
+        if (checkedBoxes.length === 0) return;
+        
+        // Analyze the states of all selected passports
+        let hasUnpaid = false;
+        
+        checkedBoxes.forEach(checkbox => {
+            const isPaid = checkbox.dataset.paid === 'true';
+            
+            if (!isPaid) {
+                hasUnpaid = true;
+            }
+        });
+        
+        // Update action visibility based on states
+        // Mark as Paid - show only if at least one is unpaid
+        if (markPaidBtn) {
+            if (hasUnpaid) {
+                markPaidBtn.parentElement.style.display = '';
+                markPaidBtn.disabled = false;
+            } else {
+                markPaidBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Send Reminder - show only if at least one is unpaid
+        if (sendRemindersBtn) {
+            if (hasUnpaid) {
+                sendRemindersBtn.parentElement.style.display = '';
+                sendRemindersBtn.disabled = false;
+            } else {
+                sendRemindersBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Delete - always available
+        if (deleteBtn) {
+            deleteBtn.parentElement.style.display = '';
+            deleteBtn.disabled = false;
+        }
+    }
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const visibleCheckboxes = Array.from(passportCheckboxes).filter(cb => {
+                const row = cb.closest('tr');
+                return row && row.style.display !== 'none';
+            });
+            
+            visibleCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    // Individual checkbox functionality
+    passportCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Initialize
+    updateBulkActions();
+}
+
+// Filter passports function
+function filterPassports(filterType) {
+    const rows = document.querySelectorAll('.table tbody tr');
+    const filterBtns = document.querySelectorAll('.github-filter-btn');
+    
+    // Update active filter button styling
+    filterBtns.forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.cssText = btn.style.cssText.replace(/background:[^;]+;/, 'background: rgba(0, 0, 0, 0.03);').replace(/color:[^;]+;/, 'color: #586069;').replace(/font-weight:[^;]+;/, '').replace(/border:[^;]+;/, '').replace(/box-shadow:[^;]+;/, '').replace(/z-index:[^;]+;/, '').replace(/border-radius:[^;]+;/, '');
+    });
+    
+    const activeBtn = document.getElementById(`filter-${filterType}`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.style.cssText = activeBtn.style.cssText.replace(/background:[^;]+;/, 'background: #ffffff;').replace(/color:[^;]+;/, 'color: #24292e;') + ' font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);';
+    }
+    
+    // Filter rows
+    rows.forEach(row => {
+        const isPaid = row.getAttribute('data-paid') === 'true';
+        const isActive = row.getAttribute('data-active') === 'true';
+        
+        let shouldShow = false;
+        
+        switch(filterType) {
+            case 'all':
+                shouldShow = true;
+                break;
+            case 'paid':
+                shouldShow = isPaid;
+                break;
+            case 'unpaid':
+                shouldShow = !isPaid;
+                break;
+            case 'active':
+                shouldShow = isActive;
+                break;
+        }
+        
+        row.style.display = shouldShow ? '' : 'none';
+    });
+    
+    // Clear any bulk selections when filtering
+    document.querySelectorAll('.passport-checkbox:checked').forEach(cb => cb.checked = false);
+    document.getElementById('bulkActions').style.display = 'none';
+    document.getElementById('selectAll').checked = false;
+    document.getElementById('selectAll').indeterminate = false;
+}
+
+// Initialize passport bulk selection when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePassportBulkSelection);
+} else {
+    initializePassportBulkSelection();
+}
+
+// Initialize signup functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Bulk selection functionality for signups
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const signupCheckboxes = document.querySelectorAll('.signup-checkbox');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+
+    function updateBulkActions() {
+        const checkedBoxes = document.querySelectorAll('.signup-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCount.textContent = count;
+        
+        // Smooth show/hide animation
+        if (count > 0 && bulkActions.style.display === 'none') {
+            bulkActions.style.display = 'block';
+            bulkActions.classList.add('show');
+        } else if (count === 0 && bulkActions.style.display !== 'none') {
+            bulkActions.classList.remove('show');
+            setTimeout(() => {
+                bulkActions.style.display = 'none';
+            }, 300);
+        }
+        
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            if (count === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (count === signupCheckboxes.length && signupCheckboxes.length > 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+        
+        // Update available bulk actions based on selected items
+        updateAvailableActions(checkedBoxes);
+    }
+    
+    // Function to determine and update available bulk actions
+    function updateAvailableActions(checkedBoxes) {
+        // Get all action buttons in the dropdown
+        const markPaidBtn = document.querySelector('button[value="mark_paid"]');
+        const approveBtn = document.querySelector('button[value="approve"]');
+        const sendRemindersBtn = document.querySelector('button[value="send_reminders"]');
+        const deleteBtn = document.querySelector('button[value="delete"]');
+        
+        if (checkedBoxes.length === 0) return;
+        
+        // Analyze the states of all selected signups
+        let hasUnpaid = false;
+        let hasPending = false;
+        let hasApproved = false;
+        let allPending = true;
+        let allPaid = true;
+        
+        checkedBoxes.forEach(checkbox => {
+            const status = checkbox.dataset.status;
+            const isPaid = checkbox.dataset.paid === 'true';
+            
+            if (!isPaid) {
+                hasUnpaid = true;
+                allPaid = false;
+            }
+            
+            if (status === 'pending') {
+                hasPending = true;
+            } else if (status === 'approved') {
+                hasApproved = true;
+                allPending = false;
+            } else {
+                allPending = false;
+            }
+        });
+        
+        // Update action visibility based on states
+        // Mark as Paid - show only if at least one is unpaid
+        if (markPaidBtn) {
+            if (hasUnpaid) {
+                markPaidBtn.parentElement.style.display = '';
+                markPaidBtn.disabled = false;
+            } else {
+                markPaidBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Approve - show only if ALL selected are pending
+        if (approveBtn) {
+            if (allPending && hasPending) {
+                approveBtn.parentElement.style.display = '';
+                approveBtn.disabled = false;
+            } else {
+                approveBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Send Reminder - show only if at least one is unpaid
+        if (sendRemindersBtn) {
+            if (hasUnpaid) {
+                sendRemindersBtn.parentElement.style.display = '';
+                sendRemindersBtn.disabled = false;
+            } else {
+                sendRemindersBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Delete - always available
+        if (deleteBtn) {
+            deleteBtn.parentElement.style.display = '';
+            deleteBtn.disabled = false;
+        }
+        
+        // Update dropdown button text to indicate filtered actions
+        const dropdownToggle = document.querySelector('.bulk-actions-card .dropdown-toggle');
+        if (dropdownToggle) {
+            // Count visible actions
+            const visibleActions = document.querySelectorAll('.bulk-actions-card .dropdown-menu li:not([style*="display: none"])').length - 1; // -1 for divider
+            if (visibleActions < 4) {
+                dropdownToggle.innerHTML = `Actions <small class="text-muted">(${visibleActions})</small>`;
+            } else {
+                dropdownToggle.textContent = 'Actions';
+            }
+        }
+    }
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            signupCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    // Individual checkbox functionality
+    signupCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Enhanced dynamic search functionality
+    const enhancedSearchInput = document.getElementById('enhancedSearchInput');
+    const searchForm = enhancedSearchInput ? enhancedSearchInput.closest('form') : null;
+    const tableContainer = document.querySelector('.table-responsive');
+    let searchTimeout;
+    let isSearching = false;
+
+    if (enhancedSearchInput && tableContainer) {
+        // Create audio element for sound effect
+        const searchSound = new Audio('/static/beep.wav');
+        searchSound.volume = 0.3; // 30% volume
+        
+        // Create loading indicator
+        function createLoadingIndicator() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'searchLoadingIndicator';
+            loadingDiv.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center p-3">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span class="text-muted">Searching...</span>
+                </div>
+            `;
+            loadingDiv.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(255, 255, 255, 0.9);
+                z-index: 10;
+                display: none;
+            `;
+            return loadingDiv;
+        }
+
+        const loadingIndicator = createLoadingIndicator();
+        tableContainer.style.position = 'relative';
+        tableContainer.appendChild(loadingIndicator);
+
+        // Show/hide loading state
+        function setLoadingState(loading) {
+            isSearching = loading;
+            if (loading) {
+                loadingIndicator.style.display = 'flex';
+                enhancedSearchInput.style.opacity = '0.8';
+                enhancedSearchInput.classList.add('searching-pulse');
+                const charCounter = document.getElementById('searchCharCounter');
+                if (charCounter) {
+                    charCounter.style.display = 'inline';
+                    charCounter.textContent = 'searching...';
+                    charCounter.className = 'text-primary fw-bold';
+                }
+            } else {
+                loadingIndicator.style.display = 'none';
+                enhancedSearchInput.style.opacity = '1';
+                enhancedSearchInput.classList.remove('searching-pulse');
+                // Reset character counter based on current input
+                updateSearchFeedback(enhancedSearchInput.value);
+            }
+        }
+
+        // Perform search by navigating to URL with query params
+        function performSearch(query) {
+            if (isSearching) return; // Prevent multiple simultaneous searches
+            
+            setLoadingState(true);
+            
+            // Build URL with search query while preserving filter parameters
+            const url = new URL(window.location.href);
+            if (query && query.trim().length >= 3) {
+                url.searchParams.set('q', query.trim());
+            } else {
+                url.searchParams.delete('q');
+            }
+            // Preserve existing filter parameters
+            const currentPaymentStatus = new URLSearchParams(window.location.search).get('payment_status');
+            const currentStatus = new URLSearchParams(window.location.search).get('status');
+            if (currentPaymentStatus && !url.searchParams.has('payment_status')) {
+                url.searchParams.set('payment_status', currentPaymentStatus);
+            }
+            if (currentStatus && !url.searchParams.has('status')) {
+                url.searchParams.set('status', currentStatus);
+            }
+            
+            // Navigate to the search URL - this will reload the page with results
+            window.location.href = url.toString();
+        }
+
+        // Debounced search function
+        function debouncedSearch(query) {
+            clearTimeout(searchTimeout);
+            
+            // If query is empty, clear search immediately
+            if (!query || query.trim().length === 0) {
+                searchTimeout = setTimeout(() => performSearch(''), 150);
+                return;
+            }
+            
+            // If query is less than 3 characters, don't search yet
+            if (query.trim().length < 3) {
+                return;
+            }
+            
+            // Debounce search for queries with 3+ characters
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 250); // 250ms debounce delay for more responsive feel
+        }
+
+        // Get elements for clear button functionality
+        const kbdHint = document.getElementById('searchKbdHint');
+        const clearBtn = document.getElementById('searchClearBtn');
+        
+        // Ctrl+K keyboard shortcut to focus search with glow effect
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                enhancedSearchInput.focus();
+                enhancedSearchInput.select();
+                
+                // Add pink glow effect
+                enhancedSearchInput.classList.add('search-glow-active');
+                
+                // Play sound effect
+                try {
+                    searchSound.currentTime = 0;
+                    searchSound.play().catch(() => {
+                        // Silently fail if audio can't play
+                    });
+                } catch (err) {
+                    // Ignore audio errors
+                }
+                
+                // Remove glow after animation
+                setTimeout(() => {
+                    enhancedSearchInput.classList.remove('search-glow-active');
+                }, 800);
+            }
+        });
+        
+        // Clear button functionality
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                enhancedSearchInput.value = '';
+                enhancedSearchInput.focus();
+                updateSearchFeedback('');
+                
+                // Show pink glow on clear
+                enhancedSearchInput.classList.add('search-glow-active');
+                setTimeout(() => {
+                    enhancedSearchInput.classList.remove('search-glow-active');
+                }, 800);
+                
+                // Trigger search to clear results
+                performSearch('');
+            });
+        }
+        
+        // Character counter element
+        const charCounter = document.getElementById('searchCharCounter');
+        
+        // Update character counter and provide visual feedback
+        function updateSearchFeedback(query) {
+            const length = query.trim().length;
+            
+            // Toggle between kbd hint and clear button
+            if (length === 0) {
+                if (charCounter) charCounter.style.display = 'none';
+                enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+                // Show kbd hint, hide clear button
+                if (kbdHint) kbdHint.style.display = 'inline-block';
+                if (clearBtn) clearBtn.style.display = 'none';
+            } else {
+                // Hide kbd hint, show clear button
+                if (kbdHint) kbdHint.style.display = 'none';
+                if (clearBtn) clearBtn.style.display = 'inline-flex';
+                
+                if (length < 3) {
+                    if (charCounter) {
+                        charCounter.style.display = 'inline';
+                        charCounter.textContent = `${3 - length} more char${3 - length === 1 ? '' : 's'}`;
+                        charCounter.className = 'text-muted';
+                    }
+                    enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+                } else {
+                    // Ready to search - hide counter, no Bootstrap validation styling
+                    if (charCounter) charCounter.style.display = 'none';
+                    enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
+                }
+            }
+        }
+
+        // Handle input changes with debouncing
+        enhancedSearchInput.addEventListener('input', function(e) {
+            const query = e.target.value;
+            updateSearchFeedback(query);
+            debouncedSearch(query);
+        });
+        
+        // Handle Enter key for immediate search
+        enhancedSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(searchTimeout);
+                const query = e.target.value;
+                if (query.trim().length >= 3 || query.trim().length === 0) {
+                    performSearch(query);
+                }
+            }
+        });
+        
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', function(e) {
+            // Page will reload automatically, just ensure we're not in a loading state
+            setLoadingState(false);
+        });
+        
+        // Prevent form submission (we handle it with JavaScript)
+        if (searchForm) {
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const query = enhancedSearchInput.value;
+                if (query.trim().length >= 3 || query.trim().length === 0) {
+                    performSearch(query);
+                }
+            });
+        }
+        
+        // Add visual feedback for minimum character requirement
+        enhancedSearchInput.addEventListener('focus', function() {
+            if (this.value.length > 0 && this.value.length < 3) {
+                this.setAttribute('title', 'Type at least 3 characters to search');
+            }
+            updateSearchFeedback(this.value);
+            
+            // Add subtle glow on regular focus (not as intense as Ctrl+K)
+            if (this.value.length === 0) {
+                this.classList.add('search-focus-glow');
+            }
+        });
+        
+        enhancedSearchInput.addEventListener('blur', function() {
+            this.removeAttribute('title');
+            this.classList.remove('search-focus-glow');
+            // Hide counter when not focused unless searching
+            if (!isSearching && this.value.trim().length < 3) {
+                const charCounter = document.getElementById('searchCharCounter');
+                if (charCounter) charCounter.style.display = 'none';
+            }
+        });
+        
+        // Initialize character counter on page load
+        updateSearchFeedback(enhancedSearchInput.value);
+
+        // Filter button functionality
+        document.querySelectorAll('.github-filter-btn').forEach(filterBtn => {
+            filterBtn.addEventListener('click', function(e) {
+                // Preserve search query when switching filters
+                const currentQuery = enhancedSearchInput.value.trim();
+                if (currentQuery && currentQuery.length >= 3) {
+                    const url = new URL(this.href);
+                    url.searchParams.set('q', currentQuery);
+                    this.href = url.toString();
+                }
+            });
+        });
+    }
+    
+    // Initialize
+    updateBulkActions();
+    
+    // Validation for debugging
+    console.log('📋 Activity Dashboard Signups section loaded');
+    console.log('🔧 Global dropdown fix available:', typeof window.dropdownFix !== 'undefined');
+    console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
+    console.log('🔍 Dropdown toggles found:', document.querySelectorAll('[data-bs-toggle="dropdown"]').length);
+
+    // Debug: Check if Bootstrap is properly loaded
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded! Dropdown functionality may not work.');
+    } else {
+        console.log('Bootstrap is loaded. Dropdown functionality should work.');
+    }
+});
+
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Critical Search Bar Fix Styles for Signups */
+/* Pink glow effect for Ctrl+K - subtle and elegant */
+#enhancedSearchInput.search-glow-active {
+  animation: pinkGlowPulse 0.8s ease-out !important;
+  border-color: #ff69b4 !important;
+  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
+              0 0 8px rgba(255, 105, 180, 0.35),
+              0 0 15px rgba(255, 105, 180, 0.15) !important;
+  transform: scale(1.005) !important;
+  background-image: none !important;
+  z-index: 1000;
+  position: relative;
+}
+
+@keyframes pinkGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
+                0 0 0 0 rgba(255, 105, 180, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+                0 0 10px rgba(255, 105, 180, 0.35),
+                0 0 18px rgba(255, 105, 180, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
+                0 0 8px rgba(255, 105, 180, 0.35),
+                0 0 15px rgba(255, 105, 180, 0.15);
+  }
+}
+
+/* Disable Bootstrap validation styling completely */
+#enhancedSearchInput.is-valid,
+#enhancedSearchInput.is-invalid {
+  border-color: #ced4da !important;
+  background-image: none !important;
+  padding-right: 100px !important;
+}
+
+#enhancedSearchInput.is-valid:focus,
+#enhancedSearchInput.is-invalid:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+  background-image: none !important;
+}
+
+/* Force remove validation feedback icons */
+#enhancedSearchInput {
+  background-image: none !important;
+}
+
+/* Subtle glow on regular focus */
+#enhancedSearchInput.search-focus-glow {
+  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
+              0 0 15px rgba(255, 105, 180, 0.15);
+}
+
+/* Enhanced loading animation */
+.searching-pulse {
+  animation: blueSearchPulse 1.5s ease-in-out infinite;
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+              0 0 15px rgba(13, 110, 253, 0.4) !important;
+}
+
+@keyframes blueSearchPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
+                0 0 15px rgba(13, 110, 253, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
+                0 0 25px rgba(13, 110, 253, 0.5);
+  }
+}
+
+/* Clear button styling */
+#searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+#searchClearBtn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+#searchClearBtn:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* Smooth transitions for kbd hint and clear button */
+#searchKbdHint, #searchClearBtn {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#searchCharCounter {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+#searchCharCounter.fw-bold {
+  font-weight: 600;
+}
+
+/* Search loading indicator */
+#searchLoadingIndicator {
+  border-radius: inherit;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+#searchLoadingIndicator .spinner-border-sm {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* GitHub-style filter buttons */
+.github-filter-group {
+  display: inline-flex;
+  align-items: center;
+  background: #e1e4e8;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.github-filter-btn {
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #24292e;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Inactive state - darker gray background */
+.github-filter-btn:not(.active) {
+  background: #e1e4e8;
+  color: #586069;
+}
+
+.github-filter-btn:not(.active):hover {
+  background: #d1d5da;
+  color: #24292e;
+  text-decoration: none;
+}
+
+/* Active state - white/light background with rounded corners */
+.github-filter-btn.active {
+  background: #ffffff;
+  color: #24292e;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
+  font-weight: 600;
+  z-index: 1;
+}
+
+.github-filter-btn.active:hover {
+  background: #ffffff;
+  text-decoration: none;
+}
+
+/* Icons styling */
+.github-filter-btn i {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.github-filter-btn.active i {
+  opacity: 1;
+}
+
+/* User avatar styling */
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+/* Enhanced search styling */
+#enhancedSearchInput {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#enhancedSearchInput:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Form improvements */
+.form-check-input {
+  margin-top: 0;
+}
+
+/* Smooth transitions for search feedback */
+.input-icon {
+  transition: all 0.2s ease;
+}
+
+.input-icon:has(#enhancedSearchInput:focus) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter Button Group Styling */
+.card-header .d-flex {
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Table improvements */
+.table {
+  background-color: transparent !important;
+}
+
+.table th {
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* Bulk Actions Bar Styling - EXACT COPY from passports.html */
+/* CRITICAL CSS FIX: Override minipass.css white background rule for bulk actions cards */
+/* This rule specifically counters: .card { background-color: #fff !important; } in minipass.css */
+html body .page-wrapper .page-body .dashboard-container .bulk-actions-container .card.bulk-actions-card {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Fallback with even higher specificity if needed */
+html body div[class*="page"] div[class*="bulk-actions"] .card[class*="bulk-actions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* NUCLEAR OPTION: Override EVERYTHING for bulk actions cards */
+[id="bulkActions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Target by ID with maximum specificity */
+body #bulkActions.card {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Inline style override simulation */
+.card[id="bulkActions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Bulk Actions Bar - MAXIMUM SPECIFICITY TO FORCE GREEN THEME */
+/* CRITICAL FIX: Counter the minipass.css .card { background-color: #fff !important; } rule */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card,
+body .page-body div.bulk-actions-container .card.bulk-actions-card,
+body div.bulk-actions-container .card.bulk-actions-card,
+body .bulk-actions-container .card.bulk-actions-card,
+body .card.bulk-actions-card,
+div.bulk-actions-container .card.bulk-actions-card,
+.bulk-actions-container .card.bulk-actions-card,
+.card.bulk-actions-card {
+  margin-top: 1.5rem !important;
+  margin-bottom: 2.5rem !important;
+  /* Force light green background - CRITICAL: Override minipass.css white background */
+  background: #f0fdf4 !important;
+  background-color: #f0fdf4 !important;
+  background-image: none !important;
+  /* Green border */
+  border: 1px solid #bbf7d0 !important;
+  border-color: #bbf7d0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  animation: slideDown 0.3s ease;
+  /* Override all backdrop and transform effects */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  transition: none !important;
+  /* Ensure visibility */
+  overflow: visible !important;
+}
+
+/* Override hover effects for bulk actions card with maximum specificity */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card:hover,
+body .page-body div.bulk-actions-container .card.bulk-actions-card:hover,
+body div.bulk-actions-container .card.bulk-actions-card:hover,
+body .bulk-actions-container .card.bulk-actions-card:hover,
+body .card.bulk-actions-card:hover,
+div.bulk-actions-container .card.bulk-actions-card:hover,
+.bulk-actions-container .card.bulk-actions-card:hover,
+.card.bulk-actions-card:hover {
+  background: #f0fdf4 !important;
+  background-color: #f0fdf4 !important;
+  background-image: none !important;
+  border: 1px solid #bbf7d0 !important;
+  border-color: #bbf7d0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transform: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Card body styling for bulk actions */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card .card-body,
+body .page-body div.bulk-actions-container .card.bulk-actions-card .card-body,
+body div.bulk-actions-container .card.bulk-actions-card .card-body,
+body .bulk-actions-container .card.bulk-actions-card .card-body,
+body .card.bulk-actions-card .card-body,
+div.bulk-actions-container .card.bulk-actions-card .card-body,
+.bulk-actions-container .card.bulk-actions-card .card-body,
+.card.bulk-actions-card .card-body {
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 1rem 1.25rem !important;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulk-actions-count {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+}
+
+.bulk-actions-count i {
+  color: #0d6efd;
+  font-size: 1.125rem;
+}
+
+.bulk-actions-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Dropdown button styling */
+.bulk-actions-card .dropdown-toggle {
+  border-color: #dee2e6;
+  color: #495057;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.bulk-actions-card .dropdown-toggle:hover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+  color: #212529;
+}
+
+.bulk-actions-card .dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Dropdown menu items */
+.bulk-actions-card .dropdown-item {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  transition: background-color 0.15s ease;
+}
+
+.bulk-actions-card .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.bulk-actions-card .dropdown-item i {
+  width: 1.25rem;
+  text-align: center;
+}
+
+/* GitHub filter styles moved to main style block at top of file */
+
+/* Table improvements */
+.table {
+  background-color: transparent !important;
+}
+
+.table th {
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* Form improvements */
+.form-check-input {
+  margin-top: 0;
+}
+
+/* User avatar styling */
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+/* Card container margins */
+.main-table-card {
+  margin-top: 0 !important;
+}
+
+/* Add extra spacing between bulk actions and main table */
+.bulk-actions-container + .main-table-card {
+  margin-top: 1rem !important;
+}
+
+/* Responsive Design for Filter Buttons */
+@media (max-width: 767px) {
+  .bulk-actions-card .card-body {
+    padding: 0.875rem 1rem !important;
+  }
+  
+  .bulk-actions-card .d-flex {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  
+  .bulk-actions-count {
+    font-size: 0.875rem;
+  }
+  
+  .bulk-actions-card .dropdown-toggle {
+    padding: 0.325rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+}
+</style>
+{% endblock %}
