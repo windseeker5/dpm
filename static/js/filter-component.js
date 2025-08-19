@@ -29,19 +29,35 @@ window.FilterComponent = (function() {
 
     function setupEventListeners() {
         // Handle filter button clicks
-        document.querySelectorAll(`.${config.filterClass}`).forEach(filterBtn => {
-            filterBtn.addEventListener('click', function(e) {
-                handleFilterClick(e, this);
-            });
+        const filterButtons = document.querySelectorAll(`.${config.filterClass}`);
+        console.log(`FilterComponent: Found ${filterButtons.length} filter buttons with class '${config.filterClass}'`);
+        
+        filterButtons.forEach(filterBtn => {
+            // Remove any existing listeners to prevent duplicates
+            filterBtn.removeEventListener('click', handleFilterClickWrapper);
+            filterBtn.addEventListener('click', handleFilterClickWrapper);
+            console.log(`FilterComponent: Added listener to button ${filterBtn.id || filterBtn.textContent.trim()}`);
         });
+    }
+
+    function handleFilterClickWrapper(e) {
+        console.log(`FilterComponent: Button clicked in ${config.mode} mode:`, this.id || this.textContent.trim());
+        const result = handleFilterClick(e, this);
+        if (config.mode === 'ajax') {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+        return result;
     }
 
     function handleFilterClick(event, filterBtn) {
         if (config.mode === 'server') {
-            handleServerFilter(event, filterBtn);
+            return handleServerFilter(event, filterBtn);
         } else if (config.mode === 'ajax') {
-            handleAjaxFilter(event, filterBtn);
+            return handleAjaxFilter(event, filterBtn);
         }
+        return true;
     }
 
     function handleServerFilter(event, filterBtn) {
@@ -75,6 +91,7 @@ window.FilterComponent = (function() {
         }
         
         // Allow default navigation to proceed
+        return true;
     }
 
     function handleAjaxFilter(event, filterBtn) {

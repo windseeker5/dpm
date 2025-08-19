@@ -403,13 +403,16 @@
           <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}?v=20250815" 
                alt="Minipass" class="brand-logo brand-logo-static">
         </a>
+        <!-- Mobile close button -->
+        <button class="sidebar-close d-lg-none" type="button" id="sidebarClose">
+          <i class="ti ti-x"></i>
+        </button>
       </div>
       
       <!-- Main Navigation -->
       <div class="minipass-sidebar-nav">
         <!-- Primary Navigation -->
         <div class="nav-section">
-          <div class="nav-section-title">Main</div>
           <ul class="nav-list">
             <li class="nav-item">
               <a href="{{ url_for('dashboard') }}" 
@@ -472,7 +475,6 @@
         
         <!-- Tools Section -->
         <div class="nav-section">
-          <div class="nav-section-title">Tools</div>
           <ul class="nav-list">
             <li class="nav-item">
               <a href="/chatbot/" 
@@ -481,26 +483,6 @@
                 <span class="nav-text">AI Analytics</span>
                 <span class="nav-tag">Beta</span>
                 {% if 'chatbot' in request.endpoint %}
-                <span class="nav-indicator"></span>
-                {% endif %}
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="{{ url_for('style_guide') }}" 
-                 class="nav-link {{ 'active' if request.endpoint == 'style_guide' }}">
-                <i class="nav-icon ti ti-palette"></i>
-                <span class="nav-text">Style Guide</span>
-                {% if request.endpoint == 'style_guide' %}
-                <span class="nav-indicator"></span>
-                {% endif %}
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="{{ url_for('components') }}" 
-                 class="nav-link {{ 'active' if request.endpoint == 'components' }}">
-                <i class="nav-icon ti ti-components"></i>
-                <span class="nav-text">Components</span>
-                {% if request.endpoint == 'components' %}
                 <span class="nav-indicator"></span>
                 {% endif %}
               </a>
@@ -785,18 +767,37 @@
       
       // Mobile sidebar toggle
       const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebarClose = document.getElementById('sidebarClose');
       const sidebar = document.getElementById('sidebar');
+      
+      function closeSidebar() {
+        sidebar.classList.remove('show');
+        document.body.classList.remove('sidebar-open');
+      }
+      
+      function openSidebar() {
+        sidebar.classList.add('show');
+        document.body.classList.add('sidebar-open');
+      }
+      
       if (sidebarToggle && sidebar) {
         sidebarToggle.addEventListener('click', function() {
           sidebar.classList.toggle('show');
           document.body.classList.toggle('sidebar-open');
         });
-        
+      }
+      
+      if (sidebarClose && sidebar) {
+        sidebarClose.addEventListener('click', function() {
+          closeSidebar();
+        });
+      }
+      
+      if (sidebar) {
         // Close sidebar when clicking outside
         document.addEventListener('click', function(event) {
           if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
-            sidebar.classList.remove('show');
-            document.body.classList.remove('sidebar-open');
+            closeSidebar();
           }
         });
       }
