@@ -44,8 +44,8 @@
 
 /* Inactive state - darker gray background */
 .github-filter-btn:not(.active) {
-  background: rgba(0, 0, 0, 0.03);
-  color: #586069;
+  background: #f6f8fa !important;
+  color: #586069 !important;
   margin: 0;
   border-right: 1px solid transparent;
   background-clip: padding-box;
@@ -57,10 +57,10 @@
 }
 
 .github-filter-btn:not(.active):hover {
-  background: #d1d5da;
-  color: #24292e;
+  background: #d1d5da !important;
+  color: #24292e !important;
   text-decoration: none;
-  background-image: none;
+  background-image: none !important;
 }
 
 /* Active state - white/light background with rounded corners */
