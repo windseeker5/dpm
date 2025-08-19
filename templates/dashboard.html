@@ -533,36 +533,10 @@
         
         <!-- Main Events Table -->
         <div class="card main-table-card">
-          <div class="card-header">
-            <div class="d-flex justify-content-center align-items-center w-100">
-              <!-- Filter Buttons -->
-              <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-                <a href="#" onclick="filterLogs('all')" 
-                   class="github-filter-btn active" id="filter-all"
-                   style="background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                  <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Events <span style="opacity: 0.6; margin-left: 4px;" id="count-all">({{ logs|length }})</span>
-                </a>
-                <a href="#" onclick="filterLogs('passport')" 
-                   class="github-filter-btn" id="filter-passport"
-                   style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                  <i class="ti ti-id-badge-2" style="font-size: 16px; margin-right: 4px;"></i>Passports <span class="badge bg-green-lt ms-2" id="count-passport">{{ active_passport_count|default(0) }}</span>
-                </a>
-                <a href="#" onclick="filterLogs('signup')" 
-                   class="github-filter-btn" id="filter-signup"
-                   style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                  <i class="ti ti-user-plus" style="font-size: 16px; margin-right: 4px;"></i>Signups <span style="opacity: 0.6; margin-left: 4px;" id="count-signup">(0)</span>
-                </a>
-                <a href="#" onclick="filterLogs('payment')" 
-                   class="github-filter-btn" id="filter-payment"
-                   style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                  <i class="ti ti-currency-dollar" style="font-size: 16px; margin-right: 4px;"></i>Payments <span style="opacity: 0.6; margin-left: 4px;" id="count-payment">(0)</span>
-                </a>
-                <a href="#" onclick="filterLogs('admin')" 
-                   class="github-filter-btn" id="filter-admin"
-                   style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                  <i class="ti ti-settings" style="font-size: 16px; margin-right: 4px;"></i>Admin <span style="opacity: 0.6; margin-left: 4px;" id="count-admin">(0)</span>
-                </a>
-              </div>
+          <div class="card-header" style="min-height: 60px;">
+            <!-- Empty header with same height as tables with filter buttons -->
+            <div class="d-flex justify-content-center align-items-center w-100" style="height: 36px;">
+              <!-- Spacer to maintain consistent header height -->
             </div>
           </div>
           <div class="table-responsive">
@@ -1952,9 +1926,6 @@ document.addEventListener('DOMContentLoaded', function() {
   updateCharts('7d');
   attachDropdownHandlers();
   
-  // Initialize filter counts and functionality
-  updateFilterCounts();
-  
   // Handle case where there are no logs
   if (!allLogs || allLogs.length === 0) {
     const tbody = document.querySelector('#logTable tbody');
@@ -1970,7 +1941,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initial setup - show all logs
   if (allLogs && allLogs.length > 0) {
-    filterLogs('all');
+    logsPagination = new LogsPagination(allLogs, 10);
+    logsPagination.init();
   }
 });
 

@@ -5,7 +5,7 @@
 <div class="page-wrapper">
   <!-- Page Header -->
   <div class="page-header d-print-none">
-    <div class="settings-container">
+    <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
           <h1 class="page-title mb-1">
@@ -22,7 +22,7 @@
 
   <!-- Page Body -->
   <div class="page-body">
-    <div class="settings-container">
+    <div class="dashboard-container">
   <form method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -292,12 +292,13 @@
 {% endblock %}
 
 {% block head %}
-<!-- Settings page width fix -->
+<!-- Settings page uses dashboard-container for consistent alignment -->
 <style>
-.settings-container {
-  max-width: 100%;
-  margin: 0 2rem;
-  padding: 0;
+/* Import dashboard container styles if not already available */
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
 /* Match dashboard card styling */
@@ -310,8 +311,8 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .settings-container {
-    margin: 0 1rem;
+  .dashboard-container {
+    padding: 0 1rem;
   }
 }
 </style>
