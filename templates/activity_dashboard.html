@@ -4,92 +4,7 @@
 
 {% block content %}
 <style>
-/* GitHub-style filter buttons - exact copy from passports.html */
-.github-filter-group {
-  display: inline-flex;
-  align-items: center;
-  background: #f6f8fa;
-  border: 1px solid #d1d5da;
-  border-radius: 6px;
-  padding: 0;
-}
-
-.github-filter-btn {
-  padding: 5px 12px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  color: #586069;
-  background: #e1e4e8;
-  border: none;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  margin: 0;
-  cursor: pointer;
-  outline: none;
-  /* Separator line between buttons */
-  border-right: 1px solid transparent;
-  background-clip: padding-box;
-  background-image: 
-    linear-gradient(to right, transparent 0%, transparent 100%), 
-    linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%);
-  background-size: 100% 100%, 1px 100%;
-  background-position: center, right center;
-  background-repeat: no-repeat;
-}
-
-/* Last button - no separator */
-.github-filter-btn:last-child {
-  background-image: none;
-  border-right: none;
-}
-
-/* Hover state for inactive buttons */
-.github-filter-btn:not(.active):hover {
-  background: #d1d5da;
-  color: #24292e;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-/* Active state - white background with rounded corners */
-.github-filter-btn.active {
-  background: #ffffff !important;
-  color: #24292e;
-  font-weight: 600;
-  border: 1px solid #d1d5da;
-  margin: -1px;
-  z-index: 1;
-  border-radius: 6px;
-  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
-  background-image: none !important;
-}
-
-.github-filter-btn.active:hover {
-  background: #ffffff !important;
-  text-decoration: none;
-}
-
-/* Icons styling */
-.github-filter-btn i {
-  font-size: 16px;
-  margin-right: 4px;
-  opacity: 0.7;
-}
-
-.github-filter-btn.active i {
-  opacity: 1;
-}
-
-/* Filter count styling */
-.filter-count {
-  opacity: 0.6;
-  margin-left: 4px;
-}
+/* Component styles loaded via base.html */
 
 /* Fix dropdown z-index issues in tables */
 .table-responsive {
@@ -1890,8 +1805,32 @@ function animateProgressBar() {
 }
 
 function initializeActivityDashboard() {
-  // Initialize enhanced search functionality
-  initializeEnhancedSearch();
+  // Initialize search component (AJAX mode for activity dashboard)
+  if (window.SearchComponent) {
+    window.SearchComponent.init({
+      formId: 'dynamicSearchForm',
+      inputId: 'enhancedSearchInput',
+      mode: 'ajax',
+      targetTable: '.main-table-card .table tbody',
+      searchColumns: [
+        { index: 1, selector: '.fw-bold', type: 'text' }, // User name
+        { index: 1, selector: '.text-muted.small', type: 'text' }, // User email
+        { index: 2, selector: '.fw-bold', type: 'text' }, // Activity name
+        { index: 2, selector: '.text-muted.small', type: 'text' } // Pass code
+      ]
+    });
+  }
+
+  // Initialize filter component  
+  if (window.FilterComponent) {
+    window.FilterComponent.init({
+      filterClass: 'github-filter-btn',
+      mode: 'ajax',
+      ajaxUrl: '/api/activity-filter',
+      preserveScrollPosition: true,
+      enableSearchPreservation: true
+    });
+  }
   
   // Filter tabs
   document.querySelectorAll('.filter-pills .nav-link').forEach(tab => {
@@ -2250,235 +2189,7 @@ function updateResultCount() {
   }
 }
 
-// Initialize Enhanced Search functionality (exact copy from signups.html)
-function initializeEnhancedSearch() {
-  const enhancedSearchInput = document.getElementById('enhancedSearchInput');
-  if (!enhancedSearchInput) return;
-  
-  const searchForm = enhancedSearchInput.closest('form');
-  const tableContainer = document.querySelector('.table-responsive');
-  let searchTimeout;
-  let isSearching = false;
-  
-  // Create audio element for sound effect
-  const searchSound = new Audio('/static/beep.wav');
-  searchSound.volume = 0.3; // 30% volume
-  
-  // Create loading indicator
-  function createLoadingIndicator() {
-    const loadingDiv = document.createElement('div');
-    loadingDiv.id = 'searchLoadingIndicator';
-    loadingDiv.innerHTML = `
-      <div class="d-flex align-items-center justify-content-center p-3">
-        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <span class="text-muted">Searching...</span>
-      </div>
-    `;
-    loadingDiv.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255, 255, 255, 0.9);
-      z-index: 10;
-      display: none;
-    `;
-    return loadingDiv;
-  }
-  
-  const loadingIndicator = createLoadingIndicator();
-  if (tableContainer) {
-    tableContainer.style.position = 'relative';
-    tableContainer.appendChild(loadingIndicator);
-  }
-  
-  // Get elements for clear button functionality
-  const kbdHint = document.getElementById('searchKbdHint');
-  const clearBtn = document.getElementById('searchClearBtn');
-  const charCounter = document.getElementById('searchCharCounter');
-  
-  // Show/hide loading state
-  function setLoadingState(loading) {
-    isSearching = loading;
-    if (loading) {
-      loadingIndicator.style.display = 'flex';
-      enhancedSearchInput.style.opacity = '0.8';
-      enhancedSearchInput.classList.add('searching-pulse');
-      if (charCounter) {
-        charCounter.style.display = 'inline';
-        charCounter.textContent = 'searching...';
-        charCounter.className = 'text-primary fw-bold';
-      }
-    } else {
-      loadingIndicator.style.display = 'none';
-      enhancedSearchInput.style.opacity = '1';
-      enhancedSearchInput.classList.remove('searching-pulse');
-      // Reset character counter based on current input
-      updateSearchFeedback(enhancedSearchInput.value);
-    }
-  }
-  
-  // Perform search with table filtering (activity dashboard specific)
-  function performSearch(query) {
-    // Only search in the passport table (first main-table-card)
-    const passportTable = document.querySelector('.main-table-card .table');
-    if (!passportTable) return;
-    
-    const searchQuery = query.toLowerCase().trim();
-    const rows = passportTable.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-      // Check if this is a data row (not a modal or other element)
-      if (!row.querySelector('td')) return;
-      
-      // Get user info from the User column (2nd column)
-      const userCell = row.querySelector('td:nth-child(2)');
-      if (!userCell) return;
-      
-      // Get all text content from the user cell
-      const userName = userCell.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
-      const userEmail = userCell.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
-      
-      // Also check activity name and pass code
-      const activityCell = row.querySelector('td:nth-child(3)');
-      const activityName = activityCell?.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
-      const passCode = activityCell?.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
-      
-      // Search in all relevant fields
-      if (searchQuery === '' || 
-          userName.includes(searchQuery) || 
-          userEmail.includes(searchQuery) ||
-          activityName.includes(searchQuery) ||
-          passCode.includes(searchQuery)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
-    
-    updateResultCount();
-  }
-  
-  // Debounced search function
-  function debouncedSearch(query) {
-    clearTimeout(searchTimeout);
-    
-    // If query is empty, clear search immediately
-    if (!query || query.trim().length === 0) {
-      searchTimeout = setTimeout(() => performSearch(''), 150);
-      return;
-    }
-    
-    // If query is less than 2 characters, don't search yet
-    if (query.trim().length < 2) {
-      return;
-    }
-    
-    // Debounce search for queries with 2+ characters
-    searchTimeout = setTimeout(() => {
-      performSearch(query);
-    }, 250); // 250ms debounce delay for more responsive feel
-  }
-  
-  // Escape key handler is already handled in setupGlobalSearchShortcut()
-  
-  // Note: Ctrl+K is handled globally in setupGlobalSearchShortcut()
-  
-  // Clear button functionality
-  if (clearBtn) {
-    clearBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      enhancedSearchInput.value = '';
-      enhancedSearchInput.focus();
-      updateSearchFeedback('');
-      
-      // Show pink glow on clear
-      enhancedSearchInput.classList.add('search-glow-active');
-      setTimeout(() => {
-        enhancedSearchInput.classList.remove('search-glow-active');
-      }, 800);
-      
-      // Trigger search to clear results
-      performSearch('');
-    });
-  }
-  
-  // Update character counter and provide visual feedback
-  function updateSearchFeedback(query) {
-    const length = query.trim().length;
-    
-    // Toggle between kbd hint and clear button
-    if (length === 0) {
-      if (charCounter) charCounter.style.display = 'none';
-      enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
-      // Show kbd hint, hide clear button
-      if (kbdHint) kbdHint.style.display = 'inline-block';
-      if (clearBtn) clearBtn.style.display = 'none';
-    } else {
-      // Hide kbd hint, show clear button
-      if (kbdHint) kbdHint.style.display = 'none';
-      if (clearBtn) clearBtn.style.display = 'inline-flex';
-      
-      if (length < 2) {
-        if (charCounter) {
-          charCounter.style.display = 'inline';
-          charCounter.textContent = `${2 - length} more char${2 - length === 1 ? '' : 's'}`;
-          charCounter.className = 'text-muted';
-        }
-        enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
-      } else {
-        // Ready to search - hide counter, no Bootstrap validation styling
-        if (charCounter) charCounter.style.display = 'none';
-        enhancedSearchInput.classList.remove('is-valid', 'is-invalid');
-      }
-    }
-  }
-  
-  // Handle input changes with debouncing
-  enhancedSearchInput.addEventListener('input', function(e) {
-    const query = e.target.value;
-    updateSearchFeedback(query);
-    debouncedSearch(query);
-  });
-  
-  // Prevent form submission on Enter key
-  const searchForm = document.getElementById('dynamicSearchForm');
-  if (searchForm) {
-    searchForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      return false;
-    });
-  }
-  
-  // Handle Enter key for immediate search
-  enhancedSearchInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      // Prevent form submission and page jump
-      e.stopPropagation();
-      clearTimeout(searchTimeout);
-      const query = e.target.value;
-      // Perform search regardless of length when Enter is pressed
-      performSearch(query);
-      return false;
-    }
-  });
-  
-  // Focus with subtle glow on regular focus
-  enhancedSearchInput.addEventListener('focus', function() {
-    this.classList.add('search-focus-glow');
-  });
-  
-  enhancedSearchInput.addEventListener('blur', function() {
-    this.classList.remove('search-focus-glow');
-  });
-  
-  // Initialize search feedback on page load
-  updateSearchFeedback(enhancedSearchInput.value || '');
-}
+// Enhanced search functionality migrated to SearchComponent
 
 // User actions - now handled by individual links with proper URLs
 function handleUserAction(e) {
@@ -3211,19 +2922,7 @@ if (document.readyState === 'loading') {
 
 {% block styles %}
 <style>
-/* Critical Search Bar Fix Styles for Signups */
-/* Pink glow effect for Ctrl+K - subtle and elegant */
-#enhancedSearchInput.search-glow-active {
-  animation: pinkGlowPulse 0.8s ease-out !important;
-  border-color: #ff69b4 !important;
-  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
-              0 0 8px rgba(255, 105, 180, 0.35),
-              0 0 15px rgba(255, 105, 180, 0.15) !important;
-  transform: scale(1.005) !important;
-  background-image: none !important;
-  z-index: 1000;
-  position: relative;
-}
+/* Component styles loaded via base.html */
 @keyframes pinkGlowPulse {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
