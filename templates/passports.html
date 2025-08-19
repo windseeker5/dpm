@@ -155,7 +155,7 @@
             <a href="{{ url_for('list_passports') }}" 
                class="github-filter-btn {% if not current_filters.payment_status and not current_filters.status %}active{% endif %}"
                style="{% if not current_filters.payment_status and not current_filters.status %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All Passports <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_passports|default(0) }})</span>
+              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_passports|default(0) }})</span>
             </a>
             <a href="{{ url_for('list_passports', payment_status='unpaid') }}" 
                class="github-filter-btn {% if current_filters.payment_status == 'unpaid' %}active{% endif %}"
@@ -222,7 +222,7 @@
               </div>
             </td>
             <td class="d-none d-lg-table-cell" style="vertical-align: middle;">
-              <span class="badge bg-blue-lt text-blue-lt-fg">{{ passport.passport_type.name if passport.passport_type else 'Standard' }}</span>
+              <span style="color: #6c757d;">{{ passport.passport_type.name if passport.passport_type else 'Standard' }}</span>
             </td>
             <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
               {% if passport.sold_amt %}
@@ -239,7 +239,7 @@
               {% endif %}
             </td>
             <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              <span class="fw-bold {% if passport.uses_remaining > 0 %}text-success{% else %}text-danger{% endif %}">
+              <span style="color: #6c757d;">
                 {{ passport.uses_remaining or 0 }}
               </span>
             </td>
