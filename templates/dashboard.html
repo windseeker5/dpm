@@ -533,9 +533,9 @@
         
         <!-- Main Events Table -->
         <div class="card main-table-card">
-          <div class="card-header" style="min-height: 60px;">
-            <!-- Empty header with same height as tables with filter buttons -->
-            <div class="d-flex justify-content-center align-items-center w-100" style="height: 36px;">
+          <div class="card-header" style="min-height: 50px;">
+            <!-- Reduced header height for cleaner look -->
+            <div class="d-flex justify-content-center align-items-center w-100" style="height: 26px;">
               <!-- Spacer to maintain consistent header height -->
             </div>
           </div>
@@ -543,9 +543,9 @@
             <table class="table table-hover" id="logTable">
             <thead>
               <tr>
-                <th>Date/Time</th>
-                <th class="d-none d-md-table-cell">Type</th>
-                <th>Description</th>
+                <th style="width: 15%;">Date/Time</th>
+                <th class="d-none d-md-table-cell" style="width: 20%;">Type</th>
+                <th style="width: 65%;">Description</th>
               </tr>
             </thead>
             <tbody>
@@ -1750,23 +1750,23 @@ class LogsPagination {
         formattedDate = 'Invalid Date';
       }
       
-      // Get icon based on log type - using original emoji icons
+      // Get icon based on log type - using Tabler icons from activity_log.html
       const iconMap = {
-        'Passport Redeemed': '🎫',
-        'Email Sent': '✉️',
-        'Passport Created': '🆔',
-        'Interact Payment': '💳',
-        'Marked Paid': '✅',
-        'Reminder Sent': '🔔',
-        'Signup Submitted': '🙋‍♂️',
-        'Signup Approved': '👍',
-        'Signup Rejected': '❌',
-        'Signup Cancelled': '❌',
-        'Activity Created': '🎯',
-        'Admin Action': '⚙️'
+        'Passport Redeemed': '<i class="ti ti-ticket text-danger"></i>',
+        'Email Sent': '<i class="ti ti-mail text-info"></i>',
+        'Passport Created': '<i class="ti ti-id text-lime"></i>',
+        'Interact Payment': '<i class="ti ti-currency-dollar text-success"></i>',
+        'Marked Paid': '<i class="ti ti-check text-green"></i>',
+        'Reminder Sent': '<i class="ti ti-bell text-purple"></i>',
+        'Signup Submitted': '<i class="ti ti-user-plus text-success"></i>',
+        'Signup Approved': '<i class="ti ti-user-check text-green"></i>',
+        'Signup Rejected': '<i class="ti ti-user-x text-danger"></i>',
+        'Signup Cancelled': '<i class="ti ti-user-x text-danger"></i>',
+        'Activity Created': '<i class="ti ti-target text-orange"></i>',
+        'Admin Action': '<i class="ti ti-settings text-muted"></i>'
       };
       
-      const icon = iconMap[log.type] || '📝';
+      const icon = iconMap[log.type] || '<i class="ti ti-activity text-muted"></i>';
       
       row.className = 'log-row';
       row.setAttribute('data-type', log.type.toLowerCase().replace(' ', '-'));
@@ -1779,7 +1779,7 @@ class LogsPagination {
         </td>
         <td class="d-none d-md-table-cell" style="vertical-align: middle;">${icon} ${log.type}</td>
         <td style="vertical-align: middle;">
-          <div class="text-truncate" style="max-width: 300px;" title="${log.details || ''}">
+          <div class="text-truncate" style="max-width: 100%;" title="${log.details || ''}">
             ${log.details || ''}
           </div>
         </td>
