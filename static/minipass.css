@@ -2097,3 +2097,49 @@ html, body {
     padding: 0.625rem 0.75rem;
   }
 }
+
+/* ============================================
+   SIDEBAR CLOSE BUTTON
+   ============================================ */
+
+/* Sidebar close button for mobile */
+.sidebar-close {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+}
+
+.sidebar-close:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.sidebar-close:active {
+  transform: scale(0.95);
+}
+
+/* Position close button in sidebar brand */
+.minipass-sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+}
+
+/* Hide close button on desktop */
+@media (min-width: 992px) {
+  .sidebar-close {
+    display: none;
+  }
+}

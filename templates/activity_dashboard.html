@@ -1017,7 +1017,7 @@
       <div class="card-header">
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
-          <div class="github-filter-group">
+          <div class="github-filter-group" role="group" aria-label="Filter buttons">
             <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='all', signup_filter=request.args.get('signup_filter', 'all')) }}"
                class="github-filter-btn {% if request.args.get('passport_filter', 'all') == 'all' %}active{% endif %}" id="filter-all">
               <i class="ti ti-list"></i>All <span class="filter-count">({{ all_passports|length }})</span>
@@ -1276,7 +1276,7 @@
         <div class="card-header">
           <div class="d-flex justify-content-center align-items-center w-100">
             <!-- Filter Buttons -->
-            <div class="github-filter-group">
+            <div class="github-filter-group" role="group" aria-label="Filter buttons">
               <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='all', passport_filter=request.args.get('passport_filter', 'all')) }}"
                  class="github-filter-btn {% if request.args.get('signup_filter', 'all') == 'all' %}active{% endif %}" id="signup-filter-all">
                 <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ all_signups|length }})</span>
@@ -3072,8 +3072,8 @@ if (document.readyState === 'loading') {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Filter Button Group Styling */
-.card-header .d-flex {
+/* Filter Button Group Styling - More specific selector to avoid conflicts */
+.main-table-card .card-header .d-flex {
   justify-content: center !important;
   align-items: center !important;
   width: 100% !important;

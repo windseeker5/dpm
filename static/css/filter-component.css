@@ -3,8 +3,8 @@
  * Consistent filter experience across all pages
  */
 
-/* Filter Button Group Styling */
-.card-header .d-flex {
+/* Filter Button Group Styling - Specific to main table cards to avoid conflicts */
+.main-table-card .card-header .d-flex {
   justify-content: center !important;
   align-items: center !important;
   width: 100% !important;
