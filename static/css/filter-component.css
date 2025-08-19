@@ -23,49 +23,104 @@
   gap: 0;
 }
 
-.github-filter-btn {
-  padding: 5px 12px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  color: #24292e;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  cursor: pointer;
-  outline: none;
-}
-
-/* Inactive state - darker gray background */
-.github-filter-btn:not(.active) {
-  background: #f6f8fa !important;
-  color: #586069 !important;
-  margin: 0;
-  border-right: 1px solid transparent;
-  background-clip: padding-box;
-  background-image: linear-gradient(to right, transparent 0%, transparent 100%), 
-                    linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%);
-  background-size: 100% 100%, 1px 100%;
-  background-position: center, right center;
-  background-repeat: no-repeat;
-}
-
-.github-filter-btn:not(.active):hover {
-  background: #d1d5da !important;
+/* Base button styles with Firefox-specific fixes and maximum specificity */
+/* High specificity for activity dashboard */
+.main-table-card .card-header .github-filter-group .github-filter-btn,
+.main-table-card .card-header .github-filter-group a.github-filter-btn,
+/* Fallback selectors for other pages */
+.github-filter-btn,
+a.github-filter-btn {
+  padding: 5px 12px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
   color: #24292e !important;
-  text-decoration: none;
-  background-image: none !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  outline: none !important;
+  box-shadow: none !important;
+  /* Firefox-specific properties */
+  -moz-appearance: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
-/* Active state - white/light background with rounded corners */
-.github-filter-btn.active {
+/* Inactive state - light gray background with Firefox compatibility and maximum specificity */
+/* High specificity for activity dashboard */
+.main-table-card .card-header .github-filter-group .github-filter-btn:not(.active),
+.main-table-card .card-header .github-filter-group a.github-filter-btn:not(.active),
+.main-table-card .card-header .github-filter-group a.github-filter-btn:link:not(.active),
+.main-table-card .card-header .github-filter-group a.github-filter-btn:visited:not(.active),
+/* Fallback selectors for other pages */
+.github-filter-btn:not(.active),
+a.github-filter-btn:not(.active),
+a.github-filter-btn:link:not(.active),
+a.github-filter-btn:visited:not(.active) {
+  background: #f6f8fa !important;
+  background-color: #f6f8fa !important;
+  color: #586069 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-right: 1px solid transparent !important;
+  background-clip: padding-box !important;
+  background-image: linear-gradient(to right, transparent 0%, transparent 100%), 
+                    linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%) !important;
+  background-size: 100% 100%, 1px 100% !important;
+  background-position: center, right center !important;
+  background-repeat: no-repeat !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* Firefox-specific inactive state override */
+@-moz-document url-prefix() {
+  .main-table-card .card-header .github-filter-group .github-filter-btn:not(.active),
+  .main-table-card .card-header .github-filter-group a.github-filter-btn:not(.active) {
+    background: #f6f8fa !important;
+    background-color: #f6f8fa !important;
+    color: #586069 !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* Hover states for inactive buttons */
+.main-table-card .card-header .github-filter-group .github-filter-btn:not(.active):hover,
+.main-table-card .card-header .github-filter-group a.github-filter-btn:not(.active):hover,
+.github-filter-btn:not(.active):hover,
+a.github-filter-btn:not(.active):hover {
+  background: #e1e4e8 !important;
+  background-color: #e1e4e8 !important;
+  color: #24292e !important;
+  text-decoration: none !important;
+  background-image: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Active state - white background with rounded corners and Firefox compatibility with maximum specificity */
+/* High specificity for activity dashboard */
+.main-table-card .card-header .github-filter-group .github-filter-btn.active,
+.main-table-card .card-header .github-filter-group a.github-filter-btn.active,
+.main-table-card .card-header .github-filter-group a.github-filter-btn.active:link,
+.main-table-card .card-header .github-filter-group a.github-filter-btn.active:visited,
+/* Fallback selectors for other pages */
+.github-filter-btn.active,
+a.github-filter-btn.active,
+a.github-filter-btn.active:link,
+a.github-filter-btn.active:visited {
   background: #ffffff !important;
+  background-color: #ffffff !important;
   color: #24292e !important;
   font-weight: 600 !important;
   border: 1px solid #d1d5da !important;
@@ -74,68 +129,97 @@
   border-radius: 6px !important;
   box-shadow: 0 1px 0 rgba(27,31,35,0.04) !important;
   background-image: none !important;
+  text-decoration: none !important;
 }
 
-.github-filter-btn.active:hover {
+/* Firefox-specific active state override */
+@-moz-document url-prefix() {
+  .main-table-card .card-header .github-filter-group .github-filter-btn.active,
+  .main-table-card .card-header .github-filter-group a.github-filter-btn.active {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #24292e !important;
+    border: 1px solid #d1d5da !important;
+    border-radius: 6px !important;
+  }
+}
+
+/* Hover states for active buttons */
+.main-table-card .card-header .github-filter-group .github-filter-btn.active:hover,
+.main-table-card .card-header .github-filter-group a.github-filter-btn.active:hover,
+.github-filter-btn.active:hover,
+a.github-filter-btn.active:hover {
   background: #ffffff !important;
-  text-decoration: none;
+  background-color: #ffffff !important;
+  text-decoration: none !important;
 }
 
 /* Icons styling */
-.github-filter-btn i {
-  font-size: 14px;
-  margin-right: 4px;
-  opacity: 0.7;
+.main-table-card .card-header .github-filter-group .github-filter-btn i {
+  font-size: 14px !important;
+  margin-right: 4px !important;
+  opacity: 0.7 !important;
 }
 
-.github-filter-btn.active i {
-  opacity: 1;
+.main-table-card .card-header .github-filter-group .github-filter-btn.active i {
+  opacity: 1 !important;
 }
 
 /* Filter count styling */
-.github-filter-btn .filter-count,
-.github-filter-btn span[style*="opacity"] {
-  opacity: 0.6;
-  margin-left: 4px;
-  font-weight: normal;
+.main-table-card .card-header .github-filter-group .github-filter-btn .filter-count,
+.main-table-card .card-header .github-filter-group .github-filter-btn span[style*="opacity"] {
+  opacity: 0.6 !important;
+  margin-left: 4px !important;
+  font-weight: normal !important;
 }
 
-.github-filter-btn.active .filter-count,
-.github-filter-btn.active span[style*="opacity"] {
-  opacity: 0.8;
-  font-weight: 500;
+.main-table-card .card-header .github-filter-group .github-filter-btn.active .filter-count,
+.main-table-card .card-header .github-filter-group .github-filter-btn.active span[style*="opacity"] {
+  opacity: 0.8 !important;
+  font-weight: 500 !important;
 }
 
-/* Focus states for accessibility */
-.github-filter-btn:focus {
-  outline: 2px solid #0969da;
-  outline-offset: -2px;
-  z-index: 2;
+/* Focus states for accessibility with Firefox compatibility */
+.main-table-card .card-header .github-filter-group .github-filter-btn:focus,
+.main-table-card .card-header .github-filter-group a.github-filter-btn:focus {
+  outline: 2px solid #0969da !important;
+  outline-offset: -2px !important;
+  z-index: 2 !important;
 }
 
-.github-filter-btn:focus:not(:focus-visible) {
-  outline: none;
+.main-table-card .card-header .github-filter-group .github-filter-btn:focus:not(:focus-visible),
+.main-table-card .card-header .github-filter-group a.github-filter-btn:focus:not(:focus-visible) {
+  outline: none !important;
+}
+
+/* Firefox-specific focus state */
+@-moz-document url-prefix() {
+  .main-table-card .card-header .github-filter-group .github-filter-btn:focus-visible,
+  .main-table-card .card-header .github-filter-group a.github-filter-btn:focus-visible {
+    outline: 2px solid #0969da !important;
+    outline-offset: -2px !important;
+  }
 }
 
 /* Loading state for filter buttons */
-.github-filter-btn.loading {
-  opacity: 0.6;
-  pointer-events: none;
-  position: relative;
+.main-table-card .card-header .github-filter-group .github-filter-btn.loading {
+  opacity: 0.6 !important;
+  pointer-events: none !important;
+  position: relative !important;
 }
 
-.github-filter-btn.loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: 8px;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 12px;
-  border: 1px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: filterButtonSpin 0.6s linear infinite;
+.main-table-card .card-header .github-filter-group .github-filter-btn.loading::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  right: 8px !important;
+  transform: translateY(-50%) !important;
+  width: 12px !important;
+  height: 12px !important;
+  border: 1px solid currentColor !important;
+  border-right-color: transparent !important;
+  border-radius: 50% !important;
+  animation: filterButtonSpin 0.6s linear infinite !important;
 }
 
 @keyframes filterButtonSpin {
@@ -259,6 +343,34 @@
   .github-filter-btn.loading::after {
     transition: none;
     animation: none;
+  }
+}
+
+/* Additional Firefox-specific overrides at the end for highest priority */
+@-moz-document url-prefix() {
+  /* Ensure all link states are properly styled in Firefox */
+  .main-table-card .card-header .github-filter-group a.github-filter-btn,
+  .main-table-card .card-header .github-filter-group a.github-filter-btn:link,
+  .main-table-card .card-header .github-filter-group a.github-filter-btn:visited,
+  .main-table-card .card-header .github-filter-group a.github-filter-btn:hover,
+  .main-table-card .card-header .github-filter-group a.github-filter-btn:active {
+    text-decoration: none !important;
+  }
+  
+  /* Force inactive button background in Firefox */
+  .main-table-card .card-header .github-filter-group a.github-filter-btn:not(.active) {
+    background: #f6f8fa !important;
+    background-color: #f6f8fa !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+  
+  /* Force active button background in Firefox */
+  .main-table-card .card-header .github-filter-group a.github-filter-btn.active {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5da !important;
+    border-radius: 6px !important;
   }
 }
 
