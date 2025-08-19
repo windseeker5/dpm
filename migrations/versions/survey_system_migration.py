@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'survey_system_2025'
-down_revision = None
+down_revision = 'add_passport_type_id_signup'
 branch_labels = None
 depends_on = None
 

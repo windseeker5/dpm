@@ -1,5 +1,5 @@
 <!-- Organization Settings with Tabler.io -->
-
+<h3 class="mb-3">Organization Settings</h3>
 
 
 <div class="card mb-4">
@@ -92,4 +92,295 @@
 
   </div>
 </div>
+
+<!-- Organization Email Configuration -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h4 class="card-title">
+      <i class="ti ti-mail"></i>
+      Organization Email Settings
+    </h4>
+    <p class="text-muted mb-0">Configure custom email settings for different organizations</p>
+  </div>
+  <div class="card-body">
+    
+    <!-- Organization List -->
+    <div id="organizations-list" class="mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Configured Organizations</h5>
+        <button class="btn btn-primary btn-sm" onclick="showCreateOrgModal()">
+          <i class="ti ti-plus"></i>
+          Add Organization
+        </button>
+      </div>
+      
+      <div id="organizations-container">
+        <div class="text-muted text-center py-4">
+          <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2 mb-0">Loading organizations...</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Quick Test Organization Button (Development) -->
+    <div class="border-top pt-3">
+      <h6>Development Tools</h6>
+      <button class="btn btn-outline-info btn-sm" onclick="createTestOrg()">
+        <i class="ti ti-flask"></i>
+        Create LHGI Test Organization
+      </button>
+      <small class="form-text text-muted">Creates a test organization with provided credentials</small>
+    </div>
+  </div>
+</div>
+
+
+<!-- JavaScript for Organization Management -->
+<script>
+// Global variables
+let currentOrgId = null;
+let isEditMode = false;
+
+// Load organizations on page load
+document.addEventListener('DOMContentLoaded', function() {
+  loadOrganizations();
+});
+
+// Load and display organizations
+function loadOrganizations() {
+  fetch('/admin/organizations')
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById('organizations-container');
+      
+      if (data.organizations && data.organizations.length > 0) {
+        container.innerHTML = '';
+        data.organizations.forEach(org => {
+          container.appendChild(createOrganizationCard(org));
+        });
+      } else {
+        container.innerHTML = '<div class="text-muted text-center py-4"><p>No organizations configured yet.</p></div>';
+      }
+    })
+    .catch(error => {
+      console.error('Error loading organizations:', error);
+      document.getElementById('organizations-container').innerHTML = 
+        '<div class="alert alert-danger">Failed to load organizations</div>';
+    });
+}
+
+// Create organization card HTML
+function createOrganizationCard(org) {
+  const card = document.createElement('div');
+  card.className = 'card mb-3';
+  card.innerHTML = `
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col">
+          <h6 class="mb-1">${org.name}</h6>
+          <p class="text-muted mb-1">
+            <i class="ti ti-mail"></i> ${org.full_email}
+            ${org.sender_name ? ` • Sender: ${org.sender_name}` : ''}
+          </p>
+          <small class="text-muted">
+            Server: ${org.mail_server || 'Not configured'} • 
+            Status: <span class="badge ${org.email_enabled ? 'bg-success' : 'bg-secondary'}">
+              ${org.email_enabled ? 'Enabled' : 'Disabled'}
+            </span>
+          </small>
+        </div>
+        <div class="col-auto">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" onclick="testOrganizationEmail(${org.id})" 
+                    title="Test Email">
+              <i class="ti ti-mail-check"></i>
+            </button>
+            <button class="btn btn-outline-secondary" onclick="editOrganization(${org.id})" 
+                    title="Edit">
+              <i class="ti ti-edit"></i>
+            </button>
+            <button class="btn ${org.email_enabled ? 'btn-outline-warning' : 'btn-outline-success'}" 
+                    onclick="toggleOrganizationEmail(${org.id})" 
+                    title="${org.email_enabled ? 'Disable' : 'Enable'}">
+              <i class="ti ${org.email_enabled ? 'ti-eye-off' : 'ti-eye'}"></i>
+            </button>
+            <button class="btn btn-outline-danger" onclick="deleteOrganization(${org.id})" 
+                    title="Delete">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+// Show create organization modal
+function showCreateOrgModal() {
+  isEditMode = false;
+  currentOrgId = null;
+  document.getElementById('orgModalLabel').textContent = 'Add Organization';
+  document.getElementById('orgForm').reset();
+  document.getElementById('orgUseTLS').checked = true;
+  
+  const modal = new bootstrap.Modal(document.getElementById('orgModal'));
+  modal.show();
+}
+
+// Edit organization
+function editOrganization(orgId) {
+  // In a real implementation, you'd fetch the organization data
+  // For now, just show the modal
+  isEditMode = true;
+  currentOrgId = orgId;
+  document.getElementById('orgModalLabel').textContent = 'Edit Organization';
+  
+  const modal = new bootstrap.Modal(document.getElementById('orgModal'));
+  modal.show();
+}
+
+// Save organization (create or update)
+function saveOrganization() {
+  const form = document.getElementById('orgForm');
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
+  
+  // Convert checkbox to boolean
+  data.org_mail_use_tls = document.getElementById('orgUseTLS').checked;
+  
+  const url = isEditMode ? `/admin/organizations/${currentOrgId}/update` : '/admin/organizations/create';
+  const method = isEditMode ? 'PUT' : 'POST';
+  
+  fetch(url, {
+    method: method,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      bootstrap.Modal.getInstance(document.getElementById('orgModal')).hide();
+      loadOrganizations();
+      showAlert(result.message, 'success');
+    } else {
+      showAlert(result.error || 'Failed to save organization', 'danger');
+    }
+  })
+  .catch(error => {
+    console.error('Error saving organization:', error);
+    showAlert('Failed to save organization', 'danger');
+  });
+}
+
+// Test organization email configuration
+function testOrganizationEmail(orgId) {
+  fetch(`/admin/organizations/${orgId}/test`, {
+    method: 'POST'
+  })
+  .then(response => response.json())
+  .then(result => {
+    const alertType = result.success ? 'success' : 'danger';
+    showAlert(result.message, alertType);
+  })
+  .catch(error => {
+    console.error('Error testing email:', error);
+    showAlert('Failed to test email configuration', 'danger');
+  });
+}
+
+// Toggle organization email enabled/disabled
+function toggleOrganizationEmail(orgId) {
+  fetch(`/admin/organizations/${orgId}/toggle`, {
+    method: 'POST'
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      loadOrganizations();
+      showAlert(result.message, 'success');
+    } else {
+      showAlert(result.error || 'Failed to toggle organization', 'danger');
+    }
+  })
+  .catch(error => {
+    console.error('Error toggling organization:', error);
+    showAlert('Failed to toggle organization', 'danger');
+  });
+}
+
+// Delete organization
+function deleteOrganization(orgId) {
+  if (!confirm('Are you sure you want to deactivate this organization? This will disable its email configuration.')) {
+    return;
+  }
+  
+  fetch(`/admin/organizations/${orgId}/delete`, {
+    method: 'DELETE'
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      loadOrganizations();
+      showAlert(result.message, 'success');
+    } else {
+      showAlert(result.error || 'Failed to delete organization', 'danger');
+    }
+  })
+  .catch(error => {
+    console.error('Error deleting organization:', error);
+    showAlert('Failed to delete organization', 'danger');
+  });
+}
+
+// Create test organization
+function createTestOrg() {
+  if (!confirm('This will create a test LHGI organization with the provided credentials. Continue?')) {
+    return;
+  }
+  
+  fetch('/admin/create-test-org', {
+    method: 'POST'
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      loadOrganizations();
+      showAlert(result.message, 'success');
+    } else {
+      showAlert(result.error || 'Failed to create test organization', 'danger');
+    }
+  })
+  .catch(error => {
+    console.error('Error creating test organization:', error);
+    showAlert('Failed to create test organization', 'danger');
+  });
+}
+
+// Show alert message
+function showAlert(message, type = 'info') {
+  // Create alert element
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${type} alert-dismissible fade show`;
+  alert.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  `;
+  
+  // Insert at top of organizations section
+  const container = document.getElementById('organizations-list');
+  container.insertBefore(alert, container.firstChild);
+  
+  // Auto-dismiss after 5 seconds
+  setTimeout(() => {
+    if (alert.parentNode) {
+      alert.remove();
+    }
+  }, 5000);
+}
+</script>
 

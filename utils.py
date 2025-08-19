@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
 # from models import Setting, db, Pass, Redemption, Admin, EbankPayment, ReminderLog
-from models import Setting, db, Passport, Redemption, Admin, EbankPayment, ReminderLog
+from models import Setting, db, Passport, Redemption, Admin, EbankPayment, ReminderLog, Organization
 
 
 
@@ -875,7 +875,9 @@ def render_and_send_email(
     theme_key,
     context_extra=None,
     to_email=None,
-    timestamp=None
+    timestamp=None,
+    activity=None,
+    organization_id=None
 ):
     from utils import get_setting, send_email_async
     from flask import url_for, render_template_string
@@ -939,6 +941,9 @@ def render_and_send_email(
     if final_html:
         send_email_async(
             app=app,
+            user=user,
+            activity=activity,
+            organization_id=organization_id,
             subject=subject,
             to_email=to_email or user.email,
             html_body=final_html,
@@ -948,6 +953,9 @@ def render_and_send_email(
     else:
         send_email_async(
             app=app,
+            user=user,
+            activity=activity,
+            organization_id=organization_id,
             subject=subject,
             to_email=to_email or user.email,
             template_name=template_name,
@@ -957,7 +965,7 @@ def render_and_send_email(
         )
 
 
-def send_email(subject, to_email, template_name=None, context=None, inline_images=None, html_body=None, timestamp_override=None):
+def send_email(subject, to_email, template_name=None, context=None, inline_images=None, html_body=None, timestamp_override=None, email_config=None):
     from flask import render_template
     import smtplib
     from email.mime.multipart import MIMEMultipart
@@ -990,7 +998,8 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     msg["To"] = to_email
 
     from_email = get_setting("MAIL_DEFAULT_SENDER") or "noreply@minipass.me"
-    msg["From"] = formataddr(("Minipass", from_email))
+    sender_name = get_setting("MAIL_SENDER_NAME") or "Minipass"
+    msg["From"] = formataddr((sender_name, from_email))
 
     alt_part = MIMEMultipart("alternative")
     alt_part.attach(MIMEText("Votre passe numérique est prête.", "plain"))
@@ -1008,28 +1017,53 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
                 logging.error(f"❌ Image embed error for {cid}: {e}")
 
     try:
-        smtp_host = get_setting("MAIL_SERVER")
-        smtp_port = int(get_setting("MAIL_PORT", 587))
-        smtp_user = get_setting("MAIL_USERNAME")
-        smtp_pass = get_setting("MAIL_PASSWORD")
-        use_tls = str(get_setting("MAIL_USE_TLS") or "true").lower() == "true"
+        # Use provided email config or fall back to system settings
+        if email_config:
+            smtp_host = email_config['MAIL_SERVER']
+            smtp_port = email_config['MAIL_PORT']
+            smtp_user = email_config['MAIL_USERNAME']
+            smtp_pass = decrypt_password(email_config['MAIL_PASSWORD']) if email_config['MAIL_PASSWORD'] else None
+            use_tls = email_config.get('MAIL_USE_TLS', True)
+            use_ssl = email_config.get('MAIL_USE_SSL', False)
+            sender_name = email_config.get('SENDER_NAME', 'Minipass')
+            
+            # Update the From header with organization-specific sender
+            from_email = email_config['MAIL_DEFAULT_SENDER']
+            msg['From'] = formataddr((sender_name, from_email))
+        else:
+            # Fall back to system settings
+            smtp_host = get_setting("MAIL_SERVER")
+            smtp_port = int(get_setting("MAIL_PORT", 587))
+            smtp_user = get_setting("MAIL_USERNAME")
+            smtp_pass = get_setting("MAIL_PASSWORD")
+            use_tls = str(get_setting("MAIL_USE_TLS") or "true").lower() == "true"
+            use_ssl = False
 
-        server = smtplib.SMTP(smtp_host, smtp_port)
+        # Choose connection type
+        if use_ssl:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            
         server.ehlo()
-        if use_tls:
+        
+        if use_tls and not use_ssl:
             server.starttls()
+            
         if smtp_user and smtp_pass:
             server.login(smtp_user, smtp_pass)
 
         server.sendmail(from_email, [to_email], msg.as_string())
         server.quit()
-        logging.info(f"✅ Email sent to {to_email} with subject '{subject}'")
+        
+        config_type = "organization-specific" if email_config else "system default"
+        logging.info(f"✅ Email sent to {to_email} with subject '{subject}' using {config_type} configuration")
 
     except Exception as e:
         logging.exception(f"❌ Failed to send email to {to_email}: {e}")
 
 
-def send_email_async(app, **kwargs):
+def send_email_async(app, user=None, activity=None, organization_id=None, **kwargs):
     import threading
     def send_in_thread():
         with app.app_context():
@@ -1168,6 +1202,8 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
 
         send_email_async(
             app=app,
+            user=signup.user,
+            activity=activity,
             subject=subject,
             to_email=signup.user.email,
             html_body=html_body,
@@ -1179,6 +1215,8 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         # fallback if compiled missing
         send_email_async(
             app=app,
+            user=signup.user,
+            activity=activity,
             subject=subject,
             to_email=signup.user.email,
             template_name=theme,
@@ -1280,8 +1318,14 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
         else:
             print("⚠️ logo.png not found in template folder.")
 
+        # Determine user and activity for email context
+        user_obj = getattr(pass_data, "user", None)
+        activity_obj = getattr(pass_data, "activity", None)
+        
         send_email_async(
             app,
+            user=user_obj,
+            activity=activity_obj,
             subject=subject,
             to_email=getattr(pass_data, "user_email", None) or getattr(getattr(pass_data, "user", None), "email", None),
             html_body=html_body,
@@ -1294,8 +1338,14 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
             "logo_image": open("static/uploads/logo.png", "rb").read()
         }
 
+        # Determine user and activity for email context
+        user_obj = getattr(pass_data, "user", None)
+        activity_obj = getattr(pass_data, "activity", None)
+        
         send_email_async(
             app,
+            user=user_obj,
+            activity=activity_obj,
             subject=subject,
             to_email=pass_data.user_email,
             template_name=theme,
@@ -1319,6 +1369,209 @@ def generate_response_token():
     """Generate a secure random token for survey responses"""
     import secrets
     return secrets.token_urlsafe(24)
+
+
+# ================================
+# 📧 ORGANIZATION EMAIL CONFIGURATION
+# ================================
+
+def get_email_config_for_context(user=None, activity=None, organization_id=None):
+    """
+    Determine the appropriate email configuration based on context.
+    Priority: organization_id > activity.organization > user.organization > system default
+    
+    Args:
+        user: User object
+        activity: Activity object  
+        organization_id: Direct organization ID
+    
+    Returns:
+        dict: Email configuration or None for system default
+    """
+    from flask import current_app
+    
+    with current_app.app_context():
+        # Priority 1: Direct organization_id
+        if organization_id:
+            org = Organization.query.get(organization_id)
+            if org and org.email_enabled and org.is_active:
+                return org.get_email_config()
+        
+        # Priority 2: Activity's organization
+        if activity and hasattr(activity, 'organization') and activity.organization:
+            if activity.organization.email_enabled and activity.organization.is_active:
+                return activity.organization.get_email_config()
+        
+        # Priority 3: User's organization
+        if user and hasattr(user, 'organization') and user.organization:
+            if user.organization.email_enabled and user.organization.is_active:
+                return user.organization.get_email_config()
+        
+        # Priority 4: System default (return None to use global settings)
+        return None
+
+
+def get_organization_by_domain(domain):
+    """
+    Get organization by domain name.
+    
+    Args:
+        domain: Domain part of email (e.g., 'lhgi' from 'lhgi@minipass.me')
+    
+    Returns:
+        Organization object or None
+    """
+    return Organization.query.filter_by(domain=domain, is_active=True).first()
+
+
+def encrypt_password(password):
+    """
+    Encrypt password for secure storage.
+    Using simple base64 encoding for now - in production should use proper encryption.
+    """
+    import base64
+    if not password:
+        return None
+    return base64.b64encode(password.encode()).decode()
+
+
+def decrypt_password(encrypted_password):
+    """
+    Decrypt stored password.
+    Using simple base64 decoding for now - in production should use proper decryption.
+    """
+    import base64
+    if not encrypted_password:
+        return None
+    try:
+        return base64.b64decode(encrypted_password.encode()).decode()
+    except:
+        return None
+
+
+def create_organization_email_config(name, domain, mail_server, mail_username, mail_password, 
+                                    mail_sender_name=None, mail_port=587, mail_use_tls=True, 
+                                    created_by=None):
+    """
+    Create a new organization with email configuration.
+    
+    Args:
+        name: Organization name
+        domain: Domain for email (without @minipass.me)
+        mail_server: SMTP server
+        mail_username: SMTP username
+        mail_password: SMTP password (will be encrypted)
+        mail_sender_name: Display name for sender
+        mail_port: SMTP port (default 587)
+        mail_use_tls: Use TLS (default True)
+        created_by: Admin who created this config
+    
+    Returns:
+        Organization object
+    """
+    from flask import current_app
+    
+    with current_app.app_context():
+        # Check if organization with this domain already exists
+        existing = Organization.query.filter_by(domain=domain).first()
+        if existing:
+            raise ValueError(f"Organization with domain '{domain}' already exists")
+        
+        # Create new organization
+        org = Organization(
+            name=name,
+            domain=domain,
+            email_enabled=True,
+            mail_server=mail_server,
+            mail_port=mail_port,
+            mail_use_tls=mail_use_tls,
+            mail_username=mail_username,
+            mail_password=encrypt_password(mail_password),
+            mail_sender_name=mail_sender_name,
+            mail_sender_email=f"{domain}@minipass.me",
+            is_active=True,
+            fallback_to_system_email=True,
+            created_by=created_by,
+            updated_by=created_by
+        )
+        
+        db.session.add(org)
+        db.session.commit()
+        
+        return org
+
+
+def update_organization_email_config(organization_id, **kwargs):
+    """
+    Update organization email configuration.
+    
+    Args:
+        organization_id: ID of organization to update
+        **kwargs: Fields to update
+    
+    Returns:
+        Organization object
+    """
+    from flask import current_app
+    
+    with current_app.app_context():
+        org = Organization.query.get(organization_id)
+        if not org:
+            raise ValueError(f"Organization with ID {organization_id} not found")
+        
+        # Update fields
+        for field, value in kwargs.items():
+            if field == 'mail_password' and value:
+                value = encrypt_password(value)
+            
+            if hasattr(org, field):
+                setattr(org, field, value)
+        
+        org.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        
+        return org
+
+
+def test_organization_email_config(organization_id):
+    """
+    Test organization email configuration by attempting to connect to SMTP server.
+    
+    Args:
+        organization_id: ID of organization to test
+    
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    from flask import current_app
+    import smtplib
+    
+    with current_app.app_context():
+        org = Organization.query.get(organization_id)
+        if not org or not org.email_enabled:
+            return False, "Organization not found or email not enabled"
+        
+        config = org.get_email_config()
+        if not config:
+            return False, "Email configuration not available"
+        
+        try:
+            # Test SMTP connection
+            server = smtplib.SMTP(config['MAIL_SERVER'], config['MAIL_PORT'])
+            server.ehlo()
+            
+            if config.get('MAIL_USE_TLS'):
+                server.starttls()
+            
+            if config.get('MAIL_USERNAME') and config.get('MAIL_PASSWORD'):
+                decrypted_password = decrypt_password(config['MAIL_PASSWORD'])
+                server.login(config['MAIL_USERNAME'], decrypted_password)
+            
+            server.quit()
+            return True, "Email configuration test successful"
+            
+        except Exception as e:
+            return False, f"Email configuration test failed: {str(e)}"
 
 
 

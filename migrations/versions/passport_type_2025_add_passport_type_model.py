@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from datetime import datetime, timezone
 
 # revision identifiers, used by Alembic.
-revision = 'passport_type_2025'
-down_revision = '88979faca0ce'
+revision = 'passport_type_2025_add_passport_type_model'
+down_revision = 'add_organization_email_support'
 branch_labels = None
 depends_on = None
 

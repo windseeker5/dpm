@@ -441,6 +441,15 @@ def initialize_setting_schemas():
             'type': SettingType.EMAIL,
             'scope': SettingScope.EMAIL
         },
+        {
+            'key': 'MAIL_SENDER_NAME',
+            'name': 'Sender Name',
+            'description': 'Display name for email sender (e.g., LHGI, Your Organization)',
+            'type': SettingType.STRING,
+            'scope': SettingScope.EMAIL,
+            'default_value': 'Minipass',
+            'validation_rules': {'max_length': 100}
+        },
         
         # Organization Settings
         {

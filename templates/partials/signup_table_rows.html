@@ -1,0 +1,111 @@
+{% for signup in signups %}
+<tr data-paid="{{ 'true' if signup.paid else 'false' }}" data-status="{{ signup.status or 'pending' }}">
+  <td>
+    <input type="checkbox" 
+           class="form-check-input signup-checkbox" 
+           name="selected_signups" 
+           value="{{ signup.id }}" 
+           form="bulkForm"
+           data-status="{{ signup.status or 'pending' }}"
+           data-paid="{{ 'true' if signup.paid else 'false' }}"
+           aria-label="Select signup {{ signup.id }}">
+  </td>
+  <td style="vertical-align: middle;">
+    <div class="d-flex align-items-center">
+      <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+           class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+      <div>
+        <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
+        <div class="text-muted small">{{ signup.user.email or 'No email' }}</div>
+      </div>
+    </div>
+  </td>
+  <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+    {% if signup.signed_up_at %}
+      {{ signup.signed_up_at.strftime('%Y-%m-%d') }}
+    {% else %}
+      <span class="text-muted">Unknown</span>
+    {% endif %}
+  </td>
+  <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+    {{ signup.activity.name if signup.activity else 'Unknown' }}
+  </td>
+  <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
+    {% set status = signup.status or 'pending' %}
+    {% if status == 'approved' %}
+      <span class="badge bg-green-lt text-green-lt-fg">Approved</span>
+    {% elif status == 'pending' %}
+      <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending</span>
+    {% elif status == 'rejected' %}
+      <span class="badge bg-red-lt text-red-lt-fg">Rejected</span>
+    {% else %}
+      <span class="badge bg-secondary-lt">{{ status.title() }}</span>
+    {% endif %}
+  </td>
+  <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+    {% if signup.passport_type_id %}
+      {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+      {% if passport_type %}
+        ${{ "%.0f"|format(passport_type.price_per_user or 0) }}
+      {% else %}
+        <span class="text-muted">-</span>
+      {% endif %}
+    {% else %}
+      <span class="text-muted">-</span>
+    {% endif %}
+  </td>
+  <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+    {% if signup.passport_type_id %}
+      {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
+      {% if passport_type %}
+        {{ passport_type.sessions_included }}
+      {% else %}
+        <span class="text-muted">-</span>
+      {% endif %}
+    {% else %}
+      <span class="text-muted">-</span>
+    {% endif %}
+  </td>
+  <td class="text-center" style="vertical-align: middle;">
+    <div class="dropdown d-inline-block">
+      <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+        <span class="d-none d-md-inline">Actions</span>
+        <i class="ti ti-menu-2 d-md-none"></i>
+      </a>
+      <div class="dropdown-menu dropdown-menu-end">
+        <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
+          <i class="ti ti-pencil me-2"></i>Edit Details
+        </a>
+        {% if not signup.paid %}
+        <a class="dropdown-item text-success" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}" 
+           onclick="return confirm('Mark this signup as paid?')">
+          <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+        </a>
+        {% endif %}
+        {% if signup.status == 'pending' %}
+        <a class="dropdown-item text-primary" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
+           onclick="return confirm('Approve and create passport?')">
+          <i class="ti ti-check me-2"></i>Approve & Create Pass
+        </a>
+        {% endif %}
+        <a class="dropdown-item" href="#">
+          <i class="ti ti-mail me-2"></i>Send Reminder
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item text-danger" href="#" 
+           onclick="if(confirm('Delete this signup?')) { 
+             var form = document.getElementById('deleteForm{{ signup.id }}'); 
+             if(form) form.submit(); 
+           }">
+          <i class="ti ti-trash me-2"></i>Delete
+        </a>
+      </div>
+    </div>
+    <!-- Hidden delete form -->
+    <form id="deleteForm{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="selected_signups" value="{{ signup.id }}">
+    </form>
+  </td>
+</tr>
+{% endfor %}

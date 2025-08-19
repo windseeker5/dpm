@@ -40,7 +40,7 @@ from werkzeug.utils import secure_filename
 
 # 🧠 Models
 from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
-from models import Activity, User, Signup, Passport, PassportType, AdminActionLog
+from models import Activity, User, Signup, Passport, PassportType, AdminActionLog, Organization
 from models import SurveyTemplate, Survey, SurveyResponse
 from models import ChatConversation, ChatMessage, QueryLog, ChatUsage
 
@@ -159,6 +159,11 @@ try:
     from chatbot_v2.routes_simple import chatbot_bp
     app.register_blueprint(chatbot_bp)
     print("✅ Simplified chatbot registered successfully")
+    
+    # Register Settings API Blueprint
+    from api.settings import settings_api
+    app.register_blueprint(settings_api)
+    print("✅ Settings API registered successfully")
     
     # List routes to verify
     for rule in app.url_map.iter_rules():
@@ -1602,7 +1607,8 @@ def setup():
             "MAIL_USE_TLS": "mail_use_tls" in request.form,
             "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
             "MAIL_PASSWORD": request.form.get("mail_password_raw", "").strip(),
-            "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip()
+            "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip(),
+            "MAIL_SENDER_NAME": request.form.get("mail_sender_name", "").strip()
         }
 
         for key, value in email_settings.items():
@@ -1745,6 +1751,262 @@ def setup():
         backup_files=backup_files,
         email_templates=email_templates
     )
+
+
+# ================================
+# 📧 ORGANIZATION EMAIL MANAGEMENT
+# ================================
+
+@app.route("/admin/organizations")
+def list_organizations():
+    """List all organizations with their email configurations"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    organizations = Organization.query.all()
+    return jsonify({
+        'organizations': [{
+            'id': org.id,
+            'name': org.name,
+            'domain': org.domain,
+            'full_email': org.full_email_address,
+            'email_enabled': org.email_enabled,
+            'is_active': org.is_active,
+            'mail_server': org.mail_server,
+            'mail_username': org.mail_username,
+            'sender_name': org.mail_sender_name,
+            'created_at': org.created_at.isoformat() if org.created_at else None,
+            'updated_at': org.updated_at.isoformat() if org.updated_at else None
+        } for org in organizations]
+    })
+
+
+@app.route("/admin/organizations/create", methods=["POST"])
+def create_organization():
+    """Create a new organization with email configuration"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        from utils import create_organization_email_config
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Validate required fields
+        required_fields = ['name', 'domain', 'mail_server', 'mail_username', 'mail_password']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        # Create organization
+        org = create_organization_email_config(
+            name=data['name'],
+            domain=data['domain'],
+            mail_server=data['mail_server'],
+            mail_username=data['mail_username'],
+            mail_password=data['mail_password'],
+            mail_sender_name=data.get('mail_sender_name'),
+            mail_port=int(data.get('mail_port', 587)),
+            mail_use_tls=data.get('mail_use_tls', True),
+            created_by=session.get('admin')
+        )
+        
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Organization '{org.name}' created with email configuration"
+        ))
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Organization created successfully',
+            'organization_id': org.id
+        })
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Failed to create organization: {str(e)}'}), 500
+
+
+@app.route("/admin/organizations/<int:org_id>/update", methods=["PUT"])
+def update_organization(org_id):
+    """Update organization email configuration"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        from utils import update_organization_email_config
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Add updated_by to the data
+        data['updated_by'] = session.get('admin')
+        
+        # Update organization
+        org = update_organization_email_config(org_id, **data)
+        
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Organization '{org.name}' email configuration updated"
+        ))
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Organization updated successfully'
+        })
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Failed to update organization: {str(e)}'}), 500
+
+
+@app.route("/admin/organizations/<int:org_id>/test", methods=["POST"])
+def test_organization_email(org_id):
+    """Test organization email configuration"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        from utils import test_organization_email_config
+        
+        success, message = test_organization_email_config(org_id)
+        
+        # Log admin action
+        org = Organization.query.get(org_id)
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Email configuration test for '{org.name if org else 'Unknown'}': {message}"
+        ))
+        db.session.commit()
+        
+        return jsonify({
+            'success': success,
+            'message': message
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Test failed: {str(e)}'}), 500
+
+
+@app.route("/admin/organizations/<int:org_id>/toggle", methods=["POST"])
+def toggle_organization_email(org_id):
+    """Toggle organization email enabled status"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        org = Organization.query.get_or_404(org_id)
+        org.email_enabled = not org.email_enabled
+        org.updated_by = session.get('admin')
+        org.updated_at = datetime.now(timezone.utc)
+        
+        db.session.commit()
+        
+        status = "enabled" if org.email_enabled else "disabled"
+        
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Organization '{org.name}' email {status}"
+        ))
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Organization email {status}',
+            'email_enabled': org.email_enabled
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to toggle organization: {str(e)}'}), 500
+
+
+@app.route("/admin/organizations/<int:org_id>/delete", methods=["DELETE"])
+def delete_organization(org_id):
+    """Delete organization (soft delete by marking as inactive)"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        org = Organization.query.get_or_404(org_id)
+        org_name = org.name
+        
+        # Soft delete - just mark as inactive
+        org.is_active = False
+        org.email_enabled = False
+        org.updated_by = session.get('admin')
+        org.updated_at = datetime.now(timezone.utc)
+        
+        db.session.commit()
+        
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Organization '{org_name}' deactivated"
+        ))
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Organization deactivated successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete organization: {str(e)}'}), 500
+
+
+# Test route for quickly creating LHGI organization
+@app.route("/admin/create-test-org", methods=["POST"])
+def create_test_org():
+    """Create test organization for LHGI (development/testing purposes)"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        from utils import create_organization_email_config
+        
+        # Check if LHGI already exists
+        existing = Organization.query.filter_by(domain='lhgi').first()
+        if existing:
+            return jsonify({'error': 'LHGI organization already exists'}), 400
+        
+        # Create LHGI organization with test credentials
+        org = create_organization_email_config(
+            name="LHGI",
+            domain="lhgi",
+            mail_server="mail.minipass.me",
+            mail_username="lhgi@minipass.me",
+            mail_password="monsterinc00",
+            mail_sender_name="LHGI",
+            mail_port=587,
+            mail_use_tls=True,
+            created_by=session.get('admin')
+        )
+        
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Test organization 'LHGI' created"
+        ))
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'LHGI test organization created successfully',
+            'organization_id': org.id
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to create test organization: {str(e)}'}), 500
 
 
 @app.route("/erase-app-data", methods=["POST"])
@@ -2823,29 +3085,52 @@ def activity_dashboard(activity_id):
         flash("❌ Activity not found", "error")
         return redirect(url_for("dashboard2"))
 
+    # Get filter parameters from request
+    passport_filter = request.args.get('passport_filter', 'all')
+    signup_filter = request.args.get('signup_filter', 'all')
+
     # Load all related signups with user eager-loaded
-    signups = (
+    signups_query = (
         Signup.query
         .options(joinedload(Signup.user))
         .filter_by(activity_id=activity_id)
-        .order_by(Signup.signed_up_at.desc())
-        .all()
     )
+    
+    # Apply signup filters
+    if signup_filter == 'paid':
+        signups_query = signups_query.filter_by(paid=True)
+    elif signup_filter == 'unpaid':
+        signups_query = signups_query.filter_by(paid=False)
+    elif signup_filter == 'pending':
+        signups_query = signups_query.filter_by(status='pending')
+    elif signup_filter == 'approved':
+        signups_query = signups_query.filter_by(status='approved')
+    
+    signups = signups_query.order_by(Signup.signed_up_at.desc()).all()
 
-    # Load only relevant passports: unpaid OR with uses remaining
-    passports = (
+    # Load passports with filtering
+    passports_query = (
         Passport.query
         .options(joinedload(Passport.user), joinedload(Passport.activity), joinedload(Passport.passport_type))
-        .filter(
-            Passport.activity_id == activity_id,
+        .filter(Passport.activity_id == activity_id)
+    )
+    
+    # Apply passport filters
+    if passport_filter == 'unpaid':
+        passports_query = passports_query.filter_by(paid=False)
+    elif passport_filter == 'paid':
+        passports_query = passports_query.filter_by(paid=True)
+    elif passport_filter == 'active':
+        passports_query = passports_query.filter(Passport.uses_remaining > 0)
+    else:  # 'all' - show unpaid OR with uses remaining
+        passports_query = passports_query.filter(
             or_(
                 Passport.uses_remaining > 0,
                 Passport.paid == False
             )
         )
-        .order_by(Passport.created_dt.desc())
-        .all()
-    )
+    
+    passports = passports_query.order_by(Passport.created_dt.desc()).all()
 
     # Use the enhanced get_kpi_stats function with activity filtering
     from utils import get_kpi_stats
@@ -2858,8 +3143,9 @@ def activity_dashboard(activity_id):
     now = datetime.now(timezone.utc)
     three_days_ago = now - timedelta(days=3)
     
-    # Get all passports for this activity for additional calculations
+    # Get all passports and signups for this activity for additional calculations and counts
     all_passports = Passport.query.filter_by(activity_id=activity_id).all()
+    all_signups = Signup.query.filter_by(activity_id=activity_id).all()
     
     # Helper function to safely compare dates
     def is_recent(dt, cutoff_date):
@@ -2975,6 +3261,8 @@ def activity_dashboard(activity_id):
         activity=activity,
         signups=signups,
         passes=passports,
+        all_signups=all_signups,  # For filter counts
+        all_passports=all_passports,  # For filter counts
         surveys=surveys,
         survey_templates=survey_templates,
         kpi_data=kpi_data,
@@ -3142,6 +3430,117 @@ def get_activity_kpis_api(activity_id):
             "details": str(e) if app.debug else "Please try again later"
         }), 500
 
+
+@app.route("/api/activity-dashboard-data/<int:activity_id>")
+def get_activity_dashboard_data(activity_id):
+    """API endpoint to get filtered passport and signup data for activity dashboard"""
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    
+    from models import Activity, Signup, Passport
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import or_
+    
+    try:
+        activity = Activity.query.get(activity_id)
+        if not activity:
+            return jsonify({"success": False, "error": "Activity not found"}), 404
+        
+        # Get filter parameters
+        passport_filter = request.args.get('passport_filter', 'all')
+        signup_filter = request.args.get('signup_filter', 'all')
+        
+        # Load filtered signups
+        signups_query = (
+            Signup.query
+            .options(joinedload(Signup.user))
+            .filter_by(activity_id=activity_id)
+        )
+        
+        if signup_filter == 'paid':
+            signups_query = signups_query.filter_by(paid=True)
+        elif signup_filter == 'unpaid':
+            signups_query = signups_query.filter_by(paid=False)
+        elif signup_filter == 'pending':
+            signups_query = signups_query.filter_by(status='pending')
+        elif signup_filter == 'approved':
+            signups_query = signups_query.filter_by(status='approved')
+        
+        signups = signups_query.order_by(Signup.signed_up_at.desc()).all()
+        
+        # Load filtered passports
+        passports_query = (
+            Passport.query
+            .options(joinedload(Passport.user), joinedload(Passport.activity), joinedload(Passport.passport_type))
+            .filter(Passport.activity_id == activity_id)
+        )
+        
+        if passport_filter == 'unpaid':
+            passports_query = passports_query.filter_by(paid=False)
+        elif passport_filter == 'paid':
+            passports_query = passports_query.filter_by(paid=True)
+        elif passport_filter == 'active':
+            passports_query = passports_query.filter(Passport.uses_remaining > 0)
+        else:  # 'all' - show unpaid OR with uses remaining
+            passports_query = passports_query.filter(
+                or_(
+                    Passport.uses_remaining > 0,
+                    Passport.paid == False
+                )
+            )
+        
+        passports = passports_query.order_by(Passport.created_dt.desc()).all()
+        
+        # Get all passports and signups for filter counts
+        all_passports = Passport.query.filter_by(activity_id=activity_id).all()
+        all_signups = Signup.query.filter_by(activity_id=activity_id).all()
+        
+        # Get passport types for signup template
+        from models import PassportType
+        passport_types = PassportType.query.filter_by(activity_id=activity_id).all()
+        
+        # Render the table HTML fragments
+        from flask import render_template_string
+        
+        # Passport table HTML
+        passport_html = render_template('partials/passport_table_rows.html', 
+                                      passes=passports, activity=activity)
+        
+        # Signup table HTML  
+        signup_html = render_template('partials/signup_table_rows.html',
+                                    signups=signups, passport_types=passport_types)
+        
+        # Calculate filter counts
+        passport_counts = {
+            'all': len([p for p in all_passports if not p.paid or p.uses_remaining > 0]),
+            'unpaid': len([p for p in all_passports if not p.paid]),
+            'paid': len([p for p in all_passports if p.paid]),
+            'active': len([p for p in all_passports if p.uses_remaining > 0])
+        }
+        
+        signup_counts = {
+            'all': len(all_signups),
+            'unpaid': len([s for s in all_signups if not s.paid]),
+            'paid': len([s for s in all_signups if s.paid]),
+            'pending': len([s for s in all_signups if s.status == 'pending']),
+            'approved': len([s for s in all_signups if s.status == 'approved'])
+        }
+        
+        return jsonify({
+            "success": True,
+            "passport_html": passport_html,
+            "signup_html": signup_html,
+            "passport_counts": passport_counts,
+            "signup_counts": signup_counts
+        })
+        
+    except Exception as e:
+        print(f"Error in get_activity_dashboard_data for activity {activity_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Internal server error",
+            "details": str(e) if current_app.debug else "Please try again later"
+        }), 500
 
 @app.route("/api/global-kpis")
 def get_global_kpis_api():
@@ -3556,6 +3955,87 @@ def archive_passport_type(passport_type_id):
             "error": str(e)
         }), 500
 
+
+# ================================
+# 📧 EMAIL CONNECTION TEST API
+# ================================
+@app.route("/api/test-email-connection", methods=["POST"])
+def test_email_connection():
+    """Test email server connection without sending an email"""
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    
+    try:
+        import smtplib
+        import ssl
+        
+        # Get connection settings from request
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+            
+        mail_server = data.get('mail_server')
+        mail_port = int(data.get('mail_port', 587))
+        mail_use_tls = data.get('mail_use_tls', True)
+        mail_username = data.get('mail_username')
+        mail_password = data.get('mail_password')
+        
+        if not all([mail_server, mail_username]):
+            return jsonify({"success": False, "error": "Mail server and username are required"}), 400
+        
+        # Test connection
+        try:
+            # Create SMTP connection
+            if mail_port == 465:  # SSL
+                context = ssl.create_default_context()
+                server = smtplib.SMTP_SSL(mail_server, mail_port, context=context)
+            else:  # Standard or TLS
+                server = smtplib.SMTP(mail_server, mail_port)
+                if mail_use_tls:
+                    context = ssl.create_default_context()
+                    server.starttls(context=context)
+            
+            # Test authentication if password provided
+            if mail_password:
+                server.login(mail_username, mail_password)
+            
+            # Close connection
+            server.quit()
+            
+            # Log successful test
+            from utils import log_admin_action
+            log_admin_action(f"Successfully tested email connection to {mail_server}:{mail_port}")
+            
+            return jsonify({
+                "success": True, 
+                "message": f"Successfully connected to {mail_server}:{mail_port}"
+            })
+            
+        except smtplib.SMTPAuthenticationError:
+            return jsonify({
+                "success": False, 
+                "error": "Authentication failed. Please check your username and password."
+            }), 400
+        except smtplib.SMTPConnectError:
+            return jsonify({
+                "success": False, 
+                "error": f"Could not connect to {mail_server}:{mail_port}. Please check server and port."
+            }), 400
+        except smtplib.SMTPServerDisconnected:
+            return jsonify({
+                "success": False, 
+                "error": "Server disconnected unexpectedly. Please try again."
+            }), 400
+        except Exception as smtp_error:
+            return jsonify({
+                "success": False, 
+                "error": f"SMTP Error: {str(smtp_error)}"
+            }), 400
+            
+    except ValueError as ve:
+        return jsonify({"success": False, "error": f"Invalid port number: {str(ve)}"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Connection test failed: {str(e)}"}), 500
 
 # ================================
 # 📋 SURVEY SYSTEM ROUTES

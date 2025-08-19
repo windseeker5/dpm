@@ -20,7 +20,7 @@
   font-weight: 500;
   line-height: 20px;
   color: #586069;
-  background: rgba(0, 0, 0, 0.03);
+  background: #e1e4e8;
   border: none;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -29,6 +29,8 @@
   align-items: center;
   white-space: nowrap;
   margin: 0;
+  cursor: pointer;
+  outline: none;
   /* Separator line between buttons */
   border-right: 1px solid transparent;
   background-clip: padding-box;
@@ -48,9 +50,10 @@
 
 /* Hover state for inactive buttons */
 .github-filter-btn:not(.active):hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: #d1d5da;
   color: #24292e;
   text-decoration: none;
+  cursor: pointer;
 }
 
 /* Active state - white background with rounded corners */
@@ -1100,21 +1103,21 @@
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
           <div class="github-filter-group">
-            <a href="#" onclick="filterPassports('all'); return false;"
-               class="github-filter-btn active" id="filter-all">
-              <i class="ti ti-list"></i>All <span class="filter-count">({{ passes|length }})</span>
+            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='all', signup_filter=request.args.get('signup_filter', 'all')) }}"
+               class="github-filter-btn {% if request.args.get('passport_filter', 'all') == 'all' %}active{% endif %}" id="filter-all">
+              <i class="ti ti-list"></i>All <span class="filter-count">({{ all_passports|length }})</span>
             </a>
-            <a href="#" onclick="filterPassports('unpaid'); return false;"
-               class="github-filter-btn" id="filter-unpaid">
-              <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ passes|selectattr('paid', 'equalto', false)|list|length }})</span>
+            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='unpaid', signup_filter=request.args.get('signup_filter', 'all')) }}"
+               class="github-filter-btn {% if request.args.get('passport_filter') == 'unpaid' %}active{% endif %}" id="filter-unpaid">
+              <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ all_passports|selectattr('paid', 'equalto', false)|list|length }})</span>
             </a>
-            <a href="#" onclick="filterPassports('paid'); return false;"
-               class="github-filter-btn" id="filter-paid">
-              <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ passes|selectattr('paid', 'equalto', true)|list|length }})</span>
+            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='paid', signup_filter=request.args.get('signup_filter', 'all')) }}"
+               class="github-filter-btn {% if request.args.get('passport_filter') == 'paid' %}active{% endif %}" id="filter-paid">
+              <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ all_passports|selectattr('paid', 'equalto', true)|list|length }})</span>
             </a>
-            <a href="#" onclick="filterPassports('active'); return false;"
-               class="github-filter-btn" id="filter-active">
-              <i class="ti ti-activity"></i>Active <span class="filter-count">({{ passes|selectattr('uses_remaining', 'greaterthan', 0)|list|length }})</span>
+            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='active', signup_filter=request.args.get('signup_filter', 'all')) }}"
+               class="github-filter-btn {% if request.args.get('passport_filter') == 'active' %}active{% endif %}" id="filter-active">
+              <i class="ti ti-activity"></i>Active <span class="filter-count">({{ all_passports|selectattr('uses_remaining', 'greaterthan', 0)|list|length }})</span>
             </a>
           </div>
         </div>
@@ -1359,25 +1362,25 @@
           <div class="d-flex justify-content-center align-items-center w-100">
             <!-- Filter Buttons -->
             <div class="github-filter-group">
-              <a href="#" onclick="filterSignups('all'); return false;"
-                 class="github-filter-btn active" id="signup-filter-all">
-                <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ signups|length }})</span>
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='all', passport_filter=request.args.get('passport_filter', 'all')) }}"
+                 class="github-filter-btn {% if request.args.get('signup_filter', 'all') == 'all' %}active{% endif %}" id="signup-filter-all">
+                <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ all_signups|length }})</span>
               </a>
-              <a href="#" onclick="filterSignups('unpaid'); return false;"
-                 class="github-filter-btn" id="signup-filter-unpaid">
-                <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ signups|selectattr('paid', 'equalto', false)|list|length }})</span>
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='unpaid', passport_filter=request.args.get('passport_filter', 'all')) }}"
+                 class="github-filter-btn {% if request.args.get('signup_filter') == 'unpaid' %}active{% endif %}" id="signup-filter-unpaid">
+                <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ all_signups|selectattr('paid', 'equalto', false)|list|length }})</span>
               </a>
-              <a href="#" onclick="filterSignups('paid'); return false;"
-                 class="github-filter-btn" id="signup-filter-paid">
-                <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ signups|selectattr('paid', 'equalto', true)|list|length }})</span>
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='paid', passport_filter=request.args.get('passport_filter', 'all')) }}"
+                 class="github-filter-btn {% if request.args.get('signup_filter') == 'paid' %}active{% endif %}" id="signup-filter-paid">
+                <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ all_signups|selectattr('paid', 'equalto', true)|list|length }})</span>
               </a>
-              <a href="#" onclick="filterSignups('pending'); return false;"
-                 class="github-filter-btn" id="signup-filter-pending">
-                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ signups|selectattr('status', 'equalto', 'pending')|list|length }})</span>
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='pending', passport_filter=request.args.get('passport_filter', 'all')) }}"
+                 class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending">
+                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ all_signups|selectattr('status', 'equalto', 'pending')|list|length }})</span>
               </a>
-              <a href="#" onclick="filterSignups('approved'); return false;"
-                 class="github-filter-btn" id="signup-filter-approved">
-                <i class="ti ti-thumb-up"></i>Approved <span class="filter-count">({{ signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='approved', passport_filter=request.args.get('passport_filter', 'all')) }}"
+                 class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved">
+                <i class="ti ti-thumb-up"></i>Approved <span class="filter-count">({{ all_signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
               </a>
             </div>
           </div>
@@ -1681,15 +1684,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Global search shortcut handler - works everywhere on the page
 function setupGlobalSearchShortcut() {
+  // FIXED: More targeted prevention of browser search - only prevent when actually needed
+  // Use capture phase to intercept before other handlers
   document.addEventListener('keydown', function(e) {
-    // Check for Ctrl+K or Cmd+K
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    // Check for Ctrl+K or Cmd+K (be more specific about key checking)
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.keyCode === 75)) {
+      // Only prevent default behaviors when we can actually handle the event
+      const searchInput = document.getElementById('enhancedSearchInput');
+      if (!searchInput) return; // Don't prevent if we can't handle it
+      
+      // Prevent browser search
       e.preventDefault();
       e.stopPropagation();
       
+      // Additional prevention methods
+      if (e.cancelable) {
+        e.returnValue = false;
+      }
+      
       // Find the search input
-      const searchInput = document.getElementById('enhancedSearchInput');
-      if (!searchInput) return;
+      if (!searchInput) return false;
       
       // Scroll to the search input smoothly
       searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1718,9 +1732,9 @@ function setupGlobalSearchShortcut() {
         }, 800);
       }, 300);
       
-      return false; // Extra prevention
+      return false;
     }
-  });
+  }, true); // Use capture phase to intercept early
 }
 
 // Initialize charts with current page data
@@ -1888,6 +1902,15 @@ function initializeActivityDashboard() {
   initializeKPIDropdowns();
   
   // Most dropdown actions now use direct navigation via href attributes
+  // CRITICAL FIX: Prevent all hash links from causing page scroll (but not filter buttons)
+  document.querySelectorAll('a[href="#"]:not(.github-filter-btn)').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault(); // Prevent default anchor behavior
+      e.stopPropagation();
+      return false;
+    });
+  });
+  
   // Only add click handlers for specific client-side actions
   document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
     item.addEventListener('click', handleUserAction);
@@ -1914,12 +1937,18 @@ function handleSearch(e) {
   updateResultCount();
 }
 
-// Filter passports function - handles button clicks by toggling classes only
+// AJAX Filter passports function - handles button clicks with server-side filtering
 function filterPassports(filterType) {
-  // Get all filter buttons in passport table
+  // Prevent multiple simultaneous requests
+  if (window.isFilteringPassports) {
+    return false;
+  }
+  window.isFilteringPassports = true;
+
+  // Get all filter buttons
   const filterButtons = document.querySelectorAll('#filter-all, #filter-unpaid, #filter-paid, #filter-active');
   
-  // Update active class on buttons - let CSS handle all styling
+  // Update active class on buttons immediately for visual feedback
   filterButtons.forEach(btn => {
     if (btn.id === `filter-${filterType}`) {
       btn.classList.add('active');
@@ -1927,49 +1956,79 @@ function filterPassports(filterType) {
       btn.classList.remove('active');
     }
   });
-  
-  // Apply the filter to the passport table rows only
-  const passportTable = document.querySelector('.main-table-card .table');
-  if (passportTable) {
-    const rows = passportTable.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-      const isPaid = row.getAttribute('data-paid') === 'true';
-      const isActive = row.getAttribute('data-active') === 'true';
-      
-      let shouldShow = false;
-      
-      switch(filterType) {
-        case 'all':
-          shouldShow = true;
-          break;
-        case 'unpaid':
-          shouldShow = !isPaid;
-          break;
-        case 'paid':
-          shouldShow = isPaid;
-          break;
-        case 'active':
-          shouldShow = isActive;
-          break;
-        default:
-          shouldShow = true;
-      }
-      
-      row.style.display = shouldShow ? '' : 'none';
-    });
-    
-    updateResultCount();
+
+  // Add loading state to the passport table
+  const passportTableBody = document.querySelector('.main-table-card tbody');
+  if (passportTableBody) {
+    passportTableBody.style.opacity = '0.5';
   }
+
+  // Get current signup filter to maintain state
+  const currentSignupFilter = getCurrentSignupFilter();
+  
+  // Make AJAX request for filtered data
+  const activityId = {{ activity.id }};
+  const url = `/api/activity-dashboard-data/${activityId}?passport_filter=${filterType}&signup_filter=${currentSignupFilter}`;
+  
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        // Update passport table content
+        if (passportTableBody && data.passport_html) {
+          passportTableBody.innerHTML = data.passport_html;
+        }
+        
+        // Update filter button counts
+        updateFilterCounts('passport', data.passport_counts);
+        
+        // Update URL without page reload
+        updateURL({ passport_filter: filterType });
+        
+        // Re-initialize any event handlers for the new content
+        initializePassportBulkSelection();
+        
+        // Restore opacity
+        if (passportTableBody) {
+          passportTableBody.style.opacity = '1';
+        }
+      } else {
+        console.error('Error filtering passports:', data.error);
+        showFilterError('passports');
+      }
+    })
+    .catch(error => {
+      console.error('Network error filtering passports:', error);
+      showFilterError('passports');
+    })
+    .finally(() => {
+      window.isFilteringPassports = false;
+      // Restore opacity in case of error
+      if (passportTableBody) {
+        passportTableBody.style.opacity = '1';
+      }
+    });
+
   return false; // Prevent default link behavior
 }
 
-// Filter signups function - handles button clicks without page reload
+// AJAX Filter signups function - handles button clicks with server-side filtering
 function filterSignups(filterType) {
-  // Get all filter buttons in signups section
+  // Prevent multiple simultaneous requests
+  if (window.isFilteringSignups) {
+    return false;
+  }
+  window.isFilteringSignups = true;
+
+  // Get all filter buttons
   const filterButtons = document.querySelectorAll('#signup-filter-all, #signup-filter-unpaid, #signup-filter-paid, #signup-filter-pending, #signup-filter-approved');
   
-  // Update active class on buttons
+  // Update active class on buttons immediately for visual feedback
   filterButtons.forEach(btn => {
     if (btn.id === `signup-filter-${filterType}`) {
       btn.classList.add('active');
@@ -1977,52 +2036,154 @@ function filterSignups(filterType) {
       btn.classList.remove('active');
     }
   });
-  
-  // Find the signups table (it's the second main-table-card on the page)
+
+  // Add loading state to the signup table
   const signupCards = document.querySelectorAll('.main-table-card');
-  const signupTable = signupCards[1]; // Second table is signups
-  
-  if (signupTable) {
-    const rows = signupTable.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-      const isPaid = row.getAttribute('data-paid') === 'true';
-      const status = row.getAttribute('data-status') || 'pending';
-      
-      let shouldShow = false;
-      
-      switch(filterType) {
-        case 'all':
-          shouldShow = true;
-          break;
-        case 'unpaid':
-          shouldShow = !isPaid;
-          break;
-        case 'paid':
-          shouldShow = isPaid;
-          break;
-        case 'pending':
-          shouldShow = status === 'pending';
-          break;
-        case 'approved':
-          shouldShow = status === 'approved';
-          break;
-        default:
-          shouldShow = true;
-      }
-      
-      row.style.display = shouldShow ? '' : 'none';
-    });
-    
-    // Update count in footer
-    const visibleRows = signupTable.querySelectorAll('tbody tr:not([style*="display: none"])');
-    const totalRows = signupTable.querySelectorAll('tbody tr');
-    const footerText = signupTable.querySelector('.card-footer .text-muted');
-    if (footerText) {
-      footerText.textContent = `Showing ${visibleRows.length} of ${totalRows.length} entries`;
-    }
+  const signupTableBody = signupCards[1] ? signupCards[1].querySelector('tbody') : null;
+  if (signupTableBody) {
+    signupTableBody.style.opacity = '0.5';
   }
+
+  // Get current passport filter to maintain state
+  const currentPassportFilter = getCurrentPassportFilter();
+  
+  // Make AJAX request for filtered data
+  const activityId = {{ activity.id }};
+  const url = `/api/activity-dashboard-data/${activityId}?passport_filter=${currentPassportFilter}&signup_filter=${filterType}`;
+  
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        // Update signup table content
+        if (signupTableBody && data.signup_html) {
+          signupTableBody.innerHTML = data.signup_html;
+        }
+        
+        // Update filter button counts
+        updateFilterCounts('signup', data.signup_counts);
+        
+        // Update URL without page reload
+        updateURL({ signup_filter: filterType });
+        
+        // Re-initialize any event handlers for the new content
+        // Note: Add signup-specific initialization if needed
+        
+        // Restore opacity
+        if (signupTableBody) {
+          signupTableBody.style.opacity = '1';
+        }
+      } else {
+        console.error('Error filtering signups:', data.error);
+        showFilterError('signups');
+      }
+    })
+    .catch(error => {
+      console.error('Network error filtering signups:', error);
+      showFilterError('signups');
+    })
+    .finally(() => {
+      window.isFilteringSignups = false;
+      // Restore opacity in case of error
+      if (signupTableBody) {
+        signupTableBody.style.opacity = '1';
+      }
+    });
+
   return false; // Prevent default link behavior
+}
+
+// Helper functions for AJAX filtering
+function getCurrentPassportFilter() {
+  const activeButton = document.querySelector('#filter-all.active, #filter-unpaid.active, #filter-paid.active, #filter-active.active');
+  if (activeButton) {
+    return activeButton.id.replace('filter-', '');
+  }
+  return 'all';
+}
+
+function getCurrentSignupFilter() {
+  const activeButton = document.querySelector('#signup-filter-all.active, #signup-filter-unpaid.active, #signup-filter-paid.active, #signup-filter-pending.active, #signup-filter-approved.active');
+  if (activeButton) {
+    return activeButton.id.replace('signup-filter-', '');
+  }
+  return 'all';
+}
+
+function updateFilterCounts(type, counts) {
+  if (type === 'passport') {
+    // Update passport filter button counts
+    const allBtn = document.querySelector('#filter-all .filter-count');
+    const unpaidBtn = document.querySelector('#filter-unpaid .filter-count');
+    const paidBtn = document.querySelector('#filter-paid .filter-count');
+    const activeBtn = document.querySelector('#filter-active .filter-count');
+    
+    if (allBtn) allBtn.textContent = `(${counts.all})`;
+    if (unpaidBtn) unpaidBtn.textContent = `(${counts.unpaid})`;
+    if (paidBtn) paidBtn.textContent = `(${counts.paid})`;
+    if (activeBtn) activeBtn.textContent = `(${counts.active})`;
+  } else if (type === 'signup') {
+    // Update signup filter button counts
+    const allBtn = document.querySelector('#signup-filter-all .filter-count');
+    const unpaidBtn = document.querySelector('#signup-filter-unpaid .filter-count');
+    const paidBtn = document.querySelector('#signup-filter-paid .filter-count');
+    const pendingBtn = document.querySelector('#signup-filter-pending .filter-count');
+    const approvedBtn = document.querySelector('#signup-filter-approved .filter-count');
+    
+    if (allBtn) allBtn.textContent = `(${counts.all})`;
+    if (unpaidBtn) unpaidBtn.textContent = `(${counts.unpaid})`;
+    if (paidBtn) paidBtn.textContent = `(${counts.paid})`;
+    if (pendingBtn) pendingBtn.textContent = `(${counts.pending})`;
+    if (approvedBtn) approvedBtn.textContent = `(${counts.approved})`;
+  }
+}
+
+function updateURL(params) {
+  const url = new URL(window.location);
+  Object.keys(params).forEach(key => {
+    if (params[key] === 'all') {
+      url.searchParams.delete(key);
+    } else {
+      url.searchParams.set(key, params[key]);
+    }
+  });
+  
+  // Update URL without page reload using History API
+  history.replaceState(null, '', url.toString());
+}
+
+function showFilterError(type) {
+  // Show a subtle error message
+  const message = `Error loading ${type}. Please try again.`;
+  
+  // Create toast notification (if Tabler toast is available)
+  if (typeof Tabler !== 'undefined' && Tabler.toast) {
+    Tabler.toast(message, { type: 'danger', duration: 3000 });
+  } else {
+    // Fallback to console and could add banner
+    console.error(message);
+    // Show temporary error message in the table area
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'alert alert-danger';
+    errorDiv.innerHTML = `<i class="ti ti-alert-circle me-2"></i>${message}`;
+    errorDiv.style.position = 'fixed';
+    errorDiv.style.top = '20px';
+    errorDiv.style.right = '20px';
+    errorDiv.style.zIndex = '9999';
+    document.body.appendChild(errorDiv);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      if (errorDiv.parentNode) {
+        errorDiv.parentNode.removeChild(errorDiv);
+      }
+    }, 3000);
+  }
 }
 
 // Filter handling
@@ -2222,17 +2383,7 @@ function initializeEnhancedSearch() {
     }, 250); // 250ms debounce delay for more responsive feel
   }
   
-  // Escape key handler for clearing search
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-      if (enhancedSearchInput === document.activeElement) {
-        enhancedSearchInput.value = '';
-        enhancedSearchInput.blur();
-        updateSearchFeedback('');
-        performSearch('');
-      }
-    }
-  });
+  // Escape key handler is already handled in setupGlobalSearchShortcut()
   
   // Note: Ctrl+K is handled globally in setupGlobalSearchShortcut()
   
@@ -3196,59 +3347,7 @@ if (document.readyState === 'loading') {
   gap: 1px;
 }
 
-.github-filter-btn {
-  padding: 5px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  color: #24292e;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-}
-
-/* Inactive state - darker gray background */
-.github-filter-btn:not(.active) {
-  background: #e1e4e8;
-  color: #586069;
-}
-
-.github-filter-btn:not(.active):hover {
-  background: #d1d5da;
-  color: #24292e;
-  text-decoration: none;
-}
-
-/* Active state - white/light background with rounded corners */
-.github-filter-btn.active {
-  background: #ffffff;
-  color: #24292e;
-  border-radius: 6px;
-  box-shadow: 0 1px 0 rgba(27,31,35,0.04);
-  font-weight: 600;
-  z-index: 1;
-}
-
-.github-filter-btn.active:hover {
-  background: #ffffff;
-  text-decoration: none;
-}
-
-/* Icons styling */
-.github-filter-btn i {
-  font-size: 14px;
-  opacity: 0.7;
-}
-
-.github-filter-btn.active i {
-  opacity: 1;
-}
+/* Duplicate CSS removed - using the first definition above */
 
 /* User avatar styling */
 .user-avatar {
