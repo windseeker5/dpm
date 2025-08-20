@@ -3085,9 +3085,10 @@ def activity_dashboard(activity_id):
         flash("❌ Activity not found", "error")
         return redirect(url_for("dashboard2"))
 
-    # Get filter parameters from request
+    # Get filter and search parameters from request
     passport_filter = request.args.get('passport_filter', 'all')
     signup_filter = request.args.get('signup_filter', 'all')
+    q = request.args.get('q', '').strip()  # Add search parameter support
 
     # Load all related signups with user eager-loaded
     signups_query = (
@@ -3105,6 +3106,16 @@ def activity_dashboard(activity_id):
         signups_query = signups_query.filter_by(status='pending')
     elif signup_filter == 'approved':
         signups_query = signups_query.filter_by(status='approved')
+    
+    # Apply search filter for signups
+    if q:
+        from models import User
+        signups_query = signups_query.join(User).filter(
+            or_(
+                User.name.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%")
+            )
+        )
     
     signups = signups_query.order_by(Signup.signed_up_at.desc()).all()
 
@@ -3127,6 +3138,18 @@ def activity_dashboard(activity_id):
             or_(
                 Passport.uses_remaining > 0,
                 Passport.paid == False
+            )
+        )
+    
+    # Apply search filter for passports
+    if q:
+        from models import User
+        passports_query = passports_query.join(User).filter(
+            or_(
+                User.name.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%"),
+                Passport.pass_code.ilike(f"%{q}%"),
+                Passport.notes.ilike(f"%{q}%")
             )
         )
     
@@ -3446,9 +3469,10 @@ def get_activity_dashboard_data(activity_id):
         if not activity:
             return jsonify({"success": False, "error": "Activity not found"}), 404
         
-        # Get filter parameters
+        # Get filter and search parameters
         passport_filter = request.args.get('passport_filter', 'all')
         signup_filter = request.args.get('signup_filter', 'all')
+        q = request.args.get('q', '').strip()  # Add search parameter support
         
         # Load filtered signups
         signups_query = (
@@ -3465,6 +3489,16 @@ def get_activity_dashboard_data(activity_id):
             signups_query = signups_query.filter_by(status='pending')
         elif signup_filter == 'approved':
             signups_query = signups_query.filter_by(status='approved')
+        
+        # Apply search filter for signups
+        if q:
+            from models import User
+            signups_query = signups_query.join(User).filter(
+                or_(
+                    User.name.ilike(f"%{q}%"),
+                    User.email.ilike(f"%{q}%")
+                )
+            )
         
         signups = signups_query.order_by(Signup.signed_up_at.desc()).all()
         
@@ -3486,6 +3520,16 @@ def get_activity_dashboard_data(activity_id):
                 or_(
                     Passport.uses_remaining > 0,
                     Passport.paid == False
+                )
+            )
+        
+        # Apply search filter if provided
+        if q:
+            passports_query = passports_query.join(User).filter(
+                or_(
+                    User.name.ilike(f"%{q}%"),
+                    User.email.ilike(f"%{q}%"),
+                    Passport.pass_code.ilike(f"%{q}%")
                 )
             )
         

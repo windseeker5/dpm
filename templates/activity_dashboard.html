@@ -521,6 +521,8 @@
   box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
               0 0 15px rgba(255, 105, 180, 0.15);
 }
+
+/* Filter component styles are loaded via filter-component.css in base.html */
 </style>
 
 <div class="page-wrapper">
@@ -1273,9 +1275,9 @@
 
       <!-- Main Signups Table -->
       <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+        <!-- TEMPORARILY COMMENTED OUT TO TEST FILTER BUTTON CONFLICT HYPOTHESIS
         <div class="card-header">
           <div class="d-flex justify-content-center align-items-center w-100">
-            <!-- Filter Buttons -->
             <div class="github-filter-group" role="group" aria-label="Filter buttons">
               <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='all', passport_filter=request.args.get('passport_filter', 'all')) }}"
                  class="github-filter-btn {% if request.args.get('signup_filter', 'all') == 'all' %}active{% endif %}" id="signup-filter-all">
@@ -1300,6 +1302,7 @@
             </div>
           </div>
         </div>
+        -->
         <div class="table-responsive">
           <table class="table table-hover">
           <thead>
@@ -1586,71 +1589,15 @@ function generateCleanLineChart(data, width = 300, height = 40) {
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize dashboard
+  // Initialize dashboard with standard components
   initializeActivityDashboard();
   // Initialize charts with current data
   initializeChartsWithData();
   // Initialize modern header features
   initializeModernHeader();
-  
-  // Global Ctrl+K handler for search - MUST be outside other functions
-  setupGlobalSearchShortcut();
 });
 
-// Global search shortcut handler - works everywhere on the page
-function setupGlobalSearchShortcut() {
-  // FIXED: More targeted prevention of browser search - only prevent when actually needed
-  // Use capture phase to intercept before other handlers
-  document.addEventListener('keydown', function(e) {
-    // Check for Ctrl+K or Cmd+K (be more specific about key checking)
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.keyCode === 75)) {
-      // Only prevent default behaviors when we can actually handle the event
-      const searchInput = document.getElementById('enhancedSearchInput');
-      if (!searchInput) return; // Don't prevent if we can't handle it
-      
-      // Prevent browser search
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Additional prevention methods
-      if (e.cancelable) {
-        e.returnValue = false;
-      }
-      
-      // Find the search input
-      if (!searchInput) return false;
-      
-      // Scroll to the search input smoothly
-      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      
-      // Focus and select after scroll
-      setTimeout(() => {
-        searchInput.focus();
-        searchInput.select();
-        
-        // Add pink glow effect
-        searchInput.classList.add('search-glow-active');
-        
-        // Try to play sound
-        try {
-          const searchSound = new Audio('/static/beep.wav');
-          searchSound.volume = 0.3;
-          searchSound.currentTime = 0;
-          searchSound.play().catch(() => {});
-        } catch (err) {
-          // Ignore audio errors
-        }
-        
-        // Remove glow after animation
-        setTimeout(() => {
-          searchInput.classList.remove('search-glow-active');
-        }, 800);
-      }, 300);
-      
-      return false;
-    }
-  }, true); // Use capture phase to intercept early
-}
+// Removed duplicate global search shortcut handler - SearchComponent handles Ctrl+K
 
 // Initialize charts with current page data
 function initializeChartsWithData() {
@@ -1805,28 +1752,22 @@ function animateProgressBar() {
 }
 
 function initializeActivityDashboard() {
-  // Initialize search component (AJAX mode for activity dashboard)
+  // Initialize reusable components now that backend supports search
   if (window.SearchComponent) {
     window.SearchComponent.init({
       formId: 'dynamicSearchForm',
       inputId: 'enhancedSearchInput',
-      mode: 'ajax',
-      targetTable: '.main-table-card .table tbody',
-      searchColumns: [
-        { index: 1, selector: '.fw-bold', type: 'text' }, // User name
-        { index: 1, selector: '.text-muted.small', type: 'text' }, // User email
-        { index: 2, selector: '.fw-bold', type: 'text' }, // Activity name
-        { index: 2, selector: '.text-muted.small', type: 'text' } // Pass code
-      ]
+      preserveParams: ['passport_filter', 'signup_filter', 'activity'],
+      minSearchLength: 3,
+      debounceDelay: 250,
+      soundEnabled: true
     });
   }
-
-  // Initialize filter component  
+  
   if (window.FilterComponent) {
     window.FilterComponent.init({
       filterClass: 'github-filter-btn',
-      mode: 'ajax',
-      ajaxUrl: '/api/activity-filter',
+      mode: 'server', // Use server-side filtering with page reload
       preserveScrollPosition: true,
       enableSearchPreservation: true
     });
@@ -1840,247 +1781,22 @@ function initializeActivityDashboard() {
   // KPI dropdowns
   initializeKPIDropdowns();
   
-  // Most dropdown actions now use direct navigation via href attributes
-  // CRITICAL FIX: Prevent all hash links from causing page scroll (but not filter buttons)
+  // Prevent hash links from causing page scroll
   document.querySelectorAll('a[href="#"]:not(.github-filter-btn)').forEach(link => {
     link.addEventListener('click', function(e) {
-      e.preventDefault(); // Prevent default anchor behavior
+      e.preventDefault();
       e.stopPropagation();
       return false;
     });
   });
   
-  // Only add click handlers for specific client-side actions
+  // Add click handlers for specific client-side actions
   document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
     item.addEventListener('click', handleUserAction);
   });
 }
 
-// Search functionality - unified approach for both mobile and desktop
-function handleSearch(e) {
-  const query = e.target.value.toLowerCase();
-  
-  // Use unified search logic that targets table rows (works for both mobile and desktop)
-  const rows = document.querySelectorAll('tbody tr');
-  rows.forEach(row => {
-    const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
-    const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
-    
-    if (userName.includes(query) || userEmail.includes(query)) {
-      row.style.display = '';
-    } else {
-      row.style.display = 'none';
-    }
-  });
-  
-  updateResultCount();
-}
-
-// AJAX Filter passports function - handles button clicks with server-side filtering
-function filterPassports(filterType) {
-  // Prevent multiple simultaneous requests
-  if (window.isFilteringPassports) {
-    return false;
-  }
-  window.isFilteringPassports = true;
-
-  // Get all filter buttons
-  const filterButtons = document.querySelectorAll('#filter-all, #filter-unpaid, #filter-paid, #filter-active');
-  
-  // Update active class on buttons immediately for visual feedback
-  filterButtons.forEach(btn => {
-    if (btn.id === `filter-${filterType}`) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
-  });
-
-  // Add loading state to the passport table
-  const passportTableBody = document.querySelector('.main-table-card tbody');
-  if (passportTableBody) {
-    passportTableBody.style.opacity = '0.5';
-  }
-
-  // Get current signup filter to maintain state
-  const currentSignupFilter = getCurrentSignupFilter();
-  
-  // Make AJAX request for filtered data
-  const activityId = {{ activity.id }};
-  const url = `/api/activity-dashboard-data/${activityId}?passport_filter=${filterType}&signup_filter=${currentSignupFilter}`;
-  
-  fetch(url)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (data.success) {
-        // Update passport table content
-        if (passportTableBody && data.passport_html) {
-          passportTableBody.innerHTML = data.passport_html;
-        }
-        
-        // Update filter button counts
-        updateFilterCounts('passport', data.passport_counts);
-        
-        // Update URL without page reload
-        updateURL({ passport_filter: filterType });
-        
-        // Re-initialize any event handlers for the new content
-        initializePassportBulkSelection();
-        
-        // Restore opacity
-        if (passportTableBody) {
-          passportTableBody.style.opacity = '1';
-        }
-      } else {
-        console.error('Error filtering passports:', data.error);
-        showFilterError('passports');
-      }
-    })
-    .catch(error => {
-      console.error('Network error filtering passports:', error);
-      showFilterError('passports');
-    })
-    .finally(() => {
-      window.isFilteringPassports = false;
-      // Restore opacity in case of error
-      if (passportTableBody) {
-        passportTableBody.style.opacity = '1';
-      }
-    });
-
-  return false; // Prevent default link behavior
-}
-
-// AJAX Filter signups function - handles button clicks with server-side filtering
-function filterSignups(filterType) {
-  // Prevent multiple simultaneous requests
-  if (window.isFilteringSignups) {
-    return false;
-  }
-  window.isFilteringSignups = true;
-
-  // Get all filter buttons
-  const filterButtons = document.querySelectorAll('#signup-filter-all, #signup-filter-unpaid, #signup-filter-paid, #signup-filter-pending, #signup-filter-approved');
-  
-  // Update active class on buttons immediately for visual feedback
-  filterButtons.forEach(btn => {
-    if (btn.id === `signup-filter-${filterType}`) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
-  });
-
-  // Add loading state to the signup table
-  const signupCards = document.querySelectorAll('.main-table-card');
-  const signupTableBody = signupCards[1] ? signupCards[1].querySelector('tbody') : null;
-  if (signupTableBody) {
-    signupTableBody.style.opacity = '0.5';
-  }
-
-  // Get current passport filter to maintain state
-  const currentPassportFilter = getCurrentPassportFilter();
-  
-  // Make AJAX request for filtered data
-  const activityId = {{ activity.id }};
-  const url = `/api/activity-dashboard-data/${activityId}?passport_filter=${currentPassportFilter}&signup_filter=${filterType}`;
-  
-  fetch(url)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (data.success) {
-        // Update signup table content
-        if (signupTableBody && data.signup_html) {
-          signupTableBody.innerHTML = data.signup_html;
-        }
-        
-        // Update filter button counts
-        updateFilterCounts('signup', data.signup_counts);
-        
-        // Update URL without page reload
-        updateURL({ signup_filter: filterType });
-        
-        // Re-initialize any event handlers for the new content
-        // Note: Add signup-specific initialization if needed
-        
-        // Restore opacity
-        if (signupTableBody) {
-          signupTableBody.style.opacity = '1';
-        }
-      } else {
-        console.error('Error filtering signups:', data.error);
-        showFilterError('signups');
-      }
-    })
-    .catch(error => {
-      console.error('Network error filtering signups:', error);
-      showFilterError('signups');
-    })
-    .finally(() => {
-      window.isFilteringSignups = false;
-      // Restore opacity in case of error
-      if (signupTableBody) {
-        signupTableBody.style.opacity = '1';
-      }
-    });
-
-  return false; // Prevent default link behavior
-}
-
-// Helper functions for AJAX filtering
-function getCurrentPassportFilter() {
-  const activeButton = document.querySelector('#filter-all.active, #filter-unpaid.active, #filter-paid.active, #filter-active.active');
-  if (activeButton) {
-    return activeButton.id.replace('filter-', '');
-  }
-  return 'all';
-}
-
-function getCurrentSignupFilter() {
-  const activeButton = document.querySelector('#signup-filter-all.active, #signup-filter-unpaid.active, #signup-filter-paid.active, #signup-filter-pending.active, #signup-filter-approved.active');
-  if (activeButton) {
-    return activeButton.id.replace('signup-filter-', '');
-  }
-  return 'all';
-}
-
-function updateFilterCounts(type, counts) {
-  if (type === 'passport') {
-    // Update passport filter button counts
-    const allBtn = document.querySelector('#filter-all .filter-count');
-    const unpaidBtn = document.querySelector('#filter-unpaid .filter-count');
-    const paidBtn = document.querySelector('#filter-paid .filter-count');
-    const activeBtn = document.querySelector('#filter-active .filter-count');
-    
-    if (allBtn) allBtn.textContent = `(${counts.all})`;
-    if (unpaidBtn) unpaidBtn.textContent = `(${counts.unpaid})`;
-    if (paidBtn) paidBtn.textContent = `(${counts.paid})`;
-    if (activeBtn) activeBtn.textContent = `(${counts.active})`;
-  } else if (type === 'signup') {
-    // Update signup filter button counts
-    const allBtn = document.querySelector('#signup-filter-all .filter-count');
-    const unpaidBtn = document.querySelector('#signup-filter-unpaid .filter-count');
-    const paidBtn = document.querySelector('#signup-filter-paid .filter-count');
-    const pendingBtn = document.querySelector('#signup-filter-pending .filter-count');
-    const approvedBtn = document.querySelector('#signup-filter-approved .filter-count');
-    
-    if (allBtn) allBtn.textContent = `(${counts.all})`;
-    if (unpaidBtn) unpaidBtn.textContent = `(${counts.unpaid})`;
-    if (paidBtn) paidBtn.textContent = `(${counts.paid})`;
-    if (pendingBtn) pendingBtn.textContent = `(${counts.pending})`;
-    if (approvedBtn) approvedBtn.textContent = `(${counts.approved})`;
-  }
-}
+// Old AJAX filter functions removed - now using standard FilterComponent
 
 function updateURL(params) {
   const url = new URL(window.location);
