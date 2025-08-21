@@ -226,7 +226,7 @@
       <div class="card-header">
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons">
+          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
             <a href="{{ url_for('list_surveys') }}" 
                class="github-filter-btn {% if not current_filters.status and not current_filters.activity %}active{% endif %}">
               <i class="ti ti-list"></i>All Surveys <span class="filter-count">({{ statistics.total_surveys }})</span>

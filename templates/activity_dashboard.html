@@ -1021,19 +1021,23 @@
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
           <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='all', signup_filter=request.args.get('signup_filter', 'all')) }}#passport-filters"
+            <a href="#"
+               onclick="filterPassports('all'); return false;"
                class="github-filter-btn {% if request.args.get('passport_filter', 'all') == 'all' %}active{% endif %}" id="filter-all">
               <i class="ti ti-list"></i>All <span class="filter-count">({{ all_passports|length }})</span>
             </a>
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='unpaid', signup_filter=request.args.get('signup_filter', 'all')) }}#passport-filters"
+            <a href="#"
+               onclick="filterPassports('unpaid'); return false;"
                class="github-filter-btn {% if request.args.get('passport_filter') == 'unpaid' %}active{% endif %}" id="filter-unpaid">
               <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ all_passports|selectattr('paid', 'equalto', false)|list|length }})</span>
             </a>
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='paid', signup_filter=request.args.get('signup_filter', 'all')) }}#passport-filters"
+            <a href="#"
+               onclick="filterPassports('paid'); return false;"
                class="github-filter-btn {% if request.args.get('passport_filter') == 'paid' %}active{% endif %}" id="filter-paid">
               <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ all_passports|selectattr('paid', 'equalto', true)|list|length }})</span>
             </a>
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='active', signup_filter=request.args.get('signup_filter', 'all')) }}#passport-filters"
+            <a href="#"
+               onclick="filterPassports('active'); return false;"
                class="github-filter-btn {% if request.args.get('passport_filter') == 'active' %}active{% endif %}" id="filter-active">
               <i class="ti ti-activity"></i>Active <span class="filter-count">({{ all_passports|selectattr('uses_remaining', 'greaterthan', 0)|list|length }})</span>
             </a>
@@ -1294,23 +1298,23 @@
         <div class="card-header">
           <div class="d-flex justify-content-center align-items-center w-100">
             <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='all', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
+              <a href="#" onclick="filterSignups('all'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter', 'all') == 'all' %}active{% endif %}" id="signup-filter-all">
                 <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ all_signups|length }})</span>
               </a>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='unpaid', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
+              <a href="#" onclick="filterSignups('unpaid'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'unpaid' %}active{% endif %}" id="signup-filter-unpaid">
                 <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ all_signups|selectattr('paid', 'equalto', false)|list|length }})</span>
               </a>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='paid', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
+              <a href="#" onclick="filterSignups('paid'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'paid' %}active{% endif %}" id="signup-filter-paid">
                 <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ all_signups|selectattr('paid', 'equalto', true)|list|length }})</span>
               </a>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='pending', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
+              <a href="#" onclick="filterSignups('pending'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending">
                 <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ all_signups|selectattr('status', 'equalto', 'pending')|list|length }})</span>
               </a>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='approved', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
+              <a href="#" onclick="filterSignups('approved'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved">
                 <i class="ti ti-thumb-up"></i>Approved <span class="filter-count">({{ all_signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
               </a>
@@ -1603,12 +1607,44 @@ function generateCleanLineChart(data, width = 300, height = 40) {
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize dashboard with standard components
-  initializeActivityDashboard();
-  // Initialize charts with current data
-  initializeChartsWithData();
-  // Initialize modern header features
-  initializeModernHeader();
+  console.log('ActivityDashboard: DOM ready, initializing...');
+  
+  try {
+    // Initialize dashboard with standard components
+    initializeActivityDashboard();
+    console.log('ActivityDashboard: Main dashboard initialized');
+  } catch (error) {
+    console.error('ActivityDashboard: Failed to initialize main dashboard:', error);
+  }
+  
+  try {
+    // Initialize charts with current data
+    initializeChartsWithData();
+    console.log('ActivityDashboard: Charts initialized');
+  } catch (error) {
+    console.error('ActivityDashboard: Failed to initialize charts:', error);
+  }
+  
+  try {
+    // Initialize modern header features
+    initializeModernHeader();
+    console.log('ActivityDashboard: Modern header initialized');
+  } catch (error) {
+    console.error('ActivityDashboard: Failed to initialize modern header:', error);
+  }
+  
+  console.log('ActivityDashboard: All initialization complete');
+  
+  // Test Ctrl+K functionality after initialization
+  setTimeout(() => {
+    console.log('ActivityDashboard: Testing Ctrl+K shortcut registration...');
+    const searchInput = document.getElementById('enhancedSearchInput');
+    if (searchInput) {
+      console.log('ActivityDashboard: Search input found, Ctrl+K should work');
+    } else {
+      console.error('ActivityDashboard: Search input not found!');
+    }
+  }, 1000);
 });
 
 // Removed duplicate global search shortcut handler - SearchComponent handles Ctrl+K
@@ -1766,26 +1802,109 @@ function animateProgressBar() {
 }
 
 function initializeActivityDashboard() {
-  // Initialize reusable components now that backend supports search
-  if (window.SearchComponent) {
-    window.SearchComponent.init({
-      formId: 'dynamicSearchForm',
-      inputId: 'enhancedSearchInput',
-      preserveParams: ['passport_filter', 'signup_filter', 'activity'],
-      minSearchLength: 3,
-      debounceDelay: 250,
-      soundEnabled: true,
-      preserveScrollPosition: true
+  // FOR ACTIVITY DASHBOARD: Use custom AJAX search instead of SearchComponent
+  // to avoid page reloads and integrate with filter system
+  console.log('ActivityDashboard: Setting up custom AJAX search');
+  
+  const searchInput = document.getElementById('enhancedSearchInput');
+  const searchForm = document.getElementById('dynamicSearchForm');
+  
+  if (searchInput) {
+    // Set up Ctrl+K keyboard shortcut manually
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('ActivityDashboard: Ctrl+K pressed - focusing search');
+        searchInput.focus();
+        searchInput.select();
+        
+        // Add glow effect
+        searchInput.classList.add('search-glow-active');
+        setTimeout(() => {
+          searchInput.classList.remove('search-glow-active');
+        }, 800);
+      }
     });
+    
+    // Set up search input handling
+    let searchTimeout;
+    searchInput.addEventListener('input', function(e) {
+      const query = e.target.value.trim();
+      
+      // Clear previous timeout
+      clearTimeout(searchTimeout);
+      
+      // Update UI feedback
+      updateSearchUI(query);
+      
+      // Debounce search
+      if (query.length === 0) {
+        // Clear search immediately
+        searchTimeout = setTimeout(() => performActivitySearch(''), 150);
+      } else if (query.length >= 3) {
+        // Search after delay
+        searchTimeout = setTimeout(() => performActivitySearch(query), 250);
+      }
+    });
+    
+    // Handle Enter key
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        if (query.length >= 3 || query.length === 0) {
+          performActivitySearch(query);
+        }
+      }
+    });
+    
+    // Handle clear button
+    const clearBtn = document.getElementById('searchClearBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        searchInput.value = '';
+        searchInput.focus();
+        updateSearchUI('');
+        
+        // Add glow effect
+        searchInput.classList.add('search-glow-active');
+        setTimeout(() => {
+          searchInput.classList.remove('search-glow-active');
+        }, 800);
+        
+        performActivitySearch('');
+      });
+    }
+    
+    // Prevent form submission
+    if (searchForm) {
+      searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const query = searchInput.value.trim();
+        if (query.length >= 3 || query.length === 0) {
+          performActivitySearch(query);
+        }
+      });
+    }
+    
+    console.log('ActivityDashboard: Custom search initialized successfully');
+  } else {
+    console.warn('ActivityDashboard: Search input not found');
   }
   
   // FilterComponent initialization moved to bottom of page
-  }
   
-  // Filter tabs
-  document.querySelectorAll('.filter-pills .nav-link').forEach(tab => {
-    tab.addEventListener('click', handleFilterChange);
-  });
+  // Initialize filter tabs (if any)
+  const filterTabs = document.querySelectorAll('.filter-pills .nav-link');
+  if (filterTabs.length > 0) {
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', handleFilterChange);
+    });
+  }
   
   // KPI dropdowns
   initializeKPIDropdowns();
@@ -1805,7 +1924,311 @@ function initializeActivityDashboard() {
   });
 }
 
-// Old AJAX filter functions removed - now using standard FilterComponent
+// AJAX filter functions for activity dashboard
+function filterPassports(filterType) {
+  console.log('Filtering passports:', filterType);
+  
+  // Update active filter button
+  document.querySelectorAll('#filter-all, #filter-unpaid, #filter-paid, #filter-active').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.getElementById('filter-' + filterType).classList.add('active');
+  
+  loadFilteredData('passport', filterType);
+}
+
+function filterSignups(filterType) {
+  console.log('Filtering signups:', filterType);
+  
+  // Update active filter button
+  document.querySelectorAll('#signup-filter-all, #signup-filter-unpaid, #signup-filter-paid, #signup-filter-pending, #signup-filter-approved').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.getElementById('signup-filter-' + filterType).classList.add('active');
+  
+  loadFilteredData('signup', filterType);
+}
+
+function loadFilteredData(category, filterType) {
+  // Show loading state on the appropriate table section
+  let tableContainer;
+  if (category === 'passport') {
+    // Find the passport table container (first .card.main-table-card)
+    const passportCard = document.querySelector('div.card.main-table-card');
+    tableContainer = passportCard ? passportCard.querySelector('.table-responsive') : null;
+  } else {
+    // Find the signup table container (second .card.main-table-card or search by signup context)
+    const allCards = document.querySelectorAll('div.card.main-table-card');
+    const signupCard = allCards.length > 1 ? allCards[1] : 
+                       document.querySelector('h2:contains("Signups") + .card');
+    tableContainer = signupCard ? signupCard.querySelector('.table-responsive') : null;
+  }
+  
+  if (tableContainer) {
+    tableContainer.style.opacity = '0.6';
+    tableContainer.style.pointerEvents = 'none';
+  }
+
+  // Get current search query if any
+  const searchInput = document.getElementById('enhancedSearchInput');
+  const searchQuery = searchInput ? searchInput.value.trim() : '';
+  
+  // Get current URL params
+  const currentParams = new URLSearchParams(window.location.search);
+  
+  // Build new params based on category
+  const params = new URLSearchParams();
+  
+  if (category === 'passport') {
+    params.set('passport_filter', filterType);
+    // Preserve signup filter
+    if (currentParams.has('signup_filter')) {
+      params.set('signup_filter', currentParams.get('signup_filter'));
+    }
+  } else if (category === 'signup') {
+    params.set('signup_filter', filterType);
+    // Preserve passport filter
+    if (currentParams.has('passport_filter')) {
+      params.set('passport_filter', currentParams.get('passport_filter'));
+    }
+  }
+  
+  // Add search query if present
+  if (searchQuery && searchQuery.length >= 3) {
+    params.set('q', searchQuery);
+  }
+  
+  // Make AJAX request to get filtered data
+  const activityId = {{ activity.id }};
+  const url = `/api/activity-dashboard-data/${activityId}?${params.toString()}`;
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update passport table if filtering passports
+        if (category === 'passport' || !category) {
+          // Find first table tbody (passport table)
+          const passportCard = document.querySelector('div.card.main-table-card');
+          const passportTableBody = passportCard ? passportCard.querySelector('tbody') : null;
+          if (passportTableBody && data.passport_html) {
+            passportTableBody.innerHTML = data.passport_html;
+          }
+          
+          // Update passport filter counts
+          if (data.passport_counts) {
+            updateFilterCounts('passport', data.passport_counts);
+          }
+        }
+        
+        // Update signup table if filtering signups
+        if (category === 'signup' || !category) {
+          // Find second table tbody (signup table)
+          const allCards = document.querySelectorAll('div.card.main-table-card');
+          const signupCard = allCards.length > 1 ? allCards[1] : null;
+          const signupTableBody = signupCard ? signupCard.querySelector('tbody') : null;
+          if (signupTableBody && data.signup_html) {
+            signupTableBody.innerHTML = data.signup_html;
+          }
+          
+          // Update signup filter counts
+          if (data.signup_counts) {
+            updateFilterCounts('signup', data.signup_counts);
+          }
+        }
+        
+        // Update URL without page reload
+        const newUrl = new URL(window.location);
+        if (category === 'passport') {
+          newUrl.searchParams.set('passport_filter', filterType);
+        } else if (category === 'signup') {
+          newUrl.searchParams.set('signup_filter', filterType);
+        }
+        if (searchQuery && searchQuery.length >= 3) {
+          newUrl.searchParams.set('q', searchQuery);
+        } else {
+          newUrl.searchParams.delete('q');
+        }
+        
+        // Update browser history
+        window.history.pushState({ category, filterType }, '', newUrl.toString());
+        
+      } else {
+        console.error('Filter request failed:', data.error);
+        // Show error message to user
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+        errorDiv.innerHTML = `
+          <strong>Filter Error:</strong> ${data.error}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.page-body').prepend(errorDiv);
+      }
+    })
+    .catch(error => {
+      console.error('Filter request error:', error);
+      // Show error message to user
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+      errorDiv.innerHTML = `
+        <strong>Network Error:</strong> Unable to apply filter. Please try again.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      document.querySelector('.page-body').prepend(errorDiv);
+    })
+    .finally(() => {
+      // Remove loading state
+      if (tableContainer) {
+        tableContainer.style.opacity = '1';
+        tableContainer.style.pointerEvents = 'auto';
+      }
+    });
+}
+
+function updateFilterCounts(category, counts) {
+  // Update filter button counts
+  Object.keys(counts).forEach(filterType => {
+    const count = counts[filterType];
+    const buttonId = category === 'passport' ? `filter-${filterType}` : `${category}-filter-${filterType}`;
+    const button = document.getElementById(buttonId);
+    if (button) {
+      const countSpan = button.querySelector('.filter-count');
+      if (countSpan) {
+        countSpan.textContent = `(${count})`;
+      }
+    }
+  });
+}
+
+// AJAX search function for activity dashboard
+function performActivitySearch(query) {
+  console.log('ActivityDashboard: Performing search:', query);
+  
+  // Get current filter states
+  const currentParams = new URLSearchParams(window.location.search);
+  const passportFilter = currentParams.get('passport_filter') || 'all';
+  const signupFilter = currentParams.get('signup_filter') || 'all';
+  
+  // Build search params
+  const params = new URLSearchParams();
+  params.set('passport_filter', passportFilter);
+  params.set('signup_filter', signupFilter);
+  
+  if (query && query.length >= 3) {
+    params.set('q', query);
+  }
+  
+  // Show loading state
+  const tableContainers = document.querySelectorAll('.table-responsive');
+  tableContainers.forEach(container => {
+    container.style.opacity = '0.6';
+    container.style.pointerEvents = 'none';
+  });
+  
+  // Make AJAX request
+  const activityId = {{ activity.id }};
+  const url = `/api/activity-dashboard-data/${activityId}?${params.toString()}`;
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update both tables
+        const passportCard = document.querySelector('div.card.main-table-card');
+        const passportTableBody = passportCard ? passportCard.querySelector('tbody') : null;
+        if (passportTableBody && data.passport_html) {
+          passportTableBody.innerHTML = data.passport_html;
+        }
+        
+        const allCards = document.querySelectorAll('div.card.main-table-card');
+        const signupCard = allCards.length > 1 ? allCards[1] : null;
+        const signupTableBody = signupCard ? signupCard.querySelector('tbody') : null;
+        if (signupTableBody && data.signup_html) {
+          signupTableBody.innerHTML = data.signup_html;
+        }
+        
+        // Update filter counts
+        if (data.passport_counts) {
+          updateFilterCounts('passport', data.passport_counts);
+        }
+        if (data.signup_counts) {
+          updateFilterCounts('signup', data.signup_counts);
+        }
+        
+        // Update URL
+        const newUrl = new URL(window.location);
+        if (query && query.length >= 3) {
+          newUrl.searchParams.set('q', query);
+        } else {
+          newUrl.searchParams.delete('q');
+        }
+        window.history.pushState({ search: query }, '', newUrl.toString());
+      } else {
+        console.error('Search request failed:', data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Search request error:', error);
+    })
+    .finally(() => {
+      // Remove loading state
+      tableContainers.forEach(container => {
+        container.style.opacity = '1';
+        container.style.pointerEvents = 'auto';
+      });
+    });
+}
+
+function updateSearchUI(query) {
+  const charCounter = document.getElementById('searchCharCounter');
+  const kbdHint = document.getElementById('searchKbdHint');
+  const clearBtn = document.getElementById('searchClearBtn');
+  const searchInput = document.getElementById('enhancedSearchInput');
+  
+  const length = query.length;
+  
+  if (length === 0) {
+    if (charCounter) charCounter.style.display = 'none';
+    if (searchInput) searchInput.classList.remove('is-valid', 'is-invalid');
+    if (kbdHint) kbdHint.style.display = 'inline-block';
+    if (clearBtn) clearBtn.style.display = 'none';
+  } else {
+    if (kbdHint) kbdHint.style.display = 'none';
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
+    
+    if (length < 3) {
+      if (charCounter) {
+        charCounter.style.display = 'inline';
+        const remaining = 3 - length;
+        charCounter.textContent = `${remaining} more char${remaining === 1 ? '' : 's'}`;
+        charCounter.className = 'text-muted';
+      }
+      if (searchInput) searchInput.classList.remove('is-valid', 'is-invalid');
+    } else {
+      if (charCounter) charCounter.style.display = 'none';
+      if (searchInput) searchInput.classList.remove('is-valid', 'is-invalid');
+    }
+  }
+}
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', function(event) {
+  if (event.state && event.state.category && event.state.filterType) {
+    // Re-apply the filter without adding to history
+    const { category, filterType } = event.state;
+    loadFilteredData(category, filterType);
+  } else if (event.state && event.state.search !== undefined) {
+    // Handle search state
+    const searchInput = document.getElementById('enhancedSearchInput');
+    if (searchInput) {
+      searchInput.value = event.state.search || '';
+      performActivitySearch(event.state.search || '');
+    }
+  } else {
+    // Full page reload for complex state changes
+    window.location.reload();
+  }
+});
 
 function updateURL(params) {
   const url = new URL(window.location);
@@ -2644,20 +3067,87 @@ if (document.readyState === 'loading') {
 
 </script>
 
-<!-- Scroll Preservation Script -->
-<script src="{{ url_for('static', filename='js/scroll-preservation.js') }}"></script>
+<!-- Scroll Preservation Script - DISABLED to prevent conflicts -->
+<!-- <script src="{{ url_for('static', filename='js/scroll-preservation.js') }}"></script> -->
 
 <script>
-// Override FilterComponent initialization to disable complex scroll preservation
-// Our new ScrollPreservation component handles this more reliably
+// Initialize FilterComponent with enhanced scroll preservation
+// No anchor hash conflicts since we removed #passport-filters and #signup-filters
 if (window.FilterComponent) {
   window.FilterComponent.init({
     filterClass: 'github-filter-btn',
-    mode: 'server',
-    preserveScrollPosition: false, // Disabled - handled by ScrollPreservation
+    mode: 'ajax', // CHANGED TO AJAX MODE FOR INSTANT FILTERING
+    preserveScrollPosition: false, // Disabled for AJAX mode
     enableSearchPreservation: true
   });
 }
+
+// CRITICAL FIX: Force scroll restoration after page load when filter parameters are present
+// This ensures users stay at the filter button position instead of being "resurrected at the top"
+(function() {
+  // Check if we have filter parameters in the URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasFilterParam = urlParams.has('passport_filter') || urlParams.has('signup_filter');
+  
+  if (hasFilterParam) {
+    // Multiple restoration strategies for maximum reliability
+    const restoreScrollPosition = () => {
+      const savedPosition = sessionStorage.getItem('filterScrollPosition');
+      if (savedPosition) {
+        const targetY = parseInt(savedPosition);
+        
+        // Try multiple scroll methods
+        window.scrollTo(0, targetY);
+        document.documentElement.scrollTop = targetY;
+        document.body.scrollTop = targetY;
+        
+        console.log('Restored scroll to:', targetY);
+        
+        // Verify after a short delay
+        setTimeout(() => {
+          const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
+          if (Math.abs(currentY - targetY) > 50) {
+            // Try once more if initial attempt failed
+            window.scrollTo(0, targetY);
+            console.log('Second scroll attempt to:', targetY);
+          }
+        }, 100);
+      } else {
+        // Fallback: scroll to filter section if no saved position
+        const filterGroup = document.querySelector('.github-filter-group');
+        if (filterGroup) {
+          setTimeout(() => {
+            filterGroup.scrollIntoView({ behavior: 'instant', block: 'center' });
+            console.log('Scrolled to filter section (fallback)');
+          }, 100);
+        }
+      }
+    };
+    
+    // Execute restoration at multiple points to ensure it works
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(restoreScrollPosition, 100);
+      });
+    } else {
+      setTimeout(restoreScrollPosition, 100);
+    }
+    
+    // Also try on window load as a safety net
+    window.addEventListener('load', () => {
+      setTimeout(restoreScrollPosition, 200);
+    });
+  }
+})();
+
+// Save scroll position before leaving the page
+window.addEventListener('beforeunload', () => {
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  if (scrollY > 100) { // Only save if user has scrolled down
+    sessionStorage.setItem('filterScrollPosition', scrollY);
+    console.log('Saved scroll position on unload:', scrollY);
+  }
+});
 </script>
 
 {% endblock %}

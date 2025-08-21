@@ -1563,6 +1563,46 @@ def signup(activity_id):
 
 
 
+@app.route("/payment-bot-settings", methods=["GET", "POST"])
+def payment_bot_settings():
+    """Dedicated page for Email Parser Payment Bot settings"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        # Save Email Payment Bot settings
+        bot_settings = {
+            "ENABLE_EMAIL_PAYMENT_BOT": "enable_email_payment_bot" in request.form,
+            "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
+            "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
+            "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
+            "GMAIL_LABEL_FOLDER_PROCESSED": request.form.get("gmail_label_folder_processed", "InteractProcessed").strip()
+        }
+        
+        for key, value in bot_settings.items():
+            existing = Setting.query.filter_by(key=key).first()
+            if existing:
+                existing.value = str(value)
+            else:
+                db.session.add(Setting(key=key, value=str(value)))
+        
+        db.session.commit()
+        
+        # Log the action
+        from utils import log_admin_action
+        log_admin_action(f"Email Payment Bot Settings Updated by {session.get('admin', 'Unknown')}")
+        
+        flash("✅ Email Payment Bot settings saved successfully!", "success")
+        return redirect(url_for("payment_bot_settings"))
+    
+    # GET request - load settings
+    settings = {}
+    for setting in Setting.query.all():
+        settings[setting.key] = setting.value
+    
+    return render_template("payment_bot_settings.html", settings=settings)
+
+
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
 
@@ -3107,15 +3147,8 @@ def activity_dashboard(activity_id):
     elif signup_filter == 'approved':
         signups_query = signups_query.filter_by(status='approved')
     
-    # Apply search filter for signups
-    if q:
-        from models import User
-        signups_query = signups_query.join(User).filter(
-            or_(
-                User.name.ilike(f"%{q}%"),
-                User.email.ilike(f"%{q}%")
-            )
-        )
+    # IMPORTANT: On activity_dashboard, search only applies to passports, NOT signups
+    # Signups are displayed unfiltered by search query for clarity
     
     signups = signups_query.order_by(Signup.signed_up_at.desc()).all()
 
@@ -3490,15 +3523,8 @@ def get_activity_dashboard_data(activity_id):
         elif signup_filter == 'approved':
             signups_query = signups_query.filter_by(status='approved')
         
-        # Apply search filter for signups
-        if q:
-            from models import User
-            signups_query = signups_query.join(User).filter(
-                or_(
-                    User.name.ilike(f"%{q}%"),
-                    User.email.ilike(f"%{q}%")
-                )
-            )
+        # IMPORTANT: On activity_dashboard, search only applies to passports, NOT signups
+        # Signups are displayed unfiltered by search query for clarity
         
         signups = signups_query.order_by(Signup.signed_up_at.desc()).all()
         
