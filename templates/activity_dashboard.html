@@ -940,7 +940,6 @@
       </div>
 
       <!-- Passport List Title -->
-      {% if passes %}
       <h2 class="mt-4 mb-3">
         <i class="ti ti-activity-heartbeat me-2" style="color: #e03131;"></i>Your Activity Passport
       </h2>
@@ -1015,24 +1014,26 @@
     </div>
 
     <!-- Main Table -->
+    <!-- Anchor for scroll position preservation -->
+    <div id="passport-filters" class="scroll-anchor"></div>
     <div class="card main-table-card" style="margin-top: 1.5rem !important;">
       <div class="card-header">
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons">
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='all', signup_filter=request.args.get('signup_filter', 'all')) }}"
+          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='all', signup_filter=request.args.get('signup_filter', 'all')) }}#passport-filters"
                class="github-filter-btn {% if request.args.get('passport_filter', 'all') == 'all' %}active{% endif %}" id="filter-all">
               <i class="ti ti-list"></i>All <span class="filter-count">({{ all_passports|length }})</span>
             </a>
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='unpaid', signup_filter=request.args.get('signup_filter', 'all')) }}"
+            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='unpaid', signup_filter=request.args.get('signup_filter', 'all')) }}#passport-filters"
                class="github-filter-btn {% if request.args.get('passport_filter') == 'unpaid' %}active{% endif %}" id="filter-unpaid">
               <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ all_passports|selectattr('paid', 'equalto', false)|list|length }})</span>
             </a>
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='paid', signup_filter=request.args.get('signup_filter', 'all')) }}"
+            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='paid', signup_filter=request.args.get('signup_filter', 'all')) }}#passport-filters"
                class="github-filter-btn {% if request.args.get('passport_filter') == 'paid' %}active{% endif %}" id="filter-paid">
               <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ all_passports|selectattr('paid', 'equalto', true)|list|length }})</span>
             </a>
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='active', signup_filter=request.args.get('signup_filter', 'all')) }}"
+            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='active', signup_filter=request.args.get('signup_filter', 'all')) }}#passport-filters"
                class="github-filter-btn {% if request.args.get('passport_filter') == 'active' %}active{% endif %}" id="filter-active">
               <i class="ti ti-activity"></i>Active <span class="filter-count">({{ all_passports|selectattr('uses_remaining', 'greaterthan', 0)|list|length }})</span>
             </a>
@@ -1057,6 +1058,7 @@
           </tr>
         </thead>
         <tbody>
+          {% if passes %}
           {% for passport in passes %}
           <tr data-paid="{{ 'true' if passport.paid else 'false' }}" data-active="{{ 'true' if passport.uses_remaining > 0 else 'false' }}">
             <td>
@@ -1158,6 +1160,19 @@
             </td>
           </tr>
           {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              <i class="ti ti-search mb-2" style="font-size: 2rem; opacity: 0.5;"></i>
+              <div>No passports found</div>
+              {% if request.args.get('q') %}
+              <small>Try adjusting your search terms or <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="text-primary">clear the search</a></small>
+              {% else %}
+              <small>No passports have been created for this activity yet</small>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
         </tbody>
       </table>
       </div>
@@ -1219,7 +1234,6 @@
         {% endif %}
       </div>
       </div>
-      {% endif %}
 
       <!-- Signups Section -->
       <h2 class="mt-5 mb-3">
@@ -1274,35 +1288,35 @@
       </div>
 
       <!-- Main Signups Table -->
+      <!-- Anchor for scroll position preservation -->
+      <div id="signup-filters" class="scroll-anchor"></div>
       <div class="card main-table-card" style="margin-top: 1.5rem !important;">
-        <!-- TEMPORARILY COMMENTED OUT TO TEST FILTER BUTTON CONFLICT HYPOTHESIS
         <div class="card-header">
           <div class="d-flex justify-content-center align-items-center w-100">
-            <div class="github-filter-group" role="group" aria-label="Filter buttons">
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='all', passport_filter=request.args.get('passport_filter', 'all')) }}"
+            <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='all', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
                  class="github-filter-btn {% if request.args.get('signup_filter', 'all') == 'all' %}active{% endif %}" id="signup-filter-all">
                 <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ all_signups|length }})</span>
               </a>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='unpaid', passport_filter=request.args.get('passport_filter', 'all')) }}"
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='unpaid', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'unpaid' %}active{% endif %}" id="signup-filter-unpaid">
                 <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ all_signups|selectattr('paid', 'equalto', false)|list|length }})</span>
               </a>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='paid', passport_filter=request.args.get('passport_filter', 'all')) }}"
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='paid', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'paid' %}active{% endif %}" id="signup-filter-paid">
                 <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ all_signups|selectattr('paid', 'equalto', true)|list|length }})</span>
               </a>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='pending', passport_filter=request.args.get('passport_filter', 'all')) }}"
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='pending', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending">
                 <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ all_signups|selectattr('status', 'equalto', 'pending')|list|length }})</span>
               </a>
-              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='approved', passport_filter=request.args.get('passport_filter', 'all')) }}"
+              <a href="{{ url_for('activity_dashboard', activity_id=activity.id, signup_filter='approved', passport_filter=request.args.get('passport_filter', 'all')) }}#signup-filters"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved">
                 <i class="ti ti-thumb-up"></i>Approved <span class="filter-count">({{ all_signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
               </a>
             </div>
           </div>
         </div>
-        -->
         <div class="table-responsive">
           <table class="table table-hover">
           <thead>
@@ -1760,17 +1774,12 @@ function initializeActivityDashboard() {
       preserveParams: ['passport_filter', 'signup_filter', 'activity'],
       minSearchLength: 3,
       debounceDelay: 250,
-      soundEnabled: true
+      soundEnabled: true,
+      preserveScrollPosition: true
     });
   }
   
-  if (window.FilterComponent) {
-    window.FilterComponent.init({
-      filterClass: 'github-filter-btn',
-      mode: 'server', // Use server-side filtering with page reload
-      preserveScrollPosition: true,
-      enableSearchPreservation: true
-    });
+  // FilterComponent initialization moved to bottom of page
   }
   
   // Filter tabs
@@ -2634,6 +2643,23 @@ if (document.readyState === 'loading') {
 }
 
 </script>
+
+<!-- Scroll Preservation Script -->
+<script src="{{ url_for('static', filename='js/scroll-preservation.js') }}"></script>
+
+<script>
+// Override FilterComponent initialization to disable complex scroll preservation
+// Our new ScrollPreservation component handles this more reliably
+if (window.FilterComponent) {
+  window.FilterComponent.init({
+    filterClass: 'github-filter-btn',
+    mode: 'server',
+    preserveScrollPosition: false, // Disabled - handled by ScrollPreservation
+    enableSearchPreservation: true
+  });
+}
+</script>
+
 {% endblock %}
 
 {% block styles %}

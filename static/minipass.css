@@ -14,6 +14,16 @@
   z-index: 1055;
 }
 
+/* Scroll anchor positioning for filter preservation */
+.scroll-anchor {
+  position: relative;
+  top: -80px; /* Offset for fixed headers */
+  display: block;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 /* Sticky positioning with proper styling */
 .position-sticky.top-0 {
   padding-top: 0.5rem;
