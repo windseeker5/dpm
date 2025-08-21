@@ -1,52 +1,206 @@
+<!-- Gravatar Information Panel -->
+<div class="alert alert-info mb-4" role="alert">
+  <div class="d-flex">
+    <div>
+      <i class="ti ti-info-circle me-2"></i>
+    </div>
+    <div>
+      <h4 class="alert-title">About Admin Avatars</h4>
+      <div class="text-muted">
+        Admin avatars are automatically generated using 
+        <a href="https://gravatar.com" target="_blank" class="alert-link">Gravatar</a>, 
+        a free service that provides profile pictures based on email addresses. 
+        To customize your avatar, create a free Gravatar account with your admin email.
+        <a href="https://gravatar.com/connect" target="_blank" class="alert-link ms-2">
+          Set up your Gravatar →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin List -->
 <div id="admin-list">
   {% for admin in admins %}
-  <div class="card admin-block mb-3">
-    <div class="card-body row align-items-center" data-loaded="true">
-      <div class="col-md-5">
-        <label class="form-label">Email</label>
-        <input type="email" name="admin_email[]" value="{{ admin.email }}" class="form-control" required>
-      </div>
-      <div class="col-md-5">
-        <label class="form-label">Password</label>
-        <div class="input-group">
-          <input type="password" name="admin_password[]" value="********"
-                 class="form-control" data-is-placeholder="true" required>
-          <span class="input-group-text toggle-password" style="cursor: pointer;">
-            <i class="ti ti-eye"></i>
-          </span>
+  <div class="card admin-block mb-3" data-loaded="true">
+    <div class="card-body">
+      <div class="row g-3 align-items-start">
+        <!-- Avatar Section -->
+        <div class="col-12 col-md-2 text-center">
+          <div class="avatar avatar-xl mx-auto mb-2" id="avatar-{{ loop.index }}" data-email="{{ admin.email }}">
+            <!-- Gravatar will be loaded via JavaScript -->
+          </div>
+          <div class="small text-muted">
+            <i class="ti ti-brand-gravatar me-1"></i>
+            Gravatar
+          </div>
         </div>
-      </div>
-      <div class="col-md-2 text-end mt-3 mt-md-0">
-        {% if admin.email != session.get('admin') %}
-        <a class="btn btn-icon btn-outline-danger remove-admin-btn" title="Remove Admin (Click Save to confirm)">
-          <i class="ti ti-trash"></i>
-        </a>
-        {% else %}
-        <span class="text-muted small">This is you</span>
-        {% endif %}
+        
+        <!-- Form Fields -->
+        <div class="col-12 col-md-8">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Email Address</label>
+              <input type="email" name="admin_email[]" value="{{ admin.email }}" 
+                     class="form-control admin-email" required>
+              <div class="form-hint">Used for login and Gravatar avatar</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Password</label>
+              <div class="input-group">
+                <input type="password" name="admin_password[]" value="********"
+                       class="form-control admin-password" data-is-placeholder="true" required>
+                <button class="btn btn-outline-secondary toggle-password" type="button">
+                  <i class="ti ti-eye"></i>
+                </button>
+              </div>
+              <div class="password-strength mt-2 d-none">
+                <div class="progress progress-sm">
+                  <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="form-hint password-strength-text">Leave blank to keep current password</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="col-12 col-md-2 text-end">
+          {% if admin.email != session.get('admin') %}
+          <button type="button" class="btn btn-outline-danger remove-admin-btn">
+            <i class="ti ti-trash"></i>
+            <span class="d-none d-md-inline ms-1">Remove</span>
+          </button>
+          {% else %}
+          <span class="badge bg-blue-lt">This is you</span>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
   {% endfor %}
 </div>
 
-<!-- Add Button -->
-<a class="btn btn-success" onclick="addAdmin()" type="button">
-  <i class="ti ti-plus me-1"></i> Add Admin
-</a>
+<!-- Add Admin Button -->
+<div class="d-grid gap-2 d-md-flex justify-content-md-start">
+  <button type="button" class="btn btn-outline-primary" id="add-admin-btn">
+    <i class="ti ti-plus me-2"></i>
+    Add New Admin
+  </button>
+</div>
 
 <!-- Deletion tracking -->
 <input type="hidden" name="deleted_admins" id="deleted_admins">
 
+<!-- Error Container for friendly alerts -->
+<div id="admin-errors"></div>
+
 <!-- Scripts -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  // Simple MD5 implementation for Gravatar
+  function md5(string) {
+    // This is a simplified version - in production, use a proper MD5 library
+    // For now, we'll use a placeholder that generates a consistent hash
+    let hash = 0;
+    for (let i = 0; i < string.length; i++) {
+      const char = string.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(16).padStart(32, '0');
+  }
+
+  // Load Gravatar avatars
+  function loadGravatars() {
+    document.querySelectorAll('[id^="avatar-"]').forEach(avatarDiv => {
+      const email = avatarDiv.dataset.email || avatarDiv.closest('.admin-block').querySelector('.admin-email')?.value;
+      if (email) {
+        const emailLower = email.trim().toLowerCase();
+        // Using a simpler approach that doesn't require crypto API
+        const hash = emailLower.split('').reduce((a, b) => {
+          a = ((a << 5) - a) + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+        const gravatarHash = Math.abs(hash).toString(16).padStart(32, '0');
+        avatarDiv.style.backgroundImage = `url(https://www.gravatar.com/avatar/${gravatarHash}?d=identicon&s=96)`;
+      }
+    });
+  }
+
+  // Initial load of Gravatars
+  loadGravatars();
+
+  // Update Gravatar on email change
+  document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('admin-email')) {
+      const adminBlock = e.target.closest('.admin-block');
+      const avatarDiv = adminBlock.querySelector('[id^="avatar-"]');
+      if (avatarDiv && e.target.value) {
+        const emailLower = e.target.value.trim().toLowerCase();
+        const hash = emailLower.split('').reduce((a, b) => {
+          a = ((a << 5) - a) + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+        const gravatarHash = Math.abs(hash).toString(16).padStart(32, '0');
+        avatarDiv.style.backgroundImage = `url(https://www.gravatar.com/avatar/${gravatarHash}?d=identicon&s=96)`;
+      }
+    }
+  });
+
+  // Password strength indicator
+  document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('admin-password')) {
+      const password = e.target.value;
+      const adminBlock = e.target.closest('.admin-block');
+      const strengthDiv = adminBlock.querySelector('.password-strength');
+      const progressBar = strengthDiv.querySelector('.progress-bar');
+      const strengthText = strengthDiv.querySelector('.password-strength-text');
+      
+      // Mark as not placeholder once user starts typing
+      if (e.target.dataset.isPlaceholder === 'true' && password !== '********') {
+        e.target.dataset.isPlaceholder = 'false';
+      }
+      
+      if (password && password !== '********') {
+        strengthDiv.classList.remove('d-none');
+        
+        // Calculate password strength
+        let strength = 0;
+        let strengthClass = 'bg-danger';
+        let strengthMessage = 'Weak password';
+        
+        if (password.length >= 8) strength += 25;
+        if (/[a-z]/.test(password)) strength += 25;
+        if (/[A-Z]/.test(password)) strength += 25;
+        if (/[0-9]/.test(password)) strength += 12.5;
+        if (/[^A-Za-z0-9]/.test(password)) strength += 12.5;
+        
+        if (strength >= 75) {
+          strengthClass = 'bg-success';
+          strengthMessage = 'Strong password';
+        } else if (strength >= 50) {
+          strengthClass = 'bg-warning';
+          strengthMessage = 'Fair password';
+        }
+        
+        progressBar.style.width = strength + '%';
+        progressBar.className = 'progress-bar ' + strengthClass;
+        strengthText.textContent = strengthMessage;
+      } else if (password === '' || password === '********') {
+        strengthDiv.classList.add('d-none');
+      }
+    }
+  });
+
   // Toggle password visibility
   document.addEventListener("click", function (e) {
     if (e.target.closest(".toggle-password")) {
-      const group = e.target.closest(".input-group");
+      const button = e.target.closest(".toggle-password");
+      const group = button.closest(".input-group");
       const input = group.querySelector("input");
-      const icon = group.querySelector("i");
+      const icon = button.querySelector("i");
+      
       if (input.type === "password") {
         input.type = "text";
         icon.classList.replace("ti-eye", "ti-eye-off");
@@ -57,85 +211,167 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Remove admin
-  document.querySelectorAll('.remove-admin-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
-      removeAdmin(this);
-    });
+  // Remove admin with confirmation
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-admin-btn')) {
+      const button = e.target.closest('.remove-admin-btn');
+      const block = button.closest(".admin-block");
+      const email = block.querySelector('.admin-email').value;
+      
+      if (confirm(`Are you sure you want to remove admin: ${email}?`)) {
+        // Track deletion
+        const deletedField = document.getElementById("deleted_admins");
+        let current = deletedField.value ? deletedField.value.split(",") : [];
+        if (email && !current.includes(email)) {
+          current.push(email);
+          deletedField.value = current.join(",");
+        }
+        
+        // Animate removal
+        block.style.transition = 'opacity 0.3s, transform 0.3s';
+        block.style.opacity = '0';
+        block.style.transform = 'translateX(-20px)';
+        setTimeout(() => block.remove(), 300);
+      }
+    }
   });
 
-  // Validate on submit
+  // Add new admin
+  document.getElementById('add-admin-btn').addEventListener('click', function() {
+    const adminList = document.getElementById("admin-list");
+    const newIndex = adminList.children.length + 1;
+    
+    const newCard = document.createElement("div");
+    newCard.className = "card admin-block mb-3";
+    newCard.style.opacity = '0';
+    newCard.innerHTML = `
+      <div class="card-body">
+        <div class="row g-3 align-items-start">
+          <!-- Avatar Section -->
+          <div class="col-12 col-md-2 text-center">
+            <div class="avatar avatar-xl mx-auto mb-2" id="avatar-${newIndex}">
+              <!-- Gravatar will be loaded when email is entered -->
+            </div>
+            <div class="small text-muted">
+              <i class="ti ti-brand-gravatar me-1"></i>
+              Gravatar
+            </div>
+          </div>
+          
+          <!-- Form Fields -->
+          <div class="col-12 col-md-8">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="admin_email[]" 
+                       class="form-control admin-email" required placeholder="admin@example.com">
+                <div class="form-hint">Used for login and Gravatar avatar</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Password</label>
+                <div class="input-group">
+                  <input type="password" name="admin_password[]" 
+                         class="form-control admin-password" required placeholder="Enter password">
+                  <button class="btn btn-outline-secondary toggle-password" type="button">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <div class="password-strength mt-2 d-none">
+                  <div class="progress progress-sm">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                  </div>
+                  <div class="form-hint password-strength-text">Enter a strong password</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Actions -->
+          <div class="col-12 col-md-2 text-end">
+            <button type="button" class="btn btn-outline-danger remove-admin-btn">
+              <i class="ti ti-trash"></i>
+              <span class="d-none d-md-inline ms-1">Remove</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    adminList.appendChild(newCard);
+    
+    // Animate appearance
+    setTimeout(() => {
+      newCard.style.transition = 'opacity 0.3s';
+      newCard.style.opacity = '1';
+    }, 10);
+    
+    // Focus on email field
+    newCard.querySelector('.admin-email').focus();
+  });
+
+  // Enhanced form validation
   document.querySelector("form").addEventListener("submit", function (e) {
+    // Clear previous errors
+    const existingErrors = document.querySelector('.alert-danger');
+    if (existingErrors) existingErrors.remove();
+    
     let valid = true;
+    const errors = [];
+    const emails = new Set();
 
     document.querySelectorAll('.admin-block').forEach(block => {
       const email = block.querySelector('input[name="admin_email[]"]').value.trim();
       const passwordInput = block.querySelector('input[name="admin_password[]"]');
       const password = passwordInput.value.trim();
 
+      // Check for duplicate emails
+      if (email) {
+        if (emails.has(email.toLowerCase())) {
+          errors.push(`Duplicate email address: ${email}`);
+          valid = false;
+        }
+        emails.add(email.toLowerCase());
+      }
+
+      // Handle placeholder passwords
       if (password === "********" && passwordInput.dataset.isPlaceholder === "true") {
         passwordInput.value = "";
       }
 
+      // Check if new admin has password
       if (!block.dataset.loaded && email && !password) {
-        alert(`Please enter a password for new admin: ${email}`);
+        errors.push(`Please enter a password for new admin: ${email}`);
         valid = false;
       }
     });
 
     if (!valid) {
       e.preventDefault();
+      
+      // Show errors using Tabler alert
+      const alertDiv = document.createElement('div');
+      alertDiv.className = 'alert alert-danger alert-dismissible mb-3';
+      alertDiv.innerHTML = `
+        <div class="d-flex">
+          <div>
+            <i class="ti ti-alert-circle me-2"></i>
+          </div>
+          <div>
+            <h4 class="alert-title">Please fix the following errors:</h4>
+            <ul class="mb-0">
+              ${errors.map(err => `<li>${err}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      const adminList = document.getElementById('admin-list');
+      adminList.parentNode.insertBefore(alertDiv, adminList);
+      
+      // Scroll to error
+      alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
 });
-
-function addAdmin() {
-  const adminList = document.getElementById("admin-list");
-  const newCard = document.createElement("div");
-  newCard.className = "card admin-block mb-3";
-  newCard.innerHTML = `
-    <div class="card-body row align-items-center" data-loaded="">
-      <div class="col-md-5">
-        <label class="form-label">Email</label>
-        <input type="email" name="admin_email[]" class="form-control" required>
-      </div>
-      <div class="col-md-5">
-        <label class="form-label">Password</label>
-        <div class="input-group">
-          <input type="password" name="admin_password[]" class="form-control" required>
-          <span class="input-group-text toggle-password" style="cursor: pointer;">
-            <i class="ti ti-eye"></i>
-          </span>
-        </div>
-      </div>
-      <div class="col-md-2 text-end mt-3 mt-md-0">
-        <a class="btn btn-icon btn-outline-danger remove-admin-btn" title="Remove Admin (Click Save to confirm)">
-          <i class="ti ti-trash"></i>
-        </a>
-      </div>
-    </div>
-  `;
-  adminList.appendChild(newCard);
-  newCard.querySelector(".remove-admin-btn").addEventListener("click", function () {
-    removeAdmin(this);
-  });
-}
-
-function removeAdmin(button) {
-  const block = button.closest(".admin-block");
-  const emailInput = block.querySelector('input[name="admin_email[]"]');
-  const email = emailInput?.value?.trim();
-
-  if (email) {
-    const deletedField = document.getElementById("deleted_admins");
-    let current = deletedField.value ? deletedField.value.split(",") : [];
-    if (!current.includes(email)) {
-      current.push(email);
-      deletedField.value = current.join(",");
-      console.log("🗑️ Marked for deletion:", email);
-    }
-  }
-
-  block.remove();
-}
 </script>

@@ -1,0 +1,217 @@
+/* Admin Settings Enhanced Styles */
+
+/* Admin Card Styling */
+.admin-block {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 10px;
+  overflow: visible;
+}
+
+.admin-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(32, 107, 196, 0.12);
+}
+
+/* Avatar Styling */
+.avatar.avatar-xl {
+  width: 96px !important;
+  height: 96px !important;
+  background-size: cover;
+  background-position: center;
+  background-color: #f1f3f5;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Password Strength Indicator */
+.password-strength .progress {
+  height: 4px;
+  background-color: #e9ecef;
+}
+
+.password-strength .progress-bar {
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* Gravatar Info Panel */
+.alert-info .alert-link {
+  color: #0c5460;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.alert-info .alert-link:hover {
+  color: #084961;
+}
+
+/* Add Admin Button */
+#add-admin-btn {
+  border-style: dashed;
+  border-width: 2px;
+  transition: all 0.2s ease;
+}
+
+#add-admin-btn:hover {
+  border-style: solid;
+  transform: translateY(-1px);
+}
+
+/* Animation for card removal */
+@keyframes slideOut {
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  /* Stack layout vertically on mobile */
+  .admin-block .row {
+    flex-direction: column;
+  }
+  
+  /* Smaller avatar on mobile */
+  .admin-block .avatar.avatar-xl {
+    width: 64px !important;
+    height: 64px !important;
+    margin: 0 auto 1rem;
+  }
+  
+  /* Full width remove button on mobile */
+  .admin-block .btn-outline-danger {
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  /* Center avatar section on mobile */
+  .admin-block .col-md-2.text-center {
+    margin-bottom: 1rem;
+  }
+  
+  /* Sticky save button on mobile */
+  .page-header .btn-success {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1030;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 50px;
+    padding: 0.75rem 1.5rem;
+  }
+  
+  /* Add padding to bottom to account for fixed save button */
+  .page-body {
+    padding-bottom: 80px;
+  }
+  
+  /* Full width add admin button on mobile */
+  #add-admin-btn {
+    width: 100%;
+  }
+  
+  /* Adjust alert text size on mobile */
+  .alert-info .alert-title {
+    font-size: 1rem;
+  }
+  
+  .alert-info .text-muted {
+    font-size: 0.875rem;
+  }
+}
+
+/* Tablet Responsive (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Adjust avatar size for tablets */
+  .admin-block .avatar.avatar-xl {
+    width: 80px !important;
+    height: 80px !important;
+  }
+  
+  /* Adjust column widths for tablets */
+  .admin-block .col-md-2 {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+  
+  .admin-block .col-md-8 {
+    flex: 0 0 auto;
+    width: 60%;
+  }
+}
+
+/* Desktop Enhancements */
+@media (min-width: 1024px) {
+  /* Ensure proper spacing on desktop */
+  .page-header .dashboard-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Keep save button visible on scroll on desktop */
+  .page-header.sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 1rem 0;
+  }
+}
+
+/* Form Control Focus States */
+.admin-email:focus,
+.admin-password:focus {
+  border-color: #206bc4;
+  box-shadow: 0 0 0 0.25rem rgba(32, 107, 196, 0.25);
+}
+
+/* Error State Styling */
+.form-control.is-invalid {
+  border-color: #d63384;
+}
+
+.invalid-feedback {
+  display: block;
+  color: #d63384;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Badge Styling */
+.badge.bg-blue-lt {
+  background-color: rgba(32, 107, 196, 0.1);
+  color: #206bc4;
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+}
+
+/* Smooth Transitions */
+.admin-block,
+.admin-block .btn,
+.admin-block .avatar,
+.password-strength .progress-bar {
+  transition: all 0.3s ease;
+}
+
+/* Loading State for Avatars */
+.avatar.loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Print Styles */
+@media print {
+  .page-header .btn-success,
+  .remove-admin-btn,
+  #add-admin-btn,
+  .toggle-password {
+    display: none !important;
+  }
+}

@@ -24,6 +24,11 @@ window.FilterComponent = (function() {
         
         setupEventListeners();
         
+        // Initialize scroll restoration if enabled
+        if (config.preserveScrollPosition) {
+            initScrollRestoration();
+        }
+        
         console.log('FilterComponent initialized in', config.mode, 'mode');
     }
 
@@ -61,33 +66,51 @@ window.FilterComponent = (function() {
     }
 
     function handleServerFilter(event, filterBtn) {
+        // CRITICAL: Prevent anchor jumping by removing hash from URL
+        const originalHref = filterBtn.href;
+        const url = new URL(originalHref);
+        
+        // Remove the hash to prevent automatic scrolling to anchor
+        const cleanUrl = url.origin + url.pathname + url.search;
+        
         // For server-side filtering, preserve search query when switching filters
         if (config.enableSearchPreservation && searchComponent) {
             const searchInput = document.getElementById('enhancedSearchInput');
             if (searchInput) {
                 const currentQuery = searchInput.value.trim();
                 if (currentQuery && currentQuery.length >= 3) {
-                    const url = new URL(filterBtn.href);
-                    url.searchParams.set('q', currentQuery);
-                    filterBtn.href = url.toString();
+                    const newUrl = new URL(cleanUrl);
+                    newUrl.searchParams.set('q', currentQuery);
+                    filterBtn.href = newUrl.toString();
+                } else {
+                    filterBtn.href = cleanUrl;
                 }
+            } else {
+                filterBtn.href = cleanUrl;
             }
+        } else {
+            filterBtn.href = cleanUrl;
         }
 
-        // For scroll position preservation, we need to handle differently
+        // Store scroll position with additional context for better restoration
         if (config.preserveScrollPosition) {
-            // Store current scroll position
-            sessionStorage.setItem('scrollPosition', window.scrollY.toString());
+            const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            const timestamp = Date.now();
+            const buttonId = filterBtn.id || 'unknown';
             
-            // Let the browser navigate normally
-            // On page load, the scroll position will be restored
-            window.addEventListener('load', function() {
-                const savedPosition = sessionStorage.getItem('scrollPosition');
-                if (savedPosition) {
-                    window.scrollTo(0, parseInt(savedPosition));
-                    sessionStorage.removeItem('scrollPosition');
-                }
-            });
+            // Store scroll data with metadata
+            const scrollData = {
+                position: scrollY,
+                timestamp: timestamp,
+                url: window.location.href,
+                buttonId: buttonId,
+                targetUrl: filterBtn.href
+            };
+            
+            sessionStorage.setItem('filterScrollPosition', scrollY.toString());
+            sessionStorage.setItem('filterScrollData', JSON.stringify(scrollData));
+            
+            console.log('FilterComponent: Stored scroll position', scrollY, 'for button', buttonId, 'navigating to', filterBtn.href);
         }
         
         // Allow default navigation to proceed
@@ -251,23 +274,135 @@ window.FilterComponent = (function() {
         });
     }
 
-    // Scroll position restoration for server-side filtering
+    // Robust scroll position restoration for server-side filtering
     function initScrollRestoration() {
-        // Restore scroll position if we came from a filter action
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedPosition = sessionStorage.getItem('scrollPosition');
+        const restoreScroll = () => {
+            const savedPosition = sessionStorage.getItem('filterScrollPosition');
+            const savedData = sessionStorage.getItem('filterScrollData');
+            
             if (savedPosition) {
-                setTimeout(() => {
-                    window.scrollTo(0, parseInt(savedPosition));
-                    sessionStorage.removeItem('scrollPosition');
-                }, 100); // Small delay to ensure page is fully loaded
+                const targetY = parseInt(savedPosition);
+                let buttonId = 'unknown';
+                
+                // Get additional context if available
+                if (savedData) {
+                    try {
+                        const data = JSON.parse(savedData);
+                        buttonId = data.buttonId || 'unknown';
+                        
+                        // Check if data is recent (within last 10 seconds)
+                        if (Date.now() - data.timestamp > 10000) {
+                            console.log('FilterComponent: Scroll data too old, ignoring');
+                            sessionStorage.removeItem('filterScrollPosition');
+                            sessionStorage.removeItem('filterScrollData');
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('FilterComponent: Could not parse scroll data');
+                    }
+                }
+                
+                // Robust scroll restoration with multiple attempts
+                const attemptRestore = (attempt = 1, maxAttempts = 15) => {
+                    // Ensure page is fully loaded before scrolling
+                    const isPageReady = document.readyState === 'complete' && 
+                                       document.body && 
+                                       document.body.scrollHeight > 100;
+                    
+                    if (isPageReady) {
+                        // Use multiple scroll methods for maximum compatibility
+                        try {
+                            // Force immediate scroll without smooth behavior
+                            window.scrollTo({
+                                top: targetY,
+                                left: 0,
+                                behavior: 'instant'
+                            });
+                            
+                            // Fallback for older browsers
+                            if (Math.abs(window.scrollY - targetY) > 20) {
+                                document.documentElement.scrollTop = targetY;
+                                document.body.scrollTop = targetY;
+                                
+                                // Force a second attempt if still not correct
+                                setTimeout(() => {
+                                    if (Math.abs(window.scrollY - targetY) > 20) {
+                                        window.scrollTo(0, targetY);
+                                    }
+                                }, 50);
+                            }
+                            
+                            // Verify scroll position was set correctly
+                            setTimeout(() => {
+                                const currentScroll = window.scrollY || document.documentElement.scrollTop || 0;
+                                if (Math.abs(currentScroll - targetY) < 100) {
+                                    // Success - remove saved position
+                                    sessionStorage.removeItem('filterScrollPosition');
+                                    sessionStorage.removeItem('filterScrollData');
+                                    console.log('FilterComponent: Successfully restored scroll to', targetY, 'for button', buttonId, 'Current:', currentScroll);
+                                } else if (attempt < maxAttempts) {
+                                    // Try again if scroll didn't work
+                                    console.log('FilterComponent: Scroll restoration attempt', attempt, 'failed. Target:', targetY, 'Current:', currentScroll);
+                                    attemptRestore(attempt + 1, maxAttempts);
+                                } else {
+                                    console.warn('FilterComponent: Max attempts reached. Could not restore scroll to', targetY);
+                                    sessionStorage.removeItem('filterScrollPosition');
+                                    sessionStorage.removeItem('filterScrollData');
+                                }
+                            }, 100);
+                            
+                        } catch (e) {
+                            console.warn('FilterComponent: Scroll restoration failed:', e);
+                            if (attempt < maxAttempts) {
+                                setTimeout(() => attemptRestore(attempt + 1, maxAttempts), 100);
+                            } else {
+                                sessionStorage.removeItem('filterScrollPosition');
+                                sessionStorage.removeItem('filterScrollData');
+                            }
+                        }
+                    } else if (attempt < maxAttempts) {
+                        // Page not ready yet, try again
+                        console.log('FilterComponent: Page not ready for scroll restoration, attempt', attempt);
+                        setTimeout(() => attemptRestore(attempt + 1, maxAttempts), 150);
+                    } else {
+                        // Max attempts reached, clean up
+                        console.warn('FilterComponent: Could not restore scroll position after', maxAttempts, 'attempts - page not ready');
+                        sessionStorage.removeItem('filterScrollPosition');
+                        sessionStorage.removeItem('filterScrollData');
+                    }
+                };
+                
+                attemptRestore();
             }
+        };
+        
+        // Multiple restoration strategies with longer delays to ensure page is fully rendered
+        if (document.readyState === 'loading') {
+            // Page still loading
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(restoreScroll, 250);
+            });
+        } else if (document.readyState === 'interactive') {
+            // DOM loaded but resources may still be loading
+            setTimeout(restoreScroll, 300);
+        } else {
+            // Page fully loaded
+            setTimeout(restoreScroll, 100);
+        }
+        
+        // Additional safety net for late-loading content
+        window.addEventListener('load', () => {
+            setTimeout(restoreScroll, 200);
         });
-    }
-
-    // Initialize scroll restoration immediately
-    if (config.preserveScrollPosition) {
-        initScrollRestoration();
+        
+        // Extra fallback for very slow loading pages
+        setTimeout(() => {
+            const savedPosition = sessionStorage.getItem('filterScrollPosition');
+            if (savedPosition) {
+                console.log('FilterComponent: Final fallback scroll restoration');
+                restoreScroll();
+            }
+        }, 1000);
     }
 
     // Public API

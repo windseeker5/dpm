@@ -13,6 +13,28 @@ class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    first_name = db.Column(db.String(50), nullable=True)  # Added for personalization
+    last_name = db.Column(db.String(50), nullable=True)   # Added for personalization
+    
+    @property
+    def full_name(self):
+        """Get full name, falling back to email if names not set"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.first_name:
+            return self.first_name
+        elif self.last_name:
+            return self.last_name
+        else:
+            return self.email.split('@')[0]  # Use email prefix as fallback
+    
+    @property
+    def display_name(self):
+        """Get display name for welcome messages"""
+        if self.first_name:
+            return self.first_name
+        else:
+            return self.email.split('@')[0]  # Use email prefix as fallback
 
 
 class AdminActionLog(db.Model):

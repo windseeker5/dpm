@@ -28,7 +28,8 @@ window.SearchComponent = (function() {
         preserveParams: ['status', 'payment_status', 'activity', 'template'],
         minSearchLength: 3,
         debounceDelay: 250,
-        soundEnabled: true
+        soundEnabled: true,
+        preserveScrollPosition: true
     };
 
     function init(userConfig = {}) {
@@ -57,6 +58,11 @@ window.SearchComponent = (function() {
 
         setupEventListeners();
         updateSearchFeedback(enhancedSearchInput.value || '');
+        
+        // Initialize scroll restoration if enabled
+        if (config.preserveScrollPosition) {
+            initScrollRestoration();
+        }
         
         console.log('SearchComponent initialized');
     }
@@ -269,6 +275,27 @@ window.SearchComponent = (function() {
         
         setLoadingState(true);
         
+        // Store scroll position with additional context for better restoration
+        if (config.preserveScrollPosition) {
+            const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            const timestamp = Date.now();
+            const currentUrl = window.location.href;
+            
+            // Store scroll data with metadata
+            const scrollData = {
+                position: scrollY,
+                timestamp: timestamp,
+                url: currentUrl,
+                query: query.trim(),
+                userAgent: navigator.userAgent.substring(0, 50)
+            };
+            
+            sessionStorage.setItem('searchScrollPosition', scrollY.toString());
+            sessionStorage.setItem('searchScrollData', JSON.stringify(scrollData));
+            
+            console.log('SearchComponent: Stored scroll position', scrollY, 'for search:', query.trim());
+        }
+        
         // Build URL with search query while preserving filter parameters
         const url = new URL(window.location.href);
         if (query && query.trim().length >= config.minSearchLength) {
@@ -310,11 +337,92 @@ window.SearchComponent = (function() {
         }
     }
 
+    // Robust scroll position restoration for search operations
+    function initScrollRestoration() {
+        const restoreScroll = () => {
+            const savedPosition = sessionStorage.getItem('searchScrollPosition');
+            if (savedPosition) {
+                const targetY = parseInt(savedPosition);
+                
+                // Robust scroll restoration with multiple attempts
+                const attemptRestore = (attempt = 1, maxAttempts = 10) => {
+                    // Ensure page is fully loaded before scrolling
+                    if (document.readyState === 'complete' && 
+                        document.body && 
+                        document.body.scrollHeight > targetY) {
+                        
+                        // Use multiple scroll methods for maximum compatibility
+                        try {
+                            window.scrollTo({
+                                top: targetY,
+                                left: 0,
+                                behavior: 'instant'
+                            });
+                            
+                            // Fallback for older browsers
+                            if (window.scrollY !== targetY) {
+                                document.documentElement.scrollTop = targetY;
+                                document.body.scrollTop = targetY;
+                            }
+                            
+                            // Verify scroll position was set correctly
+                            setTimeout(() => {
+                                if (Math.abs(window.scrollY - targetY) < 50) {
+                                    // Success - remove saved position
+                                    sessionStorage.removeItem('searchScrollPosition');
+                                    console.log('SearchComponent: Scroll restored to', targetY);
+                                } else if (attempt < maxAttempts) {
+                                    // Try again if scroll didn't work
+                                    attemptRestore(attempt + 1, maxAttempts);
+                                }
+                            }, 50);
+                            
+                        } catch (e) {
+                            console.warn('SearchComponent: Scroll restoration failed:', e);
+                            if (attempt < maxAttempts) {
+                                attemptRestore(attempt + 1, maxAttempts);
+                            }
+                        }
+                    } else if (attempt < maxAttempts) {
+                        // Page not ready yet, try again
+                        setTimeout(() => attemptRestore(attempt + 1, maxAttempts), 100);
+                    } else {
+                        // Max attempts reached, clean up
+                        sessionStorage.removeItem('searchScrollPosition');
+                        console.warn('SearchComponent: Could not restore scroll position after', maxAttempts, 'attempts');
+                    }
+                };
+                
+                attemptRestore();
+            }
+        };
+        
+        // Multiple restoration strategies
+        if (document.readyState === 'loading') {
+            // Page still loading
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(restoreScroll, 150);
+            });
+        } else if (document.readyState === 'interactive') {
+            // DOM loaded but resources may still be loading
+            setTimeout(restoreScroll, 200);
+        } else {
+            // Page fully loaded
+            setTimeout(restoreScroll, 50);
+        }
+        
+        // Additional safety net for late-loading content
+        window.addEventListener('load', () => {
+            setTimeout(restoreScroll, 100);
+        });
+    }
+
     // Public API
     return {
         init: init,
         performSearch: performSearch,
         setLoadingState: setLoadingState,
-        updateSearchFeedback: updateSearchFeedback
+        updateSearchFeedback: updateSearchFeedback,
+        initScrollRestoration: initScrollRestoration
     };
 })();

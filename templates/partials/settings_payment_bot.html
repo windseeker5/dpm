@@ -1,0 +1,62 @@
+<!-- Email Parser Payment Bot Settings -->
+<h3 class="mb-3">
+  <i class="ti ti-robot me-2"></i>
+  Email Parser Payment Bot
+</h3>
+
+<div class="mb-4">
+  <div class="form-check form-switch mb-3">
+    <input class="form-check-input" type="checkbox" name="enable_email_payment_bot" id="enable_email_payment_bot" {% if settings.ENABLE_EMAIL_PAYMENT_BOT == 'True' %}checked{% endif %}>
+    <label class="form-check-label" for="enable_email_payment_bot">Enable Email Payment Bot</label>
+  </div>
+
+  <div id="email-bot-config" style="display: none;">
+    <div class="mb-3">
+      <label class="form-label">Email Sender (e.g., notify@yourbank)</label>
+      <input type="text" class="form-control" name="bank_email_from" value="{{ settings.BANK_EMAIL_FROM or '' }}">
+      <div class="form-text">The email address that sends payment notifications</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Email Subject to Match</label>
+      <input type="text" class="form-control" name="bank_email_subject" value="{{ settings.BANK_EMAIL_SUBJECT or '' }}">
+      <div class="form-text">Subject line to identify payment emails</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Fuzzy Match Threshold</label>
+      <input type="number" class="form-control" name="bank_email_name_confidance" value="{{ settings.BANK_EMAIL_NAME_CONFIDANCE or '85' }}" min="0" max="100">
+      <div class="form-text">Minimum confidence percentage for name matching (0-100)</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Gmail Label for Processed</label>
+      <input type="text" class="form-control" name="gmail_label_folder_processed" value="{{ settings.GMAIL_LABEL_FOLDER_PROCESSED or 'InteractProcessed' }}">
+      <div class="form-text">Gmail label applied to processed payment emails</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Show/hide email bot configuration based on enable switch
+  document.addEventListener('DOMContentLoaded', function() {
+    const enableSwitch = document.getElementById('enable_email_payment_bot');
+    const config = document.getElementById('email-bot-config');
+    
+    if (enableSwitch && config) {
+      // Set initial state
+      if (enableSwitch.checked) {
+        config.style.display = 'block';
+      }
+      
+      // Handle toggle changes
+      enableSwitch.addEventListener('change', function() {
+        if (this.checked) {
+          config.style.display = 'block';
+        } else {
+          config.style.display = 'none';
+        }
+      });
+    }
+  });
+</script>
