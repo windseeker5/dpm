@@ -15,6 +15,7 @@ class Admin(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)  # Added for personalization
     last_name = db.Column(db.String(50), nullable=True)   # Added for personalization
+    avatar_filename = db.Column(db.String(255), nullable=True)  # For custom avatar uploads
     
     @property
     def full_name(self):

@@ -9,7 +9,11 @@
       <div class="row g-2 align-items-center">
         <div class="col">
           <h1 class="page-title mb-3 text-center text-md-start">
-            Welcome back !
+            {% if current_admin and current_admin.display_name %}
+              Welcome back, {{ current_admin.display_name }}!
+            {% else %}
+              Welcome back!
+            {% endif %}
           </h1>
           <p class="text-muted mb-0 text-center text-md-start">
             Here's what's happening with your activities today.

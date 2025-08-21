@@ -1809,6 +1809,16 @@ function initializeActivityDashboard() {
   const searchInput = document.getElementById('enhancedSearchInput');
   const searchForm = document.getElementById('dynamicSearchForm');
   
+  // Initialize sound effect for Ctrl+K
+  let searchSound = null;
+  try {
+    searchSound = new Audio('/static/beep.wav');
+    searchSound.volume = 0.3;
+    console.log('ActivityDashboard: Sound effect initialized');
+  } catch (err) {
+    console.warn('ActivityDashboard: Audio not available');
+  }
+  
   if (searchInput) {
     // Set up Ctrl+K keyboard shortcut manually
     document.addEventListener('keydown', function(e) {
@@ -1819,6 +1829,19 @@ function initializeActivityDashboard() {
         console.log('ActivityDashboard: Ctrl+K pressed - focusing search');
         searchInput.focus();
         searchInput.select();
+        
+        // Play sound effect (matching other pages)
+        if (searchSound) {
+          try {
+            searchSound.currentTime = 0;
+            searchSound.play().catch(() => {
+              // Silently fail if audio can't play
+              console.log('ActivityDashboard: Could not play sound (browser may block autoplay)');
+            });
+          } catch (err) {
+            // Ignore audio errors
+          }
+        }
         
         // Add glow effect
         searchInput.classList.add('search-glow-active');
