@@ -270,15 +270,20 @@ def inject_globals_and_csrf():
     # Calculate pending signups count for sidebar badge
     pending_signups_count = 0
     active_passport_count = 0
+    current_admin = None
+    
     try:
         if "admin" in session:  # Only calculate if admin is logged in
             pending_signups_count = Signup.query.filter_by(status='pending').count()
             # Calculate active passports (uses_remaining > 0)
             active_passport_count = Passport.query.filter(Passport.uses_remaining > 0).count()
+            # Get current admin info for personalization
+            current_admin = Admin.query.filter_by(email=session.get("admin")).first()
     except Exception:
         # If there's any database error, default to 0
         pending_signups_count = 0
         active_passport_count = 0
+        current_admin = None
     
     return {
         'now': datetime.now(timezone.utc),
@@ -286,7 +291,8 @@ def inject_globals_and_csrf():
         'git_branch': get_git_branch(),
         'csrf_token': generate_csrf,  # returns the raw CSRF token
         'pending_signups_count': pending_signups_count,
-        'active_passport_count': active_passport_count
+        'active_passport_count': active_passport_count,
+        'current_admin': current_admin  # Add current admin for template personalization
     }
 
 
@@ -1614,21 +1620,63 @@ def setup():
         # 🔐 Step 1: Admin accounts
         admin_emails = request.form.getlist("admin_email[]")
         admin_passwords = request.form.getlist("admin_password[]")
+        admin_first_names = request.form.getlist("admin_first_name[]")
+        admin_last_names = request.form.getlist("admin_last_name[]")
 
-        for email, password in zip(admin_emails, admin_passwords):
+        # Create avatar upload directory if needed
+        avatar_dir = os.path.join(app.config["UPLOAD_FOLDER"], "avatars")
+        os.makedirs(avatar_dir, exist_ok=True)
+
+        # Process admins with names and avatar support
+        for i, (email, password) in enumerate(zip(admin_emails, admin_passwords)):
             email = email.strip()
             password = password.strip()
+            first_name = admin_first_names[i].strip() if i < len(admin_first_names) else ""
+            last_name = admin_last_names[i].strip() if i < len(admin_last_names) else ""
+            
             if not email:
                 continue
 
+            # Handle avatar upload
+            avatar_filename = None
+            avatar_file_key = f"admin_avatar_{i+1}"
+            if avatar_file_key in request.files:
+                avatar_file = request.files[avatar_file_key]
+                if avatar_file and avatar_file.filename:
+                    # Generate unique filename
+                    ext = os.path.splitext(avatar_file.filename)[1]
+                    avatar_filename = f"admin_{email.replace('@', '_').replace('.', '_')}_{int(time.time())}{ext}"
+                    avatar_path = os.path.join(avatar_dir, avatar_filename)
+                    avatar_file.save(avatar_path)
+
             existing = Admin.query.filter_by(email=email).first()
             if existing:
+                # Update existing admin
                 if password and password != "********":
                     existing.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+                # Update names (allow empty values for backward compatibility)
+                existing.first_name = first_name if first_name else None
+                existing.last_name = last_name if last_name else None
+                # Update avatar if uploaded
+                if avatar_filename:
+                    # Delete old avatar if exists
+                    if existing.avatar_filename:
+                        old_avatar = os.path.join(avatar_dir, existing.avatar_filename)
+                        if os.path.exists(old_avatar):
+                            os.remove(old_avatar)
+                    existing.avatar_filename = avatar_filename
             else:
+                # Create new admin
                 if password and password != "********":
                     hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-                    db.session.add(Admin(email=email, password_hash=hashed))
+                    new_admin = Admin(
+                        email=email, 
+                        password_hash=hashed,
+                        first_name=first_name if first_name else None,
+                        last_name=last_name if last_name else None,
+                        avatar_filename=avatar_filename
+                    )
+                    db.session.add(new_admin)
 
         # 🗑️ Step 2: Remove deleted admins
         deleted_emails_raw = request.form.get("deleted_admins", "")
