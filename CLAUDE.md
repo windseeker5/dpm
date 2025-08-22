@@ -15,6 +15,40 @@ Minipass is a Flask-based SAAS PWA application for end-to-end activities managem
 5. If it doesn't work, redo and retest
 6. Always use the flask debug server up and running on port 8890 (user: kdresdell@gmail.com, password : admin123 )
 
+## ⚠️ MANDATORY File Organization Rules
+
+### STRICT Directory Structure - NO EXCEPTIONS
+**These rules MUST be followed for EVERY file created or modified:**
+
+1. **Test Files** (`test_*.py`, `*_test.py`, verification scripts):
+   - **MUST** be placed in `/test/` directory
+   - **NEVER** create test files in the root directory
+   - HTML test files go in `/test/html/` subdirectory
+   
+2. **Documentation** (`.md` files, except CLAUDE.md and README.md):
+   - **MUST** be placed in `/doc/` directory
+   - **NEVER** create documentation in the root directory
+   - Only CLAUDE.md and README.md stay in root
+   
+3. **Screenshots** (`.png`, `.jpg`, `.jpeg` files):
+   - **MUST** be placed in `/playwright/` directory
+   - **NEVER** save screenshots in root or test directories
+   - Use descriptive names with timestamps when appropriate
+
+4. **Python Scripts**:
+   - Utility/helper scripts → `/test/` if test-related
+   - Debug scripts → `/test/debug/`
+   - One-off scripts → `/test/scripts/`
+
+5. **NEVER Place in Root Directory**:
+   - Test files of any kind
+   - Documentation (except CLAUDE.md, README.md)
+   - Screenshots or images
+   - Debug or temporary scripts
+   - HTML test files
+
+**Enforcement**: Before creating ANY file, determine its category and place it in the correct directory. Create the directory if it doesn't exist.
+
 
 
 
