@@ -4,19 +4,16 @@
 
 <div class="page-wrapper">
   <!-- Page Header -->
-  <div class="page-header d-print-none">
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
-      <div class="row g-2 align-items-center">
-        <div class="col">
-          <h1 class="page-title mb-1">
-            <i class="ti ti-settings me-2"></i>
-            Settings
-          </h1>
+      <div class="d-flex align-items-center justify-content-between w-100">
+        <div class="d-flex align-items-center">
+          <h1 class="page-title mb-0"><i class="ti ti-settings fs-1 text-muted me-2"></i>Settings</h1>
         </div>
-        <div class="col-auto ms-auto">
+        <div class="d-flex align-items-center">
           <button type="submit" class="btn btn-success" form="settings-form">
             <i class="ti ti-device-floppy me-2"></i>
-            Save All Settings
+            Save Settings
           </button>
         </div>
       </div>
@@ -35,22 +32,25 @@
             <div class="tab-content">
               <!-- Admins Tab -->
               <div class="tab-pane fade show active" id="tab-admins">
+                <h2 class="mb-4">Admin Accounts</h2>
                 {% include 'partials/settings_admins.html' %}
               </div>
 
               <!-- Organization Tab -->
               <div class="tab-pane fade" id="tab-org">
+                <h2 class="mb-4">Organization</h2>
                 {% include 'partials/settings_org.html' %}
               </div>
 
               <!-- Email Settings Tab -->
               <div class="tab-pane fade" id="tab-email">
+                <h2 class="mb-4">Email Settings</h2>
                 {% include 'partials/settings_email.html' %}
               </div>
 
               <!-- Email Notification Tab -->
               <div class="tab-pane fade" id="tab-email-templates">
-                <h3 class="mb-4">📧 Email Notification Templates</h3>
+                <h2 class="mb-4">Email Notification</h2>
                 <ul class="nav nav-tabs mb-3" role="tablist">
                   {% for event in ['pass_created', 'pass_redeemed', 'payment_received', 'payment_late', 'signup', 'survey_invitation'] %}
                     <li class="nav-item" role="presentation">
@@ -97,6 +97,7 @@
 
               <!-- Your Data Tab -->
               <div class="tab-pane fade" id="tab-data">
+                <h2 class="mb-4">Your Data</h2>
                 <div class="row">
                   <div class="col-lg-8">
                     <h3 class="mb-4">
@@ -143,6 +144,7 @@
 
               <!-- Backup & Restore Tab -->
               <div class="tab-pane fade" id="tab-backup">
+                <h2 class="mb-4">Backup & Restore</h2>
                 <div class="row">
                   <div class="col-lg-8">
                     <h3 class="mb-4">
@@ -356,10 +358,33 @@
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.04) !important;
 }
 
+/* Settings Header Button Alignment - Force Right Alignment */
+.page-header .dashboard-container > .d-flex {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.page-header .d-flex:last-child {
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .dashboard-container {
     padding: 0 1rem;
+  }
+  
+  /* Ensure button stays aligned on mobile */
+  .page-header .dashboard-container > .d-flex {
+    flex-wrap: nowrap !important;
+  }
+  
+  .page-header .btn-success {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 }
 </style>
