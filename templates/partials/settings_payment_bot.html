@@ -1,57 +1,132 @@
 <!-- Email Parser Payment Bot Settings -->
-<div class="mb-4">
-  <div class="form-check form-switch mb-3">
-    <input class="form-check-input" type="checkbox" name="enable_email_payment_bot" id="enable_email_payment_bot" {% if settings.ENABLE_EMAIL_PAYMENT_BOT == 'True' %}checked{% endif %}>
-    <label class="form-check-label" for="enable_email_payment_bot">Enable Email Payment Bot</label>
-  </div>
+<div class="row">
+  <div class="col-lg-8">
+    <!-- Configuration Card -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Bot Configuration</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" name="enable_email_payment_bot" id="enable_email_payment_bot" {% if settings.ENABLE_EMAIL_PAYMENT_BOT == 'True' %}checked{% endif %}>
+          <label class="form-check-label" for="enable_email_payment_bot">Enable Email Payment Bot</label>
+        </div>
 
-  <div id="email-bot-config" style="display: none;">
-    <div class="mb-3">
-      <label class="form-label">Email Sender (e.g., notify@yourbank)</label>
-      <input type="text" class="form-control" name="bank_email_from" value="{{ settings.BANK_EMAIL_FROM or '' }}">
-      <div class="form-text">The email address that sends payment notifications</div>
+        <div id="email-bot-config" style="display: none;">
+          <!-- Payment Email Display -->
+          <div class="alert alert-info mb-3">
+            <div class="d-flex">
+              <div>
+                <i class="ti ti-mail me-2"></i>
+              </div>
+              <div>
+                <h4 class="alert-title">Payment Email Address</h4>
+                <div class="text-muted">{{ settings.PAYMENT_EMAIL_ADDRESS or 'lhgi@minipass.me' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email Sender (e.g., notify@yourbank)</label>
+            <input type="text" class="form-control" name="bank_email_from" value="{{ settings.BANK_EMAIL_FROM or '' }}">
+            <div class="form-text">The email address that sends payment notifications</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email Subject to Match</label>
+            <input type="text" class="form-control" name="bank_email_subject" value="{{ settings.BANK_EMAIL_SUBJECT or '' }}">
+            <div class="form-text">Subject line to identify payment emails</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Fuzzy Match Threshold: <span id="threshold-value">{{ settings.BANK_EMAIL_NAME_CONFIDANCE or '85' }}</span>%</label>
+            <input type="range" class="form-range" name="bank_email_name_confidance" 
+                   value="{{ settings.BANK_EMAIL_NAME_CONFIDANCE or '85' }}" 
+                   min="0" max="100" id="threshold-slider">
+            <div class="form-text">Minimum confidence percentage for name matching</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Gmail Label for Processed</label>
+            <input type="text" class="form-control" name="gmail_label_folder_processed" value="{{ settings.GMAIL_LABEL_FOLDER_PROCESSED or 'InteractProcessed' }}">
+            <div class="form-text">Gmail label applied to processed payment emails</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Email Subject to Match</label>
-      <input type="text" class="form-control" name="bank_email_subject" value="{{ settings.BANK_EMAIL_SUBJECT or '' }}">
-      <div class="form-text">Subject line to identify payment emails</div>
+    <!-- Test Payment Email Card -->
+    <div class="card mb-3" id="test-email-card" style="display: none;">
+      <div class="card-header">
+        <h3 class="card-title">Test Payment Email</h3>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-warning mb-3">
+          <div class="d-flex">
+            <div>
+              <i class="ti ti-alert-triangle me-2"></i>
+            </div>
+            <div>
+              <h4 class="alert-title">Rate Limited</h4>
+              <div class="text-muted">You can send up to 2 test emails per hour</div>
+            </div>
+          </div>
+        </div>
+
+        <form id="test-payment-form">
+          <div class="mb-3">
+            <label class="form-label">Sender Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="test-sender-name" maxlength="100" required>
+            <div class="form-text">Name that will appear as the payment sender</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Amount (CAD) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="test-amount" min="0.01" max="10000" step="0.01" required>
+            <div class="form-text">Test payment amount between $0.01 and $10,000</div>
+          </div>
+
+          <button type="button" class="btn btn-primary" id="send-test-btn">
+            <i class="ti ti-send me-2"></i>
+            Send Test Payment Email
+          </button>
+        </form>
+
+        <div id="test-email-result" class="mt-3"></div>
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Fuzzy Match Threshold</label>
-      <input type="number" class="form-control" name="bank_email_name_confidance" value="{{ settings.BANK_EMAIL_NAME_CONFIDANCE or '85' }}" min="0" max="100">
-      <div class="form-text">Minimum confidence percentage for name matching (0-100)</div>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Gmail Label for Processed</label>
-      <input type="text" class="form-control" name="gmail_label_folder_processed" value="{{ settings.GMAIL_LABEL_FOLDER_PROCESSED or 'InteractProcessed' }}">
-      <div class="form-text">Gmail label applied to processed payment emails</div>
+    <!-- Recent Payment Logs Card -->
+    <div class="card" id="payment-logs-card" style="display: none;">
+      <div class="card-header">
+        <h3 class="card-title">Recent Payment Logs</h3>
+        <div class="card-actions">
+          <button class="btn btn-sm btn-ghost-primary" id="refresh-logs-btn">
+            <i class="ti ti-refresh"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-vcenter">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Sender</th>
+                <th>Amount</th>
+                <th>Match</th>
+                <th>Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="payment-logs-tbody">
+              <tr>
+                <td colspan="5" class="text-center text-muted">Loading payment logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<script>
-  // Show/hide email bot configuration based on enable switch
-  document.addEventListener('DOMContentLoaded', function() {
-    const enableSwitch = document.getElementById('enable_email_payment_bot');
-    const config = document.getElementById('email-bot-config');
-    
-    if (enableSwitch && config) {
-      // Set initial state
-      if (enableSwitch.checked) {
-        config.style.display = 'block';
-      }
-      
-      // Handle toggle changes
-      enableSwitch.addEventListener('change', function() {
-        if (this.checked) {
-          config.style.display = 'block';
-        } else {
-          config.style.display = 'none';
-        }
-      });
-    }
-  });
-</script>
