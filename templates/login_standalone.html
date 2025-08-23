@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  
+  <title>Login - Minipass</title>
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tabler Core CSS -->
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* Left side - Decorative patterns */
+    .login-left {
+      flex: 0 0 55%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .geometric-pattern {
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-opacity='0.1'%3E%3Cpolygon fill='%23ffffff' points='50 0 60 40 100 50 60 60 50 100 40 60 0 50 40 40'/%3E%3C/g%3E%3C/svg%3E") repeat;
+      opacity: 0.1;
+    }
+
+    .floating-shapes {
+      position: absolute;
+      inset: 0;
+    }
+
+    .shape {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .shape:nth-child(1) {
+      width: 80px;
+      height: 80px;
+      top: 20%;
+      left: 20%;
+      animation-delay: 0s;
+    }
+
+    .shape:nth-child(2) {
+      width: 120px;
+      height: 120px;
+      top: 60%;
+      left: 70%;
+      animation-delay: 2s;
+    }
+
+    .shape:nth-child(3) {
+      width: 60px;
+      height: 60px;
+      top: 80%;
+      left: 30%;
+      animation-delay: 4s;
+    }
+
+    .shape:nth-child(4) {
+      width: 100px;
+      height: 100px;
+      top: 30%;
+      left: 80%;
+      animation-delay: 1s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+      50% {
+        transform: translateY(-20px) rotate(180deg);
+      }
+    }
+
+    .brand-content {
+      text-align: center;
+      z-index: 2;
+      color: white;
+    }
+
+    .brand-logo {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .brand-tagline {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      font-weight: 300;
+      max-width: 400px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Right side - Login form */
+    .login-right {
+      flex: 0 0 45%;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .login-form-container {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .login-title {
+      font-family: 'Roboto Slab', serif !important;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2rem; /* Increased spacing */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .login-subtitle {
+      color: #64748b;
+      font-size: 1rem;
+      font-weight: 400;
+    }
+
+    .form-card {
+      background: white;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+    }
+
+    .form-label {
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+      border: 2px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+      background: white;
+    }
+
+    .form-control:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      outline: none;
+    }
+
+    .btn-login {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.875rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: white;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      background: linear-gradient(135deg, #5a67d8 0%, #6b46a3 100%);
+      color: white;
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .login-container {
+        flex-direction: column;
+      }
+
+      .login-left {
+        flex: 0 0 30%;
+        min-height: 30vh;
+      }
+
+      .brand-logo {
+        font-size: 2rem;
+      }
+
+      .brand-tagline {
+        font-size: 1rem;
+      }
+
+      .login-right {
+        flex: 1;
+        padding: 1.5rem 1rem;
+      }
+
+      .login-title {
+        font-size: 1.5rem;
+      }
+
+      .shape {
+        display: none;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .login-left {
+        flex: 0 0 25%;
+        min-height: 25vh;
+      }
+
+      .login-right {
+        padding: 1rem;
+      }
+
+      .login-form-container {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <!-- Left side - Decorative patterns -->
+    <div class="login-left">
+      <div class="geometric-pattern"></div>
+      <div class="floating-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+      </div>
+      <div class="brand-content">
+        <div class="brand-logo">
+          <img src="{{ url_for('static', filename='assets/brand/logo/primary/logo.png') }}" alt="Minipass Logo" style="max-width: 200px; height: auto; filter: brightness(0) invert(1);">
+        </div>
+        <div class="brand-tagline" style="margin-top: 2rem;">
+          Streamline your activity management with modern digital passes and seamless user experiences.
+        </div>
+      </div>
+    </div>
+
+    <!-- Right side - Login form -->
+    <div class="login-right">
+      <div class="login-form-container">
+        <div class="login-header">
+          <h1 class="login-title">
+            <i class="ti ti-lock"></i>
+            Login
+          </h1>
+          <p class="login-subtitle">Welcome back! Please sign in to your account.</p>
+        </div>
+
+        <!-- PRESERVE EXACT FORM STRUCTURE -->
+        <form method="POST" autocomplete="on" class="form-card">
+          <div class="card-body">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Email Input -->
+            <div class="mb-3">
+              <label class="form-label" for="email">Email</label>
+              <input id="email" name="email" type="email" inputmode="email"
+                     class="form-control" required autocomplete="email" />
+            </div>
+
+            <!-- Password Input -->
+            <div class="mb-3">
+              <label class="form-label" for="password">Password</label>
+              <input id="password" name="password" type="password"
+                     class="form-control" required autocomplete="current-password" />
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-footer">
+              <button type="submit" class="btn btn-login">
+                <i class="ti ti-login"></i>
+                Login
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabler Core JS (if needed for form interactions) -->
+  <script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
+</body>
+</html>
