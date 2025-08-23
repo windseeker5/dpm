@@ -2317,7 +2317,7 @@ def login():
         flash("Invalid login!", "error")
         return redirect(url_for("login"))
 
-    return render_template("login.html")
+    return render_template("login_standalone.html")
 
 
 
