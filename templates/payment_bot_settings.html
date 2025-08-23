@@ -39,6 +39,11 @@
 
 {% endblock %}
 
+{% block scripts %}
+<!-- Payment Bot JavaScript -->
+<script src="{{ url_for('static', filename='js/payment-bot.js') }}?v=1.0"></script>
+{% endblock %}
+
 {% block head %}
 <!-- Settings page uses dashboard-container for consistent alignment -->
 <style>

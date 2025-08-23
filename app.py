@@ -48,6 +48,9 @@ from models import ChatConversation, ChatMessage, QueryLog, ChatUsage
 # ⚙️ Config
 from config import Config
 
+# 🔒 Security Decorators
+from decorators import rate_limit
+
 # 🔁 Background Jobs
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -1607,6 +1610,95 @@ def payment_bot_settings():
         settings[setting.key] = setting.value
     
     return render_template("payment_bot_settings.html", settings=settings)
+
+
+@app.route("/api/payment-bot/test-email", methods=["POST"])
+@rate_limit(max_requests=2, window=3600)  # 2 requests per hour
+def api_payment_bot_test_email():
+    """Send a test payment email (rate-limited and secure)"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    from markupsafe import escape
+    from utils import send_email, get_setting
+    
+    # Get and sanitize inputs (NO custom From address for security)
+    sender_name = escape(request.form.get("sender_name", "").strip())[:100]
+    amount = request.form.get("amount", "").strip()
+    
+    # Validate inputs
+    if not sender_name:
+        return jsonify({"error": "Sender name is required"}), 400
+    
+    try:
+        amount_float = float(amount)
+        if amount_float <= 0 or amount_float > 10000:
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid amount (must be between 0 and 10000)"}), 400
+    
+    # Get payment email address from settings (hardcoded fallback for safety)
+    payment_email = get_setting("PAYMENT_EMAIL_ADDRESS", "lhgi@minipass.me")
+    
+    # Build test email content
+    subject = f"INTERAC e-Transfer: {sender_name} sent you ${amount_float:.2f} (CAD)"
+    html_body = f"""
+    <html>
+    <body>
+        <h2>Test Payment Notification</h2>
+        <p><strong>Sender:</strong> {sender_name}</p>
+        <p><strong>Amount:</strong> ${amount_float:.2f} CAD</p>
+        <p><strong>Reference:</strong> TEST-{int(time.time())}</p>
+        <hr>
+        <p><em>This is a test email sent from Minipass Payment Bot settings.</em></p>
+    </body>
+    </html>
+    """
+    
+    try:
+        # Send email ONLY to configured payment address
+        send_email(
+            subject=subject,
+            to_email=payment_email,
+            html_body=html_body
+        )
+        
+        # Log the action
+        from utils import log_admin_action
+        log_admin_action(f"Test payment email sent by {session.get('admin', 'Unknown')} - Amount: ${amount_float:.2f}")
+        
+        return jsonify({"success": True, "message": f"Test email sent to {payment_email}"}), 200
+    except Exception as e:
+        print(f"Error sending test email: {e}")
+        return jsonify({"error": "Failed to send test email"}), 500
+
+
+@app.route("/api/payment-bot/logs", methods=["GET"])
+def api_payment_bot_logs():
+    """Get recent payment logs (sanitized for XSS prevention)"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    from markupsafe import escape
+    
+    # Get last 10 payment logs
+    recent_payments = EbankPayment.query.order_by(EbankPayment.timestamp.desc()).limit(10).all()
+    
+    # Sanitize and format for display
+    logs = []
+    for payment in recent_payments:
+        logs.append({
+            "id": payment.id,
+            "date_sent": payment.timestamp.strftime("%Y-%m-%d %H:%M") if payment.timestamp else "Unknown",
+            "from_email": escape(payment.from_email or "Unknown"),
+            "subject": escape(payment.subject or "No subject")[:100],
+            "amount": float(payment.bank_info_amt) if payment.bank_info_amt else 0.0,
+            "bank_info_name": escape(payment.bank_info_name or "Unknown")[:50],
+            "matched_pass": bool(payment.matched_pass_id),
+            "match_confidence": payment.name_score or 0
+        })
+    
+    return jsonify({"logs": logs}), 200
 
 
 @app.route("/setup", methods=["GET", "POST"])
