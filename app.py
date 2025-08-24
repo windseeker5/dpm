@@ -181,6 +181,11 @@ try:
     app.register_blueprint(settings_api)
     print("✅ Settings API registered successfully")
     
+    # Register Notifications API Blueprint
+    from api.notifications import notifications_bp
+    app.register_blueprint(notifications_bp)
+    print("✅ Notifications API registered successfully")
+    
     # List routes to verify
     for rule in app.url_map.iter_rules():
         if 'chatbot' in rule.rule:
@@ -189,6 +194,14 @@ try:
     # Exempt chatbot API from CSRF for testing
     csrf.exempt(chatbot_bp)
     print("✅ Chatbot API exempted from CSRF")
+    
+    # Add test notification route
+    @app.route("/test-notifications")
+    def test_notifications():
+        """Test page for SSE notifications"""
+        if "admin" not in session:
+            return redirect(url_for("login"))
+        return render_template("test_notifications.html")
 except Exception as e:
     print(f"❌ Simple Chatbot registration failed: {e}")
     import traceback
@@ -701,6 +714,13 @@ def mark_signup_paid(signup_id):
     signup.paid = True
     signup.paid_at = datetime.utcnow()
     db.session.commit()
+    
+    # Emit SSE notification for signup payment
+    try:
+        from api.notifications import emit_signup_notification
+        emit_signup_notification(signup)
+    except Exception as e:
+        current_app.logger.warning(f"Failed to emit signup notification: {e}")
 
     flash(f"✅ Marked {signup.user.name}'s signup as paid.", "success")
     return redirect(url_for("list_signups"))
@@ -864,13 +884,23 @@ def bulk_signup_action():
         
         if action == 'mark_paid':
             count = 0
+            paid_signups = []  # Track signups for notifications
             for signup in signups:
                 if not signup.paid:
                     signup.paid = True
                     signup.paid_at = datetime.now(timezone.utc)
+                    paid_signups.append(signup)
                     count += 1
             
             db.session.commit()
+            
+            # Emit SSE notifications for all newly paid signups
+            for signup in paid_signups:
+                try:
+                    from api.notifications import emit_signup_notification
+                    emit_signup_notification(signup)
+                except Exception as e:
+                    current_app.logger.warning(f"Failed to emit signup notification for signup {signup.id}: {e}")
             
             # Log admin action
             db.session.add(AdminActionLog(
@@ -1576,6 +1606,13 @@ def signup(activity_id):
 
         from utils import notify_signup_event
         notify_signup_event(app, signup=signup, activity=activity)
+        
+        # Emit SSE notification for signup
+        try:
+            from api.notifications import emit_signup_notification
+            emit_signup_notification(signup)
+        except Exception as e:
+            current_app.logger.warning(f"Failed to emit signup notification: {e}")
 
         flash("✅ Signup submitted!", "success")
         return redirect(url_for("signup_thank_you", signup_id=signup.id))
@@ -1758,6 +1795,48 @@ def api_payment_bot_check_emails():
                 "error": f"Failed to check emails: {error_msg}"
             }), 500
 
+
+@app.route("/api/payment-notification-html/<notification_id>", methods=["POST"])
+@csrf.exempt
+def api_payment_notification_html(notification_id):
+    """Render HTML for payment notification"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Get notification data from request
+        notification_data = request.get_json()
+        if not notification_data:
+            return jsonify({"error": "No notification data provided"}), 400
+        
+        # Render the notification template
+        html = render_template('partials/event_notification.html', data=notification_data)
+        return html, 200, {'Content-Type': 'text/html'}
+        
+    except Exception as e:
+        current_app.logger.error(f"Error rendering payment notification HTML: {e}")
+        return jsonify({"error": "Failed to render notification"}), 500
+
+@app.route("/api/signup-notification-html/<notification_id>", methods=["POST"])
+@csrf.exempt
+def api_signup_notification_html(notification_id):
+    """Render HTML for signup notification"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Get notification data from request
+        notification_data = request.get_json()
+        if not notification_data:
+            return jsonify({"error": "No notification data provided"}), 400
+        
+        # Render the notification template
+        html = render_template('partials/event_notification.html', data=notification_data)
+        return html, 200, {'Content-Type': 'text/html'}
+        
+    except Exception as e:
+        current_app.logger.error(f"Error rendering signup notification HTML: {e}")
+        return jsonify({"error": "Failed to render notification"}), 500
 
 @app.route("/api/payment-bot/logs", methods=["GET"])
 def api_payment_bot_logs():
@@ -2998,14 +3077,24 @@ def passports_bulk_action():
     
     if action == "mark_paid":
         count = 0
+        paid_passports = []  # Track passports for notifications
         for passport in passports:
             if not passport.paid:
                 passport.paid = True
                 passport.paid_date = datetime.now(timezone.utc)
                 passport.marked_paid_by = session.get("admin", "unknown")
+                paid_passports.append(passport)
                 count += 1
         
         db.session.commit()
+        
+        # Emit SSE notifications for all newly paid passports
+        for passport in paid_passports:
+            try:
+                from api.notifications import emit_payment_notification
+                emit_payment_notification(passport)
+            except Exception as e:
+                current_app.logger.warning(f"Failed to emit payment notification for passport {passport.id}: {e}")
         
         # Log admin action
         db.session.add(AdminActionLog(
@@ -4309,6 +4398,13 @@ def mark_passport_paid(passport_id):
         admin_email=session.get("admin"),
         timestamp=now_utc
     )
+    
+    # ✅ Step 6: Emit SSE notification for payment
+    try:
+        from api.notifications import emit_payment_notification
+        emit_payment_notification(passport)
+    except Exception as e:
+        current_app.logger.warning(f"Failed to emit payment notification: {e}")
 
     flash(f" Passport {passport.pass_code} marked as paid. Email sent.", "success")
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
@@ -5452,6 +5548,28 @@ def delete_survey(survey_id):
     
     return redirect(url_for("list_surveys"))
 
+
+# Duplicate endpoints removed - using the ones defined earlier in the file
+
+
+@app.route("/test/sse")
+def test_sse_page():
+    """Serve the SSE test page for admin users"""
+    if "admin" not in session:
+        flash("Admin access required.", "error")
+        return redirect(url_for("login"))
+    
+    return send_from_directory("test/html", "sse_test.html")
+
+
+@app.route("/test/notification-endpoints")
+def test_notification_endpoints_page():
+    """Serve the notification endpoints test page for admin users"""
+    if "admin" not in session:
+        flash("Admin access required.", "error")
+        return redirect(url_for("login"))
+    
+    return send_from_directory("test/html", "notification_endpoints_test.html")
 
 
 # Initialize default survey template on startup

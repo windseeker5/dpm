@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Endpoints Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .preview {
+            border: 2px solid #007bff;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Notification Endpoints Test</h1>
+        <p>This page tests the notification HTML endpoints that generate the HTML for real-time notifications.</p>
+        
+        <div class="test-section">
+            <h2>💰 Payment Notification Test</h2>
+            <p>Tests the <code>/api/payment-notification-html/&lt;id&gt;</code> endpoint</p>
+            <button onclick="testPaymentNotification()">Test Payment Notification</button>
+            <div id="payment-result" class="result" style="display: none;"></div>
+            <div id="payment-preview" class="preview" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 Signup Notification Test</h2>
+            <p>Tests the <code>/api/signup-notification-html/&lt;id&gt;</code> endpoint</p>
+            <button onclick="testSignupNotification()">Test Signup Notification</button>
+            <div id="signup-result" class="result" style="display: none;"></div>
+            <div id="signup-preview" class="preview" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔗 Notification Manager Integration Test</h2>
+            <p>Tests the JavaScript notification system integration</p>
+            <button onclick="testNotificationManager()">Test Notification Manager</button>
+            <div id="manager-result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        async function testPaymentNotification() {
+            const resultDiv = document.getElementById('payment-result');
+            const previewDiv = document.getElementById('payment-preview');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing payment notification endpoint...';
+            
+            try {
+                const paymentData = {
+                    type: 'payment',
+                    id: 'payment_123_1640995200',
+                    timestamp: '2024-01-24T10:00:00Z',
+                    data: {
+                        user_name: 'John Doe',
+                        email: 'john@example.com',
+                        avatar: 'https://www.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e',
+                        amount: 175.00,
+                        activity: 'Mountain Biking',
+                        activity_id: 1,
+                        paid_date: '2024-01-24T10:00:00Z'
+                    }
+                };
+                
+                const response = await fetch('/api/payment-notification-html/test123', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(paymentData)
+                });
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Success! Status: ${response.status}\nHTML Length: ${html.length} characters`;
+                    
+                    // Show preview
+                    previewDiv.style.display = 'block';
+                    previewDiv.innerHTML = '<h4>Preview:</h4>' + html;
+                } else {
+                    const errorText = await response.text();
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Error! Status: ${response.status}\nResponse: ${errorText}`;
+                    previewDiv.style.display = 'none';
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Network Error: ${error.message}`;
+                previewDiv.style.display = 'none';
+            }
+        }
+        
+        async function testSignupNotification() {
+            const resultDiv = document.getElementById('signup-result');
+            const previewDiv = document.getElementById('signup-preview');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing signup notification endpoint...';
+            
+            try {
+                const signupData = {
+                    type: 'signup',
+                    id: 'signup_456_1640995300',
+                    timestamp: '2024-01-24T10:05:00Z',
+                    data: {
+                        user_name: 'Jane Smith',
+                        email: 'jane@example.com',
+                        avatar: 'https://www.gravatar.com/avatar/25f9e794323b453885f5181f1b624d0b',
+                        activity: 'Rock Climbing',
+                        activity_id: 2,
+                        passport_type: 'Standard Pass',
+                        passport_type_price: 50.00,
+                        phone: '+1234567890'
+                    }
+                };
+                
+                const response = await fetch('/api/signup-notification-html/test456', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(signupData)
+                });
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Success! Status: ${response.status}\nHTML Length: ${html.length} characters`;
+                    
+                    // Show preview
+                    previewDiv.style.display = 'block';
+                    previewDiv.innerHTML = '<h4>Preview:</h4>' + html;
+                } else {
+                    const errorText = await response.text();
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Error! Status: ${response.status}\nResponse: ${errorText}`;
+                    previewDiv.style.display = 'none';
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Network Error: ${error.message}`;
+                previewDiv.style.display = 'none';
+            }
+        }
+        
+        async function testNotificationManager() {
+            const resultDiv = document.getElementById('manager-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            
+            try {
+                // Check if EventNotificationManager is available
+                if (typeof window.EventNotificationManager === 'undefined') {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ EventNotificationManager not found. Make sure event-notifications.js is loaded.';
+                    return;
+                }
+                
+                // Test creating a notification manager instance
+                const manager = new window.EventNotificationManager();
+                
+                // Create a test notification
+                const testNotification = {
+                    type: 'payment',
+                    id: 'test_notification_' + Date.now(),
+                    timestamp: new Date().toISOString(),
+                    data: {
+                        user_name: 'Test User',
+                        email: 'test@example.com',
+                        avatar: 'https://www.gravatar.com/avatar/default',
+                        amount: 99.99,
+                        activity: 'Test Activity',
+                        activity_id: 999,
+                        paid_date: new Date().toISOString()
+                    }
+                };
+                
+                // Try to display the notification
+                await manager.displayNotification(testNotification);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Notification Manager working!\nTest notification displayed in the notification container.';
+                
+                // Clean up after 5 seconds
+                setTimeout(() => {
+                    manager.destroy();
+                }, 5000);
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Error testing notification manager: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

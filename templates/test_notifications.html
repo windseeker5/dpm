@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notifications - Minipass</title>
+    <link href="{{ url_for('static', filename='tabler/dist/css/tabler.min.css') }}" rel="stylesheet">
+</head>
+<body class="d-flex flex-column">
+    <div class="page-wrapper">
+        <div class="container-xl">
+            <div class="page-header d-print-none">
+                <div class="row g-2 align-items-center">
+                    <div class="col">
+                        <h2 class="page-title">
+                            Test Real-time Notifications
+                        </h2>
+                        <div class="text-muted">Test SSE notification system</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="page-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">SSE Connection Status</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="connection-status" class="alert alert-info">
+                                    <strong>Status:</strong> <span id="status-text">Connecting...</span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <button id="test-notification-btn" class="btn btn-primary">
+                                        Send Test Notification
+                                    </button>
+                                    <button id="reconnect-btn" class="btn btn-secondary">
+                                        Reconnect SSE
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 mt-3">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Live Notifications</h3>
+                                <div class="card-actions">
+                                    <button id="clear-notifications" class="btn btn-sm btn-outline-secondary">
+                                        Clear All
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="notifications-container" class="list-group">
+                                    <!-- Notifications will appear here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='tabler/dist/js/tabler.min.js') }}"></script>
+    <script>
+        class NotificationTester {
+            constructor() {
+                this.eventSource = null;
+                this.statusElement = document.getElementById('status-text');
+                this.connectionStatusElement = document.getElementById('connection-status');
+                this.notificationsContainer = document.getElementById('notifications-container');
+                
+                this.setupEventListeners();
+                this.connectSSE();
+            }
+            
+            setupEventListeners() {
+                document.getElementById('test-notification-btn').addEventListener('click', () => {
+                    this.sendTestNotification();
+                });
+                
+                document.getElementById('reconnect-btn').addEventListener('click', () => {
+                    this.reconnectSSE();
+                });
+                
+                document.getElementById('clear-notifications').addEventListener('click', () => {
+                    this.clearNotifications();
+                });
+            }
+            
+            connectSSE() {
+                if (this.eventSource) {
+                    this.eventSource.close();
+                }
+                
+                this.updateStatus('Connecting...', 'info');
+                
+                this.eventSource = new EventSource('/api/event-stream');
+                
+                this.eventSource.onopen = () => {
+                    console.log('SSE connection opened');
+                    this.updateStatus('Connected', 'success');
+                };
+                
+                this.eventSource.onmessage = (event) => {
+                    console.log('SSE message received:', event.data);
+                    try {
+                        const notification = JSON.parse(event.data);
+                        this.displayNotification(notification);
+                    } catch (e) {
+                        console.error('Failed to parse notification:', e);
+                    }
+                };
+                
+                this.eventSource.onerror = (event) => {
+                    console.error('SSE connection error:', event);
+                    this.updateStatus('Connection Error', 'danger');
+                };
+            }
+            
+            updateStatus(text, type) {
+                this.statusElement.textContent = text;
+                this.connectionStatusElement.className = `alert alert-${type}`;
+            }
+            
+            displayNotification(notification) {
+                const notificationElement = document.createElement('div');
+                notificationElement.className = 'list-group-item';
+                
+                let badgeClass = 'badge-primary';
+                let icon = 'ti ti-bell';
+                
+                if (notification.type === 'payment') {
+                    badgeClass = 'badge-success';
+                    icon = 'ti ti-currency-dollar';
+                } else if (notification.type === 'signup') {
+                    badgeClass = 'badge-info';
+                    icon = 'ti ti-user-plus';
+                } else if (notification.type === 'heartbeat') {
+                    badgeClass = 'badge-secondary';
+                    icon = 'ti ti-heartbeat';
+                }
+                
+                const timestamp = new Date(notification.timestamp || Date.now()).toLocaleTimeString();
+                
+                let content = `
+                    <div class="d-flex align-items-center">
+                        <span class="avatar avatar-sm me-3" style="background-color: var(--tblr-primary-lt);">
+                            <i class="${icon}"></i>
+                        </span>
+                        <div class="flex-fill">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>${notification.type.toUpperCase()}</strong>
+                                <span class="badge ${badgeClass}">${timestamp}</span>
+                            </div>
+                `;
+                
+                if (notification.type === 'payment' && notification.data) {
+                    content += `
+                        <div class="text-muted small">
+                            Payment of $${notification.data.amount} from ${notification.data.user_name}
+                            <br>Activity: ${notification.data.activity}
+                        </div>
+                    `;
+                } else if (notification.type === 'signup' && notification.data) {
+                    content += `
+                        <div class="text-muted small">
+                            New signup: ${notification.data.user_name} (${notification.data.email})
+                            <br>Activity: ${notification.data.activity}
+                        </div>
+                    `;
+                } else if (notification.type === 'heartbeat') {
+                    content += `<div class="text-muted small">Connection heartbeat</div>`;
+                } else {
+                    content += `<div class="text-muted small">${JSON.stringify(notification)}</div>`;
+                }
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+                
+                notificationElement.innerHTML = content;
+                
+                // Insert at the beginning of the container
+                this.notificationsContainer.insertBefore(notificationElement, this.notificationsContainer.firstChild);
+                
+                // Keep only the last 20 notifications
+                while (this.notificationsContainer.children.length > 20) {
+                    this.notificationsContainer.removeChild(this.notificationsContainer.lastChild);
+                }
+            }
+            
+            sendTestNotification() {
+                fetch('/api/notifications/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Test notification sent:', data);
+                })
+                .catch(error => {
+                    console.error('Failed to send test notification:', error);
+                });
+            }
+            
+            reconnectSSE() {
+                this.connectSSE();
+            }
+            
+            clearNotifications() {
+                this.notificationsContainer.innerHTML = '';
+            }
+        }
+        
+        // Initialize the notification tester when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new NotificationTester();
+        });
+    </script>
+</body>
+</html>
