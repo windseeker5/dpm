@@ -503,37 +503,16 @@
               <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] }}" id="settings-submenu">
                 <ul class="nav-list">
                   <li class="nav-item">
-                    <a href="{{ url_for('unified_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'unified_settings' }}">
-                      <i class="nav-icon ti ti-adjustments-horizontal"></i>
-                      <span class="nav-text">Unified Settings</span>
-                      {% if request.endpoint == 'unified_settings' %}
-                      <span class="nav-indicator"></span>
-                      {% endif %}
-                    </a>
-                  </li>
-                  <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="admins">
                       <i class="nav-icon ti ti-users"></i>
                       <span class="nav-text">Admin Accounts</span>
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="org">
-                      <i class="nav-icon ti ti-building"></i>
-                      <span class="nav-text">Organization (Legacy)</span>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="email">
-                      <i class="nav-icon ti ti-mail"></i>
-                      <span class="nav-text">Email Settings (Legacy)</span>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="{{ url_for('payment_bot_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'payment_bot_settings' }}">
-                      <i class="nav-icon ti ti-robot"></i>
-                      <span class="nav-text">Payment Bot (Legacy)</span>
-                      {% if request.endpoint == 'payment_bot_settings' %}
+                    <a href="{{ url_for('unified_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'unified_settings' }}">
+                      <i class="nav-icon ti ti-mail-cog"></i>
+                      <span class="nav-text">Email Settings</span>
+                      {% if request.endpoint == 'unified_settings' %}
                       <span class="nav-indicator"></span>
                       {% endif %}
                     </a>
@@ -541,7 +520,7 @@
                   <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="email-templates">
                       <i class="nav-icon ti ti-template"></i>
-                      <span class="nav-text">Email Notification</span>
+                      <span class="nav-text">Email Templates</span>
                     </a>
                   </li>
                   <li class="nav-item">

@@ -262,7 +262,21 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
         from_expected = get_setting("BANK_EMAIL_FROM", "notify@payments.interac.ca")
 
         if not mail:
-            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            # Get IMAP server from settings, same logic as in match_gmail_payments_to_passes
+            imap_server = get_setting("IMAP_SERVER")
+            if not imap_server:
+                mail_server = get_setting("MAIL_SERVER")
+                if mail_server:
+                    imap_server = mail_server
+                else:
+                    imap_server = "imap.gmail.com"
+            
+            try:
+                mail = imaplib.IMAP4_SSL(imap_server)
+            except:
+                mail = imaplib.IMAP4(imap_server, 143)
+                mail.starttls()
+            
             mail.login(gmail_user, gmail_password)
             mail.select("inbox")
 
@@ -630,7 +644,28 @@ def match_gmail_payments_to_passes():
         threshold = int(get_setting("BANK_EMAIL_NAME_CONFIDANCE", "85"))
         gmail_label = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "InteractProcessed")
 
-        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        # Get IMAP server from settings, fallback to MAIL_SERVER or Gmail
+        imap_server = get_setting("IMAP_SERVER")
+        if not imap_server:
+            mail_server = get_setting("MAIL_SERVER")
+            if mail_server:
+                # Try to use the mail server for IMAP (often works for custom domains)
+                imap_server = mail_server
+            else:
+                # Fallback to Gmail for backward compatibility
+                imap_server = "imap.gmail.com"
+        
+        print(f"🔌 Connecting to IMAP server: {imap_server}")
+        
+        try:
+            # Try SSL connection first (port 993)
+            mail = imaplib.IMAP4_SSL(imap_server)
+        except:
+            # If SSL fails, try TLS (port 143)
+            print(f"⚠️ SSL connection failed, trying TLS...")
+            mail = imaplib.IMAP4(imap_server, 143)
+            mail.starttls()
+        
         mail.login(user, pwd)
         mail.select("inbox")
 

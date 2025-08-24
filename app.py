@@ -1705,6 +1705,60 @@ def api_payment_bot_test_email():
         return jsonify({"error": "Failed to send test email"}), 500
 
 
+@app.route("/api/payment-bot/check-emails", methods=["POST"])
+@rate_limit(max_requests=5, window=3600)  # 5 requests per hour
+def api_payment_bot_check_emails():
+    """Manually trigger email payment bot to check for new payments"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    from utils import match_gmail_payments_to_passes, get_setting, log_admin_action
+    
+    # Check if payment bot is enabled
+    if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") != "True":
+        return jsonify({"error": "Payment bot is not enabled in settings"}), 400
+    
+    try:
+        # Log the action first
+        log_admin_action(f"Manual payment bot check triggered by {session.get('admin', 'Unknown')}")
+        
+        # Run the email checking function
+        result = match_gmail_payments_to_passes()
+        
+        # Return success with any matched payments info
+        if result and isinstance(result, dict):
+            return jsonify({
+                "success": True, 
+                "message": f"Email check completed. {result.get('matched', 0)} payments matched.",
+                "details": result
+            }), 200
+        else:
+            return jsonify({
+                "success": True,
+                "message": "Email check completed. No new payments found."
+            }), 200
+            
+    except Exception as e:
+        import traceback
+        error_msg = str(e)
+        print(f"Error running payment bot check: {error_msg}")
+        print(f"Traceback: {traceback.format_exc()}")
+        
+        # Provide more specific error messages
+        if "AUTHENTICATIONFAILED" in error_msg or "Invalid credentials" in error_msg:
+            return jsonify({
+                "error": "Email authentication failed. Please check your email settings (username/password)."
+            }), 500
+        elif "connection" in error_msg.lower():
+            return jsonify({
+                "error": "Could not connect to email server. Please check your server settings."
+            }), 500
+        else:
+            return jsonify({
+                "error": f"Failed to check emails: {error_msg}"
+            }), 500
+
+
 @app.route("/api/payment-bot/logs", methods=["GET"])
 def api_payment_bot_logs():
     """Get recent payment logs (sanitized for XSS prevention)"""
