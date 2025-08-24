@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Notifications Visual Test</title>
+    
+    <!-- Tabler CSS -->
+    <link href="http://127.0.0.1:8890/static/tabler/css/tabler.min.css" rel="stylesheet"/>
+    <link href="http://127.0.0.1:8890/static/tabler/icons/tabler-icons.min.css" rel="stylesheet"/>
+    
+    <!-- Event Notifications CSS -->
+    <link href="http://127.0.0.1:8890/static/css/event-notifications.css?v=1.0" rel="stylesheet">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .test-header h1 {
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .test-header p {
+            color: #64748b;
+            margin: 0;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .btn-demo {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-demo:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-payment {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .btn-signup {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        
+        .btn-multiple {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        .btn-clear {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .demo-info {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .demo-info h3 {
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .demo-info ul {
+            color: #475569;
+            margin: 0;
+            padding-left: 1.25rem;
+        }
+        
+        .demo-info li {
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Mobile responsive controls */
+        @media (max-width: 768px) {
+            .test-controls {
+                flex-direction: column;
+            }
+            
+            .btn-demo {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body data-admin-user="true">
+    <div class="test-container">
+        <div class="test-header">
+            <h1><i class="ti ti-bell-ringing"></i> Event Notifications Visual Test</h1>
+            <p>Interactive demonstration of real-time payment and signup notifications</p>
+        </div>
+        
+        <div class="test-controls">
+            <button class="btn-demo btn-payment" onclick="showPaymentNotification()">
+                <i class="ti ti-credit-card"></i>
+                Payment Notification
+            </button>
+            
+            <button class="btn-demo btn-signup" onclick="showSignupNotification()">
+                <i class="ti ti-user-plus"></i>
+                Signup Notification
+            </button>
+            
+            <button class="btn-demo btn-multiple" onclick="showMultipleNotifications()">
+                <i class="ti ti-stack"></i>
+                Multiple Notifications
+            </button>
+            
+            <button class="btn-demo btn-clear" onclick="clearAllNotifications()">
+                <i class="ti ti-trash"></i>
+                Clear All
+            </button>
+        </div>
+        
+        <div class="demo-info">
+            <h3><i class="ti ti-info-circle"></i> Test Features</h3>
+            <ul>
+                <li><strong>Payment Notifications:</strong> Green gradient with payment confirmation</li>
+                <li><strong>Signup Notifications:</strong> Blue gradient with registration details</li>
+                <li><strong>Auto-dismiss:</strong> Notifications disappear after 10 seconds</li>
+                <li><strong>Manual dismiss:</strong> Click the X button to close immediately</li>
+                <li><strong>Hover pause:</strong> Hover to pause auto-dismiss timer</li>
+                <li><strong>Mobile responsive:</strong> Full-width notifications on mobile devices</li>
+                <li><strong>Stacking limit:</strong> Maximum 5 notifications shown at once</li>
+                <li><strong>Smooth animations:</strong> Slide-in from right with scale effect</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Notification container will be created by JavaScript -->
+
+    <!-- Event Notifications JavaScript -->
+    <script src="http://127.0.0.1:8890/static/js/event-notifications.js?v=1.0"></script>
+    
+    <script>
+        // Sample notification data
+        const sampleUsers = [
+            {
+                name: 'Sarah Johnson',
+                email: 'sarah.johnson@example.com',
+                phone: '+1 (555) 123-4567',
+                avatar: 'https://www.gravatar.com/avatar/d4c74594d841139328695756648b6bd6?d=identicon'
+            },
+            {
+                name: 'Michael Chen',
+                email: 'michael.chen@example.com', 
+                phone: '+1 (555) 987-6543',
+                avatar: 'https://www.gravatar.com/avatar/a8c0b9a1c2d3e4f5g6h7i8j9k0l1m2n3?d=identicon'
+            },
+            {
+                name: 'Emma Davis',
+                email: 'emma.davis@example.com',
+                phone: '+1 (555) 246-8135',
+                avatar: 'https://www.gravatar.com/avatar/1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p?d=identicon'
+            },
+            {
+                name: 'Alex Rodriguez',
+                email: 'alex.rodriguez@example.com',
+                phone: '+1 (555) 369-2580',
+                avatar: 'https://www.gravatar.com/avatar/9z8y7x6w5v4u3t2s1r0q9p8o7n6m5l4k?d=identicon'
+            }
+        ];
+        
+        const sampleActivities = [
+            'Rock Climbing Adventure',
+            'Photography Workshop',
+            'Yoga Retreat Weekend',
+            'Cooking Masterclass',
+            'Hiking Expedition',
+            'Art & Wine Evening',
+            'Fitness Bootcamp',
+            'Meditation Circle'
+        ];
+        
+        let notificationCounter = 1;
+        
+        function getRandomUser() {
+            return sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
+        }
+        
+        function getRandomActivity() {
+            return sampleActivities[Math.floor(Math.random() * sampleActivities.length)];
+        }
+        
+        function showPaymentNotification() {
+            const user = getRandomUser();
+            const activity = getRandomActivity();
+            const amount = (Math.random() * 150 + 25).toFixed(2);
+            
+            const notification = {
+                type: 'payment',
+                id: `payment_demo_${notificationCounter++}_${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                data: {
+                    passport_id: Math.floor(Math.random() * 1000) + 1,
+                    user_name: user.name,
+                    email: user.email,
+                    amount: parseFloat(amount),
+                    activity: activity,
+                    activity_id: Math.floor(Math.random() * 100) + 1,
+                    avatar: user.avatar,
+                    paid_date: new Date().toISOString()
+                }
+            };
+            
+            if (window.eventNotificationManager) {
+                window.eventNotificationManager.displayNotification(notification);
+            } else {
+                console.error('Event notification manager not available');
+            }
+        }
+        
+        function showSignupNotification() {
+            const user = getRandomUser();
+            const activity = getRandomActivity();
+            const passportTypes = ['Basic', 'Premium', 'VIP', 'Student'];
+            const passportType = passportTypes[Math.floor(Math.random() * passportTypes.length)];
+            const price = (Math.random() * 200 + 50).toFixed(2);
+            
+            const notification = {
+                type: 'signup',
+                id: `signup_demo_${notificationCounter++}_${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                data: {
+                    signup_id: Math.floor(Math.random() * 1000) + 1,
+                    user_name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    activity: activity,
+                    activity_id: Math.floor(Math.random() * 100) + 1,
+                    passport_type: passportType,
+                    passport_type_price: parseFloat(price),
+                    avatar: user.avatar,
+                    created_at: new Date().toISOString()
+                }
+            };
+            
+            if (window.eventNotificationManager) {
+                window.eventNotificationManager.displayNotification(notification);
+            } else {
+                console.error('Event notification manager not available');
+            }
+        }
+        
+        function showMultipleNotifications() {
+            // Show 3 notifications with different delays
+            setTimeout(() => showPaymentNotification(), 100);
+            setTimeout(() => showSignupNotification(), 700);
+            setTimeout(() => showPaymentNotification(), 1300);
+        }
+        
+        function clearAllNotifications() {
+            if (window.eventNotificationManager) {
+                window.eventNotificationManager.dismissAll();
+            } else {
+                console.error('Event notification manager not available');
+            }
+        }
+        
+        // Show demo notification when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait for notification manager to initialize
+            setTimeout(() => {
+                if (window.eventNotificationManager) {
+                    console.log('Event notification manager is ready for testing');
+                    // Uncomment to show demo notification on load:
+                    // setTimeout(() => showPaymentNotification(), 1000);
+                } else {
+                    console.error('Event notification manager failed to initialize');
+                }
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

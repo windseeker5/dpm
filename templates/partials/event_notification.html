@@ -1,0 +1,133 @@
+<!-- Event Notification Component - Tabler.io Style -->
+<!-- Accepts notification data and renders appropriate notification type -->
+
+{% set notification_type = data.type %}
+{% set notification_data = data.data %}
+
+<div class="alert alert-dismissible event-notification {{ 'notification-payment' if notification_type == 'payment' else 'notification-signup' }}" 
+     role="alert" 
+     aria-live="polite" 
+     data-notification-id="{{ data.id }}"
+     data-notification-type="{{ notification_type }}">
+  
+  <!-- Close Button -->
+  <button type="button" class="btn-close" aria-label="Close notification">
+    <i class="ti ti-x"></i>
+  </button>
+  
+  <!-- Main Notification Content -->
+  <div class="notification-content">
+    
+    <!-- Avatar and Title Section -->
+    <div class="notification-header">
+      <div class="notification-avatar">
+        <span class="avatar avatar-md" 
+              style="background-image: url('{{ notification_data.avatar }}')">
+          <!-- Fallback icon if Gravatar fails -->
+          <i class="ti ti-user"></i>
+        </span>
+      </div>
+      
+      <div class="notification-title-area">
+        <div class="notification-title">
+          {% if notification_type == 'payment' %}
+            <i class="ti ti-credit-card notification-icon text-green"></i>
+            <span class="notification-title-text">Payment Received</span>
+          {% elif notification_type == 'signup' %}
+            <i class="ti ti-user-plus notification-icon text-blue"></i>
+            <span class="notification-title-text">New Registration</span>
+          {% endif %}
+        </div>
+        
+        <div class="notification-subtitle text-muted">
+          {{ notification_data.user_name }}
+          <span class="notification-email">{{ notification_data.email }}</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Details Section -->
+    <div class="notification-body">
+      <div class="notification-activity">
+        <strong>{{ notification_data.activity }}</strong>
+      </div>
+      
+      {% if notification_type == 'payment' %}
+        <div class="notification-amount">
+          <span class="text-green fw-bold">${{ "%.2f"|format(notification_data.amount) }}</span>
+          {% if notification_data.paid_date %}
+            <span class="text-muted ms-2">
+              <i class="ti ti-clock"></i>
+              <span class="notification-time" data-timestamp="{{ notification_data.paid_date }}"></span>
+            </span>
+          {% endif %}
+        </div>
+      {% elif notification_type == 'signup' %}
+        <div class="notification-signup-details">
+          {% if notification_data.passport_type %}
+            <span class="badge badge-outline text-blue">{{ notification_data.passport_type }}</span>
+          {% endif %}
+          {% if notification_data.passport_type_price and notification_data.passport_type_price > 0 %}
+            <span class="text-muted ms-2">${{ "%.2f"|format(notification_data.passport_type_price) }}</span>
+          {% endif %}
+          {% if notification_data.phone %}
+            <div class="notification-phone text-muted">
+              <i class="ti ti-phone"></i>
+              {{ notification_data.phone }}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+    
+    <!-- Status Footer -->
+    <div class="notification-footer">
+      <div class="notification-status">
+        {% if notification_type == 'payment' %}
+          <i class="ti ti-check text-green"></i>
+          <span class="text-green">Payment Confirmed</span>
+        {% elif notification_type == 'signup' %}
+          <i class="ti ti-clock text-blue"></i>
+          <span class="text-blue">Registration Pending</span>
+        {% endif %}
+      </div>
+      
+      <div class="notification-actions">
+        {% if notification_data.activity_id %}
+          <a href="{{ url_for('activity_dashboard', activity_id=notification_data.activity_id) }}" 
+             class="btn btn-sm btn-outline-primary">
+            <i class="ti ti-eye"></i>
+            View Activity
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Progress bar for auto-dismiss -->
+  <div class="notification-progress"></div>
+</div>
+
+<!-- Initialize timestamp display -->
+<script>
+  // Format timestamps after the element is created
+  document.addEventListener('DOMContentLoaded', function() {
+    const timeElements = document.querySelectorAll('.notification-time');
+    timeElements.forEach(function(element) {
+      const timestamp = element.getAttribute('data-timestamp');
+      if (timestamp) {
+        const date = new Date(timestamp);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = months[date.getMonth()];
+        const day = date.getDate();
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hours12 = hours % 12 || 12;
+        const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+        element.textContent = `${month} ${day}, ${hours12}:${minutesStr} ${ampm}`;
+      }
+    });
+  });
+</script>

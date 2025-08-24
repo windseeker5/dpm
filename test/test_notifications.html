@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Notifications Test</title>
+    
+    <!-- Tabler Core CSS -->
+    <link href="../static/tabler/css/tabler.min.css" rel="stylesheet"/>
+    <link href="../static/tabler/icons/tabler-icons.min.css" rel="stylesheet"/>
+    
+    <!-- Event Notifications CSS -->
+    <link href="../static/css/event-notifications.css?v=1.0" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f8fafc;
+            padding: 2rem;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .btn-test {
+            margin-right: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body data-admin-user="true">
+    <div class="test-container">
+        <div class="test-section">
+            <h1>Event Notifications System Test</h1>
+            <p>This page tests the real-time event notification components.</p>
+            
+            <h3>Manual Test Buttons</h3>
+            <button class="btn btn-success btn-test" onclick="testPaymentNotification()">
+                <i class="ti ti-credit-card"></i>
+                Test Payment Notification
+            </button>
+            
+            <button class="btn btn-primary btn-test" onclick="testSignupNotification()">
+                <i class="ti ti-user-plus"></i>
+                Test Signup Notification
+            </button>
+            
+            <button class="btn btn-warning btn-test" onclick="testMultipleNotifications()">
+                <i class="ti ti-bell"></i>
+                Test Multiple Notifications
+            </button>
+            
+            <button class="btn btn-danger btn-test" onclick="dismissAllNotifications()">
+                <i class="ti ti-x"></i>
+                Dismiss All
+            </button>
+            
+            <h3>SSE Connection Test</h3>
+            <div id="connection-status" class="alert alert-info">
+                <strong>Connection Status:</strong> <span id="status-text">Checking...</span>
+            </div>
+            
+            <h3>Test Results</h3>
+            <div id="test-results"></div>
+        </div>
+    </div>
+
+    <!-- Event Notifications JavaScript -->
+    <script src="../static/js/event-notifications.js?v=1.0"></script>
+    
+    <script>
+        // Test functions
+        function testPaymentNotification() {
+            const notification = {
+                type: 'payment',
+                id: `payment_test_${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                data: {
+                    passport_id: 123,
+                    user_name: 'John Doe',
+                    email: 'john.doe@example.com',
+                    amount: 75.00,
+                    activity: 'Rock Climbing Adventure',
+                    activity_id: 456,
+                    avatar: 'https://www.gravatar.com/avatar/' + btoa('john.doe@example.com') + '?d=identicon',
+                    paid_date: new Date().toISOString()
+                }
+            };
+            
+            if (window.eventNotificationManager) {
+                window.eventNotificationManager.displayNotification(notification);
+                logResult('Payment notification displayed');
+            } else {
+                logResult('Event notification manager not available');
+            }
+        }
+        
+        function testSignupNotification() {
+            const notification = {
+                type: 'signup',
+                id: `signup_test_${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                data: {
+                    signup_id: 789,
+                    user_name: 'Jane Smith',
+                    email: 'jane.smith@example.com',
+                    phone: '+1 (555) 123-4567',
+                    activity: 'Yoga Workshop Series',
+                    activity_id: 789,
+                    passport_type: 'Premium Pass',
+                    passport_type_price: 120.00,
+                    avatar: 'https://www.gravatar.com/avatar/' + btoa('jane.smith@example.com') + '?d=identicon',
+                    created_at: new Date().toISOString()
+                }
+            };
+            
+            if (window.eventNotificationManager) {
+                window.eventNotificationManager.displayNotification(notification);
+                logResult('Signup notification displayed');
+            } else {
+                logResult('Event notification manager not available');
+            }
+        }
+        
+        function testMultipleNotifications() {
+            // Test payment notification
+            setTimeout(() => testPaymentNotification(), 100);
+            // Test signup notification
+            setTimeout(() => testSignupNotification(), 600);
+            // Test another payment
+            setTimeout(() => {
+                const notification = {
+                    type: 'payment',
+                    id: `payment_test_multi_${Date.now()}`,
+                    timestamp: new Date().toISOString(),
+                    data: {
+                        passport_id: 999,
+                        user_name: 'Mike Johnson',
+                        email: 'mike.johnson@example.com',
+                        amount: 45.50,
+                        activity: 'Photography Workshop',
+                        activity_id: 111,
+                        avatar: 'https://www.gravatar.com/avatar/' + btoa('mike.johnson@example.com') + '?d=identicon',
+                        paid_date: new Date().toISOString()
+                    }
+                };
+                window.eventNotificationManager?.displayNotification(notification);
+            }, 1100);
+            
+            logResult('Multiple notifications queued');
+        }
+        
+        function dismissAllNotifications() {
+            if (window.eventNotificationManager) {
+                window.eventNotificationManager.dismissAll();
+                logResult('All notifications dismissed');
+            } else {
+                logResult('Event notification manager not available');
+            }
+        }
+        
+        function logResult(message) {
+            const resultsDiv = document.getElementById('test-results');
+            const timestamp = new Date().toLocaleTimeString();
+            resultsDiv.innerHTML += `<div class="alert alert-info">[${timestamp}] ${message}</div>`;
+        }
+        
+        // Check SSE connection status
+        function checkConnectionStatus() {
+            const statusText = document.getElementById('status-text');
+            const statusDiv = document.getElementById('connection-status');
+            
+            if (window.eventNotificationManager) {
+                if (window.eventNotificationManager.eventSource) {
+                    const readyState = window.eventNotificationManager.eventSource.readyState;
+                    const states = ['CONNECTING', 'OPEN', 'CLOSED'];
+                    const state = states[readyState] || 'UNKNOWN';
+                    
+                    statusText.textContent = `SSE ${state} (${readyState})`;
+                    
+                    if (readyState === 1) { // OPEN
+                        statusDiv.className = 'alert alert-success';
+                    } else if (readyState === 0) { // CONNECTING
+                        statusDiv.className = 'alert alert-warning';
+                    } else { // CLOSED or ERROR
+                        statusDiv.className = 'alert alert-danger';
+                    }
+                } else {
+                    statusText.textContent = 'No SSE connection';
+                    statusDiv.className = 'alert alert-danger';
+                }
+            } else {
+                statusText.textContent = 'Manager not initialized';
+                statusDiv.className = 'alert alert-danger';
+            }
+        }
+        
+        // Update connection status periodically
+        setInterval(checkConnectionStatus, 2000);
+        
+        // Initial check after a short delay
+        setTimeout(checkConnectionStatus, 1000);
+        
+        // Log when manager is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (window.eventNotificationManager) {
+                    logResult('Event Notification Manager initialized successfully');
+                } else {
+                    logResult('Event Notification Manager failed to initialize');
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

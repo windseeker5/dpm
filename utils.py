@@ -53,6 +53,28 @@ from models import Setting
 import uuid
 
 
+def get_gravatar_url(email, size=64):
+    """
+    Generate Gravatar URL for email address with identicon fallback
+    
+    Args:
+        email (str): User's email address
+        size (int): Size of the avatar image (default: 64)
+    
+    Returns:
+        str: Gravatar URL
+    """
+    import hashlib
+    
+    if not email:
+        email = 'unknown@example.com'
+    
+    # Create MD5 hash of lowercase email
+    email_hash = hashlib.md5(email.lower().strip().encode('utf-8')).hexdigest()
+    
+    # Return Gravatar URL with identicon fallback
+    return f"https://www.gravatar.com/avatar/{email_hash}?s={size}&d=identicon"
+
 
 def utc_to_local(dt_utc):
     if not dt_utc:
@@ -720,6 +742,13 @@ def match_gmail_payments_to_passes():
                     admin_email="gmail-bot@system",
                     timestamp=now_utc
                 )
+
+                # Emit SSE notification for payment
+                try:
+                    from api.notifications import emit_payment_notification
+                    emit_payment_notification(best_passport)
+                except Exception as e:
+                    print(f"⚠️ Failed to emit payment notification: {e}")
 
                 if uid:
                     # Check if the processed folder exists, create if needed

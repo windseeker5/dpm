@@ -33,6 +33,9 @@
   <link href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0" rel="stylesheet">
   
+  <!-- Event Notifications -->
+  <link href="{{ url_for('static', filename='css/event-notifications.css') }}?v=1.0" rel="stylesheet">
+  
   <!-- Enhanced Flash Alert Overlay Styles -->
   <style>
     /* Modern notification system with enhanced design */
@@ -344,7 +347,7 @@
   
   {% block head %}{% endblock %}
 </head>
-<body class="antialiased">
+<body class="antialiased" {% if session.get('admin') %}data-admin-user="true"{% endif %}>
 
   <!-- Skip Navigation for Accessibility -->
   <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
@@ -829,6 +832,23 @@
   <!-- Reusable Components -->
   <script src="{{ url_for('static', filename='js/search-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/filter-component.js') }}?v=1.0"></script>
+  
+  <!-- Event Notifications -->
+  {% if current_admin %}
+  <!-- Notification Container -->
+  <div id="notification-container"></div>
+  
+  <script src="{{ url_for('static', filename='js/event-notifications.js') }}?v=1.0"></script>
+  <script>
+    // Initialize Event Notification Manager for admin users
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.EventNotificationManager) {
+        window.notificationManager = new EventNotificationManager();
+        console.log('Event Notification Manager initialized');
+      }
+    });
+  </script>
+  {% endif %}
   
   {% block scripts %}{% endblock %}
 </body>
