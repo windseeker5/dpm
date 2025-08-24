@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo Visibility Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .test-container {
+            padding: 20px;
+            border: 2px solid #ccc;
+            margin: 20px;
+        }
+        .desktop-test {
+            background-color: #e3f2fd;
+        }
+        .mobile-test {
+            background-color: #f3e5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Logo Visibility Test</h1>
+        
+        <div class="test-container desktop-test">
+            <h3>Desktop Logo (should show on screens ≥768px)</h3>
+            <div class="text-center">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='80' viewBox='0 0 100 80'%3E%3Crect width='100' height='80' fill='%23007bff'/%3E%3Ctext x='50' y='45' text-anchor='middle' fill='white' font-family='Arial' font-size='14'%3EDESKTOP%3C/text%3E%3C/svg%3E" 
+                     alt="Logo" 
+                     style="height: 80px; margin: 0 auto; display: none;" 
+                     class="d-md-block">
+            </div>
+            <p class="mt-2">Classes: <code>d-md-block</code></p>
+            <p>Style: <code>display: none</code> (overridden by d-md-block on medium+ screens)</p>
+        </div>
+
+        <div class="test-container mobile-test">
+            <h3>Mobile Logo (should show on screens &lt;768px)</h3>
+            <div class="text-center">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='60' viewBox='0 0 100 60'%3E%3Crect width='100' height='60' fill='%23ff6b6b'/%3E%3Ctext x='50' y='35' text-anchor='middle' fill='white' font-family='Arial' font-size='12'%3EMOBILE%3C/text%3E%3C/svg%3E" 
+                     alt="Logo" 
+                     style="height: 60px; display: block; margin: 0 auto;" 
+                     class="d-block d-md-none">
+            </div>
+            <p class="mt-2">Classes: <code>d-block d-md-none</code></p>
+            <p>Style: <code>display: block</code> (hidden on medium+ screens by d-md-none)</p>
+        </div>
+
+        <div class="alert alert-info mt-4">
+            <h4>Test Instructions:</h4>
+            <ul>
+                <li><strong>Desktop (≥768px):</strong> Only the BLUE "DESKTOP" logo should be visible</li>
+                <li><strong>Mobile (&lt;768px):</strong> Only the RED "MOBILE" logo should be visible</li>
+            </ul>
+            <p>Resize your browser window to test both breakpoints!</p>
+        </div>
+
+        <div class="mt-4">
+            <h4>Current Viewport Info:</h4>
+            <p>Screen width: <span id="screenWidth"></span>px</p>
+            <p>Viewport width: <span id="viewportWidth"></span>px</p>
+            <p>Bootstrap breakpoint: <span id="breakpoint"></span></p>
+        </div>
+    </div>
+
+    <script>
+        function updateViewportInfo() {
+            document.getElementById('screenWidth').textContent = screen.width;
+            document.getElementById('viewportWidth').textContent = window.innerWidth;
+            
+            const width = window.innerWidth;
+            let breakpoint;
+            if (width < 576) breakpoint = 'xs (< 576px)';
+            else if (width < 768) breakpoint = 'sm (576px - 767px)';
+            else if (width < 992) breakpoint = 'md (768px - 991px)';
+            else if (width < 1200) breakpoint = 'lg (992px - 1199px)';
+            else if (width < 1400) breakpoint = 'xl (1200px - 1399px)';
+            else breakpoint = 'xxl (≥ 1400px)';
+            
+            document.getElementById('breakpoint').textContent = breakpoint;
+        }
+
+        updateViewportInfo();
+        window.addEventListener('resize', updateViewportInfo);
+    </script>
+</body>
+</html>

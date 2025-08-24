@@ -609,8 +609,8 @@ def dashboard():
 
         # Get passport type information for this activity
         passport_types = PassportType.query.filter_by(activity_id=a.id).all()
-        total_sessions = sum(pt.sessions_included for pt in passport_types) if passport_types else 0
-        total_target_revenue = sum(pt.target_revenue for pt in passport_types) if passport_types else 0.0
+        total_sessions = sum(pt.sessions_included or 0 for pt in passport_types) if passport_types else 0
+        total_target_revenue = sum(pt.target_revenue or 0 for pt in passport_types) if passport_types else 0.0
         
         activity_cards.append({
             "id": a.id,
@@ -1565,10 +1565,27 @@ def signup(activity_id):
         notify_signup_event(app, signup=signup, activity=activity)
 
         flash("✅ Signup submitted!", "success")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("signup_thank_you", signup_id=signup.id))
 
     return render_template("signup_form.html", activity=activity, settings=settings, 
                          passport_types=passport_types, selected_passport_type=selected_passport_type)
+
+
+@app.route("/signup/thank-you/<int:signup_id>")
+def signup_thank_you(signup_id):
+    """Thank you page after successful signup"""
+    signup = db.session.get(Signup, signup_id)
+    if not signup:
+        flash("❌ Signup not found.", "error")
+        return redirect(url_for("dashboard"))
+    
+    activity = signup.activity
+    settings = {s.key: s.value for s in Setting.query.all()}
+    
+    return render_template("signup_thank_you.html", 
+                          signup=signup, 
+                          activity=activity, 
+                          settings=settings)
 
 
 
@@ -3972,13 +3989,17 @@ def create_passport():
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
     activity_list = Activity.query.order_by(Activity.name).all()
+    
+    # Get activity_id from URL parameters if provided
+    selected_activity_id = request.args.get('activity_id', type=int)
 
     return render_template(
         "passport_form.html",
         passport=None,
         default_amt=default_amt,
         default_qt=default_qt,
-        activity_list=activity_list
+        activity_list=activity_list,
+        selected_activity_id=selected_activity_id
     )
 
 
