@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializePaymentBotToggle();
     initializeFuzzyThreshold();
     initializeFormSubmission();
+    initializePaymentBotTest();
     
     console.log('Unified Settings JS initialized');
 });
@@ -130,6 +131,57 @@ function initializeFormSubmission() {
                 
                 console.error('Error saving settings:', error);
                 showToast('error', 'An error occurred while saving settings');
+            });
+        });
+    }
+}
+
+/**
+ * Payment Bot Test Functionality
+ */
+function initializePaymentBotTest() {
+    const testLink = document.getElementById('test-payment-bot');
+    
+    if (testLink) {
+        testLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            const originalText = testLink.textContent;
+            testLink.textContent = 'Testing...';
+            testLink.style.pointerEvents = 'none';
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+            
+            // Make API call to trigger email check
+            fetch('/api/payment-bot/check-emails', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'csrf_token=' + encodeURIComponent(csrfToken)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Restore link state
+                testLink.textContent = originalText;
+                testLink.style.pointerEvents = 'auto';
+                
+                if (data.success) {
+                    showToast('success', data.message || 'Email check completed successfully');
+                } else {
+                    showToast('error', data.error || 'Failed to check emails');
+                }
+            })
+            .catch(error => {
+                // Restore link state
+                testLink.textContent = originalText;
+                testLink.style.pointerEvents = 'auto';
+                
+                console.error('Error checking emails:', error);
+                showToast('error', 'An error occurred while checking emails');
             });
         });
     }
