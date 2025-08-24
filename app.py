@@ -87,7 +87,7 @@ from flask import render_template, render_template_string, url_for
 # ==========================================
 # These fields were removed from the UI on 2025-01-24 but need backward compatibility
 REMOVED_FIELD_DEFAULTS = {
-    'gmail_label_folder_processed': 'InteractProcessed',
+    'gmail_label_folder_processed': 'PaymentProcessed',
     'default_pass_amount': 50,
     'default_session_qt': 4,
     'email_info_text': '',

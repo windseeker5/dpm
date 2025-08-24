@@ -642,7 +642,7 @@ def match_gmail_payments_to_passes():
             return
 
         threshold = int(get_setting("BANK_EMAIL_NAME_CONFIDANCE", "85"))
-        gmail_label = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "InteractProcessed")
+        processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
 
         # Get IMAP server from settings, fallback to MAIL_SERVER or Gmail
         imap_server = get_setting("IMAP_SERVER")
@@ -722,8 +722,43 @@ def match_gmail_payments_to_passes():
                 )
 
                 if uid:
-                    mail.uid("COPY", uid, gmail_label)
-                    mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                    # Check if the processed folder exists, create if needed
+                    try:
+                        # List all folders to check if our processed folder exists
+                        folder_exists = False
+                        result, folder_list = mail.list()
+                        if result == 'OK':
+                            for folder_info in folder_list:
+                                if folder_info:
+                                    # Parse folder name from IMAP list response
+                                    folder_str = folder_info.decode() if isinstance(folder_info, bytes) else folder_info
+                                    # Check if our folder name appears in the response
+                                    if processed_folder in folder_str:
+                                        folder_exists = True
+                                        break
+                        
+                        # Create folder if it doesn't exist
+                        if not folder_exists:
+                            print(f"📁 Creating folder: {processed_folder}")
+                            try:
+                                mail.create(processed_folder)
+                            except Exception as create_error:
+                                # Some servers don't allow folder creation or folder already exists
+                                print(f"⚠️ Could not create folder {processed_folder}: {create_error}")
+                        
+                        # Try to copy the email to the processed folder
+                        copy_result = mail.uid("COPY", uid, processed_folder)
+                        if copy_result[0] == 'OK':
+                            # Only mark as deleted if copy was successful
+                            mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                            print(f"✅ Email moved to {processed_folder} folder")
+                        else:
+                            print(f"⚠️ Could not copy email to {processed_folder}: {copy_result}")
+                            # Don't delete if we couldn't copy
+                            
+                    except Exception as e:
+                        print(f"⚠️ Error moving email to processed folder: {e}")
+                        # Don't delete the email if we couldn't move it
             else:
                 db.session.add(EbankPayment(
                     from_email=from_email,

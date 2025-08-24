@@ -555,11 +555,11 @@ def initialize_setting_schemas():
         },
         {
             'key': 'GMAIL_LABEL_FOLDER_PROCESSED',
-            'name': 'Gmail Processed Label',
-            'description': 'Gmail label for processed emails',
+            'name': 'Payment Processed Folder',
+            'description': 'IMAP folder for processed payment emails',
             'type': SettingType.STRING,
             'scope': SettingScope.INTEGRATION,
-            'default_value': 'InteractProcessed'
+            'default_value': 'PaymentProcessed'
         }
     ]
     
