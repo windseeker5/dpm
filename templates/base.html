@@ -489,19 +489,28 @@
             </li>
             <li class="nav-item nav-item-expandable">
               <a href="#" 
-                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['setup', 'payment_bot_settings'] }}"
+                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] }}"
                  data-bs-toggle="collapse" 
                  data-bs-target="#settings-submenu"
-                 aria-expanded="{{ 'true' if request.endpoint in ['setup', 'payment_bot_settings'] else 'false' }}">
+                 aria-expanded="{{ 'true' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] else 'false' }}">
                 <i class="nav-icon ti ti-settings"></i>
                 <span class="nav-text">Settings</span>
                 <i class="nav-chevron ti ti-chevron-right"></i>
-                {% if request.endpoint in ['setup', 'payment_bot_settings'] %}
+                {% if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] %}
                 <span class="nav-indicator"></span>
                 {% endif %}
               </a>
-              <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['setup', 'payment_bot_settings'] }}" id="settings-submenu">
+              <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] }}" id="settings-submenu">
                 <ul class="nav-list">
+                  <li class="nav-item">
+                    <a href="{{ url_for('unified_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'unified_settings' }}">
+                      <i class="nav-icon ti ti-adjustments-horizontal"></i>
+                      <span class="nav-text">Unified Settings</span>
+                      {% if request.endpoint == 'unified_settings' %}
+                      <span class="nav-indicator"></span>
+                      {% endif %}
+                    </a>
+                  </li>
                   <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="admins">
                       <i class="nav-icon ti ti-users"></i>
@@ -511,19 +520,19 @@
                   <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="org">
                       <i class="nav-icon ti ti-building"></i>
-                      <span class="nav-text">Organization</span>
+                      <span class="nav-text">Organization (Legacy)</span>
                     </a>
                   </li>
                   <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="email">
                       <i class="nav-icon ti ti-mail"></i>
-                      <span class="nav-text">Email Settings</span>
+                      <span class="nav-text">Email Settings (Legacy)</span>
                     </a>
                   </li>
                   <li class="nav-item">
                     <a href="{{ url_for('payment_bot_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'payment_bot_settings' }}">
                       <i class="nav-icon ti ti-robot"></i>
-                      <span class="nav-text">Email Parser Payment Bot</span>
+                      <span class="nav-text">Payment Bot (Legacy)</span>
                       {% if request.endpoint == 'payment_bot_settings' %}
                       <span class="nav-indicator"></span>
                       {% endif %}

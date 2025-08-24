@@ -82,6 +82,19 @@ from collections import defaultdict
 from utils import send_email, generate_qr_code_image, get_pass_history_data, get_setting
 from flask import render_template, render_template_string, url_for
 
+# ==========================================
+# HARDCODED DEFAULTS FOR REMOVED UI FIELDS
+# ==========================================
+# These fields were removed from the UI on 2025-01-24 but need backward compatibility
+REMOVED_FIELD_DEFAULTS = {
+    'gmail_label_folder_processed': 'InteractProcessed',
+    'default_pass_amount': 50,
+    'default_session_qt': 4,
+    'email_info_text': '',
+    'email_footer_text': '',
+    'activity_tags': []
+}
+
 import requests
 from flask import send_from_directory
 
@@ -1602,7 +1615,9 @@ def payment_bot_settings():
             "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
             "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
             "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
-            "GMAIL_LABEL_FOLDER_PROCESSED": request.form.get("gmail_label_folder_processed", "InteractProcessed").strip()
+            # OBSOLETE: gmail_label_folder_processed removed from UI on 2025-01-24
+            # "GMAIL_LABEL_FOLDER_PROCESSED": request.form.get("gmail_label_folder_processed", "InteractProcessed").strip()
+            "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed']
         }
         
         for key, value in bot_settings.items():
@@ -1819,10 +1834,15 @@ def setup():
 
         # ⚙️ Step 4: App-level settings
         extra_settings = {
-            "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50").strip(),
-            "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4").strip(),
-            "EMAIL_INFO_TEXT": request.form.get("email_info_text", "").strip(),
-            "EMAIL_FOOTER_TEXT": request.form.get("email_footer_text", "").strip(),
+            # OBSOLETE: These fields removed from UI on 2025-01-24, using hardcoded defaults
+            # "DEFAULT_PASS_AMOUNT": request.form.get("default_pass_amount", "50").strip(),
+            # "DEFAULT_SESSION_QT": request.form.get("default_session_qt", "4").strip(),
+            # "EMAIL_INFO_TEXT": request.form.get("email_info_text", "").strip(),
+            # "EMAIL_FOOTER_TEXT": request.form.get("email_footer_text", "").strip(),
+            "DEFAULT_PASS_AMOUNT": str(REMOVED_FIELD_DEFAULTS['default_pass_amount']),
+            "DEFAULT_SESSION_QT": str(REMOVED_FIELD_DEFAULTS['default_session_qt']),
+            "EMAIL_INFO_TEXT": REMOVED_FIELD_DEFAULTS['email_info_text'],
+            "EMAIL_FOOTER_TEXT": REMOVED_FIELD_DEFAULTS['email_footer_text'],
             "ORG_NAME": request.form.get("ORG_NAME", "").strip(),
             "CALL_BACK_DAYS": request.form.get("CALL_BACK_DAYS", "0").strip()
         }
@@ -1840,7 +1860,9 @@ def setup():
             "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
             "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
             "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
-            "GMAIL_LABEL_FOLDER_PROCESSED": request.form.get("gmail_label_folder_processed", "InteractProcessed").strip()
+            # OBSOLETE: gmail_label_folder_processed removed from UI on 2025-01-24
+            # "GMAIL_LABEL_FOLDER_PROCESSED": request.form.get("gmail_label_folder_processed", "InteractProcessed").strip()
+            "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed']
         }
 
         for key, value in bot_settings.items():
@@ -1851,24 +1873,18 @@ def setup():
                 db.session.add(Setting(key=key, value=str(value)))
 
         # 🏷 Step 6: Activity Tags
-        activity_raw = request.form.get("activities", "").strip()
+        # OBSOLETE: Activity tags/ACTIVITY_LIST field removed from UI on 2025-01-24
+        # activity_raw = request.form.get("activities", "").strip()
+        # Using hardcoded default empty list
         try:
-            if activity_raw.startswith("["):
-                tag_objects = json.loads(activity_raw)
-                activity_list = [
-                    tag["value"].strip() if isinstance(tag, dict) and "value" in tag else str(tag).strip()
-                    for tag in tag_objects if str(tag).strip()
-                ]
-            else:
-                activity_list = [a.strip() for a in activity_raw.split(",") if a.strip()]
-
+            activity_list = REMOVED_FIELD_DEFAULTS['activity_tags']
             setting = Setting.query.filter_by(key="ACTIVITY_LIST").first()
             if setting:
                 setting.value = json.dumps(activity_list)
             else:
                 db.session.add(Setting(key="ACTIVITY_LIST", value=json.dumps(activity_list)))
         except Exception as e:
-            print("❌ Failed to parse/save activity list:", e)
+            print("❌ Failed to save activity list:", e)
 
         # 🖼 Step 7: Logo Upload
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -2204,6 +2220,132 @@ def create_test_org():
         
     except Exception as e:
         return jsonify({'error': f'Failed to create test organization: {str(e)}'}), 500
+
+
+# ================================
+# 🔧 UNIFIED SETTINGS MANAGEMENT
+# ================================
+
+@app.route("/admin/unified-settings", methods=["GET", "POST"])
+def unified_settings():
+    """Unified settings page that consolidates organization, email, and payment bot settings"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        try:
+            # Step 1: Organization Settings
+            org_settings = {
+                "ORG_NAME": request.form.get("ORG_NAME", "").strip(),
+                "CALL_BACK_DAYS": request.form.get("CALL_BACK_DAYS", "0").strip(),
+                # Keep hardcoded defaults for removed fields
+                "DEFAULT_PASS_AMOUNT": str(REMOVED_FIELD_DEFAULTS['default_pass_amount']),
+                "DEFAULT_SESSION_QT": str(REMOVED_FIELD_DEFAULTS['default_session_qt']),
+                "EMAIL_INFO_TEXT": REMOVED_FIELD_DEFAULTS['email_info_text'],
+                "EMAIL_FOOTER_TEXT": REMOVED_FIELD_DEFAULTS['email_footer_text'],
+            }
+            
+            for key, value in org_settings.items():
+                existing = Setting.query.filter_by(key=key).first()
+                if existing:
+                    existing.value = value
+                else:
+                    db.session.add(Setting(key=key, value=value))
+            
+            # Step 2: Logo Upload
+            logo_filename = None  # Track uploaded logo for response
+            logo_file = request.files.get("ORG_LOGO_FILE")
+            if logo_file and logo_file.filename:
+                os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+                filename = secure_filename(logo_file.filename)
+                logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                logo_file.save(logo_path)
+                logo_filename = filename  # Store for JSON response
+                
+                setting = Setting.query.filter_by(key="LOGO_FILENAME").first()
+                if setting:
+                    setting.value = filename
+                else:
+                    db.session.add(Setting(key="LOGO_FILENAME", value=filename))
+            
+            # Step 3: Email Settings
+            email_settings = {
+                "MAIL_SERVER": request.form.get("mail_server", "").strip(),
+                "MAIL_PORT": request.form.get("mail_port", "587").strip(),
+                "MAIL_USE_TLS": "mail_use_tls" in request.form,
+                "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
+                "MAIL_PASSWORD": request.form.get("mail_password_raw", "").strip(),
+                "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip(),
+                "MAIL_SENDER_NAME": request.form.get("mail_sender_name", "").strip()
+            }
+            
+            for key, value in email_settings.items():
+                if key == "MAIL_PASSWORD" and (not value or value == "********"):
+                    continue
+                setting = Setting.query.filter_by(key=key).first()
+                if setting:
+                    setting.value = str(value)
+                else:
+                    db.session.add(Setting(key=key, value=str(value)))
+            
+            # Step 4: Payment Bot Settings
+            bot_settings = {
+                "ENABLE_EMAIL_PAYMENT_BOT": "enable_email_payment_bot" in request.form,
+                "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
+                "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
+                "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
+                "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed']
+            }
+            
+            for key, value in bot_settings.items():
+                existing = Setting.query.filter_by(key=key).first()
+                if existing:
+                    existing.value = str(value)
+                else:
+                    db.session.add(Setting(key=key, value=str(value)))
+            
+            # Step 5: Save all changes
+            db.session.commit()
+            
+            # Log the action
+            from utils import log_admin_action
+            log_admin_action(f"Unified Settings Updated by {session.get('admin', 'Unknown')}")
+            
+            # Check if this is an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                # Return JSON response for AJAX requests
+                response_data = {"success": True, "message": "All settings saved successfully!"}
+                if logo_filename:
+                    response_data["logo_url"] = url_for('static', filename=f'uploads/{logo_filename}')
+                return jsonify(response_data)
+            else:
+                # Traditional form submission - use flash and redirect
+                flash("✅ All settings saved successfully!", "success")
+                return redirect(url_for("unified_settings"))
+            
+        except Exception as e:
+            db.session.rollback()
+            
+            # Check if this is an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                # Return JSON error response for AJAX requests
+                return jsonify({"success": False, "error": f"Error saving settings: {str(e)}"}), 400
+            else:
+                # Traditional form submission - use flash and redirect
+                flash(f"❌ Error saving settings: {str(e)}", "error")
+                return redirect(url_for("unified_settings"))
+    
+    # GET request - load all settings
+    settings = {s.key: s.value for s in Setting.query.all()}
+    
+    return render_template("unified_settings.html", settings=settings)
+
+
+# Alternative route name to match template url_for reference
+@app.route("/admin/save-unified-settings", methods=["POST"])
+def save_unified_settings():
+    """Alternative endpoint name to match template url_for reference"""
+    return unified_settings()
 
 
 @app.route("/erase-app-data", methods=["POST"])

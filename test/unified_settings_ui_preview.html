@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Settings UI Preview</title>
+    <link href="../static/tabler/css/tabler.min.css" rel="stylesheet"/>
+    <link href="../static/tabler/icons/tabler-icons.min.css" rel="stylesheet"/>
+    <link href="../static/css/unified-settings.css" rel="stylesheet"/>
+    <style>
+        body { background-color: #f8f9fa; padding: 2rem 0; }
+        .demo-mobile { max-width: 375px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper unified-settings">
+        <div class="page-header d-print-none">
+            <div class="container-xl">
+                <div class="row g-2 align-items-center">
+                    <div class="col">
+                        <div class="page-pretitle">
+                            <i class="ti ti-settings me-1"></i>
+                            Configuration
+                        </div>
+                        <h2 class="page-title">
+                            <i class="ti ti-adjustments-horizontal me-2"></i>
+                            Settings Management
+                        </h2>
+                        <div class="text-muted mt-1">
+                            Manage organization, email, and payment bot settings from one centralized dashboard
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-body">
+            <div class="container-xl">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-xl-10">
+                        
+                        <!-- Organization Settings Section -->
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-header bg-light">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-sm bg-primary text-white me-3">
+                                        <i class="ti ti-building"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="card-title mb-1">
+                                            Organization Settings
+                                        </h3>
+                                        <p class="text-muted mb-0 small">Configure your organization details and branding</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-lg-6">
+                                        <div class="mb-3">
+                                            <label class="form-label required">Organization Name</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="ti ti-building"></i>
+                                                </span>
+                                                <input type="text" class="form-control" value="LHGI Demo Organization" required>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Call-Back Delay (days)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="ti ti-clock"></i>
+                                                </span>
+                                                <input type="number" class="form-control" min="0" value="3">
+                                            </div>
+                                            <div class="form-text">Number of days before sending payment reminders</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Organization Logo</label>
+                                            <div class="text-center mb-3">
+                                                <div class="avatar avatar-xl bg-light border border-dashed rounded-3 mx-auto mb-2" id="logo-container">
+                                                    <div id="logo-placeholder" class="text-muted">
+                                                        <i class="ti ti-photo" style="font-size: 2rem;"></i>
+                                                        <div class="small mt-1">No logo uploaded</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input type="file" class="form-control" accept="image/*">
+                                            <div class="form-text text-center">Upload a PNG, JPG, or SVG file (max 2MB)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Email Configuration Section -->
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-header bg-light">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-sm bg-info text-white me-3">
+                                        <i class="ti ti-mail"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="card-title mb-1">
+                                            Email Configuration
+                                        </h3>
+                                        <p class="text-muted mb-0 small">Configure your email server and sender settings</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-lg-6">
+                                        <div class="mb-3">
+                                            <label class="form-label required">Default Sender Email</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="ti ti-mail"></i>
+                                                </span>
+                                                <input type="email" class="form-control" value="admin@lhgi.com" required>
+                                            </div>
+                                            <div class="form-text">The email address used as sender for all outgoing emails</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Sender Name</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="ti ti-user"></i>
+                                                </span>
+                                                <input type="text" class="form-control" value="LHGI Activities" placeholder="e.g., LHGI, Your Organization">
+                                            </div>
+                                            <div class="form-text">The display name shown in email clients</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <div class="card card-sm border">
+                                            <div class="card-header">
+                                                <h4 class="card-title mb-0">
+                                                    <a href="#advanced-email-settings" data-bs-toggle="collapse" aria-expanded="false" class="text-decoration-none d-flex align-items-center">
+                                                        <i class="ti ti-settings me-2"></i>
+                                                        Advanced Server Settings
+                                                        <i class="ti ti-chevron-down ms-auto transition-transform"></i>
+                                                    </a>
+                                                </h4>
+                                            </div>
+                                            <div class="collapse" id="advanced-email-settings">
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Mail Server</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">
+                                                                <i class="ti ti-server"></i>
+                                                            </span>
+                                                            <input type="text" class="form-control" value="smtp.gmail.com">
+                                                        </div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Mail Port</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">
+                                                                <i class="ti ti-network"></i>
+                                                            </span>
+                                                            <input type="number" class="form-control" value="587">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Bot Configuration Section -->
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-header bg-light">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-sm bg-success text-white me-3">
+                                        <i class="ti ti-robot"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="card-title mb-1">
+                                            Payment Bot Configuration
+                                        </h3>
+                                        <p class="text-muted mb-0 small">Automated payment processing from email notifications</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Enable Payment Bot Toggle -->
+                                <div class="card card-sm bg-azure-lt border-azure mb-4">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto">
+                                                <div class="avatar bg-azure text-white">
+                                                    <i class="ti ti-toggle-right"></i>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="mb-2">
+                                                    <label class="form-check form-switch mb-0">
+                                                        <input class="form-check-input" type="checkbox" checked>
+                                                        <span class="form-check-label fw-medium">Enable Email Payment Bot</span>
+                                                    </label>
+                                                </div>
+                                                <div class="text-muted small">
+                                                    Automatically process payments from incoming email notifications
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Information Card -->
+                                <div class="card bg-info-lt border-info mb-4">
+                                    <div class="card-header bg-info text-white">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar avatar-sm bg-white text-info me-3">
+                                                <i class="ti ti-info-circle"></i>
+                                            </div>
+                                            <h4 class="mb-0 text-white">How the Payment Bot Works</h4>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="mb-3 text-muted">The bot monitors your email for payment notifications and automatically matches them to pending signups:</p>
+                                        <div class="row g-2">
+                                            <div class="col-sm-6 col-lg-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="ti ti-mail me-2 text-info"></i>
+                                                    <small>Processes specified email addresses</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="ti ti-search me-2 text-info"></i>
+                                                    <small>Matches users with fuzzy logic</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="ti ti-check me-2 text-info"></i>
+                                                    <small>Updates payment status automatically</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6 col-lg-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="ti ti-send me-2 text-info"></i>
+                                                    <small>Sends confirmation emails</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Payment Email Display -->
+                                <div class="row g-3">
+                                    <div class="col-lg-6">
+                                        <div class="card bg-success-lt border-success">
+                                            <div class="card-body text-center">
+                                                <div class="avatar avatar-lg bg-success text-white mx-auto mb-3">
+                                                    <i class="ti ti-mail-check"></i>
+                                                </div>
+                                                <h4 class="card-title text-success mb-1">Payment Email Address</h4>
+                                                <div class="text-muted font-monospace">lhgi@minipass.me</div>
+                                                <div class="text-muted small mt-1">Forward payment notifications here</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <div class="mb-3">
+                                            <label class="form-label d-flex align-items-center justify-content-between">
+                                                <span>Fuzzy Match Threshold</span>
+                                                <span class="badge bg-primary fs-6">85%</span>
+                                            </label>
+                                            <input type="range" class="form-range" value="85" min="0" max="100">
+                                            <div class="d-flex justify-content-between text-muted mt-1">
+                                                <small>0% (Match anything)</small>
+                                                <small>100% (Exact match only)</small>
+                                            </div>
+                                            <div class="form-text">Minimum confidence percentage for name matching</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="card shadow-sm">
+                            <div class="card-footer bg-light text-end">
+                                <div class="d-flex align-items-center justify-content-end gap-2">
+                                    <div class="text-muted small d-none d-sm-block">
+                                        Changes will be applied immediately
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-lg px-4">
+                                        <i class="ti ti-device-floppy me-2"></i>
+                                        Save All Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../static/tabler/js/tabler.min.js"></script>
+
+    <!-- Mobile Demo Toggle -->
+    <div class="position-fixed bottom-0 end-0 m-3">
+        <button class="btn btn-secondary btn-sm" onclick="toggleMobileView()">
+            <i class="ti ti-device-mobile"></i> Mobile View
+        </button>
+    </div>
+
+    <script>
+        function toggleMobileView() {
+            const body = document.body;
+            const container = document.querySelector('.container-xl');
+            
+            if (body.classList.contains('demo-mobile')) {
+                body.classList.remove('demo-mobile');
+                container.style.maxWidth = '';
+                container.style.padding = '';
+            } else {
+                body.classList.add('demo-mobile');
+                container.style.maxWidth = '375px';
+                container.style.padding = '0 15px';
+            }
+        }
+    </script>
+</body>
+</html>
