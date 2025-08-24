@@ -64,13 +64,13 @@
           <!-- Activity -->
           <div class="mb-3">
             <label class="form-label">Activity <span class="text-danger">*</span></label>
-            <select name="activity_id" class="form-select" required onchange="updateActivityDetails(this)">
+            <select name="activity_id" class="form-select" required onchange="updateActivityDetails(this)" id="activity_select">
               <option value="">-- Select Activity --</option>
               {% for activity in activity_list %}
                 <option value="{{ activity.id }}"
                   data-price="{{ activity.price_per_user }}"
                   data-sessions="{{ activity.sessions_included }}"
-                  {% if passport and passport.activity_id == activity.id %}selected{% endif %}>
+                  {% if (passport and passport.activity_id == activity.id) or (selected_activity_id and selected_activity_id == activity.id) %}selected{% endif %}>
                   {{ activity.name }}
                 </option>
               {% endfor %}
@@ -168,5 +168,13 @@
     if (price) document.getElementById("sold_amt").value = price;
     if (sessions) document.getElementById("uses_remaining").value = sessions;
   }
+  
+  // Auto-populate activity details on page load if activity is pre-selected
+  document.addEventListener("DOMContentLoaded", function() {
+    const activitySelect = document.getElementById("activity_select");
+    if (activitySelect && activitySelect.value) {
+      updateActivityDetails(activitySelect);
+    }
+  });
 </script>
 {% endblock %}

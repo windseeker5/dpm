@@ -35,7 +35,6 @@
     }
 
     .signup-title {
-      font-family: 'Anton', sans-serif;
       font-size: 2rem;
       color: #646464;
       font-weight: 700;
@@ -46,23 +45,20 @@
     .signup-wrapper {
       min-height: 100vh;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
-      padding-top: 2rem;
-      padding-bottom: 2rem;
-      padding-left: 1rem;
-      padding-right: 1rem;
-      overflow-y: auto;
+      padding: 1rem;
     }
     
     .signup-card {
       background: #fff;
       border-radius: 16px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
       display: flex;
       width: 100%;
       max-width: 1400px;
-      max-height: calc(100vh - 4rem);
+      min-height: 800px;
     }
     
     .signup-form {
@@ -70,8 +66,7 @@
       padding: 4rem;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-      overflow-y: auto;
+      justify-content: center;
     }
     
     .signup-image {
@@ -90,7 +85,7 @@
       
       .signup-card {
         flex-direction: column;
-        min-height: auto;
+        min-height: 100vh;
         border-radius: 0;
         box-shadow: none;
         max-width: none;
@@ -98,10 +93,9 @@
       
       .signup-form {
         padding: 2rem 1.5rem;
-        min-height: auto;
+        min-height: 100vh;
         justify-content: flex-start;
         padding-top: 2rem;
-        padding-bottom: 2rem;
       }
       
       .signup-image {
@@ -225,17 +219,21 @@
 
 <body>
 <div class="signup-wrapper">
-  <div class="signup-card shadow-lg rounded-3 border-0">
+  <div class="signup-card">
     
     <!-- Left Side: Form -->
-    <div class="signup-form p-5">
+    <div class="signup-form">
 
       
       <!-- Logo and Header -->
       {% if settings and settings["LOGO_FILENAME"] %}
       <div class="text-center mb-4">
         <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo" 
-             style="height: 80px; display: block; margin: 0 auto;">
+             style="height: 80px; display: block; margin: 0 auto;" 
+             class="d-none d-md-block">
+        <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo" 
+             style="height: 60px; display: block; margin: 0 auto;" 
+             class="d-block d-md-none">
       </div>
       {% endif %}
       
@@ -251,7 +249,7 @@
       </div>
       
       <!-- Title -->
-      <div class="text-center mb-4">
+      <div class="text-center mb-2">
         <h1 class="signup-title mb-1">{{ activity.name }}</h1>
         {% if selected_passport_type %}
           <div class="text-muted mb-1" style="font-size: 1.1rem; font-weight: 500;">
@@ -261,10 +259,10 @@
       </div>
 
       <!-- Price and Sessions (Dynamic based on passport type) -->
-      <div class="text-muted d-flex align-items-center justify-content-center gap-3 mb-4 p-3 bg-blue-lt rounded-3" style="font-size: 1.1rem;" id="pricing-info">
+      <div class="text-muted d-flex align-items-center justify-content-center gap-3 mb-4" style="font-size: 1.1rem;" id="pricing-info">
         <div class="d-flex align-items-center gap-1">
-          <i class="ti ti-currency-dollar" style="font-size: 1.2rem;"></i> 
-          <strong id="price-display">
+          <i class="ti ti-currency-dollar text-success" style="font-size: 1.2rem;"></i> 
+          <strong id="price-display" class="text-success">
             {% if selected_passport_type %}
               ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
             {% elif passport_types|length == 1 %}
@@ -275,8 +273,8 @@
           </strong>
         </div>
         <div class="d-flex align-items-center gap-1">
-          <i class="ti ti-ticket" style="font-size: 1.2rem;"></i> 
-          <strong id="sessions-display">
+          <i class="ti ti-ticket text-primary" style="font-size: 1.2rem;"></i> 
+          <strong id="sessions-display" class="text-primary">
             {% if selected_passport_type %}
               {{ selected_passport_type.sessions_included }}
             {% elif passport_types|length == 1 %}
@@ -313,7 +311,7 @@
 
         <!-- Passport Type Selection (if multiple types available) -->
         {% if passport_types|length > 1 and not selected_passport_type %}
-        <div class="mb-4" style="display:none">
+        <div class="mb-4">
           <label class="form-label d-flex align-items-center gap-2">
             <i class="ti ti-ticket"></i>
             Registration Type
@@ -381,39 +379,39 @@
         {% endif %}
 
         <!-- Name -->
-        <div class="mb-4">
+        <div class="mb-3">
           <label class="form-label d-flex align-items-center gap-2">
             <i class="ti ti-user"></i>
             Full Name
           </label>
-          <input type="text" name="name" class="form-control form-control-lg" required placeholder="Enter your full name" autocomplete="name">
+          <input type="text" name="name" class="form-control" required placeholder="Enter your full name" autocomplete="name">
         </div>
 
         <!-- Email -->
-        <div class="mb-4">
+        <div class="mb-3">
           <label class="form-label d-flex align-items-center gap-2">
             <i class="ti ti-mail"></i>
             Email Address
           </label>
-          <input type="email" name="email" class="form-control form-control-lg" required placeholder="your.email@example.com" autocomplete="email">
+          <input type="email" name="email" class="form-control" required placeholder="your.email@example.com" autocomplete="email">
         </div>
 
         <!-- Phone -->
-        <div class="mb-4">
+        <div class="mb-3">
           <label class="form-label d-flex align-items-center gap-2">
             <i class="ti ti-phone"></i>
             Phone Number
           </label>
-          <input type="tel" name="phone" class="form-control form-control-lg" placeholder="+1 (514) 123-4567" autocomplete="tel">
+          <input type="tel" name="phone" class="form-control" placeholder="+1 (514) 123-4567" autocomplete="tel">
         </div>
 
         <!-- Notes -->
-        <div class="mb-4">
+        <div class="mb-3">
           <label class="form-label d-flex align-items-center gap-2">
             <i class="ti ti-notes"></i>
             Additional Notes
           </label>
-          <textarea name="notes" class="form-control form-control-lg" rows="3" placeholder="Any special requirements, position preferences, or other notes..."></textarea>
+          <textarea name="notes" class="form-control" rows="3" placeholder="Any special requirements, position preferences, or other notes..."></textarea>
         </div>
 
         <!-- Terms -->
@@ -428,18 +426,18 @@
         </div>
 
         <!-- Submit -->
-        <div class="d-grid mb-4">
-          <button type="submit" class="btn btn-success btn-lg shadow rounded-3">
+        <div class="d-grid mb-3">
+          <button type="submit" class="btn btn-success btn-lg">
             <i class="ti ti-send me-2"></i> Submit Registration
           </button>
         </div>
 
         <!-- Info message -->
-        <div class="alert alert-blue-lt border-0 rounded-3">
+        <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); color: #1565c0;">
           <div class="d-flex align-items-start gap-2">
             <i class="ti ti-info-circle mt-1 flex-shrink-0"></i>
             <div class="small">
-              <strong>Next Steps:</strong> Once submitted, you'll receive a confirmation email with payment instructions. Your activity pass will be generated after payment is received.
+              <strong>Next Steps:</strong> Once submitted, you’ll receive a confirmation email with payment instructions. Your activity pass will be generated after payment is received.
             </div>
           </div>
         </div>
@@ -459,12 +457,7 @@
 <script src="https://unpkg.com/@tabler/core@latest/dist/js/tabler.min.js"></script>
 
 <script>
-// Note: Passport type selection functions commented out since UI is hidden
-// The passport type is now determined solely from the URL parameter
-// All functionality preserved through hidden input field
-
-/*
-// Handle mobile card selection - UNUSED (UI hidden)
+// Handle mobile card selection
 function selectPassportType(id, price, sessions) {
   // Clear all card selections
   document.querySelectorAll('.passport-type-card .card').forEach(card => {
@@ -483,7 +476,7 @@ function selectPassportType(id, price, sessions) {
   updatePricingDisplay(price, sessions);
 }
 
-// Update pricing information when passport type is selected - UNUSED (UI hidden)
+// Update pricing information when passport type is selected
 function updatePricing() {
   const select = document.getElementById('passport-type-select');
   const selectedOption = select ? select.options[select.selectedIndex] : null;
@@ -511,7 +504,7 @@ function updatePricing() {
   }
 }
 
-// Update the pricing display elements - UNUSED (UI hidden)
+// Update the pricing display elements
 function updatePricingDisplay(price, sessions) {
   const priceDisplay = document.getElementById('price-display');
   const sessionsDisplay = document.getElementById('sessions-display');
@@ -522,7 +515,7 @@ function updatePricingDisplay(price, sessions) {
   if (sessionsText) sessionsText.textContent = sessions == '1' ? 'session' : 'sessions';
 }
 
-// Reset pricing to default values - UNUSED (UI hidden)
+// Reset pricing to default values
 function resetPricingDisplay() {
   const priceDisplay = document.getElementById('price-display');
   const sessionsDisplay = document.getElementById('sessions-display');
@@ -539,7 +532,7 @@ function resetPricingDisplay() {
   {% endif %}
 }
 
-// Initialize mobile cards on page load - UNUSED (UI hidden)
+// Initialize mobile cards on page load
 document.addEventListener('DOMContentLoaded', function() {
   // Add click handlers to mobile passport type cards
   document.querySelectorAll('.passport-type-card').forEach(card => {
@@ -551,13 +544,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
-});
-*/
-
-// Keeping minimal JavaScript for any future form validation needs
-document.addEventListener('DOMContentLoaded', function() {
-  // Form is ready - all validation handled by HTML5 attributes
-  // CSRF token and hidden fields are preserved
 });
 </script>
 
