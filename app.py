@@ -189,10 +189,6 @@ try:
     app.register_blueprint(settings_api)
     print("✅ Settings API registered successfully")
     
-    # Register Notifications API Blueprint
-    from api.notifications import notifications_bp
-    app.register_blueprint(notifications_bp)
-    print("✅ Notifications API registered successfully")
     
     # List routes to verify
     for rule in app.url_map.iter_rules():
@@ -742,11 +738,7 @@ def mark_signup_paid(signup_id):
     db.session.commit()
     
     # Emit SSE notification for signup payment
-    try:
-        from api.notifications import emit_signup_notification
-        emit_signup_notification(signup)
-    except Exception as e:
-        current_app.logger.warning(f"Failed to emit signup notification: {e}")
+    # SSE notifications removed for leaner performance
 
     flash(f"✅ Marked {signup.user.name}'s signup as paid.", "success")
     return redirect(url_for("list_signups"))
@@ -920,13 +912,7 @@ def bulk_signup_action():
             
             db.session.commit()
             
-            # Emit SSE notifications for all newly paid signups
-            for signup in paid_signups:
-                try:
-                    from api.notifications import emit_signup_notification
-                    emit_signup_notification(signup)
-                except Exception as e:
-                    current_app.logger.warning(f"Failed to emit signup notification for signup {signup.id}: {e}")
+            # SSE notifications removed for leaner performance
             
             # Log admin action
             db.session.add(AdminActionLog(
@@ -1633,12 +1619,7 @@ def signup(activity_id):
         from utils import notify_signup_event
         notify_signup_event(app, signup=signup, activity=activity)
         
-        # Emit SSE notification for signup
-        try:
-            from api.notifications import emit_signup_notification
-            emit_signup_notification(signup)
-        except Exception as e:
-            current_app.logger.warning(f"Failed to emit signup notification: {e}")
+        # SSE notifications removed for leaner performance
 
         flash("✅ Signup submitted!", "success")
         return redirect(url_for("signup_thank_you", signup_id=signup.id))
@@ -1821,34 +1802,6 @@ def api_payment_bot_check_emails():
                 "error": f"Failed to check emails: {error_msg}"
             }), 500
 
-
-# SSE Event Stream Endpoint (Performance Fix)
-@app.route('/api/event-stream')
-def event_stream():
-    """
-    Server-Sent Events endpoint for real-time notifications
-    Quick fix version - returns empty stream to prevent connection failures
-    """
-    import time
-    
-    def generate():
-        # Send a heartbeat every 30 seconds to keep connection alive
-        while True:
-            timestamp = str(time.time())
-            data = "data: {'type': 'heartbeat', 'timestamp': '" + timestamp + "'}\n\n"
-            yield data
-            time.sleep(30)
-    
-    return Response(
-        generate(),
-        mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Cache-Control'
-        }
-    )
 
 
 @app.route("/api/payment-notification-html/<notification_id>", methods=["POST"])
@@ -3143,13 +3096,7 @@ def passports_bulk_action():
         
         db.session.commit()
         
-        # Emit SSE notifications for all newly paid passports
-        for passport in paid_passports:
-            try:
-                from api.notifications import emit_payment_notification
-                emit_payment_notification(passport)
-            except Exception as e:
-                current_app.logger.warning(f"Failed to emit payment notification for passport {passport.id}: {e}")
+        # SSE notifications removed for leaner performance
         
         # Log admin action
         db.session.add(AdminActionLog(
@@ -4744,12 +4691,7 @@ def mark_passport_paid(passport_id):
         timestamp=now_utc
     )
     
-    # ✅ Step 6: Emit SSE notification for payment
-    try:
-        from api.notifications import emit_payment_notification
-        emit_payment_notification(passport)
-    except Exception as e:
-        current_app.logger.warning(f"Failed to emit payment notification: {e}")
+    # SSE notifications removed for leaner performance
 
     flash(f" Passport {passport.pass_code} marked as paid. Email sent.", "success")
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
