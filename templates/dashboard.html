@@ -40,24 +40,38 @@
         <div class="row d-none d-md-flex">
         <!-- Revenue Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="revenue" data-kpi-id="{{ revenue_card.id if revenue_card else 'revenue-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">REVENUE</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="revenue">
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="revenue">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="revenue">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="revenue">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1" id="revenue-value">${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}</div>
+              <div class="h2 mb-1" id="revenue-value">
+                {% if revenue_card and revenue_card.data %}
+                  ${{ "{:,.0f}".format(revenue_card.data.value) }}
+                {% else %}
+                  ${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}
+                {% endif %}
+              </div>
               <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('revenue_change') %}
+                {% if revenue_card and revenue_card.data %}
+                  {% if revenue_card.data.trend_percentage > 0 %}
+                    <div class="text-success me-2" id="revenue-trend">{{ revenue_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif revenue_card.data.trend_percentage < 0 %}
+                    <div class="text-danger me-2" id="revenue-trend">{{ revenue_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2" id="revenue-trend">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% elif kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('revenue_change') %}
                   {% if kpi_data['7d']['revenue_change'] > 0 %}
                     <div class="text-success me-2" id="revenue-trend">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-up"></i></div>
                   {% elif kpi_data['7d']['revenue_change'] < 0 %}
@@ -80,33 +94,47 @@
 
         <!-- Active Passports Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active_passports" data-kpi-id="{{ active_passports_card.id if active_passports_card else 'active-passports-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">ACTIVE PASSPORTS</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="active_passports">
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="active_passports">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="active_passports">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="active_passports">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">{{ passport_stats['active_passports'] if passport_stats else '0' }}</div>
+              <div class="h2 mb-1" id="active-passports-value">
+                {% if active_passports_card and active_passports_card.data %}
+                  {{ "{:,.0f}".format(active_passports_card.data.value) }}
+                {% else %}
+                  {{ passport_stats['active_passports'] if passport_stats else '0' }}
+                {% endif %}
+              </div>
               <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('passport_change') %}
-                  {% if kpi_data['7d']['passport_change'] > 0 %}
-                    <div class="text-success me-2">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif kpi_data['7d']['passport_change'] < 0 %}
-                    <div class="text-danger me-2">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-down"></i></div>
+                {% if active_passports_card and active_passports_card.data %}
+                  {% if active_passports_card.data.trend_percentage > 0 %}
+                    <div class="text-success me-2" id="active-passports-trend">{{ active_passports_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif active_passports_card.data.trend_percentage < 0 %}
+                    <div class="text-danger me-2" id="active-passports-trend">{{ active_passports_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
                   {% else %}
-                    <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="active-passports-trend">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% elif kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('passport_change') %}
+                  {% if kpi_data['7d']['passport_change'] > 0 %}
+                    <div class="text-success me-2" id="active-passports-trend">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['7d']['passport_change'] < 0 %}
+                    <div class="text-danger me-2" id="active-passports-trend">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2" id="active-passports-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
                 {% else %}
-                  <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                  <div class="text-muted me-2" id="active-passports-trend">-- <i class="ti ti-minus"></i></div>
                 {% endif %}
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
@@ -120,33 +148,47 @@
 
         <!-- Passports Created Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_created" data-kpi-id="{{ passports_created_card.id if passports_created_card else 'passports-created-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">PASSPORTS CREATED</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports_created">
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="passports_created">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="passports_created">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="passports_created">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">{{ passport_stats['total_passports'] if passport_stats else '0' }}</div>
+              <div class="h2 mb-1" id="passports-created-value">
+                {% if passports_created_card and passports_created_card.data %}
+                  {{ "{:,.0f}".format(passports_created_card.data.value) }}
+                {% else %}
+                  {{ passport_stats['total_passports'] if passport_stats else '0' }}
+                {% endif %}
+              </div>
               <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('new_passports_change') %}
-                  {% if kpi_data['7d']['new_passports_change'] > 0 %}
-                    <div class="text-success me-2">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif kpi_data['7d']['new_passports_change'] < 0 %}
-                    <div class="text-danger me-2">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-down"></i></div>
+                {% if passports_created_card and passports_created_card.data %}
+                  {% if passports_created_card.data.trend_percentage > 0 %}
+                    <div class="text-success me-2" id="passports-created-trend">{{ passports_created_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif passports_created_card.data.trend_percentage < 0 %}
+                    <div class="text-danger me-2" id="passports-created-trend">{{ passports_created_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
                   {% else %}
-                    <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="passports-created-trend">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% elif kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('new_passports_change') %}
+                  {% if kpi_data['7d']['new_passports_change'] > 0 %}
+                    <div class="text-success me-2" id="passports-created-trend">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['7d']['new_passports_change'] < 0 %}
+                    <div class="text-danger me-2" id="passports-created-trend">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2" id="passports-created-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
                 {% else %}
-                  <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                  <div class="text-muted me-2" id="passports-created-trend">-- <i class="ti ti-minus"></i></div>
                 {% endif %}
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
@@ -160,33 +202,47 @@
 
         <!-- Pending Sign Ups Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending_signups" data-kpi-id="{{ pending_signups_card.id if pending_signups_card else 'pending-signups-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">PENDING SIGN UPS</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="pending_signups">
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="pending_signups">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="pending_signups">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="pending_signups">Last 90 days</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1">{{ signup_stats['pending_signups'] if signup_stats else '0' }}</div>
+              <div class="h2 mb-1" id="pending-signups-value">
+                {% if pending_signups_card and pending_signups_card.data %}
+                  {{ "{:,.0f}".format(pending_signups_card.data.value) }}
+                {% else %}
+                  {{ signup_stats['pending_signups'] if signup_stats else '0' }}
+                {% endif %}
+              </div>
               <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('signup_change') %}
-                  {% if kpi_data['7d']['signup_change'] > 0 %}
-                    <div class="text-success me-2">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif kpi_data['7d']['signup_change'] < 0 %}
-                    <div class="text-danger me-2">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-down"></i></div>
+                {% if pending_signups_card and pending_signups_card.data %}
+                  {% if pending_signups_card.data.trend_percentage > 0 %}
+                    <div class="text-success me-2" id="pending-signups-trend">{{ pending_signups_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif pending_signups_card.data.trend_percentage < 0 %}
+                    <div class="text-danger me-2" id="pending-signups-trend">{{ pending_signups_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
                   {% else %}
-                    <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="pending-signups-trend">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% elif kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('signup_change') %}
+                  {% if kpi_data['7d']['signup_change'] > 0 %}
+                    <div class="text-success me-2" id="pending-signups-trend">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['7d']['signup_change'] < 0 %}
+                    <div class="text-danger me-2" id="pending-signups-trend">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2" id="pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
                 {% else %}
-                  <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                  <div class="text-muted me-2" id="pending-signups-trend">-- <i class="ti ti-minus"></i></div>
                 {% endif %}
               </div>
               <div style="height: 40px; position: relative; overflow: hidden;">
@@ -204,24 +260,38 @@
         <div class="d-flex overflow-auto pb-2" style="scroll-snap-type: x mandatory;">
           <!-- Revenue Card -->
           <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
-            <div class="card" style="border-radius: 12px; position: relative;">
+            <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="revenue-mobile" data-kpi-id="{{ revenue_card.id if revenue_card else 'revenue-mobile-default' }}">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <div class="text-muted small text-uppercase">REVENUE</div>
                   <div class="dropdown">
-                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="revenue-mobile">
                       Last 7 days
                     </button>
                     <ul class="dropdown-menu">
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="revenue">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="revenue">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="revenue">Last 90 days</a></li>
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1" id="mobile-revenue-value">${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}</div>
+                <div class="h2 mb-1" id="mobile-revenue-value">
+                  {% if revenue_card and revenue_card.data %}
+                    ${{ "{:,.0f}".format(revenue_card.data.value) }}
+                  {% else %}
+                    ${{ "{:,.0f}".format(kpi_data['7d']['revenue']) if kpi_data and kpi_data.get('7d') else '0' }}
+                  {% endif %}
+                </div>
                 <div class="d-flex align-items-center mb-3">
-                  {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('revenue_change') %}
+                  {% if revenue_card and revenue_card.data %}
+                    {% if revenue_card.data.trend_percentage > 0 %}
+                      <div class="text-success me-2" id="mobile-revenue-trend">{{ revenue_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif revenue_card.data.trend_percentage < 0 %}
+                      <div class="text-danger me-2" id="mobile-revenue-trend">{{ revenue_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2" id="mobile-revenue-trend">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
+                  {% elif kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('revenue_change') %}
                     {% if kpi_data['7d']['revenue_change'] > 0 %}
                       <div class="text-success me-2" id="mobile-revenue-trend">{{ kpi_data['7d']['revenue_change'] }}% <i class="ti ti-trending-up"></i></div>
                     {% elif kpi_data['7d']['revenue_change'] < 0 %}
@@ -244,33 +314,47 @@
 
           <!-- Active Passports Card -->
           <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
-            <div class="card" style="border-radius: 12px; position: relative;">
+            <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active-passports-mobile" data-kpi-id="{{ active_passports_card.id if active_passports_card else 'active-passports-mobile-default' }}">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <div class="text-muted small text-uppercase">ACTIVE PASSPORTS</div>
                   <div class="dropdown">
-                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="active-passports-mobile">
                       Last 7 days
                     </button>
                     <ul class="dropdown-menu">
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="active_passports">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="active_passports">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="active_passports">Last 90 days</a></li>
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1">{{ passport_stats['active_passports'] if passport_stats else '0' }}</div>
+                <div class="h2 mb-1" id="mobile-active-passports-value">
+                  {% if active_passports_card and active_passports_card.data %}
+                    {{ "{:,.0f}".format(active_passports_card.data.value) }}
+                  {% else %}
+                    {{ passport_stats['active_passports'] if passport_stats else '0' }}
+                  {% endif %}
+                </div>
                 <div class="d-flex align-items-center mb-3">
-                  {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('passport_change') %}
-                    {% if kpi_data['7d']['passport_change'] > 0 %}
-                      <div class="text-success me-2">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-up"></i></div>
-                    {% elif kpi_data['7d']['passport_change'] < 0 %}
-                      <div class="text-danger me-2">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% if active_passports_card and active_passports_card.data %}
+                    {% if active_passports_card.data.trend_percentage > 0 %}
+                      <div class="text-success me-2" id="mobile-active-passports-trend">{{ active_passports_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif active_passports_card.data.trend_percentage < 0 %}
+                      <div class="text-danger me-2" id="mobile-active-passports-trend">{{ active_passports_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
                     {% else %}
-                      <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                      <div class="text-muted me-2" id="mobile-active-passports-trend">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
+                  {% elif kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('passport_change') %}
+                    {% if kpi_data['7d']['passport_change'] > 0 %}
+                      <div class="text-success me-2" id="mobile-active-passports-trend">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif kpi_data['7d']['passport_change'] < 0 %}
+                      <div class="text-danger me-2" id="mobile-active-passports-trend">{{ kpi_data['7d']['passport_change'] }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2" id="mobile-active-passports-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
                   {% else %}
-                    <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="mobile-active-passports-trend">-- <i class="ti ti-minus"></i></div>
                   {% endif %}
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
@@ -284,33 +368,47 @@
 
           <!-- Passports Created Card -->
           <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
-            <div class="card" style="border-radius: 12px; position: relative;">
+            <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports-created-mobile" data-kpi-id="{{ passports_created_card.id if passports_created_card else 'passports-created-mobile-default' }}">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <div class="text-muted small text-uppercase">PASSPORTS CREATED</div>
                   <div class="dropdown">
-                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports-created-mobile">
                       Last 7 days
                     </button>
                     <ul class="dropdown-menu">
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="passports_created">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="passports_created">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="passports_created">Last 90 days</a></li>
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1">{{ passport_stats['total_passports'] if passport_stats else '0' }}</div>
+                <div class="h2 mb-1" id="mobile-passports-created-value">
+                  {% if passports_created_card and passports_created_card.data %}
+                    {{ "{:,.0f}".format(passports_created_card.data.value) }}
+                  {% else %}
+                    {{ passport_stats['total_passports'] if passport_stats else '0' }}
+                  {% endif %}
+                </div>
                 <div class="d-flex align-items-center mb-3">
-                  {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('new_passports_change') %}
-                    {% if kpi_data['7d']['new_passports_change'] > 0 %}
-                      <div class="text-success me-2">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-up"></i></div>
-                    {% elif kpi_data['7d']['new_passports_change'] < 0 %}
-                      <div class="text-danger me-2">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% if passports_created_card and passports_created_card.data %}
+                    {% if passports_created_card.data.trend_percentage > 0 %}
+                      <div class="text-success me-2" id="mobile-passports-created-trend">{{ passports_created_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif passports_created_card.data.trend_percentage < 0 %}
+                      <div class="text-danger me-2" id="mobile-passports-created-trend">{{ passports_created_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
                     {% else %}
-                      <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                      <div class="text-muted me-2" id="mobile-passports-created-trend">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
+                  {% elif kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('new_passports_change') %}
+                    {% if kpi_data['7d']['new_passports_change'] > 0 %}
+                      <div class="text-success me-2" id="mobile-passports-created-trend">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif kpi_data['7d']['new_passports_change'] < 0 %}
+                      <div class="text-danger me-2" id="mobile-passports-created-trend">{{ kpi_data['7d']['new_passports_change'] }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2" id="mobile-passports-created-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
                   {% else %}
-                    <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="mobile-passports-created-trend">-- <i class="ti ti-minus"></i></div>
                   {% endif %}
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
@@ -324,33 +422,47 @@
 
           <!-- Pending Sign Ups Card -->
           <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
-            <div class="card" style="border-radius: 12px; position: relative;">
+            <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending-signups-mobile" data-kpi-id="{{ pending_signups_card.id if pending_signups_card else 'pending-signups-mobile-default' }}">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <div class="text-muted small text-uppercase">PENDING SIGN UPS</div>
                   <div class="dropdown">
-                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="pending-signups-mobile">
                       Last 7 days
                     </button>
                     <ul class="dropdown-menu">
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d">Last 7 days</a></li>
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d">Last 30 days</a></li>
-                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d">Last 90 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="pending_signups">Last 7 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="pending_signups">Last 30 days</a></li>
+                      <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="pending_signups">Last 90 days</a></li>
                     </ul>
                   </div>
                 </div>
-                <div class="h2 mb-1">{{ signup_stats['pending_signups'] if signup_stats else '0' }}</div>
+                <div class="h2 mb-1" id="mobile-pending-signups-value">
+                  {% if pending_signups_card and pending_signups_card.data %}
+                    {{ "{:,.0f}".format(pending_signups_card.data.value) }}
+                  {% else %}
+                    {{ signup_stats['pending_signups'] if signup_stats else '0' }}
+                  {% endif %}
+                </div>
                 <div class="d-flex align-items-center mb-3">
-                  {% if kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('signup_change') %}
-                    {% if kpi_data['7d']['signup_change'] > 0 %}
-                      <div class="text-success me-2">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-up"></i></div>
-                    {% elif kpi_data['7d']['signup_change'] < 0 %}
-                      <div class="text-danger me-2">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-down"></i></div>
+                  {% if pending_signups_card and pending_signups_card.data %}
+                    {% if pending_signups_card.data.trend_percentage > 0 %}
+                      <div class="text-success me-2" id="mobile-pending-signups-trend">{{ pending_signups_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif pending_signups_card.data.trend_percentage < 0 %}
+                      <div class="text-danger me-2" id="mobile-pending-signups-trend">{{ pending_signups_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
                     {% else %}
-                      <div class="text-muted me-2">0% <i class="ti ti-minus"></i></div>
+                      <div class="text-muted me-2" id="mobile-pending-signups-trend">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
+                  {% elif kpi_data and kpi_data.get('7d') and kpi_data['7d'].get('signup_change') %}
+                    {% if kpi_data['7d']['signup_change'] > 0 %}
+                      <div class="text-success me-2" id="mobile-pending-signups-trend">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif kpi_data['7d']['signup_change'] < 0 %}
+                      <div class="text-danger me-2" id="mobile-pending-signups-trend">{{ kpi_data['7d']['signup_change'] }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2" id="mobile-pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
                   {% else %}
-                    <div class="text-muted me-2">-- <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="mobile-pending-signups-trend">-- <i class="ti ti-minus"></i></div>
                   {% endif %}
                 </div>
                 <div style="height: 40px; position: relative; overflow: hidden;">
@@ -2052,5 +2164,140 @@ function updateFilterCounts() {
         }
     });
 }
+
+// Override KPI card handling to use new centralized KPICard component for all 4 cards
+document.addEventListener('DOMContentLoaded', function() {
+  // Define card configurations
+  const kpiCardConfigs = [
+    { 
+      selector: '[data-kpi-card="revenue"], [data-kpi-card="revenue-mobile"]',
+      cardType: 'revenue',
+      valuePrefix: '$',
+      trendIds: ['#revenue-trend', '#mobile-revenue-trend'],
+      valueIds: ['#revenue-value', '#mobile-revenue-value']
+    },
+    { 
+      selector: '[data-kpi-card="active_passports"], [data-kpi-card="active-passports-mobile"]',
+      cardType: 'active_passports',
+      valuePrefix: '',
+      trendIds: ['#active-passports-trend', '#mobile-active-passports-trend'],
+      valueIds: ['#active-passports-value', '#mobile-active-passports-value']
+    },
+    { 
+      selector: '[data-kpi-card="passports_created"], [data-kpi-card="passports-created-mobile"]',
+      cardType: 'passports_created',
+      valuePrefix: '',
+      trendIds: ['#passports-created-trend', '#mobile-passports-created-trend'],
+      valueIds: ['#passports-created-value', '#mobile-passports-created-value']
+    },
+    { 
+      selector: '[data-kpi-card="pending_signups"], [data-kpi-card="pending-signups-mobile"]',
+      cardType: 'pending_signups',
+      valuePrefix: '',
+      trendIds: ['#pending-signups-trend', '#mobile-pending-signups-trend'],
+      valueIds: ['#pending-signups-value', '#mobile-pending-signups-value']
+    }
+  ];
+
+  // Setup handlers for each KPI card type
+  kpiCardConfigs.forEach(config => {
+    document.querySelectorAll(`${config.selector} .kpi-period-btn`).forEach(item => {
+      item.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent default handler
+        
+        const period = this.getAttribute('data-period');
+        const text = this.textContent.trim();
+        const cardElement = this.closest('.card');
+        const button = this.closest('.dropdown').querySelector('.dropdown-toggle');
+        
+        // Update button text
+        if (button) {
+          button.textContent = text;
+        }
+        
+        // Fetch data from new API endpoint
+        fetch(`/api/kpi-card/${config.cardType}?period=${period}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.card) {
+              // Update value
+              const valueEl = cardElement.querySelector('.h2');
+              if (valueEl) {
+                const formattedValue = config.valuePrefix 
+                  ? `${config.valuePrefix}${Math.round(data.card.data.value).toLocaleString()}`
+                  : Math.round(data.card.data.value).toLocaleString();
+                valueEl.textContent = formattedValue;
+              }
+              
+              // Update trend - use specific ID selectors
+              const trendSelector = config.trendIds.join(', ');
+              const trendEl = cardElement.querySelector(trendSelector);
+              if (trendEl && data.card.data.trend_percentage !== undefined) {
+                const change = data.card.data.trend_percentage;
+                let trendClass = 'text-muted';
+                let icon = 'ti ti-minus';
+                
+                if (change > 0) {
+                  trendClass = 'text-success';
+                  icon = 'ti ti-trending-up';
+                } else if (change < 0) {
+                  trendClass = 'text-danger';
+                  icon = 'ti ti-trending-down';
+                }
+                
+                trendEl.className = `${trendClass} me-2`;
+                trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="${icon}"></i>`;
+              }
+              
+              // Update chart if data is available
+              if (data.card.data.chart_data) {
+                const chartEl = cardElement.querySelector('svg');
+                if (chartEl && data.card.data.chart_data.length > 0) {
+                  // Determine chart type based on card type
+                  const useBarChart = config.cardType === 'active_passports';
+                  
+                  if (useBarChart && typeof generateInteractiveBarChart === 'function') {
+                    // Use bar chart for active passports
+                    const chartData = generateInteractiveBarChart(data.card.data.chart_data, 300, 40, config.cardType);
+                    if (chartData.bars) {
+                      chartEl.innerHTML = chartData.bars.map((bar, index) => 
+                        `<rect x="${bar.x}" y="${bar.y}" width="${bar.width}" height="${bar.height}" 
+                               fill="#206bc4" opacity="0.8" 
+                               data-value="${bar.value}" data-index="${index}" 
+                               class="chart-hover-bar" style="cursor: pointer;" />`
+                      ).join('');
+                    }
+                  } else if (typeof generateInteractiveLineChart === 'function') {
+                    // Use line chart for other cards
+                    const chartData = generateInteractiveLineChart(data.card.data.chart_data, 300, 40, config.cardType);
+                    if (chartData.path) {
+                      chartEl.innerHTML = `
+                        <path d="${chartData.path}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        ${chartData.points ? chartData.points.map((point, index) => 
+                          `<circle cx="${point.x}" cy="${point.y}" r="6" fill="transparent" 
+                                   data-value="${point.value}" data-index="${index}" 
+                                   class="chart-hover-point" style="cursor: pointer;" />`
+                        ).join('') : ''}
+                      `;
+                    }
+                  }
+                }
+              }
+            }
+          })
+          .catch(error => {
+            console.error(`Error fetching ${config.cardType} KPI data:`, error);
+            // Fall back to existing data
+            updateDashboardKPICard(period, config.cardType, cardElement);
+          });
+      });
+    });
+  });
+});
 </script>
+
+<!-- KPI Card Manager Integration -->
+<script src="{{ url_for('static', filename='js/kpi-card-manager.js') }}"></script>
+
 {% endblock %}

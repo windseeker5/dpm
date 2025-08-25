@@ -493,7 +493,7 @@ def get_payment_bot_settings():
             'bank_email_from': get_setting('BANK_EMAIL_FROM'),
             'bank_email_subject': get_setting('BANK_EMAIL_SUBJECT'),
             'bank_email_name_confidence': int(get_setting('BANK_EMAIL_NAME_CONFIDANCE', '85')),
-            'gmail_label_folder_processed': get_setting('GMAIL_LABEL_FOLDER_PROCESSED', 'InteractProcessed')
+            'gmail_label_folder_processed': get_setting('GMAIL_LABEL_FOLDER_PROCESSED', 'PaymentProcessed')
         }
         return jsonify({'success': True, 'data': settings})
     except Exception as e:

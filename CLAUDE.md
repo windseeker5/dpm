@@ -287,3 +287,4 @@ Passport (1) ──> (N) Redemptions (tracked in passport.used_sessions)
 │   └── uploads/            # User uploads
 └── migrations/              # Database migrations
 ```
+- /exit

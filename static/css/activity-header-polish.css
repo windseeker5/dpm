@@ -1,0 +1,426 @@
+/* Activity Header Card - Seamless Split Layout (Option B) */
+/* Modern SaaS style inspired by Stripe, Linear, Notion */
+
+/* Clean modern header - compact and integrated */
+.activity-header-modern {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-bottom: 2rem;
+  border: 1px solid rgba(0,0,0,0.06);
+  overflow: hidden;
+  position: relative;
+  min-height: 280px; /* 40% height reduction */
+  max-height: 320px;
+}
+
+/* Remove gutters for seamless layout */
+.activity-header-modern .row.g-0 {
+  margin: 0;
+}
+
+/* Content side styling - ensure it's above background image */
+.activity-header-modern .content-side {
+  padding: 2rem;
+  position: relative;
+  z-index: 2; /* Above background image */
+}
+
+/* Image side - no padding for seamless integration */
+.activity-header-modern .image-side {
+  padding: 0;
+  position: relative;
+}
+
+/* Image as subtle background - truly integrated */
+.activity-image-seamless {
+  position: absolute;
+  top: 0;
+  right: -10%; /* Slight offset for better composition */
+  bottom: 0;
+  width: 60%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.activity-image-seamless img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0.12; /* Very subtle background */
+}
+
+/* Soft gradient fade for image */
+.image-gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 0.95) 30%,
+    rgba(255, 255, 255, 0.7) 60%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  pointer-events: none;
+}
+
+/* NEW: Activity subtitle with conditional badge */
+.activity-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+}
+
+/* Green Active badge styling - smaller and cleaner */
+.activity-subtitle .badge.bg-green-lt {
+  background-color: #d1f4dd !important;
+  color: #1a7e3e !important;
+  padding: 0.25rem 0.5rem;
+  font-weight: 600;
+  font-size: 0.7rem;
+  border: none;
+  margin-left: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Polish the existing green Activities badge */
+.activity-header-modern .badge.bg-green-lt {
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+/* Keep pulse indicator smooth */
+.activity-header-modern .pulse-indicator {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Activity title - slightly bolder */
+.activity-title-modern {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Description text - better readability */
+.activity-meta-modern {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+/* Clean stats - NO dividers, NO lines, just spacing */
+.activity-quick-stats-clean {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem; /* More space between items */
+  margin: 1.5rem 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.activity-quick-stats-clean .stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #475569;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+  border: none !important; /* Force no borders */
+  padding: 0 !important; /* No padding that might look like dividers */
+  background: none !important;
+  position: relative;
+}
+
+/* Remove any pseudo-elements that might create dividers */
+.activity-quick-stats-clean .stat-item::before,
+.activity-quick-stats-clean .stat-item::after {
+  display: none !important;
+}
+
+.activity-quick-stats-clean .stat-item:hover {
+  color: #1e293b;
+}
+
+.activity-quick-stats-clean .stat-item i {
+  color: #94a3b8;
+  font-size: 1.1rem;
+}
+
+.activity-quick-stats-clean .stat-item strong {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Keep old styles for backwards compatibility */
+.activity-quick-stats {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+
+.activity-quick-stats .quick-stat-item {
+  background: #f8f9fa;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  transition: background 0.2s ease;
+}
+
+.activity-quick-stats .quick-stat-item:hover {
+  background: #f1f3f5;
+}
+
+.activity-quick-stats .quick-stat-item i {
+  color: #6c757d;
+  font-size: 1rem;
+}
+
+/* Progress bar - smoother gradient */
+.progress-indicator {
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+.progress-bar-modern {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+/* Avatar list - better stacking */
+.participant-avatars-section {
+  margin: 1.5rem 0;
+}
+
+.avatar-list-stacked .avatar {
+  border: 2px solid white;
+  transition: transform 0.2s ease;
+}
+
+.avatar-list-stacked .avatar:hover {
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+/* Action buttons - consistent polish for all 3 */
+.activity-actions-modern {
+  margin-top: 1.5rem;
+}
+
+.activity-actions-modern .btn {
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.activity-actions-modern .btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Specific button hover enhancements */
+.activity-actions-modern .btn-secondary:hover {
+  background-color: #495057;
+  border-color: #495057;
+}
+
+.activity-actions-modern .btn-success:hover {
+  background-color: #157347;
+  border-color: #146c43;
+  box-shadow: 0 4px 12px rgba(25, 135, 84, 0.25);
+}
+
+.activity-actions-modern .btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+}
+
+/* Next session banner - cleaner look */
+.next-session-banner {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.next-session-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.next-session-info i {
+  font-size: 1.5rem;
+  color: #6c757d;
+}
+
+.session-time {
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+.session-countdown {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+/* Activity image container - subtle improvements */
+.activity-image-modern {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  height: 100%;
+  min-height: 350px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.activity-image-modern img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.activity-image-modern:hover img {
+  transform: scale(1.02);
+}
+
+.image-overlay-modern {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+}
+
+/* Mobile responsiveness - seamless layout adaptation */
+@media (max-width: 768px) {
+  .activity-header-modern {
+    border-radius: 8px;
+  }
+  
+  /* Content side padding adjustment */
+  .activity-header-modern .content-side {
+    padding: 1.25rem;
+  }
+  
+  /* Image on top for mobile */
+  .activity-header-modern .image-side {
+    order: -1; /* Move image to top */
+    margin-bottom: 0;
+  }
+  
+  .activity-image-seamless {
+    min-height: 200px;
+    max-height: 250px;
+  }
+  
+  /* Activity subtitle */
+  .activity-subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Activity title smaller on mobile */
+  .activity-title-modern {
+    font-size: 1.5rem;
+  }
+  
+  /* Clean stats in 2x2 grid */
+  .activity-quick-stats-clean {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  
+  .activity-quick-stats-clean .stat-item {
+    font-size: 0.85rem;
+  }
+  
+  /* Keep old stats responsive too */
+  .activity-quick-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  
+  .activity-quick-stats .quick-stat-item {
+    padding: 0.625rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Full width buttons on mobile */
+  .activity-actions-modern .d-flex {
+    flex-direction: column;
+  }
+  
+  .activity-actions-modern .btn {
+    width: 100%;
+    padding: 0.75rem;
+  }
+  
+  /* Activity image adjustments */
+  .activity-image-modern {
+    min-height: 200px;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Next session banner stacks on mobile */
+  .next-session-banner {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .next-session-info {
+    flex-direction: column;
+  }
+  
+  .next-session-banner .btn {
+    width: 100%;
+  }
+}

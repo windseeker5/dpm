@@ -3,6 +3,7 @@
 {% block title %}Activity Dashboard - {{ activity.name }}{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/activity-header-clean.css') }}">
 <style>
 /* Component styles loaded via base.html */
 
@@ -529,129 +530,96 @@
 
   <div class="page-body">
     <div class="dashboard-container">
-      <!-- Modern Activity Header with Enhanced UI -->
-      <div class="activity-header-modern">
-
-        <div class="row g-4">
-          <div class="col-lg-7">
-            <!-- Activity Subtitle and Status -->
-            <div class="d-flex align-items-center justify-content-between flex-wrap mb-3">
-              <div class="d-flex align-items-center">
-                <span class="badge bg-green-lt me-3">
-                  Activities
-                  <span class="pulse-indicator ms-1"></span>
-                </span>
-              </div>
+      <!-- Clean Activity Header - Option A Split Layout -->
+      <div class="activity-header-clean">
+        <div class="header-split-layout">
+          <!-- Left Content Section (60%) -->
+          <div class="content-section">
+            <!-- Activity Subtitle with Badge -->
+            <div class="activity-subtitle-line">
+              <span class="subtitle-text">ACTIVITY</span>
+              <span class="badge-active">
+                Active
+                <span class="pulse-dot"></span>
+              </span>
             </div>
 
-            <div class="d-flex align-items-center mb-2">
-              <h1 class="activity-title-modern mb-0 me-auto">{{ activity.name }}</h1>
-            </div>
+            <!-- Activity Title -->
+            <h1 class="activity-title">{{ activity.name }}</h1>
             
-            <p class="activity-meta-modern">
+            <!-- Description -->
+            <p class="activity-description">
               {{ activity.description or "Transform your game with professional coaching and structured training sessions." }}
             </p>
 
-            <!-- Quick Stats Bar -->
-            <div class="activity-quick-stats">
-              <div class="quick-stat-item">
+            <!-- Clean Stats - No Dividers -->
+            <div class="activity-stats-row">
+              <div class="stat">
                 <i class="ti ti-users"></i>
-                <span><strong>{{ passes|length }}</strong></span>
+                <span>{{ passes|length }} users</span>
               </div>
-              <div class="quick-stat-item">
+              <div class="stat">
                 <i class="ti ti-star-filled"></i>
-                <span><strong>4.8</strong> rating</span>
+                <span>4.8 rating</span>
               </div>
-              <div class="quick-stat-item">
+              <div class="stat">
                 <i class="ti ti-map-pin"></i>
                 <span>{{ activity.location or 'Location' }}</span>
               </div>
-              <div class="quick-stat-item">
+              <div class="stat">
                 <i class="ti ti-share"></i>
-                <span>signups</span>
+                <span>{{ signups|length }} signups</span>
               </div>
-              {% if activity.price %}
-              <div class="quick-stat-item">
-                <i class="ti ti-currency-dollar"></i>
-                <span><strong>${{ activity.price }}</strong> per session</span>
-              </div>
-              {% endif %}
             </div>
 
-            <!-- Progress Indicator -->
-            <div class="progress-indicator">
-              <div class="progress-bar-modern" style="width: {{ ((activity.sessions_completed or 0) / (activity.total_sessions or 12) * 100) }}%"></div>
+            <!-- Revenue Progress Bar -->
+            {% set actual_revenue = kpi_data.revenue.total|float if kpi_data else 0 %}
+            {% set target_revenue = activity.target_revenue|float if activity.target_revenue else 1000 %}
+            {% set progress_percentage = ((actual_revenue / target_revenue * 100) if target_revenue > 0 else 0)|round %}
+            <div class="revenue-progress-container">
+              <div class="progress-labels">
+                <span class="progress-title">Revenue Progress</span>
+                <span class="progress-amounts">${{ "{:,.0f}".format(actual_revenue) }} / ${{ "{:,.0f}".format(target_revenue) }} target</span>
+              </div>
+              <div class="progress-bar-wrapper">
+                <div class="progress-bar-fill" style="width: {{ [progress_percentage, 100]|min }}%"></div>
+              </div>
+              <div class="progress-percentage">{{ progress_percentage }}% Complete</div>
             </div>
 
-            <!-- Participant Avatars Section -->
-            <div class="participant-avatars-section mt-4 mb-3">
+            <!-- Participant Avatars -->
+            <div class="participant-avatars">
               <div class="avatar-list avatar-list-stacked">
-                {% for p in passes[:4] %}
+                {% for p in passes[:5] %}
                 <span class="avatar avatar-sm" style="background-image: url(https://www.gravatar.com/avatar/{{ p.user.email|lower|trim|encode_md5 }}?d=identicon&s=72)"
                       data-bs-toggle="tooltip"
-                      data-bs-placement="top"
                       title="{{ p.user.name }}"></span>
                 {% endfor %}
-                <span class="avatar avatar-sm">+5</span>
+                {% if passes|length > 5 %}
+                <span class="avatar avatar-sm">+{{ passes|length - 5 }}</span>
+                {% endif %}
               </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="activity-actions-modern">
-              <div class="d-flex flex-wrap gap-2 align-items-center">
-                <!-- New Action Buttons -->
-                <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-secondary">
-                  <i class="ti ti-edit me-2"></i>Edit
-                </a>
-                <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
-                  <i class="ti ti-scan me-2"></i>Scan
-                </a>
-                <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-primary">
-                  <i class="ti ti-plus me-2"></i>Passport
-                </a>
-
-              </div>
+            <div class="activity-actions">
+              <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-secondary">
+                <i class="ti ti-edit me-2"></i>Edit
+              </a>
+              <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
+                <i class="ti ti-scan me-2"></i>Scan
+              </a>
+              <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i>Passport
+              </a>
             </div>
-
-            <!-- Next Session Banner -->
-            {% if activity.next_session_date %}
-            <div class="next-session-banner">
-              <div class="next-session-info">
-                <i class="ti ti-calendar-time"></i>
-                <div>
-                  <div class="session-time">Next Session: {{ activity.next_session_date.strftime('%A, %B %d at %I:%M %p') }}</div>
-                  <div class="session-countdown" id="countdown-timer">In 2 days, 14 hours</div>
-                </div>
-              </div>
-              <button class="btn btn-sm btn-outline-primary">
-                <i class="ti ti-bell me-1"></i>Set Reminder
-              </button>
-            </div>
-            {% endif %}
           </div>
 
-          <div class="col-lg-5">
-            <!-- Enhanced Activity Image -->
-            <div class="activity-image-modern">
-              <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}" 
-                   alt="{{ activity.name }}">
-              
-              <div class="image-overlay-modern">
-                <div class="d-flex justify-content-between align-items-end">
-                  <div>
-                    <div class="text-white mb-1">
-                      <i class="ti ti-map-pin me-1"></i>{{ activity.location or 'Sports Complex' }}
-                    </div>
-                    <div class="text-white-50 small">
-                      <i class="ti ti-clock me-1"></i>{{ activity.duration or '90' }} minutes per session
-                    </div>
-                  </div>
-                  <button class="btn btn-sm btn-light">
-                    <i class="ti ti-camera me-1"></i>Change Cover
-                  </button>
-                </div>
-              </div>
-            </div>
+          <!-- Right Image Section (40%) -->
+          <div class="image-section">
+            <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}" 
+                 alt="{{ activity.name }}"
+                 class="activity-image">
           </div>
         </div>
       </div>
@@ -3172,6 +3140,9 @@ window.addEventListener('beforeunload', () => {
   }
 });
 </script>
+
+<!-- Include KPICardManager for enhanced KPI card functionality -->
+<script src="{{ url_for('static', filename='js/kpi-card-manager.js') }}"></script>
 
 {% endblock %}
 
