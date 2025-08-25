@@ -38,3 +38,4 @@ pydantic>=2.0.0    # Data validation
 
 premailer
 requests
+python-dotenv
