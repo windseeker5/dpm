@@ -87,7 +87,7 @@ function initializeFormSubmission() {
             
             // Create form data and add hardcoded values for removed fields
             const formData = new FormData(form);
-            formData.append('gmail_label_folder_processed', 'InteractProcessed');
+            formData.append('gmail_label_folder_processed', 'PaymentProcessed');
             formData.append('default_pass_amount', '50');
             formData.append('default_session_qt', '4');
             formData.append('email_info_text', '');

@@ -1,0 +1,263 @@
+/* Activity Header - Clean Option A Design */
+/* Professional split layout inspired by modern SaaS */
+
+/* Main container */
+.activity-header-clean {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Split layout container */
+.header-split-layout {
+  display: flex;
+  gap: 32px;
+  align-items: stretch;
+  min-height: 240px;
+}
+
+/* Content section (left 60%) */
+.content-section {
+  flex: 1 1 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Image section (right 40%) */
+.image-section {
+  flex: 0 0 40%;
+  max-width: 40%;
+  height: 280px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.activity-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Activity subtitle line */
+.activity-subtitle-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.subtitle-text {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+/* Green Active badge */
+.badge-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #d1f4dd;
+  color: #1a7e3e;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #1a7e3e;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+/* Activity title */
+.activity-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+}
+
+/* Description */
+.activity-description {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0 0 20px 0;
+}
+
+/* Stats row - NO DIVIDERS */
+.activity-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px; /* Clean spacing between stats */
+  margin-bottom: 24px;
+}
+
+.activity-stats-row .stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.activity-stats-row .stat i {
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+/* Revenue Progress Bar */
+.revenue-progress-container {
+  margin: 24px 0;
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.progress-amounts {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.progress-bar-wrapper {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.progress-percentage {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: right;
+}
+
+/* Participant avatars */
+.participant-avatars {
+  margin: 20px 0;
+}
+
+.participant-avatars .avatar-list {
+  display: flex;
+  gap: -8px;
+}
+
+.participant-avatars .avatar {
+  border: 2px solid white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Action buttons */
+.activity-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.activity-actions .btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .activity-header-clean {
+    padding: 16px;
+  }
+
+  .header-split-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .content-section {
+    flex: 1 1 100%;
+  }
+
+  .image-section {
+    flex: 1 1 100%;
+    max-width: 100%;
+    height: 200px;
+    order: -1; /* Image on top for mobile */
+  }
+
+  .activity-title {
+    font-size: 22px;
+  }
+
+  .activity-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .activity-actions {
+    flex-direction: column;
+  }
+
+  .activity-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Remove any inherited styles that might cause issues */
+.activity-header-clean * {
+  box-sizing: border-box;
+}
+
+/* Ensure no weird margins or padding */
+.activity-header-clean h1,
+.activity-header-clean p {
+  margin-top: 0;
+}
+
+/* Override any gradient lines from parent */
+.page-wrapper::before,
+.page-body::before,
+.dashboard-container::before {
+  display: none !important;
+}

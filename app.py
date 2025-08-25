@@ -11,6 +11,8 @@ import bcrypt
 import stripe
 import qrcode
 import subprocess
+import logging
+import traceback
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
@@ -33,7 +35,7 @@ from flask_wtf import CSRFProtect
 
 
 # 🧱 SQLAlchemy Extras
-from sqlalchemy import extract, func, case, desc
+from sqlalchemy import extract, func, case, desc, text
 
 # 📎 File Handling
 from werkzeug.utils import secure_filename
@@ -49,7 +51,10 @@ from models import ChatConversation, ChatMessage, QueryLog, ChatUsage
 from config import Config
 
 # 🔒 Security Decorators
-from decorators import rate_limit
+from decorators import rate_limit, admin_required, log_api_call, cache_response
+
+# 🎯 KPI Card Component
+from components.kpi_card import generate_kpi_card, generate_dashboard_cards
 
 # 🔁 Background Jobs
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -164,6 +169,9 @@ print(f"📂 Connected DB path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 csrf = CSRFProtect(app)
 app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
@@ -607,6 +615,20 @@ def dashboard():
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
     from datetime import datetime
+    
+    # Try to use the new KPICard component for all dashboard cards, fallback to original
+    try:
+        from components.kpi_card import generate_kpi_card
+        revenue_card_data = generate_kpi_card('revenue')
+        active_passports_card_data = generate_kpi_card('active_passports')
+        passports_created_card_data = generate_kpi_card('passports_created')
+        pending_signups_card_data = generate_kpi_card('pending_signups')
+    except Exception as e:
+        print(f"Failed to use KPICard component: {e}")
+        revenue_card_data = None
+        active_passports_card_data = None
+        passports_created_card_data = None
+        pending_signups_card_data = None
 
     kpi_data = get_kpi_stats()
     activities = db.session.query(Activity).filter_by(status='active').all()
@@ -695,7 +717,11 @@ def dashboard():
         passport_stats=passport_stats,
         signup_stats=signup_stats,
         active_passport_count=active_passport_count,
-        logs=all_logs
+        logs=all_logs,
+        revenue_card=revenue_card_data,  # Add the new revenue card data
+        active_passports_card=active_passports_card_data,  # Add active passports card
+        passports_created_card=passports_created_card_data,  # Add passports created card
+        pending_signups_card=pending_signups_card_data  # Add pending signups card
     )
 
 
@@ -3771,23 +3797,149 @@ def activity_dashboard(activity_id):
 
 
 @app.route("/api/activity-kpis/<int:activity_id>")
+@admin_required
+@rate_limit(max_requests=30, window=60)  # 30 requests per minute
+@log_api_call
+@cache_response(timeout=180)  # Cache for 3 minutes
 def get_activity_kpis_api(activity_id):
-    """API endpoint to get KPI data for a specific activity and period"""
-    if "admin" not in session:
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    """Secure API endpoint to get KPI data for a specific activity and period
     
+    Security Features:
+    - Admin authentication required
+    - Rate limiting (30 req/min)
+    - Input validation and sanitization
+    - SQL injection prevention
+    - Request logging
+    - Response caching
+    """
+    from markupsafe import escape
+    
+    # Input validation and sanitization
+    try:
+        # Validate activity_id
+        if activity_id is None or activity_id <= 0:
+            return jsonify({
+                "success": False, 
+                "error": "Invalid activity ID",
+                "code": "INVALID_ACTIVITY_ID"
+            }), 400
+        
+        # Validate and sanitize period parameter
+        period_param = request.args.get('period', '7')
+        try:
+            period = int(escape(str(period_param)))
+            if period not in [7, 30, 90]:
+                period = 7  # Default fallback
+        except (ValueError, TypeError):
+            period = 7
+        
+        # Validate activity exists and user has access
+        from models import Activity
+        activity = db.session.execute(
+            text("SELECT id, name FROM activity WHERE id = :activity_id AND active = 1"),
+            {"activity_id": activity_id}
+        ).fetchone()
+        
+        if not activity:
+            return jsonify({
+                "success": False, 
+                "error": "Activity not found or inactive",
+                "code": "ACTIVITY_NOT_FOUND"
+            }), 404
+            
+    except Exception as e:
+        logger.error(f"Input validation error in KPI API: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Invalid request parameters",
+            "code": "VALIDATION_ERROR"
+        }), 400
+    
+    # Try to use new KPI Card component first, fallback to legacy implementation
+    try:
+        # Use the secure KPI Card component with validation
+        dashboard_cards = generate_dashboard_cards(
+            activity_id=activity_id,
+            period=f"{period}d",
+            device_type='desktop'
+        )
+        
+        if dashboard_cards.get('success'):
+            # Transform to expected format
+            kpi_data = {}
+            for card_id, card in dashboard_cards['cards'].items():
+                card_type = card['card_type']
+                if card_type == 'revenue':
+                    kpi_data['revenue'] = {
+                        'total': card['total'],
+                        'change': card['change'],
+                        'trend': card['trend_direction'],
+                        'percentage': card['percentage'],
+                        'trend_data': card['trend_data']
+                    }
+                elif card_type == 'active_users':
+                    kpi_data['active_users'] = {
+                        'total': card['total'],
+                        'change': card['change'],
+                        'trend': card['trend_direction'],
+                        'percentage': card['percentage'],
+                        'trend_data': card['trend_data']
+                    }
+                elif card_type == 'unpaid_passports':
+                    kpi_data['unpaid_passports'] = {
+                        'total': card['total'],
+                        'change': card['change'],
+                        'trend': card['trend_direction'],
+                        'percentage': card['percentage'],
+                        'overdue': card.get('overdue', 0),
+                        'trend_data': card['trend_data']
+                    }
+                elif card_type == 'profit':
+                    kpi_data['profit'] = {
+                        'total': card['total'],
+                        'margin': card.get('margin', 0),
+                        'change': card['change'],
+                        'trend': card['trend_direction'],
+                        'percentage': card['percentage'],
+                        'trend_data': card['trend_data']
+                    }
+            
+            return jsonify({
+                "success": True,
+                "period": period,
+                "kpi_data": kpi_data,
+                "source": "kpi_component",
+                "cache_info": {
+                    "generation_time_ms": dashboard_cards.get('generation_time_ms', 0),
+                    "cache_hit": any(card.get('cache_hit', False) for card in dashboard_cards['cards'].values())
+                }
+            })
+        
+        # Fallback to legacy implementation with enhanced security
+        logger.info(f"Falling back to legacy KPI implementation for activity {activity_id}")
+        
+    except Exception as component_error:
+        logger.warning(f"KPI component failed, using legacy: {str(component_error)}")
+    
+    # Legacy implementation with security enhancements
     from models import Activity, Passport
     from datetime import datetime, timezone, timedelta
     from utils import get_kpi_stats
     import math
     
     try:
-        # Get period from query parameters (default to 7 days)
-        period = int(request.args.get('period', 7))
+        # Secure database query using parameterized query
+        activity = db.session.execute(
+            text("SELECT * FROM activity WHERE id = :activity_id AND active = 1"),
+            {"activity_id": activity_id}
+        ).fetchone()
         
-        activity = Activity.query.get(activity_id)
         if not activity:
-            return jsonify({"success": False, "error": "Activity not found"}), 404
+            return jsonify({
+                "success": False, 
+                "error": "Activity not found",
+                "code": "ACTIVITY_NOT_FOUND"
+            }), 404
         
         # Use the enhanced get_kpi_stats function with activity filtering
         kpi_stats = get_kpi_stats(activity_id=activity_id)
@@ -3921,33 +4073,89 @@ def get_activity_kpis_api(activity_id):
         })
         
     except Exception as e:
-        print(f"Error in get_activity_kpis_api for activity {activity_id}: {str(e)}")
+        # Secure error logging without exposing sensitive data
+        logger.error(f"Error in get_activity_kpis_api for activity {activity_id}: {str(e)}")
+        
+        # Log the full error for debugging but don't expose to client
+        logger.debug(f"Full traceback: {traceback.format_exc()}")
+        
         return jsonify({
             "success": False,
             "error": "Internal server error",
-            "details": str(e) if app.debug else "Please try again later"
+            "code": "INTERNAL_ERROR",
+            "details": str(e) if current_app.debug else "Please try again later",
+            "activity_id": activity_id  # Safe to include
         }), 500
 
 
 @app.route("/api/activity-dashboard-data/<int:activity_id>")
+@admin_required
+@rate_limit(max_requests=40, window=60)  # 40 requests per minute
+@log_api_call
 def get_activity_dashboard_data(activity_id):
-    """API endpoint to get filtered passport and signup data for activity dashboard"""
-    if "admin" not in session:
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    """Secure API endpoint to get filtered passport and signup data for activity dashboard
+    
+    Security Features:
+    - Admin authentication required
+    - Rate limiting (40 req/min)
+    - Input validation and sanitization
+    - SQL injection prevention
+    - Request logging
+    """
+    from markupsafe import escape
+    
+    # Input validation and sanitization
+    try:
+        # Validate activity_id
+        if activity_id is None or activity_id <= 0:
+            return jsonify({
+                "success": False, 
+                "error": "Invalid activity ID",
+                "code": "INVALID_ACTIVITY_ID"
+            }), 400
+        
+        # Validate and sanitize filter parameters
+        passport_filter = escape(str(request.args.get('passport_filter', 'all'))).strip()[:20]
+        signup_filter = escape(str(request.args.get('signup_filter', 'all'))).strip()[:20]
+        search_query = escape(str(request.args.get('q', ''))).strip()[:100]
+        
+        # Validate filter values
+        valid_passport_filters = ['all', 'paid', 'unpaid']
+        valid_signup_filters = ['all', 'paid', 'unpaid', 'pending']
+        
+        if passport_filter not in valid_passport_filters:
+            passport_filter = 'all'
+        if signup_filter not in valid_signup_filters:
+            signup_filter = 'all'
+            
+    except Exception as e:
+        logger.error(f"Input validation error in activity dashboard API: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Invalid request parameters",
+            "code": "VALIDATION_ERROR"
+        }), 400
     
     from models import Activity, Signup, Passport
     from sqlalchemy.orm import joinedload
     from sqlalchemy import or_
     
     try:
-        activity = Activity.query.get(activity_id)
-        if not activity:
-            return jsonify({"success": False, "error": "Activity not found"}), 404
+        # Use secure parameterized query to check activity exists
+        activity = db.session.execute(
+            text("SELECT id, name FROM activity WHERE id = :activity_id AND active = 1"),
+            {"activity_id": activity_id}
+        ).fetchone()
         
-        # Get filter and search parameters
-        passport_filter = request.args.get('passport_filter', 'all')
-        signup_filter = request.args.get('signup_filter', 'all')
-        q = request.args.get('q', '').strip()  # Add search parameter support
+        if not activity:
+            return jsonify({
+                "success": False, 
+                "error": "Activity not found or inactive",
+                "code": "ACTIVITY_NOT_FOUND"
+            }), 404
+        
+        # Get filter and search parameters (already validated above)
+        q = search_query
         
         # Load filtered signups
         signups_query = (
@@ -4055,25 +4263,128 @@ def get_activity_dashboard_data(activity_id):
         }), 500
 
 @app.route("/api/global-kpis")
+@admin_required
+@rate_limit(max_requests=60, window=60)  # 60 requests per minute for global data
+@log_api_call
+@cache_response(timeout=300)  # Cache for 5 minutes
 def get_global_kpis_api():
-    """API endpoint to get global KPI data for a specific period"""
-    if "admin" not in session:
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    """Secure API endpoint to get global KPI data for a specific period
     
+    Security Features:
+    - Admin authentication required
+    - Rate limiting (60 req/min)
+    - Input validation and sanitization
+    - Request logging
+    - Response caching
+    """
+    from markupsafe import escape
+    
+    # Input validation and sanitization
+    try:
+        # Validate and sanitize period parameter
+        period_param = request.args.get('period', '7d')
+        period = escape(str(period_param)).strip()
+        
+        # Validate period format
+        valid_periods = ['7d', '30d', '90d']
+        if period not in valid_periods:
+            return jsonify({
+                "success": False,
+                "error": f"Invalid period. Must be one of: {', '.join(valid_periods)}",
+                "code": "INVALID_PERIOD"
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Input validation error in global KPI API: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Invalid request parameters",
+            "code": "VALIDATION_ERROR"
+        }), 400
+    
+    # Try to use new KPI Card component first, fallback to legacy implementation
+    try:
+        # Use the secure KPI Card component
+        dashboard_cards = generate_dashboard_cards(
+            activity_id=None,  # Global data
+            period=period,
+            device_type='desktop'
+        )
+        
+        if dashboard_cards.get('success'):
+            # Transform to expected format for global dashboard
+            kpi_data = {}
+            for card_id, card in dashboard_cards['cards'].items():
+                card_type = card['card_type']
+                
+                # Map card types to expected global KPI format
+                if card_type == 'revenue':
+                    kpi_data['revenue'] = {
+                        'total': card['total'],
+                        'change': card['change'],
+                        'trend': card['trend_direction'],
+                        'percentage': card['percentage'],
+                        'trend_data': card['trend_data']
+                    }
+                elif card_type == 'active_users':
+                    kpi_data['active_passports'] = {
+                        'total': card['total'],
+                        'change': card['change'],
+                        'trend': card['trend_direction'],
+                        'percentage': card['percentage'],
+                        'trend_data': card['trend_data']
+                    }
+                elif card_type == 'passports_created':
+                    kpi_data['passports_created'] = {
+                        'total': card['total'],
+                        'change': card['change'],
+                        'trend': card['trend_direction'],
+                        'percentage': card['percentage'],
+                        'trend_data': card['trend_data']
+                    }
+                elif card_type == 'pending_signups':
+                    kpi_data['pending_signups'] = {
+                        'total': card['total'],
+                        'change': card['change'],
+                        'trend': card['trend_direction'],
+                        'percentage': card['percentage'],
+                        'trend_data': card['trend_data']
+                    }
+            
+            return jsonify({
+                "success": True,
+                "period": period,
+                "kpi_data": kpi_data,
+                "source": "kpi_component",
+                "cache_info": {
+                    "generation_time_ms": dashboard_cards.get('generation_time_ms', 0),
+                    "cache_hit": any(card.get('cache_hit', False) for card in dashboard_cards['cards'].values())
+                }
+            })
+        
+        # Fallback to legacy implementation
+        logger.info("Falling back to legacy global KPI implementation")
+        
+    except Exception as component_error:
+        logger.warning(f"Global KPI component failed, using legacy: {str(component_error)}")
+    
+    # Legacy implementation with enhanced security
     from utils import get_kpi_stats
     import math
     
     try:
-        # Get period from query parameters (default to 7d)
-        period = request.args.get('period', '7d')
-        
-        # Get global KPI stats
+        # Get global KPI stats with error handling
         kpi_stats = get_kpi_stats()
         
-        # Get the requested period data
+        # Get the requested period data with validation
         period_data = kpi_stats.get(period, {})
         if not period_data:
-            return jsonify({"success": False, "error": f"No data available for period: {period}"}), 404
+            logger.warning(f"No KPI data available for period: {period}")
+            return jsonify({
+                "success": False, 
+                "error": f"No data available for period: {period}",
+                "code": "NO_DATA"
+            }), 404
         
         # Helper function to safely validate and clean numeric values
         def safe_float(value, default=0.0):
@@ -4149,11 +4460,16 @@ def get_global_kpis_api():
         })
         
     except Exception as e:
-        print(f"Error in get_global_kpis_api: {str(e)}")
+        # Secure error logging
+        logger.error(f"Error in get_global_kpis_api: {str(e)}")
+        logger.debug(f"Full traceback: {traceback.format_exc()}")
+        
         return jsonify({
             "success": False,
             "error": "Internal server error",
-            "details": str(e) if app.debug else "Please try again later"
+            "code": "INTERNAL_ERROR",
+            "details": str(e) if current_app.debug else "Please try again later",
+            "period": period if 'period' in locals() else 'unknown'
         }), 500
 
 
@@ -5570,6 +5886,58 @@ def test_notification_endpoints_page():
         return redirect(url_for("login"))
     
     return send_from_directory("test/html", "notification_endpoints_test.html")
+
+
+# New KPI Card API endpoint for standardized components
+@app.route("/api/kpi-card/<card_type>")
+def get_kpi_card_api(card_type):
+    """API endpoint for fetching individual KPI card data using the new component"""
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    
+    # Get period parameter
+    period = request.args.get('period', '7d')
+    
+    # Validate period
+    valid_periods = ['7d', '30d', '90d', 'all']
+    if period not in valid_periods:
+        period = '7d'
+    
+    # Validate card type
+    valid_card_types = ['revenue', 'active_users', 'active_passports', 
+                        'passports_created', 'pending_signups', 
+                        'unpaid_passports', 'profit']
+    
+    if card_type not in valid_card_types:
+        return jsonify({
+            "success": False,
+            "error": f"Invalid card type: {card_type}"
+        }), 400
+    
+    try:
+        from components.kpi_card import generate_kpi_card
+        
+        # Generate card data with the specified period
+        card_data = generate_kpi_card(card_type, period=period)
+        
+        if card_data:
+            return jsonify({
+                "success": True,
+                "card_data": card_data,
+                "period": period
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to generate card data"
+            }), 500
+            
+    except Exception as e:
+        print(f"Error in KPI card API: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 # Initialize default survey template on startup
