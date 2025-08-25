@@ -33,9 +33,6 @@
   <link href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0" rel="stylesheet">
   
-  <!-- Event Notifications -->
-  <link href="{{ url_for('static', filename='css/event-notifications.css') }}?v=1.0" rel="stylesheet">
-  
   <!-- Enhanced Flash Alert Overlay Styles -->
   <style>
     /* Modern notification system with enhanced design */
@@ -832,14 +829,7 @@
   <!-- Reusable Components -->
   <script src="{{ url_for('static', filename='js/search-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/filter-component.js') }}?v=1.0"></script>
-  
-  <!-- Event Notifications -->
-  {% if current_admin %}
-  <!-- Notification Container -->
-  <div id="notification-container"></div>
-  
-  {% endif %}
-  
+
   {% block scripts %}{% endblock %}
 </body>
 </html>
