@@ -1,0 +1,2211 @@
+{
+  "metadata": {
+    "generated_at": "2025-08-25T17:23:40.735420",
+    "app_root": "/home/kdresdell/Documents/DEV/minipass_env/app",
+    "local_base_url": "http://127.0.0.1:8890",
+    "vps_base_url": "https://lhgi.minipass.me",
+    "templates_scanned": 27
+  },
+  "summary": {
+    "total_assets": 44,
+    "file_missing": 0,
+    "local_inaccessible": 4,
+    "vps_inaccessible": 17,
+    "critical_issues": 0,
+    "healthy_assets": 27
+  },
+  "template_assets": {
+    "templates/base.html": [
+      {
+        "type": "static",
+        "original_path": "favicon.svg",
+        "normalized_path": "favicon.svg"
+      },
+      {
+        "type": "static",
+        "original_path": "favicon.png",
+        "normalized_path": "favicon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "apple-touch-icon.png",
+        "normalized_path": "apple-touch-icon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/css/tabler.min.css",
+        "normalized_path": "tabler/css/tabler.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/icons/tabler-icons.min.css",
+        "normalized_path": "tabler/icons/tabler-icons.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "minipass.css",
+        "normalized_path": "minipass.css"
+      },
+      {
+        "type": "static",
+        "original_path": "css/dropdown-fix.css",
+        "normalized_path": "css/dropdown-fix.css"
+      },
+      {
+        "type": "static",
+        "original_path": "css/search-component.css",
+        "normalized_path": "css/search-component.css"
+      },
+      {
+        "type": "static",
+        "original_path": "css/filter-component.css",
+        "normalized_path": "css/filter-component.css"
+      },
+      {
+        "type": "static",
+        "original_path": "css/event-notifications.css",
+        "normalized_path": "css/event-notifications.css"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "tinymce/tinymce.min.js",
+        "normalized_path": "tinymce/tinymce.min.js"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/js/tabler.min.js",
+        "normalized_path": "tabler/js/tabler.min.js"
+      },
+      {
+        "type": "static",
+        "original_path": "js/dropdown-fix.js",
+        "normalized_path": "js/dropdown-fix.js"
+      },
+      {
+        "type": "static",
+        "original_path": "js/search-component.js",
+        "normalized_path": "js/search-component.js"
+      },
+      {
+        "type": "static",
+        "original_path": "js/filter-component.js",
+        "normalized_path": "js/filter-component.js"
+      },
+      {
+        "type": "static",
+        "original_path": "js/event-notifications.js",
+        "normalized_path": "js/event-notifications.js"
+      }
+    ],
+    "templates/signup_form_WORKING.html": [
+      {
+        "type": "static",
+        "original_path": "favicon.svg",
+        "normalized_path": "favicon.svg"
+      },
+      {
+        "type": "static",
+        "original_path": "favicon.png",
+        "normalized_path": "favicon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "apple-touch-icon.png",
+        "normalized_path": "apple-touch-icon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/css/tabler.min.css",
+        "normalized_path": "tabler/css/tabler.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/icons/tabler-icons.min.css",
+        "normalized_path": "tabler/icons/tabler-icons.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "minipass.css",
+        "normalized_path": "minipass.css"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/",
+        "normalized_path": "uploads/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/",
+        "normalized_path": "uploads/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "default_signup.jpg",
+        "normalized_path": "default_signup.jpg"
+      }
+    ],
+    "templates/scan_qr.html": [
+      {
+        "type": "static",
+        "original_path": "beep.wav",
+        "normalized_path": "beep.wav"
+      }
+    ],
+    "templates/signup_thank_you.html": [
+      {
+        "type": "static",
+        "original_path": "favicon.svg",
+        "normalized_path": "favicon.svg"
+      },
+      {
+        "type": "static",
+        "original_path": "favicon.png",
+        "normalized_path": "favicon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "apple-touch-icon.png",
+        "normalized_path": "apple-touch-icon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/css/tabler.min.css",
+        "normalized_path": "tabler/css/tabler.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/icons/tabler-icons.min.css",
+        "normalized_path": "tabler/icons/tabler-icons.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "minipass.css",
+        "normalized_path": "minipass.css"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/",
+        "normalized_path": "uploads/"
+      }
+    ],
+    "templates/style_guide.html": [
+      {
+        "type": "bg-img",
+        "original_path": "/static/uploads/activity_images/activity_28486c0e82.jpg",
+        "normalized_path": "uploads/activity_images/activity_28486c0e82.jpg"
+      },
+      {
+        "type": "bg-img",
+        "original_path": "/static/uploads/activity_images/activity_3beae4fa86.jpg",
+        "normalized_path": "uploads/activity_images/activity_3beae4fa86.jpg"
+      },
+      {
+        "type": "bg-img",
+        "original_path": "/static/uploads/activity_images/activity_name.jpg",
+        "normalized_path": "uploads/activity_images/activity_name.jpg"
+      },
+      {
+        "type": "resource",
+        "original_path": "/static/uploads/activity_images/activity_28486c0e82.jpg",
+        "normalized_path": "uploads/activity_images/activity_28486c0e82.jpg"
+      },
+      {
+        "type": "resource",
+        "original_path": "/static/uploads/activity_images/activity_3beae4fa86.jpg",
+        "normalized_path": "uploads/activity_images/activity_3beae4fa86.jpg"
+      },
+      {
+        "type": "resource",
+        "original_path": "/static/uploads/activity_images/activity_name.jpg",
+        "normalized_path": "uploads/activity_images/activity_name.jpg"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/activity_28486c0e82.jpg",
+        "normalized_path": "uploads/activity_images/activity_28486c0e82.jpg"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/activity_3beae4fa86.jpg",
+        "normalized_path": "uploads/activity_images/activity_3beae4fa86.jpg"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/activity_name.jpg",
+        "normalized_path": "uploads/activity_images/activity_name.jpg"
+      }
+    ],
+    "templates/login_standalone.html": [
+      {
+        "type": "static",
+        "original_path": "favicon.svg",
+        "normalized_path": "favicon.svg"
+      },
+      {
+        "type": "static",
+        "original_path": "favicon.png",
+        "normalized_path": "favicon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/css/tabler.min.css",
+        "normalized_path": "tabler/css/tabler.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/icons/tabler-icons.min.css",
+        "normalized_path": "tabler/icons/tabler-icons.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "assets/brand/logo/primary/logo.png",
+        "normalized_path": "assets/brand/logo/primary/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/js/tabler.min.js",
+        "normalized_path": "tabler/js/tabler.min.js"
+      }
+    ],
+    "templates/unified_settings.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/",
+        "normalized_path": "uploads/"
+      },
+      {
+        "type": "static",
+        "original_path": "js/unified-settings.js",
+        "normalized_path": "js/unified-settings.js"
+      }
+    ],
+    "templates/payment_bot_settings.html": [
+      {
+        "type": "static",
+        "original_path": "js/payment-bot.js",
+        "normalized_path": "js/payment-bot.js"
+      }
+    ],
+    "templates/pass.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/logo.png",
+        "normalized_path": "uploads/logo.png"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/logo.png",
+        "normalized_path": "uploads/logo.png"
+      }
+    ],
+    "templates/activity_income.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/receipts/",
+        "normalized_path": "uploads/receipts/"
+      }
+    ],
+    "templates/activity_expenses.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/receipts/",
+        "normalized_path": "uploads/receipts/"
+      }
+    ],
+    "templates/test_notifications.html": [
+      {
+        "type": "static",
+        "original_path": "tabler/dist/css/tabler.min.css",
+        "normalized_path": "tabler/dist/css/tabler.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/dist/js/tabler.min.js",
+        "normalized_path": "tabler/dist/js/tabler.min.js"
+      }
+    ],
+    "templates/setup.html": [
+      {
+        "type": "static",
+        "original_path": "backups/",
+        "normalized_path": "backups/"
+      },
+      {
+        "type": "static",
+        "original_path": "css/admin-settings.css",
+        "normalized_path": "css/admin-settings.css"
+      },
+      {
+        "type": "static",
+        "original_path": "js/email-settings.js",
+        "normalized_path": "js/email-settings.js"
+      }
+    ],
+    "templates/dashboard.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "js/kpi-card-manager.js",
+        "normalized_path": "js/kpi-card-manager.js"
+      }
+    ],
+    "templates/signup_form.html": [
+      {
+        "type": "static",
+        "original_path": "favicon.svg",
+        "normalized_path": "favicon.svg"
+      },
+      {
+        "type": "static",
+        "original_path": "favicon.png",
+        "normalized_path": "favicon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "apple-touch-icon.png",
+        "normalized_path": "apple-touch-icon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/css/tabler.min.css",
+        "normalized_path": "tabler/css/tabler.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/icons/tabler-icons.min.css",
+        "normalized_path": "tabler/icons/tabler-icons.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "minipass.css",
+        "normalized_path": "minipass.css"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/",
+        "normalized_path": "uploads/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "default_signup.jpg",
+        "normalized_path": "default_signup.jpg"
+      }
+    ],
+    "templates/activities_old.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      }
+    ],
+    "templates/activity_dashboard.html": [
+      {
+        "type": "static",
+        "original_path": "css/activity-header-clean.css",
+        "normalized_path": "css/activity-header-clean.css"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "js/scroll-preservation.js",
+        "normalized_path": "js/scroll-preservation.js"
+      },
+      {
+        "type": "static",
+        "original_path": "js/kpi-card-manager.js",
+        "normalized_path": "js/kpi-card-manager.js"
+      },
+      {
+        "type": "static",
+        "original_path": "beep.wav",
+        "normalized_path": "beep.wav"
+      }
+    ],
+    "templates/activities.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      }
+    ],
+    "templates/activity_form.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/receipts/",
+        "normalized_path": "uploads/receipts/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/receipts/",
+        "normalized_path": "uploads/receipts/"
+      }
+    ],
+    "templates/signup_form_20250823_132215.html": [
+      {
+        "type": "static",
+        "original_path": "favicon.svg",
+        "normalized_path": "favicon.svg"
+      },
+      {
+        "type": "static",
+        "original_path": "favicon.png",
+        "normalized_path": "favicon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "apple-touch-icon.png",
+        "normalized_path": "apple-touch-icon.png"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/css/tabler.min.css",
+        "normalized_path": "tabler/css/tabler.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "tabler/icons/tabler-icons.min.css",
+        "normalized_path": "tabler/icons/tabler-icons.min.css"
+      },
+      {
+        "type": "static",
+        "original_path": "minipass.css",
+        "normalized_path": "minipass.css"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/",
+        "normalized_path": "uploads/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/",
+        "normalized_path": "uploads/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "uploads/activity_images/",
+        "normalized_path": "uploads/activity_images/"
+      },
+      {
+        "type": "static",
+        "original_path": "default_signup.jpg",
+        "normalized_path": "default_signup.jpg"
+      }
+    ],
+    "templates/partials/settings_org.html": [
+      {
+        "type": "static",
+        "original_path": "uploads/",
+        "normalized_path": "uploads/"
+      }
+    ],
+    "templates/email_templates/signup/index.html": [
+      {
+        "type": "img",
+        "original_path": "good-news.png",
+        "normalized_path": "good-news.png"
+      },
+      {
+        "type": "img",
+        "original_path": "facebook.png",
+        "normalized_path": "facebook.png"
+      },
+      {
+        "type": "img",
+        "original_path": "instagram.png",
+        "normalized_path": "instagram.png"
+      }
+    ],
+    "templates/email_templates/latePayment/index.html": [
+      {
+        "type": "img",
+        "original_path": "thumb-down.png",
+        "normalized_path": "thumb-down.png"
+      },
+      {
+        "type": "img",
+        "original_path": "facebook.png",
+        "normalized_path": "facebook.png"
+      },
+      {
+        "type": "img",
+        "original_path": "instagram.png",
+        "normalized_path": "instagram.png"
+      }
+    ],
+    "templates/email_templates/paymentReceived/index.html": [
+      {
+        "type": "img",
+        "original_path": "currency-dollar.png",
+        "normalized_path": "currency-dollar.png"
+      },
+      {
+        "type": "img",
+        "original_path": "facebook.png",
+        "normalized_path": "facebook.png"
+      },
+      {
+        "type": "img",
+        "original_path": "instagram.png",
+        "normalized_path": "instagram.png"
+      }
+    ],
+    "templates/email_templates/redeemPass/index.html": [
+      {
+        "type": "img",
+        "original_path": "hand-rock.png",
+        "normalized_path": "hand-rock.png"
+      },
+      {
+        "type": "img",
+        "original_path": "facebook.png",
+        "normalized_path": "facebook.png"
+      },
+      {
+        "type": "img",
+        "original_path": "instagram.png",
+        "normalized_path": "instagram.png"
+      }
+    ],
+    "templates/email_templates/survey_invitation/index.html": [
+      {
+        "type": "img",
+        "original_path": "logo.png",
+        "normalized_path": "logo.png"
+      },
+      {
+        "type": "img",
+        "original_path": "facebook.png",
+        "normalized_path": "facebook.png"
+      },
+      {
+        "type": "img",
+        "original_path": "instagram.png",
+        "normalized_path": "instagram.png"
+      }
+    ],
+    "templates/email_templates/newPass/index.html": [
+      {
+        "type": "img",
+        "original_path": "ticket.png",
+        "normalized_path": "ticket.png"
+      },
+      {
+        "type": "img",
+        "original_path": "facebook.png",
+        "normalized_path": "facebook.png"
+      },
+      {
+        "type": "img",
+        "original_path": "instagram.png",
+        "normalized_path": "instagram.png"
+      }
+    ]
+  },
+  "asset_details": {
+    "apple-touch-icon.png": {
+      "file_exists": true,
+      "file_size": 5495,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 5495,
+        "url": "http://127.0.0.1:8890/static/apple-touch-icon.png"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 5495,
+        "url": "https://lhgi.minipass.me/static/apple-touch-icon.png"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "apple-touch-icon.png"
+        },
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "apple-touch-icon.png"
+        },
+        {
+          "template": "templates/signup_thank_you.html",
+          "type": "static",
+          "original_path": "apple-touch-icon.png"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "apple-touch-icon.png"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "apple-touch-icon.png"
+        }
+      ]
+    },
+    "assets/brand/logo/primary/logo.png": {
+      "file_exists": true,
+      "file_size": 42583,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 42583,
+        "url": "http://127.0.0.1:8890/static/assets/brand/logo/primary/logo.png"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 42583,
+        "url": "https://lhgi.minipass.me/static/assets/brand/logo/primary/logo.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        },
+        {
+          "template": "templates/login_standalone.html",
+          "type": "static",
+          "original_path": "assets/brand/logo/primary/logo.png"
+        }
+      ]
+    },
+    "backups/": {
+      "file_exists": true,
+      "file_size": 4096,
+      "local": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "http://127.0.0.1:8890/static/backups/"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/backups/"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/setup.html",
+          "type": "static",
+          "original_path": "backups/"
+        }
+      ]
+    },
+    "beep.wav": {
+      "file_exists": true,
+      "file_size": 339496,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 339496,
+        "url": "http://127.0.0.1:8890/static/beep.wav"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 339496,
+        "url": "https://lhgi.minipass.me/static/beep.wav"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/scan_qr.html",
+          "type": "static",
+          "original_path": "beep.wav"
+        },
+        {
+          "template": "templates/activity_dashboard.html",
+          "type": "static",
+          "original_path": "beep.wav"
+        }
+      ]
+    },
+    "css/activity-header-clean.css": {
+      "file_exists": true,
+      "file_size": 4373,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 4373,
+        "url": "http://127.0.0.1:8890/static/css/activity-header-clean.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 4373,
+        "url": "https://lhgi.minipass.me/static/css/activity-header-clean.css"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/activity_dashboard.html",
+          "type": "static",
+          "original_path": "css/activity-header-clean.css"
+        }
+      ]
+    },
+    "css/admin-settings.css": {
+      "file_exists": true,
+      "file_size": 4403,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 4403,
+        "url": "http://127.0.0.1:8890/static/css/admin-settings.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 4403,
+        "url": "https://lhgi.minipass.me/static/css/admin-settings.css"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/setup.html",
+          "type": "static",
+          "original_path": "css/admin-settings.css"
+        }
+      ]
+    },
+    "css/dropdown-fix.css": {
+      "file_exists": true,
+      "file_size": 6071,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 6071,
+        "url": "http://127.0.0.1:8890/static/css/dropdown-fix.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 6071,
+        "url": "https://lhgi.minipass.me/static/css/dropdown-fix.css"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "css/dropdown-fix.css"
+        }
+      ]
+    },
+    "css/event-notifications.css": {
+      "file_exists": true,
+      "file_size": 7939,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 7939,
+        "url": "http://127.0.0.1:8890/static/css/event-notifications.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 7939,
+        "url": "https://lhgi.minipass.me/static/css/event-notifications.css"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "css/event-notifications.css"
+        }
+      ]
+    },
+    "css/filter-component.css": {
+      "file_exists": true,
+      "file_size": 12009,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 12009,
+        "url": "http://127.0.0.1:8890/static/css/filter-component.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 12009,
+        "url": "https://lhgi.minipass.me/static/css/filter-component.css"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "css/filter-component.css"
+        }
+      ]
+    },
+    "css/search-component.css": {
+      "file_exists": true,
+      "file_size": 5559,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 5559,
+        "url": "http://127.0.0.1:8890/static/css/search-component.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 5559,
+        "url": "https://lhgi.minipass.me/static/css/search-component.css"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "css/search-component.css"
+        }
+      ]
+    },
+    "currency-dollar.png": {
+      "file_exists": true,
+      "file_size": 386,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 386,
+        "url": "http://127.0.0.1:8890/static/currency-dollar.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/currency-dollar.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/email_templates/paymentReceived/index.html",
+          "type": "img",
+          "original_path": "currency-dollar.png"
+        }
+      ]
+    },
+    "default_signup.jpg": {
+      "file_exists": true,
+      "file_size": 3393,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 3393,
+        "url": "http://127.0.0.1:8890/static/default_signup.jpg"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/default_signup.jpg"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "default_signup.jpg"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "default_signup.jpg"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "default_signup.jpg"
+        }
+      ]
+    },
+    "facebook.png": {
+      "file_exists": true,
+      "file_size": 487,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 487,
+        "url": "http://127.0.0.1:8890/static/facebook.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/facebook.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/email_templates/signup/index.html",
+          "type": "img",
+          "original_path": "facebook.png"
+        },
+        {
+          "template": "templates/email_templates/latePayment/index.html",
+          "type": "img",
+          "original_path": "facebook.png"
+        },
+        {
+          "template": "templates/email_templates/paymentReceived/index.html",
+          "type": "img",
+          "original_path": "facebook.png"
+        },
+        {
+          "template": "templates/email_templates/redeemPass/index.html",
+          "type": "img",
+          "original_path": "facebook.png"
+        },
+        {
+          "template": "templates/email_templates/survey_invitation/index.html",
+          "type": "img",
+          "original_path": "facebook.png"
+        },
+        {
+          "template": "templates/email_templates/newPass/index.html",
+          "type": "img",
+          "original_path": "facebook.png"
+        }
+      ]
+    },
+    "favicon.png": {
+      "file_exists": true,
+      "file_size": 1445,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 1445,
+        "url": "http://127.0.0.1:8890/static/favicon.png"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 1445,
+        "url": "https://lhgi.minipass.me/static/favicon.png"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "favicon.png"
+        },
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "favicon.png"
+        },
+        {
+          "template": "templates/signup_thank_you.html",
+          "type": "static",
+          "original_path": "favicon.png"
+        },
+        {
+          "template": "templates/login_standalone.html",
+          "type": "static",
+          "original_path": "favicon.png"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "favicon.png"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "favicon.png"
+        }
+      ]
+    },
+    "favicon.svg": {
+      "file_exists": true,
+      "file_size": 1558,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 1558,
+        "url": "http://127.0.0.1:8890/static/favicon.svg"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 1558,
+        "url": "https://lhgi.minipass.me/static/favicon.svg"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "favicon.svg"
+        },
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "favicon.svg"
+        },
+        {
+          "template": "templates/signup_thank_you.html",
+          "type": "static",
+          "original_path": "favicon.svg"
+        },
+        {
+          "template": "templates/login_standalone.html",
+          "type": "static",
+          "original_path": "favicon.svg"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "favicon.svg"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "favicon.svg"
+        }
+      ]
+    },
+    "good-news.png": {
+      "file_exists": true,
+      "file_size": 386,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 386,
+        "url": "http://127.0.0.1:8890/static/good-news.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/good-news.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/email_templates/signup/index.html",
+          "type": "img",
+          "original_path": "good-news.png"
+        }
+      ]
+    },
+    "hand-rock.png": {
+      "file_exists": true,
+      "file_size": 386,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 386,
+        "url": "http://127.0.0.1:8890/static/hand-rock.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/hand-rock.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/email_templates/redeemPass/index.html",
+          "type": "img",
+          "original_path": "hand-rock.png"
+        }
+      ]
+    },
+    "instagram.png": {
+      "file_exists": true,
+      "file_size": 386,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 386,
+        "url": "http://127.0.0.1:8890/static/instagram.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/instagram.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/email_templates/signup/index.html",
+          "type": "img",
+          "original_path": "instagram.png"
+        },
+        {
+          "template": "templates/email_templates/latePayment/index.html",
+          "type": "img",
+          "original_path": "instagram.png"
+        },
+        {
+          "template": "templates/email_templates/paymentReceived/index.html",
+          "type": "img",
+          "original_path": "instagram.png"
+        },
+        {
+          "template": "templates/email_templates/redeemPass/index.html",
+          "type": "img",
+          "original_path": "instagram.png"
+        },
+        {
+          "template": "templates/email_templates/survey_invitation/index.html",
+          "type": "img",
+          "original_path": "instagram.png"
+        },
+        {
+          "template": "templates/email_templates/newPass/index.html",
+          "type": "img",
+          "original_path": "instagram.png"
+        }
+      ]
+    },
+    "js/dropdown-fix.js": {
+      "file_exists": true,
+      "file_size": 12713,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 12713,
+        "url": "http://127.0.0.1:8890/static/js/dropdown-fix.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 12713,
+        "url": "https://lhgi.minipass.me/static/js/dropdown-fix.js"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "js/dropdown-fix.js"
+        }
+      ]
+    },
+    "js/email-settings.js": {
+      "file_exists": true,
+      "file_size": 16941,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 16941,
+        "url": "http://127.0.0.1:8890/static/js/email-settings.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 16941,
+        "url": "https://lhgi.minipass.me/static/js/email-settings.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/setup.html",
+          "type": "static",
+          "original_path": "js/email-settings.js"
+        }
+      ]
+    },
+    "js/event-notifications.js": {
+      "file_exists": true,
+      "file_size": 14016,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 14016,
+        "url": "http://127.0.0.1:8890/static/js/event-notifications.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 14016,
+        "url": "https://lhgi.minipass.me/static/js/event-notifications.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "js/event-notifications.js"
+        }
+      ]
+    },
+    "js/filter-component.js": {
+      "file_exists": true,
+      "file_size": 17743,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 17743,
+        "url": "http://127.0.0.1:8890/static/js/filter-component.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 17743,
+        "url": "https://lhgi.minipass.me/static/js/filter-component.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "js/filter-component.js"
+        }
+      ]
+    },
+    "js/kpi-card-manager.js": {
+      "file_exists": true,
+      "file_size": 42063,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 42063,
+        "url": "http://127.0.0.1:8890/static/js/kpi-card-manager.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 42063,
+        "url": "https://lhgi.minipass.me/static/js/kpi-card-manager.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/dashboard.html",
+          "type": "static",
+          "original_path": "js/kpi-card-manager.js"
+        },
+        {
+          "template": "templates/activity_dashboard.html",
+          "type": "static",
+          "original_path": "js/kpi-card-manager.js"
+        }
+      ]
+    },
+    "js/payment-bot.js": {
+      "file_exists": true,
+      "file_size": 9259,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 9259,
+        "url": "http://127.0.0.1:8890/static/js/payment-bot.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 9259,
+        "url": "https://lhgi.minipass.me/static/js/payment-bot.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/payment_bot_settings.html",
+          "type": "static",
+          "original_path": "js/payment-bot.js"
+        }
+      ]
+    },
+    "js/scroll-preservation.js": {
+      "file_exists": true,
+      "file_size": 5665,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 5665,
+        "url": "http://127.0.0.1:8890/static/js/scroll-preservation.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 5665,
+        "url": "https://lhgi.minipass.me/static/js/scroll-preservation.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/activity_dashboard.html",
+          "type": "static",
+          "original_path": "js/scroll-preservation.js"
+        }
+      ]
+    },
+    "js/search-component.js": {
+      "file_exists": true,
+      "file_size": 16833,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 16833,
+        "url": "http://127.0.0.1:8890/static/js/search-component.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 16833,
+        "url": "https://lhgi.minipass.me/static/js/search-component.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "js/search-component.js"
+        }
+      ]
+    },
+    "js/unified-settings.js": {
+      "file_exists": true,
+      "file_size": 7962,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 7962,
+        "url": "http://127.0.0.1:8890/static/js/unified-settings.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 7962,
+        "url": "https://lhgi.minipass.me/static/js/unified-settings.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/unified_settings.html",
+          "type": "static",
+          "original_path": "js/unified-settings.js"
+        }
+      ]
+    },
+    "logo.png": {
+      "file_exists": true,
+      "file_size": 42583,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 42583,
+        "url": "http://127.0.0.1:8890/static/logo.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/logo.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/email_templates/survey_invitation/index.html",
+          "type": "img",
+          "original_path": "logo.png"
+        }
+      ]
+    },
+    "minipass.css": {
+      "file_exists": true,
+      "file_size": 47144,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 47144,
+        "url": "http://127.0.0.1:8890/static/minipass.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 47144,
+        "url": "https://lhgi.minipass.me/static/minipass.css"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "minipass.css"
+        },
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "minipass.css"
+        },
+        {
+          "template": "templates/signup_thank_you.html",
+          "type": "static",
+          "original_path": "minipass.css"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "minipass.css"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "minipass.css"
+        }
+      ]
+    },
+    "tabler/css/tabler.min.css": {
+      "file_exists": true,
+      "file_size": 535841,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 535841,
+        "url": "http://127.0.0.1:8890/static/tabler/css/tabler.min.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 535841,
+        "url": "https://lhgi.minipass.me/static/tabler/css/tabler.min.css"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "tabler/css/tabler.min.css"
+        },
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "tabler/css/tabler.min.css"
+        },
+        {
+          "template": "templates/signup_thank_you.html",
+          "type": "static",
+          "original_path": "tabler/css/tabler.min.css"
+        },
+        {
+          "template": "templates/login_standalone.html",
+          "type": "static",
+          "original_path": "tabler/css/tabler.min.css"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "tabler/css/tabler.min.css"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "tabler/css/tabler.min.css"
+        }
+      ]
+    },
+    "tabler/dist/css/tabler.min.css": {
+      "file_exists": true,
+      "file_size": 535841,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 535841,
+        "url": "http://127.0.0.1:8890/static/tabler/dist/css/tabler.min.css"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/tabler/dist/css/tabler.min.css"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/test_notifications.html",
+          "type": "static",
+          "original_path": "tabler/dist/css/tabler.min.css"
+        }
+      ]
+    },
+    "tabler/dist/js/tabler.min.js": {
+      "file_exists": true,
+      "file_size": 83542,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 83542,
+        "url": "http://127.0.0.1:8890/static/tabler/dist/js/tabler.min.js"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/tabler/dist/js/tabler.min.js"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/test_notifications.html",
+          "type": "static",
+          "original_path": "tabler/dist/js/tabler.min.js"
+        }
+      ]
+    },
+    "tabler/icons/tabler-icons.min.css": {
+      "file_exists": true,
+      "file_size": 240183,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 240183,
+        "url": "http://127.0.0.1:8890/static/tabler/icons/tabler-icons.min.css"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 240183,
+        "url": "https://lhgi.minipass.me/static/tabler/icons/tabler-icons.min.css"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "tabler/icons/tabler-icons.min.css"
+        },
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "tabler/icons/tabler-icons.min.css"
+        },
+        {
+          "template": "templates/signup_thank_you.html",
+          "type": "static",
+          "original_path": "tabler/icons/tabler-icons.min.css"
+        },
+        {
+          "template": "templates/login_standalone.html",
+          "type": "static",
+          "original_path": "tabler/icons/tabler-icons.min.css"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "tabler/icons/tabler-icons.min.css"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "tabler/icons/tabler-icons.min.css"
+        }
+      ]
+    },
+    "tabler/js/tabler.min.js": {
+      "file_exists": true,
+      "file_size": 83542,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 83542,
+        "url": "http://127.0.0.1:8890/static/tabler/js/tabler.min.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 83542,
+        "url": "https://lhgi.minipass.me/static/tabler/js/tabler.min.js"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "tabler/js/tabler.min.js"
+        },
+        {
+          "template": "templates/login_standalone.html",
+          "type": "static",
+          "original_path": "tabler/js/tabler.min.js"
+        }
+      ]
+    },
+    "thumb-down.png": {
+      "file_exists": true,
+      "file_size": 386,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 386,
+        "url": "http://127.0.0.1:8890/static/thumb-down.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/thumb-down.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/email_templates/latePayment/index.html",
+          "type": "img",
+          "original_path": "thumb-down.png"
+        }
+      ]
+    },
+    "ticket.png": {
+      "file_exists": true,
+      "file_size": 386,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 386,
+        "url": "http://127.0.0.1:8890/static/ticket.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/ticket.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/email_templates/newPass/index.html",
+          "type": "img",
+          "original_path": "ticket.png"
+        }
+      ]
+    },
+    "tinymce/tinymce.min.js": {
+      "file_exists": true,
+      "file_size": 456890,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 456890,
+        "url": "http://127.0.0.1:8890/static/tinymce/tinymce.min.js"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 456890,
+        "url": "https://lhgi.minipass.me/static/tinymce/tinymce.min.js"
+      },
+      "is_critical": true,
+      "used_in_templates": [
+        {
+          "template": "templates/base.html",
+          "type": "static",
+          "original_path": "tinymce/tinymce.min.js"
+        }
+      ]
+    },
+    "uploads/": {
+      "file_exists": true,
+      "file_size": 4096,
+      "local": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "http://127.0.0.1:8890/static/uploads/"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/uploads/"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "uploads/"
+        },
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "uploads/"
+        },
+        {
+          "template": "templates/signup_thank_you.html",
+          "type": "static",
+          "original_path": "uploads/"
+        },
+        {
+          "template": "templates/unified_settings.html",
+          "type": "static",
+          "original_path": "uploads/"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "uploads/"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "uploads/"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "uploads/"
+        },
+        {
+          "template": "templates/partials/settings_org.html",
+          "type": "static",
+          "original_path": "uploads/"
+        }
+      ]
+    },
+    "uploads/activity_images/": {
+      "file_exists": true,
+      "file_size": 4096,
+      "local": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "http://127.0.0.1:8890/static/uploads/activity_images/"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/uploads/activity_images/"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/signup_form_WORKING.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/signup_thank_you.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/dashboard.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/dashboard.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/signup_form.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/activities_old.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/activities_old.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/activity_dashboard.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/activities.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/activity_form.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        },
+        {
+          "template": "templates/signup_form_20250823_132215.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/"
+        }
+      ]
+    },
+    "uploads/activity_images/activity_28486c0e82.jpg": {
+      "file_exists": true,
+      "file_size": 836379,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 836379,
+        "url": "http://127.0.0.1:8890/static/uploads/activity_images/activity_28486c0e82.jpg"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 836379,
+        "url": "https://lhgi.minipass.me/static/uploads/activity_images/activity_28486c0e82.jpg"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/style_guide.html",
+          "type": "bg-img",
+          "original_path": "/static/uploads/activity_images/activity_28486c0e82.jpg"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "resource",
+          "original_path": "/static/uploads/activity_images/activity_28486c0e82.jpg"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/activity_28486c0e82.jpg"
+        }
+      ]
+    },
+    "uploads/activity_images/activity_3beae4fa86.jpg": {
+      "file_exists": true,
+      "file_size": 1194192,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 1194192,
+        "url": "http://127.0.0.1:8890/static/uploads/activity_images/activity_3beae4fa86.jpg"
+      },
+      "vps": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 1194192,
+        "url": "https://lhgi.minipass.me/static/uploads/activity_images/activity_3beae4fa86.jpg"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/style_guide.html",
+          "type": "bg-img",
+          "original_path": "/static/uploads/activity_images/activity_3beae4fa86.jpg"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "resource",
+          "original_path": "/static/uploads/activity_images/activity_3beae4fa86.jpg"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/activity_3beae4fa86.jpg"
+        }
+      ]
+    },
+    "uploads/activity_images/activity_name.jpg": {
+      "file_exists": true,
+      "file_size": 4445,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 4445,
+        "url": "http://127.0.0.1:8890/static/uploads/activity_images/activity_name.jpg"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/uploads/activity_images/activity_name.jpg"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/style_guide.html",
+          "type": "bg-img",
+          "original_path": "/static/uploads/activity_images/activity_name.jpg"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "resource",
+          "original_path": "/static/uploads/activity_images/activity_name.jpg"
+        },
+        {
+          "template": "templates/style_guide.html",
+          "type": "static",
+          "original_path": "uploads/activity_images/activity_name.jpg"
+        }
+      ]
+    },
+    "uploads/logo.png": {
+      "file_exists": true,
+      "file_size": 42583,
+      "local": {
+        "accessible": true,
+        "status_code": 200,
+        "size": 42583,
+        "url": "http://127.0.0.1:8890/static/uploads/logo.png"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/uploads/logo.png"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/pass.html",
+          "type": "static",
+          "original_path": "uploads/logo.png"
+        },
+        {
+          "template": "templates/pass.html",
+          "type": "static",
+          "original_path": "uploads/logo.png"
+        }
+      ]
+    },
+    "uploads/receipts/": {
+      "file_exists": true,
+      "file_size": 4096,
+      "local": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "http://127.0.0.1:8890/static/uploads/receipts/"
+      },
+      "vps": {
+        "accessible": false,
+        "status_code": 404,
+        "size": 207,
+        "url": "https://lhgi.minipass.me/static/uploads/receipts/"
+      },
+      "is_critical": false,
+      "used_in_templates": [
+        {
+          "template": "templates/activity_income.html",
+          "type": "static",
+          "original_path": "uploads/receipts/"
+        },
+        {
+          "template": "templates/activity_expenses.html",
+          "type": "static",
+          "original_path": "uploads/receipts/"
+        },
+        {
+          "template": "templates/activity_form.html",
+          "type": "static",
+          "original_path": "uploads/receipts/"
+        },
+        {
+          "template": "templates/activity_form.html",
+          "type": "static",
+          "original_path": "uploads/receipts/"
+        }
+      ]
+    }
+  }
+}
