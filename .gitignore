@@ -6,7 +6,7 @@ __pycache__/
 venv/
 
 # logos 
-uploads/
+#uploads/
 
 # Environment files
 .env
@@ -20,4 +20,4 @@ uploads/
 
 
 # SQLite database
-instance/prod_database.db
+#instance/prod_database.db
