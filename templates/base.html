@@ -838,16 +838,6 @@
   <!-- Notification Container -->
   <div id="notification-container"></div>
   
-  <script src="{{ url_for('static', filename='js/event-notifications.js') }}?v=1.0"></script>
-  <script>
-    // Initialize Event Notification Manager for admin users
-    document.addEventListener('DOMContentLoaded', function() {
-      if (window.EventNotificationManager) {
-        window.notificationManager = new EventNotificationManager();
-        console.log('Event Notification Manager initialized');
-      }
-    });
-  </script>
   {% endif %}
   
   {% block scripts %}{% endblock %}

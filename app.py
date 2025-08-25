@@ -779,7 +779,7 @@ def list_signups():
     # Apply text search filter
     if q:
         # Escape special characters for LIKE queries to prevent issues
-        escaped_q = q.replace('%', '\%').replace('_', '\_')
+        escaped_q = q.replace('%', '\\%').replace('_', '\\_')
         search_filter = db.or_(
             User.name.ilike(f'%{escaped_q}%', escape='\\'),
             User.email.ilike(f'%{escaped_q}%', escape='\\'),
@@ -1035,7 +1035,7 @@ def export_signups():
     # Apply filters (same logic as list_signups)
     if q:
         # Escape special characters for LIKE queries to prevent issues
-        escaped_q = q.replace('%', '\%').replace('_', '\_')
+        escaped_q = q.replace('%', '\\%').replace('_', '\\_')
         search_filter = db.or_(
             User.name.ilike(f'%{escaped_q}%', escape='\\'),
             User.email.ilike(f'%{escaped_q}%', escape='\\'),
@@ -1820,6 +1820,35 @@ def api_payment_bot_check_emails():
             return jsonify({
                 "error": f"Failed to check emails: {error_msg}"
             }), 500
+
+
+# SSE Event Stream Endpoint (Performance Fix)
+@app.route('/api/event-stream')
+def event_stream():
+    """
+    Server-Sent Events endpoint for real-time notifications
+    Quick fix version - returns empty stream to prevent connection failures
+    """
+    import time
+    
+    def generate():
+        # Send a heartbeat every 30 seconds to keep connection alive
+        while True:
+            timestamp = str(time.time())
+            data = "data: {'type': 'heartbeat', 'timestamp': '" + timestamp + "'}\n\n"
+            yield data
+            time.sleep(30)
+    
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Cache-Control'
+        }
+    )
 
 
 @app.route("/api/payment-notification-html/<notification_id>", methods=["POST"])
