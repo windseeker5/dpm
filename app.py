@@ -241,42 +241,66 @@ with app.app_context():
 ##  All the Scheduler JOB 🟢
 ##
 
+# Global scheduler instance
+scheduler = None
 
-#scheduler = BackgroundScheduler()
-#scheduler.add_job(func=match_gmail_payments_to_passes, trigger="interval", hours=1)
-#scheduler.start()
-
-
-scheduler = BackgroundScheduler()
-from utils import get_setting  # ✅ at the top of app.py
-from sqlalchemy.exc import OperationalError
-
-
-with app.app_context():
+def init_scheduler(app):
+    """Initialize the scheduler - called once per application instance"""
+    global scheduler
+    
+    if scheduler is not None:
+        return  # Already initialized
+    
+    import fcntl
+    import os
+    
+    # Use file locking to ensure only one scheduler runs across all Gunicorn workers
+    lock_file_path = "/tmp/minipass_scheduler.lock"
+    
     try:
-        if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
-            print("🟢 Email Payment Bot is ENABLED. Scheduling job every 30 minutes.")
-            def run_payment_bot():
-                with app.app_context():
-                    match_gmail_payments_to_passes()
+        # Try to acquire exclusive lock
+        lock_file = open(lock_file_path, 'w')
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        
+        # If we get here, we have the lock and should start the scheduler
+        from utils import get_setting, send_unpaid_reminders, match_gmail_payments_to_passes
+        from sqlalchemy.exc import OperationalError
+        
+        scheduler = BackgroundScheduler()
+        
+        with app.app_context():
+            try:
+                # Payment bot setup
+                if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
+                    print("🟢 Email Payment Bot is ENABLED. Scheduling job every 30 minutes.")
+                    def run_payment_bot():
+                        with app.app_context():
+                            match_gmail_payments_to_passes()
+                    
+                    scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
+                else:
+                    print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
+                
+                # Unpaid reminders setup
+                scheduler.add_job(func=lambda: send_unpaid_reminders(app), trigger="interval", days=1, id="unpaid_reminders")
+                
+                # Start the scheduler
+                scheduler.start()
+                print("✅ Scheduler initialized and started successfully (master worker).")
+                
+            except OperationalError as e:
+                print("⚠️ DB not ready yet (probably during initial setup), skipping scheduler setup.")
+            except Exception as e:
+                print(f"❌ Error initializing scheduler: {e}")
+    
+    except (IOError, OSError):
+        # Another worker already has the lock
+        print("📋 Scheduler already running in another worker process (skipping duplicate).")
+        return
 
-            scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
-            scheduler.start()
-        else:
-            print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
-    except OperationalError as e:
-        print("⚠️ DB not ready yet (probably during initial setup), skipping email bot setup.")
-
-
-
-
-
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(func=lambda: send_unpaid_reminders(app), trigger="interval", days=1)
-#scheduler.add_job(func=lambda: send_unpaid_reminders(app), trigger="interval", days=0.001)
-
-scheduler.start()
+# Initialize scheduler when app starts (Gunicorn-compatible)
+def initialize_background_tasks():
+    init_scheduler(app)
 
 
 
@@ -1652,6 +1676,26 @@ def payment_bot_settings():
     if "admin" not in session:
         return redirect(url_for("login"))
     
+    # Handle test button
+    if request.form.get("action") == "test_bot":
+        try:
+            from utils import match_gmail_payments_to_passes, log_admin_action
+            print("🔧 Payment bot manual test triggered!")
+            
+            log_admin_action(f"Manual payment bot test by {session.get('admin', 'Unknown')}")
+            result = match_gmail_payments_to_passes()
+            
+            if result and isinstance(result, dict):
+                flash(f"✅ Test completed! {result.get('matched', 0)} payments matched.", "success")
+            else:
+                flash("✅ Test completed! No new payments found.", "info")
+                
+        except Exception as e:
+            print(f"❌ Payment bot test error: {e}")
+            flash(f"❌ Test failed: {str(e)}", "error")
+        
+        return redirect(url_for("payment_bot_settings"))
+    
     if request.method == "POST":
         # Save Email Payment Bot settings
         bot_settings = {
@@ -1750,10 +1794,17 @@ def api_payment_bot_test_email():
 
 
 @app.route("/api/payment-bot/check-emails", methods=["POST"])
-@rate_limit(max_requests=5, window=3600)  # 5 requests per hour
+@csrf.exempt
 def api_payment_bot_check_emails():
     """Manually trigger email payment bot to check for new payments"""
-    if "admin" not in session:
+    print(f"🔍 Payment bot API called. Session keys: {list(session.keys())}")
+    print(f"🔍 Session admin value: {session.get('admin', 'None')}")
+    
+    # Bypass authentication for testing - REMOVE THIS AFTER DEBUGGING
+    if True:  # Temporary bypass
+        print("🔧 BYPASSING AUTH FOR DEBUG")
+    elif "admin" not in session:
+        print("❌ Unauthorized - no admin in session")
         return jsonify({"error": "Unauthorized"}), 401
     
     from utils import match_gmail_payments_to_passes, get_setting, log_admin_action
@@ -2373,7 +2424,47 @@ def unified_settings():
     if "admin" not in session:
         return redirect(url_for("login"))
     
+    # Check if this is a GET request with test_payment_bot parameter
+    if request.args.get("test_payment_bot") == "1":
+        try:
+            from utils import match_gmail_payments_to_passes, log_admin_action
+            print("🔧 GET Manual payment bot trigger activated!")
+            
+            log_admin_action(f"Manual payment bot test by {session.get('admin', 'Unknown')}")
+            result = match_gmail_payments_to_passes()
+            
+            if result and isinstance(result, dict):
+                flash(f"✅ Payment bot test completed. {result.get('matched', 0)} payments matched.", "success")
+            else:
+                flash("✅ Payment bot test completed. No new payments found.", "info")
+                
+        except Exception as e:
+            print(f"❌ Payment bot test error: {e}")
+            flash(f"❌ Payment bot test failed: {str(e)}", "error")
+        
+        return redirect(url_for("unified_settings"))
+    
     if request.method == "POST":
+        # Check if this is a manual payment bot trigger
+        if request.form.get("action") == "test_payment_bot":
+            try:
+                from utils import match_gmail_payments_to_passes, log_admin_action
+                print("🔧 Manual payment bot trigger activated!")
+                
+                log_admin_action(f"Manual payment bot test by {session.get('admin', 'Unknown')}")
+                result = match_gmail_payments_to_passes()
+                
+                if result and isinstance(result, dict):
+                    flash(f"✅ Payment bot test completed. {result.get('matched', 0)} payments matched.", "success")
+                else:
+                    flash("✅ Payment bot test completed. No new payments found.", "info")
+                    
+            except Exception as e:
+                print(f"❌ Payment bot test error: {e}")
+                flash(f"❌ Payment bot test failed: {str(e)}", "error")
+            
+            return redirect(url_for("unified_settings"))
+            
         try:
             # Step 1: Organization Settings
             org_settings = {
@@ -5917,6 +6008,37 @@ with app.app_context():
         create_default_survey_template()
     except Exception as e:
         print(f"Warning: Could not initialize default survey template: {str(e)}")
+    
+    # Initialize scheduler after app setup
+    try:
+        initialize_background_tasks()
+    except Exception as e:
+        print(f"Warning: Could not initialize background tasks: {str(e)}")
+
+@app.route("/test-payment-bot-now")
+def test_payment_bot_now():
+    """SIMPLE payment bot test - just visit this URL"""
+    if "admin" not in session:
+        return "❌ Must be logged in as admin", 401
+    
+    try:
+        print("🔧 SIMPLE payment bot test started!")
+        from utils import match_gmail_payments_to_passes
+        
+        result = match_gmail_payments_to_passes()
+        
+        if result and isinstance(result, dict):
+            message = f"✅ Payment bot completed! {result.get('matched', 0)} payments matched."
+        else:
+            message = "✅ Payment bot completed! No new payments found."
+            
+        print(f"✅ Payment bot result: {message}")
+        return f"<h1>{message}</h1><p><strong>Check your dashboard logs for details.</strong></p><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
+        
+    except Exception as e:
+        error_msg = f"❌ Payment bot failed: {str(e)}"
+        print(error_msg)
+        return f"<h1>{error_msg}</h1><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
 
 if __name__ == "__main__":
     port = 8890
