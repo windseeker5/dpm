@@ -145,7 +145,9 @@
                         <li>Verifying payment amount matches passport price</li>
                         <li>Automatically processing matched payments</li>
                         <li>Moving processed emails to designated folder</li>
-                        <li>Bot validates payment emails every 30 minutes (<a href="#" id="test-payment-bot" class="text-primary">force bot to run / test mode</a>)</li>
+                        <li>Bot validates payment emails every 30 minutes 
+                            <a href="/admin/unified-settings?test_payment_bot=1" class="btn btn-sm btn-primary" style="margin-left: 10px;">Test Now</a>
+                        </li>
                       </ul>
                     </div>
                   </div>
@@ -204,7 +206,7 @@
 
 {% block scripts %}
 <!-- Unified Settings JavaScript -->
-<script src="{{ url_for('static', filename='js/unified-settings.js') }}?v=2.1"></script>
+<script src="{{ url_for('static', filename='js/unified-settings.js') }}?v=2.2"></script>
 <script>
 // Add chevron rotation for Advanced Server Settings
 document.addEventListener('DOMContentLoaded', function() {
@@ -222,6 +224,10 @@ document.addEventListener('DOMContentLoaded', function() {
             chevronIcon.style.transition = 'transform 0.3s ease';
         });
     }
+    
+    // Initialize payment bot test functionality
+    console.log('Initializing payment bot test...');
+    initializePaymentBotTest();
 });
 </script>
 {% endblock %}

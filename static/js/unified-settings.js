@@ -140,28 +140,29 @@ function initializeFormSubmission() {
  * Payment Bot Test Functionality
  */
 function initializePaymentBotTest() {
+    console.log('Looking for test-payment-bot element...');
     const testLink = document.getElementById('test-payment-bot');
     
     if (testLink) {
+        console.log('Found test-payment-bot element, adding click listener');
         testLink.addEventListener('click', function(e) {
             e.preventDefault();
+            console.log('Payment bot test button clicked!');
             
             // Show loading state
             const originalText = testLink.textContent;
             testLink.textContent = 'Testing...';
             testLink.style.pointerEvents = 'none';
             
-            // Get CSRF token
-            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-            
-            // Make API call to trigger email check
+            // Make API call to trigger email check (CSRF exempt endpoint)
             fetch('/api/payment-bot/check-emails', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json'
                 },
-                body: 'csrf_token=' + encodeURIComponent(csrfToken)
+                credentials: 'same-origin', // Include session cookies for authentication
+                body: JSON.stringify({})
             })
             .then(response => response.json())
             .then(data => {
@@ -184,6 +185,8 @@ function initializePaymentBotTest() {
                 showToast('error', 'An error occurred while checking emails');
             });
         });
+    } else {
+        console.error('test-payment-bot element not found!');
     }
 }
 

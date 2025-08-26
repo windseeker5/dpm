@@ -692,6 +692,10 @@ def match_gmail_payments_to_passes():
         mail.select("inbox")
 
         matches = extract_interac_transfers(user, pwd, mail)
+        
+        print(f"🔍 DEBUG: Found {len(matches)} email matches")
+        for i, match in enumerate(matches):
+            print(f"🔍 Email {i+1}: {match.get('subject', 'No subject')[:50]}...")
 
         for match in matches:
             name = match["bank_info_name"]
@@ -699,20 +703,36 @@ def match_gmail_payments_to_passes():
             from_email = match.get("from_email")
             uid = match.get("uid")
             subject = match["subject"]
+            
+            print(f"🔍 Processing payment: Name='{name}', Amount=${amt}, From={from_email}")
 
             best_score = 0
             best_passport = None
             unpaid_passports = Passport.query.filter_by(paid=False).all()
+            
+            print(f"🔍 Found {len(unpaid_passports)} unpaid passports to match against")
 
             for p in unpaid_passports:
                 if not p.user:
                     continue  # Safety check
                 score = fuzz.partial_ratio(name.lower(), p.user.name.lower())
+                print(f"🔍 Checking passport: User='{p.user.name}', Amount=${p.sold_amt}, Score={score} (threshold={threshold})")
                 if score >= threshold and abs(p.sold_amt - amt) < 1:
+                    print(f"✅ MATCH FOUND! Score={score}, Amount match: ${p.sold_amt} ≈ ${amt}")
                     if score > best_score:
                         best_score = score
                         best_passport = p
+                else:
+                    if score < threshold:
+                        print(f"❌ Score too low: {score} < {threshold}")
+                    if abs(p.sold_amt - amt) >= 1:
+                        print(f"❌ Amount mismatch: ${p.sold_amt} vs ${amt} (diff: ${abs(p.sold_amt - amt)})")
 
+            if best_passport:
+                print(f"🎯 PROCESSING MATCH: {best_passport.user.name} - ${best_passport.sold_amt}")
+            else:
+                print(f"❌ NO MATCH FOUND for payment: Name='{name}', Amount=${amt}")
+                
             if best_passport:
                 now_utc = datetime.now(timezone.utc)
                 best_passport.paid = True
