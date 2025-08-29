@@ -14,7 +14,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
 
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
@@ -34,19 +34,21 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    .signup-title {
-      font-family: 'Anton', sans-serif;
-      font-size: 2rem;
-      color: #646464;
+    .page-title {
+      font-family: 'Roboto Slab', serif;
       font-weight: 700;
-      margin-bottom: 0rem;
+      color: #0f172a;
+      font-size: 2.25rem;
       line-height: 1.2;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      justify-content: center !important;
     }
 
     .signup-wrapper {
       min-height: 100vh;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
       padding-top: 2rem;
       padding-bottom: 2rem;
@@ -57,12 +59,13 @@
     
     .signup-card {
       background: #fff;
-      border-radius: 16px;
+      border-radius: 12px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
       display: flex;
       width: 100%;
       max-width: 1400px;
       max-height: calc(100vh - 4rem);
+      overflow: hidden;
     }
     
     .signup-form {
@@ -79,6 +82,7 @@
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      border-radius: 0 12px 12px 0;
     }
 
     /* Mobile-first responsive design */
@@ -108,7 +112,7 @@
         display: none; /* Hide large image on mobile */
       }
       
-      .signup-title {
+      .page-title {
         font-size: 1.75rem;
         text-align: center;
         margin-bottom: 0.5rem;
@@ -235,7 +239,7 @@
       {% if settings and settings["LOGO_FILENAME"] %}
       <div class="text-center mb-4">
         <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo" 
-             style="height: 80px; display: block; margin: 0 auto;">
+             style="height: 120px; display: block; margin: 0 auto;">
       </div>
       {% endif %}
       
@@ -252,7 +256,7 @@
       
       <!-- Title -->
       <div class="text-center mb-4">
-        <h1 class="signup-title mb-1">{{ activity.name }}</h1>
+        <h1 class="page-title mb-1">{{ activity.name }}</h1>
         {% if selected_passport_type %}
           <div class="text-muted mb-1" style="font-size: 1.1rem; font-weight: 500;">
             {{ selected_passport_type.name }}
@@ -261,40 +265,47 @@
       </div>
 
       <!-- Price and Sessions (Dynamic based on passport type) -->
-      <div class="text-muted d-flex align-items-center justify-content-center gap-3 mb-4 p-3 bg-blue-lt rounded-3" style="font-size: 1.1rem;" id="pricing-info">
-        <div class="d-flex align-items-center gap-1">
-          <i class="ti ti-currency-dollar" style="font-size: 1.2rem;"></i> 
-          <strong id="price-display">
-            {% if selected_passport_type %}
-              ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
-            {% elif passport_types|length == 1 %}
-              ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
-            {% else %}
-              ${{ "%.2f"|format(activity.price_per_user or 0) }}
-            {% endif %}
-          </strong>
+      <div class="text-muted text-center mb-4 p-3 bg-blue-lt rounded-3" style="font-size: 1.1rem;" id="pricing-info">
+        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+          <div class="d-flex align-items-center gap-1">
+            <i class="ti ti-currency-dollar" style="font-size: 1.2rem;"></i> 
+            <strong id="price-display">
+              {% if selected_passport_type %}
+                ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
+              {% elif passport_types|length == 1 %}
+                ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
+              {% else %}
+                ${{ "%.2f"|format(activity.price_per_user or 0) }}
+              {% endif %}
+            </strong>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <i class="ti ti-ticket" style="font-size: 1.2rem;"></i> 
+            <strong id="sessions-display">
+              {% if selected_passport_type %}
+                {{ selected_passport_type.sessions_included }}
+              {% elif passport_types|length == 1 %}
+                {{ passport_types[0].sessions_included }}
+              {% else %}
+                {{ activity.sessions_included }}
+              {% endif %}
+            </strong> 
+            <span id="sessions-text">
+              {% if selected_passport_type %}
+                {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
+              {% elif passport_types|length == 1 %}
+                {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
+              {% else %}
+                {{ "session" if activity.sessions_included == 1 else "sessions" }}
+              {% endif %}
+            </span>
+          </div>
         </div>
-        <div class="d-flex align-items-center gap-1">
-          <i class="ti ti-ticket" style="font-size: 1.2rem;"></i> 
-          <strong id="sessions-display">
-            {% if selected_passport_type %}
-              {{ selected_passport_type.sessions_included }}
-            {% elif passport_types|length == 1 %}
-              {{ passport_types[0].sessions_included }}
-            {% else %}
-              {{ activity.sessions_included }}
-            {% endif %}
-          </strong> 
-          <span id="sessions-text">
-            {% if selected_passport_type %}
-              {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
-            {% elif passport_types|length == 1 %}
-              {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
-            {% else %}
-              {{ "session" if activity.sessions_included == 1 else "sessions" }}
-            {% endif %}
-          </span>
+        {% if selected_passport_type and selected_passport_type.payment_instructions %}
+        <div class="text-center">
+          <small class="text-muted">{{ selected_passport_type.payment_instructions }}</small>
         </div>
+        {% endif %}
       </div>
       
 
@@ -365,20 +376,6 @@
         </div>
         {% endif %}
         
-        <!-- Display selected passport type info -->
-        {% if selected_passport_type %}
-        <div class="mb-3">
-          <div class="alert alert-info d-flex align-items-center">
-            <i class="ti ti-info-circle me-2"></i>
-            <div>
-              <strong>Registration Type:</strong> {{ selected_passport_type.name }}<br>
-              {% if selected_passport_type.payment_instructions %}
-                <small class="text-muted">{{ selected_passport_type.payment_instructions }}</small>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% endif %}
 
         <!-- Name -->
         <div class="mb-4">
@@ -386,7 +383,7 @@
             <i class="ti ti-user"></i>
             Nom complet
           </label>
-          <input type="text" name="name" class="form-control form-control-lg" required placeholder="Enter your full name" autocomplete="name">
+          <input type="text" name="name" class="form-control form-control-lg" required placeholder="Nom complet" autocomplete="name">
         </div>
 
         <!-- Email -->
@@ -395,7 +392,7 @@
             <i class="ti ti-mail"></i>
             Adresse courriel
           </label>
-          <input type="email" name="email" class="form-control form-control-lg" required placeholder="your.email@example.com" autocomplete="email">
+          <input type="email" name="email" class="form-control form-control-lg" required placeholder="courriel@example.com" autocomplete="email">
         </div>
 
         <!-- Phone -->
@@ -404,23 +401,26 @@
             <i class="ti ti-phone"></i>
             Numéro de téléphone
           </label>
-          <input type="tel" name="phone" class="form-control form-control-lg" placeholder="+1 (514) 123-4567" autocomplete="tel">
+          <input type="tel" name="phone" class="form-control form-control-lg" placeholder="+1(514)123-4567" autocomplete="tel">
         </div>
 
         <!-- Notes -->
         <div class="mb-4">
-          <label class="form-label d-flex align-items-center gap-2">
+          <div class="form-label d-flex align-items-center gap-2" style="cursor: pointer;" onclick="toggleNotes()">
             <i class="ti ti-notes"></i>
             Notes supplémentaires
-          </label>
-          <textarea name="notes" class="form-control form-control-lg" rows="3" placeholder="Toute exigence spéciale, préférences de position ou autres notes..."></textarea>
+            <i class="ti ti-plus" id="notes-toggle-icon" style="margin-left: auto;"></i>
+          </div>
+          <div id="notes-section" style="display: none; margin-top: 0.5rem;">
+            <textarea name="notes" class="form-control form-control-lg" rows="3" placeholder="Toute exigence spéciale, préférences de position ou autres notes..."></textarea>
+          </div>
         </div>
 
         <!-- Terms -->
         <div class="mb-4">
-          <div class="form-check d-flex align-items-start gap-3">
-            <input class="form-check-input mt-1" type="checkbox" name="accept_terms" required id="accept-terms">
-            <label class="form-check-label" for="accept-terms">
+          <div class="form-check d-flex align-items-center gap-3">
+            <input class="form-check-input" type="checkbox" name="accept_terms" required id="accept-terms">
+            <label class="form-check-label d-flex align-items-center" for="accept-terms">
               <i class="ti ti-shield-check me-1 text-success"></i>
               J'accepte les termes et conditions
             </label>
@@ -430,19 +430,10 @@
         <!-- Submit -->
         <div class="d-grid mb-4">
           <button type="submit" class="btn btn-success btn-lg shadow rounded-3">
-            <i class="ti ti-send me-2"></i> Soumettre l'inscription
+            <i class="ti ti-send me-2"></i> Je m'inscris
           </button>
         </div>
 
-        <!-- Info message -->
-        <div class="alert alert-blue-lt border-0 rounded-3">
-          <div class="d-flex align-items-start gap-2">
-            <i class="ti ti-info-circle mt-1 flex-shrink-0"></i>
-            <div class="small">
-              <strong>Prochaines étapes :</strong> Une fois soumis, vous recevrez un courriel de confirmation avec les instructions de paiement. Votre pass d'activité sera généré après réception du paiement.
-            </div>
-          </div>
-        </div>
       </form>
 
     </div>
@@ -554,9 +545,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 */
 
-// Keeping minimal JavaScript for any future form validation needs
+// Notes toggle function
+function toggleNotes() {
+  const section = document.getElementById('notes-section');
+  const icon = document.getElementById('notes-toggle-icon');
+  if (section.style.display === 'none') {
+    section.style.display = 'block';
+    icon.className = 'ti ti-minus';
+  } else {
+    section.style.display = 'none';
+    icon.className = 'ti ti-plus';
+  }
+}
+
+// Form ready - validation handled by HTML5 attributes
 document.addEventListener('DOMContentLoaded', function() {
-  // Form is ready - all validation handled by HTML5 attributes
   // CSRF token and hidden fields are preserved
 });
 </script>
