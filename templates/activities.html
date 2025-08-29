@@ -224,8 +224,8 @@
                   </a>
                   {% endif %}
                   <div class="dropdown-divider"></div>
-                  <a class="dropdown-item text-danger" href="{{ url_for('delete_activity', activity_id=activity.id) }}" 
-                     onclick="return confirm('Delete this activity? This action cannot be undone.')">
+                  <a class="dropdown-item text-danger" href="#" 
+                     onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
                     <i class="ti ti-trash me-2"></i>Delete
                   </a>
                 </div>
@@ -313,6 +313,75 @@
     </div>
     {% endif %}
 
+    </div>
+  </div>
+</div>
+
+<!-- Activity Delete Confirmation Modal -->
+<div class="modal modal-blur fade" id="activityDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M4 7h16"/>
+          <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+          <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+          <path d="M10 12l0 6"/>
+          <path d="M14 12l0 6"/>
+        </svg>
+        <h3>Are you sure?</h3>
+        <div class="text-secondary">Delete activity <strong id="deleteActivityName"></strong>? This action cannot be undone.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+            </div>
+            <div class="col">
+              <form method="POST" id="activityDeleteForm" class="d-inline w-100" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="activity_id" id="deleteActivityId">
+                <button type="submit" class="btn btn-danger w-100">Delete</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cannot Delete Activity Modal -->
+<div class="modal modal-blur fade" id="cannotDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-warning icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M12 9v4"/>
+          <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/>
+          <path d="M12 16h.01"/>
+        </svg>
+        <h3>Cannot Delete Activity</h3>
+        <div class="text-secondary">Activity <strong id="cannotDeleteActivityName"></strong> cannot be deleted because it has active passports:</div>
+        <div class="mt-3">
+          <ul id="activePassportsList" class="list-unstyled text-start" style="max-height: 150px; overflow-y: auto;">
+            <!-- Passport list will be populated by JavaScript -->
+          </ul>
+        </div>
+        <div class="text-secondary">Please wait for all passports to be used or expired before deleting this activity.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <button class="btn btn-primary w-100" data-bs-dismiss="modal">Understood</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -500,6 +569,38 @@ document.addEventListener('DOMContentLoaded', function() {
     updateBulkActions();
     
 });
+
+// Activity delete functionality
+function checkAndDeleteActivity(activityId, activityName) {
+    fetch(`/check-activity-passports/${activityId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.has_active_passports) {
+                // Show "cannot delete" modal
+                document.getElementById('cannotDeleteActivityName').textContent = activityName;
+                const passportList = document.getElementById('activePassportsList');
+                passportList.innerHTML = '';
+                data.active_passports.forEach(passport => {
+                    const li = document.createElement('li');
+                    li.textContent = `${passport.email} (${passport.uses_remaining} uses remaining)`;
+                    passportList.appendChild(li);
+                });
+                const modal = new bootstrap.Modal(document.getElementById('cannotDeleteModal'));
+                modal.show();
+            } else {
+                // Show delete confirmation modal
+                document.getElementById('deleteActivityName').textContent = activityName;
+                document.getElementById('deleteActivityId').value = activityId;
+                document.getElementById('activityDeleteForm').action = `/delete-activity/${activityId}`;
+                const modal = new bootstrap.Modal(document.getElementById('activityDeleteModal'));
+                modal.show();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking activity passports:', error);
+            alert('Error checking activity. Please try again.');
+        });
+}
 </script>
 {% endblock %}
 {% block styles %}
@@ -1312,6 +1413,14 @@ div.bulk-actions-container .card.bulk-actions-card .card-body,
   .btn-group .btn i {
     font-size: 12px;
   }
+}
+
+/* Fix modal z-index to appear above KPI dropdowns */
+.modal-backdrop {
+  z-index: 10000 !important;
+}
+.modal {
+  z-index: 10001 !important;
 }
 </style>
 {% endblock %}
