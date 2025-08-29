@@ -50,6 +50,7 @@
       <div class="card bulk-actions-card" id="bulkActions" style="display: none; background-color: #f0fdf4 !important; background: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; border-radius: 8px !important;">
         <div class="card-body p-3">
           <form method="POST" action="{{ url_for('bulk_signup_action') }}" id="bulkForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="d-flex justify-content-between align-items-center">
               <div class="bulk-actions-count">
                 <i class="ti ti-checkbox me-2"></i>
@@ -78,8 +79,8 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                      <button type="submit" name="action" value="delete" class="dropdown-item text-danger" 
-                              onclick="return confirm('Delete ' + document.querySelectorAll('.signup-checkbox:checked').length + ' selected signups?')">
+                      <button type="button" name="action" value="delete" class="dropdown-item text-danger" 
+                              onclick="showBulkDeleteModal('signups', document.querySelectorAll('.signup-checkbox:checked').length)">
                         <i class="ti ti-trash me-2"></i>Delete Selected
                       </button>
                     </li>
@@ -238,16 +239,14 @@
                   </a>
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#" 
-                     onclick="if(confirm('Delete this signup?')) { 
-                       var form = document.getElementById('deleteForm{{ signup.id }}'); 
-                       if(form) form.submit(); 
-                     }">
+                     onclick="confirmSignupDelete({{ signup.id }}, '{{ signup.user.email or signup.user.name or 'Unknown user' }}'); return false;">
                     <i class="ti ti-trash me-2"></i>Delete
                   </a>
                 </div>
               </div>
               <!-- Hidden delete form -->
               <form id="deleteForm{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="selected_signups" value="{{ signup.id }}">
               </form>
@@ -334,6 +333,80 @@
     </div>
     {% endif %}
 
+    </div>
+  </div>
+</div>
+
+<!-- Delete Signup Confirmation Modal -->
+<div class="modal modal-blur fade" id="signupDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M4 7h16"/>
+          <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+          <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+          <path d="M10 12l0 6"/>
+          <path d="M14 12l0 6"/>
+        </svg>
+        <h3>Are you sure?</h3>
+        <div class="text-secondary">Delete signup for <strong id="deleteSignupUser"></strong>?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+            </div>
+            <div class="col">
+              <form method="POST" id="signupDeleteForm" class="d-inline w-100">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="selected_signups" id="deleteSignupId">
+                <button type="submit" class="btn btn-danger w-100">Delete</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal modal-blur fade" id="bulkDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M4 7h16"/>
+          <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+          <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+          <path d="M10 12l0 6"/>
+          <path d="M14 12l0 6"/>
+        </svg>
+        <h3>Are you sure?</h3>
+        <div class="text-secondary">Delete <strong id="bulkDeleteCount"></strong> selected <span id="bulkDeleteType"></span>?</div>
+        <div class="text-muted small mt-2">This action cannot be undone.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+            </div>
+            <div class="col">
+              <button type="button" id="confirmBulkDelete" class="btn btn-danger w-100">Delete All</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -518,6 +591,37 @@ document.addEventListener('DOMContentLoaded', function() {
     updateBulkActions();
     
 });
+
+// Signup delete confirmation
+function confirmSignupDelete(signupId, signupUser) {
+  document.getElementById('deleteSignupUser').textContent = signupUser;
+  document.getElementById('deleteSignupId').value = signupId;
+  document.getElementById('signupDeleteForm').action = "{{ url_for('bulk_signup_action') }}";
+  const modal = new bootstrap.Modal(document.getElementById('signupDeleteModal'));
+  modal.show();
+}
+
+// Bulk delete confirmation
+function showBulkDeleteModal(type, count) {
+  document.getElementById('bulkDeleteCount').textContent = count;
+  document.getElementById('bulkDeleteType').textContent = type;
+  const modal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+  modal.show();
+  
+  // Set up the confirm button to submit the bulk form
+  document.getElementById('confirmBulkDelete').onclick = function() {
+    // Create a temporary input for the delete action
+    const form = document.getElementById('bulkForm');
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'delete';
+    form.appendChild(actionInput);
+    
+    // Submit the form
+    form.submit();
+  };
+}
 </script>
 {% endblock %}
 {% block styles %}
