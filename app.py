@@ -2835,6 +2835,19 @@ def edit_passport(passport_id):
         passport.uses_remaining = int(request.form.get("uses_remaining", passport.uses_remaining))
         passport.paid = "paid_ind" in request.form
         passport.notes = request.form.get("notes", passport.notes).strip()
+        
+        # Handle passport type update
+        passport_type_id = request.form.get("passport_type_id")
+        if passport_type_id and passport_type_id != "":
+            passport.passport_type_id = int(passport_type_id)
+            # Update passport type name
+            from models import PassportType
+            passport_type = PassportType.query.get(passport.passport_type_id)
+            if passport_type:
+                passport.passport_type_name = passport_type.name
+        else:
+            passport.passport_type_id = None
+            passport.passport_type_name = None
 
         db.session.commit()
         flash("Passport updated successfully.", "success")
@@ -2842,11 +2855,17 @@ def edit_passport(passport_id):
 
     # 🟢 FIX: fetch activities and pass to template
     activity_list = Activity.query.order_by(Activity.name).all()
+    
+    # Load passport types for the passport's activity
+    from models import PassportType
+    passport_types = PassportType.query.filter_by(activity_id=passport.activity_id, status='active').all()
 
     return render_template(
         "passport_form.html",
         passport=passport,
-        activity_list=activity_list  # 🛠️ Add this
+        activity_list=activity_list,
+        passport_types=passport_types,
+        selected_activity_id=passport.activity_id
     )
 
 
@@ -3848,6 +3867,10 @@ def activity_dashboard(activity_id):
         print(f"Warning: Survey template tables not found: {e}")
         survey_templates = []
 
+    # Load passport types for this activity
+    from models import PassportType
+    passport_types = PassportType.query.filter_by(activity_id=activity_id, status='active').all()
+
     return render_template(
         "activity_dashboard.html",
         activity=activity,
@@ -3857,6 +3880,7 @@ def activity_dashboard(activity_id):
         all_passports=all_passports,  # For filter counts
         surveys=surveys,
         survey_templates=survey_templates,
+        passport_types=passport_types,
         kpi_data=kpi_data,
         dashboard_stats=dashboard_stats,
         activity_logs=activity_logs,
@@ -4603,6 +4627,8 @@ def create_passport():
         sessions_qt = int(request.form.get("sessionsQt") or request.form.get("uses_remaining") or 4)
         paid = "paid_ind" in request.form
         activity_id = int(request.form.get("activity_id", 0))
+        passport_type_id = request.form.get("passport_type_id")
+        passport_type_id = int(passport_type_id) if passport_type_id and passport_type_id != "" else None
         notes = request.form.get("notes", "").strip()
 
         # ✅ Always create a new user (even if same email is reused)
@@ -4610,11 +4636,21 @@ def create_passport():
         db.session.add(user)
         db.session.flush()  # Assign user.id
 
+        # ✅ Get passport type name if passport_type_id is provided
+        passport_type_name = None
+        if passport_type_id:
+            from models import PassportType
+            passport_type = PassportType.query.get(passport_type_id)
+            if passport_type:
+                passport_type_name = passport_type.name
+
         # ✅ Create Passport object
         passport = Passport(
             pass_code=generate_pass_code(),
             user_id=user.id,
             activity_id=activity_id,
+            passport_type_id=passport_type_id,
+            passport_type_name=passport_type_name,
             sold_amt=sold_amt,
             uses_remaining=sessions_qt,
             created_by=current_admin.id if current_admin else None,
@@ -4661,6 +4697,13 @@ def create_passport():
     
     # Get activity_id from URL parameters if provided
     selected_activity_id = request.args.get('activity_id', type=int)
+    
+    # Load passport types for the selected activity or all activities
+    from models import PassportType
+    if selected_activity_id:
+        passport_types = PassportType.query.filter_by(activity_id=selected_activity_id, status='active').all()
+    else:
+        passport_types = PassportType.query.filter_by(status='active').all()
 
     return render_template(
         "passport_form.html",
@@ -4668,6 +4711,7 @@ def create_passport():
         default_amt=default_amt,
         default_qt=default_qt,
         activity_list=activity_list,
+        passport_types=passport_types,
         selected_activity_id=selected_activity_id
     )
 

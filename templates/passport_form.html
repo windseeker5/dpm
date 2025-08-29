@@ -77,6 +77,23 @@
             </select>
           </div>
 
+          <!-- Passport Type -->
+          <div class="mb-3">
+            <label class="form-label">Passport Type <span class="text-danger">*</span></label>
+            <select name="passport_type_id" id="passport_type_select" class="form-select" required onchange="updatePassportTypeDetails(this)">
+              <option value="">-- Select Passport Type --</option>
+              {% for passport_type in passport_types %}
+                <option value="{{ passport_type.id }}"
+                  data-activity="{{ passport_type.activity_id }}"
+                  data-price="{{ passport_type.price_per_user }}"
+                  data-sessions="{{ passport_type.sessions_included }}"
+                  {% if passport and passport.passport_type_id == passport_type.id %}selected{% endif %}>
+                  {{ passport_type.name }} ({{ passport_type.type }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
           <!-- Price -->
           <div class="mb-3 input-icon">
             <span class="input-icon-addon"><i class="ti ti-currency-dollar"></i></span>
@@ -162,6 +179,23 @@
   });
 
   function updateActivityDetails(select) {
+    const selected = select.options[select.selectedIndex];
+    const price = selected.getAttribute("data-price");
+    const sessions = selected.getAttribute("data-sessions");
+    if (price) document.getElementById("sold_amt").value = price;
+    if (sessions) document.getElementById("uses_remaining").value = sessions;
+    
+    // Filter passport types by activity
+    const activityId = select.value;
+    const passportTypeSelect = document.getElementById("passport_type_select");
+    for (let option of passportTypeSelect.options) {
+      if (option.value === "") continue;
+      option.style.display = option.getAttribute("data-activity") === activityId ? "" : "none";
+    }
+    passportTypeSelect.value = ""; // Reset selection
+  }
+  
+  function updatePassportTypeDetails(select) {
     const selected = select.options[select.selectedIndex];
     const price = selected.getAttribute("data-price");
     const sessions = selected.getAttribute("data-sessions");
