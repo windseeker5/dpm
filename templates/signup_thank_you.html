@@ -12,7 +12,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
@@ -88,11 +88,13 @@
     }
 
     .thank-you-title {
-      font-family: 'Anton', sans-serif;
+      font-family: 'Roboto Slab', serif;
+      font-weight: 600;
       font-size: 2.5rem;
-      color: #2c3e50;
+      color: #1a1f36;
       margin-bottom: 1rem;
       line-height: 1.2;
+      letter-spacing: -0.02em;
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
     }
 
@@ -248,14 +250,6 @@
   </div>
 
   <div class="thank-you-content">
-    <!-- Organization Logo -->
-    {% if settings and settings["LOGO_FILENAME"] %}
-    <div class="text-center">
-      <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" 
-           alt="Logo" 
-           class="organization-logo">
-    </div>
-    {% endif %}
 
     <!-- Success Icon -->
     <div class="success-icon">
@@ -263,7 +257,7 @@
     </div>
 
     <!-- Thank You Title -->
-    <h1 class="thank-you-title">Thank You!</h1>
+    <h1 class="thank-you-title">Merci!</h1>
 
     <!-- Activity Name -->
     <div class="activity-name">
@@ -274,22 +268,22 @@
     <!-- Thank You Message -->
     <div class="thank-you-message">
       <p class="mb-3">
-        <strong>Your registration has been successfully submitted!</strong>
+        <strong>Votre inscription a été soumise avec succès!</strong>
       </p>
       <p class="mb-3">
-        You'll receive a confirmation email shortly with payment instructions and all the details you need for your upcoming activity.
+        Vous recevrez bientôt un e-mail de confirmation avec les instructions de paiement et tous les détails dont vous avez besoin pour votre prochaine activité.
       </p>
       <p class="mb-0">
         <i class="ti ti-mail me-1 text-primary"></i>
-        We've sent the details to <strong>{{ signup.user.email }}</strong>
+        Nous avons envoyé les détails à <strong>{{ signup.user.email }}</strong>
       </p>
     </div>
 
     <!-- Action Buttons -->
     <div class="action-buttons">
-      <a href="{{ url_for('dashboard') }}" class="btn-home">
+      <a href="http://minipass.me" class="btn-home">
         <i class="ti ti-home me-2"></i>
-        Return Home
+        Retour à l'accueil
       </a>
     </div>
   </div>
