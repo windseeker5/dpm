@@ -3649,20 +3649,61 @@ def delete_activity(activity_id):
     if "admin" not in session:
         return redirect(url_for("login"))
 
+    # Import models at the beginning
+    from models import PassportType, Expense, Income, Signup, Passport, Survey
+
     activity = db.session.get(Activity, activity_id)
     if not activity:
         flash("❌ Activity not found.", "error")
         return redirect(url_for("list_activities"))
 
+    # Check for active passports first
+    active_passports = Passport.query.filter_by(
+        activity_id=activity_id
+    ).filter(Passport.uses_remaining > 0).count()
+    
+    if active_passports > 0:
+        flash(f"❌ Cannot delete activity. There are {active_passports} active passports.", "error")
+        return redirect(url_for("list_activities"))
+
+    # Delete related records first (in order to avoid FK constraints)
+    
+    PassportType.query.filter_by(activity_id=activity_id).delete()
+    Expense.query.filter_by(activity_id=activity_id).delete()
+    Income.query.filter_by(activity_id=activity_id).delete()
+    Survey.query.filter_by(activity_id=activity_id).delete()
+    Signup.query.filter_by(activity_id=activity_id).delete()
+    Passport.query.filter_by(activity_id=activity_id).delete()
+    
+    # Now delete the activity
     db.session.delete(activity)
     db.session.commit()
     flash("✅ Activity deleted successfully.", "success")
     return redirect(url_for("list_activities"))
 
 
-
-
-
+@app.route("/check-activity-passports/<int:activity_id>")
+def check_activity_passports(activity_id):
+    """Check if activity has active passports (uses_remaining > 0)"""
+    if "admin" not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    active_passports = Passport.query.filter_by(
+        activity_id=activity_id
+    ).filter(Passport.uses_remaining > 0).all()
+    
+    passport_list = []
+    for p in active_passports[:5]:  # Show max 5
+        passport_list.append({
+            'email': p.user.email if p.user else 'No email',
+            'uses_remaining': p.uses_remaining
+        })
+    
+    return jsonify({
+        'has_active_passports': len(active_passports) > 0,
+        'count': len(active_passports),
+        'active_passports': passport_list
+    })
 
 
 @app.route("/activity-dashboard/<int:activity_id>")

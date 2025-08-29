@@ -4,24 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Running the Application
-- Start development server: `python app.py`
-- The app runs on port 8889 by default
-- Uses gunicorn in production: `gunicorn --workers=2 --threads=4 --bind=0.0.0.0:8889 app:app`
+  TESTING REQUIREMENTS:
+  - ALWAYS test all code changes using Playwright
+  MCP server
+  - NEVER assume code works without testing
+  - Test both success AND failure paths
+  - Username: kdresdell@gmail.com, Password:
+  admin123
+  - Flask server already running on port 8890
+  - DO NOT start new Flask servers
 
-### Database Management
-- Initialize database: `python migrations/createdb.py`
-- Run specific migrations: `python migrations/<migration_file>.py`
-- Database file location: `instance/minipass.db` (SQLite)
+  2. Best practices for our workflow:
 
-### Testing
-- Test files are located in `test/` directory (mostly automated UI tests using Playwright)
-- Run specific test: `python test/<test_file>.py`
-- Screenshots are saved to `playwright/` directory for visual verification
+  - I should ALWAYS test after making changes
+  - I should test BOTH paths (success and failure
+  cases)
+  - I should use the Playwright MCP server you've
+  configured
+  - I should remember your credentials and port
+  throughout the session
 
-### Docker
-- Build image: `docker build -t minipass .`
-- Uses Python 3.9 base image, exposes port 8889
+
 
 ## Architecture Overview
 
