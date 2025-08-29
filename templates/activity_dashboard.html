@@ -1116,16 +1116,14 @@
                   </a>
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#" 
-                     onclick="if(confirm('Delete this passport?')) { 
-                       var form = document.getElementById('deleteForm{{ passport.id }}'); 
-                       if(form) form.submit(); 
-                     }">
+                     onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.email or 'No email' }}'); return false;"
                     <i class="ti ti-trash me-2"></i>Delete
                   </a>
                 </div>
               </div>
               <!-- Hidden delete form -->
               <form id="deleteForm{{ passport.id }}" method="POST" action="{{ url_for('passports_bulk_action') }}" style="display: none;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="selected_passports" value="{{ passport.id }}">
               </form>
@@ -1195,6 +1193,45 @@
       </div>
       {% endif %}
       {% endfor %}
+
+      <!-- Delete Passport Confirmation Modal -->
+      <div class="modal modal-blur fade" id="passportDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M4 7h16"/>
+                <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+                <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+                <path d="M10 12l0 6"/>
+                <path d="M14 12l0 6"/>
+              </svg>
+              <h3>Are you sure?</h3>
+              <div class="text-secondary">Delete passport for <strong id="deletePassportEmail"></strong>?</div>
+            </div>
+            <div class="modal-footer">
+              <div class="w-100">
+                <div class="row">
+                  <div class="col">
+                    <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+                  </div>
+                  <div class="col">
+                    <form method="POST" id="passportDeleteForm" class="d-inline w-100">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="selected_passports" id="deletePassportId">
+                      <button type="submit" class="btn btn-danger w-100">Delete</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <!-- Pagination -->
       <div class="card-footer d-flex justify-content-between align-items-center">
@@ -3143,6 +3180,17 @@ window.addEventListener('beforeunload', () => {
 
 <!-- Include KPICardManager for enhanced KPI card functionality -->
 <script src="{{ url_for('static', filename='js/kpi-card-manager.js') }}"></script>
+
+<script>
+// Passport delete confirmation
+function confirmPassportDelete(passportId, passportEmail) {
+  document.getElementById('deletePassportEmail').textContent = passportEmail;
+  document.getElementById('deletePassportId').value = passportId;
+  document.getElementById('passportDeleteForm').action = "{{ url_for('passports_bulk_action') }}";
+  const modal = new bootstrap.Modal(document.getElementById('passportDeleteModal'));
+  modal.show();
+}
+</script>
 
 {% endblock %}
 

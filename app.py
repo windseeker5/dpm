@@ -3166,7 +3166,8 @@ def passports_bulk_action():
         return redirect(url_for("login"))
     
     action = request.form.get("action")
-    passport_ids = request.form.getlist("passport_ids[]")
+    # Handle both parameter names for backward compatibility
+    passport_ids = request.form.getlist("passport_ids[]") or request.form.getlist("selected_passports")
     
     if not passport_ids:
         flash("❌ No passports selected.", "error")
