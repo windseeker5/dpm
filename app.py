@@ -2646,7 +2646,29 @@ def generate_backup():
         zip_path = os.path.join(tmp_dir, zip_filename)
 
         with ZipFile(zip_path, "w") as zipf:
+            # Add database
             zipf.write(db_path, arcname=db_filename)
+            
+            # Add all uploaded files
+            uploads_dir = os.path.join(app.static_folder, "uploads")
+            if os.path.exists(uploads_dir):
+                for root, dirs, files in os.walk(uploads_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        # Create archive path relative to app root
+                        archive_path = os.path.relpath(file_path, start=os.path.dirname(app.static_folder))
+                        zipf.write(file_path, arcname=archive_path)
+            
+            # Add email template images
+            email_templates_dir = os.path.join("templates", "email_templates")
+            if os.path.exists(email_templates_dir):
+                for root, dirs, files in os.walk(email_templates_dir):
+                    for file in files:
+                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg')):
+                            file_path = os.path.join(root, file)
+                            # Keep relative path from app root
+                            archive_path = os.path.relpath(file_path, start='.')
+                            zipf.write(file_path, arcname=archive_path)
 
         final_path = os.path.join("static", "backups", zip_filename)
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
@@ -2654,6 +2676,19 @@ def generate_backup():
         print(f"🛠 Moving zip from {zip_path} → {final_path}")
         shutil.move(zip_path, final_path)
         print(f"✅ Backup saved to: {final_path}")
+
+        # Auto-cleanup: Keep only the 5 most recent backups
+        backup_dir = os.path.join("static", "backups")
+        if os.path.exists(backup_dir):
+            backup_files = sorted(
+                [f for f in os.listdir(backup_dir) if f.endswith(".zip")],
+                reverse=True  # Most recent first
+            )
+            if len(backup_files) > 5:
+                for old_backup in backup_files[5:]:  # Keep first 5, delete rest
+                    old_path = os.path.join(backup_dir, old_backup)
+                    os.remove(old_path)
+                    print(f"🗑️ Deleted old backup: {old_backup}")
 
         flash(f"📦 Backup created: {zip_filename}", "success")
     except Exception as e:
@@ -2663,6 +2698,29 @@ def generate_backup():
     return redirect(url_for("setup", backup_file=zip_filename))
 
 
+@app.route("/delete-backup/<filename>", methods=["POST"])
+def delete_backup(filename):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        # Security: Only allow .zip files and prevent path traversal
+        if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
+            flash("❌ Invalid backup filename.", "danger")
+            return redirect(url_for("setup"))
+
+        backup_path = os.path.join("static", "backups", filename)
+        if os.path.exists(backup_path):
+            os.remove(backup_path)
+            print(f"🗑️ Backup deleted: {filename}")
+            flash(f"🗑️ Backup deleted: {filename}", "success")
+        else:
+            flash("❌ Backup file not found.", "danger")
+    except Exception as e:
+        print("❌ Delete backup failed:", str(e))
+        flash("❌ Failed to delete backup. Check logs.", "danger")
+
+    return redirect(url_for("setup"))
 
 
 @app.route("/users.json")
@@ -3414,7 +3472,9 @@ def activity_income(activity_id, income_id=None):
         if receipt_file and receipt_file.filename:
             ext = os.path.splitext(receipt_file.filename)[1]
             filename = f"income_{uuid.uuid4().hex}{ext}"
-            path = os.path.join(app.static_folder, "uploads/receipts", filename)
+            receipts_dir = os.path.join(app.static_folder, "uploads/receipts")
+            os.makedirs(receipts_dir, exist_ok=True)
+            path = os.path.join(receipts_dir, filename)
             receipt_file.save(path)
             income.receipt_filename = filename
 
@@ -3488,7 +3548,9 @@ def activity_expenses(activity_id, expense_id=None):
         if receipt_file and receipt_file.filename:
             ext = os.path.splitext(receipt_file.filename)[1]
             filename = f"expense_{uuid.uuid4().hex}{ext}"
-            path = os.path.join(app.static_folder, "uploads/receipts", filename)
+            receipts_dir = os.path.join(app.static_folder, "uploads/receipts")
+            os.makedirs(receipts_dir, exist_ok=True)
+            path = os.path.join(receipts_dir, filename)
             receipt_file.save(path)
             expense.receipt_filename = filename
 
