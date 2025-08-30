@@ -1127,7 +1127,7 @@
                   </a>
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#" 
-                     onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.email or 'No email' }}'); return false;"
+                     onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
                     <i class="ti ti-trash me-2"></i>Delete
                   </a>
                 </div>
@@ -1221,7 +1221,7 @@
                 <path d="M14 12l0 6"/>
               </svg>
               <h3>Are you sure?</h3>
-              <div class="text-secondary">Delete passport for <strong id="deletePassportEmail"></strong>?</div>
+              <div class="text-secondary">Delete passport for <strong id="deletePassportName"></strong>?<div id="deletePassportWarning" class="text-warning mt-2"></div></div>
             </div>
             <div class="modal-footer">
               <div class="w-100">
@@ -3267,9 +3267,20 @@ window.addEventListener('beforeunload', () => {
 
 <script>
 // Passport delete confirmation
-function confirmPassportDelete(passportId, passportEmail) {
-  document.getElementById('deletePassportEmail').textContent = passportEmail;
+function confirmPassportDelete(passportId, passportName, usesRemaining) {
+  document.getElementById('deletePassportName').textContent = passportName;
   document.getElementById('deletePassportId').value = passportId;
+  
+  // Show warning if user still has remaining sessions
+  const warningDiv = document.getElementById('deletePassportWarning');
+  if (usesRemaining > 0) {
+    const sessionText = usesRemaining === 1 ? 'session' : 'sessions';
+    warningDiv.innerHTML = `<i class="ti ti-alert-triangle me-1"></i>Warning: This user still has ${usesRemaining} remaining ${sessionText}!`;
+    warningDiv.style.display = 'block';
+  } else {
+    warningDiv.style.display = 'none';
+  }
+  
   document.getElementById('passportDeleteForm').action = "{{ url_for('passports_bulk_action') }}";
   const modal = new bootstrap.Modal(document.getElementById('passportDeleteModal'));
   modal.show();
