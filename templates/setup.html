@@ -166,7 +166,7 @@
                           settings and admin passwords for security.
                         </p>
                         
-                        <button type="button" class="btn btn-primary" onclick="location.href='{{ url_for('generate_backup') }}'">
+                        <button type="button" class="btn btn-primary" onclick="createBackup()">
                           <i class="ti ti-database-export me-2"></i>
                           Create Backup Now
                         </button>
@@ -193,10 +193,20 @@
                                     <div class="text-muted small">Database backup file</div>
                                   </div>
                                 </div>
-                                <a href="{{ url_for('static', filename='backups/' ~ file) }}" download class="btn btn-sm btn-outline-primary">
-                                  <i class="ti ti-download me-1"></i>
-                                  Download
-                                </a>
+                                <div class="d-flex gap-2">
+                                  <a href="{{ url_for('static', filename='backups/' ~ file) }}" download class="btn btn-sm btn-outline-primary">
+                                    <i class="ti ti-download me-1"></i>
+                                    Download
+                                  </a>
+                                  <form method="POST" action="{{ url_for('delete_backup', filename=file) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                            onclick="return confirm('Are you sure you want to delete this backup?')">
+                                      <i class="ti ti-trash me-1"></i>
+                                      Delete
+                                    </button>
+                                  </form>
+                                </div>
                               </div>
                             {% endfor %}
                           </div>
@@ -221,6 +231,46 @@
           </div>
     </div>
     </form>
+    </div>
+  </div>
+</div>
+
+<!-- Backup Limit Modal -->
+<div class="modal modal-blur fade" id="backupLimitModal" tabindex="-1" role="dialog" aria-labelledby="backupLimitModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="backupLimitModalLabel">
+          <i class="ti ti-alert-triangle text-warning me-2"></i>
+          Backup Limit Reached
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-start">
+          <div class="me-3">
+            <i class="ti ti-info-circle text-blue fs-2"></i>
+          </div>
+          <div>
+            <p class="text-secondary mb-2">
+              You already have <strong>5 backups</strong>, which is the maximum limit.
+            </p>
+            <p class="text-secondary mb-0">
+              If you continue, we will automatically delete the <strong>oldest backup</strong> to create space for the new one.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn me-auto" data-bs-dismiss="modal">
+          <i class="ti ti-x me-1"></i>
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" onclick="proceedWithBackup()">
+          <i class="ti ti-database-export me-1"></i>
+          Continue & Create Backup
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -435,5 +485,27 @@ document.addEventListener('DOMContentLoaded', function() {
   // Clear localStorage after using it (so it doesn't persist across sessions)
   localStorage.removeItem('settings-active-tab');
 });
+
+// Backup management functions
+function createBackup() {
+  const backupCount = {{ backup_files|length if backup_files else 0 }};
+  console.log('Current backup count:', backupCount);
+  
+  if (backupCount >= 5) {
+    // Show confirmation modal
+    const modal = new bootstrap.Modal(document.getElementById('backupLimitModal'));
+    modal.show();
+  } else {
+    // Proceed directly with backup creation
+    window.location.href = '{{ url_for("generate_backup") }}';
+  }
+}
+
+function proceedWithBackup() {
+  // Close modal and proceed with backup
+  const modal = bootstrap.Modal.getInstance(document.getElementById('backupLimitModal'));
+  modal.hide();
+  window.location.href = '{{ url_for("generate_backup") }}';
+}
 </script>
 {% endblock %}
