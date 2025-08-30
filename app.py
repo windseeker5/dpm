@@ -4746,7 +4746,10 @@ def create_passport():
         )
 
         flash("✅ Passport created and confirmation email sent.", "success")
-        return redirect(url_for("dashboard"))
+        if activity_id and activity_id > 0:
+            return redirect(url_for("activity_dashboard", activity_id=activity_id))
+        else:
+            return redirect(url_for("dashboard"))
 
     # 👉 GET METHOD
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
