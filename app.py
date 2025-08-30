@@ -4891,6 +4891,47 @@ def mark_passport_paid(passport_id):
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
 
+@app.route("/passport/<int:passport_id>/send-reminder", methods=["POST"])
+def send_passport_reminder(passport_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Passport, AdminActionLog
+    from datetime import datetime, timezone
+
+    passport = db.session.get(Passport, passport_id)
+    if not passport:
+        flash("❌ Passport not found!", "error")
+        return redirect(url_for("dashboard2"))
+
+    if passport.paid:
+        flash("❌ Cannot send reminder for paid passport!", "error")
+        return redirect(request.referrer or url_for("list_passports"))
+
+    try:
+        # Send payment reminder email (force send even if not late)
+        notify_pass_event(
+            app=current_app._get_current_object(),
+            event_type="payment_late",
+            pass_data=passport,
+            admin_email=session.get("admin"),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Sent payment reminder to {passport.user.name if passport.user else 'Unknown'} for passport {passport.pass_code}"
+        ))
+        db.session.commit()
+
+        flash(f"📧 Payment reminder sent to {passport.user.name if passport.user else 'Unknown'}!", "success")
+    except Exception as e:
+        flash(f"❌ Failed to send reminder: {str(e)}", "error")
+
+    return redirect(request.referrer or url_for("list_passports"))
+
+
 @app.route("/api/passport-type-dependencies/<int:passport_type_id>", methods=["GET"])
 def check_passport_type_dependencies(passport_type_id):
     """Check if a passport type has dependencies (existing passports) that prevent deletion"""

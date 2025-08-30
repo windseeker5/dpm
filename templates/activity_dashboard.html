@@ -1122,9 +1122,11 @@
                   <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
                     <i class="ti ti-qrcode me-2"></i>View QR Code
                   </a>
-                  <a class="dropdown-item" href="#">
+                  {% if not passport.paid %}
+                  <button type="button" class="dropdown-item text-warning" data-bs-toggle="modal" data-bs-target="#send-reminder-modal-{{ passport.id }}">
                     <i class="ti ti-mail me-2"></i>Send Reminder
-                  </a>
+                  </button>
+                  {% endif %}
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#" 
                      onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
@@ -1197,6 +1199,29 @@
               <form method="POST" action="{{ url_for('mark_passport_paid', passport_id=p.id) }}" class="w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-success w-100">Yes, mark as paid</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if not p.paid %}
+      <!-- Send Reminder Modal -->
+      <div class="modal modal-blur fade" id="send-reminder-modal-{{ p.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-status bg-warning"></div>
+            <div class="modal-body text-center py-4">
+              <i class="ti ti-mail icon mb-2 text-warning" style="font-size: 2rem;"></i>
+              <h3>Send Payment Reminder</h3>
+              <div class="text-muted">Send payment reminder to {{ p.user.name }}?</div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              <form method="POST" action="{{ url_for('send_passport_reminder', passport_id=p.id) }}" class="w-100">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-warning w-100">Yes, Send Reminder</button>
               </form>
             </div>
           </div>
@@ -1568,79 +1593,6 @@
       </div>
       {% endif %}
 
-      <!-- What's Happening Section -->
-      {% if activity_logs %}
-      <h3 class="mt-5 mb-3">
-        <i class="ti ti-cardboards me-2" style="color: #2fb344;"></i>What's Happening in Your Activity
-      </h3>
-
-      <!-- Activity Log Table -->
-      <div class="card" style="border-radius: 12px; overflow: hidden;">
-        <div class="card-header">
-          <h4 class="card-title">Recent Activity</h4>
-        </div>
-        <div class="table-responsive">
-          <table class="table card-table table-vcenter" id="activityLogTable">
-            <thead>
-              <tr>
-                <th scope="col" class="text-muted">Date/Time</th>
-                <th scope="col" class="text-muted">Type</th>
-                <th scope="col" class="text-muted">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for log in activity_logs %}
-                <tr>
-                  <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') if log.timestamp else 'Unknown' }}</td>
-                  <td>
-                    {% set action_lower = log.action.lower() %}
-                    {% if 'redeem' in action_lower %}
-                      <i class="ti ti-ticket text-danger"></i>
-                      Passport Redeemed
-                    {% elif 'signup' in action_lower %}
-                      <i class="ti ti-user-plus text-success"></i>
-                      Signup Activity
-                    {% elif 'created' in action_lower %}
-                      <i class="ti ti-id text-lime"></i>
-                      Passport Created
-                    {% elif 'email' in action_lower %}
-                      <i class="ti ti-mail text-info"></i>
-                      Email Activity
-                    {% elif 'payment' in action_lower %}
-                      <i class="ti ti-currency-dollar text-success"></i>
-                      Payment Activity
-                    {% else %}
-                      <i class="ti ti-settings text-muted"></i>
-                      Admin Action
-                    {% endif %}
-                  </td>
-                  <td>{{ log.action }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        
-        <!-- Pagination -->
-        <div class="card-footer d-flex align-items-center">
-          <p class="m-0 text-muted">Showing <span id="activityShowingCount">{{ activity_logs|length if activity_logs else 0 }}</span> of {{ activity_logs|length if activity_logs else 0 }} activity logs</p>
-          {% set log_total_items = activity_logs|length if activity_logs else 0 %}
-          {% set log_items_per_page = 10 %}
-          {% set log_total_pages = ((log_total_items - 1) // log_items_per_page) + 1 if log_total_items > 0 else 1 %}
-          {% if log_total_pages > 1 %}
-          <ul class="pagination m-0 ms-auto" id="activityPaginationControls">
-            {% for page_num in range(1, log_total_pages + 1) %}
-              {% if page_num <= 5 %}
-              <li class="page-item {% if page_num == 1 %}active{% endif %}">
-                <a href="#" class="page-link">{{ page_num }}</a>
-              </li>
-              {% endif %}
-            {% endfor %}
-          </ul>
-          {% endif %}
-        </div>
-      </div>
-      {% endif %}
 
     </div>
   </div>
@@ -2020,15 +1972,6 @@ function initializeActivityDashboard() {
   
   // KPI dropdowns
   initializeKPIDropdowns();
-  
-  // Prevent hash links from causing page scroll
-  document.querySelectorAll('a[href="#"]:not(.github-filter-btn)').forEach(link => {
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    });
-  });
   
   // Add click handlers for specific client-side actions
   document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {

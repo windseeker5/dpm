@@ -217,9 +217,11 @@
                   <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
                     <i class="ti ti-qrcode me-2"></i>View QR Code
                   </a>
-                  <a class="dropdown-item" href="#">
+                  {% if not passport.paid %}
+                  <button type="button" class="dropdown-item text-warning" data-bs-toggle="modal" data-bs-target="#send-reminder-modal-{{ passport.id }}">
                     <i class="ti ti-mail me-2"></i>Send Reminder
-                  </a>
+                  </button>
+                  {% endif %}
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#" 
                      onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
@@ -309,6 +311,31 @@
     </div>
   </div>
 </div>
+
+<!-- Send Reminder Modals -->
+{% for passport in passports %}
+{% if not passport.paid %}
+<div class="modal modal-blur fade" id="send-reminder-modal-{{ passport.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-mail icon mb-2 text-warning" style="font-size: 2rem;"></i>
+        <h3>Send Payment Reminder</h3>
+        <div class="text-muted">Send payment reminder to {{ passport.user.name }}?</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{{ url_for('send_passport_reminder', passport_id=passport.id) }}" class="w-100">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-warning w-100">Yes, Send Reminder</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
