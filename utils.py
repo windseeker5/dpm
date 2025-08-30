@@ -590,7 +590,7 @@ def get_kpi_stats(activity_id=None):
 
 
 
-def send_unpaid_reminders(app):
+def send_unpaid_reminders(app, force_send=False):
     from utils import get_setting, notify_pass_event
     from models import ReminderLog, Passport, db
     from datetime import datetime, timedelta, timezone
@@ -609,7 +609,10 @@ def send_unpaid_reminders(app):
             print("❌ Invalid CALL_BACK_DAYS value. Defaulting to 15.")
             days = 15
 
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        if force_send:
+            print("🔧 FORCE_SEND mode: Will bypass 'already reminded' checks")
 
         unpaid_passports = Passport.query.filter(
             Passport.paid == False,
@@ -621,27 +624,33 @@ def send_unpaid_reminders(app):
                 .order_by(ReminderLog.reminder_sent_at.desc())\
                 .first()
 
-            if recent_reminder and ensure_utc_aware(recent_reminder.reminder_sent_at) > datetime.now(timezone.utc) - timedelta(days=days):
+            if not force_send and recent_reminder and recent_reminder.reminder_sent_at > datetime.now() - timedelta(days=days):
                 print(f"⏳ Skipping reminder: {p.user.name if p.user else '-'} (already reminded)")
                 continue
 
-            # ✅ Log the reminder FIRST
-            db.session.add(ReminderLog(
-                pass_id=p.id,
-                reminder_sent_at=datetime.now(timezone.utc)
-            ))
-            db.session.commit()
-            print(f"✅ Logged late reminder for: {p.user.name if p.user else '-'}")
-
-            # ✅ THEN send reminder email
-            print(f"📬 Sending reminder to: {p.user.email if p.user else 'N/A'}")
-            notify_pass_event(
-                app=app,
-                event_type="payment_late",
-                pass_data=p,  # using new models
-                admin_email="auto-reminder@system",
-                timestamp=datetime.now(timezone.utc)
-            )
+            # ✅ Send email FIRST, then log only if successful
+            try:
+                print(f"📬 Sending reminder to: {p.user.email if p.user else 'N/A'}")
+                from flask import current_app
+                notify_pass_event(
+                    app=current_app._get_current_object(),
+                    event_type="payment_late",
+                    pass_data=p,  # using new models
+                    admin_email="auto-reminder@system",
+                    timestamp=datetime.now()
+                )
+                
+                # ✅ Only log to database AFTER email succeeds
+                db.session.add(ReminderLog(
+                    pass_id=p.id,
+                    reminder_sent_at=datetime.now()
+                ))
+                db.session.commit()
+                print(f"✅ Email sent and logged for: {p.user.name if p.user else '-'}")
+                
+            except Exception as e:
+                print(f"❌ Failed to send email to {p.user.name if p.user else '-'}: {e}")
+                # No database log if email failed - will retry next time
 
 
 
@@ -1298,7 +1307,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         "title": title,
         "intro_text": intro,
         "conclusion_text": conclusion,
-        "logo_url": url_for("static", filename="uploads/logo.png"),
+        "logo_url": "/static/uploads/logo.png",
     }
 
     # Find compiled template
@@ -1379,10 +1388,8 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
     conclusion_raw = get_setting(conclusion_key, "")
 
     # ✅ Normalize cross-model values
-    games_remaining = getattr(pass_data, "games_remaining", None) or getattr(pass_data, "uses_remaining", 0)
-    activity_display = getattr(pass_data, "activity", "")
-    if hasattr(activity_display, "name"):
-        activity_display = activity_display.name
+    games_remaining = getattr(pass_data, "uses_remaining", 0)
+    activity_display = getattr(pass_data.activity, "name", "") if pass_data.activity else ""
 
     intro = render_template_string(intro_raw, pass_data=pass_data, default_qt=games_remaining, activity_list=activity_display)
     conclusion = render_template_string(conclusion_raw, pass_data=pass_data, default_qt=games_remaining, activity_list=activity_display)
@@ -1397,14 +1404,14 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
     context = {
         "pass_data": {
             "pass_code": pass_data.pass_code,
-            "user_name": getattr(pass_data, "user_name", None) or getattr(getattr(pass_data, "user", None), "name", ""),
-            "activity": activity_display,
-            "games_remaining": games_remaining,
+            "user_name": pass_data.user.name if pass_data.user else "",
+            "activity": pass_data.activity.name if pass_data.activity else "",
+            "games_remaining": pass_data.uses_remaining,
             "sold_amt": pass_data.sold_amt,
-            "user_email": getattr(pass_data, "user_email", None) or getattr(getattr(pass_data, "user", None), "email", ""),
-            "phone_number": getattr(pass_data, "phone_number", None) or getattr(getattr(pass_data, "user", None), "phone_number", ""),
-            "pass_created_dt": getattr(pass_data, "pass_created_dt", getattr(pass_data, "created_dt", None)),
-            "paid_ind": getattr(pass_data, "paid_ind", getattr(pass_data, "paid", False))
+            "user_email": pass_data.user.email if pass_data.user else "",
+            "phone_number": pass_data.user.phone_number if pass_data.user else "",
+            "pass_created_dt": pass_data.created_dt,
+            "paid_ind": pass_data.paid
         },
         "title": title,
         "intro_text": intro,
@@ -1412,7 +1419,7 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
         "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data),
         "history_html": render_template("email_blocks/history_table_inline.html", history=history),
         "email_info": "",
-        "logo_url": url_for("static", filename="uploads/logo.png"),
+        "logo_url": "/static/uploads/logo.png",
         "special_message": ""
     }
 
@@ -1446,7 +1453,7 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
             user=user_obj,
             activity=activity_obj,
             subject=subject,
-            to_email=getattr(pass_data, "user_email", None) or getattr(getattr(pass_data, "user", None), "email", None),
+            to_email=pass_data.user.email if pass_data.user else None,
             html_body=html_body,
             inline_images=inline_images,
             timestamp_override=timestamp
@@ -1466,7 +1473,7 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
             user=user_obj,
             activity=activity_obj,
             subject=subject,
-            to_email=pass_data.user_email,
+            to_email=pass_data.user.email if pass_data.user else None,
             template_name=theme,
             context=context,
             inline_images=inline_images,

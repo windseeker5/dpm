@@ -428,7 +428,7 @@ def retry_failed_emails():
             subject=f"[TEST] {log.subject}" if testing_mode else log.subject,
             user_name=context.get("user_name", "User"),
             pass_code=log.pass_code,
-            created_date=context.get("created_date", datetime.utcnow().strftime("%Y-%m-%d")),
+            created_date=context.get("created_date", datetime.now().strftime("%Y-%m-%d")),
             remaining_games=context.get("remaining_games", 0),
             special_message=context.get("special_message", None),
             admin_email=session.get("admin")
@@ -671,7 +671,7 @@ def dashboard():
 
         # Optional: Days left
         if a.end_date:
-            days_left = max((a.end_date - datetime.utcnow()).days, 0)
+            days_left = max((a.end_date - datetime.now()).days, 0)
         else:
             days_left = "N/A"
 
@@ -758,7 +758,7 @@ def mark_signup_paid(signup_id):
         return redirect(url_for("list_signups"))
 
     signup.paid = True
-    signup.paid_at = datetime.utcnow()
+    signup.paid_at = datetime.now()
     db.session.commit()
     
     # Emit SSE notification for signup payment
@@ -930,7 +930,7 @@ def bulk_signup_action():
             for signup in signups:
                 if not signup.paid:
                     signup.paid = True
-                    signup.paid_at = datetime.now(timezone.utc)
+                    signup.paid_at = datetime.now()
                     paid_signups.append(signup)
                     count += 1
             
@@ -1173,14 +1173,14 @@ def create_pass_from_signup(signup_id):
     
     # Create new passport
     new_passport = Passport(
-        pass_code=f"MP{datetime.utcnow().timestamp():.0f}",
+        pass_code=f"MP{datetime.now().timestamp():.0f}",
         user_id=signup.user_id,
         activity_id=signup.activity_id,
         passport_type_id=passport_type.id if passport_type else None,
         passport_type_name=passport_type.name if passport_type else None,  # Preserve type name
         sold_amt=passport_type.price_per_user if passport_type else 0.0,
         uses_remaining=passport_type.sessions_included if passport_type else 1,
-        created_dt=datetime.utcnow(),
+        created_dt=datetime.now(),
         paid=signup.paid,
         notes=f"Created from signup {signup.id}"
     )
@@ -2441,6 +2441,23 @@ def unified_settings():
         except Exception as e:
             print(f"❌ Payment bot test error: {e}")
             flash(f"❌ Payment bot test failed: {str(e)}", "error")
+        
+        return redirect(url_for("unified_settings"))
+    
+    # Check if this is a GET request with test_late_payment parameter
+    if request.args.get("test_late_payment") == "1":
+        try:
+            from utils import send_unpaid_reminders, log_admin_action
+            print("🔧 GET Manual late payment reminder test activated!")
+            
+            log_admin_action(f"Manual late payment reminder test by {session.get('admin', 'Unknown')}")
+            send_unpaid_reminders(current_app, force_send=True)
+            
+            flash("✅ Late payment reminder test completed. Check console for details.", "success")
+                
+        except Exception as e:
+            print(f"❌ Late payment reminder test error: {e}")
+            flash(f"❌ Late payment reminder test failed: {str(e)}", "error")
         
         return redirect(url_for("unified_settings"))
     
@@ -4695,7 +4712,7 @@ def create_passport():
             sold_amt=sold_amt,
             uses_remaining=sessions_qt,
             created_by=current_admin.id if current_admin else None,
-            created_dt=datetime.now(timezone.utc),  # fresh datetime
+            created_dt=datetime.now(),  # fresh datetime
             paid=paid,
             notes=notes
         )

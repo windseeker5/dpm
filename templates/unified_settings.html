@@ -38,6 +38,10 @@
             <div class="mb-3">
               <label class="form-label">Call-Back Delay (days) if unpaid</label>
               <input type="number" name="CALL_BACK_DAYS" class="form-control" min="0" value="{{ settings.get('CALL_BACK_DAYS', '15') }}">
+              <div class="form-text">
+                Test late payment reminders for unpaid passports beyond this delay
+                <a href="/admin/unified-settings?test_late_payment=1" class="btn btn-sm btn-warning" style="margin-left: 10px;">Test Late Payment Reminders</a>
+              </div>
             </div>
 
             <div class="mb-3">

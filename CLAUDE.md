@@ -4,26 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-  TESTING REQUIREMENTS:
-  - ALWAYS test all code changes using Playwright
-  MCP server
-  - NEVER assume code works without testing
-  - Test both success AND failure paths
-  - Username: kdresdell@gmail.com, Password:
-  admin123
-  - Flask server already running on port 8890
-  - DO NOT start new Flask servers
+CONSTRAINTS - DO NOT:
+  - Create ANY new files
+  - Add ANY global event listeners
+  - Touch ANY search functionality
+  - Touch ANY filter functionality  
+  - Use WeakMap, RequestQueue, or any complex patterns
+  - Add "monitoring", "performance", or "enterprise" features
+  - Write more than 50 lines
 
-  2. Best practices for our workflow:
 
-  - I should ALWAYS test after making changes
-  - I should test BOTH paths (success and failure
-  cases)
-  - I should use the Playwright MCP server you've
-  configured
-  - I should remember your credentials and port
-  throughout the session
+Only change what's necessary to fix this issue. Don't refactor working code around it. 
 
+Always use the best competent agent for the task. Do not start a flask server. We already have one up and running for debug on port 8890.
+
+Always test your task using playwrights mcp server and username = kdresdell@gmail.com and password = admin123
+
+Reference: @Developmet_Guidelines.md [Bug Fix Protocol]
 
 
 ## Architecture Overview
