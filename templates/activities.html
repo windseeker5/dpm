@@ -160,9 +160,9 @@
             <td style="vertical-align: middle;">
               <div class="d-flex align-items-center">
                 {% if activity.image_filename %}
-                  <span class="avatar avatar-sm me-3" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }})"></span>
+                  <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="avatar avatar-sm me-3" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}); cursor: pointer; text-decoration: none;"></a>
                 {% else %}
-                  <span class="avatar avatar-sm bg-secondary-lt text-secondary me-3">{{ activity.name[0].upper() }}</span>
+                  <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="avatar avatar-sm bg-secondary-lt text-secondary me-3" style="cursor: pointer; text-decoration: none;">{{ activity.name[0].upper() }}</a>
                 {% endif %}
                 <div>
                   <div class="fw-bold">{{ activity.name }}</div>
