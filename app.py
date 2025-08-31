@@ -19,6 +19,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# 📁 API Blueprints
+from api.backup import backup_api
+
 
 # 🌐 Flask Core
 from flask import (
@@ -140,7 +143,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB limit
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB limit
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.jpeg', '.png', '.gif']
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads', 'activity_images')
 
@@ -152,6 +155,9 @@ app.config.from_object(Config)
 
 # ✅ Initialize database
 db.init_app(app)
+
+# 📁 Register API blueprints
+app.register_blueprint(backup_api)
 
 
 
@@ -2646,8 +2652,18 @@ def generate_backup():
         zip_path = os.path.join(tmp_dir, zip_filename)
 
         with ZipFile(zip_path, "w") as zipf:
-            # Add database
-            zipf.write(db_path, arcname=db_filename)
+            # Add database in expected folder structure
+            zipf.write(db_path, arcname=f"database/{db_filename}")
+            
+            # Add metadata
+            metadata = {
+                "backup_type": "full",
+                "version": "2.0",
+                "created_by": session.get("admin", "unknown"),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "database_file": db_filename
+            }
+            zipf.writestr("backup_metadata.json", json.dumps(metadata, indent=2))
             
             # Add all uploaded files
             uploads_dir = os.path.join(app.static_folder, "uploads")
@@ -2659,16 +2675,15 @@ def generate_backup():
                         archive_path = os.path.relpath(file_path, start=os.path.dirname(app.static_folder))
                         zipf.write(file_path, arcname=archive_path)
             
-            # Add email template images
+            # Add ALL email template files (HTML, compiled, images, etc.)
             email_templates_dir = os.path.join("templates", "email_templates")
             if os.path.exists(email_templates_dir):
                 for root, dirs, files in os.walk(email_templates_dir):
                     for file in files:
-                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg')):
-                            file_path = os.path.join(root, file)
-                            # Keep relative path from app root
-                            archive_path = os.path.relpath(file_path, start='.')
-                            zipf.write(file_path, arcname=archive_path)
+                        file_path = os.path.join(root, file)
+                        # Keep relative path from app root
+                        archive_path = os.path.relpath(file_path, start='.')
+                        zipf.write(file_path, arcname=archive_path)
 
         final_path = os.path.join("static", "backups", zip_filename)
         os.makedirs(os.path.dirname(final_path), exist_ok=True)
@@ -2719,6 +2734,135 @@ def delete_backup(filename):
     except Exception as e:
         print("❌ Delete backup failed:", str(e))
         flash("❌ Failed to delete backup. Check logs.", "danger")
+
+    return redirect(url_for("setup"))
+
+
+@app.route("/restore-backup/<filename>", methods=["POST"])
+def restore_backup(filename):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        # Security: Only allow .zip files and prevent path traversal
+        if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
+            flash("❌ Invalid backup filename.", "danger")
+            return redirect(url_for("setup"))
+
+        backup_path = os.path.join("static", "backups", filename)
+        if not os.path.exists(backup_path):
+            flash("❌ Backup file not found.", "danger")
+            return redirect(url_for("setup"))
+
+        # Import restore functions directly
+        from api.backup import restore_database, restore_uploads, restore_templates, create_restore_point
+        from zipfile import ZipFile
+        import tempfile
+        
+        try:
+            # Create restore point before restoration
+            create_restore_point()
+            
+            # Extract and restore from the backup file
+            with tempfile.TemporaryDirectory() as temp_extract_dir:
+                with ZipFile(backup_path, 'r') as zipf:
+                    zipf.extractall(temp_extract_dir)
+                
+                # Restore database, uploads, and templates
+                restore_database(temp_extract_dir)
+                restore_uploads(temp_extract_dir)
+                restore_templates(temp_extract_dir)
+            
+            flash(f"✅ Successfully restored from backup: {filename}", "success")
+            
+        except Exception as restore_error:
+            print(f"❌ Direct restore failed: {str(restore_error)}")
+            flash(f"❌ Restore failed: {str(restore_error)}", "danger")
+
+    except Exception as e:
+        print("❌ Restore backup failed:", str(e))
+        flash("❌ Failed to restore backup. Check logs.", "danger")
+
+    return redirect(url_for("setup"))
+
+
+@app.route("/upload-and-restore-backup", methods=["POST"])
+def upload_and_restore_backup():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        # Check if file was uploaded
+        if 'backup_file' not in request.files:
+            flash("❌ No backup file selected.", "danger")
+            return redirect(url_for("setup"))
+
+        file = request.files['backup_file']
+        if file.filename == '':
+            flash("❌ No backup file selected.", "danger")
+            return redirect(url_for("setup"))
+
+        # Validate file extension
+        if not file.filename.endswith('.zip'):
+            flash("❌ Only ZIP backup files are supported.", "danger")
+            return redirect(url_for("setup"))
+
+        # Save uploaded file temporarily
+        import tempfile
+        import shutil
+        from werkzeug.utils import secure_filename
+        
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        temp_filename = f"uploaded_backup_{timestamp}_{filename}"
+        
+        # Ensure backup directory exists
+        backup_dir = os.path.join("static", "backups")
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        # Save uploaded file
+        temp_backup_path = os.path.join(backup_dir, temp_filename)
+        file.save(temp_backup_path)
+        
+        # Import restore functions directly
+        from api.backup import restore_database, restore_uploads, restore_templates, create_restore_point
+        from zipfile import ZipFile
+        
+        try:
+            # Create restore point before restoration
+            create_restore_point()
+            
+            # Extract and restore from the uploaded backup
+            with tempfile.TemporaryDirectory() as temp_extract_dir:
+                with ZipFile(temp_backup_path, 'r') as zipf:
+                    zipf.extractall(temp_extract_dir)
+                
+                # Restore database, uploads, and templates
+                restore_database(temp_extract_dir)
+                restore_uploads(temp_extract_dir)
+                restore_templates(temp_extract_dir)
+            
+            # Clean up the temporary uploaded file
+            try:
+                os.remove(temp_backup_path)
+            except:
+                pass
+            
+            flash(f"✅ Successfully restored from uploaded backup: {filename}", "success")
+            
+        except Exception as restore_error:
+            # Clean up the temporary uploaded file
+            try:
+                os.remove(temp_backup_path)
+            except:
+                pass
+            
+            print(f"❌ Direct restore failed: {str(restore_error)}")
+            flash(f"❌ Restore failed: {str(restore_error)}", "danger")
+
+    except Exception as e:
+        print("❌ Upload and restore failed:", str(e))
+        flash("❌ Failed to upload and restore backup. Check logs.", "danger")
 
     return redirect(url_for("setup"))
 

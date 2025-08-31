@@ -21,3 +21,17 @@ venv/
 
 # SQLite database
 #instance/prod_database.db
+
+# Backup files and directories
+static/backups/*.zip
+instance/*.backup_*
+static/uploads_backup_*/
+templates/email_templates_backup_*/
+
+# Testing screenshots and files
+.playwright-mcp/
+test_backup_*.py
+test_restore_*.py
+
+# SQL exports
+SQL/

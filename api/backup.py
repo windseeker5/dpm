@@ -58,16 +58,15 @@ def create_backup():
                                 arc_path = os.path.relpath(file_path, os.path.dirname(upload_dir))
                                 zipf.write(file_path, arc_path)
                 
-                # Include email templates if full backup
+                # Include ALL email template files if full backup (HTML, compiled, images, JSON, etc.)
                 if backup_type == 'full':
                     template_dir = 'templates/email_templates'
                     if os.path.exists(template_dir):
                         for root, dirs, files in os.walk(template_dir):
                             for file in files:
-                                if file.endswith('.html'):
-                                    file_path = os.path.join(root, file)
-                                    arc_path = os.path.relpath(file_path, 'templates')
-                                    zipf.write(file_path, f'templates/{arc_path}')
+                                file_path = os.path.join(root, file)
+                                arc_path = os.path.relpath(file_path, 'templates')
+                                zipf.write(file_path, f'templates/{arc_path}')
                 
                 # Add backup metadata
                 metadata = {
@@ -391,7 +390,11 @@ def restore_database(temp_dir):
 
 def restore_uploads(temp_dir):
     """Restore uploaded files from backup"""
+    # Try new backup structure first (static/uploads in zip)
     upload_backup_dir = os.path.join(temp_dir, 'static', 'uploads')
+    if not os.path.exists(upload_backup_dir):
+        # Try old backup structure (uploads directly in temp_dir)
+        upload_backup_dir = os.path.join(temp_dir, 'uploads')
     if not os.path.exists(upload_backup_dir):
         return
     
@@ -408,7 +411,11 @@ def restore_uploads(temp_dir):
 
 def restore_templates(temp_dir):
     """Restore email templates from backup"""
+    # Try new backup structure first (templates/email_templates in zip)
     template_backup_dir = os.path.join(temp_dir, 'templates', 'email_templates')
+    if not os.path.exists(template_backup_dir):
+        # Try old backup structure (email_templates directly in temp_dir)
+        template_backup_dir = os.path.join(temp_dir, 'email_templates')
     if not os.path.exists(template_backup_dir):
         return
     
