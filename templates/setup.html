@@ -173,6 +173,33 @@
                       </div>
                     </div>
                     
+                    <!-- Upload & Restore Section -->
+                    <div class="card">
+                      <div class="card-header">
+                        <h4 class="card-title mb-0">
+                          <i class="ti ti-upload me-2"></i>
+                          Upload & Restore Backup
+                        </h4>
+                      </div>
+                      <div class="card-body">
+                        <p class="text-muted mb-3">
+                          Upload a backup file from your computer and restore it. This will replace all current data.
+                        </p>
+                        <div class="mb-3">
+                          <label for="backup_file_display" class="form-label">Select Backup File</label>
+                          <input type="file" class="form-control" id="backup_file_display" 
+                                 accept=".zip" required>
+                          <div class="form-text">Only ZIP backup files are supported</div>
+                        </div>
+                        <button type="button" class="btn btn-warning" 
+                                data-bs-toggle="modal" data-bs-target="#confirmUploadRestoreModal"
+                                onclick="copyFileToModal()">
+                          <i class="ti ti-restore me-2"></i>
+                          Upload & Restore
+                        </button>
+                      </div>
+                    </div>
+                    
                     <!-- Available Backups Section -->
                     <div class="card">
                       <div class="card-header">
@@ -190,7 +217,7 @@
                                   <i class="ti ti-file-zip text-muted me-3"></i>
                                   <div>
                                     <div class="fw-semibold">{{ file }}</div>
-                                    <div class="text-muted small">Database backup file</div>
+                                    <div class="text-muted small">Complete system backup (database + files)</div>
                                   </div>
                                 </div>
                                 <div class="d-flex gap-2">
@@ -198,14 +225,18 @@
                                     <i class="ti ti-download me-1"></i>
                                     Download
                                   </a>
-                                  <form method="POST" action="{{ url_for('delete_backup', filename=file) }}" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                            onclick="return confirm('Are you sure you want to delete this backup?')">
-                                      <i class="ti ti-trash me-1"></i>
-                                      Delete
-                                    </button>
-                                  </form>
+                                  <button type="button" class="btn btn-sm btn-outline-warning" 
+                                          data-bs-toggle="modal" data-bs-target="#confirmRestoreModal"
+                                          onclick="setRestoreFilename('{{ file }}')">
+                                    <i class="ti ti-restore me-1"></i>
+                                    Restore
+                                  </button>
+                                  <button type="button" class="btn btn-sm btn-outline-danger" 
+                                          data-bs-toggle="modal" data-bs-target="#confirmDeleteBackupModal"
+                                          onclick="setDeleteFilename('{{ file }}')">
+                                    <i class="ti ti-trash me-1"></i>
+                                    Delete
+                                  </button>
                                 </div>
                               </div>
                             {% endfor %}
@@ -271,6 +302,127 @@
           Continue & Create Backup
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Backup Confirmation Modal -->
+<div class="modal modal-blur fade" id="confirmRestoreModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-alert-triangle text-warning me-2"></i>
+          Confirm Restore
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-start">
+          <div class="me-3">
+            <i class="ti ti-restore text-warning fs-2"></i>
+          </div>
+          <div>
+            <p class="text-secondary mb-2">
+              <strong>Warning:</strong> This will replace ALL current data with the backup data.
+            </p>
+            <p class="text-secondary mb-0">
+              This action cannot be undone. A restore point will be created automatically.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" id="restoreForm" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button type="submit" class="btn btn-warning">
+            <i class="ti ti-restore me-1"></i>
+            Restore Backup
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Backup Confirmation Modal -->
+<div class="modal modal-blur fade" id="confirmDeleteBackupModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-trash text-danger me-2"></i>
+          Delete Backup
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-start">
+          <div class="me-3">
+            <i class="ti ti-trash text-danger fs-2"></i>
+          </div>
+          <div>
+            <p class="text-secondary mb-0">
+              Are you sure you want to delete this backup? This action cannot be undone.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" id="deleteForm" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button type="submit" class="btn btn-danger">
+            <i class="ti ti-trash me-1"></i>
+            Delete Backup
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload & Restore Confirmation Modal -->
+<div class="modal modal-blur fade" id="confirmUploadRestoreModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-alert-triangle text-warning me-2"></i>
+          Confirm Upload & Restore
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('upload_and_restore_backup') }}" enctype="multipart/form-data" id="uploadRestoreForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="modal-body">
+          <div class="d-flex align-items-start">
+            <div class="me-3">
+              <i class="ti ti-upload text-warning fs-2"></i>
+            </div>
+            <div>
+              <p class="text-secondary mb-2">
+                <strong>Warning:</strong> This will replace ALL current data with the uploaded backup.
+              </p>
+              <p class="text-secondary mb-0">
+                This action cannot be undone. A restore point will be created automatically.
+              </p>
+            </div>
+          </div>
+          <div class="mt-3">
+            <input type="file" class="form-control" id="backup_file" name="backup_file" 
+                   accept=".zip" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning">
+            <i class="ti ti-restore me-1"></i>
+            Upload & Restore
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -506,6 +658,26 @@ function proceedWithBackup() {
   const modal = bootstrap.Modal.getInstance(document.getElementById('backupLimitModal'));
   modal.hide();
   window.location.href = '{{ url_for("generate_backup") }}';
+}
+
+function setRestoreFilename(filename) {
+  document.getElementById('restoreForm').action = `/restore-backup/${filename}`;
+}
+
+function setDeleteFilename(filename) {
+  document.getElementById('deleteForm').action = `/delete-backup/${filename}`;
+}
+
+function copyFileToModal() {
+  const displayInput = document.getElementById('backup_file_display');
+  if (!displayInput.files.length) {
+    alert('Please select a backup file first.');
+    return false;
+  }
+  // Copy the file selection to the modal's file input
+  const modalInput = document.getElementById('backup_file');
+  modalInput.files = displayInput.files;
+  return true;
 }
 </script>
 {% endblock %}
