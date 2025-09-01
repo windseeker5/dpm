@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
+    <style>
+        .chart-container {
+            width: 300px;
+            height: 40px;
+            border: 1px solid #ccc;
+            margin: 10px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>KPI Charts Test</h1>
+    
+    <div>
+        <h3>Active Users Chart</h3>
+        <div id="active-users-chart" class="chart-container"></div>
+    </div>
+    
+    <div>
+        <h3>Passports Created Chart</h3>
+        <div id="passports-created-chart" class="chart-container"></div>
+    </div>
+    
+    <div>
+        <h3>Unpaid Passports Chart</h3>
+        <div id="unpaid-passports-chart" class="chart-container"></div>
+    </div>
+
+    <script>
+        // Mock KPI data
+        const kpiData = {
+            active_users: {
+                current: 25,
+                change: 5,
+                trend_data: [12, 18, 15, 22, 19, 25, 30]
+            },
+            passports_created: {
+                current: 12,
+                change: 2,
+                trend_data: [8, 12, 10, 15, 13, 18, 20]
+            },
+            unpaid_passports: {
+                current: 3,
+                change: -1,
+                trend_data: [5, 4, 6, 3, 2, 4, 3]
+            }
+        };
+
+        // Initialize a simple bar chart for KPI cards
+        function initializeKPIBarChart(chartId, data, color) {
+            const chartElement = document.getElementById(chartId);
+            if (!chartElement) {
+                console.warn(`Chart element ${chartId} not found`);
+                return;
+            }
+            
+            const options = {
+                series: [{
+                    name: 'Value',
+                    data: data
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 40,
+                    sparkline: {
+                        enabled: true
+                    },
+                    toolbar: {
+                        show: false
+                    }
+                },
+                colors: [color],
+                plotOptions: {
+                    bar: {
+                        columnWidth: '60%',
+                        distributed: false
+                    }
+                },
+                xaxis: {
+                    labels: {
+                        show: false
+                    },
+                    axisBorder: {
+                        show: false
+                    },
+                    axisTicks: {
+                        show: false
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        show: false
+                    }
+                },
+                grid: {
+                    show: false
+                },
+                tooltip: {
+                    enabled: true,
+                    theme: 'dark'
+                }
+            };
+            
+            try {
+                chartElement.innerHTML = ''; // Clear existing content
+                const chart = new ApexCharts(chartElement, options);
+                chart.render();
+                console.log(`Successfully initialized chart ${chartId}`);
+            } catch (error) {
+                console.error(`Failed to initialize chart ${chartId}:`, error);
+            }
+        }
+
+        // Initialize ApexCharts for KPI cards
+        function initializeApexChartsForKPI() {
+            console.log('Initializing ApexCharts for KPI cards');
+            
+            // Check if ApexCharts is loaded
+            if (typeof ApexCharts === 'undefined') {
+                console.error('ApexCharts library not loaded!');
+                return;
+            }
+            
+            // Active Users Bar Chart
+            if (kpiData && kpiData.active_users && kpiData.active_users.trend_data) {
+                initializeKPIBarChart('active-users-chart', kpiData.active_users.trend_data, '#ffc107');
+            } else {
+                initializeKPIBarChart('active-users-chart', [12, 18, 15, 22, 19, 25, 30], '#ffc107');
+            }
+            
+            // Passports Created Bar Chart
+            if (kpiData && kpiData.passports_created && kpiData.passports_created.trend_data) {
+                initializeKPIBarChart('passports-created-chart', kpiData.passports_created.trend_data, '#2fb344');
+            } else {
+                initializeKPIBarChart('passports-created-chart', [8, 12, 10, 15, 13, 18, 20], '#2fb344');
+            }
+            
+            // Unpaid Passports Bar Chart
+            if (kpiData && kpiData.unpaid_passports && kpiData.unpaid_passports.trend_data) {
+                initializeKPIBarChart('unpaid-passports-chart', kpiData.unpaid_passports.trend_data, '#dc3545');
+            } else {
+                initializeKPIBarChart('unpaid-passports-chart', [3, 5, 4, 7, 6, 8, 9], '#dc3545');
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM ready, initializing charts...');
+            initializeApexChartsForKPI();
+        });
+    </script>
+</body>
+</html>

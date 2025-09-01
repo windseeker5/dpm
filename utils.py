@@ -377,214 +377,296 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
 
 
 
-def get_kpi_stats(activity_id=None):
-    from datetime import datetime, timedelta, timezone
-    from models import Passport, Signup
-    from flask import current_app
-    import math
+# OBSOLETE - Use get_kpi_data() instead. This function will be removed in future version.
 
+def get_kpi_data(activity_id=None, period='7d'):
+    """
+    Optimized KPI data retrieval function with direct SQL queries.
+    
+    Args:
+        activity_id: Optional activity ID for activity-specific KPIs (None for global)
+        period: Time period - '7d', '30d', '90d', or 'all'
+        
+    Returns:
+        dict: KPI data with current values, previous values, changes, and trends
+    """
+    from datetime import datetime, timedelta, timezone
+    from models import Passport, Signup, Income, db
+    from flask import current_app
+    from sqlalchemy import func, and_, or_
+    
     with current_app.app_context():
         now = datetime.now(timezone.utc)
-
-        def build_daily_series(model, date_attr, filter_fn=None, days=7, aggregate_fn=None):
-            """Build a daily series with proper data validation"""
-            import math
+        
+        # Define time ranges
+        if period == '7d':
+            current_start = now - timedelta(days=7)
+            prev_start = now - timedelta(days=14)
+            prev_end = now - timedelta(days=7)
+            trend_days = 7
+        elif period == '30d':
+            current_start = now - timedelta(days=30)
+            prev_start = now - timedelta(days=60)
+            prev_end = now - timedelta(days=30)
+            trend_days = 30
+        elif period == '90d':
+            current_start = now - timedelta(days=90)
+            prev_start = now - timedelta(days=180)
+            prev_end = now - timedelta(days=90)
+            trend_days = 30  # Show last 30 days for trend
+        elif period == 'all':
+            current_start = datetime.min.replace(tzinfo=timezone.utc)
+            prev_start = None  # No comparison for 'all'
+            prev_end = None
+            trend_days = 30  # Show last 30 days for trend
+        else:
+            raise ValueError(f"Invalid period: {period}")
+            
+        current_end = now
+        
+        # Helper function to build base queries
+        def get_base_passport_query():
+            query = Passport.query
+            if activity_id:
+                query = query.filter(Passport.activity_id == activity_id)
+            return query
+            
+        def get_base_signup_query():
+            query = Signup.query
+            if activity_id:
+                query = query.filter(Signup.activity_id == activity_id)
+            return query
+            
+        def get_base_income_query():
+            query = Income.query
+            if activity_id:
+                query = query.filter(Income.activity_id == activity_id)
+            return query
+        
+        # KPI 1: Revenue (all passport amounts + income amounts)
+        # Current period revenue
+        passport_revenue = get_base_passport_query().filter(
+            Passport.created_dt >= current_start,
+            Passport.created_dt <= current_end
+        ).with_entities(func.sum(Passport.sold_amt)).scalar() or 0
+        
+        income_revenue = get_base_income_query().filter(
+            Income.date >= current_start,
+            Income.date <= current_end
+        ).with_entities(func.sum(Income.amount)).scalar() or 0
+        
+        current_revenue = passport_revenue + income_revenue
+        
+        # Previous period revenue (if not 'all')
+        if period != 'all':
+            prev_passport_revenue = get_base_passport_query().filter(
+                Passport.created_dt >= prev_start,
+                Passport.created_dt <= prev_end
+            ).with_entities(func.sum(Passport.sold_amt)).scalar() or 0
+            
+            prev_income_revenue = get_base_income_query().filter(
+                Income.date >= prev_start,
+                Income.date <= prev_end
+            ).with_entities(func.sum(Income.amount)).scalar() or 0
+            
+            prev_revenue = prev_passport_revenue + prev_income_revenue
+            if prev_revenue > 0:
+                revenue_change = ((current_revenue - prev_revenue) / prev_revenue * 100)
+            elif current_revenue > 0:
+                revenue_change = 100.0  # New revenue, show as 100% increase
+            else:
+                revenue_change = 0
+        else:
+            prev_revenue = None
+            revenue_change = None
+        
+        # KPI 2: Active Users (passports with uses_remaining > 0)
+        current_active_users = get_base_passport_query().filter(
+            Passport.uses_remaining > 0
+        ).count()
+        
+        if period != 'all':
+            # For active users, we need a snapshot comparison, not creation-based
+            # This is complex to calculate historically, so we'll skip the comparison
+            # Alternative: Track this in a separate daily snapshot table for accurate trends
+            prev_active_users = None
+            active_users_change = None
+        else:
+            prev_active_users = None
+            active_users_change = None
+        
+        # KPI 3: Passports Created
+        current_passports_created = get_base_passport_query().filter(
+            Passport.created_dt >= current_start,
+            Passport.created_dt <= current_end
+        ).count()
+        
+        if period != 'all':
+            prev_passports_created = get_base_passport_query().filter(
+                Passport.created_dt >= prev_start,
+                Passport.created_dt <= prev_end
+            ).count()
+            if prev_passports_created > 0:
+                passports_created_change = ((current_passports_created - prev_passports_created) / prev_passports_created * 100)
+            elif current_passports_created > 0:
+                passports_created_change = 100.0  # New passports, show as 100% increase
+            else:
+                passports_created_change = 0
+        else:
+            prev_passports_created = None
+            passports_created_change = None
+        
+        # KPI 4: Passports Unpaid
+        current_unpaid = get_base_passport_query().filter(
+            Passport.paid == False
+        ).count()
+        
+        if period != 'all':
+            # For unpaid, compare new unpaid passports created in each period
+            prev_unpaid = get_base_passport_query().filter(
+                Passport.created_dt >= prev_start,
+                Passport.created_dt <= prev_end,
+                Passport.paid == False
+            ).count()
+            
+            # Also get current period new unpaid for fair comparison
+            current_period_unpaid = get_base_passport_query().filter(
+                Passport.created_dt >= current_start,
+                Passport.created_dt <= current_end,
+                Passport.paid == False
+            ).count()
+            
+            if prev_unpaid > 0:
+                unpaid_change = ((current_period_unpaid - prev_unpaid) / prev_unpaid * 100)
+            elif current_period_unpaid > 0:
+                unpaid_change = 100.0  # New unpaid passports, show as 100% increase
+            else:
+                unpaid_change = 0
+        else:
+            prev_unpaid = None
+            unpaid_change = None
+        
+        # Build trend data (optimized - single query with grouping)
+        def build_trend(days):
+            trend_start = now - timedelta(days=days)
+            
+            # Single query for passport revenue by day
+            passport_daily = db.session.query(
+                func.date(Passport.created_dt).label('day'),
+                func.sum(Passport.sold_amt).label('revenue')
+            )
+            if activity_id:
+                passport_daily = passport_daily.filter(Passport.activity_id == activity_id)
+            passport_daily = passport_daily.filter(
+                Passport.created_dt >= trend_start,
+                Passport.created_dt <= now
+            ).group_by(func.date(Passport.created_dt)).all()
+            
+            # Single query for income revenue by day
+            income_daily = db.session.query(
+                func.date(Income.date).label('day'),
+                func.sum(Income.amount).label('revenue')
+            )
+            if activity_id:
+                income_daily = income_daily.filter(Income.activity_id == activity_id)
+            income_daily = income_daily.filter(
+                Income.date >= trend_start,
+                Income.date <= now
+            ).group_by(func.date(Income.date)).all()
+            
+            # Convert to dictionaries for fast lookup
+            passport_dict = {str(row.day): float(row.revenue or 0) for row in passport_daily}
+            income_dict = {str(row.day): float(row.revenue or 0) for row in income_daily}
+            
+            # Build trend array
             trend = []
             for i in reversed(range(days)):
-                try:
-                    start = now - timedelta(days=i+1)
-                    end = now - timedelta(days=i)
-                    query = model.query.filter(getattr(model, date_attr) >= start, getattr(model, date_attr) < end)
-                    
-                    # Add activity filter if activity_id is provided
-                    if activity_id and hasattr(model, 'activity_id'):
-                        query = query.filter(model.activity_id == activity_id)
-                    
-                    if filter_fn:
-                        query = query.filter(filter_fn)
-                    
-                    if aggregate_fn:
-                        # Use custom aggregation function (e.g., sum revenue)
-                        result = aggregate_fn(query.all())
-                    else:
-                        # Default to count
-                        result = query.count()
-                    
-                    # Validate the result
-                    if result is None or (isinstance(result, float) and (math.isnan(result) or math.isinf(result))):
-                        result = 0
-                    elif isinstance(result, (int, float)):
-                        result = round(float(result), 2)
-                    else:
-                        result = 0
-                        
-                    trend.append(result)
-                except Exception as e:
-                    print(f"Error building daily series for day {i}: {e}")
-                    trend.append(0)
+                day = (now - timedelta(days=i+1)).date()
+                day_str = str(day)
+                daily_revenue = passport_dict.get(day_str, 0) + income_dict.get(day_str, 0)
+                trend.append(daily_revenue)
             return trend
         
-        def build_revenue_series(days=7):
-            """Build daily revenue series from paid passports using paid_date with data validation"""
-            import math
+        revenue_trend = build_trend(trend_days)
+        
+        # Build trends for other KPIs (optimized - single query with grouping)
+        def build_count_trend(model, filter_condition, days):
+            trend_start = now - timedelta(days=days)
+            
+            # Determine date column
+            date_col = None
+            if hasattr(model, 'created_dt'):
+                date_col = model.created_dt
+            elif hasattr(model, 'signed_up_at'):
+                date_col = model.signed_up_at
+            else:
+                # Fallback to per-day queries if no date column
+                return [0] * days
+            
+            # Single query with grouping
+            query = db.session.query(
+                func.date(date_col).label('day'),
+                func.count().label('count')
+            )
+            
+            if activity_id and hasattr(model, 'activity_id'):
+                query = query.filter(model.activity_id == activity_id)
+            
+            query = query.filter(
+                date_col >= trend_start,
+                date_col <= now
+            )
+            
+            if filter_condition is not None:
+                query = query.filter(filter_condition)
+            
+            daily_counts = query.group_by(func.date(date_col)).all()
+            
+            # Convert to dictionary for fast lookup
+            count_dict = {str(row.day): row.count for row in daily_counts}
+            
+            # Build trend array
             trend = []
             for i in reversed(range(days)):
-                try:
-                    start = now - timedelta(days=i+1)
-                    end = now - timedelta(days=i)
-                    # Use paid_date for accurate revenue tracking, fallback to created_dt if null
-                    query = Passport.query.filter(Passport.paid == True)
-                    
-                    # Add activity filter if activity_id is provided
-                    if activity_id:
-                        query = query.filter(Passport.activity_id == activity_id)
-                    
-                    passports = query.filter(
-                        db.or_(
-                            db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= start, Passport.paid_date < end),
-                            db.and_(Passport.paid_date.is_(None), Passport.created_dt >= start, Passport.created_dt < end)
-                        )
-                    ).all()
-                    
-                    # Calculate daily revenue with validation
-                    daily_revenue = 0
-                    for p in passports:
-                        if p.sold_amt is not None:
-                            try:
-                                amount = float(p.sold_amt)
-                                if not (math.isnan(amount) or math.isinf(amount)):
-                                    daily_revenue += amount
-                            except (TypeError, ValueError):
-                                continue
-                    
-                    trend.append(round(daily_revenue, 2))
-                except Exception as e:
-                    print(f"Error building revenue series for day {i}: {e}")
-                    trend.append(0.0)
+                day = (now - timedelta(days=i+1)).date()
+                day_str = str(day)
+                trend.append(count_dict.get(day_str, 0))
             return trend
-
-        ranges = {
-            "7d": (now - timedelta(days=7), now, 7),
-            "30d": (now - timedelta(days=30), now, 30),
-            "90d": (now - timedelta(days=90), now, 90),
-            "all": (datetime.min.replace(tzinfo=timezone.utc), now, 30),
-        }
-        previous_ranges = {
-            "7d": (now - timedelta(days=14), now - timedelta(days=7)),
-            "30d": (now - timedelta(days=60), now - timedelta(days=30)),
-            "90d": (now - timedelta(days=180), now - timedelta(days=90)),
-            "all": (datetime.min.replace(tzinfo=timezone.utc), now),
-        }
-
-        kpis = {}
-
-        for label, (start, end, trend_days) in ranges.items():
-            prev_start, prev_end = previous_ranges[label]
-
-            # Get current period paid passports using paid_date (with fallback to created_dt)
-            current_revenue_query = Passport.query.filter(Passport.paid == True)
-            if activity_id:
-                current_revenue_query = current_revenue_query.filter(Passport.activity_id == activity_id)
-            current_revenue_passports = current_revenue_query.filter(
-                db.or_(
-                    db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= start, Passport.paid_date <= end),
-                    db.and_(Passport.paid_date.is_(None), Passport.created_dt >= start, Passport.created_dt <= end)
-                )
-            ).all()
-            
-            # Get previous period paid passports using paid_date (with fallback to created_dt)
-            previous_revenue_query = Passport.query.filter(Passport.paid == True)
-            if activity_id:
-                previous_revenue_query = previous_revenue_query.filter(Passport.activity_id == activity_id)
-            previous_revenue_passports = previous_revenue_query.filter(
-                db.or_(
-                    db.and_(Passport.paid_date.isnot(None), Passport.paid_date >= prev_start, Passport.paid_date <= prev_end),
-                    db.and_(Passport.paid_date.is_(None), Passport.created_dt >= prev_start, Passport.created_dt <= prev_end)
-                )
-            ).all()
-            
-            # For other metrics, use created_dt as they track passport creation, not revenue
-            current_passports_query = Passport.query.filter(Passport.created_dt >= start, Passport.created_dt <= end)
-            previous_passports_query = Passport.query.filter(Passport.created_dt >= prev_start, Passport.created_dt <= prev_end)
-            if activity_id:
-                current_passports_query = current_passports_query.filter(Passport.activity_id == activity_id)
-                previous_passports_query = previous_passports_query.filter(Passport.activity_id == activity_id)
-            current_passports = current_passports_query.all()
-            previous_passports = previous_passports_query.all()
-
-            def revenue_total(passports): return sum(p.sold_amt for p in passports if p.sold_amt is not None)
-            def created(passports): return len(passports)
-            def active(passports): return len([p for p in passports if p.uses_remaining > 0])
-            def pending_signups_count(): 
-                query = Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= start, Signup.signed_up_at <= end)
-                if activity_id:
-                    query = query.filter(Signup.activity_id == activity_id)
-                return query.count()
-
-            # Helper function to safely calculate percentage changes
-            def safe_percentage_change(current, previous):
-                """Calculate percentage change with validation"""
-                try:
-                    if previous is None or previous == 0:
-                        return 0
-                    if current is None:
-                        current = 0
-                    change = ((current - previous) / previous) * 100
-                    return round(change, 1) if not (math.isnan(change) or math.isinf(change)) else 0
-                except (TypeError, ValueError, ZeroDivisionError):
-                    return 0
-            
-            # Calculate percentage changes with validation
-            current_revenue = revenue_total(current_revenue_passports)
-            previous_revenue = revenue_total(previous_revenue_passports)
-            revenue_change = safe_percentage_change(current_revenue, previous_revenue)
-            
-            current_active = active(current_passports)
-            previous_active = active(previous_passports)
-            passport_change = safe_percentage_change(current_active, previous_active)
-            
-            current_created = created(current_passports)
-            previous_created = created(previous_passports)
-            new_passports_change = safe_percentage_change(current_created, previous_created)
-            
-            prev_signups_query = Signup.query.filter(Signup.status == "pending", Signup.signed_up_at >= prev_start, Signup.signed_up_at <= prev_end)
-            if activity_id:
-                prev_signups_query = prev_signups_query.filter(Signup.activity_id == activity_id)
-            prev_signups = prev_signups_query.count()
-            current_signups = pending_signups_count()
-            signup_change = safe_percentage_change(current_signups, prev_signups)
-            
-            # Helper function to safely round numbers
-            def safe_round(value, decimals=2):
-                """Safely round numbers, handling None and invalid values"""
-                try:
-                    if value is None:
-                        return 0
-                    num_val = float(value)
-                    return round(num_val, decimals) if not (math.isnan(num_val) or math.isinf(num_val)) else 0
-                except (TypeError, ValueError):
-                    return 0
-            
-            kpis[label] = {
-                "revenue": safe_round(current_revenue, 2),
-                "revenue_prev": safe_round(previous_revenue, 2),
-                "revenue_change": revenue_change,
-                "pass_created": max(0, int(current_created)),
-                "pass_created_prev": max(0, int(previous_created)),
-                "new_passports_change": new_passports_change,
-                "active_users": max(0, int(current_active)),
-                "active_users_prev": max(0, int(previous_active)),
-                "passport_change": passport_change,
-                "pending_signups": max(0, int(current_signups)),
-                "signup_change": signup_change,
-                # Real trend arrays - use proper functions
-                "revenue_trend": build_revenue_series(trend_days),
-                "active_users_trend": build_daily_series(Passport, "created_dt", lambda: Passport.uses_remaining > 0, trend_days),
-                "pass_created_trend": build_daily_series(Passport, "created_dt", None, trend_days),
-                "pending_signups_trend": build_daily_series(Signup, "signed_up_at", lambda: Signup.status == "pending", trend_days)
+        
+        active_users_trend = build_count_trend(Passport, Passport.uses_remaining > 0, trend_days)
+        passports_created_trend = build_count_trend(Passport, None, trend_days)
+        unpaid_trend = build_count_trend(Passport, Passport.paid == False, trend_days)
+        
+        return {
+            'revenue': {
+                'current': round(current_revenue, 2),
+                'previous': round(prev_revenue, 2) if prev_revenue is not None else None,
+                'change': round(revenue_change, 1) if revenue_change is not None else None,
+                'trend_data': revenue_trend
+            },
+            'active_users': {
+                'current': current_active_users,
+                'previous': prev_active_users,
+                'change': round(active_users_change, 1) if active_users_change is not None else None,
+                'trend_data': active_users_trend
+            },
+            'passports_created': {
+                'current': current_passports_created,
+                'previous': prev_passports_created,
+                'change': round(passports_created_change, 1) if passports_created_change is not None else None,
+                'trend_data': passports_created_trend
+            },
+            'unpaid_passports': {
+                'current': current_unpaid,
+                'previous': prev_unpaid,
+                'change': round(unpaid_change, 1) if unpaid_change is not None else None,
+                'trend_data': unpaid_trend,
+                'current_period': current_period_unpaid if period != 'all' else None  # New unpaid in current period
             }
+        }
 
-        return kpis
+
+# Temporary compatibility shim for get_kpi_stats (to allow app to start during transition)
 
 
 

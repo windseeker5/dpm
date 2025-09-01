@@ -91,7 +91,6 @@
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="active_passports">Last 7 days</a></li>
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="active_passports">Last 30 days</a></li>
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="active_passports">Last 90 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="active_passports">All time</a></li>
                   </ul>
                 </div>
               </div>
@@ -142,7 +141,6 @@
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="passports_created">Last 7 days</a></li>
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="passports_created">Last 30 days</a></li>
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="passports_created">Last 90 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="passports_created">All time</a></li>
                   </ul>
                 </div>
               </div>
@@ -179,12 +177,12 @@
           </div>
         </div>
 
-        <!-- Unpaid Passports Card -->
+        <!-- Pending Sign Ups Card -->
         <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending_signups" data-kpi-id="{{ pending_signups_card.id if pending_signups_card else 'pending-signups-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
+                <div class="text-muted small text-uppercase">PENDING SIGN UPS</div>
                 <div class="dropdown">
                   <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="pending_signups">
                     Last 7 days
@@ -193,15 +191,14 @@
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="pending_signups">Last 7 days</a></li>
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="pending_signups">Last 30 days</a></li>
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="pending_signups">Last 90 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="pending_signups">All time</a></li>
                   </ul>
                 </div>
               </div>
               <div class="h2 mb-1" id="pending-signups-value">
-                {% if kpi_data and kpi_data.unpaid_passports %}
-                  {{ "{:,.0f}".format(kpi_data.unpaid_passports.current) }}
+                {% if pending_signups_card and pending_signups_card.data %}
+                  {{ "{:,.0f}".format(pending_signups_card.data.value) }}
                 {% else %}
-                  0
+                  {{ signup_stats['pending_signups'] if signup_stats else '0' }}
                 {% endif %}
               </div>
               <div class="d-flex align-items-center mb-3">
@@ -213,11 +210,11 @@
                   {% else %}
                     <div class="text-muted me-2" id="pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
-                {% elif kpi_data and kpi_data.get('unpaid_passports') and kpi_data['unpaid_passports'].get('change') is not none %}
-                  {% if kpi_data['unpaid_passports']['change'] > 0 %}
-                    <div class="text-success me-2" id="pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif kpi_data['unpaid_passports']['change'] < 0 %}
-                    <div class="text-danger me-2" id="pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                {% elif kpi_data and kpi_data.get('passports_unpaid') and kpi_data['passports_unpaid'].get('change') is not none %}
+                  {% if kpi_data['passports_unpaid']['change'] > 0 %}
+                    <div class="text-success me-2" id="pending-signups-trend">{{ kpi_data['passports_unpaid']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['passports_unpaid']['change'] < 0 %}
+                    <div class="text-danger me-2" id="pending-signups-trend">{{ kpi_data['passports_unpaid']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
                   {% else %}
                     <div class="text-muted me-2" id="pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
@@ -420,11 +417,11 @@
                     {% else %}
                       <div class="text-muted me-2" id="mobile-pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
-                  {% elif kpi_data and kpi_data.get('unpaid_passports') and kpi_data['unpaid_passports'].get('change') is not none %}
-                    {% if kpi_data['unpaid_passports']['change'] > 0 %}
-                      <div class="text-success me-2" id="mobile-pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
-                    {% elif kpi_data['unpaid_passports']['change'] < 0 %}
-                      <div class="text-danger me-2" id="mobile-pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                  {% elif kpi_data and kpi_data.get('passports_unpaid') and kpi_data['passports_unpaid'].get('change') is not none %}
+                    {% if kpi_data['passports_unpaid']['change'] > 0 %}
+                      <div class="text-success me-2" id="mobile-pending-signups-trend">{{ kpi_data['passports_unpaid']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif kpi_data['passports_unpaid']['change'] < 0 %}
+                      <div class="text-danger me-2" id="mobile-pending-signups-trend">{{ kpi_data['passports_unpaid']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
                     {% else %}
                       <div class="text-muted me-2" id="mobile-pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
@@ -1249,9 +1246,8 @@
 
 {% block scripts %}
 <script>
-// Store KPI data from backend as global variable
-window.kpiData = {{ kpi_data | tojson | safe }};
-const kpiData = window.kpiData;
+// Store KPI data from backend
+const kpiData = {{ kpi_data | tojson | safe }};
 console.log('KPI Data loaded:', kpiData);
 
 // Store logs data for pagination
@@ -1455,8 +1451,8 @@ function updateCharts(period = '7d') {
   }
   
   // Update Pending Signups Bar Chart (both desktop and mobile)
-  if (kpiData.unpaid_passports && kpiData.unpaid_passports.trend) {
-    const pendingSignupsBars = generateBarChart(kpiData.unpaid_passports.trend);
+  if (kpiData.passports_unpaid && kpiData.passports_unpaid.trend) {
+    const pendingSignupsBars = generateBarChart(kpiData.passports_unpaid.trend);
     const pendingSignupsCharts = ['#pending-signups-chart', '#mobile-pending-signups-chart'];
     pendingSignupsCharts.forEach(selector => {
       const chart = document.querySelector(selector);
@@ -1646,12 +1642,12 @@ function determineKPIType(cardElement) {
     return 'revenue'; // fallback
   }
   
-  // Determine KPI type based on card content - use FRONTEND keys consistently
+  // Determine KPI type based on card content
   const cardText = cardElement.textContent.toLowerCase();
   if (cardText.includes('revenue')) return 'revenue';
-  if (cardText.includes('active passports') || cardText.includes('active users')) return 'active_passports';
+  if (cardText.includes('active passports') || cardText.includes('active users')) return 'active_users';
   if (cardText.includes('passports created')) return 'passports_created';
-  if (cardText.includes('unpaid passports') || cardText.includes('pending sign ups')) return 'pending_signups';
+  if (cardText.includes('pending sign ups')) return 'passports_unpaid';
   return 'revenue'; // fallback
 }
 
@@ -1689,7 +1685,7 @@ async function updateKPICard(period, kpiType, cardElement) {
       'revenue': 'revenue',
       'active_passports': 'active_users',
       'passports_created': 'passports_created', 
-      'pending_signups': 'unpaid_passports'
+      'pending_signups': 'passports_unpaid'
     };
     
     const apiKey = apiKeyMapping[kpiType] || kpiType;
@@ -1726,11 +1722,11 @@ async function updateKPICard(period, kpiType, cardElement) {
     let trendElement = null;
     if (kpiType === 'revenue') {
       trendElement = cardElement.querySelector('#revenue-trend');
-    } else if (kpiType === 'active_passports') {
+    } else if (kpiType === 'active_users') {
       trendElement = cardElement.querySelector('#active-passports-trend');
     } else if (kpiType === 'passports_created') {
       trendElement = cardElement.querySelector('#passports-created-trend');
-    } else if (kpiType === 'pending_signups') {
+    } else if (kpiType === 'passports_unpaid') {
       trendElement = cardElement.querySelector('#pending-signups-trend');
     }
     
@@ -1788,7 +1784,7 @@ async function updateKPICard(period, kpiType, cardElement) {
 // Function to update a single chart in a KPI card
 function updateSingleChart(cardElement, kpiData, kpiType) {
   const chartElement = cardElement.querySelector('[id*="-chart"]');
-  if (!chartElement || !kpiData.trend_data || kpiData.trend_data.length === 0) {
+  if (!chartElement || !kpiData.trend || kpiData.trend.length === 0) {
     return;
   }
   
@@ -1800,10 +1796,10 @@ function updateSingleChart(cardElement, kpiData, kpiType) {
     const options = {
       series: [{ 
         name: 'Revenue',
-        data: kpiData.trend_data 
+        data: kpiData.trend 
       }],
       chart: { 
-        type: 'area', 
+        type: 'line', 
         height: 40, 
         sparkline: { enabled: true },
         toolbar: { show: false },
@@ -1845,8 +1841,8 @@ function updateSingleChart(cardElement, kpiData, kpiType) {
     // Bar chart for other KPIs
     const options = {
       series: [{ 
-        name: kpiType === 'pending_signups' ? 'Unpaid Passports' : kpiType.replace('_', ' '),
-        data: kpiData.trend_data 
+        name: kpiType.replace('_', ' '),
+        data: kpiData.trend 
       }],
       chart: { 
         type: 'bar', 
@@ -1985,11 +1981,11 @@ function updateSingleKPIValues(kpiType, cardElement, period, periodData) {
       trendEl.className = `${trendClass} me-2`;
       trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="ti ${icon}"></i>`;
     }
-  } else if (kpiType === 'pending_signups' && kpiData.unpaid_passports && kpiData.unpaid_passports.current !== undefined) {
-    if (valueEl) valueEl.textContent = Math.round(kpiData.unpaid_passports.current);
+  } else if (kpiType === 'pending_signups' && kpiData.passports_unpaid && kpiData.passports_unpaid.current !== undefined) {
+    if (valueEl) valueEl.textContent = Math.round(kpiData.passports_unpaid.current);
     
-    if (trendEl && kpiData.unpaid_passports.change !== undefined) {
-      const change = kpiData.unpaid_passports.change;
+    if (trendEl && kpiData.passports_unpaid.change !== undefined) {
+      const change = kpiData.passports_unpaid.change;
       let trendClass = 'text-muted';
       let icon = 'ti-minus';
       
@@ -2048,8 +2044,8 @@ function updateSingleKPIChart(kpiType, cardElement, period, periodData) {
   } else if (kpiType === 'passports_created' && kpiData.passports_created && kpiData.passports_created.trend) {
     const passportsCreatedPath = generateLineChart(kpiData.passports_created.trend);
     chartEl.innerHTML = `<path d="${passportsCreatedPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
-  } else if (kpiType === 'pending_signups' && kpiData.unpaid_passports && kpiData.unpaid_passports.trend) {
-    const pendingSignupsBars = generateBarChart(kpiData.unpaid_passports.trend);
+  } else if (kpiType === 'pending_signups' && kpiData.passports_unpaid && kpiData.passports_unpaid.trend) {
+    const pendingSignupsBars = generateBarChart(kpiData.passports_unpaid.trend);
     chartEl.innerHTML = pendingSignupsBars;
   }
 }
@@ -2343,37 +2339,268 @@ let logsPagination;
 
 // Initialize ApexCharts on page load  
 function initializeApexCharts() {
-  if (!kpiData || typeof ApexCharts === 'undefined') return;
+  console.log('Initializing ApexCharts with data:', kpiData);
   
-  // Revenue line chart
-  if (kpiData.revenue && kpiData.revenue.trend_data) {
-    ['#revenue-chart', '#mobile-revenue-chart'].forEach(id => {
-      const el = document.querySelector(id);
-      if (el) new ApexCharts(el, {series: [{data: kpiData.revenue.trend_data}], chart: {type: 'area', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  // Revenue Line Chart with gradient fill (like Tabler.io reference)
+  if (kpiData && kpiData.revenue && kpiData.revenue.trend && kpiData.revenue.trend.length > 0) {
+    const revenueOptions = {
+      series: [{ 
+        name: 'Revenue', 
+        data: kpiData.revenue.trend 
+      }],
+      chart: { 
+        type: 'area', 
+        height: 40, 
+        sparkline: { enabled: true },
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        parentHeightOffset: 0,
+        offsetX: 0,
+        offsetY: 0
+      },
+      stroke: { 
+        curve: 'smooth', 
+        width: 1.5, 
+        colors: ['#206bc4'] 
+      },
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shadeIntensity: 1,
+          opacityFrom: 0.4,
+          opacityTo: 0.1,
+          stops: [0, 100]
+        },
+        colors: ['#206bc4']
+      },
+      colors: ['#206bc4'],
+      tooltip: { 
+        enabled: true,
+        y: { 
+          formatter: (val) => '$' + (val || 0).toFixed(2) 
+        }
+      },
+      xaxis: {
+        labels: { show: false },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+      },
+      yaxis: {
+        labels: { show: false }
+      },
+      grid: {
+        show: false,
+        padding: {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0
+        }
+      },
+      markers: {
+        size: 0
+      },
+      dataLabels: {
+        enabled: false
+      }
+    };
+    
+    // Initialize charts for both desktop and mobile
+    const revenueElement1 = document.querySelector('#revenue-chart');
+    const revenueElement2 = document.querySelector('#mobile-revenue-chart');
+    
+    if (revenueElement1) {
+      revenueElement1.innerHTML = '';
+      const revenueChart1 = new ApexCharts(revenueElement1, revenueOptions);
+      revenueChart1.render();
+    }
+    if (revenueElement2) {
+      revenueElement2.innerHTML = '';
+      const revenueChart2 = new ApexCharts(revenueElement2, revenueOptions);
+      revenueChart2.render();
+    }
+  }
+
+  // Active Users Bar Chart (like Tabler.io reference)
+  if (kpiData && kpiData.active_users && kpiData.active_users.trend && kpiData.active_users.trend.length > 0) {
+    const activeUsersOptions = {
+      series: [{ 
+        name: 'Active Users',
+        data: kpiData.active_users.trend 
+      }],
+      chart: { 
+        type: 'bar', 
+        height: 40, 
+        sparkline: { enabled: true },
+        toolbar: { show: false },
+        parentHeightOffset: 0,
+        offsetX: 0,
+        offsetY: 0
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 2,
+          columnWidth: '60%'
+        }
+      },
+      colors: ['#206bc4'],
+      tooltip: {
+        enabled: true,
+        y: {
+          formatter: (val) => (val || 0).toString()
+        }
+      },
+      xaxis: {
+        labels: { show: false },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+      },
+      yaxis: {
+        labels: { show: false }
+      },
+      grid: {
+        show: false,
+        padding: {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0
+        }
+      },
+      dataLabels: {
+        enabled: false
+      }
+    };
+    
+    ['#active-passports-chart', '#mobile-active-passports-chart'].forEach(selector => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.innerHTML = '';
+        const chart = new ApexCharts(element, activeUsersOptions);
+        chart.render();
+      }
     });
   }
 
-  // Active passports bar chart
-  if (kpiData.active_users && kpiData.active_users.trend_data) {
-    ['#active-passports-chart', '#mobile-active-passports-chart'].forEach(id => {
-      const el = document.querySelector(id);
-      if (el) new ApexCharts(el, {series: [{data: kpiData.active_users.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  // Passports Created Bar Chart (changed from line to bar)
+  if (kpiData && kpiData.passports_created && kpiData.passports_created.trend && kpiData.passports_created.trend.length > 0) {
+    const passportsOptions = {
+      series: [{ 
+        name: 'Passports Created',
+        data: kpiData.passports_created.trend 
+      }],
+      chart: { 
+        type: 'bar', 
+        height: 40, 
+        sparkline: { enabled: true },
+        toolbar: { show: false },
+        parentHeightOffset: 0,
+        offsetX: 0,
+        offsetY: 0
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 2,
+          columnWidth: '60%'
+        }
+      },
+      colors: ['#206bc4'],
+      tooltip: {
+        enabled: true,
+        y: {
+          formatter: (val) => (val || 0).toString()
+        }
+      },
+      xaxis: {
+        labels: { show: false },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+      },
+      yaxis: {
+        labels: { show: false }
+      },
+      grid: {
+        show: false,
+        padding: {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0
+        }
+      },
+      dataLabels: {
+        enabled: false
+      }
+    };
+    
+    ['#passports-created-chart', '#mobile-passports-created-chart'].forEach(selector => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.innerHTML = '';
+        const chart = new ApexCharts(element, passportsOptions);
+        chart.render();
+      }
     });
   }
 
-  // Passports created bar chart
-  if (kpiData.passports_created && kpiData.passports_created.trend_data) {
-    ['#passports-created-chart', '#mobile-passports-created-chart'].forEach(id => {
-      const el = document.querySelector(id);
-      if (el) new ApexCharts(el, {series: [{data: kpiData.passports_created.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
-    });
-  }
-
-  // Unpaid passports bar chart
-  if (kpiData.unpaid_passports && kpiData.unpaid_passports.trend_data) {
-    ['#pending-signups-chart', '#mobile-pending-signups-chart'].forEach(id => {
-      const el = document.querySelector(id);
-      if (el) new ApexCharts(el, {series: [{data: kpiData.unpaid_passports.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  // Unpaid Passports Bar Chart
+  if (kpiData && kpiData.passports_unpaid && kpiData.passports_unpaid.trend && kpiData.passports_unpaid.trend.length > 0) {
+    const unpaidOptions = {
+      series: [{ 
+        name: 'Unpaid Passports',
+        data: kpiData.passports_unpaid.trend 
+      }],
+      chart: { 
+        type: 'bar', 
+        height: 40, 
+        sparkline: { enabled: true },
+        toolbar: { show: false },
+        parentHeightOffset: 0,
+        offsetX: 0,
+        offsetY: 0
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 2,
+          columnWidth: '60%'
+        }
+      },
+      colors: ['#206bc4'],
+      tooltip: {
+        enabled: true,
+        y: {
+          formatter: (val) => (val || 0).toString()
+        }
+      },
+      xaxis: {
+        labels: { show: false },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+      },
+      yaxis: {
+        labels: { show: false }
+      },
+      grid: {
+        show: false,
+        padding: {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0
+        }
+      },
+      dataLabels: {
+        enabled: false
+      }
+    };
+    
+    ['#pending-signups-chart', '#mobile-pending-signups-chart'].forEach(selector => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.innerHTML = '';
+        const chart = new ApexCharts(element, unpaidOptions);
+        chart.render();
+      }
     });
   }
 }
@@ -2507,11 +2734,43 @@ function updateFilterCounts() {
     });
 }
 
-// REMOVED: Duplicate chart initialization (handled by initializeApexCharts function above)
+// Override KPI card handling to use new centralized KPICard component for all 4 cards
+document.addEventListener('DOMContentLoaded', function() {
+  // Define card configurations
+  const kpiCardConfigs = [
+    { 
+      selector: '[data-kpi-card="revenue"], [data-kpi-card="revenue-mobile"]',
+      cardType: 'revenue',
+      valuePrefix: '$',
+      trendIds: ['#revenue-trend', '#mobile-revenue-trend'],
+      valueIds: ['#revenue-value', '#mobile-revenue-value']
+    },
+    { 
+      selector: '[data-kpi-card="active_passports"], [data-kpi-card="active-passports-mobile"]',
+      cardType: 'active_passports',
+      valuePrefix: '',
+      trendIds: ['#active-passports-trend', '#mobile-active-passports-trend'],
+      valueIds: ['#active-passports-value', '#mobile-active-passports-value']
+    },
+    { 
+      selector: '[data-kpi-card="passports_created"], [data-kpi-card="passports-created-mobile"]',
+      cardType: 'passports_created',
+      valuePrefix: '',
+      trendIds: ['#passports-created-trend', '#mobile-passports-created-trend'],
+      valueIds: ['#passports-created-value', '#mobile-passports-created-value']
+    },
+    { 
+      selector: '[data-kpi-card="pending_signups"], [data-kpi-card="pending-signups-mobile"]',
+      cardType: 'pending_signups',
+      valuePrefix: '',
+      trendIds: ['#pending-signups-trend', '#mobile-pending-signups-trend'],
+      valueIds: ['#pending-signups-value', '#mobile-pending-signups-value']
+    }
+  ];
 
-/*
-// DISABLED: Setup handlers for each KPI card type 
-// This handler conflicts with attachDropdownHandlers() - using unified handler instead
+  // DISABLED: Setup handlers for each KPI card type 
+  // This handler conflicts with attachDropdownHandlers() - using unified handler instead
+  /*
   kpiCardConfigs.forEach(config => {
     document.querySelectorAll(`${config.selector} .kpi-period-btn`).forEach(item => {
       item.addEventListener('click', function(e) {
@@ -2607,6 +2866,7 @@ function updateFilterCounts() {
     });
   });
   */
+});
 </script>
 
 

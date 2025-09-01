@@ -57,7 +57,6 @@ from config import Config
 from decorators import rate_limit, admin_required, log_api_call, cache_response
 
 # 🎯 KPI Card Component
-from components.kpi_card import generate_kpi_card, generate_dashboard_cards
 
 # 🔁 Background Jobs
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -72,7 +71,7 @@ from utils import (
     match_gmail_payments_to_passes,
     utc_to_local,
     send_unpaid_reminders,
-    get_kpi_stats,
+    get_kpi_data,
     notify_pass_event,
     notify_signup_event,
     generate_pass_code,
@@ -637,26 +636,14 @@ def dashboard():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from utils import get_kpi_stats, get_all_activity_logs
+    from utils import get_kpi_data, get_all_activity_logs
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
     from datetime import datetime
+    from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card
     
-    # Try to use the new KPICard component for all dashboard cards, fallback to original
-    try:
-        from components.kpi_card import generate_kpi_card
-        revenue_card_data = generate_kpi_card('revenue')
-        active_passports_card_data = generate_kpi_card('active_passports')
-        passports_created_card_data = generate_kpi_card('passports_created')
-        pending_signups_card_data = generate_kpi_card('pending_signups')
-    except Exception as e:
-        print(f"Failed to use KPICard component: {e}")
-        revenue_card_data = None
-        active_passports_card_data = None
-        passports_created_card_data = None
-        pending_signups_card_data = None
-
-    kpi_data = get_kpi_stats()
+    # Use new simplified KPI data function
+    kpi_data = get_kpi_data()
     activities = db.session.query(Activity).filter_by(status='active').all()
     activity_cards = []
 
@@ -736,6 +723,12 @@ def dashboard():
     # ✅ Extract active passport count for the dashboard badge
     active_passport_count = passport_stats['active_passports']
 
+    # Render KPI cards using new templates
+    revenue_card = render_revenue_card()
+    active_users_card = render_active_users_card()
+    passports_created_card = render_passports_created_card()
+    passports_unpaid_card = render_passports_unpaid_card()
+
     return render_template(
         "dashboard.html",
         activities=activity_cards,
@@ -744,10 +737,10 @@ def dashboard():
         signup_stats=signup_stats,
         active_passport_count=active_passport_count,
         logs=all_logs,
-        revenue_card=revenue_card_data,  # Add the new revenue card data
-        active_passports_card=active_passports_card_data,  # Add active passports card
-        passports_created_card=passports_created_card_data,  # Add passports created card
-        pending_signups_card=pending_signups_card_data  # Add pending signups card
+        revenue_card=revenue_card,
+        active_users_card=active_users_card,
+        passports_created_card=passports_created_card,
+        passports_unpaid_card=passports_unpaid_card
     )
 
 
@@ -3938,6 +3931,7 @@ def activity_dashboard(activity_id):
     from sqlalchemy.orm import joinedload
     from sqlalchemy import or_, func
     from datetime import datetime, timezone, timedelta
+    from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card
 
     activity = Activity.query.get(activity_id)
     if not activity:
@@ -4007,9 +4001,9 @@ def activity_dashboard(activity_id):
     
     passports = passports_query.order_by(Passport.created_dt.desc()).all()
 
-    # Use the enhanced get_kpi_stats function with activity filtering
-    from utils import get_kpi_stats
-    kpi_stats = get_kpi_stats(activity_id=activity_id)
+    # Use the enhanced get_kpi_data function with activity filtering
+    from utils import get_kpi_data
+    kpi_stats = get_kpi_data(activity_id=activity_id)
     
     # Get the 7-day KPI data by default (this will be the initial view)
     current_kpi = kpi_stats.get('7d', {})
@@ -4066,28 +4060,35 @@ def activity_dashboard(activity_id):
     # KPI data structure for the dashboard template
     kpi_data = {
         'revenue': {
-            'total': current_kpi.get('revenue', 0),
+            'current': current_kpi.get('revenue', 0),
             'change_7d': current_kpi.get('revenue_change', 0),
             'trend': 'up' if current_kpi.get('revenue_change', 0) > 0 else 'down' if current_kpi.get('revenue_change', 0) < 0 else 'stable',
             'percentage': current_kpi.get('revenue_change', 0),
             'trend_data': current_kpi.get('revenue_trend', [])
         },
         'active_users': {
-            'total': current_kpi.get('active_users', 0),
+            'current': current_kpi.get('active_users', 0),
             'change_7d': current_kpi.get('passport_change', 0),
             'trend': 'up' if current_kpi.get('passport_change', 0) > 0 else 'down' if current_kpi.get('passport_change', 0) < 0 else 'stable',
             'percentage': current_kpi.get('passport_change', 0),
             'trend_data': current_kpi.get('active_users_trend', [])
         },
         'unpaid_passports': {
-            'total': unpaid_count,
+            'current': unpaid_count,
             'overdue': overdue_count,
             'trend': 'down' if overdue_count == 0 else 'up',
             'percentage': overdue_count,
             'trend_data': [unpaid_count] * 7  # Simple placeholder for now
         },
+        'passports_created': {
+            'current': current_kpi.get('passports_created', len(all_passports)),
+            'change': current_kpi.get('passports_created_change', 0),
+            'trend': 'up' if current_kpi.get('passports_created_change', 0) > 0 else 'down' if current_kpi.get('passports_created_change', 0) < 0 else 'stable',
+            'percentage': current_kpi.get('passports_created_change', 0),
+            'trend_data': current_kpi.get('passports_created_trend', [])
+        },
         'profit': {
-            'total': profit,
+            'current': profit,
             'margin': profit_margin,
             'trend': 'up' if profit > 0 else 'down' if profit < 0 else 'stable',
             'percentage': profit_margin,
@@ -4135,6 +4136,12 @@ def activity_dashboard(activity_id):
     from models import PassportType
     passport_types = PassportType.query.filter_by(activity_id=activity_id, status='active').all()
 
+    # Render KPI cards with activity filter
+    revenue_card = render_revenue_card(activity_id=activity_id)
+    active_users_card = render_active_users_card(activity_id=activity_id)  
+    passports_created_card = render_passports_created_card(activity_id=activity_id)
+    passports_unpaid_card = render_passports_unpaid_card(activity_id=activity_id)
+
     return render_template(
         "activity_dashboard.html",
         activity=activity,
@@ -4148,7 +4155,11 @@ def activity_dashboard(activity_id):
         kpi_data=kpi_data,
         dashboard_stats=dashboard_stats,
         activity_logs=activity_logs,
-        current_datetime=datetime.now()
+        current_datetime=datetime.now(),
+        revenue_card=revenue_card,
+        active_users_card=active_users_card,
+        passports_created_card=passports_created_card,
+        passports_unpaid_card=passports_unpaid_card
     )
 
 
@@ -4184,7 +4195,7 @@ def get_activity_kpis_api(activity_id):
         period_param = request.args.get('period', '7')
         try:
             period = int(escape(str(period_param)))
-            if period not in [7, 30, 90]:
+            if period not in [7, 30, 90, 365]:
                 period = 7  # Default fallback
         except (ValueError, TypeError):
             period = 7
@@ -4192,7 +4203,7 @@ def get_activity_kpis_api(activity_id):
         # Validate activity exists and user has access
         from models import Activity
         activity = db.session.execute(
-            text("SELECT id, name FROM activity WHERE id = :activity_id AND active = 1"),
+            text("SELECT id, name FROM activity WHERE id = :activity_id AND status = 'active'"),
             {"activity_id": activity_id}
         ).fetchone()
         
@@ -4280,13 +4291,13 @@ def get_activity_kpis_api(activity_id):
     # Legacy implementation with security enhancements
     from models import Activity, Passport
     from datetime import datetime, timezone, timedelta
-    from utils import get_kpi_stats
+    from utils import get_kpi_data
     import math
     
     try:
         # Secure database query using parameterized query
         activity = db.session.execute(
-            text("SELECT * FROM activity WHERE id = :activity_id AND active = 1"),
+            text("SELECT * FROM activity WHERE id = :activity_id AND status = 'active'"),
             {"activity_id": activity_id}
         ).fetchone()
         
@@ -4298,7 +4309,7 @@ def get_activity_kpis_api(activity_id):
             }), 404
         
         # Use the enhanced get_kpi_stats function with activity filtering
-        kpi_stats = get_kpi_stats(activity_id=activity_id)
+        kpi_stats = get_kpi_data(activity_id=activity_id)
         
         # Map period to the correct key
         period_key = '7d'
@@ -4499,7 +4510,7 @@ def get_activity_dashboard_data(activity_id):
     try:
         # Use secure parameterized query to check activity exists
         activity = db.session.execute(
-            text("SELECT id, name FROM activity WHERE id = :activity_id AND active = 1"),
+            text("SELECT id, name FROM activity WHERE id = :activity_id AND status = 'active'"),
             {"activity_id": activity_id}
         ).fetchone()
         
@@ -4725,12 +4736,12 @@ def get_global_kpis_api():
         logger.warning(f"Global KPI component failed, using legacy: {str(component_error)}")
     
     # Legacy implementation with enhanced security
-    from utils import get_kpi_stats
+    from utils import get_kpi_data
     import math
     
     try:
         # Get global KPI stats with error handling
-        kpi_stats = get_kpi_stats()
+        kpi_stats = get_kpi_data()
         
         # Get the requested period data with validation
         period_data = kpi_stats.get(period, {})
@@ -4826,6 +4837,64 @@ def get_global_kpis_api():
             "code": "INTERNAL_ERROR",
             "details": str(e) if current_app.debug else "Please try again later",
             "period": period if 'period' in locals() else 'unknown'
+        }), 500
+
+
+@app.route('/api/kpi-data', methods=['GET'])
+@admin_required
+@rate_limit(max_requests=30, window=60)
+@log_api_call
+@cache_response(timeout=60)
+def get_kpi_data_api():
+    """
+    Unified KPI data endpoint for both global and activity-specific KPIs.
+    Supports periods: 7d, 30d, 90d, all
+    Optional activity_id parameter for activity-specific data
+    """
+    from utils import get_kpi_data
+    from models import Activity
+    from markupsafe import escape
+    
+    try:
+        # Get and validate period parameter
+        period = request.args.get('period', '7d')
+        valid_periods = ['7d', '30d', '90d', 'all']
+        
+        if period not in valid_periods:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid period. Must be one of: {", ".join(valid_periods)}'
+            }), 400
+        
+        # Get optional activity_id parameter
+        activity_id = request.args.get('activity_id', type=int)
+        
+        # Validate activity_id if provided
+        if activity_id is not None:
+            activity = Activity.query.get(activity_id)
+            if not activity:
+                return jsonify({
+                    'success': False,
+                    'error': f'Activity with id {activity_id} not found'
+                }), 404
+        
+        # Get KPI data using the existing function
+        kpi_data = get_kpi_data(activity_id=activity_id, period=period)
+        
+        # Return successful response
+        return jsonify({
+            'success': True,
+            'period': period,
+            'activity_id': activity_id,
+            'kpi_data': kpi_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in get_kpi_data_api: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'An error occurred while fetching KPI data',
+            'details': str(e) if app.debug else None
         }), 500
 
 
@@ -6303,56 +6372,6 @@ def test_notification_endpoints_page():
     return send_from_directory("test/html", "notification_endpoints_test.html")
 
 
-# New KPI Card API endpoint for standardized components
-@app.route("/api/kpi-card/<card_type>")
-def get_kpi_card_api(card_type):
-    """API endpoint for fetching individual KPI card data using the new component"""
-    if "admin" not in session:
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-    
-    # Get period parameter
-    period = request.args.get('period', '7d')
-    
-    # Validate period
-    valid_periods = ['7d', '30d', '90d', 'all']
-    if period not in valid_periods:
-        period = '7d'
-    
-    # Validate card type
-    valid_card_types = ['revenue', 'active_users', 'active_passports', 
-                        'passports_created', 'pending_signups', 
-                        'unpaid_passports', 'profit']
-    
-    if card_type not in valid_card_types:
-        return jsonify({
-            "success": False,
-            "error": f"Invalid card type: {card_type}"
-        }), 400
-    
-    try:
-        from components.kpi_card import generate_kpi_card
-        
-        # Generate card data with the specified period
-        card_data = generate_kpi_card(card_type, period=period)
-        
-        if card_data:
-            return jsonify({
-                "success": True,
-                "card_data": card_data,
-                "period": period
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "error": "Failed to generate card data"
-            }), 500
-            
-    except Exception as e:
-        print(f"Error in KPI card API: {e}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
 
 
 # Initialize default survey template on startup
@@ -6393,7 +6412,10 @@ def test_payment_bot_now():
         print(error_msg)
         return f"<h1>{error_msg}</h1><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
 
+
+
+
 if __name__ == "__main__":
-    port = 8890
+    port = 5000
     print(f"🚀 Running on port {port}")
     app.run(debug=True, port=port)

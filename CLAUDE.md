@@ -2,109 +2,129 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Development Commands
+## Development Environment
 
-CONSTRAINTS - DO NOT:
-  - Create ANY new files
-  - Add ANY global event listeners
-  - Touch ANY search functionality
-  - Touch ANY filter functionality  
-  - Use WeakMap, RequestQueue, or any complex patterns
-  - Add "monitoring", "performance", or "enterprise" features
-  - Write more than 50 lines
+**IMPORTANT: Flask server is always running on `localhost:5000` in debug mode.**
 
+### Infrastructure Status
+- Flask Server: `localhost:5000` ✅ Always running in debug mode
+- MCP Playwright: ✅ Available for browser testing
+- Database: SQLite (`instance/minipass.db`) ✅ Configured
+- Virtual Environment: `venv/` ✅ Activated with all dependencies
 
-Only change what's necessary to fix this issue. Don't refactor working code around it. 
+### Required Reading for All Work
+🚨 **MANDATORY:** Read `docs/CONSTRAINTS.md` before starting any task
+- Main agents are ORCHESTRATORS only - delegate to specialists
+- Specialist agents must acknowledge constraints before coding
+- Use existing servers (Flask on 5000, MCP Playwright)
+- Follow Python-first development approach
 
-Always use the best competent agent for the task. Do not start a flask server. We already have one up and running for debug on port 8890.
+## Common Commands
 
-Always test your task using playwrights mcp server and username = kdresdell@gmail.com and password = admin123
+### Running Tests
+```bash
+# Unit tests (using unittest framework)
+source venv/bin/activate
+python -m unittest test.test_kpi_data -v
+python test/test_kpi_data.py
 
-Reference: @Developmet_Guidelines.md [Bug Fix Protocol]
+# MCP Playwright tests (for UI testing)
+# Use MCP Playwright browser tools directly in Claude Code
+```
 
+### Development
+```bash
+# Virtual environment (if needed)
+source venv/bin/activate
+
+# Database migrations
+flask db migrate -m "description"
+flask db upgrade
+
+# Access Flask app (always running on port 5000)
+# No need to start - already running in debug mode
+curl http://localhost:5000/
+```
 
 ## Architecture Overview
 
-### Core Structure
-This is a Flask-based business management application (Minipass) that handles:
-- **Passport Management**: Digitized passes with QR codes, payments, and tracking
-- **Activity Tracking**: Member activities with expenses and income
-- **Survey System**: Customer surveys with template management
-- **AI Analytics Chatbot**: Multi-provider AI chatbot (OpenAI, Anthropic, Ollama)
-- **Email Integration**: IMAP/SMTP for automated payment processing and notifications
+### Core Application Structure
+- **Main App**: `app.py` - Single-file Flask application (~66k lines)
+- **Models**: `models.py` - SQLAlchemy models for all entities
+- **Utils**: `utils.py` - Business logic and helper functions
+- **Templates**: `templates/` - Jinja2 templates using Tabler.io CSS framework
 
-### Key Components
-- **Main Application**: `app.py` - Primary Flask app with all route handlers
-- **Database Models**: `models.py` - SQLAlchemy models for all entities
-- **Utilities**: `utils.py` - Email processing, QR generation, payment matching
-- **Security**: `decorators.py` - Rate limiting, admin auth, API logging
-- **AI Chatbot**: `chatbot_v2/` - Modular AI chatbot with provider abstraction
-- **KPI Components**: `components/kpi_card.py` - Reusable dashboard metrics
+### Key Models & Entities
+- **Admin**: Administrator accounts with authentication
+- **Activity**: Core business entity (sports leagues, fitness classes, etc.)
+- **Passport/PassportType**: Digital passes for activities
+- **Signup**: Registration process for activities
+- **User**: End users who purchase and redeem passes
+- **Income**: Financial tracking and payment matching
+- **Survey/SurveyTemplate**: Customer feedback collection
+- **ChatConversation/ChatMessage**: AI chatbot for data queries
 
-### Database Architecture
-- Uses SQLite with timezone-aware datetime handling
-- Key models: Admin, Passport, Activity, Survey, Organization, ChatConversation
-- Migration system in `migrations/` directory with version tracking
-- Backward compatibility maintained for removed UI fields via `REMOVED_FIELD_DEFAULTS`
+### Business Logic Architecture
+- **Registration Flow**: Activity → PassportType → Signup → Payment → Passport
+- **Payment Matching**: Automated email parsing to match e-transfers with signups
+- **Digital Passes**: QR code generation and redemption tracking
+- **KPI Dashboard**: Real-time metrics using `get_kpi_data()` function
+- **Survey System**: Template-based feedback collection with 3-click deployment
+
+### API Structure
+- **Blueprints**: `api/backup.py`, `api/settings.py`
+- **Chatbot**: `chatbot_v2/` - AI-powered business intelligence queries
+- **Email Templates**: `templates/email_templates/` - Automated branded communications
 
 ### Frontend Architecture
-- Uses Tabler.io CSS framework for responsive UI
-- Custom CSS in `static/css/` for component-specific styling
-- JavaScript components in `static/js/` (dropdown fixes, chatbot, unified settings)
-- Templates in `templates/` with Jinja2 templating
+- **Server-side rendering** with Jinja2 templates
+- **Tabler.io CSS framework** for consistent UI components
+- **Minimal JavaScript** (<10 lines per function constraint)
+- **Progressive Web App** features for mobile experience
 
-### AI Chatbot System (chatbot_v2/)
-- Multi-provider support: OpenAI, Anthropic Claude, Ollama
-- Database query integration for analytics
-- Conversation tracking and usage monitoring
-- Security-focused with query sanitization
+### Database Design
+- **SQLite** database with timezone-aware datetime handling
+- **Migration system** using Flask-Migrate
+- **Backup system** with automated daily backups in `instance/`
 
-### Email System
-- IMAP integration for automated payment processing from Gmail
-- Email template compilation system in `templates/email_templates/`
-- Automated reminder system and notification workflows
-- Image inlining and premailer for email compatibility
+### Technology Constraints
+- **Container Limits**: <512MB RAM, <10s startup time
+- **Python-First Policy**: Business logic in Python, minimal client-side JavaScript
+- **Testing Required**: Unit tests + MCP Playwright integration tests
+- **Email Integration**: Custom email parsing for Canadian e-transfer automation
 
-### Security Features
-- CSRF protection via Flask-WTF
-- Rate limiting decorators
-- Admin authentication system
-- API call logging and audit trails
-- Secure file handling with werkzeug
+## Development Workflow
 
-### Performance Optimizations
-- Response caching decorators
-- Background job scheduling with APScheduler
-- Optimized database queries with SQLAlchemy
-- Static asset organization for efficient loading
+### For Main Orchestrator Agents
+1. Read `docs/CONSTRAINTS.md` and `docs/PRD.md` for context
+2. Plan tasks and delegate to appropriate specialist agents
+3. Never code directly - orchestrate only
 
-## Development Notes
+### For Specialist Agents
+1. Acknowledge constraints checklist before starting
+2. Use existing Flask server on port 5000
+3. Write unit tests for new functionality
+4. Follow Python-first development approach
+5. Keep JavaScript minimal and functional
 
-### Key Dependencies
-- **Flask Stack**: Flask, SQLAlchemy, Migrate, WTF, Mail
-- **AI/ML**: OpenAI, Anthropic, Ollama clients, pandas, matplotlib
-- **Payments**: Stripe integration
-- **Email**: premailer for template processing
-- **QR Codes**: qrcode[pil] for pass generation
-- **Fuzzy Matching**: rapidfuzz for payment matching
+### Testing Strategy
+- **Unit Tests**: Python unittest framework in `test/` directory
+- **Integration Tests**: MCP Playwright for browser-based testing
+- **Manual Testing**: Use running Flask server on localhost:5000
 
-### Important Patterns
-- All datetime handling uses UTC with timezone conversion via `utc_to_local()`
-- Email templates are compiled from source with inline image processing
-- KPI cards use standardized component system for consistency
-- Security decorators are applied to sensitive routes
-- Database migrations maintain backward compatibility
+## Key Business Context
 
-### Development Environment
-- Uses Python virtual environment
-- Environment variables loaded via python-dotenv
-- Static files served directly in development
-- Database auto-creates on first run
+Minipass is a SaaS platform for activity management targeting two markets:
+1. **Activity Managers**: Sports leagues, fitness classes, tournaments
+2. **Small Business Loyalty**: Coffee shops, salons, local services
 
-### File Upload Handling
-- Activity images stored in `static/uploads/activity_images/`
-- Avatar uploads in `static/uploads/avatars/`
-- Receipt files in expense tracking
-- Secure filename processing with werkzeug
+**Unique Features**:
+- Automated Canadian e-transfer payment matching
+- Professional branded email communications
+- QR code digital pass system
+- AI business intelligence chatbot
+- 3-click survey deployment system
 
-This is a production business application with customer data, so maintain security best practices and thorough testing for all changes.
+**Pricing Tiers**: $10 Starter → $35 Professional → $50 Enterprise
+**Architecture**: One Docker container per customer
+**Target Launch**: September 2025
