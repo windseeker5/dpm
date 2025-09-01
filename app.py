@@ -6413,6 +6413,200 @@ def test_payment_bot_now():
         return f"<h1>{error_msg}</h1><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
 
 
+# ================================
+# 📧 EMAIL TEMPLATE CUSTOMIZATION ROUTES
+# ================================
+
+@app.route("/activity/<int:activity_id>/email-templates")
+def email_template_customization(activity_id):
+    """Display email template customization interface"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    from models import Activity
+    
+    activity = Activity.query.get_or_404(activity_id)
+    
+    # Email template types we support
+    template_types = {
+        'newPass': 'New Pass Created',
+        'paymentReceived': 'Payment Received',
+        'latePayment': 'Late Payment Reminder',
+        'signup': 'Signup Confirmation',
+        'redeemPass': 'Pass Redeemed',
+        'survey_invitation': 'Survey Invitation'
+    }
+    
+    # Get existing customizations or initialize empty
+    current_templates = activity.email_templates or {}
+    
+    return render_template("email_template_customization.html", 
+                         activity=activity,
+                         template_types=template_types,
+                         current_templates=current_templates)
+
+
+@app.route("/activity/<int:activity_id>/email-templates/save", methods=["POST"])
+def save_email_templates(activity_id):
+    """Save email template customizations"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    from models import Activity
+    from werkzeug.utils import secure_filename
+    import json
+    import os
+    
+    activity = Activity.query.get_or_404(activity_id)
+    
+    template_types = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'redeemPass', 'survey_invitation']
+    
+    # Initialize email_templates as empty dict if None
+    if activity.email_templates is None:
+        activity.email_templates = {}
+    
+    try:
+        # Process each template type
+        for template_type in template_types:
+            template_data = {}
+            
+            # Get form fields
+            subject = request.form.get(f'{template_type}_subject', '').strip()
+            title = request.form.get(f'{template_type}_title', '').strip()
+            intro_text = request.form.get(f'{template_type}_intro_text', '').strip()
+            conclusion_text = request.form.get(f'{template_type}_conclusion_text', '').strip()
+            cta_text = request.form.get(f'{template_type}_cta_text', '').strip()
+            cta_url = request.form.get(f'{template_type}_cta_url', '').strip()
+            custom_message = request.form.get(f'{template_type}_custom_message', '').strip()
+            
+            # Only save non-empty values
+            if subject:
+                template_data['subject'] = subject
+            if title:
+                template_data['title'] = title
+            if intro_text:
+                template_data['intro_text'] = intro_text
+            if conclusion_text:
+                template_data['conclusion_text'] = conclusion_text
+            if cta_text:
+                template_data['cta_text'] = cta_text
+            if cta_url:
+                template_data['cta_url'] = cta_url
+            if custom_message:
+                template_data['custom_message'] = custom_message
+            
+            # Handle hero image upload
+            hero_file = request.files.get(f'{template_type}_hero_image')
+            if hero_file and hero_file.filename:
+                filename = secure_filename(hero_file.filename)
+                # Create unique filename
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"{activity_id}_{template_type}_{timestamp}_{filename}"
+                
+                # Save file
+                upload_path = os.path.join('static', 'uploads', 'email_heroes', filename)
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                hero_file.save(upload_path)
+                
+                template_data['hero_image'] = filename
+            
+            # Only save template_data if it has content
+            if template_data:
+                activity.email_templates[template_type] = template_data
+        
+        # Mark the attribute as modified for SQLAlchemy JSON field
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(activity, 'email_templates')
+        
+        db.session.commit()
+        
+        flash("✅ Email templates saved successfully!", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"❌ Error saving email templates: {str(e)}", "error")
+    
+    return redirect(url_for('email_template_customization', activity_id=activity_id))
+
+
+@app.route("/activity/<int:activity_id>/email-preview")
+def email_preview(activity_id):
+    """Preview email template with customizations"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    from models import Activity
+    from utils import get_email_context
+    
+    activity = Activity.query.get_or_404(activity_id)
+    template_type = request.args.get('type', 'newPass')
+    
+    # Create sample context data for preview
+    base_context = {
+        'user_name': 'John Doe',
+        'user_email': 'john.doe@example.com',
+        'activity_name': activity.name,
+        'pass_code': 'SAMPLE123',
+        'amount': '$50.00'
+    }
+    
+    # Get merged context with activity customizations
+    context = get_email_context(activity, template_type, base_context)
+    
+    # Simple preview template
+    preview_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{context.get('subject', 'Email Preview')}</title>
+        <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f6fa; }}
+            .email-container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            .header {{ background: #066FD1; color: white; padding: 30px; text-align: center; }}
+            .content {{ padding: 30px; line-height: 1.6; }}
+            .hero-image {{ max-width: 100%; height: auto; margin: 20px 0; border-radius: 8px; }}
+            .cta {{ background: #066FD1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+            .custom-message {{ background: #f8f9fa; border-left: 4px solid #066FD1; padding: 15px; margin: 20px 0; }}
+        </style>
+    </head>
+    <body>
+        <div class="email-container">
+            <div class="header">
+                <h1>{context.get('title', 'Minipass Notification')}</h1>
+            </div>
+            <div class="content">
+    """
+    
+    if context.get('intro_text'):
+        preview_html += f'<p>{context["intro_text"]}</p>'
+    
+    if context.get('hero_image'):
+        preview_html += f'<img src="/static/uploads/email_heroes/{context["hero_image"]}" alt="Hero Image" class="hero-image">'
+    
+    if context.get('custom_message'):
+        preview_html += f'<div class="custom-message">{context["custom_message"]}</div>'
+    
+    if template_type == 'newPass':
+        preview_html += '<p><strong>Pass Code:</strong> SAMPLE123</p><p><strong>Activity:</strong> ' + activity.name + '</p>'
+    
+    if context.get('cta_text') and context.get('cta_url'):
+        preview_html += f'<a href="{context["cta_url"]}" class="cta">{context["cta_text"]}</a>'
+    
+    if context.get('conclusion_text'):
+        preview_html += f'<p>{context["conclusion_text"]}</p>'
+    
+    preview_html += """
+                <p style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 15px;">
+                    This is a preview of your customized email template.
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return preview_html
 
 
 if __name__ == "__main__":

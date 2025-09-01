@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Email Template Customization - {{ activity.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <div class="page-pretitle">
+                    Activity Management
+                </div>
+                <h2 class="page-title">
+                    Email Template Customization
+                </h2>
+                <p class="text-muted">Customize email templates for <strong>{{ activity.name }}</strong></p>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                    <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-outline-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="m0 0h24v24H0z" fill="none"/>
+                            <path d="m15 6l-6 6l6 6"/>
+                        </svg>
+                        Back to Activity
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row">
+            <div class="col-md-12">
+                
+                <div class="alert alert-info">
+                    <h4 class="alert-title">How it works</h4>
+                    <div class="text-muted">
+                        Customize the content and appearance of automated emails sent to your users. Any field left empty will use the system default. 
+                        Changes apply only to this activity.
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('save_email_templates', activity_id=activity.id) }}" enctype="multipart/form-data">
+                    
+                    <!-- Template Tabs -->
+                    <div class="card">
+                        <div class="card-header">
+                            <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs" role="tablist">
+                                {% for template_key, template_name in template_types.items() %}
+                                <li class="nav-item" role="presentation">
+                                    <a href="#tab-{{ template_key }}" class="nav-link{% if loop.first %} active{% endif %}" data-bs-toggle="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}" role="tab">
+                                        {{ template_name }}
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="tab-content">
+                                {% for template_key, template_name in template_types.items() %}
+                                {% set template_data = current_templates.get(template_key, {}) %}
+                                <div class="tab-pane{% if loop.first %} active show{% endif %}" id="tab-{{ template_key }}" role="tabpanel">
+                                    
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h3 class="mb-3">{{ template_name }}</h3>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label for="{{ template_key }}_subject" class="form-label">Email Subject</label>
+                                                    <input type="text" 
+                                                           name="{{ template_key }}_subject" 
+                                                           id="{{ template_key }}_subject"
+                                                           class="form-control" 
+                                                           value="{{ template_data.get('subject', '') }}"
+                                                           placeholder="Leave empty to use system default">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label for="{{ template_key }}_title" class="form-label">Email Title</label>
+                                                    <input type="text" 
+                                                           name="{{ template_key }}_title" 
+                                                           id="{{ template_key }}_title"
+                                                           class="form-control" 
+                                                           value="{{ template_data.get('title', '') }}"
+                                                           placeholder="Main heading shown in the email">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label for="{{ template_key }}_intro_text" class="form-label">Introduction Text</label>
+                                                    <textarea name="{{ template_key }}_intro_text" 
+                                                              id="{{ template_key }}_intro_text"
+                                                              class="form-control" 
+                                                              rows="3"
+                                                              placeholder="Opening message for the email">{{ template_data.get('intro_text', '') }}</textarea>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label for="{{ template_key }}_hero_image" class="form-label">Hero Image</label>
+                                                    <input type="file" 
+                                                           name="{{ template_key }}_hero_image" 
+                                                           id="{{ template_key }}_hero_image"
+                                                           class="form-control" 
+                                                           accept="image/*">
+                                                    <small class="form-hint">Upload a banner image for this email type (optional)</small>
+                                                    {% if template_data.get('hero_image') %}
+                                                    <div class="mt-2">
+                                                        <img src="/static/uploads/email_heroes/{{ template_data.get('hero_image') }}" 
+                                                             alt="Current hero image" 
+                                                             style="max-width: 200px; height: auto; border-radius: 4px;">
+                                                        <p class="text-muted small mt-1">Current hero image</p>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label for="{{ template_key }}_cta_text" class="form-label">Call-to-Action Text</label>
+                                                    <input type="text" 
+                                                           name="{{ template_key }}_cta_text" 
+                                                           id="{{ template_key }}_cta_text"
+                                                           class="form-control" 
+                                                           value="{{ template_data.get('cta_text', '') }}"
+                                                           placeholder="e.g., View Dashboard">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="{{ template_key }}_cta_url" class="form-label">Call-to-Action URL</label>
+                                                    <input type="url" 
+                                                           name="{{ template_key }}_cta_url" 
+                                                           id="{{ template_key }}_cta_url"
+                                                           class="form-control" 
+                                                           value="{{ template_data.get('cta_url', '') }}"
+                                                           placeholder="https://your-website.com/dashboard">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label for="{{ template_key }}_custom_message" class="form-label">Custom Message</label>
+                                                    <textarea name="{{ template_key }}_custom_message" 
+                                                              id="{{ template_key }}_custom_message"
+                                                              class="form-control" 
+                                                              rows="3"
+                                                              placeholder="Additional message or special instructions">{{ template_data.get('custom_message', '') }}</textarea>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label for="{{ template_key }}_conclusion_text" class="form-label">Conclusion Text</label>
+                                                    <textarea name="{{ template_key }}_conclusion_text" 
+                                                              id="{{ template_key }}_conclusion_text"
+                                                              class="form-control" 
+                                                              rows="3"
+                                                              placeholder="Closing message for the email">{{ template_data.get('conclusion_text', '') }}</textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h3 class="card-title">Preview</h3>
+                                                </div>
+                                                <div class="card-body">
+                                                    <iframe id="preview-{{ template_key }}" 
+                                                            src="{{ url_for('email_preview', activity_id=activity.id, type=template_key) }}" 
+                                                            style="width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 4px;">
+                                                    </iframe>
+                                                    <div class="mt-2">
+                                                        <a href="{{ url_for('email_preview', activity_id=activity.id, type=template_key) }}" 
+                                                           target="_blank" 
+                                                           class="btn btn-sm btn-outline-primary">
+                                                            Open Full Preview
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer">
+                            <div class="d-flex">
+                                <button type="submit" class="btn btn-primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="m0 0h24v24H0z" fill="none"/>
+                                        <path d="M5 12l5 5l10 -10"/>
+                                    </svg>
+                                    Save All Templates
+                                </button>
+                                <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-outline-secondary ms-auto">Cancel</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh preview when form inputs change (debounced)
+document.addEventListener('DOMContentLoaded', function() {
+    const templateTypes = {{ template_types.keys() | list | tojson }};
+    const debounceTimers = {};
+    
+    templateTypes.forEach(templateType => {
+        const inputs = document.querySelectorAll(`#tab-${templateType} input, #tab-${templateType} textarea`);
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimers[templateType]);
+                debounceTimers[templateType] = setTimeout(() => {
+                    // Refresh preview iframe
+                    const iframe = document.getElementById(`preview-${templateType}`);
+                    if (iframe) {
+                        iframe.src = iframe.src.split('?')[0] + '?type=' + templateType + '&t=' + Date.now();
+                    }
+                }, 500);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

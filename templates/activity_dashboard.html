@@ -597,6 +597,9 @@
               <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-secondary">
                 <i class="ti ti-edit me-2"></i>Edit
               </a>
+              <a href="{{ url_for('email_template_customization', activity_id=activity.id) }}" class="btn btn-outline-info">
+                <i class="ti ti-mail me-2"></i>Email Templates
+              </a>
               <a href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;" class="btn btn-danger">
                 <i class="ti ti-trash me-2"></i>Delete
               </a>

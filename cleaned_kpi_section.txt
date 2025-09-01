@@ -1,3 +1,0 @@
-// All remaining KPI functions removed - functionality cleaned up
-
-// Bulk selection functionality for passports table
