@@ -641,9 +641,19 @@ def dashboard():
     from sqlalchemy.sql import func
     from datetime import datetime
     from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card
+    import re
+    
+    # Detect mobile user agent
+    user_agent = request.headers.get('User-Agent', '').lower()
+    is_mobile = bool(re.search(r'mobile|android|iphone|ipad', user_agent)) or request.args.get('mobile') == '1'
     
     # Use new simplified KPI data function
     kpi_data = get_kpi_data()
+    
+    # Get all-time data for mobile users
+    mobile_kpi_data = None
+    if is_mobile:
+        mobile_kpi_data = get_kpi_data(activity_id=None, period='all')
     activities = db.session.query(Activity).filter_by(status='active').all()
     activity_cards = []
 
@@ -733,6 +743,8 @@ def dashboard():
         "dashboard.html",
         activities=activity_cards,
         kpi_data=kpi_data,
+        mobile_kpi_data=mobile_kpi_data,
+        is_mobile=is_mobile,
         passport_stats=passport_stats,
         signup_stats=signup_stats,
         active_passport_count=active_passport_count,
@@ -1330,6 +1342,7 @@ def create_activity():
 
     if request.method == "POST":
         from models import Activity, PassportType, AdminActionLog, db
+        from utils import copy_global_email_templates_to_activity
         import os
         import uuid
 
@@ -1373,6 +1386,7 @@ def create_activity():
             status=status,
             created_by=session.get("admin"),
             image_filename=image_filename,
+            email_templates=copy_global_email_templates_to_activity(),
         )
 
         db.session.add(new_activity)
@@ -6632,22 +6646,40 @@ def email_preview(activity_id):
 @app.route("/activity/<int:activity_id>/email-test", methods=["POST"])
 def test_email_template(activity_id):
     """Send test email to kdresdell@gmail.com with current template customizations"""
+    print("\n" + "="*80)
+    print("🔥 TEST_EMAIL_TEMPLATE ROUTE CALLED")
+    print("="*80)
+    print(f"Activity ID: {activity_id}")
+    print(f"Method: {request.method}")
+    print(f"Form data: {dict(request.form)}")
+    print(f"Session admin: {'admin' in session}")
+    
     if "admin" not in session:
+        print("❌ NOT LOGGED IN - REDIRECTING")
         return redirect(url_for("login"))
     
     from models import Activity
     from utils import send_email  # Use DIRECT send_email, not async
     from datetime import datetime
     import os
+    import sys
+    
+    print("✅ Admin authenticated, proceeding...")
     
     try:
         activity = Activity.query.get_or_404(activity_id)
         template_type = request.form.get('template_type', 'newPass')
         
+        print(f"📧 Activity: {activity.name}")
+        print(f"📧 Template type: {template_type}")
+        
         # Get the actual customizations from the activity
         custom_data = {}
         if activity.email_templates and template_type in activity.email_templates:
             custom_data = activity.email_templates[template_type]
+            print(f"✅ Found customizations: {list(custom_data.keys())}")
+        else:
+            print("⚠️ No customizations found, using defaults")
         
         # Create test context with ACTUAL customizations
         test_context = {
@@ -6665,30 +6697,109 @@ def test_email_template(activity_id):
             'test_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         
-        # Use custom subject if available
+        # Use custom subject if available, only add timestamp if debugging
         subject = custom_data.get('subject', f"Test: {template_type} - {activity.name}")
-        subject = f"📧 {subject} - TEST {datetime.now().strftime('%H:%M:%S')}"
+        # Remove timestamp from subject for clean testing
+        # subject = f"📧 {subject} - TEST {datetime.now().strftime('%H:%M:%S')}"
         
-        # DIRECTLY send the email - no async bullshit
-        # Use signup template for all tests (it doesn't need QR codes)
-        send_email(
+        print(f"\n🎯 ABOUT TO CALL send_email() WITH:")
+        print(f"   Subject: {subject}")
+        print(f"   To: kdresdell@gmail.com")
+        print(f"   Template: signup")
+        print(f"   Context keys: {list(test_context.keys())}")
+        
+        # Generate the HTML with customizations (like preview does)
+        preview_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>{test_context.get('title', 'Email')}</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f6fa; }}
+                .email-container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ background: #066FD1; color: white; padding: 30px; text-align: center; }}
+                .content {{ padding: 30px; line-height: 1.6; }}
+                .hero-image {{ max-width: 100%; height: auto; margin: 20px 0; border-radius: 8px; }}
+                .cta {{ background: #066FD1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .custom-message {{ background: #f8f9fa; border-left: 4px solid #066FD1; padding: 15px; margin: 20px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="header">
+                    <h1>{test_context.get('title', 'Minipass Notification')}</h1>
+                </div>
+                <div class="content">
+        """
+        
+        if test_context.get('intro_text'):
+            preview_html += f'<p>{test_context["intro_text"]}</p>'
+        
+        # Add hero image if exists
+        if custom_data.get('hero_image'):
+            preview_html += f'<img src="cid:hero_image" alt="Hero Image" class="hero-image">'
+        
+        if test_context.get('custom_message'):
+            preview_html += f'<div class="custom-message">{test_context["custom_message"]}</div>'
+        
+        # Add template-specific content
+        if template_type == 'newPass':
+            preview_html += f'<p><strong>Pass Code:</strong> {test_context["pass_code"]}</p>'
+            preview_html += f'<p><strong>Activity:</strong> {test_context["activity_name"]}</p>'
+        
+        if test_context.get('cta_text') and test_context.get('cta_url'):
+            preview_html += f'<a href="{test_context["cta_url"]}" class="cta">{test_context["cta_text"]}</a>'
+        
+        if test_context.get('conclusion_text'):
+            preview_html += f'<p>{test_context["conclusion_text"]}</p>'
+        
+        preview_html += """
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Prepare inline images if hero image exists
+        inline_images = {}
+        if custom_data.get('hero_image'):
+            hero_path = os.path.join('static', 'uploads', 'email_heroes', custom_data['hero_image'])
+            if os.path.exists(hero_path):
+                with open(hero_path, 'rb') as f:
+                    inline_images['hero_image'] = f.read()
+        
+        # DIRECTLY send the email with generated HTML
+        print("\n🚀 CALLING send_email() with custom HTML...")
+        sys.stdout.flush()  # Force flush output
+        
+        result = send_email(
             subject=subject,
             to_email="kdresdell@gmail.com",
-            template_name="signup",  # Always use signup template for tests
-            context=test_context
+            html_body=preview_html,  # Pass the generated HTML directly
+            context=test_context,
+            inline_images=inline_images if inline_images else None
         )
+        
+        print(f"\n✅ send_email() RETURNED: {result}")
         
         flash(f"✅ Test email sent DIRECTLY to kdresdell@gmail.com", "success")
         
         # Log it for debugging
-        print(f"TEST EMAIL SENT: {subject} to kdresdell@gmail.com")
-        print(f"Template: signup, Context: {test_context}")
+        print(f"\n📬 TEST EMAIL SENT: {subject} to kdresdell@gmail.com")
+        print(f"📬 Template: signup")
+        print(f"📬 Return value: {result}")
+        print("="*80 + "\n")
+        sys.stdout.flush()  # Force flush output
         
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
         flash(f"❌ Error: {str(e)}", "error")
-        print(f"ERROR SENDING TEST EMAIL: {error_detail}")
+        print(f"\n❌ ERROR SENDING TEST EMAIL:")
+        print(error_detail)
+        print("="*80 + "\n")
+        sys.stdout.flush()  # Force flush output
     
     return redirect(url_for('email_template_customization', activity_id=activity_id))
 
