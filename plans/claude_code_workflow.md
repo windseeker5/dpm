@@ -94,16 +94,12 @@ Explain why this solution follows our memory constraints and Python-first approa
 CRITICAL CONSTRAINTS: Python Flask app, minimal JavaScript, fix ONE thing only.
 
 I need to fix [specific bug description]. 
-
+ 
 Only change what's necessary to fix this issue. Don't refactor working code around it. 
 
-Always use the best competent agent for the task.
-
-Do not start a flask server. We already have one up and running for debug on port 8890.
-
+Always use the best competent agent for the task. Do not start a flask server. We already have one up and running for debug on port 8890.
 
 Always test your task using playwrights mcp server and username = kdresdell@gmail.com and password = admin123
-
 
 Reference: @Developmet_Guidelines.md [Bug Fix Protocol]
 ```

@@ -1,0 +1,33 @@
+<!-- Bar Chart KPI Card Template - Exact Tabler.io Style -->
+<div class="col-md-3 mb-3">
+  <div class="card" style="border-radius: 12px;">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="text-muted small text-uppercase">{{ title }}</div>
+        <div class="dropdown">
+          <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-period-button="{{ card_id }}">
+            Last 7 days
+          </button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7" data-card="{{ card_id }}">Last 7 days</a></li>
+            <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30" data-card="{{ card_id }}">Last 30 days</a></li>
+            <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90" data-card="{{ card_id }}">Last 90 days</a></li>
+            <li><a class="dropdown-item kpi-period-btn" href="#" data-period="365" data-card="{{ card_id }}">All time</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="h1 mb-2" id="{{ card_id }}-value">{{ value }}</div>
+      
+      <div class="d-flex align-items-center mb-3">
+        <div id="{{ card_id }}-change" class="text-muted me-2">
+          {{ change }}% <i class="ti ti-minus"></i>
+        </div>
+        <div class="text-muted small">than last period</div>
+      </div>
+      
+      <div id="{{ card_id }}-chart" style="height: 40px;"></div>
+    </div>
+  </div>
+</div>
+

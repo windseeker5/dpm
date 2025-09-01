@@ -3,6 +3,6 @@
 Production-ready components for Minipass application
 """
 
-from .kpi_card import KPICard
+# KPI components removed - using simplified server-side rendering instead
 
-__all__ = ['KPICard']
+__all__ = []

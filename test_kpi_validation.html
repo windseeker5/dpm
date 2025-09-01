@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPI Fix Validation Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #007bff; }
+        .chart-test { height: 60px; border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 KPI Charts Fix Validation</h1>
+    
+    <div class="test-section">
+        <h2>✅ Fixes Applied</h2>
+        <ul>
+            <li class="success">✓ Chart element IDs corrected (active-users-chart → active-passports-chart)</li>
+            <li class="success">✓ Chart element IDs corrected (unpaid-passports-chart → pending-signups-chart)</li>
+            <li class="success">✓ Data property access fixed (trend_data → trend)</li>
+            <li class="success">✓ JavaScript initialization functions updated to match working dashboard</li>
+            <li class="success">✓ Comprehensive ApexCharts configuration copied from working implementation</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Expected Chart Elements</h2>
+        <div class="chart-test">
+            <strong>Revenue Chart:</strong> #revenue-chart (Line/Area chart with gradient)
+        </div>
+        <div class="chart-test">
+            <strong>Active Passports Chart:</strong> #active-passports-chart (Bar chart)
+        </div>
+        <div class="chart-test">
+            <strong>Passports Created Chart:</strong> #passports-created-chart (Bar chart)
+        </div>
+        <div class="chart-test">
+            <strong>Pending Signups Chart:</strong> #pending-signups-chart (Bar chart)
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Manual Testing Steps</h2>
+        <ol>
+            <li class="info">Navigate to <code>http://localhost:5000/</code> and login with kdresdell@gmail.com / admin123</li>
+            <li class="info">Verify all 4 KPI charts render properly on main dashboard</li>
+            <li class="info">Navigate to <code>http://localhost:5000/activity/1</code></li>
+            <li class="info">Verify all 4 KPI charts render properly on activity dashboard</li>
+            <li class="info">Check browser console (F12) for JavaScript errors</li>
+            <li class="info">Test chart interactions (hover tooltips, period dropdowns)</li>
+            <li class="info">Compare both pages - charts should behave identically</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Key Technical Changes</h2>
+        <h3>HTML Element IDs:</h3>
+        <pre>
+BEFORE (Broken):
+&lt;div id="active-users-chart"&gt;&lt;/div&gt;
+&lt;div id="unpaid-passports-chart"&gt;&lt;/div&gt;
+
+AFTER (Fixed):
+&lt;div id="active-passports-chart"&gt;&lt;/div&gt;
+&lt;div id="pending-signups-chart"&gt;&lt;/div&gt;
+        </pre>
+
+        <h3>JavaScript Data Access:</h3>
+        <pre>
+BEFORE (Broken):
+data.trend_data
+
+AFTER (Fixed):
+data.trend
+        </pre>
+
+        <h3>Initialization Approach:</h3>
+        <pre>
+BEFORE (Broken):
+Simple generic chart function with basic options
+
+AFTER (Fixed):  
+Exact copy of working dashboard's comprehensive ApexCharts implementation
+        </pre>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Files Modified</h2>
+        <ul>
+            <li><code>/templates/activity_dashboard.html</code> - Fixed chart IDs and JavaScript</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🎉 Expected Outcome</h2>
+        <p class="success">Both dashboard pages should now have <strong>identical, fully working KPI chart implementations</strong> with proper rendering, interactions, and visual consistency.</p>
+    </div>
+</body>
+</html>
