@@ -1330,6 +1330,21 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                         if context.get('subject'):
                             subject = context['subject']
 
+                # Load inline images for compiled templates
+                if template_name and not html_body:
+                    # Normalize template name to get base name
+                    base_template = template_name.replace('email_templates/', '').replace('/index.html', '').replace('.html', '')
+                    compiled_folder = os.path.join("templates/email_templates", f"{base_template}_compiled")
+                    json_path = os.path.join(compiled_folder, "inline_images.json")
+                    
+                    # If compiled version exists, load the inline images
+                    if os.path.exists(json_path):
+                        import base64
+                        with open(json_path, "r") as f:
+                            compiled_images = json.load(f)
+                            for cid, img_base64 in compiled_images.items():
+                                inline_images[cid] = base64.b64decode(img_base64)
+
                 # --- Send the email ---
                 send_email(
                     subject=subject,
@@ -1345,15 +1360,28 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                 def format_dt(dt):
                     return dt.strftime('%Y-%m-%d %H:%M') if isinstance(dt, datetime) else dt
 
+                # Extract pass data if it exists (for backward compatibility)
+                pass_code = None
+                user_name = None
+                if context:
+                    # Try to get from hockey_pass structure (old format)
+                    if "hockey_pass" in context:
+                        pass_code = context.get("hockey_pass", {}).get("pass_code")
+                        user_name = context.get("hockey_pass", {}).get("user_name")
+                    # Also check for direct pass_code (new format)
+                    elif "pass_code" in context:
+                        pass_code = context.get("pass_code")
+                        user_name = context.get("user_name")
+                
                 db.session.add(EmailLog(
                     to_email=to_email,
                     subject=subject,
-                    pass_code=context.get("hockey_pass", {}).get("pass_code") if context else None,
+                    pass_code=pass_code,
                     template_name=template_name or "",
                     context_json=json.dumps({
-                        "user_name": context.get("hockey_pass", {}).get("user_name") if context else None,
-                        "created_date": format_dt(context.get("hockey_pass", {}).get("pass_created_dt")) if context else None,
-                        "remaining_games": context.get("hockey_pass", {}).get("games_remaining") if context else None,
+                        "user_name": user_name or context.get("user_name") if context else None,
+                        "activity_name": context.get("activity_name") if context else None,
+                        "template_type": template_name,
                         "special_message": context.get("special_message", "") if context else ""
                     }),
                     result="SENT",
@@ -1367,10 +1395,19 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
 
                 from models import EmailLog
 
+                # Try to extract pass_code safely for error log
+                error_pass_code = None
+                error_context = kwargs.get("context", {})
+                if error_context:
+                    if "hockey_pass" in error_context:
+                        error_pass_code = error_context.get("hockey_pass", {}).get("pass_code")
+                    elif "pass_code" in error_context:
+                        error_pass_code = error_context.get("pass_code")
+                
                 db.session.add(EmailLog(
                     to_email=kwargs.get("to_email"),
                     subject=kwargs.get("subject"),
-                    pass_code=kwargs.get("context", {}).get("hockey_pass", {}).get("pass_code") if kwargs.get("context") else None,
+                    pass_code=error_pass_code,
                     template_name=kwargs.get("template_name") or "",
                     context_json=json.dumps({"error": str(e)}),
                     result="FAILED",

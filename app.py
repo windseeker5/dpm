@@ -6468,7 +6468,11 @@ def save_email_templates(activity_id):
     try:
         # Process each template type
         for template_type in template_types:
-            template_data = {}
+            # Get existing template data or create new
+            if template_type in activity.email_templates:
+                template_data = activity.email_templates[template_type].copy()
+            else:
+                template_data = {}
             
             # Get form fields
             subject = request.form.get(f'{template_type}_subject', '').strip()
@@ -6479,7 +6483,7 @@ def save_email_templates(activity_id):
             cta_url = request.form.get(f'{template_type}_cta_url', '').strip()
             custom_message = request.form.get(f'{template_type}_custom_message', '').strip()
             
-            # Only save non-empty values
+            # Update values (preserve existing if new is empty)
             if subject:
                 template_data['subject'] = subject
             if title:
@@ -6495,24 +6499,40 @@ def save_email_templates(activity_id):
             if custom_message:
                 template_data['custom_message'] = custom_message
             
-            # Handle hero image upload
-            hero_file = request.files.get(f'{template_type}_hero_image')
-            if hero_file and hero_file.filename:
-                filename = secure_filename(hero_file.filename)
-                # Create unique filename
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f"{activity_id}_{template_type}_{timestamp}_{filename}"
-                
-                # Save file
-                upload_path = os.path.join('static', 'uploads', 'email_heroes', filename)
-                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
-                hero_file.save(upload_path)
-                
-                template_data['hero_image'] = filename
+            # Handle hero image deletion
+            delete_hero = request.form.get(f'{template_type}_delete_hero')
+            if delete_hero:
+                # Delete the file from disk if it exists
+                if 'hero_image' in template_data:
+                    old_image_path = os.path.join('static', 'uploads', 'email_heroes', template_data['hero_image'])
+                    if os.path.exists(old_image_path):
+                        os.remove(old_image_path)
+                    del template_data['hero_image']
             
-            # Only save template_data if it has content
-            if template_data:
-                activity.email_templates[template_type] = template_data
+            # Handle hero image upload (only if not deleting)
+            if not delete_hero:
+                hero_file = request.files.get(f'{template_type}_hero_image')
+                if hero_file and hero_file.filename:
+                    # Delete old image if exists
+                    if 'hero_image' in template_data:
+                        old_image_path = os.path.join('static', 'uploads', 'email_heroes', template_data['hero_image'])
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                    
+                    filename = secure_filename(hero_file.filename)
+                    # Create unique filename
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"{activity_id}_{template_type}_{timestamp}_{filename}"
+                    
+                    # Save file
+                    upload_path = os.path.join('static', 'uploads', 'email_heroes', filename)
+                    os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                    hero_file.save(upload_path)
+                    
+                    template_data['hero_image'] = filename
+            
+            # Always save template_data to preserve all fields
+            activity.email_templates[template_type] = template_data
         
         # Mark the attribute as modified for SQLAlchemy JSON field
         from sqlalchemy.orm.attributes import flag_modified
@@ -6607,6 +6627,70 @@ def email_preview(activity_id):
     """
     
     return preview_html
+
+
+@app.route("/activity/<int:activity_id>/email-test", methods=["POST"])
+def test_email_template(activity_id):
+    """Send test email to kdresdell@gmail.com with current template customizations"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    from models import Activity
+    from utils import send_email  # Use DIRECT send_email, not async
+    from datetime import datetime
+    import os
+    
+    try:
+        activity = Activity.query.get_or_404(activity_id)
+        template_type = request.form.get('template_type', 'newPass')
+        
+        # Get the actual customizations from the activity
+        custom_data = {}
+        if activity.email_templates and template_type in activity.email_templates:
+            custom_data = activity.email_templates[template_type]
+        
+        # Create test context with ACTUAL customizations
+        test_context = {
+            'user_name': 'Kevin Dresdell',
+            'user_email': 'kdresdell@gmail.com',
+            'activity_name': activity.name,
+            'pass_code': 'TEST123',
+            # Use custom data if available, otherwise defaults
+            'title': custom_data.get('title', f'Test Email - {template_type}'),
+            'intro_text': custom_data.get('intro_text', f'This is a test of the {template_type} template'),
+            'conclusion_text': custom_data.get('conclusion_text', f'Test for {activity.name}'),
+            'custom_message': custom_data.get('custom_message', ''),
+            'cta_text': custom_data.get('cta_text', ''),
+            'cta_url': custom_data.get('cta_url', ''),
+            'test_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Use custom subject if available
+        subject = custom_data.get('subject', f"Test: {template_type} - {activity.name}")
+        subject = f"📧 {subject} - TEST {datetime.now().strftime('%H:%M:%S')}"
+        
+        # DIRECTLY send the email - no async bullshit
+        # Use signup template for all tests (it doesn't need QR codes)
+        send_email(
+            subject=subject,
+            to_email="kdresdell@gmail.com",
+            template_name="signup",  # Always use signup template for tests
+            context=test_context
+        )
+        
+        flash(f"✅ Test email sent DIRECTLY to kdresdell@gmail.com", "success")
+        
+        # Log it for debugging
+        print(f"TEST EMAIL SENT: {subject} to kdresdell@gmail.com")
+        print(f"Template: signup, Context: {test_context}")
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        flash(f"❌ Error: {str(e)}", "error")
+        print(f"ERROR SENDING TEST EMAIL: {error_detail}")
+    
+    return redirect(url_for('email_template_customization', activity_id=activity_id))
 
 
 if __name__ == "__main__":
