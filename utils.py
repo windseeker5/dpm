@@ -1296,6 +1296,39 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                 if html_body:
                     template_name = None
                     context = {}
+                
+                # 📧 Apply email template customizations if activity is provided
+                if activity and template_name and not html_body:
+                    # Map template names to our template types
+                    template_type_mapping = {
+                        'email_templates/newPass/index.html': 'newPass',
+                        'email_templates/newPass_compiled/index.html': 'newPass',
+                        'newPass': 'newPass',
+                        'email_templates/paymentReceived/index.html': 'paymentReceived',
+                        'email_templates/paymentReceived_compiled/index.html': 'paymentReceived',
+                        'paymentReceived': 'paymentReceived',
+                        'email_templates/latePayment/index.html': 'latePayment',
+                        'email_templates/latePayment_compiled/index.html': 'latePayment',
+                        'latePayment': 'latePayment',
+                        'email_templates/signup/index.html': 'signup',
+                        'email_templates/signup_compiled/index.html': 'signup',
+                        'signup': 'signup',
+                        'email_templates/redeemPass/index.html': 'redeemPass',
+                        'email_templates/redeemPass_compiled/index.html': 'redeemPass',
+                        'redeemPass': 'redeemPass',
+                        'email_templates/survey_invitation/index.html': 'survey_invitation',
+                        'email_templates/survey_invitation_compiled/index.html': 'survey_invitation',
+                        'survey_invitation': 'survey_invitation'
+                    }
+                    
+                    template_type = template_type_mapping.get(template_name)
+                    if template_type:
+                        from utils import get_email_context
+                        # Apply activity customizations to context
+                        context = get_email_context(activity, template_type, context)
+                        # Update subject if customized
+                        if context.get('subject'):
+                            subject = context['subject']
 
                 # --- Send the email ---
                 send_email(
@@ -1781,5 +1814,46 @@ def test_organization_email_config(organization_id):
         except Exception as e:
             return False, f"Email configuration test failed: {str(e)}"
 
+
+def get_email_context(activity, template_type, base_context=None):
+    """
+    Merge activity email template customizations with default values
+    
+    Args:
+        activity: Activity model instance
+        template_type: Template type (newPass, paymentReceived, etc.)
+        base_context: Base context dictionary to merge with
+    
+    Returns:
+        Dictionary with merged email context
+    """
+    # Default email template values
+    defaults = {
+        'subject': 'Minipass Notification',
+        'title': 'Welcome to Minipass',
+        'intro_text': 'Thank you for using our service.',
+        'conclusion_text': 'We appreciate your business!',
+        'hero_image': None,
+        'cta_text': None,
+        'cta_url': None,
+        'custom_message': None
+    }
+    
+    # Start with base context if provided
+    context = base_context.copy() if base_context else {}
+    
+    # Apply defaults
+    for key, value in defaults.items():
+        if key not in context:
+            context[key] = value
+    
+    # Apply activity-specific customizations if they exist
+    if activity and activity.email_templates:
+        template_customizations = activity.email_templates.get(template_type, {})
+        for key, value in template_customizations.items():
+            if value is not None and value != '':
+                context[key] = value
+    
+    return context
 
 
