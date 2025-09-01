@@ -581,7 +581,7 @@
             </div>
 
             <!-- Revenue Progress Bar -->
-            {% set actual_revenue = kpi_data['revenue']['current']|float if kpi_data and kpi_data.get('revenue') else 0 %}
+            {% set actual_revenue = kpi_data['revenue']['current']|float if kpi_data and kpi_data['revenue'] else 0 %}
             {% set target_revenue = activity.target_revenue|float if activity.target_revenue else 1000 %}
             {% set progress_percentage = ((actual_revenue / target_revenue * 100) if target_revenue > 0 else 0)|round %}
             <div class="revenue-progress-container">
@@ -659,17 +659,21 @@
                 </div>
               </div>
               
-              <div class="h2 mb-1" id="revenue-value">${{ "{:,.0f}".format(kpi_data['revenue']['current']) if kpi_data and kpi_data.get('revenue') else '0' }}</div>
+              <div class="h2 mb-1" id="revenue-value">${{ "{:,.0f}".format(kpi_data['revenue']['current']) if kpi_data and kpi_data['revenue'] else '0' }}</div>
               
               <div class="d-flex align-items-center mb-2">
-                {% if kpi_data and kpi_data.get('revenue') and kpi_data['revenue'].get('change') is not none %}
+                {% if kpi_data and kpi_data['revenue'] %}
                   {% set change = kpi_data['revenue']['change'] %}
-                  {% if change > 0 %}
-                    <div class="text-success me-2" id="revenue-trend">{{ change|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif change < 0 %}
-                    <div class="text-danger me-2" id="revenue-trend">{{ change|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                  {% if change is not none %}
+                    {% if change > 0 %}
+                      <div class="text-success me-2" id="revenue-trend">{{ change|round|int }}% <i class="ti ti-trending-up"></i></div>
+                    {% elif change < 0 %}
+                      <div class="text-danger me-2" id="revenue-trend">{{ change|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                    {% else %}
+                      <div class="text-muted me-2" id="revenue-trend">0% <i class="ti ti-minus"></i></div>
+                    {% endif %}
                   {% else %}
-                    <div class="text-muted me-2" id="revenue-trend">0% <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="revenue-trend">-- <i class="ti ti-minus"></i></div>
                   {% endif %}
                 {% else %}
                   <div class="text-muted me-2" id="revenue-trend">-- <i class="ti ti-minus"></i></div>
@@ -681,36 +685,42 @@
           </div>
         </div>
 
-        <!-- Active Users Card -->
+        <!-- Active Passports Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active_users" data-kpi-id="active-users-default">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active_passports" data-kpi-id="active-passports-default">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">ACTIVE PASSPORTS</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="active_users">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="active_passports">
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="active_users">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="active_users">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="active_users">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="active_passports">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="active_passports">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="active_passports">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="active_passports">All time</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1" id="active-users-value">{{ "{:,.0f}".format(kpi_data['active_users']['current']) if kpi_data and kpi_data.get('active_users') else '0' }}</div>
+              <div class="h2 mb-1" id="active-passports-value">
+                {% if passport_stats %}
+                  {{ passport_stats['active_passports'] }}
+                {% else %}
+                  0
+                {% endif %}
+              </div>
               <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data.get('active_users') and kpi_data['active_users'].get('change') is not none %}
-                  {% set change = kpi_data['active_users']['change'] %}
-                  {% if change > 0 %}
-                    <div class="text-success me-2" id="active-users-trend">{{ change|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif change < 0 %}
-                    <div class="text-danger me-2" id="active-users-trend">{{ change|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                {% if kpi_data and kpi_data['active_users'] and kpi_data['active_users']['change'] is not none %}
+                  {% if kpi_data['active_users']['change'] > 0 %}
+                    <div class="text-success me-2" id="active-passports-trend">{{ kpi_data['active_users']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['active_users']['change'] < 0 %}
+                    <div class="text-danger me-2" id="active-passports-trend">{{ kpi_data['active_users']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
                   {% else %}
-                    <div class="text-muted me-2" id="active-users-trend">0% <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="active-passports-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
                 {% else %}
-                  <div class="text-muted me-2" id="active-users-trend">-- <i class="ti ti-minus"></i></div>
+                  <div class="text-muted me-2" id="active-passports-trend">-- <i class="ti ti-minus"></i></div>
                 {% endif %}
               </div>
               <div id="active-passports-chart" style="height: 40px;"></div>
@@ -732,17 +742,23 @@
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="passports_created">Last 7 days</a></li>
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="passports_created">Last 30 days</a></li>
                     <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="passports_created">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="passports_created">All time</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1" id="passports-created-value">{{ "{:,.0f}".format(kpi_data['passports_created']['current']) if kpi_data and kpi_data.get('passports_created') else '0' }}</div>
+              <div class="h2 mb-1" id="passports-created-value">
+                {% if passport_stats %}
+                  {{ passport_stats['total_passports'] }}
+                {% else %}
+                  0
+                {% endif %}
+              </div>
               <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data.get('passports_created') and kpi_data['passports_created'].get('change') is not none %}
-                  {% set change = kpi_data['passports_created']['change'] %}
-                  {% if change > 0 %}
-                    <div class="text-success me-2" id="passports-created-trend">{{ change|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif change < 0 %}
-                    <div class="text-danger me-2" id="passports-created-trend">{{ change|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                {% if kpi_data and kpi_data['passports_created'] and kpi_data['passports_created']['change'] is not none %}
+                  {% if kpi_data['passports_created']['change'] > 0 %}
+                    <div class="text-success me-2" id="passports-created-trend">{{ kpi_data['passports_created']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['passports_created']['change'] < 0 %}
+                    <div class="text-danger me-2" id="passports-created-trend">{{ kpi_data['passports_created']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
                   {% else %}
                     <div class="text-muted me-2" id="passports-created-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
@@ -757,34 +773,40 @@
 
         <!-- Unpaid Passports Card -->
         <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="unpaid_passports" data-kpi-id="unpaid-passports-default">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending_signups" data-kpi-id="pending-signups-default">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">PENDING SIGN UPS</div>
+                <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
                 <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="unpaid_passports">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="pending_signups">
                     Last 7 days
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="unpaid_passports">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="unpaid_passports">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="unpaid_passports">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="pending_signups">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="pending_signups">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="pending_signups">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="pending_signups">All time</a></li>
                   </ul>
                 </div>
               </div>
-              <div class="h2 mb-1" id="unpaid-passports-value">{{ "{:,.0f}".format(kpi_data['unpaid_passports']['current']) if kpi_data and kpi_data.get('unpaid_passports') else '0' }}</div>
+              <div class="h2 mb-1" id="pending-signups-value">
+                {% if kpi_data and kpi_data['unpaid_passports'] %}
+                  {{ "{:,.0f}".format(kpi_data['unpaid_passports']['current']) }}
+                {% else %}
+                  0
+                {% endif %}
+              </div>
               <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data.get('unpaid_passports') and kpi_data['unpaid_passports'].get('change') is not none %}
-                  {% set change = kpi_data['unpaid_passports']['change'] %}
-                  {% if change > 0 %}
-                    <div class="text-success me-2" id="unpaid-passports-trend">{{ change|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif change < 0 %}
-                    <div class="text-danger me-2" id="unpaid-passports-trend">{{ change|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                {% if kpi_data and kpi_data['unpaid_passports'] and kpi_data['unpaid_passports']['change'] is not none %}
+                  {% if kpi_data['unpaid_passports']['change'] > 0 %}
+                    <div class="text-success me-2" id="pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['unpaid_passports']['change'] < 0 %}
+                    <div class="text-danger me-2" id="pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
                   {% else %}
-                    <div class="text-muted me-2" id="unpaid-passports-trend">0% <i class="ti ti-minus"></i></div>
+                    <div class="text-muted me-2" id="pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
                 {% else %}
-                  <div class="text-muted me-2" id="unpaid-passports-trend">-- <i class="ti ti-minus"></i></div>
+                  <div class="text-muted me-2" id="pending-signups-trend">-- <i class="ti ti-minus"></i></div>
                 {% endif %}
               </div>
               <div id="pending-signups-chart" style="height: 40px;"></div>
@@ -1523,57 +1545,9 @@ function generateCleanLineChart(data, width = 300, height = 40) {
 }
 
 // Initialize all KPI charts for activity dashboard - USING WORKING DASHBOARD APPROACH
-function initializeActivityKPICharts() {
-  if (!kpiData || typeof ApexCharts === 'undefined') return;
-  
-  // Fix data mapping: use trend_data to match dashboard.html
-  const getData = (kpiType) => {
-    return kpiData[kpiType] && kpiData[kpiType].trend_data ? kpiData[kpiType].trend_data : null;
-  };
-  
-  // Revenue line chart
-  const revenueData = getData('revenue');
-    
-  if (revenueData) {
-    const el = document.querySelector('#revenue-chart');
-    if (el) new ApexCharts(el, {series: [{data: revenueData}], chart: {type: 'area', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
-  }
+// Removed - replaced with initializeApexCharts() function from dashboard.html
 
-  // Active passports bar chart
-  const activeUsersData = getData('active_users');
-    
-  if (activeUsersData) {
-    const el = document.querySelector('#active-passports-chart');
-    if (el) new ApexCharts(el, {series: [{data: activeUsersData}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
-  }
-
-  // Passports created bar chart
-  const createdData = getData('passports_created');
-  if (createdData) {
-    const el = document.querySelector('#passports-created-chart');
-    if (el) new ApexCharts(el, {series: [{data: createdData}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
-  }
-
-  // Pending signups bar chart
-  const unpaidData = getData('passports_unpaid');
-  if (unpaidData) {
-    const el = document.querySelector('#pending-signups-chart');
-    if (el) new ApexCharts(el, {series: [{data: unpaidData}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#d63384']}).render();
-  }
-}
-
-// Simple KPI dropdown handlers for activity dashboard
-function initializeKPIDropdowns() {
-  document.querySelectorAll('.kpi-period-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      const period = this.dataset.period;
-      const cardElement = this.closest('.kpi-card-rounded');
-      const kpiType = determineKPIType(cardElement);
-      updateSingleKPIData(period, kpiType, cardElement, this.textContent.trim());
-    });
-  });
-}
+// Removed - replaced with attachDropdownHandlers() function from dashboard.html
 
 // Rest of old code to be cleaned up later
 function oldCodeSkipSection() {
@@ -2037,11 +2011,9 @@ function initializeActivityDashboard() {
     });
   }
   
-  // KPI dropdowns
-  initializeKPIDropdowns();
-  
-  // Initialize all KPI charts
-  initializeActivityKPICharts();
+  // Initialize KPI functionality with working functions from dashboard.html
+  attachDropdownHandlers();
+  initializeApexCharts();
   
   // Add click handlers for specific client-side actions
   document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
@@ -2726,12 +2698,7 @@ function hideTooltip() {
 }
 
 // KPI Dropdown Functionality
-function initializeKPIDropdowns() {
-  // Add event listeners to all KPI dropdown items with the kpi-period-btn class
-  document.querySelectorAll('.kpi-period-btn').forEach(item => {
-    item.addEventListener('click', handleKPITimeChange);
-  });
-}
+// Removed - replaced with attachDropdownHandlers() function
 
 // WARNING: This handler must update ONLY the clicked KPI card
 // Never call global update functions that affect all cards
@@ -2813,143 +2780,376 @@ function determineKPIType(cardElement) {
   return 'revenue'; // fallback
 }
 
-function updateSingleKPIData(period, kpiType, cardElement, periodText) {
-  // Get activity ID from current URL
-  const pathParts = window.location.pathname.split('/');
-  const activityId = pathParts[pathParts.length - 1];
-  
-  // Show loading state for this card only
-  showKPILoading(cardElement);
-  
-  // Make API call to get updated KPI data
-  fetch(`/api/activity-kpis/${activityId}?period=${period}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        updateSingleKPIDisplay(data.kpi_data, period, kpiType, cardElement);
-        // Update all dropdowns with same KPI type to show consistent period
-        updateAllDropdownsForKPIType(kpiType, periodText);
-      } else {
-        console.error('Failed to fetch KPI data:', data.error);
-        showNotification('error', 'Failed to update KPI data');
+// Function to handle dropdown clicks - from working dashboard.html
+function attachDropdownHandlers() {
+  // Find all dropdown items in KPI cards
+  document.querySelectorAll('.kpi-period-btn').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Prevent multiple rapid clicks
+      if (this.classList.contains('loading')) return;
+      this.classList.add('loading');
+      
+      // Get period from data attribute
+      const period = this.getAttribute('data-period');
+      const text = this.textContent.trim();
+      
+      // Find the specific KPI card this dropdown belongs to
+      const cardElement = this.closest('.card');
+      
+      // Add null check to prevent TypeError
+      if (!cardElement) {
+        console.error('Could not find card element for KPI dropdown');
+        this.classList.remove('loading');
+        return;
       }
-      // Hide loading state
+      
+      const kpiType = determineKPIType(cardElement);
+      
+      // Update button text with loading state
+      const button = this.closest('.dropdown')?.querySelector('.dropdown-toggle');
+      if (button) {
+        button.style.opacity = '0.7';
+        button.textContent = text + ' ...';
+      }
+      
+      // Update ONLY this specific KPI card by fetching new data
+      updateKPICard(period, kpiType, cardElement);
+      
+      // Reset loading state and button text
       setTimeout(() => {
-        hideKPILoading(cardElement);
-      }, 200);
-    })
-    .catch(error => {
-      console.error('Error fetching KPI data:', error);
-      showNotification('error', 'Failed to update KPI data');
-      hideKPILoading(cardElement);
+        this.classList.remove('loading');
+        if (button) {
+          button.style.opacity = '1';
+          button.textContent = text;
+        }
+      }, 300);
     });
-}
-
-// Update all dropdown buttons for the same KPI type (desktop and mobile)
-function updateAllDropdownsForKPIType(kpiType, periodText) {
-  let selectorPattern;
-  if (kpiType === 'revenue') {
-    selectorPattern = '[id*="revenue"]';
-  } else if (kpiType === 'active_users') {
-    selectorPattern = '[id*="active-users"]';
-  } else if (kpiType === 'unpaid_passports') {
-    selectorPattern = '[id*="unpaid-passports"]';
-  } else if (kpiType === 'profit') {
-    selectorPattern = '[id*="profit"]';
-  }
-  
-  if (selectorPattern) {
-    document.querySelectorAll(`.card:has(${selectorPattern}) .dropdown-toggle`).forEach(button => {
-      button.textContent = periodText;
-      button.style.opacity = '1';
-    });
-  }
-}
-
-function updateSingleKPIDisplay(kpiData, period, kpiType, cardElement) {
-  // Update only the specific KPI card
-  const kpiTypeData = kpiData[kpiType];
-  if (!kpiTypeData) return;
-  
-  // Determine chart type and prefix based on KPI type
-  let chartType = 'line';
-  let prefix = kpiType;
-  
-  if (kpiType === 'active_users') {
-    chartType = 'bar';
-    prefix = 'active-users';
-  } else if (kpiType === 'unpaid_passports') {
-    chartType = 'unpaid-bar';
-    prefix = 'unpaid-passports';
-  }
-  
-  // Update the specific card
-  updateKPICard(prefix, kpiTypeData, chartType, period);
-}
-
-function updateAllKPIData(period) {
-  // Get activity ID from current URL
-  const pathParts = window.location.pathname.split('/');
-  const activityId = pathParts[pathParts.length - 1];
-  
-  // Make API call to get updated KPI data
-  fetch(`/api/activity-kpis/${activityId}?period=${period}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        updateAllKPIDisplays(data.kpi_data, period);
-      } else {
-        console.error('Failed to fetch KPI data:', data.error);
-        showNotification('error', 'Failed to update KPI data');
-      }
-      hideKPILoading();
-    })
-    .catch(error => {
-      console.error('Error fetching KPI data:', error);
-      showNotification('error', 'Failed to update KPI data');
-      hideKPILoading();
-    });
-}
-
-function updateAllKPIDisplays(kpiData, period) {
-  // Add fade-out animation to existing charts
-  const allCharts = document.querySelectorAll('.card svg');
-  allCharts.forEach(chart => {
-    chart.style.transition = 'opacity 0.3s ease';
-    chart.style.opacity = '0.3';
   });
+}
+
+function showKPILoadingForCard(cardElement) {
+  // Add null check to prevent errors
+  if (!cardElement) {
+    console.error('showKPILoadingForCard called with null cardElement');
+    return;
+  }
   
-  // Delay the chart update for smooth transition
-  setTimeout(() => {
-    // Update Revenue with interactive tooltips
-    updateKPICard('revenue', kpiData.revenue, 'line', period);
-    updateKPICard('mobile-revenue', kpiData.revenue, 'line', period);
+  // Show loading for specific card only
+  const valueEl = cardElement.querySelector('.h2');
+  // Find trend element using ID-based selectors
+  const trendEl = cardElement.querySelector('[id*="-trend"]');
+  const chartEl = cardElement.querySelector('[id*="-chart"]');
+  
+  if (valueEl) valueEl.style.opacity = '0.6';
+  if (trendEl) trendEl.style.opacity = '0.6';
+  if (chartEl) chartEl.style.opacity = '0.3';
+}
+
+function hideKPILoadingForCard(cardElement) {
+  // Add null check to prevent errors
+  if (!cardElement) {
+    console.error('hideKPILoadingForCard called with null cardElement');
+    return;
+  }
+  
+  // Hide loading for specific card only
+  const valueEl = cardElement.querySelector('.h2');
+  // Find trend element using ID-based selectors
+  const trendEl = cardElement.querySelector('[id*="-trend"]');
+  const chartEl = cardElement.querySelector('[id*="-chart"]');
+  
+  if (valueEl) valueEl.style.opacity = '1';
+  if (trendEl) trendEl.style.opacity = '1';
+  if (chartEl) chartEl.style.opacity = '1';
+}
+
+// CRITICAL: This function ensures individual card updates without cross-contamination
+// It identifies which specific KPI card was clicked to enable targeted updates
+function determineKPIType(cardElement) {
+  // Add null check to prevent errors
+  if (!cardElement) {
+    console.error('determineKPIType called with null cardElement');
+    return 'revenue'; // fallback
+  }
+  
+  // Determine KPI type based on card content - use FRONTEND keys consistently
+  const cardText = cardElement.textContent.toLowerCase();
+  if (cardText.includes('revenue')) return 'revenue';
+  if (cardText.includes('active passports') || cardText.includes('active users')) return 'active_passports';
+  if (cardText.includes('passports created')) return 'passports_created';
+  if (cardText.includes('unpaid passports') || cardText.includes('pending sign ups')) return 'pending_signups';
+  return 'revenue'; // fallback
+}
+
+// Function to update a specific KPI card with new data from API
+async function updateKPICard(period, kpiType, cardElement) {
+  console.log(`🔄 updateKPICard called - Period: ${period}, Type: ${kpiType}`);
+  try {
+    showKPILoadingForCard(cardElement);
     
-    // Update Active Users
-    updateKPICard('active-users', kpiData.active_users, 'bar', period);
-    updateKPICard('mobile-active-users', kpiData.active_users, 'bar', period);
+    // Get activity_id if we're on activity dashboard
+    const activityId = window.location.pathname.includes('activity-dashboard') 
+      ? window.location.pathname.split('/').pop() 
+      : null;
     
-    // Update Unpaid Passports
-    updateKPICard('unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
-    updateKPICard('mobile-unpaid-passports', kpiData.unpaid_passports, 'unpaid-bar', period);
+    // Build API URL
+    let apiUrl = `/api/kpi-data?period=${period}`;
+    if (activityId) {
+      apiUrl += `&activity_id=${activityId}`;
+    }
     
-    // Update Profit with interactive tooltips
-    updateKPICard('profit', kpiData.profit, 'line', period);
-    updateKPICard('mobile-profit', kpiData.profit, 'line', period);
+    // Fetch new KPI data
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.status}`);
+    }
     
-    // Add fade-in animation to updated charts
-    setTimeout(() => {
-      const allCharts = document.querySelectorAll('.card svg');
-      allCharts.forEach(chart => {
-        chart.style.opacity = '1';
-      });
-    }, 100);
-  }, 300);
+    const result = await response.json();
+    console.log('📦 API Response:', result);
+    if (!result.success) {
+      throw new Error(result.error || 'API returned error');
+    }
+    
+    // Map frontend card types to API data keys
+    const apiKeyMapping = {
+      'revenue': 'revenue',
+      'active_passports': 'active_users',
+      'passports_created': 'passports_created', 
+      'pending_signups': 'unpaid_passports'
+    };
+    
+    const apiKey = apiKeyMapping[kpiType] || kpiType;
+    const kpiData = result.kpi_data[apiKey];
+    console.log(`📈 KPI Data for ${kpiType} (API key: ${apiKey}):`, kpiData);
+    if (!kpiData) {
+      throw new Error(`No data found for KPI type: ${kpiType} (API key: ${apiKey})`);
+    }
+    
+    // Update card value with specific ID selectors
+    let valueElement = null;
+    if (kpiType === 'revenue') {
+      valueElement = cardElement.querySelector('#revenue-value');
+    } else if (kpiType === 'active_passports') {
+      valueElement = cardElement.querySelector('#active-passports-value');
+    } else if (kpiType === 'passports_created') {
+      valueElement = cardElement.querySelector('#passports-created-value');
+    } else if (kpiType === 'pending_signups') {
+      valueElement = cardElement.querySelector('#pending-signups-value');
+    }
+    
+    if (valueElement) {
+      let formattedValue = kpiData.current;
+      if (kpiType === 'revenue') {
+        formattedValue = `$${Math.round(kpiData.current).toLocaleString()}`;
+      } else {
+        formattedValue = Math.round(kpiData.current).toLocaleString();
+      }
+      valueElement.textContent = formattedValue;
+    }
+    
+    // Update performance indicator with proper color and arrow
+    // Use specific ID-based selectors to avoid overwriting title elements
+    let trendElement = null;
+    if (kpiType === 'revenue') {
+      trendElement = cardElement.querySelector('#revenue-trend');
+    } else if (kpiType === 'active_passports') {
+      trendElement = cardElement.querySelector('#active-passports-trend');
+    } else if (kpiType === 'passports_created') {
+      trendElement = cardElement.querySelector('#passports-created-trend');
+    } else if (kpiType === 'pending_signups') {
+      trendElement = cardElement.querySelector('#pending-signups-trend');
+    }
+    
+    if (trendElement && kpiData.change !== null && kpiData.change !== undefined) {
+      let trendClass = 'text-muted me-2';
+      let icon = 'ti-minus';
+      let changeText = '--';
+      
+      if (kpiData.change > 0) {
+        trendClass = 'text-success me-2';
+        icon = 'ti-trending-up';
+        changeText = `${Math.round(Math.abs(kpiData.change))}%`;
+      } else if (kpiData.change < 0) {
+        trendClass = 'text-danger me-2';
+        icon = 'ti-trending-down';
+        changeText = `${Math.round(Math.abs(kpiData.change))}%`;
+      } else if (kpiData.change === 0) {
+        changeText = '0%';
+      }
+      
+      trendElement.className = trendClass;
+      trendElement.innerHTML = `${changeText} <i class="ti ${icon}"></i>`;
+    }
+    
+    // Update chart with new trend data
+    updateSingleChart(cardElement, kpiData, kpiType);
+    
+    // Update dropdown button text
+    const dropdownButton = cardElement.querySelector('.dropdown-toggle');
+    if (dropdownButton) {
+      const periodTexts = {
+        '7d': 'Last 7 days',
+        '30d': 'Last 30 days', 
+        '90d': 'Last 90 days',
+        'all': 'All time'
+      };
+      dropdownButton.textContent = periodTexts[period] || period;
+    }
+    
+    hideKPILoadingForCard(cardElement);
+    
+  } catch (error) {
+    console.error('Error updating KPI card:', error);
+    hideKPILoadingForCard(cardElement);
+    
+    // Show error state
+    const trendElement = cardElement.querySelector('.d-flex .text-success, .d-flex .text-danger, .d-flex .text-muted');
+    if (trendElement) {
+      trendElement.className = 'text-danger me-2';
+      trendElement.innerHTML = 'Error <i class="ti ti-alert-circle"></i>';
+    }
+  }
+}
+
+// Function to update a single chart in a KPI card
+function updateSingleChart(cardElement, kpiData, kpiType) {
+  const chartElement = cardElement.querySelector('[id*="-chart"]');
+  if (!chartElement || !kpiData.trend_data || kpiData.trend_data.length === 0) {
+    return;
+  }
+  
+  // Clear existing chart
+  chartElement.innerHTML = '';
+  
+  if (kpiType === 'revenue') {
+    // Line chart for revenue
+    const options = {
+      series: [{ 
+        name: 'Revenue',
+        data: kpiData.trend_data 
+      }],
+      chart: { 
+        type: 'area', 
+        height: 40, 
+        sparkline: { enabled: true },
+        toolbar: { show: false },
+        parentHeightOffset: 0,
+        offsetX: 0,
+        offsetY: 0
+      },
+      stroke: {
+        width: 1.5,
+        curve: 'smooth'
+      },
+      colors: ['#206bc4'],
+      tooltip: {
+        enabled: true,
+        y: {
+          formatter: (val) => `$${Math.round(val).toLocaleString()}`
+        }
+      },
+      grid: {
+        show: false,
+        padding: {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0
+        }
+      },
+      markers: {
+        size: 0
+      },
+      dataLabels: {
+        enabled: false
+      }
+    };
+    
+    const chart = new ApexCharts(chartElement, options);
+    chart.render();
+  } else {
+    // Bar chart for other KPIs
+    const options = {
+      series: [{ 
+        name: kpiType === 'pending_signups' ? 'Unpaid Passports' : kpiType.replace('_', ' '),
+        data: kpiData.trend_data 
+      }],
+      chart: { 
+        type: 'bar', 
+        height: 40, 
+        sparkline: { enabled: true },
+        toolbar: { show: false },
+        parentHeightOffset: 0,
+        offsetX: 0,
+        offsetY: 0
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 2,
+          columnWidth: '60%'
+        }
+      },
+      colors: ['#206bc4'],
+      tooltip: {
+        enabled: true,
+        y: {
+          formatter: (val) => (val || 0).toString()
+        }
+      },
+      grid: {
+        show: false,
+        padding: {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0
+        }
+      },
+      dataLabels: {
+        enabled: false
+      }
+    };
+    
+    const chart = new ApexCharts(chartElement, options);
+    chart.render();
+  }
+}
+
+// Initialize ApexCharts for activity dashboard
+function initializeApexCharts() {
+  if (!kpiData || typeof ApexCharts === 'undefined') return;
+  
+  // Revenue line chart
+  if (kpiData.revenue && kpiData.revenue.trend_data) {
+    const el = document.querySelector('#revenue-chart');
+    if (el) new ApexCharts(el, {series: [{data: kpiData.revenue.trend_data}], chart: {type: 'area', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  }
+
+  // Active passports bar chart
+  if (kpiData.active_users && kpiData.active_users.trend_data) {
+    const el = document.querySelector('#active-passports-chart');
+    if (el) new ApexCharts(el, {series: [{data: kpiData.active_users.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  }
+
+  // Passports created bar chart
+  if (kpiData.passports_created && kpiData.passports_created.trend_data) {
+    const el = document.querySelector('#passports-created-chart');
+    if (el) new ApexCharts(el, {series: [{data: kpiData.passports_created.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  }
+
+  // Unpaid passports bar chart
+  if (kpiData.unpaid_passports && kpiData.unpaid_passports.trend_data) {
+    const el = document.querySelector('#pending-signups-chart');
+    if (el) new ApexCharts(el, {series: [{data: kpiData.unpaid_passports.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  }
 }
 
 // WARNING: Icon classes MUST use full format: 'ti ti-trending-up' not 'ti-trending-up'
 // Using incomplete class names causes encoding issues (â��)
-function updateKPICard(prefix, data, chartType, period) {
+// DUPLICATE FUNCTION REMOVED - using async updateKPICard from dashboard.html instead
+// function updateKPICard(prefix, data, chartType, period) {
   // Update value
   const valueEl = document.getElementById(`${prefix}-value`);
   if (valueEl) {

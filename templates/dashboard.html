@@ -55,10 +55,10 @@
                 </div>
               </div>
               
-              <div class="h2 mb-1" id="revenue-value">${{ "{:,.0f}".format(kpi_data.revenue.current) }}</div>
+              <div class="h2 mb-1" id="revenue-value">${{ "{:,.0f}".format(kpi_data['revenue']['current']) }}</div>
               
               <div class="d-flex align-items-center mb-2">
-                {% set change = kpi_data.revenue.change %}
+                {% set change = kpi_data['revenue']['change'] %}
                 {% if change is not none %}
                   {% if change > 0 %}
                     <div class="text-success me-2" id="revenue-trend">{{ change|round|int }}% <i class="ti ti-trending-up"></i></div>
@@ -111,7 +111,7 @@
                   {% else %}
                     <div class="text-muted me-2" id="active-passports-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
-                {% elif kpi_data and kpi_data.get('active_users') and kpi_data['active_users'].get('change') is not none %}
+                {% elif kpi_data and kpi_data['active_users'] and kpi_data['active_users']['change'] is not none %}
                   {% if kpi_data['active_users']['change'] > 0 %}
                     <div class="text-success me-2" id="active-passports-trend">{{ kpi_data['active_users']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
                   {% elif kpi_data['active_users']['change'] < 0 %}
@@ -162,7 +162,7 @@
                   {% else %}
                     <div class="text-muted me-2" id="passports-created-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
-                {% elif kpi_data and kpi_data.get('passports_created') and kpi_data['passports_created'].get('change') is not none %}
+                {% elif kpi_data and kpi_data['passports_created'] and kpi_data['passports_created']['change'] is not none %}
                   {% if kpi_data['passports_created']['change'] > 0 %}
                     <div class="text-success me-2" id="passports-created-trend">{{ kpi_data['passports_created']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
                   {% elif kpi_data['passports_created']['change'] < 0 %}
@@ -198,8 +198,8 @@
                 </div>
               </div>
               <div class="h2 mb-1" id="pending-signups-value">
-                {% if kpi_data and kpi_data.unpaid_passports %}
-                  {{ "{:,.0f}".format(kpi_data.unpaid_passports.current) }}
+                {% if kpi_data and kpi_data['unpaid_passports'] %}
+                  {{ "{:,.0f}".format(kpi_data['unpaid_passports']['current']) }}
                 {% else %}
                   0
                 {% endif %}
@@ -213,7 +213,7 @@
                   {% else %}
                     <div class="text-muted me-2" id="pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                   {% endif %}
-                {% elif kpi_data and kpi_data.get('unpaid_passports') and kpi_data['unpaid_passports'].get('change') is not none %}
+                {% elif kpi_data and kpi_data['unpaid_passports'] and kpi_data['unpaid_passports']['change'] is not none %}
                   {% if kpi_data['unpaid_passports']['change'] > 0 %}
                     <div class="text-success me-2" id="pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
                   {% elif kpi_data['unpaid_passports']['change'] < 0 %}
@@ -256,7 +256,7 @@
                   {% if revenue_card and revenue_card.data %}
                     ${{ "{:,.0f}".format(revenue_card.data.value) }}
                   {% else %}
-                    ${{ "{:,.0f}".format(kpi_data['revenue']['current']) if kpi_data and kpi_data.get('revenue') else '0' }}
+                    ${{ "{:,.0f}".format(kpi_data['revenue']['current']) if kpi_data and kpi_data['revenue'] else '0' }}
                   {% endif %}
                 </div>
                 <div class="d-flex align-items-center mb-3">
@@ -268,7 +268,7 @@
                     {% else %}
                       <div class="text-muted me-2" id="mobile-revenue-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
-                  {% elif kpi_data and kpi_data.get('revenue') and kpi_data['revenue'].get('change') is not none %}
+                  {% elif kpi_data and kpi_data['revenue'] and kpi_data['revenue']['change'] is not none %}
                     {% if kpi_data['revenue']['change'] > 0 %}
                       <div class="text-success me-2" id="mobile-revenue-trend">{{ kpi_data['revenue']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
                     {% elif kpi_data['revenue']['change'] < 0 %}
@@ -319,7 +319,7 @@
                     {% else %}
                       <div class="text-muted me-2" id="mobile-active-passports-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
-                  {% elif kpi_data and kpi_data.get('active_users') and kpi_data['active_users'].get('change') is not none %}
+                  {% elif kpi_data and kpi_data['active_users'] and kpi_data['active_users']['change'] is not none %}
                     {% if kpi_data['active_users']['change'] > 0 %}
                       <div class="text-success me-2" id="mobile-active-passports-trend">{{ kpi_data['active_users']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
                     {% elif kpi_data['active_users']['change'] < 0 %}
@@ -370,7 +370,7 @@
                     {% else %}
                       <div class="text-muted me-2" id="mobile-passports-created-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
-                  {% elif kpi_data and kpi_data.get('passports_created') and kpi_data['passports_created'].get('change') is not none %}
+                  {% elif kpi_data and kpi_data['passports_created'] and kpi_data['passports_created']['change'] is not none %}
                     {% if kpi_data['passports_created']['change'] > 0 %}
                       <div class="text-success me-2" id="mobile-passports-created-trend">{{ kpi_data['passports_created']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
                     {% elif kpi_data['passports_created']['change'] < 0 %}
@@ -420,7 +420,7 @@
                     {% else %}
                       <div class="text-muted me-2" id="mobile-pending-signups-trend">0% <i class="ti ti-minus"></i></div>
                     {% endif %}
-                  {% elif kpi_data and kpi_data.get('unpaid_passports') and kpi_data['unpaid_passports'].get('change') is not none %}
+                  {% elif kpi_data and kpi_data['unpaid_passports'] and kpi_data['unpaid_passports']['change'] is not none %}
                     {% if kpi_data['unpaid_passports']['change'] > 0 %}
                       <div class="text-success me-2" id="mobile-pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
                     {% elif kpi_data['unpaid_passports']['change'] < 0 %}
