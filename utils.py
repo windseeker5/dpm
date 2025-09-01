@@ -1186,6 +1186,18 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     import logging
     from utils import get_setting, safe_template
     from datetime import datetime
+    import sys
+
+    print("\n" + "🔵"*40)
+    print("📨 SEND_EMAIL FUNCTION CALLED")
+    print("🔵"*40)
+    print(f"Subject: {subject}")
+    print(f"To: {to_email}")
+    print(f"Template: {template_name}")
+    print(f"Has context: {context is not None}")
+    print(f"Has inline_images: {len(inline_images) if inline_images else 0}")
+    print(f"Has html_body: {html_body is not None}")
+    sys.stdout.flush()
 
     context = context or {}
     inline_images = inline_images or {}
@@ -1212,7 +1224,11 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     msg["From"] = formataddr((sender_name, from_email))
 
     alt_part = MIMEMultipart("alternative")
-    alt_part.attach(MIMEText("Votre passe numérique est prête.", "plain"))
+    # Generate plain text from context or use a better fallback
+    plain_text = context.get('preview_text', context.get('heading', 'Your digital pass is ready'))
+    if context.get('body_text'):
+        plain_text = f"{plain_text}\n\n{context.get('body_text')}"
+    alt_part.attach(MIMEText(plain_text, "plain"))
     alt_part.attach(MIMEText(final_html, "html"))
     msg.attach(alt_part)
 
@@ -1240,6 +1256,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             # Update the From header with organization-specific sender
             from_email = email_config['MAIL_DEFAULT_SENDER']
             msg['From'] = formataddr((sender_name, from_email))
+            print(f"📧 Using organization config: {smtp_host}:{smtp_port}")
         else:
             # Fall back to system settings
             smtp_host = get_setting("MAIL_SERVER")
@@ -1248,6 +1265,13 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             smtp_pass = get_setting("MAIL_PASSWORD")
             use_tls = str(get_setting("MAIL_USE_TLS") or "true").lower() == "true"
             use_ssl = False
+            print(f"📧 Using system config: {smtp_host}:{smtp_port}")
+
+        print(f"🔌 Connecting to SMTP: {smtp_host}:{smtp_port}")
+        print(f"   From: {from_email}")
+        print(f"   User: {smtp_user}")
+        print(f"   TLS: {use_tls}, SSL: {use_ssl}")
+        sys.stdout.flush()
 
         # Choose connection type
         if use_ssl:
@@ -1256,21 +1280,35 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             server = smtplib.SMTP(smtp_host, smtp_port)
             
         server.ehlo()
+        print("✅ SMTP connected and EHLO sent")
         
         if use_tls and not use_ssl:
             server.starttls()
+            print("✅ STARTTLS completed")
             
         if smtp_user and smtp_pass:
             server.login(smtp_user, smtp_pass)
+            print("✅ SMTP login successful")
 
+        print(f"📤 Sending email from {from_email} to {to_email}...")
+        sys.stdout.flush()
         server.sendmail(from_email, [to_email], msg.as_string())
         server.quit()
         
         config_type = "organization-specific" if email_config else "system default"
+        print(f"✅✅✅ EMAIL SENT SUCCESSFULLY to {to_email}")
+        print(f"   Subject: {subject}")
+        print("🔵"*40 + "\n")
+        sys.stdout.flush()
         logging.info(f"✅ Email sent to {to_email} with subject '{subject}' using {config_type} configuration")
+        return True  # Return True on success
 
     except Exception as e:
+        print(f"❌❌❌ FAILED TO SEND EMAIL: {e}")
+        print("🔵"*40 + "\n")
+        sys.stdout.flush()
         logging.exception(f"❌ Failed to send email to {to_email}: {e}")
+        return False  # Return False on failure
 
 
 def send_email_async(app, user=None, activity=None, organization_id=None, **kwargs):
@@ -1892,5 +1930,64 @@ def get_email_context(activity, template_type, base_context=None):
                 context[key] = value
     
     return context
+
+
+def copy_global_email_templates_to_activity():
+    """
+    Copy all global email template settings to create default 
+    activity-specific templates when creating a new activity
+    
+    Returns:
+        dict: Email templates configuration for all 6 template types
+    """
+    # Map global settings to activity template structure
+    return {
+        'newPass': {
+            'subject': get_setting('SUBJECT_pass_created', 'Your Digital Pass is Ready! 🎉'),
+            'title': get_setting('HEADING_pass_created', 'Welcome!'),
+            'intro_text': get_setting('INTRO_pass_created', 'Great news! Your digital pass has been created.'),
+            'conclusion_text': get_setting('CONCLUSION_pass_created', 'We look forward to seeing you!'),
+            'custom_message': get_setting('CUSTOM_MESSAGE_pass_created', ''),
+            'cta_text': get_setting('CTA_TEXT_pass_created', 'View My Pass'),
+            'cta_url': get_setting('CTA_URL_pass_created', 'https://minipass.me/my-passes'),
+        },
+        'paymentReceived': {
+            'subject': get_setting('SUBJECT_payment_received', 'Payment Confirmed - Thank You!'),
+            'title': get_setting('HEADING_payment_received', 'Payment Received'),
+            'intro_text': get_setting('INTRO_payment_received', 'We have successfully received your payment.'),
+            'conclusion_text': get_setting('CONCLUSION_payment_received', 'Thank you for your payment!'),
+            'custom_message': get_setting('CUSTOM_MESSAGE_payment_received', ''),
+        },
+        'latePayment': {
+            'subject': get_setting('SUBJECT_payment_late', 'Friendly Payment Reminder'),
+            'title': get_setting('HEADING_payment_late', 'Payment Reminder'),
+            'intro_text': get_setting('INTRO_payment_late', 'This is a friendly reminder about your pending payment.'),
+            'conclusion_text': get_setting('CONCLUSION_payment_late', 'Please contact us if you have any questions.'),
+            'custom_message': get_setting('CUSTOM_MESSAGE_payment_late', ''),
+        },
+        'signup': {
+            'subject': get_setting('SUBJECT_signup', 'Registration Confirmed!'),
+            'title': get_setting('HEADING_signup', 'Welcome Aboard!'),
+            'intro_text': get_setting('INTRO_signup', 'Your registration has been confirmed.'),
+            'conclusion_text': get_setting('CONCLUSION_signup', 'We are excited to have you join us!'),
+            'custom_message': get_setting('CUSTOM_MESSAGE_signup', ''),
+        },
+        'redeemPass': {
+            'subject': get_setting('SUBJECT_pass_redeemed', 'Pass Successfully Redeemed'),
+            'title': get_setting('HEADING_pass_redeemed', 'Enjoy Your Activity!'),
+            'intro_text': get_setting('INTRO_pass_redeemed', 'Your pass has been successfully redeemed.'),
+            'conclusion_text': get_setting('CONCLUSION_pass_redeemed', 'Have a great time!'),
+            'custom_message': get_setting('CUSTOM_MESSAGE_pass_redeemed', ''),
+        },
+        'survey_invitation': {
+            'subject': get_setting('SUBJECT_survey_invitation', 'We Value Your Feedback'),
+            'title': get_setting('HEADING_survey_invitation', 'Share Your Experience'),
+            'intro_text': get_setting('INTRO_survey_invitation', 'We would love to hear about your experience.'),
+            'conclusion_text': get_setting('CONCLUSION_survey_invitation', 'Thank you for helping us improve!'),
+            'custom_message': get_setting('CUSTOM_MESSAGE_survey_invitation', ''),
+            'cta_text': 'Take Survey',
+            'cta_url': '{survey_url}'  # Will be replaced dynamically
+        }
+    }
 
 

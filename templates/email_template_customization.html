@@ -195,15 +195,13 @@
                                                             Open Full Preview
                                                         </a>
                                                         
-                                                        <!-- Test Email Button -->
-                                                        <form method="POST" action="{{ url_for('test_email_template', activity_id=activity.id) }}" 
-                                                              style="display: inline-block; margin-left: 8px;">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                            <input type="hidden" name="template_type" value="{{ template_key }}">
-                                                            <button type="submit" class="btn btn-sm btn-success">
-                                                                📧 Send Test Email
-                                                            </button>
-                                                        </form>
+                                                        <!-- Test Email Button - MUST be a separate button that doesn't submit main form -->
+                                                        <button type="button" 
+                                                                onclick="document.getElementById('test-email-form-{{ template_key }}').submit();"
+                                                                class="btn btn-sm btn-success"
+                                                                style="margin-left: 8px;">
+                                                            📧 Send Test Email
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -234,6 +232,17 @@
         </div>
     </div>
 </div>
+
+<!-- Hidden forms for test email buttons (outside main form to prevent conflicts) -->
+{% for template_key in template_types %}
+<form id="test-email-form-{{ template_key }}" 
+      method="POST" 
+      action="{{ url_for('test_email_template', activity_id=activity.id) }}" 
+      style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" name="template_type" value="{{ template_key }}">
+</form>
+{% endfor %}
 
 <script>
 // Auto-refresh preview when form inputs change (debounced)

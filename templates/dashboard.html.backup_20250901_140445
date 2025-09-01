@@ -33,9 +33,7 @@
     <div class="dashboard-container">
       
       <!-- New KPI Cards Section - Clean ApexCharts Implementation -->
-      
-      <!-- Desktop Version (unchanged) -->
-      <div class="row mb-4 d-none d-md-flex">
+      <div class="row mb-4">
         <!-- Include ApexCharts -->
         <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
         <!-- Revenue Card (Line Chart) -->
@@ -232,72 +230,6 @@
           </div>
         </div>
       </div>
-      
-      <!-- Mobile Version (DEAD SIMPLE) -->
-      <div class="mobile-kpi-container d-md-none mb-4">
-        <div class="mobile-kpi-scroll">
-          <!-- Revenue Card -->
-          <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">REVENUE</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">$2,688</div>
-                <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>All-time
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Active Passports Card -->
-          <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">ACTIVE PASSPORTS</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">24</div>
-                <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>All-time
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Passports Created Card -->
-          <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">PASSPORTS CREATED</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">24</div>
-                <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>All-time
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Unpaid Passports Card -->
-          <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">UNPAID PASSPORTS</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">8</div>
-                <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>All-time
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Dots Navigation -->
-        <div class="mobile-kpi-dots">
-          <div class="mobile-dot active" data-index="0"></div>
-          <div class="mobile-dot" data-index="1"></div>
-          <div class="mobile-dot" data-index="2"></div>
-          <div class="mobile-dot" data-index="3"></div>
-        </div>
-      </div>
-      
       <!-- Activities Section -->
       <div class="activities-section mb-5 pt-3">
         <div class="row mb-4">
@@ -1100,94 +1032,6 @@
 {% endblock %}
 
 {% block scripts %}
-<style>
-/* Mobile KPI Carousel CSS */
-@media (max-width: 767.98px) {
-  .kpi-carousel-wrapper {
-    position: relative;
-    width: 100%;
-    padding: 0 15px;
-  }
-  
-  .kpi-carousel {
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  
-  .kpi-carousel::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .kpi-track {
-    display: flex;
-    width: 400%; /* 4 cards × 100% */
-  }
-  
-  .kpi-slide {
-    flex: 0 0 100%;
-    scroll-snap-align: start;
-    padding: 0 5px;
-  }
-  
-  .kpi-dots {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 15px;
-  }
-  
-}
-
-/* Mobile KPI Styles (DEAD SIMPLE) */
-@media (max-width: 767.98px) {
-  .mobile-kpi-container {
-    position: relative;
-  }
-  
-  .mobile-kpi-scroll {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-    gap: 1rem;
-    padding: 0 1rem;
-  }
-  
-  .mobile-kpi-scroll::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
-  }
-  
-  .mobile-kpi-card {
-    flex: 0 0 calc(100vw - 2rem);
-    scroll-snap-align: start;
-  }
-  
-  .mobile-kpi-dots {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 1rem;
-  }
-  
-  .mobile-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #dee2e6;
-    transition: background 0.3s ease;
-    cursor: pointer;
-  }
-  
-  .mobile-dot.active {
-    background: #206bc4;
-  }
-}
-</style>
-
 <script>
 // Store KPI data from backend as global variable
 window.kpiData = {{ kpi_data | tojson | safe }};
@@ -2278,95 +2122,11 @@ function initializeApexCharts() {
   }
 }
 
-// Simple mobile carousel - swipe handling only (< 20 lines)
-function initializeMobileCarousel() {
-  const carousel = document.querySelector('.kpi-carousel');
-  const dots = document.querySelectorAll('.dot');
-  if (carousel && window.innerWidth < 768) {
-    carousel.addEventListener('scroll', () => {
-      const index = Math.round(carousel.scrollLeft / carousel.offsetWidth);
-      dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
-    });
-  }
-}
-
-// Initialize charts with server-provided data
-function initializeMobileCharts() {
-  {% if mobile_kpi_data %}
-    if (typeof ApexCharts !== 'undefined') {
-      // Revenue chart
-      {% if mobile_kpi_data['revenue'] and mobile_kpi_data['revenue']['trend_data'] %}
-        const revenueEl = document.getElementById('mobile-revenue-chart');
-        if (revenueEl) {
-          const revenueChart = new ApexCharts(revenueEl, {
-            series: [{data: {{ mobile_kpi_data['revenue']['trend_data'] | tojson }}}],
-            chart: {type: 'area', height: 40, sparkline: {enabled: true}},
-            colors: ['#206bc4']
-          });
-          revenueChart.render();
-        }
-      {% endif %}
-      
-      // Active passports chart
-      {% if mobile_kpi_data['active_users'] and mobile_kpi_data['active_users']['trend_data'] %}
-        const activeEl = document.getElementById('mobile-active-passports-chart');
-        if (activeEl) {
-          const activeChart = new ApexCharts(activeEl, {
-            series: [{data: {{ mobile_kpi_data['active_users']['trend_data'] | tojson }}}],
-            chart: {type: 'bar', height: 40, sparkline: {enabled: true}},
-            colors: ['#206bc4']
-          });
-          activeChart.render();
-        }
-      {% endif %}
-      
-      // Passports created chart
-      {% if mobile_kpi_data['passports_created'] and mobile_kpi_data['passports_created']['trend_data'] %}
-        const createdEl = document.getElementById('mobile-passports-created-chart');
-        if (createdEl) {
-          const createdChart = new ApexCharts(createdEl, {
-            series: [{data: {{ mobile_kpi_data['passports_created']['trend_data'] | tojson }}}],
-            chart: {type: 'bar', height: 40, sparkline: {enabled: true}},
-            colors: ['#206bc4']
-          });
-          createdChart.render();
-        }
-      {% endif %}
-      
-      // Unpaid passports chart
-      {% if mobile_kpi_data['unpaid_passports'] and mobile_kpi_data['unpaid_passports']['trend_data'] %}
-        const unpaidEl = document.getElementById('mobile-unpaid-passports-chart');
-        if (unpaidEl) {
-          const unpaidChart = new ApexCharts(unpaidEl, {
-            series: [{data: {{ mobile_kpi_data['unpaid_passports']['trend_data'] | tojson }}}],
-            chart: {type: 'bar', height: 40, sparkline: {enabled: true}},
-            colors: ['#206bc4']
-          });
-          unpaidChart.render();
-        }
-      {% endif %}
-    }
-  {% endif %}
-}
-
 // Initialize charts and filtering on page load
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM loaded, initializing charts...');
   initializeApexCharts();
   attachDropdownHandlers();
-  
-  // Initialize mobile carousel and charts
-  initializeMobileCarousel();
-  
-  // Ensure ApexCharts is loaded before initializing mobile charts
-  if (typeof ApexCharts !== 'undefined') {
-    initializeMobileCharts();
-  } else {
-    // Wait for ApexCharts to load
-    setTimeout(function() {
-      initializeMobileCharts();
-    }, 100);
-  }
   
   // Handle case where there are no logs
   if (!allLogs || allLogs.length === 0) {
@@ -2491,17 +2251,6 @@ function updateFilterCounts() {
     });
 }
 
-// DEAD SIMPLE Mobile KPI dot navigation (< 10 lines)
-document.addEventListener('DOMContentLoaded', function() {
-  const scroll = document.querySelector('.mobile-kpi-scroll');
-  const dots = document.querySelectorAll('.mobile-dot');
-  if (scroll && dots.length > 0) {
-    scroll.addEventListener('scroll', () => {
-      const index = Math.round(scroll.scrollLeft / scroll.offsetWidth);
-      dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
-    });
-  }
-});
 
 </script>
 
