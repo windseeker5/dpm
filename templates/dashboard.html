@@ -32,22 +32,13 @@
   <div class="page-body">
     <div class="dashboard-container">
       
-
-
-
-
-
-
-      <!-- KPI Cards Section - Responsive Carousel on Mobile -->
-      <div class="kpi-section mb-4">
+      <!-- New KPI Cards Section - Clean ApexCharts Implementation -->
+      <div class="row mb-4">
         <!-- Include ApexCharts -->
         <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
-        
-        <!-- KPI Cards Container - Desktop: Grid, Mobile: Carousel -->
-        <div class="kpi-cards-wrapper" style="display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important;">
-          <!-- Revenue Card -->
-          <div class="kpi-card-mobile">
-            <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="revenue" data-kpi-id="{{ revenue_card.id if revenue_card else 'revenue-default' }}">
+        <!-- Revenue Card (Line Chart) -->
+        <div class="col-md-3 mb-3">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="revenue" data-kpi-id="{{ revenue_card.id if revenue_card else 'revenue-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">REVENUE</div>
@@ -84,11 +75,11 @@
               <div id="revenue-chart" style="height: 40px; margin: 0; padding: 0;"></div>
             </div>
           </div>
-          </div>
+        </div>
 
-          <!-- Active Passports Card -->
-          <div class="kpi-card-mobile">
-            <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active_passports" data-kpi-id="{{ active_passports_card.id if active_passports_card else 'active-passports-default' }}">
+        <!-- Active Passports Card -->
+        <div class="col-md-3 mb-3">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active_passports" data-kpi-id="{{ active_passports_card.id if active_passports_card else 'active-passports-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">ACTIVE PASSPORTS</div>
@@ -135,11 +126,11 @@
               <div id="active-passports-chart" style="height: 40px;"></div>
             </div>
           </div>
-          </div>
+        </div>
 
-          <!-- Passports Created Card -->
-          <div class="kpi-card-mobile">
-            <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_created" data-kpi-id="{{ passports_created_card.id if passports_created_card else 'passports-created-default' }}">
+        <!-- Passports Created Card -->
+        <div class="col-md-3 mb-3">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_created" data-kpi-id="{{ passports_created_card.id if passports_created_card else 'passports-created-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">PASSPORTS CREATED</div>
@@ -186,11 +177,11 @@
               <div id="passports-created-chart" style="height: 40px;"></div>
             </div>
           </div>
-          </div>
+        </div>
 
-          <!-- Unpaid Passports Card -->
-          <div class="kpi-card-mobile">
-            <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending_signups" data-kpi-id="{{ pending_signups_card.id if pending_signups_card else 'pending-signups-default' }}">
+        <!-- Unpaid Passports Card -->
+        <div class="col-md-3 mb-3">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending_signups" data-kpi-id="{{ pending_signups_card.id if pending_signups_card else 'pending-signups-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
@@ -237,41 +228,8 @@
               <div id="pending-signups-chart" style="height: 40px;"></div>
             </div>
           </div>
-          </div>
-        </div>
-        
-        <!-- Mobile Scroll Indicators -->
-        <div class="kpi-scroll-indicators d-md-none text-center mt-3">
-          <span class="indicator active" data-slide="0"></span>
-          <span class="indicator" data-slide="1"></span>
-          <span class="indicator" data-slide="2"></span>
-          <span class="indicator" data-slide="3"></span>
         </div>
       </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      
       <!-- Activities Section -->
       <div class="activities-section mb-5 pt-3">
         <div class="row mb-4">
@@ -1070,128 +1028,6 @@
 .apexcharts-tooltip {
   z-index: 1000 !important;
 }
-
-/* Fix dropdown z-index to show above other elements */
-.dropdown-menu {
-  z-index: 1050 !important;
-}
-
-.dropdown {
-  z-index: 1040 !important;
-}
-
-/* Mobile-specific z-index fixes for dropdowns */
-@media screen and (max-width: 767.98px) {
-  .dropdown-menu {
-    z-index: 999999 !important;
-    position: absolute !important;
-  }
-  
-  .dropdown {
-    z-index: 999998 !important;
-    position: relative !important;
-  }
-  
-  /* Ensure dropdown parent has proper stacking context */
-  .kpi-card-mobile .card {
-    position: relative !important;
-    z-index: 100 !important;
-  }
-  
-  /* When dropdown is open, increase z-index to maximum */
-  .kpi-card-mobile .dropdown.show {
-    z-index: 999997 !important;
-    position: relative !important;
-  }
-  
-  .kpi-card-mobile .dropdown.show .dropdown-menu {
-    z-index: 999999 !important;
-    position: absolute !important;
-  }
-  }
-}
-
-/* Desktop KPI Cards - Ultra High Specificity Grid Layout */
-body .page-wrapper .page-body .dashboard-container .kpi-section .kpi-cards-wrapper {
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 1rem !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-body .page-wrapper .page-body .dashboard-container .kpi-section .kpi-cards-wrapper .kpi-card-mobile {
-  display: block !important;
-  width: auto !important;
-  margin: 0 !important;
-  flex: none !important;
-}
-
-/* Mobile KPI Carousel - Ultra High Specificity */
-@media screen and (max-width: 767.98px) {
-  body .page-wrapper .page-body .dashboard-container .kpi-section .kpi-cards-wrapper {
-    display: flex !important;
-    flex-direction: row !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scroll-snap-type: x mandatory !important;
-    gap: 1rem !important;
-    padding: 0 1rem !important;
-    margin: 0 -1rem !important;
-    grid-template-columns: none !important;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    width: 100vw !important;
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw !important;
-    margin-right: -50vw !important;
-  }
-  
-  body .page-wrapper .page-body .dashboard-container .kpi-section .kpi-cards-wrapper::-webkit-scrollbar {
-    display: none !important;
-  }
-  
-  body .page-wrapper .page-body .dashboard-container .kpi-section .kpi-cards-wrapper .kpi-card-mobile {
-    min-width: 280px !important;
-    width: 280px !important;
-    flex-shrink: 0 !important;
-    flex-grow: 0 !important;
-    flex-basis: 280px !important;
-    scroll-snap-align: start !important;
-    display: block !important;
-    margin: 0 !important;
-  }
-}
-
-/* Scroll Indicators Styles */
-.kpi-scroll-indicators {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #e2e8f0;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.indicator.active {
-  background-color: #3b82f6;
-  transform: scale(1.2);
-}
-
-.indicator:hover {
-  background-color: #64748b;
-}
 </style>
 {% endblock %}
 
@@ -1233,6 +1069,11 @@ function generateInteractiveLineChart(data, width = 300, height = 40, chartId = 
   };
 }
 
+// Legacy function for backward compatibility
+function generateLineChart(data, width = 300, height = 40) {
+  const result = generateInteractiveLineChart(data, width, height);
+  return result.path;
+}
 
 // Tooltip management functions
 function createTooltip() {
@@ -1331,9 +1172,7 @@ function updateCharts(period = '7d') {
   // Update Revenue Line Chart with interactive tooltips
   if (kpiData.revenue && kpiData.revenue.trend) {
     const revenueChartData = generateInteractiveLineChart(kpiData.revenue.trend, 300, 40, 'revenue');
-    const revenueCharts = ['#revenue-chart'];
-    revenueCharts.forEach(selector => {
-      const chart = document.querySelector(selector);
+    const chart = document.querySelector('#revenue-chart');
     if (chart && revenueChartData.path) {
       // Create SVG with path and invisible hover zones
       chart.innerHTML = `
@@ -1363,8 +1202,6 @@ function updateCharts(period = '7d') {
         point.addEventListener('mouseleave', hideTooltip);
       });
     }
-  });
-  
   } else {
     console.warn('No revenue trend data available');
   }
@@ -1372,27 +1209,21 @@ function updateCharts(period = '7d') {
   // Update Active Passports Bar Chart
   if (kpiData.active_users && kpiData.active_users.trend) {
     const activePassportsBars = generateBarChart(kpiData.active_users.trend);
-    const activePassportsCharts = ['#active-passports-chart'];
-    activePassportsCharts.forEach(selector => {
-      const chart = document.querySelector(selector);
-      if (chart) {
-        chart.innerHTML = activePassportsBars;
-      }
-    });
+    const chart = document.querySelector('#active-passports-chart');
+    if (chart) {
+      chart.innerHTML = activePassportsBars;
+    }
   } else {
     console.warn('No active users trend data available');
   }
   
   // Update Passports Created Line Chart
   if (kpiData.passports_created && kpiData.passports_created.trend) {
-    const passportsCreatedPath = generateInteractiveLineChart(kpiData.passports_created.trend).path;
-    const passportsCreatedCharts = ['#passports-created-chart'];
-    passportsCreatedCharts.forEach(selector => {
-      const chart = document.querySelector(selector);
-      if (chart && passportsCreatedPath) {
-        chart.innerHTML = `<path d="${passportsCreatedPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
-      }
-    });
+    const passportsCreatedPath = generateLineChart(kpiData.passports_created.trend);
+    const chart = document.querySelector('#passports-created-chart');
+    if (chart && passportsCreatedPath) {
+      chart.innerHTML = `<path d="${passportsCreatedPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
   } else {
     console.warn('No passports created trend data available');
   }
@@ -1400,13 +1231,10 @@ function updateCharts(period = '7d') {
   // Update Pending Signups Bar Chart
   if (kpiData.unpaid_passports && kpiData.unpaid_passports.trend) {
     const pendingSignupsBars = generateBarChart(kpiData.unpaid_passports.trend);
-    const pendingSignupsCharts = ['#pending-signups-chart'];
-    pendingSignupsCharts.forEach(selector => {
-      const chart = document.querySelector(selector);
-      if (chart) {
-        chart.innerHTML = pendingSignupsBars;
-      }
-    });
+    const chart = document.querySelector('#pending-signups-chart');
+    if (chart) {
+      chart.innerHTML = pendingSignupsBars;
+    }
   } else {
     console.warn('No pending signups trend data available');
   }
@@ -1848,7 +1676,7 @@ function updateDashboardKPICard(period, kpiType, cardElement) {
   }, 200);
 }
 
-// WARNING: Must use specific ID selectors for revenue cards (#revenue-trend, #mobile-revenue-trend)
+// WARNING: Must use specific ID selectors for revenue cards (#revenue-trend)
 // Using broad selectors like '.text-muted' will overwrite title elements!
 function updateSingleKPIValues(kpiType, cardElement, period, periodData) {
   // Update value and trend for the specific card only
@@ -1960,12 +1788,29 @@ function updateSingleKPIChart(kpiType, cardElement, period, periodData) {
         ).join('')}
       `;
       
+      // Add hover event listeners for revenue tooltips
+      chartEl.querySelectorAll('.chart-hover-point').forEach(point => {
+        point.addEventListener('mouseenter', function(e) {
+          const rect = chartEl.getBoundingClientRect();
+          const value = parseFloat(this.getAttribute('data-value'));
+          const index = parseInt(this.getAttribute('data-index'));
+          showTooltip(
+            rect.left + parseFloat(this.getAttribute('cx')) + window.scrollX,
+            rect.top + parseFloat(this.getAttribute('cy')) + window.scrollY - 50,
+            value, 
+            period, 
+            index
+          );
+        });
+        
+        point.addEventListener('mouseleave', hideTooltip);
+      });
     }
   } else if (kpiType === 'active_passports' && kpiData.active_users && kpiData.active_users.trend) {
     const activePassportsBars = generateBarChart(kpiData.active_users.trend);
     chartEl.innerHTML = activePassportsBars;
   } else if (kpiType === 'passports_created' && kpiData.passports_created && kpiData.passports_created.trend) {
-    const passportsCreatedPath = generateInteractiveLineChart(kpiData.passports_created.trend).path;
+    const passportsCreatedPath = generateLineChart(kpiData.passports_created.trend);
     chartEl.innerHTML = `<path d="${passportsCreatedPath}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
   } else if (kpiType === 'pending_signups' && kpiData.unpaid_passports && kpiData.unpaid_passports.trend) {
     const pendingSignupsBars = generateBarChart(kpiData.unpaid_passports.trend);
@@ -1973,8 +1818,56 @@ function updateSingleKPIChart(kpiType, cardElement, period, periodData) {
   }
 }
 
+function updateMainDashboardKPIs(period) {
+  // First, try to use existing KPI data for immediate feedback
+  const existingData = kpiData[period];
+  if (existingData) {
+    updateKPIValues(period, existingData);
+  }
+  
+  // Use server-side rendered data (no API calls needed per simplification plan)
+  console.log('Using server-side KPI data, no API calls needed');
 
+  hideKPILoading();
+}
 
+function updateKPIDisplays(kpiData, period) {
+  // Update Revenue - pass the full period data which contains revenue and revenue_change
+  updateKPICardLegacy('revenue', kpiData);
+  
+}
+
+function updateKPICardLegacy(prefix, data) {
+  // Update value - LEGACY FUNCTION (renamed to avoid conflict with async version)
+  const valueEl = document.getElementById(`${prefix}-value`);
+  if (valueEl && data) {
+    if (prefix.includes('revenue')) {
+      valueEl.textContent = `$${Math.round(data.revenue || 0).toLocaleString()}`;
+    } else {
+      valueEl.textContent = Math.round(data.total || 0);
+    }
+  }
+  
+  // Update trend
+  const trendEl = document.getElementById(`${prefix}-trend`);
+  if (trendEl && data) {
+    // Use revenue_change for revenue cards, change for others
+    const change = prefix.includes('revenue') ? (data.revenue_change || 0) : (data.change || 0);
+    let trendClass = 'text-muted';
+    let icon = 'ti-minus';
+    
+    if (change > 0) {
+      trendClass = 'text-success';
+      icon = 'ti-trending-up';
+    } else if (change < 0) {
+      trendClass = 'text-danger';
+      icon = 'ti-trending-down';
+    }
+    
+    trendEl.className = `${trendClass} me-2`;
+    trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="ti ${icon}"></i>`;
+  }
+}
 
 // Pagination functionality for logs table
 class LogsPagination {
@@ -2234,7 +2127,6 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM loaded, initializing charts...');
   initializeApexCharts();
   attachDropdownHandlers();
-  forceMobileKPILayout();
   
   // Handle case where there are no logs
   if (!allLogs || allLogs.length === 0) {
@@ -2254,9 +2146,6 @@ document.addEventListener('DOMContentLoaded', function() {
     logsPagination = new LogsPagination(allLogs, 10);
     logsPagination.init();
   }
-  
-  // Initialize mobile carousel indicators
-  initializeCarouselIndicators();
 });
 
 // Filter functionality
@@ -2361,200 +2250,6 @@ function updateFilterCounts() {
         }
     });
 }
-
-// Force Mobile KPI Layout via JavaScript
-function forceMobileKPILayout() {
-  const kpiWrapper = document.querySelector('.kpi-cards-wrapper');
-  if (!kpiWrapper) return;
-  
-  function applyMobileLayout() {
-    if (window.innerWidth <= 767) {
-      // Mobile: Apply flex layout
-      kpiWrapper.style.display = 'flex';
-      kpiWrapper.style.flexDirection = 'row';
-      kpiWrapper.style.overflowX = 'auto';
-      kpiWrapper.style.overflowY = 'hidden';
-      kpiWrapper.style.gap = '1rem';
-      kpiWrapper.style.padding = '0 1rem';
-      kpiWrapper.style.margin = '0 -1rem';
-      kpiWrapper.style.gridTemplateColumns = 'none';
-      kpiWrapper.style.width = '100vw';
-      kpiWrapper.style.position = 'relative';
-      kpiWrapper.style.left = '50%';
-      kpiWrapper.style.marginLeft = '-50vw';
-      
-      // Apply to cards
-      const cards = kpiWrapper.querySelectorAll('.kpi-card-mobile');
-      cards.forEach(card => {
-        card.style.minWidth = '280px';
-        card.style.width = '280px';
-        card.style.flexShrink = '0';
-        card.style.flexGrow = '0';
-      });
-    } else {
-      // Desktop: Apply grid layout (inline styles should already handle this)
-      kpiWrapper.style.display = 'grid';
-      kpiWrapper.style.gridTemplateColumns = 'repeat(4, 1fr)';
-      kpiWrapper.style.gap = '1rem';
-      
-      // Reset mobile-specific styles
-      kpiWrapper.style.overflowX = 'visible';
-      kpiWrapper.style.padding = '0';
-      kpiWrapper.style.margin = '0';
-      kpiWrapper.style.width = '100%';
-      kpiWrapper.style.position = 'static';
-      kpiWrapper.style.left = 'auto';
-      kpiWrapper.style.marginLeft = '0';
-      
-      // Reset card styles
-      const cards = kpiWrapper.querySelectorAll('.kpi-card-mobile');
-      cards.forEach(card => {
-        card.style.minWidth = 'auto';
-        card.style.width = 'auto';
-        card.style.flexShrink = 'initial';
-        card.style.flexGrow = 'initial';
-      });
-    }
-  }
-  
-  // Apply on load and resize
-  applyMobileLayout();
-  window.addEventListener('resize', applyMobileLayout);
-}
-
-// Mobile KPI Carousel Scroll Indicators with Error Handling and Boundary Control
-function initializeCarouselIndicators() {
-  const carousel = document.querySelector('.kpi-cards-wrapper');
-  const indicators = document.querySelectorAll('.indicator');
-  
-  if (!carousel || indicators.length === 0) return;
-  
-  // Get total number of cards for boundary checking
-  const totalCards = carousel.querySelectorAll('.kpi-card-mobile').length;
-  const maxScrollIndex = Math.max(0, totalCards - 1);
-  
-  // Function to update active indicator based on scroll position
-  function updateActiveIndicator() {
-    try {
-      const scrollLeft = carousel.scrollLeft;
-      const cardElement = carousel.querySelector('.kpi-card-mobile');
-      
-      // Add null check for card element
-      if (!cardElement) {
-        console.warn('No .kpi-card-mobile element found');
-        return;
-      }
-      
-      const cardWidth = cardElement.offsetWidth + 16; // width + gap
-      let activeIndex = Math.round(scrollLeft / cardWidth);
-      
-      // Boundary checking to prevent over-scroll
-      activeIndex = Math.max(0, Math.min(activeIndex, maxScrollIndex));
-      
-      indicators.forEach((indicator, index) => {
-        if (index === activeIndex) {
-          indicator.classList.add('active');
-        } else {
-          indicator.classList.remove('active');
-        }
-      });
-    } catch (error) {
-      console.error('Error updating carousel indicators:', error);
-    }
-  }
-  
-  // Add scroll event listener with boundary control
-  function handleScroll() {
-    try {
-      const cardElement = carousel.querySelector('.kpi-card-mobile');
-      if (!cardElement) return;
-      
-      const cardWidth = cardElement.offsetWidth + 16;
-      const maxScrollLeft = (totalCards - 1) * cardWidth;
-      
-      // Prevent over-scroll past the last card
-      if (carousel.scrollLeft > maxScrollLeft) {
-        carousel.scrollTo({
-          left: maxScrollLeft,
-          behavior: 'auto'
-        });
-      }
-      
-      // Prevent over-scroll before the first card
-      if (carousel.scrollLeft < 0) {
-        carousel.scrollTo({
-          left: 0,
-          behavior: 'auto'
-        });
-      }
-      
-      updateActiveIndicator();
-    } catch (error) {
-      console.error('Error handling scroll boundaries:', error);
-    }
-  }
-  
-  // Add scroll event listener with error handling
-  try {
-    carousel.addEventListener('scroll', handleScroll);
-    
-    // Add touch event handling for better boundary control on mobile
-    let touchStartX = 0;
-    carousel.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].clientX;
-    });
-    
-    carousel.addEventListener('touchmove', (e) => {
-      const touchCurrentX = e.touches[0].clientX;
-      const touchDiff = touchStartX - touchCurrentX;
-      const cardElement = carousel.querySelector('.kpi-card-mobile');
-      
-      if (cardElement) {
-        const cardWidth = cardElement.offsetWidth + 16;
-        const maxScrollLeft = (totalCards - 1) * cardWidth;
-        
-        // Prevent over-scroll at boundaries
-        if ((carousel.scrollLeft <= 0 && touchDiff < 0) || 
-            (carousel.scrollLeft >= maxScrollLeft && touchDiff > 0)) {
-          e.preventDefault();
-        }
-      }
-    }, { passive: false });
-    
-  } catch (error) {
-    console.error('Error adding scroll listener:', error);
-  }
-  
-  // Add click handlers to indicators with error handling
-  indicators.forEach((indicator, index) => {
-    indicator.addEventListener('click', () => {
-      try {
-        const cardElement = carousel.querySelector('.kpi-card-mobile');
-        
-        // Add null check for card element
-        if (!cardElement) {
-          console.warn('No .kpi-card-mobile element found for click handler');
-          return;
-        }
-        
-        // Ensure index is within bounds
-        const targetIndex = Math.max(0, Math.min(index, maxScrollIndex));
-        const cardWidth = cardElement.offsetWidth + 16; // width + gap
-        
-        carousel.scrollTo({
-          left: targetIndex * cardWidth,
-          behavior: 'smooth'
-        });
-      } catch (error) {
-        console.error('Error handling indicator click:', error);
-      }
-    });
-  });
-  
-  // Initialize first indicator as active
-  updateActiveIndicator();
-}
-
 
 
 </script>
