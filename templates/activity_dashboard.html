@@ -34,7 +34,7 @@
   overflow: visible !important;
 }
 
-/* Fix modal z-index to appear above KPI dropdowns */
+/* Fix modal z-index */
 .modal-backdrop {
   z-index: 10000 !important;
 }
@@ -62,23 +62,6 @@
   padding-right: 1.5rem !important;
 }
 
-/* Mobile scroll snap styles for KPI cards */
-.d-flex.overflow-auto {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
-}
-
-.d-flex.overflow-auto::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
-}
-
-
-/* Mobile scroll indicators */
-@media (max-width: 767.98px) {
-  .flex-shrink-0 {
-    scroll-snap-align: start;
-  }
-}
 
 /* Modern Activity Header Styles */
 .activity-header-modern {
@@ -641,7 +624,6 @@
 
 
 
-<!-- This is place holder for KPI cards HTML -->
 
 
 
@@ -1355,17 +1337,6 @@
 
 
 <script>
-
-
-
-
-// KPI data initialization removed - functionality cleaned up
-
-// Chart generation functions removed - KPI functionality cleaned up
-
-// ApexCharts configuration and initialization code removed - KPI functionality cleaned up
-
-
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
   console.log('ActivityDashboard: DOM ready, initializing...');
@@ -1378,12 +1349,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('ActivityDashboard: Failed to initialize main dashboard:', error);
   }
   
-  try {
-    // Initialize charts with current data - REMOVED duplicate function call
-    console.log('ActivityDashboard: Charts initialized');
-  } catch (error) {
-    console.error('ActivityDashboard: Failed to initialize charts:', error);
-  }
   
   try {
     // Initialize modern header features
@@ -1407,7 +1372,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 1000);
 });
 
-// Search functionality preserved - KPI-related initialization removed
 
 // Initialize modern header features
 function initializeModernHeader() {
@@ -1627,8 +1591,6 @@ function initializeActivityDashboard() {
       tab.addEventListener('click', handleFilterChange);
     });
   }
-  
-  // KPI initialization calls removed - functionality cleaned up
   
   // Add click handlers for specific client-side actions
   document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
@@ -2204,11 +2166,6 @@ function generateInteractiveLineChart(data, width = 300, height = 40, chartId = 
   };
 }
 
-// Legacy chart generation functions removed - KPI functionality cleaned up
-
-function generateLineChart(data, width = 300, height = 40) {
-  return ''; // Chart generation removed - KPI functionality cleaned up
-}
 
 function generateBarChart(data, width = 300, height = 40) {
   if (!data || data.length === 0) return '';
@@ -2311,7 +2268,6 @@ function hideTooltip() {
   }
 }
 
-// All KPI-related JavaScript functions successfully removed
 
 // Bulk selection functionality for passports table
 function initializePassportBulkSelection() {

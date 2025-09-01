@@ -2063,10 +2063,7 @@ function updateMainDashboardKPIs(period) {
   
   // Use server-side rendered data (no API calls needed per simplification plan)
   console.log('Using server-side KPI data, no API calls needed');
-  // Note: updateCharts() disabled to prevent conflicts with ApexCharts
-  // if (kpiData) {
-  //   updateCharts(period);
-  // }
+
   hideKPILoading();
 }
 
@@ -2075,14 +2072,6 @@ function updateKPIDisplays(kpiData, period) {
   updateKPICardLegacy('revenue', kpiData);
   updateKPICardLegacy('mobile-revenue', kpiData);
   
-  // Update Active Passports (we don't have exact counts in API, so skip for now)
-  // updateKPICard('active-passports', kpiData.active_passports);
-  
-  // Update Passports Created (we don't have exact counts in API, so skip for now)
-  // updateKPICard('passports-created', kpiData.passports_created);
-  
-  // Update Pending Signups (we don't have exact counts in API, so skip for now)
-  // updateKPICard('pending-signups', kpiData.pending_signups);
 }
 
 function updateKPICardLegacy(prefix, data) {
@@ -2507,106 +2496,7 @@ function updateFilterCounts() {
     });
 }
 
-// REMOVED: Duplicate chart initialization (handled by initializeApexCharts function above)
 
-/*
-// DISABLED: Setup handlers for each KPI card type 
-// This handler conflicts with attachDropdownHandlers() - using unified handler instead
-  kpiCardConfigs.forEach(config => {
-    document.querySelectorAll(`${config.selector} .kpi-period-btn`).forEach(item => {
-      item.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation(); // Prevent default handler
-        
-        const period = this.getAttribute('data-period');
-        const text = this.textContent.trim();
-        const cardElement = this.closest('.card');
-        const button = this.closest('.dropdown').querySelector('.dropdown-toggle');
-        
-        // Update button text
-        if (button) {
-          button.textContent = text;
-        }
-        
-        // Fetch data from new API endpoint
-        fetch(`/api/kpi-card/${config.cardType}?period=${period}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.success && data.card) {
-              // Update value
-              const valueEl = cardElement.querySelector('.h2');
-              if (valueEl) {
-                const formattedValue = config.valuePrefix 
-                  ? `${config.valuePrefix}${Math.round(data.card.data.value).toLocaleString()}`
-                  : Math.round(data.card.data.value).toLocaleString();
-                valueEl.textContent = formattedValue;
-              }
-              
-              // Update trend - use specific ID selectors
-              const trendSelector = config.trendIds.join(', ');
-              const trendEl = cardElement.querySelector(trendSelector);
-              if (trendEl && data.card.data.trend_percentage !== undefined) {
-                const change = data.card.data.trend_percentage;
-                let trendClass = 'text-muted';
-                let icon = 'ti ti-minus';
-                
-                if (change > 0) {
-                  trendClass = 'text-success';
-                  icon = 'ti ti-trending-up';
-                } else if (change < 0) {
-                  trendClass = 'text-danger';
-                  icon = 'ti ti-trending-down';
-                }
-                
-                trendEl.className = `${trendClass} me-2`;
-                trendEl.innerHTML = `${Math.round(Math.abs(change))}% <i class="${icon}"></i>`;
-              }
-              
-              // Update chart if data is available
-              if (data.card.data.chart_data) {
-                const chartEl = cardElement.querySelector('svg');
-                if (chartEl && data.card.data.chart_data.length > 0) {
-                  // Determine chart type based on card type
-                  const useBarChart = config.cardType === 'active_passports';
-                  
-                  if (useBarChart && typeof generateInteractiveBarChart === 'function') {
-                    // Use bar chart for active passports
-                    const chartData = generateInteractiveBarChart(data.card.data.chart_data, 300, 40, config.cardType);
-                    if (chartData.bars) {
-                      chartEl.innerHTML = chartData.bars.map((bar, index) => 
-                        `<rect x="${bar.x}" y="${bar.y}" width="${bar.width}" height="${bar.height}" 
-                               fill="#206bc4" opacity="0.8" 
-                               data-value="${bar.value}" data-index="${index}" 
-                               class="chart-hover-bar" style="cursor: pointer;" />`
-                      ).join('');
-                    }
-                  } else if (typeof generateInteractiveLineChart === 'function') {
-                    // Use line chart for other cards
-                    const chartData = generateInteractiveLineChart(data.card.data.chart_data, 300, 40, config.cardType);
-                    if (chartData.path) {
-                      chartEl.innerHTML = `
-                        <path d="${chartData.path}" fill="none" stroke="#206bc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                        ${chartData.points ? chartData.points.map((point, index) => 
-                          `<circle cx="${point.x}" cy="${point.y}" r="6" fill="transparent" 
-                                   data-value="${point.value}" data-index="${index}" 
-                                   class="chart-hover-point" style="cursor: pointer;" />`
-                        ).join('') : ''}
-                      `;
-                    }
-                  }
-                }
-              }
-            }
-          })
-          .catch(error => {
-            console.error(`Error fetching ${config.cardType} KPI data:`, error);
-            // Fall back to existing data
-            updateDashboardKPICard(period, config.cardType, cardElement);
-          });
-      });
-    });
-  });
-  */
 </script>
 
 
