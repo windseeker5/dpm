@@ -1878,17 +1878,15 @@ async function updateKPICard(period, kpiType, cardElement) {
     showKPILoadingForCard(cardElement);
     
     // Get activity_id if we're on activity dashboard
-    // DISABLED FOR NOW - showing global data like dashboard
-    const activityId = null; // window.location.pathname.includes('activity-dashboard') 
-      // ? window.location.pathname.split('/').pop() 
-      // : null;
+    const activityId = window.location.pathname.includes('activity-dashboard') 
+      ? window.location.pathname.split('/').pop() 
+      : null;
     
     // Build API URL
     let apiUrl = `/api/kpi-data?period=${period}`;
-    // NOT adding activity_id - showing global numbers like dashboard
-    // if (activityId) {
-    //   apiUrl += `&activity_id=${activityId}`;
-    // }
+    if (activityId) {
+      apiUrl += `&activity_id=${activityId}`;
+    }
     
     // Fetch new KPI data
     const response = await fetch(apiUrl);

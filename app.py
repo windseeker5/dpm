@@ -4017,7 +4017,7 @@ def activity_dashboard(activity_id):
 
     # Use the enhanced get_kpi_data function with activity filtering
     from utils import get_kpi_data
-    kpi_data = get_kpi_data()  # No filtering for now - show global numbers like dashboard
+    kpi_data = get_kpi_data(activity_id=activity_id)  # Filter for this specific activity
     
     # Get the 7-day KPI data by default (this will be the initial view)
     current_kpi = kpi_data.get('revenue', {})
