@@ -603,9 +603,18 @@
                 <i class="ti ti-map-pin"></i>
                 <span>{{ activity.location or 'Location' }}</span>
               </div>
-              <div class="stat">
+              <div class="stat share-stat">
                 <i class="ti ti-share"></i>
-                <span>{{ signups|length }} signups</span>
+                <span>{{ passport_types|length }} {{ 'type' if passport_types|length == 1 else 'types' }}</span>
+                <div class="share-dropdown" style="display: none;">
+                  {% for pt in passport_types %}
+                  <a href="#" class="share-link" 
+                     data-url="{{ url_for('signup', activity_id=activity.id, passport_type_id=pt.id, _external=True) }}"
+                     onclick="copyToClipboard(event, this)">
+                    {{ pt.name }}
+                  </a>
+                  {% endfor %}
+                </div>
               </div>
             </div>
 
@@ -759,8 +768,8 @@
                 </div>
               </div>
               <div class="h2 mb-1" id="active-passports-value">
-                {% if active_passports_card and active_passports_card.data %}
-                  {{ "{:,.0f}".format(active_passports_card.data.value) }}
+                {% if kpi_data and kpi_data['active_users'] %}
+                  {{ "{:,.0f}".format(kpi_data['active_users']['current']) }}
                 {% else %}
                   {{ passport_stats['active_passports'] if passport_stats else '0' }}
                 {% endif %}
@@ -810,8 +819,8 @@
                 </div>
               </div>
               <div class="h2 mb-1" id="passports-created-value">
-                {% if passports_created_card and passports_created_card.data %}
-                  {{ "{:,.0f}".format(passports_created_card.data.value) }}
+                {% if kpi_data and kpi_data['passports_created'] %}
+                  {{ "{:,.0f}".format(kpi_data['passports_created']['current']) }}
                 {% else %}
                   {{ passport_stats['total_passports'] if passport_stats else '0' }}
                 {% endif %}
@@ -902,9 +911,15 @@
             <div class="card" style="border-radius: 12px; min-height: 160px;">
               <div class="card-body text-center">
                 <div class="text-muted small text-uppercase mb-3">REVENUE</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">$2,688</div>
+                <div class="h1 mb-3" id="mobile-revenue-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
+                  {% if kpi_data and kpi_data['revenue'] %}
+                    ${{ "{:,.0f}".format(kpi_data['revenue']['current']) }}
+                  {% else %}
+                    $0
+                  {% endif %}
+                </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>All-time
+                  <i class="ti ti-timeline me-1"></i><span id="mobile-revenue-period">Last 7 days</span>
                 </div>
               </div>
             </div>
@@ -915,9 +930,15 @@
             <div class="card" style="border-radius: 12px; min-height: 160px;">
               <div class="card-body text-center">
                 <div class="text-muted small text-uppercase mb-3">ACTIVE PASSPORTS</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">24</div>
+                <div class="h1 mb-3" id="mobile-active-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
+                  {% if kpi_data and kpi_data['active_users'] %}
+                    {{ "{:,.0f}".format(kpi_data['active_users']['current']) }}
+                  {% else %}
+                    0
+                  {% endif %}
+                </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>All-time
+                  <i class="ti ti-timeline me-1"></i><span id="mobile-active-period">Last 7 days</span>
                 </div>
               </div>
             </div>
@@ -928,9 +949,15 @@
             <div class="card" style="border-radius: 12px; min-height: 160px;">
               <div class="card-body text-center">
                 <div class="text-muted small text-uppercase mb-3">PASSPORTS CREATED</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">24</div>
+                <div class="h1 mb-3" id="mobile-created-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
+                  {% if kpi_data and kpi_data['passports_created'] %}
+                    {{ "{:,.0f}".format(kpi_data['passports_created']['current']) }}
+                  {% else %}
+                    0
+                  {% endif %}
+                </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>All-time
+                  <i class="ti ti-timeline me-1"></i><span id="mobile-created-period">Last 7 days</span>
                 </div>
               </div>
             </div>
@@ -941,9 +968,15 @@
             <div class="card" style="border-radius: 12px; min-height: 160px;">
               <div class="card-body text-center">
                 <div class="text-muted small text-uppercase mb-3">UNPAID PASSPORTS</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">8</div>
+                <div class="h1 mb-3" id="mobile-pending-value" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">
+                  {% if kpi_data and kpi_data['unpaid_passports'] %}
+                    {{ "{:,.0f}".format(kpi_data['unpaid_passports']['current']) }}
+                  {% else %}
+                    0
+                  {% endif %}
+                </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>All-time
+                  <i class="ti ti-timeline me-1"></i><span id="mobile-pending-period">Last 7 days</span>
                 </div>
               </div>
             </div>
@@ -1937,6 +1970,28 @@ async function updateKPICard(period, kpiType, cardElement) {
       valueElement.textContent = formattedValue;
     }
     
+    // Also update mobile card values
+    let mobileValueElement = null;
+    if (kpiType === 'revenue') {
+      mobileValueElement = document.querySelector('#mobile-revenue-value');
+    } else if (kpiType === 'active_passports') {
+      mobileValueElement = document.querySelector('#mobile-active-value');
+    } else if (kpiType === 'passports_created') {
+      mobileValueElement = document.querySelector('#mobile-created-value');
+    } else if (kpiType === 'pending_signups') {
+      mobileValueElement = document.querySelector('#mobile-pending-value');
+    }
+    
+    if (mobileValueElement) {
+      let formattedValue = kpiData.current;
+      if (kpiType === 'revenue') {
+        formattedValue = `$${Math.round(kpiData.current).toLocaleString()}`;
+      } else {
+        formattedValue = Math.round(kpiData.current).toLocaleString();
+      }
+      mobileValueElement.textContent = formattedValue;
+    }
+    
     // Update performance indicator with proper color and arrow
     // Use specific ID-based selectors to avoid overwriting title elements
     let trendElement = null;
@@ -1984,6 +2039,28 @@ async function updateKPICard(period, kpiType, cardElement) {
         'all': 'All time'
       };
       dropdownButton.textContent = periodTexts[period] || period;
+    }
+    
+    // Also update mobile period labels
+    let mobilePeriodElement = null;
+    if (kpiType === 'revenue') {
+      mobilePeriodElement = document.querySelector('#mobile-revenue-period');
+    } else if (kpiType === 'active_passports') {
+      mobilePeriodElement = document.querySelector('#mobile-active-period');
+    } else if (kpiType === 'passports_created') {
+      mobilePeriodElement = document.querySelector('#mobile-created-period');
+    } else if (kpiType === 'pending_signups') {
+      mobilePeriodElement = document.querySelector('#mobile-pending-period');
+    }
+    
+    if (mobilePeriodElement) {
+      const periodTexts = {
+        '7d': 'Last 7 days',
+        '30d': 'Last 30 days',
+        '90d': 'Last 90 days',
+        'all': 'All time'
+      };
+      mobilePeriodElement.textContent = periodTexts[period] || period;
     }
     
     hideKPILoadingForCard(cardElement);
@@ -2105,33 +2182,36 @@ function updateSingleChart(cardElement, kpiData, kpiType) {
   }
 }
 
-// Initialize ApexCharts on page load  
+// Initialize ApexCharts on page load - Fixed with debugging
 function initializeApexCharts() {
-  if (!kpiData || typeof ApexCharts === 'undefined') return;
+  console.log('🔍 Debugging KPI Data Structure:');
+  console.log('Full kpiData:', JSON.stringify(window.kpiData, null, 2));
   
-  // Revenue line chart
-  if (kpiData.revenue && kpiData.revenue.trend_data) {
-    const el = document.querySelector('#revenue-chart');
-    if (el) new ApexCharts(el, {series: [{data: kpiData.revenue.trend_data}], chart: {type: 'area', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  if (!window.kpiData || typeof ApexCharts === 'undefined') {
+    console.error('❌ Missing kpiData or ApexCharts library');
+    return;
   }
-
-  // Active passports bar chart
-  if (kpiData.active_users && kpiData.active_users.trend_data) {
-    const el = document.querySelector('#active-passports-chart');
-    if (el) new ApexCharts(el, {series: [{data: kpiData.active_users.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
-  }
-
-  // Passports created bar chart
-  if (kpiData.passports_created && kpiData.passports_created.trend_data) {
-    const el = document.querySelector('#passports-created-chart');
-    if (el) new ApexCharts(el, {series: [{data: kpiData.passports_created.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
-  }
-
-  // Unpaid passports bar chart
-  if (kpiData.unpaid_passports && kpiData.unpaid_passports.trend_data) {
-    const el = document.querySelector('#pending-signups-chart');
-    if (el) new ApexCharts(el, {series: [{data: kpiData.unpaid_passports.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
-  }
+  
+  // Ensure charts render even with empty/null data
+  ['revenue', 'active_users', 'passports_created', 'unpaid_passports'].forEach(key => {
+    const chartId = key === 'revenue' ? '#revenue-chart' : 
+                    key === 'active_users' ? '#active-passports-chart' :
+                    key === 'passports_created' ? '#passports-created-chart' : '#pending-signups-chart';
+    const el = document.querySelector(chartId);
+    console.log(`Chart ${key}: element=${el ? 'found' : 'missing'}, data=${kpiData[key] ? 'exists' : 'null'}`);
+    
+    if (el) {
+      const kpiItem = kpiData[key];
+      const data = (kpiItem && kpiItem.trend_data && kpiItem.trend_data.length > 0) ? kpiItem.trend_data : [0];
+      console.log(`  Rendering ${key} with data:`, data);
+      
+      new ApexCharts(el, {
+        series: [{data: data}], 
+        chart: {type: key === 'revenue' ? 'area' : 'bar', height: 40, sparkline: {enabled: true}}, 
+        colors: ['#206bc4']
+      }).render();
+    }
+  });
 }
 
 // Simple mobile carousel - swipe handling only (< 20 lines)
@@ -3445,6 +3525,38 @@ function checkAndDeleteActivity(activityId, activityName) {
             alert('Error checking activity. Please try again.');
         });
 }
+
+// Share signup links functionality
+function copyToClipboard(event, element) {
+  event.preventDefault();
+  const url = element.dataset.url;
+  navigator.clipboard.writeText(url).then(() => {
+    // Visual feedback
+    const originalText = element.textContent;
+    element.textContent += ' ✓';
+    setTimeout(() => {
+      element.textContent = originalText;
+    }, 2000);
+  });
+}
+
+// Show/hide dropdown on hover - using querySelector on specific element
+document.addEventListener('DOMContentLoaded', function() {
+  const shareStat = document.querySelector('.share-stat');
+  if (shareStat) {
+    shareStat.addEventListener('mouseenter', function() {
+      const dropdown = this.querySelector('.share-dropdown');
+      if (dropdown && dropdown.children.length > 0) {
+        dropdown.style.display = 'block';
+      }
+    });
+    
+    shareStat.addEventListener('mouseleave', function() {
+      const dropdown = this.querySelector('.share-dropdown');
+      if (dropdown) dropdown.style.display = 'none';
+    });
+  }
+});
 </script>
 
 {% endblock %}

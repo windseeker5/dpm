@@ -1325,6 +1325,7 @@ def approve_and_create_pass(signup_id):
         app=current_app._get_current_object(),
         event_type="pass_created",
         pass_data=passport,
+        activity=passport.activity,
         admin_email=session.get("admin"),
         timestamp=now_utc
     )
@@ -1342,7 +1343,6 @@ def create_activity():
 
     if request.method == "POST":
         from models import Activity, PassportType, AdminActionLog, db
-        from utils import copy_global_email_templates_to_activity
         import os
         import uuid
 
@@ -1386,7 +1386,7 @@ def create_activity():
             status=status,
             created_by=session.get("admin"),
             image_filename=image_filename,
-            email_templates=copy_global_email_templates_to_activity(),
+            email_templates={},
         )
 
         db.session.add(new_activity)
@@ -2108,17 +2108,6 @@ def setup():
 
             flash("✅ Logo uploaded successfully!", "success")
 
-        # ✅ Step 8: Save email notification templates (including signup and survey_invitation)
-        for event in ["pass_created", "pass_redeemed", "payment_received", "payment_late", "signup", "survey_invitation"]:
-            for key in ["SUBJECT", "TITLE", "INTRO", "CONCLUSION", "THEME"]:
-                full_key = f"{key}_{event}"
-                value = request.form.get(full_key, "").strip()
-                if value:
-                    existing = Setting.query.filter_by(key=full_key).first()
-                    if existing:
-                        existing.value = value
-                    else:
-                        db.session.add(Setting(key=full_key, value=value))
 
         db.session.commit()
         print("[SETUP] Admins configured:", admin_emails)
@@ -3029,6 +3018,7 @@ def redeem_passport_qr(pass_code):
             app=current_app._get_current_object(),
             event_type="pass_redeemed",
             pass_data=passport,
+            activity=passport.activity,
             admin_email=session.get("admin"),
             timestamp=now_utc
         )
@@ -3453,6 +3443,7 @@ def passports_bulk_action():
                     app=current_app._get_current_object(),
                     event_type="payment_late",
                     pass_data=passport,
+                    activity=passport.activity,
                     admin_email=session.get("admin"),
                     timestamp=datetime.now(timezone.utc)
                 )
@@ -4997,6 +4988,7 @@ def create_passport():
             app=current_app._get_current_object(),
             event_type="pass_created",
             pass_data=passport,
+            activity=passport.activity,
             admin_email=session.get("admin"),
             timestamp=now_utc
         )
@@ -5087,6 +5079,7 @@ def redeem_passport(pass_code):
             app=current_app._get_current_object(),
             event_type="pass_redeemed",
             pass_data=passport,
+            activity=passport.activity,
             admin_email=session.get("admin"),
             timestamp=now_utc
         )
@@ -5140,6 +5133,7 @@ def mark_passport_paid(passport_id):
         app=current_app._get_current_object(),
         event_type="payment_received",
         pass_data=passport,
+        activity=passport.activity,
         admin_email=session.get("admin"),
         timestamp=now_utc
     )
@@ -5173,6 +5167,7 @@ def send_passport_reminder(passport_id):
             app=current_app._get_current_object(),
             event_type="payment_late",
             pass_data=passport,
+            activity=passport.activity,
             admin_email=session.get("admin"),
             timestamp=datetime.now(timezone.utc)
         )
@@ -6089,9 +6084,40 @@ def send_survey_invitations(survey_id):
                 survey_url = url_for('take_survey', survey_token=survey.survey_token, 
                                    _external=True) + f"?token={response.response_token}"
                 
-                # Use template system from setup page
-                subject = get_setting('SUBJECT_survey_invitation', f"{survey.name} - Your Feedback Requested")
-                template_name = get_setting('THEME_survey_invitation', 'email_survey_invitation.html')
+                # Use activity-specific email templates
+                from utils import get_email_context
+                
+                # Build base context
+                base_context = {
+                    'user_name': passport.user.name or 'Participant',
+                    'activity_name': survey.activity.name,
+                    'survey_name': survey.name,
+                    'survey_url': survey_url,
+                    'question_count': question_count,
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_address': get_setting('ORG_ADDRESS', ''),
+                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me')
+                }
+                
+                # Get email context using activity-specific templates
+                email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
+                
+                subject = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
+                template_name = 'email_survey_invitation_compiled/index.html'
+
+                # Load inline_images.json for survey invitation template
+                import json
+                import base64
+                import os
+                compiled_folder = template_name.replace('/index.html', '')
+                json_path = os.path.join('templates/email_templates', compiled_folder, 'inline_images.json')
+
+                inline_images = {}
+                if os.path.exists(json_path):
+                    with open(json_path, 'r') as f:
+                        compiled_images = json.load(f)
+                        for cid, img_base64 in compiled_images.items():
+                            inline_images[cid] = base64.b64decode(img_base64)
                 
                 context = {
                     'user_name': passport.user.name or 'Participant',
@@ -6102,9 +6128,9 @@ def send_survey_invitations(survey_id):
                     'organization_name': get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-                    'title': get_setting('TITLE_survey_invitation', 'We\'d Love Your Feedback!'),
-                    'intro': get_setting('INTRO_survey_invitation', 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'),
-                    'conclusion': get_setting('CONCLUSION_survey_invitation', 'Thank you for helping us create better experiences!')
+                    'title': email_context.get('title', 'We\'d Love Your Feedback!'),
+                    'intro': email_context.get('intro_text', 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'),
+                    'conclusion': email_context.get('conclusion_text', 'Thank you for helping us create better experiences!')
                 }
                 
                 send_email_async(
@@ -6112,7 +6138,8 @@ def send_survey_invitations(survey_id):
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
-                    context=context
+                    context=context,
+                    inline_images=inline_images
                 )
                 
                 sent_count += 1
@@ -6131,9 +6158,40 @@ def send_survey_invitations(survey_id):
                 survey_url = url_for('take_survey', survey_token=survey.survey_token, 
                                    _external=True) + f"?token={existing_response.response_token}"
                 
-                # Use template system from setup page
-                subject = get_setting('SUBJECT_survey_invitation', f"{survey.name} - Your Feedback Requested")
-                template_name = get_setting('THEME_survey_invitation', 'email_survey_invitation.html')
+                # Use activity-specific email templates
+                from utils import get_email_context
+                
+                # Build base context
+                base_context = {
+                    'user_name': passport.user.name or 'Participant',
+                    'activity_name': survey.activity.name,
+                    'survey_name': survey.name,
+                    'survey_url': survey_url,
+                    'question_count': question_count,
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_address': get_setting('ORG_ADDRESS', ''),
+                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me')
+                }
+                
+                # Get email context using activity-specific templates
+                email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
+                
+                subject = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
+                template_name = 'email_survey_invitation_compiled/index.html'
+
+                # Load inline_images.json for survey invitation template
+                import json
+                import base64
+                import os
+                compiled_folder = template_name.replace('/index.html', '')
+                json_path = os.path.join('templates/email_templates', compiled_folder, 'inline_images.json')
+
+                inline_images = {}
+                if os.path.exists(json_path):
+                    with open(json_path, 'r') as f:
+                        compiled_images = json.load(f)
+                        for cid, img_base64 in compiled_images.items():
+                            inline_images[cid] = base64.b64decode(img_base64)
                 
                 context = {
                     'user_name': passport.user.name or 'Participant',
@@ -6144,9 +6202,9 @@ def send_survey_invitations(survey_id):
                     'organization_name': get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-                    'title': get_setting('TITLE_survey_invitation', 'We\'d Love Your Feedback!'),
-                    'intro': get_setting('INTRO_survey_invitation', 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'),
-                    'conclusion': get_setting('CONCLUSION_survey_invitation', 'Thank you for helping us create better experiences!')
+                    'title': email_context.get('title', 'We\'d Love Your Feedback!'),
+                    'intro': email_context.get('intro_text', 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'),
+                    'conclusion': email_context.get('conclusion_text', 'Thank you for helping us create better experiences!')
                 }
                 
                 send_email_async(
@@ -6154,7 +6212,8 @@ def send_survey_invitations(survey_id):
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
-                    context=context
+                    context=context,
+                    inline_images=inline_images
                 )
                 
                 sent_count += 1
