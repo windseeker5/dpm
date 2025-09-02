@@ -6119,6 +6119,22 @@ def send_survey_invitations(survey_id):
                         for cid, img_base64 in compiled_images.items():
                             inline_images[cid] = base64.b64decode(img_base64)
                 
+                # Get organization logo from settings
+                from utils import get_setting
+                org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+                org_logo_path = os.path.join("static/uploads", org_logo_filename)
+                
+                # Add both logo CIDs for compatibility
+                if os.path.exists(org_logo_path):
+                    logo_data = open(org_logo_path, "rb").read()
+                    inline_images['logo'] = logo_data  # For owner_card_inline.html
+                    inline_images['logo_image'] = logo_data  # For compiled templates
+                else:
+                    # Fallback to default logo
+                    logo_data = open("static/uploads/logo.png", "rb").read()
+                    inline_images['logo'] = logo_data
+                    inline_images['logo_image'] = logo_data
+                
                 context = {
                     'user_name': passport.user.name or 'Participant',
                     'activity_name': survey.activity.name,
@@ -6192,6 +6208,22 @@ def send_survey_invitations(survey_id):
                         compiled_images = json.load(f)
                         for cid, img_base64 in compiled_images.items():
                             inline_images[cid] = base64.b64decode(img_base64)
+                
+                # Get organization logo from settings
+                from utils import get_setting
+                org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+                org_logo_path = os.path.join("static/uploads", org_logo_filename)
+                
+                # Add both logo CIDs for compatibility
+                if os.path.exists(org_logo_path):
+                    logo_data = open(org_logo_path, "rb").read()
+                    inline_images['logo'] = logo_data  # For owner_card_inline.html
+                    inline_images['logo_image'] = logo_data  # For compiled templates
+                else:
+                    # Fallback to default logo
+                    logo_data = open("static/uploads/logo.png", "rb").read()
+                    inline_images['logo'] = logo_data
+                    inline_images['logo_image'] = logo_data
                 
                 context = {
                     'user_name': passport.user.name or 'Participant',

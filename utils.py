@@ -1528,6 +1528,22 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
             cid_map = json.load(f)
         for cid, img_base64 in cid_map.items():
             inline_images[cid] = base64.b64decode(img_base64)
+        
+        # Get organization logo from settings
+        from utils import get_setting
+        org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+        org_logo_path = os.path.join("static/uploads", org_logo_filename)
+        
+        # Add both logo CIDs for compatibility
+        if os.path.exists(org_logo_path):
+            logo_data = open(org_logo_path, "rb").read()
+            inline_images['logo'] = logo_data  # For owner_card_inline.html
+            inline_images['logo_image'] = logo_data  # For compiled templates
+        else:
+            # Fallback to default logo
+            logo_data = open("static/uploads/logo.png", "rb").read()
+            inline_images['logo'] = logo_data
+            inline_images['logo_image'] = logo_data
 
         send_email_async(
             app=app,
@@ -1649,7 +1665,24 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
 
     # Add dynamic content (QR code must be generated per passport)
     inline_images['qr_code'] = qr_data
-    inline_images['logo_image'] = open("static/uploads/logo.png", "rb").read()
+    
+    # Get organization logo from settings
+    from utils import get_setting
+    org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+    org_logo_path = os.path.join("static/uploads", org_logo_filename)
+    
+    # Add both logo CIDs for compatibility
+    if os.path.exists(org_logo_path):
+        logo_data = open(org_logo_path, "rb").read()
+        inline_images['logo'] = logo_data  # For owner_card_inline.html
+        inline_images['logo_image'] = logo_data  # For compiled templates
+        print(f"Using organization logo: {org_logo_filename}")
+    else:
+        # Fallback to default logo
+        logo_data = open("static/uploads/logo.png", "rb").read()
+        inline_images['logo'] = logo_data
+        inline_images['logo_image'] = logo_data
+        print("Using default Minipass logo")
 
     # Determine user and activity for email context
     user_obj = getattr(pass_data, "user", None)
