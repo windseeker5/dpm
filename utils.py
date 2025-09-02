@@ -1894,6 +1894,9 @@ def get_email_context(activity, template_type, base_context=None):
     """
     Merge activity email template customizations with default values
     
+    CRITICAL: Preserves email blocks (owner_html, history_html) from base_context.
+    These blocks are never overridden by user customizations.
+    
     Args:
         activity: Activity model instance
         template_type: Template type (newPass, paymentReceived, etc.)
@@ -1917,17 +1920,30 @@ def get_email_context(activity, template_type, base_context=None):
     # Start with base context if provided
     context = base_context.copy() if base_context else {}
     
-    # Apply defaults
+    # Apply defaults for missing keys
     for key, value in defaults.items():
         if key not in context:
             context[key] = value
+    
+    # Preserve email blocks from base_context - NEVER override these
+    protected_blocks = {}
+    if base_context:
+        if 'owner_html' in base_context:
+            protected_blocks['owner_html'] = base_context['owner_html']
+        if 'history_html' in base_context:
+            protected_blocks['history_html'] = base_context['history_html']
     
     # Apply activity-specific customizations if they exist
     if activity and activity.email_templates:
         template_customizations = activity.email_templates.get(template_type, {})
         for key, value in template_customizations.items():
-            if value is not None and value != '':
-                context[key] = value
+            # NEVER allow customizations to override email blocks
+            if key not in ['owner_html', 'history_html']:
+                if value is not None and value != '':
+                    context[key] = value
+    
+    # Restore protected blocks to ensure they're never overridden
+    context.update(protected_blocks)
     
     return context
 
