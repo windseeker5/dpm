@@ -261,3 +261,40 @@
 .dashboard-container::before {
   display: none !important;
 }
+
+/* Share signup links styles */
+.share-stat {
+  position: relative;
+  cursor: pointer;
+}
+
+.share-stat:hover i {
+  color: #206bc4;
+}
+
+.share-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 0;
+  margin-top: 4px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  z-index: 1000;
+  min-width: 180px;
+}
+
+.share-link {
+  display: block;
+  padding: 8px 12px;
+  color: #374151;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.share-link:hover {
+  background: #f3f4f6;
+  color: #206bc4;
+}

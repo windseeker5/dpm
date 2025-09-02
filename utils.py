@@ -718,6 +718,7 @@ def send_unpaid_reminders(app, force_send=False):
                     app=current_app._get_current_object(),
                     event_type="payment_late",
                     pass_data=p,  # using new models
+                    activity=p.activity,
                     admin_email="auto-reminder@system",
                     timestamp=datetime.now()
                 )
@@ -850,6 +851,7 @@ def match_gmail_payments_to_passes():
                     app=current_app._get_current_object(),
                     event_type="payment_received",
                     pass_data=best_passport,  # ✅ update keyword
+                    activity=best_passport.activity,
                     admin_email="gmail-bot@system",
                     timestamp=now_utc
                 )
@@ -1459,7 +1461,7 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
 
 
 def notify_signup_event(app, *, signup, activity, timestamp=None):
-    from utils import send_email_async, get_setting
+    from utils import send_email_async, get_email_context
     from flask import render_template_string, url_for
     import os
     import json
@@ -1468,12 +1470,21 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
 
     timestamp = timestamp or datetime.now(timezone.utc)
 
-    # 🧠 Same logic as notify_pass_event
-    subject = get_setting("SUBJECT_signup", "Confirmation d'inscription")
-    title = get_setting("TITLE_signup", "Votre Inscription est Confirmée")
-    intro_raw = get_setting("INTRO_signup", "")
-    conclusion_raw = get_setting("CONCLUSION_signup", "")
-    theme = get_setting("THEME_signup", "signup.html")
+    # Build base context
+    base_context = {
+        "user_name": signup.user.name,
+        "activity_name": activity.name
+    }
+    
+    # Get email context using activity-specific templates
+    email_context = get_email_context(activity, 'signup', base_context)
+    
+    # Extract template values
+    subject = email_context.get('subject', "Confirmation d'inscription")
+    title = email_context.get('title', "Votre Inscription est Confirmée")
+    intro_raw = email_context.get('intro_text', '')
+    conclusion_raw = email_context.get('conclusion_text', '')
+    theme = "signup/index.html"
 
     # Render intro and conclusion manually
     intro = render_template_string(intro_raw, user_name=signup.user.name, activity_name=activity.name)
@@ -1543,8 +1554,8 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         )
 
 
-def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp=None):
-    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_setting
+def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None, timestamp=None):
+    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_email_context
     from flask import render_template, render_template_string, url_for
     from datetime import datetime, timezone
     import json
@@ -1552,37 +1563,36 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
     import os
 
     timestamp = timestamp or datetime.now(timezone.utc)
-    event_key = event_type.lower().replace(" ", "_")
-
-    # ✅ Normalize theme_key prefix based on event type
-    if event_key in ["pass_created", "pass_redeemed", "payment_received", "payment_late"]:
-        theme_key = f"THEME_{event_key}"
-        subject_key = f"SUBJECT_{event_key}"
-        title_key = f"TITLE_{event_key}"
-        intro_key = f"INTRO_{event_key}"
-        conclusion_key = f"CONCLUSION_{event_key}"
-    else:
-        theme_key = f"THEME_pass_{event_key}"
-        subject_key = f"SUBJECT_pass_{event_key}"
-        title_key = f"TITLE_pass_{event_key}"
-        intro_key = f"INTRO_pass_{event_key}"
-        conclusion_key = f"CONCLUSION_pass_{event_key}"
-
-    theme = get_setting(theme_key, "confirmation.html")
-    print("🧪 Raw get_setting theme key:", theme_key)
-    print("🧪 theme value from DB:", theme)
-
-    subject = get_setting(subject_key, f"[Minipass] {event_type.title()} Notification")
-    title = get_setting(title_key, f"{event_type.title()} Confirmation")
-    intro_raw = get_setting(intro_key, "")
-    conclusion_raw = get_setting(conclusion_key, "")
-
-    # ✅ Normalize cross-model values
-    games_remaining = getattr(pass_data, "uses_remaining", 0)
-    activity_display = getattr(pass_data.activity, "name", "") if pass_data.activity else ""
-
-    intro = render_template_string(intro_raw, pass_data=pass_data, default_qt=games_remaining, activity_list=activity_display)
-    conclusion = render_template_string(conclusion_raw, pass_data=pass_data, default_qt=games_remaining, activity_list=activity_display)
+    
+    # Map event types to template keys used in activity.email_templates
+    event_type_mapping = {
+        'pass_created': 'newPass',
+        'payment_received': 'paymentReceived', 
+        'payment_late': 'latePayment',
+        'pass_redeemed': 'redeemPass'
+    }
+    
+    template_type = event_type_mapping.get(event_type, 'newPass')
+    
+    # Build base context
+    base_context = {
+        "pass_data": pass_data,
+        "default_qt": getattr(pass_data, "uses_remaining", 0),
+        "activity_list": getattr(pass_data.activity, "name", "") if pass_data.activity else ""
+    }
+    
+    # Get email context using activity-specific templates
+    email_context = get_email_context(activity, template_type, base_context)
+    
+    # Extract template values
+    subject = email_context.get('subject', f"[Minipass] {event_type.title()} Notification")
+    title = email_context.get('title', f"{event_type.title()} Confirmation")
+    intro_raw = email_context.get('intro_text', '')
+    conclusion_raw = email_context.get('conclusion_text', '')
+    
+    # Render intro and conclusion with pass_data context
+    intro = render_template_string(intro_raw, pass_data=pass_data, default_qt=email_context.get('default_qt', 0), activity_list=email_context.get('activity_list', ''))
+    conclusion = render_template_string(conclusion_raw, pass_data=pass_data, default_qt=email_context.get('default_qt', 0), activity_list=email_context.get('activity_list', ''))
 
     print("🔔 Email debug - subject:", subject)
     print("🔔 Email debug - title:", title)
@@ -1591,6 +1601,15 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
     qr_data = generate_qr_code_image(pass_data.pass_code).read()
     history = get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)
 
+    # Map event type to template directory - Use compiled template paths
+    template_mapping = {
+        'pass_created': 'newPass_compiled/index.html',
+        'payment_received': 'paymentReceived_compiled/index.html',
+        'payment_late': 'latePayment_compiled/index.html',
+        'pass_redeemed': 'redeemPass_compiled/index.html'
+    }
+    theme = template_mapping.get(event_type, 'newPass_compiled/index.html')
+    
     context = {
         "pass_data": {
             "pass_code": pass_data.pass_code,
@@ -1613,62 +1632,40 @@ def notify_pass_event(app, *, event_type, pass_data, admin_email=None, timestamp
         "special_message": ""
     }
 
-    compiled_folder = os.path.join("templates/email_templates", theme.replace(".html", "_compiled"))
-    index_path = os.path.join(compiled_folder, "index.html")
-    json_path = os.path.join(compiled_folder, "inline_images.json")
-    use_compiled = os.path.exists(index_path) and os.path.exists(json_path)
+    # Load compiled inline_images.json
+    import json
+    import base64
+    import os
+    compiled_folder = theme.replace('/index.html', '')
+    json_path = os.path.join('templates/email_templates', compiled_folder, 'inline_images.json')
 
-    if use_compiled:
-        with open(index_path, "r") as f:
-            raw_html = f.read()
-        html_body = render_template_string(raw_html, **context)
+    inline_images = {}
+    if os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            compiled_images = json.load(f)
+            for cid, img_base64 in compiled_images.items():
+                inline_images[cid] = base64.b64decode(img_base64)
+        print(f"Loaded {len(inline_images)} inline images from compiled template")
 
-        with open(json_path, "r") as f:
-            inline_images = {cid: base64.b64decode(data) for cid, data in json.load(f).items()}
-        inline_images["qr_code"] = qr_data
+    # Add dynamic content (QR code must be generated per passport)
+    inline_images['qr_code'] = qr_data
+    inline_images['logo_image'] = open("static/uploads/logo.png", "rb").read()
 
-        logo_path = os.path.join(compiled_folder.replace("_compiled", ""), "logo.png")
-        if os.path.exists(logo_path):
-            with open(logo_path, "rb") as logo_file:
-                inline_images["logo"] = logo_file.read()
-        else:
-            print("⚠️ logo.png not found in template folder.")
-
-        # Determine user and activity for email context
-        user_obj = getattr(pass_data, "user", None)
-        activity_obj = getattr(pass_data, "activity", None)
-        
-        send_email_async(
-            app,
-            user=user_obj,
-            activity=activity_obj,
-            subject=subject,
-            to_email=pass_data.user.email if pass_data.user else None,
-            html_body=html_body,
-            inline_images=inline_images,
-            timestamp_override=timestamp
-        )
-    else:
-        inline_images = {
-            "qr_code": qr_data,
-            "logo_image": open("static/uploads/logo.png", "rb").read()
-        }
-
-        # Determine user and activity for email context
-        user_obj = getattr(pass_data, "user", None)
-        activity_obj = getattr(pass_data, "activity", None)
-        
-        send_email_async(
-            app,
-            user=user_obj,
-            activity=activity_obj,
-            subject=subject,
-            to_email=pass_data.user.email if pass_data.user else None,
-            template_name=theme,
-            context=context,
-            inline_images=inline_images,
-            timestamp_override=timestamp
-        )
+    # Determine user and activity for email context
+    user_obj = getattr(pass_data, "user", None)
+    activity_obj = getattr(pass_data, "activity", None)
+    
+    send_email_async(
+        app,
+        user=user_obj,
+        activity=activity_obj,
+        subject=subject,
+        to_email=pass_data.user.email if pass_data.user else None,
+        template_name=theme,
+        context=context,
+        inline_images=inline_images,
+        timestamp_override=timestamp
+    )
 
 
 # ================================
@@ -1948,62 +1945,5 @@ def get_email_context(activity, template_type, base_context=None):
     return context
 
 
-def copy_global_email_templates_to_activity():
-    """
-    Copy all global email template settings to create default 
-    activity-specific templates when creating a new activity
-    
-    Returns:
-        dict: Email templates configuration for all 6 template types
-    """
-    # Map global settings to activity template structure
-    return {
-        'newPass': {
-            'subject': get_setting('SUBJECT_pass_created', 'Your Digital Pass is Ready! 🎉'),
-            'title': get_setting('HEADING_pass_created', 'Welcome!'),
-            'intro_text': get_setting('INTRO_pass_created', 'Great news! Your digital pass has been created.'),
-            'conclusion_text': get_setting('CONCLUSION_pass_created', 'We look forward to seeing you!'),
-            'custom_message': get_setting('CUSTOM_MESSAGE_pass_created', ''),
-            'cta_text': get_setting('CTA_TEXT_pass_created', 'View My Pass'),
-            'cta_url': get_setting('CTA_URL_pass_created', 'https://minipass.me/my-passes'),
-        },
-        'paymentReceived': {
-            'subject': get_setting('SUBJECT_payment_received', 'Payment Confirmed - Thank You!'),
-            'title': get_setting('HEADING_payment_received', 'Payment Received'),
-            'intro_text': get_setting('INTRO_payment_received', 'We have successfully received your payment.'),
-            'conclusion_text': get_setting('CONCLUSION_payment_received', 'Thank you for your payment!'),
-            'custom_message': get_setting('CUSTOM_MESSAGE_payment_received', ''),
-        },
-        'latePayment': {
-            'subject': get_setting('SUBJECT_payment_late', 'Friendly Payment Reminder'),
-            'title': get_setting('HEADING_payment_late', 'Payment Reminder'),
-            'intro_text': get_setting('INTRO_payment_late', 'This is a friendly reminder about your pending payment.'),
-            'conclusion_text': get_setting('CONCLUSION_payment_late', 'Please contact us if you have any questions.'),
-            'custom_message': get_setting('CUSTOM_MESSAGE_payment_late', ''),
-        },
-        'signup': {
-            'subject': get_setting('SUBJECT_signup', 'Registration Confirmed!'),
-            'title': get_setting('HEADING_signup', 'Welcome Aboard!'),
-            'intro_text': get_setting('INTRO_signup', 'Your registration has been confirmed.'),
-            'conclusion_text': get_setting('CONCLUSION_signup', 'We are excited to have you join us!'),
-            'custom_message': get_setting('CUSTOM_MESSAGE_signup', ''),
-        },
-        'redeemPass': {
-            'subject': get_setting('SUBJECT_pass_redeemed', 'Pass Successfully Redeemed'),
-            'title': get_setting('HEADING_pass_redeemed', 'Enjoy Your Activity!'),
-            'intro_text': get_setting('INTRO_pass_redeemed', 'Your pass has been successfully redeemed.'),
-            'conclusion_text': get_setting('CONCLUSION_pass_redeemed', 'Have a great time!'),
-            'custom_message': get_setting('CUSTOM_MESSAGE_pass_redeemed', ''),
-        },
-        'survey_invitation': {
-            'subject': get_setting('SUBJECT_survey_invitation', 'We Value Your Feedback'),
-            'title': get_setting('HEADING_survey_invitation', 'Share Your Experience'),
-            'intro_text': get_setting('INTRO_survey_invitation', 'We would love to hear about your experience.'),
-            'conclusion_text': get_setting('CONCLUSION_survey_invitation', 'Thank you for helping us improve!'),
-            'custom_message': get_setting('CUSTOM_MESSAGE_survey_invitation', ''),
-            'cta_text': 'Take Survey',
-            'cta_url': '{survey_url}'  # Will be replaced dynamically
-        }
-    }
 
 
