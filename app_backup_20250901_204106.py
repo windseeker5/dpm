@@ -4017,7 +4017,7 @@ def activity_dashboard(activity_id):
 
     # Use the enhanced get_kpi_data function with activity filtering
     from utils import get_kpi_data
-    kpi_data = get_kpi_data()  # No filtering for now - show global numbers like dashboard
+    kpi_data = get_kpi_data(activity_id=activity_id)
     
     # Get the 7-day KPI data by default (this will be the initial view)
     current_kpi = kpi_data.get('revenue', {})
@@ -4060,24 +4060,58 @@ def activity_dashboard(activity_id):
     approved_signups = [s for s in signups if s.status == 'approved']
     
     # Activity log entries (recent activity)
-    # Use get_all_activity_logs to get properly formatted logs like dashboard does
-    from utils import get_all_activity_logs
-    all_activity_logs = get_all_activity_logs()
-    # Filter for this activity
-    activity_logs = [log for log in all_activity_logs if activity.name in log.get('action', '')][:10]
+    try:
+        activity_logs = (
+            AdminActionLog.query
+            .filter(AdminActionLog.action.contains(activity.name))
+            .order_by(AdminActionLog.timestamp.desc())
+            .limit(10)
+            .all()
+        )
+    except:
+        activity_logs = []
 
     # KPI data structure for the dashboard template
-    # Using the same structure from get_kpi_data() as dashboard does - no transformation
-    # The old custom structure is commented out below:
-    # kpi_data = {
-    #     'revenue': {
-    #         'current': current_kpi.get('revenue', 0),
-    #         'change_7d': current_kpi.get('revenue_change', 0),
-    #         ...
-    #     }
-    # }
+    kpi_data = {
+        'revenue': {
+            'current': current_kpi.get('revenue', 0),
+            'change_7d': current_kpi.get('revenue_change', 0),
+            'trend': 'up' if current_kpi.get('revenue_change', 0) > 0 else 'down' if current_kpi.get('revenue_change', 0) < 0 else 'stable',
+            'percentage': current_kpi.get('revenue_change', 0),
+            'trend_data': current_kpi.get('revenue_trend', [])
+        },
+        'active_users': {
+            'current': current_kpi.get('active_users', 0),
+            'change_7d': current_kpi.get('passport_change', 0),
+            'trend': 'up' if current_kpi.get('passport_change', 0) > 0 else 'down' if current_kpi.get('passport_change', 0) < 0 else 'stable',
+            'percentage': current_kpi.get('passport_change', 0),
+            'trend_data': current_kpi.get('active_users_trend', [])
+        },
+        'unpaid_passports': {
+            'current': unpaid_count,
+            'overdue': overdue_count,
+            'trend': 'down' if overdue_count == 0 else 'up',
+            'percentage': overdue_count,
+            'trend_data': [unpaid_count] * 7  # Simple placeholder for now
+        },
+        'passports_created': {
+            'current': current_kpi.get('passports_created', len(all_passports)),
+            'change': current_kpi.get('passports_created_change', 0),
+            'trend': 'up' if current_kpi.get('passports_created_change', 0) > 0 else 'down' if current_kpi.get('passports_created_change', 0) < 0 else 'stable',
+            'percentage': current_kpi.get('passports_created_change', 0),
+            'trend_data': current_kpi.get('passports_created_trend', [])
+        },
+        'profit': {
+            'current': profit,
+            'margin': profit_margin,
+            'trend': 'up' if profit > 0 else 'down' if profit < 0 else 'stable',
+            'percentage': profit_margin,
+            'trend_data': current_kpi.get('revenue_trend', [])  # Use revenue trend for now
+        }
+    }
     
-    # kpi_data is already set from line 4020: kpi_data = get_kpi_data(activity_id=activity_id)
+    # Store the full KPI stats for JavaScript access
+    kpi_data['all_periods'] = kpi_stats
     
     # Dashboard statistics
     dashboard_stats = {
@@ -4135,7 +4169,6 @@ def activity_dashboard(activity_id):
         kpi_data=kpi_data,
         dashboard_stats=dashboard_stats,
         activity_logs=activity_logs,
-        logs=activity_logs,  # Added for compatibility with copied KPI cards JavaScript
         current_datetime=datetime.now(),
         revenue_card=revenue_card,
         active_users_card=active_users_card,
@@ -6532,17 +6565,15 @@ def save_email_templates(activity_id):
 
 @app.route("/activity/<int:activity_id>/email-preview")
 def email_preview(activity_id):
-    """Preview email template using compiled template with email blocks and real images"""
+    """Preview email template using compiled template with email blocks"""
     if "admin" not in session:
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import get_email_context, safe_template, generate_qr_code_image
+    from utils import get_email_context, safe_template
     from flask import render_template
     from datetime import datetime
     import os
-    import json
-    import base64
     
     activity = Activity.query.get_or_404(activity_id)
     template_type = request.args.get('type', 'newPass')
@@ -6558,30 +6589,28 @@ def email_preview(activity_id):
     
     # Add email blocks for templates that need them
     if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
-        # Create sample pass data using proper class structure
-        class PassData:
-            def __init__(self):
-                self.activity = type('obj', (object,), {
-                    'name': activity.name,
-                    'id': activity.id
-                })()
-                self.user = type('obj', (object,), {
-                    'name': 'John Doe',
-                    'email': 'john.doe@example.com',
-                    'phone_number': '555-0123'
-                })()
-                self.pass_type = type('obj', (object,), {
-                    'name': 'Sample Pass',
-                    'price': 50.00
-                })()
-                self.created_dt = datetime.now()
-                self.sold_amt = 50.00
-                self.paid = True
-                self.pass_code = 'SAMPLE123'
-                self.remaining_activities = 5
-                self.uses_remaining = 5
+        # Create sample pass data for email blocks
+        pass_data_mock = {
+            'activity': {'name': activity.name, 'id': activity.id},
+            'user': {'name': 'John Doe', 'email': 'john.doe@example.com', 'phone_number': '555-0123'},
+            'pass_type': {'name': 'Sample Pass', 'price': 50.00},
+            'created_dt': datetime.now(),
+            'sold_amt': 50.00,
+            'paid': True,
+            'pass_code': 'SAMPLE123',
+            'remaining_activities': 5
+        }
         
-        pass_data = PassData()
+        # Create a simple object to mimic the pass_data structure
+        class MockObject:
+            def __init__(self, data):
+                for key, value in data.items():
+                    if isinstance(value, dict):
+                        setattr(self, key, MockObject(value))
+                    else:
+                        setattr(self, key, value)
+        
+        pass_data = MockObject(pass_data_mock)
         
         # Render email blocks
         base_context['owner_html'] = render_template(
@@ -6589,18 +6618,17 @@ def email_preview(activity_id):
             pass_data=pass_data
         )
         
-        # Add history for ALL templates that need it (not just redeemPass)
-        history = [
-            {'date': '2025-01-09', 'action': 'Pass Created'},
-            {'date': '2025-01-10', 'action': 'Payment Received'}
-        ]
-        if template_type == 'redeemPass':
-            history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
-        
-        base_context['history_html'] = render_template(
-            "email_blocks/history_table_inline.html", 
-            history=history
-        )
+        # Add history for templates that need it
+        if template_type in ['redeemPass', 'latePayment']:
+            history = [
+                {'date': '2025-01-09', 'action': 'Pass Created'},
+                {'date': '2025-01-10', 'action': 'Payment Received'},
+                {'date': '2025-01-11', 'action': 'Pass Redeemed'}
+            ]
+            base_context['history_html'] = render_template(
+                "email_blocks/history_table_inline.html", 
+                history=history
+            )
     
     # Get merged context with activity customizations (preserves email blocks)
     context = get_email_context(activity, template_type, base_context)
@@ -6611,46 +6639,6 @@ def email_preview(activity_id):
     try:
         # Render the compiled template with the merged context
         rendered_html = render_template(template_path, **context)
-        
-        # Load inline images and convert to data URIs for browser display
-        compiled_folder = template_path.replace('/index.html', '')
-        json_path = os.path.join('templates', compiled_folder, 'inline_images.json')
-        
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as f:
-                inline_images_data = json.load(f)
-                
-                # Replace cid: references with data: URIs
-                for img_id, base64_data in inline_images_data.items():
-                    # Determine image type (most are PNG)
-                    mime_type = 'image/png'
-                    if img_id in ['facebook', 'instagram']:
-                        mime_type = 'image/png'
-                    
-                    # Replace cid:image_id with data URI
-                    cid_ref = f'cid:{img_id}'
-                    data_uri = f'data:{mime_type};base64,{base64_data}'
-                    rendered_html = rendered_html.replace(cid_ref, data_uri)
-        
-        # Add logo image as data URI
-        logo_path = None
-        if hasattr(activity, 'logo') and activity.logo:
-            logo_path = os.path.join('static', 'uploads', 'email_logos', activity.logo)
-        if not logo_path or not os.path.exists(logo_path):
-            logo_path = 'static/uploads/logo.png'
-        
-        if os.path.exists(logo_path):
-            with open(logo_path, 'rb') as f:
-                logo_base64 = base64.b64encode(f.read()).decode('utf-8')
-                # Replace both logo and logo_image references
-                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
-                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
-        
-        # Generate sample QR code for preview
-        qr_code_data = generate_qr_code_image('SAMPLE123')
-        if qr_code_data:
-            qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
-            rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
         
         # Add a preview banner to distinguish from actual emails
         preview_banner = """
@@ -6744,30 +6732,27 @@ def test_email_template(activity_id):
         # Add email blocks for templates that need them
         if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
             # Create test pass data for email blocks
-            # Using a simple class to provide dot notation access
-            class PassData:
-                def __init__(self):
-                    self.activity = type('obj', (object,), {
-                        'name': activity.name,
-                        'id': activity.id
-                    })()
-                    self.user = type('obj', (object,), {
-                        'name': 'Test User',
-                        'email': 'kdresdell@gmail.com',
-                        'phone_number': '555-0123'
-                    })()
-                    self.pass_type = type('obj', (object,), {
-                        'name': 'Test Pass',
-                        'price': 25.00
-                    })()
-                    self.created_dt = datetime.now()
-                    self.sold_amt = 25.00
-                    self.paid = True
-                    self.pass_code = 'TEST123'
-                    self.remaining_activities = 3
-                    self.uses_remaining = 3
+            pass_data_mock = {
+                'activity': {'name': activity.name, 'id': activity.id},
+                'user': {'name': 'Kevin Dresdell', 'email': 'kdresdell@gmail.com', 'phone_number': '555-0123'},
+                'pass_type': {'name': 'Test Pass', 'price': 25.00},
+                'created_dt': datetime.now(),
+                'sold_amt': 25.00,
+                'paid': True,
+                'pass_code': 'TEST123',
+                'remaining_activities': 3
+            }
             
-            pass_data = PassData()
+            # Create a simple object to mimic the pass_data structure
+            class MockObject:
+                def __init__(self, data):
+                    for key, value in data.items():
+                        if isinstance(value, dict):
+                            setattr(self, key, MockObject(value))
+                        else:
+                            setattr(self, key, value)
+            
+            pass_data = MockObject(pass_data_mock)
             
             # Render email blocks
             base_context['owner_html'] = render_template(
@@ -6816,28 +6801,13 @@ def test_email_template(activity_id):
         if os.path.exists(json_path):
             with open(json_path, 'r') as f:
                 inline_images_data = json.load(f)
-                # Convert base64 strings to bytes
-                import base64
-                for img_id, base64_data in inline_images_data.items():
-                    try:
-                        # The JSON contains base64-encoded image data directly
-                        inline_images[img_id] = base64.b64decode(base64_data)
-                        print(f"   Loaded inline image: {img_id} ({len(inline_images[img_id])} bytes)")
-                    except Exception as e:
-                        print(f"   ⚠️ Failed to decode image {img_id}: {e}")
-        
-        # Add logo image from activity or default
-        logo_path = None
-        if hasattr(activity, 'logo') and activity.logo:
-            logo_path = os.path.join('static', 'uploads', 'email_logos', activity.logo)
-        if not logo_path or not os.path.exists(logo_path):
-            # Try default logo
-            logo_path = 'static/uploads/logo.png'
-        if os.path.exists(logo_path):
-            with open(logo_path, 'rb') as f:
-                inline_images['logo'] = f.read()
-                inline_images['logo_image'] = inline_images['logo']  # Some templates use logo_image
-                print(f"   Added logo: {logo_path}")
+                # Load the actual image files
+                for img_id, img_info in inline_images_data.items():
+                    img_path = os.path.join('templates', compiled_folder, img_info['filename'])
+                    if os.path.exists(img_path):
+                        with open(img_path, 'rb') as img_f:
+                            inline_images[img_id] = img_f.read()
+                            print(f"   Loaded inline image: {img_id} ({len(inline_images[img_id])} bytes)")
         
         # Add hero image if customized
         if context.get('hero_image'):
