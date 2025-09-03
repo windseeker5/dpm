@@ -2205,10 +2205,22 @@ def setup():
     ) if os.path.exists(backup_dir) else []
 
     print("📥 Received backup_file from args:", backup_file)
-    print("🗂️ Available backups in static/backups/:", os.listdir("static/backups"))
+    
+    # Safely check and create static/backups directory if needed
+    if os.path.exists("static/backups"):
+        print("🗂️ Available backups in static/backups/:", os.listdir("static/backups"))
+    else:
+        print("🗂️ static/backups directory not found - creating it")
+        os.makedirs("static/backups", exist_ok=True)
+        print("🗂️ Available backups in static/backups/:", [])
 
     template_base = os.path.join("templates", "email_templates")
     email_templates = []
+
+    # Safely check if templates directory exists
+    if not os.path.exists(template_base):
+        print(f"⚠️ Templates directory not found: {template_base}")
+        os.makedirs(template_base, exist_ok=True)
 
     for entry in os.listdir(template_base):
         full_path = os.path.join(template_base, entry)
