@@ -6131,12 +6131,11 @@ def send_survey_invitations(survey_id):
                 if os.path.exists(org_logo_path):
                     logo_data = open(org_logo_path, "rb").read()
                     inline_images['logo'] = logo_data  # For owner_card_inline.html
-                    inline_images['logo_image'] = logo_data  # For compiled templates
+                    # Note: logo_image is not needed - templates don't actually use it
                 else:
                     # Fallback to default logo
                     logo_data = open("static/uploads/logo.png", "rb").read()
                     inline_images['logo'] = logo_data
-                    inline_images['logo_image'] = logo_data
                 
                 context = {
                     'user_name': passport.user.name or 'Participant',
@@ -6221,12 +6220,11 @@ def send_survey_invitations(survey_id):
                 if os.path.exists(org_logo_path):
                     logo_data = open(org_logo_path, "rb").read()
                     inline_images['logo'] = logo_data  # For owner_card_inline.html
-                    inline_images['logo_image'] = logo_data  # For compiled templates
+                    # Note: logo_image is not needed - templates don't actually use it
                 else:
                     # Fallback to default logo
                     logo_data = open("static/uploads/logo.png", "rb").read()
                     inline_images['logo'] = logo_data
-                    inline_images['logo_image'] = logo_data
                 
                 context = {
                     'user_name': passport.user.name or 'Participant',
@@ -7155,7 +7153,7 @@ def test_email_template(activity_id):
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 inline_images['logo'] = f.read()
-                inline_images['logo_image'] = inline_images['logo']  # Some templates use logo_image
+                # Note: logo_image is not needed - templates don't actually use it
                 print(f"   Added logo: {logo_path}")
         
         # Add hero image if customized

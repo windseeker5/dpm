@@ -1382,7 +1382,9 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             try:
                 part = MIMEImage(img_data)
                 part.add_header("Content-ID", f"<{cid}>")
-                part.add_header("Content-Disposition", "inline", filename=f"{cid}.png")
+                part.add_header("Content-Disposition", "inline")
+                # Debug: Log what we're attaching
+                print(f"📎 Attaching inline image: {cid} (size: {len(img_data)} bytes)")
                 msg.attach(part)
             except Exception as e:
                 logging.error(f"❌ Image embed error for {cid}: {e}")
@@ -1681,12 +1683,11 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         if os.path.exists(org_logo_path):
             logo_data = open(org_logo_path, "rb").read()
             inline_images['logo'] = logo_data  # For owner_card_inline.html
-            inline_images['logo_image'] = logo_data  # For compiled templates
+            # Note: logo_image is not needed - templates don't actually use it
         else:
             # Fallback to default logo
             logo_data = open("static/uploads/logo.png", "rb").read()
             inline_images['logo'] = logo_data
-            inline_images['logo_image'] = logo_data
 
         send_email_async(
             app=app,
@@ -1814,17 +1815,16 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
     org_logo_path = os.path.join("static/uploads", org_logo_filename)
     
-    # Add both logo CIDs for compatibility
+    # Add logo CID for owner_card_inline.html
     if os.path.exists(org_logo_path):
         logo_data = open(org_logo_path, "rb").read()
         inline_images['logo'] = logo_data  # For owner_card_inline.html
-        inline_images['logo_image'] = logo_data  # For compiled templates
+        # Note: logo_image is not needed - templates don't actually use it
         print(f"Using organization logo: {org_logo_filename}")
     else:
         # Fallback to default logo
         logo_data = open("static/uploads/logo.png", "rb").read()
         inline_images['logo'] = logo_data
-        inline_images['logo_image'] = logo_data
         print("Using default Minipass logo")
 
     # Determine user and activity for email context
