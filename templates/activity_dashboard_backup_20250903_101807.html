@@ -567,33 +567,33 @@
 
   <div class="page-body">
     <div class="dashboard-container">
-      <!-- Clean Activity Header Card -->
-      <div class="card activity-header-card">
-        <div class="card-body">
-          <!-- Header Top Section -->
-          <div class="activity-header-top">
-            <!-- Activity Picture -->
+      <!-- Clean Activity Header - Option A Split Layout -->
+      <div class="activity-header-clean">
+        <div class="header-compact-layout">
+          <!-- Activity Header Line with Image and Title -->
+          <div class="activity-header-line">
+            <!-- Activity Picture (30x30px) -->
             <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'placeholder.jpg')) }}" 
                  alt="{{ activity.name }}"
-                 class="activity-image">
+                 class="activity-image-inline">
             
-            <!-- Title and Description -->
-            <div class="activity-info">
-              <div class="activity-title-row">
-                <h2 class="activity-title">{{ activity.name }}</h2>
-                <span class="badge bg-success">
+            <!-- Title and Subtitle -->
+            <div class="title-section">
+              <div class="title-with-badge">
+                <h1 class="activity-title">{{ activity.name }}</h1>
+                <span class="badge-active">
                   Active
-                  <span class="badge-pulse"></span>
+                  <span class="pulse-dot"></span>
                 </span>
               </div>
-              <p class="activity-description text-muted">
+              <p class="activity-description">
                 {{ activity.description or "Transform your game with professional coaching and structured training sessions." }}
               </p>
             </div>
             
-            <!-- Right Section: Avatars (Desktop) / Dropdown (Mobile) -->
-            <div class="activity-header-right">
-              <!-- Desktop: User Avatars -->
+            <!-- User Avatar (desktop) / Mobile Dropdown -->
+            <div class="user-avatar-section">
+              <!-- Desktop Avatars -->
               <div class="avatar-list avatar-list-stacked d-none d-md-flex">
                 {% for p in passes[:5] %}
                 <span class="avatar avatar-sm" style="background-image: url(https://www.gravatar.com/avatar/{{ (p.user.email|lower|trim|encode_md5) if p.user and p.user.email else '00000000000000000000000000000000' }}?d=identicon&s=72)"
@@ -605,9 +605,9 @@
                 {% endif %}
               </div>
               
-              <!-- Mobile: Action Dropdown -->
+              <!-- Mobile Dropdown -->
               <div class="dropdown d-md-none">
-                <button class="btn btn-primary btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-outline-primary btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                   <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                     <circle cx="12" cy="12" r="1" />
@@ -615,45 +615,45 @@
                     <circle cx="12" cy="5" r="1" />
                   </svg>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                  <li><a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                    <i class="ti ti-edit me-2"></i>Edit Activity
-                  </a></li>
-                  <li><a class="dropdown-item" href="{{ url_for('email_template_customization', activity_id=activity.id) }}">
+                <div class="dropdown-menu dropdown-menu-end">
+                  <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
+                    <i class="ti ti-edit me-2"></i>Edit
+                  </a>
+                  <a class="dropdown-item" href="{{ url_for('email_template_customization', activity_id=activity.id) }}">
                     <i class="ti ti-mail me-2"></i>Email Templates
-                  </a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="{{ url_for('scan_qr') }}">
-                    <i class="ti ti-scan me-2"></i>Scan QR
-                  </a></li>
-                  <li><a class="dropdown-item" href="{{ url_for('create_passport', activity_id=activity.id) }}">
-                    <i class="ti ti-ticket me-2"></i>Create Passport
-                  </a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-danger" href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
-                    <i class="ti ti-trash me-2"></i>Delete Activity
-                  </a></li>
-                </ul>
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item" href="{{ url_for('scan_qr') }}">
+                    <i class="ti ti-scan me-2"></i>Scan
+                  </a>
+                  <a class="dropdown-item" href="{{ url_for('create_passport', activity_id=activity.id) }}">
+                    <i class="ti ti-plus me-2"></i>Create Passport
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-danger" href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
+                    <i class="ti ti-trash me-2"></i>Delete
+                  </a>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Stats Row -->
           <div class="activity-stats-row">
-            <div class="stat-item">
-              <i class="ti ti-users text-primary"></i>
+            <div class="stat">
+              <i class="ti ti-users"></i>
               <span>{{ passes|length }} users</span>
             </div>
-            <div class="stat-item">
-              <i class="ti ti-star-filled text-warning"></i>
+            <div class="stat">
+              <i class="ti ti-star-filled"></i>
               <span>4.8</span>
             </div>
-            <div class="stat-item">
-              <i class="ti ti-map-pin text-info"></i>
+            <div class="stat">
+              <i class="ti ti-map-pin"></i>
               <span>{{ activity.location or 'Location' }}</span>
             </div>
-            <div class="stat-item share-stat">
-              <i class="ti ti-clipboard text-success"></i>
+            <div class="stat share-stat">
+              <i class="ti ti-clipboard"></i>
               <span>{{ passport_types|length }} {{ 'type' if passport_types|length == 1 else 'types' }}</span>
               <div class="share-dropdown" style="display: none;">
                 {% for pt in passport_types %}
@@ -671,35 +671,36 @@
           {% set actual_revenue = kpi_data['revenue']['current']|float if kpi_data and kpi_data['revenue'] else 0 %}
           {% set target_revenue = activity.target_revenue|float if activity.target_revenue else 1000 %}
           {% set progress_percentage = ((actual_revenue / target_revenue * 100) if target_revenue > 0 else 0)|round %}
-          <div class="revenue-progress-section">
-            <div class="revenue-header">
-              <span class="revenue-label">Revenue Progress</span>
-              <span class="revenue-amount">${{ "{:,.0f}".format(actual_revenue) }}</span>
+          <div class="revenue-progress-container">
+            <div class="progress-labels">
+              <span class="progress-title">Revenue Progress</span>
+              <span class="progress-current-amount">${{ "{:,.0f}".format(actual_revenue) }}</span>
             </div>
-            <div class="progress">
-              <div class="progress-bar bg-success" role="progressbar" style="width: {{ [progress_percentage, 100]|min }}%" 
-                   aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress-bar-wrapper">
+              <div class="progress-bar-fill" style="width: {{ [progress_percentage, 100]|min }}%"></div>
             </div>
           </div>
 
-          <!-- Desktop Action Buttons -->
-          <div class="activity-actions d-none d-md-flex">
-            <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-sm btn-secondary">
-              <i class="ti ti-edit"></i> Edit
-            </a>
-            <a href="{{ url_for('email_template_customization', activity_id=activity.id) }}" class="btn btn-sm btn-outline-primary">
-              <i class="ti ti-mail"></i> Email Templates
-            </a>
-            <a href="{{ url_for('scan_qr') }}" class="btn btn-sm btn-outline-success">
-              <i class="ti ti-scan"></i> Scan
-            </a>
-            <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-sm btn-primary">
-              <i class="ti ti-ticket"></i> Create Passport
-            </a>
-            <a href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;" class="btn btn-sm btn-outline-danger">
-              <i class="ti ti-trash"></i> Delete
-            </a>
-          </div>
+            <!-- Action Buttons (Desktop only, mobile uses dropdown in header) -->
+
+            <!-- Desktop Buttons -->
+            <div class="activity-actions d-none d-md-flex">
+              <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-secondary">
+                <i class="ti ti-edit me-2"></i>Edit
+              </a>
+              <a href="{{ url_for('email_template_customization', activity_id=activity.id) }}" class="btn btn-outline-info">
+                <i class="ti ti-mail me-2"></i>Email Templates
+              </a>
+              <a href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;" class="btn btn-danger">
+                <i class="ti ti-trash me-2"></i>Delete
+              </a>
+              <a href="{{ url_for('scan_qr') }}" class="btn btn-success">
+                <i class="ti ti-scan me-2"></i>Scan
+              </a>
+              <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i>Passport
+              </a>
+            </div>
         </div>
       </div>
 
@@ -1057,6 +1058,47 @@
 
 
 
+    <!-- Bulk Actions Bar - Separate Card Above Table -->
+    <div class="bulk-actions-container">
+      <div class="card bulk-actions-card" id="bulkActions" style="display: none; background-color: #f0fdf4 !important; background: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; border-radius: 8px !important;">
+        <div class="card-body p-3">
+          <form method="POST" action="{{ url_for('passports_bulk_action') }}" id="bulkForm">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="bulk-actions-count">
+                <i class="ti ti-checkbox me-2"></i>
+                <span id="selectedCount">0</span> passports selected
+              </div>
+              <div class="bulk-actions-buttons">
+                <div class="dropdown">
+                  <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Actions
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <button type="submit" name="action" value="mark_paid" class="dropdown-item text-success">
+                        <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                      </button>
+                    </li>
+                    <li>
+                      <button type="submit" name="action" value="send_reminders" class="dropdown-item text-warning">
+                        <i class="ti ti-mail me-2"></i>Send Reminder
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button type="submit" name="action" value="delete" class="dropdown-item text-danger" 
+                              onclick="return confirm('Delete ' + document.querySelectorAll('.passport-checkbox:checked').length + ' selected passports?')">
+                        <i class="ti ti-trash me-2"></i>Delete Selected
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 
     <!-- Main Table -->
     <!-- Anchor for scroll position preservation -->
@@ -1093,6 +1135,9 @@
         <table class="table table-hover">
         <thead>
           <tr>
+            <th class="w-1">
+              <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
+            </th>
             <th>User</th>
             <th class="d-none d-md-table-cell">Activity</th>
             <th class="d-none d-lg-table-cell">Passport Type</th>
@@ -1107,6 +1152,16 @@
           {% if passes %}
           {% for passport in passes %}
           <tr data-paid="{{ 'true' if passport.paid else 'false' }}" data-active="{{ 'true' if passport.uses_remaining > 0 else 'false' }}">
+            <td>
+              <input type="checkbox" 
+                     class="form-check-input passport-checkbox" 
+                     name="selected_passports" 
+                     value="{{ passport.id }}" 
+                     form="bulkForm"
+                     data-status="{{ 'active' if passport.uses_remaining > 0 else 'expired' }}"
+                     data-paid="{{ 'true' if passport.paid else 'false' }}"
+                     aria-label="Select passport {{ passport.id }}">
+            </td>
             <td style="vertical-align: middle;">
               <div class="d-flex align-items-center">
                 <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
@@ -1372,6 +1427,40 @@
         </div>
       </div>
 
+      <!-- Bulk Delete Confirmation Modal -->
+      <div class="modal modal-blur fade" id="bulkDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M4 7h16"/>
+                <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+                <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+                <path d="M10 12l0 6"/>
+                <path d="M14 12l0 6"/>
+              </svg>
+              <h3>Are you sure?</h3>
+              <div class="text-secondary">Delete <strong id="bulkDeleteCount"></strong> selected <span id="bulkDeleteType"></span>?</div>
+              <div class="text-muted small mt-2">This action cannot be undone.</div>
+            </div>
+            <div class="modal-footer">
+              <div class="w-100">
+                <div class="row">
+                  <div class="col">
+                    <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+                  </div>
+                  <div class="col">
+                    <button type="button" id="confirmBulkDelete" class="btn btn-danger w-100">Delete All</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Signups Section -->
       {% if has_pending_signups %}
@@ -1379,6 +1468,53 @@
         <i class="ti ti-edit text-orange me-2"></i>Signups
       </h2>
 
+      <!-- Bulk Actions Bar - Separate Card Above Table -->
+      <div class="bulk-actions-container">
+        <div class="card bulk-actions-card" id="bulkActions" style="display: none; background-color: #f0fdf4 !important; background: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; border-radius: 8px !important;">
+          <div class="card-body p-3">
+            <form method="POST" action="{{ url_for('bulk_signup_action') }}" id="bulkForm">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="bulk-actions-count">
+                  <i class="ti ti-checkbox me-2"></i>
+                  <span id="selectedCount">0</span> signups selected
+                </div>
+                <div class="bulk-actions-buttons">
+                  <div class="dropdown">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li>
+                        <button type="submit" name="action" value="mark_paid" class="dropdown-item text-success">
+                          <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                        </button>
+                      </li>
+                      <li>
+                        <button type="submit" name="action" value="approve" class="dropdown-item text-info">
+                          <i class="ti ti-thumb-up me-2"></i>Approve
+                        </button>
+                      </li>
+                      <li>
+                        <button type="submit" name="action" value="send_reminders" class="dropdown-item text-warning">
+                          <i class="ti ti-mail me-2"></i>Send Reminder
+                        </button>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <button type="button" name="action" value="delete" class="dropdown-item text-danger" 
+                                onclick="showBulkDeleteModal('signups', document.querySelectorAll('.signup-checkbox:checked').length)">
+                          <i class="ti ti-trash me-2"></i>Delete Selected
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
 
       <!-- Main Signups Table -->
       <!-- Anchor for scroll position preservation -->
@@ -1406,6 +1542,9 @@
           <table class="table table-hover">
           <thead>
             <tr>
+              <th class="w-1">
+                <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all">
+              </th>
               <th>User</th>
               <th class="d-none d-md-table-cell">Created</th>
               <th class="d-none d-md-table-cell">Activity</th>
@@ -1418,6 +1557,16 @@
           <tbody>
             {% for signup in signups %}
             <tr data-paid="{{ 'true' if signup.paid else 'false' }}" data-status="{{ signup.status or 'pending' }}">
+              <td>
+                <input type="checkbox" 
+                       class="form-check-input signup-checkbox" 
+                       name="selected_signups" 
+                       value="{{ signup.id }}" 
+                       form="bulkForm"
+                       data-status="{{ signup.status or 'pending' }}"
+                       data-paid="{{ 'true' if signup.paid else 'false' }}"
+                       aria-label="Select signup {{ signup.id }}">
+              </td>
               <td style="vertical-align: middle;">
                 <div class="d-flex align-items-center">
                   <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
@@ -3037,8 +3186,126 @@ function hideTooltip() {
 }
 
 
+// Bulk selection functionality for passports table
+function initializePassportBulkSelection() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const passportCheckboxes = document.querySelectorAll('.passport-checkbox');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+
+    function updateBulkActions() {
+        const checkedBoxes = document.querySelectorAll('.passport-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCount.textContent = count;
+        
+        // Smooth show/hide animation
+        if (count > 0 && bulkActions.style.display === 'none') {
+            bulkActions.style.display = 'block';
+            bulkActions.classList.add('show');
+        } else if (count === 0 && bulkActions.style.display !== 'none') {
+            bulkActions.classList.remove('show');
+            setTimeout(() => {
+                bulkActions.style.display = 'none';
+            }, 300);
+        }
+        
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            if (count === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (count === passportCheckboxes.length && passportCheckboxes.length > 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+        
+        // Update available bulk actions based on selected items
+        updateAvailableActions(checkedBoxes);
+    }
+    
+    // Function to determine and update available bulk actions
+    function updateAvailableActions(checkedBoxes) {
+        // Get all action buttons in the dropdown
+        const markPaidBtn = document.querySelector('button[value="mark_paid"]');
+        const sendRemindersBtn = document.querySelector('button[value="send_reminders"]');
+        const deleteBtn = document.querySelector('button[value="delete"]');
+        
+        if (checkedBoxes.length === 0) return;
+        
+        // Analyze the states of all selected passports
+        let hasUnpaid = false;
+        
+        checkedBoxes.forEach(checkbox => {
+            const isPaid = checkbox.dataset.paid === 'true';
+            
+            if (!isPaid) {
+                hasUnpaid = true;
+            }
+        });
+        
+        // Update action visibility based on states
+        // Mark as Paid - show only if at least one is unpaid
+        if (markPaidBtn) {
+            if (hasUnpaid) {
+                markPaidBtn.parentElement.style.display = '';
+                markPaidBtn.disabled = false;
+            } else {
+                markPaidBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Send Reminder - show only if at least one is unpaid
+        if (sendRemindersBtn) {
+            if (hasUnpaid) {
+                sendRemindersBtn.parentElement.style.display = '';
+                sendRemindersBtn.disabled = false;
+            } else {
+                sendRemindersBtn.parentElement.style.display = 'none';
+            }
+        }
+        
+        // Delete - always available
+        if (deleteBtn) {
+            deleteBtn.parentElement.style.display = '';
+            deleteBtn.disabled = false;
+        }
+    }
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const visibleCheckboxes = Array.from(passportCheckboxes).filter(cb => {
+                const row = cb.closest('tr');
+                return row && row.style.display !== 'none';
+            });
+            
+            visibleCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    // Individual checkbox functionality
+    passportCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Initialize
+    updateBulkActions();
+}
 
 
+// Initialize passport bulk selection when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePassportBulkSelection);
+} else {
+    initializePassportBulkSelection();
+}
 
 </script>
 
@@ -3156,6 +3423,27 @@ function confirmSignupDelete(signupId, signupUser) {
   modal.show();
 }
 
+// Bulk delete confirmation
+function showBulkDeleteModal(type, count) {
+  document.getElementById('bulkDeleteCount').textContent = count;
+  document.getElementById('bulkDeleteType').textContent = type;
+  const modal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+  modal.show();
+  
+  // Set up the confirm button to submit the bulk form
+  document.getElementById('confirmBulkDelete').onclick = function() {
+    // Create a temporary input for the delete action
+    const form = document.getElementById('bulkForm');
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'delete';
+    form.appendChild(actionInput);
+    
+    // Submit the form
+    form.submit();
+  };
+}
 </script>
 
 <!-- Activity Delete Confirmation Modal -->
@@ -3482,6 +3770,178 @@ document.addEventListener('DOMContentLoaded', function() {
   background-color: rgba(13, 110, 253, 0.04);
 }
 
+/* Bulk Actions Bar Styling - EXACT COPY from passports.html */
+/* CRITICAL CSS FIX: Override minipass.css white background rule for bulk actions cards */
+/* This rule specifically counters: .card { background-color: #fff !important; } in minipass.css */
+html body .page-wrapper .page-body .dashboard-container .bulk-actions-container .card.bulk-actions-card {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Fallback with even higher specificity if needed */
+html body div[class*="page"] div[class*="bulk-actions"] .card[class*="bulk-actions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* NUCLEAR OPTION: Override EVERYTHING for bulk actions cards */
+[id="bulkActions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Target by ID with maximum specificity */
+body #bulkActions.card {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Inline style override simulation */
+.card[id="bulkActions"] {
+  background-color: #f0fdf4 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+}
+
+/* Bulk Actions Bar - MAXIMUM SPECIFICITY TO FORCE GREEN THEME */
+/* CRITICAL FIX: Counter the minipass.css .card { background-color: #fff !important; } rule */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card,
+body .page-body div.bulk-actions-container .card.bulk-actions-card,
+body div.bulk-actions-container .card.bulk-actions-card,
+body .bulk-actions-container .card.bulk-actions-card,
+body .card.bulk-actions-card,
+div.bulk-actions-container .card.bulk-actions-card,
+.bulk-actions-container .card.bulk-actions-card,
+.card.bulk-actions-card {
+  margin-top: 1.5rem !important;
+  margin-bottom: 2.5rem !important;
+  /* Force light green background - CRITICAL: Override minipass.css white background */
+  background: #f0fdf4 !important;
+  background-color: #f0fdf4 !important;
+  background-image: none !important;
+  /* Green border */
+  border: 1px solid #bbf7d0 !important;
+  border-color: #bbf7d0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  animation: slideDown 0.3s ease;
+  /* Override all backdrop and transform effects */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  transition: none !important;
+  /* Ensure visibility */
+  overflow: visible !important;
+}
+
+/* Override hover effects for bulk actions card with maximum specificity */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card:hover,
+body .page-body div.bulk-actions-container .card.bulk-actions-card:hover,
+body div.bulk-actions-container .card.bulk-actions-card:hover,
+body .bulk-actions-container .card.bulk-actions-card:hover,
+body .card.bulk-actions-card:hover,
+div.bulk-actions-container .card.bulk-actions-card:hover,
+.bulk-actions-container .card.bulk-actions-card:hover,
+.card.bulk-actions-card:hover {
+  background: #f0fdf4 !important;
+  background-color: #f0fdf4 !important;
+  background-image: none !important;
+  border: 1px solid #bbf7d0 !important;
+  border-color: #bbf7d0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transform: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Card body styling for bulk actions */
+body .dashboard-container div.bulk-actions-container .card.bulk-actions-card .card-body,
+body .page-body div.bulk-actions-container .card.bulk-actions-card .card-body,
+body div.bulk-actions-container .card.bulk-actions-card .card-body,
+body .bulk-actions-container .card.bulk-actions-card .card-body,
+body .card.bulk-actions-card .card-body,
+div.bulk-actions-container .card.bulk-actions-card .card-body,
+.bulk-actions-container .card.bulk-actions-card .card-body,
+.card.bulk-actions-card .card-body {
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 1rem 1.25rem !important;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulk-actions-count {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+}
+
+.bulk-actions-count i {
+  color: #0d6efd;
+  font-size: 1.125rem;
+}
+
+.bulk-actions-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Dropdown button styling */
+.bulk-actions-card .dropdown-toggle {
+  border-color: #dee2e6;
+  color: #495057;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.bulk-actions-card .dropdown-toggle:hover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+  color: #212529;
+}
+
+.bulk-actions-card .dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Dropdown menu items */
+.bulk-actions-card .dropdown-item {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  transition: background-color 0.15s ease;
+}
+
+.bulk-actions-card .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.bulk-actions-card .dropdown-item i {
+  width: 1.25rem;
+  text-align: center;
+}
 
 /* GitHub filter styles moved to main style block at top of file */
 
@@ -3528,5 +3988,32 @@ document.addEventListener('DOMContentLoaded', function() {
   margin-top: 0 !important;
 }
 
+/* Add extra spacing between bulk actions and main table */
+.bulk-actions-container + .main-table-card {
+  margin-top: 1rem !important;
+}
+
+/* Responsive Design for Filter Buttons */
+@media (max-width: 767px) {
+  .bulk-actions-card .card-body {
+    padding: 0.875rem 1rem !important;
+  }
+  
+  .bulk-actions-card .d-flex {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  
+  .bulk-actions-count {
+    font-size: 0.875rem;
+  }
+  
+  .bulk-actions-card .dropdown-toggle {
+    padding: 0.325rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+}
 </style>
 {% endblock %}

@@ -1,83 +1,79 @@
-/* Activity Header - Clean Option A Design */
-/* Professional split layout inspired by modern SaaS */
+/* Activity Header Card - Clean Design */
+/* Professional card-based layout with proper containment */
 
-/* Main container */
-.activity-header-clean {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
+/* Main card styling */
+.activity-header-card {
   margin-bottom: 24px;
+  border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Split layout container */
-.header-split-layout {
+.activity-header-card .card-body {
+  padding: 20px;
+}
+
+/* Header top section with image, title, and actions */
+.activity-header-top {
   display: flex;
-  gap: 32px;
-  align-items: stretch;
-  min-height: 240px;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-/* Content section (left 60%) */
-.content-section {
-  flex: 1 1 60%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-/* Image section (right 40%) */
-.image-section {
-  flex: 0 0 40%;
-  max-width: 40%;
-  height: 280px;
-  overflow: hidden;
-  border-radius: 8px;
-}
-
+/* Activity image - desktop 60px, mobile 40px */
 .activity-image {
-  width: 100%;
-  height: 100%;
+  width: 60px;
+  height: 60px;
   object-fit: cover;
-  display: block;
+  border-radius: 8px;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
 }
 
-/* Activity subtitle line */
-.activity-subtitle-line {
+/* Activity info section */
+.activity-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Title row with badge */
+.activity-title-row {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
-.subtitle-text {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6b7280;
+/* Activity title */
+.activity-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  line-height: 1.2;
 }
 
-/* Green Active badge */
-.badge-active {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background-color: #d1f4dd;
-  color: #1a7e3e;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
+/* Activity description */
+.activity-description {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
 }
 
-.pulse-dot {
+/* Header right section */
+.activity-header-right {
+  flex-shrink: 0;
+}
+
+/* Active badge pulse animation */
+.badge-pulse {
+  display: inline-block;
   width: 6px;
   height: 6px;
-  background-color: #1a7e3e;
+  background-color: white;
   border-radius: 50%;
+  margin-left: 4px;
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -92,184 +88,32 @@
   }
 }
 
-/* Activity title */
-.activity-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 8px 0;
-  line-height: 1.2;
-}
-
-/* Description */
-.activity-description {
-  font-size: 14px;
-  color: #6b7280;
-  line-height: 1.5;
-  margin: 0 0 20px 0;
-}
-
-/* Stats row - NO DIVIDERS */
+/* Stats row */
 .activity-stats-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 24px; /* Clean spacing between stats */
-  margin-bottom: 24px;
-}
-
-.activity-stats-row .stat {
-  display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: #374151;
-}
-
-.activity-stats-row .stat i {
-  color: #9ca3af;
-  font-size: 16px;
-}
-
-/* Revenue Progress Bar */
-.revenue-progress-container {
-  margin: 24px 0;
-}
-
-.progress-labels {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.progress-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.progress-amounts {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.progress-bar-wrapper {
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-  border-radius: 4px;
-  transition: width 0.5s ease;
-}
-
-.progress-percentage {
-  font-size: 11px;
-  color: #9ca3af;
-  text-align: right;
-}
-
-/* Participant avatars */
-.participant-avatars {
-  margin: 20px 0;
-}
-
-.participant-avatars .avatar-list {
-  display: flex;
-  gap: -8px;
-}
-
-.participant-avatars .avatar {
-  border: 2px solid white;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Action buttons */
-.activity-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 20px;
-}
-
-.activity-actions .btn {
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
+  gap: 24px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8f9fa;
   border-radius: 6px;
 }
 
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .activity-header-clean {
-    padding: 16px;
-  }
-
-  .header-split-layout {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .content-section {
-    flex: 1 1 100%;
-  }
-
-  .image-section {
-    flex: 1 1 100%;
-    max-width: 100%;
-    height: 200px;
-    order: -1; /* Image on top for mobile */
-  }
-
-  .activity-title {
-    font-size: 22px;
-  }
-
-  .activity-stats-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .activity-actions {
-    flex-direction: column;
-  }
-
-  .activity-actions .btn {
-    width: 100%;
-  }
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
 }
 
-/* Remove any inherited styles that might cause issues */
-.activity-header-clean * {
-  box-sizing: border-box;
+.stat-item i {
+  font-size: 18px;
 }
 
-/* Ensure no weird margins or padding */
-.activity-header-clean h1,
-.activity-header-clean p {
-  margin-top: 0;
-}
-
-/* Override any gradient lines from parent */
-.page-wrapper::before,
-.page-body::before,
-.dashboard-container::before {
-  display: none !important;
-}
-
-/* Share signup links styles */
+/* Share dropdown positioning */
 .share-stat {
   position: relative;
-  cursor: pointer;
-}
-
-.share-stat:hover i {
-  color: #206bc4;
 }
 
 .share-dropdown {
@@ -279,22 +123,146 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  padding: 8px 0;
+  padding: 8px;
   margin-top: 4px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  z-index: 1000;
   min-width: 180px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
 }
 
 .share-link {
   display: block;
-  padding: 8px 12px;
+  padding: 6px 12px;
   color: #374151;
   text-decoration: none;
-  font-size: 13px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
 
 .share-link:hover {
-  background: #f3f4f6;
-  color: #206bc4;
+  background-color: #f3f4f6;
+}
+
+/* Revenue progress section */
+.revenue-progress-section {
+  margin-bottom: 20px;
+}
+
+.revenue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.revenue-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.revenue-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+/* Progress bar styling */
+.progress {
+  height: 8px;
+  background-color: #e5e7eb;
+}
+
+/* Action buttons container */
+.activity-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.activity-actions .btn {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.activity-actions .btn i {
+  margin-right: 4px;
+  font-size: 16px;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .activity-header-card .card-body {
+    padding: 12px;
+  }
+
+  .activity-header-top {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  /* Smaller image on mobile */
+  .activity-image {
+    width: 40px;
+    height: 40px;
+  }
+
+  .activity-title {
+    font-size: 18px;
+  }
+
+  .activity-description {
+    font-size: 13px;
+  }
+
+  /* Stats in 2x2 grid on mobile */
+  .activity-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 10px;
+  }
+
+  .stat-item {
+    font-size: 13px;
+  }
+
+  .stat-item i {
+    font-size: 16px;
+  }
+
+  /* Smaller revenue text on mobile */
+  .revenue-label {
+    font-size: 13px;
+  }
+
+  .revenue-amount {
+    font-size: 18px;
+  }
+
+  /* Mobile dropdown button */
+  .dropdown .btn-icon {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 375px) {
+  .activity-title {
+    font-size: 16px;
+  }
+
+  .activity-image {
+    width: 35px;
+    height: 35px;
+  }
+
+  .activity-header-card .card-body {
+    padding: 10px;
+  }
 }
