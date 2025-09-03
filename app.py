@@ -13,6 +13,7 @@ import qrcode
 import subprocess
 import logging
 import traceback
+import shutil
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
@@ -1394,6 +1395,43 @@ def create_activity():
 
         db.session.add(new_activity)
         db.session.flush()  # Get the activity ID
+        
+        # Copy default images for the new activity
+        try:
+            # Define source paths for default images
+            default_hero_path = os.path.join("static", "uploads", "defaults", "default_hero.png")
+            
+            # Use organization logo from settings as the default owner logo
+            from utils import get_setting
+            org_logo_filename = get_setting('LOGO_FILENAME', 'flhgi.png')  # Use org logo, not Minipass
+            org_logo_path = os.path.join("static", "uploads", org_logo_filename)
+            
+            # Define target paths with activity ID
+            activity_hero_path = os.path.join("static", "uploads", f"{new_activity.id}_hero.png")
+            activity_logo_path = os.path.join("static", "uploads", f"{new_activity.id}_owner_logo.png")
+            
+            # Copy default images if they exist
+            if os.path.exists(default_hero_path):
+                shutil.copy(default_hero_path, activity_hero_path)
+            if os.path.exists(org_logo_path):
+                shutil.copy(org_logo_path, activity_logo_path)
+            elif os.path.exists(os.path.join("static", "uploads", "flhgi.png")):
+                # Fallback to FLHGI logo if org logo not found
+                shutil.copy(os.path.join("static", "uploads", "flhgi.png"), activity_logo_path)
+            
+            # Update email templates to reference the copied images
+            updated_templates = new_activity.email_templates.copy()
+            for template_type in updated_templates:
+                if isinstance(updated_templates[template_type], dict):
+                    updated_templates[template_type]['hero_image'] = f"{new_activity.id}_hero.png"
+                    updated_templates[template_type]['activity_logo'] = f"{new_activity.id}_owner_logo.png"
+            
+            # Update the activity with the modified templates
+            new_activity.email_templates = updated_templates
+            
+        except Exception as e:
+            print(f"Warning: Could not copy default images for activity {new_activity.id}: {e}")
+            # Continue with activity creation even if image copying fails
 
         # Handle passport types
         passport_types_data = {}
@@ -6540,7 +6578,67 @@ def save_email_templates(activity_id):
     if activity.email_templates is None:
         activity.email_templates = {}
     
+    # Track activity-wide images that need to be processed only once
+    hero_image_processed = False
+    owner_logo_processed = False
+    
     try:
+        # Handle activity-wide hero image upload (shared across all templates)
+        hero_file = None
+        owner_logo_file = None
+        
+        # Look for hero image upload from any template type
+        for template_type in template_types:
+            if not hero_image_processed:
+                hero_file = request.files.get(f'{template_type}_hero_image')
+                if hero_file and hero_file.filename:
+                    hero_image_processed = True
+                    break
+        
+        # Look for owner logo upload from any template type
+        for template_type in template_types:
+            if not owner_logo_processed:
+                owner_logo_file = request.files.get(f'{template_type}_owner_logo')
+                if owner_logo_file and owner_logo_file.filename:
+                    owner_logo_processed = True
+                    break
+        
+        # Process hero image if uploaded
+        hero_filename = None
+        if hero_file and hero_file.filename:
+            try:
+                # Use activity-specific filename that overwrites existing
+                hero_filename = f"{activity_id}_hero.png"
+                upload_path = os.path.join('static', 'uploads', hero_filename)
+                
+                # Ensure uploads directory exists
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                
+                # Save file (overwrites if exists)
+                hero_file.save(upload_path)
+                
+            except Exception as e:
+                flash(f"❌ Error uploading hero image: {str(e)}", "error")
+                hero_filename = None
+        
+        # Process owner logo if uploaded
+        owner_logo_filename = None
+        if owner_logo_file and owner_logo_file.filename:
+            try:
+                # Use activity-specific filename that overwrites existing
+                owner_logo_filename = f"{activity_id}_owner_logo.png"
+                upload_path = os.path.join('static', 'uploads', owner_logo_filename)
+                
+                # Ensure uploads directory exists
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                
+                # Save file (overwrites if exists)
+                owner_logo_file.save(upload_path)
+                
+            except Exception as e:
+                flash(f"❌ Error uploading owner logo: {str(e)}", "error")
+                owner_logo_filename = None
+        
         # Process each template type
         for template_type in template_types:
             # Get existing template data or create new
@@ -6554,14 +6652,10 @@ def save_email_templates(activity_id):
             title = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_title', '').strip())
             intro_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_intro_text', '').strip())
             conclusion_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_conclusion_text', '').strip())
-            cta_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_cta_text', '').strip())
-            cta_url = ContentSanitizer.validate_url(request.form.get(f'{template_type}_cta_url', '').strip())
-            custom_message = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_custom_message', '').strip())
             
-            # Remove HTML tags from subject, title, and CTA text (plain text fields)
+            # Remove HTML tags from subject and title (plain text fields)
             subject = bleach.clean(subject, tags=[], strip=True) if subject else ''
             title = bleach.clean(title, tags=[], strip=True) if title else ''
-            cta_text = bleach.clean(cta_text, tags=[], strip=True) if cta_text else ''
             
             # Update values (preserve existing if new is empty)
             if subject:
@@ -6572,44 +6666,12 @@ def save_email_templates(activity_id):
                 template_data['intro_text'] = intro_text
             if conclusion_text:
                 template_data['conclusion_text'] = conclusion_text
-            if cta_text:
-                template_data['cta_text'] = cta_text
-            if cta_url:
-                template_data['cta_url'] = cta_url
-            if custom_message:
-                template_data['custom_message'] = custom_message
             
-            # Handle hero image deletion
-            delete_hero = request.form.get(f'{template_type}_delete_hero')
-            if delete_hero:
-                # Delete the file from disk if it exists
-                if 'hero_image' in template_data:
-                    old_image_path = os.path.join('static', 'uploads', 'email_heroes', template_data['hero_image'])
-                    if os.path.exists(old_image_path):
-                        os.remove(old_image_path)
-                    del template_data['hero_image']
-            
-            # Handle hero image upload (only if not deleting)
-            if not delete_hero:
-                hero_file = request.files.get(f'{template_type}_hero_image')
-                if hero_file and hero_file.filename:
-                    # Delete old image if exists
-                    if 'hero_image' in template_data:
-                        old_image_path = os.path.join('static', 'uploads', 'email_heroes', template_data['hero_image'])
-                        if os.path.exists(old_image_path):
-                            os.remove(old_image_path)
-                    
-                    filename = secure_filename(hero_file.filename)
-                    # Create unique filename
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    filename = f"{activity_id}_{template_type}_{timestamp}_{filename}"
-                    
-                    # Save file
-                    upload_path = os.path.join('static', 'uploads', 'email_heroes', filename)
-                    os.makedirs(os.path.dirname(upload_path), exist_ok=True)
-                    hero_file.save(upload_path)
-                    
-                    template_data['hero_image'] = filename
+            # Update image references if files were uploaded (activity-wide)
+            if hero_filename:
+                template_data['hero_image'] = hero_filename
+            if owner_logo_filename:
+                template_data['activity_logo'] = owner_logo_filename
             
             # Always save template_data to preserve all fields
             activity.email_templates[template_type] = template_data
@@ -6736,7 +6798,10 @@ def email_preview(activity_id):
         if hasattr(activity, 'logo_filename') and activity.logo_filename:
             logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
         if not logo_path or not os.path.exists(logo_path):
-            logo_path = 'static/uploads/logo.png'
+            # Use organization logo from settings as fallback instead of hardcoded Minipass logo
+            from utils import get_setting
+            org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+            logo_path = os.path.join('static', 'uploads', org_logo)
         
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
@@ -6940,7 +7005,10 @@ def email_preview_live(activity_id):
         if hasattr(activity, 'logo_filename') and activity.logo_filename:
             logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
         if not logo_path or not os.path.exists(logo_path):
-            logo_path = 'static/uploads/logo.png'
+            # Use organization logo from settings as fallback instead of hardcoded Minipass logo
+            from utils import get_setting
+            org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+            logo_path = os.path.join('static', 'uploads', org_logo)
         
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:

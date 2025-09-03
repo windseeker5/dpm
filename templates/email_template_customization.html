@@ -147,101 +147,58 @@
                                   placeholder="Opening message for the email">{{ template_data.get('intro_text', '') }}</textarea>
                       </div>
                                             
-                      <!-- Activity Logo -->
+                      <!-- Hero Image (Activity-wide, only show on first template) -->
+                      {% if loop.first %}
                       <div class="mb-3">
-                        <label class="form-label">Activity Logo</label>
-                        <div class="row align-items-center">
-                          <div class="col-md-8">
-                            <div class="d-flex align-items-center gap-2">
-                              <div class="current-logo-preview" id="logo-preview-{{ template_key }}">
-                                <img src="{% if activity.logo_filename %}{{ url_for('static', filename='uploads/logos/' + activity.logo_filename) }}{% else %}{{ url_for('static', filename='uploads/logo.png') }}{% endif %}" 
-                                     alt="Current logo" 
-                                     style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">
-                              </div>
-                              <div class="flex-fill">
-                                <input type="file" 
-                                       class="form-control logo-upload" 
-                                       data-activity-id="{{ activity.id }}"
-                                       data-template-key="{{ template_key }}"
-                                       accept="image/*">
-                                <small class="form-hint">Upload a logo specific to this activity (PNG, JPG, GIF)</small>
-                              </div>
-                            </div>
+                        <label class="form-label">Hero Image</label>
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="current-image-preview" id="hero-preview-{{ template_key }}">
+                            {% set hero_filename = activity.id|string + '_hero.png' %}
+                            <img id="hero-img-preview" 
+                                 src="{{ url_for('static', filename='uploads/' + hero_filename) }}" 
+                                 alt="Current hero image" 
+                                 style="width: 100px; height: 60px; object-fit: cover; border: 1px solid #dee2e6; border-radius: 6px; background: white;"
+                                 onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}'; this.style.backgroundColor='#f8f9fa';">
                           </div>
-                          <div class="col-md-4 text-end">
-                            {% if activity.logo_filename %}
-                            <button type="button" 
-                                    class="btn btn-sm btn-outline-danger delete-logo-btn"
-                                    data-activity-id="{{ activity.id }}"
-                                    data-template-key="{{ template_key }}">
-                              <i class="ti ti-trash me-1"></i>Reset to Default
-                            </button>
-                            {% else %}
-                            <small class="text-muted">Using default logo</small>
-                            {% endif %}
+                          <div class="flex-fill">
+                            <input type="file" 
+                                   name="{{ template_key }}_hero_image" 
+                                   id="{{ template_key }}_hero_image"
+                                   class="form-control" 
+                                   accept="image/*"
+                                   onchange="previewImage(this, 'hero-img-preview')">
+                            <small class="form-hint d-block">Banner image shown at top of email (replaces ticket icon)</small>
                           </div>
                         </div>
                       </div>
+                      {% endif %}
                       
-                      <!-- Hero Image -->
+                      <!-- Owner Card Logo (Activity-wide, only show on first template) -->
+                      {% if loop.first %}
                       <div class="mb-3">
-                        <label for="{{ template_key }}_hero_image" class="form-label">Hero Image</label>
-                        <input type="file" 
-                               name="{{ template_key }}_hero_image" 
-                               id="{{ template_key }}_hero_image"
-                               class="form-control" 
-                               accept="image/*">
-                        <small class="form-hint">Upload a banner image for this email type (optional)</small>
-                        {% if template_data.get('hero_image') %}
-                        <div class="mt-2 p-2 border rounded">
-                          <img src="/static/uploads/email_heroes/{{ template_data.get('hero_image') }}" 
-                               alt="Current hero image" 
-                               style="max-width: 200px; height: auto; border-radius: 4px;">
-                          <p class="text-muted small mt-1">Current hero image</p>
-                          <div class="form-check">
-                            <input type="checkbox" 
-                                   class="form-check-input" 
-                                   name="{{ template_key }}_delete_hero" 
-                                   id="{{ template_key }}_delete_hero">
-                            <label class="form-check-label text-danger" for="{{ template_key }}_delete_hero">
-                              <i class="ti ti-trash me-1"></i>Delete this image
-                            </label>
+                        <label class="form-label">Owner Card Logo</label>
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="current-logo-preview" id="owner-logo-preview-{{ template_key }}">
+                            {% set owner_logo_filename = activity.id|string + '_owner_logo.png' %}
+                            <img id="owner-img-preview" 
+                                 src="{{ url_for('static', filename='uploads/' + owner_logo_filename) }}" 
+                                 alt="Current owner logo" 
+                                 style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;"
+                                 onerror="this.src='{{ url_for('static', filename='uploads/flhgi.png') }}';">
+                          </div>
+                          <div class="flex-fill">
+                            <input type="file" 
+                                   name="{{ template_key }}_owner_logo" 
+                                   id="{{ template_key }}_owner_logo"
+                                   class="form-control" 
+                                   accept="image/*"
+                                   onchange="previewImage(this, 'owner-img-preview')">
+                            <small class="form-hint d-block">Logo shown in organization card at bottom of email</small>
                           </div>
                         </div>
-                        {% endif %}
                       </div>
+                      {% endif %}
                                             
-                      <!-- Call-to-Action Section -->
-                      <div class="row mb-3">
-                        <div class="col-md-6">
-                          <label for="{{ template_key }}_cta_text" class="form-label">Call-to-Action Text</label>
-                          <input type="text" 
-                                 name="{{ template_key }}_cta_text" 
-                                 id="{{ template_key }}_cta_text"
-                                 class="form-control" 
-                                 value="{{ template_data.get('cta_text', '') }}"
-                                 placeholder="e.g., View Dashboard">
-                        </div>
-                        <div class="col-md-6">
-                          <label for="{{ template_key }}_cta_url" class="form-label">Call-to-Action URL</label>
-                          <input type="url" 
-                                 name="{{ template_key }}_cta_url" 
-                                 id="{{ template_key }}_cta_url"
-                                 class="form-control" 
-                                 value="{{ template_data.get('cta_url', '') }}"
-                                 placeholder="https://your-website.com/dashboard">
-                        </div>
-                      </div>
-                                            
-                      <!-- Custom Message -->
-                      <div class="mb-3">
-                        <label for="{{ template_key }}_custom_message" class="form-label">Custom Message</label>
-                        <textarea name="{{ template_key }}_custom_message" 
-                                  id="{{ template_key }}_custom_message"
-                                  class="form-control tinymce" 
-                                  rows="3"
-                                  placeholder="Additional message or special instructions">{{ template_data.get('custom_message', '') }}</textarea>
-                      </div>
                       
                       <!-- Conclusion Text -->
                       <div class="mb-3">
@@ -522,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(document.querySelector('form'));
         const draftData = {};
         for (let [key, value] of formData.entries()) {
-            if (key.includes('_intro_text') || key.includes('_custom_message') || key.includes('_conclusion_text')) {
+            if (key.includes('_intro_text') || key.includes('_conclusion_text') || key.includes('_subject') || key.includes('_title')) {
                 draftData[key] = value;
             }
         }
@@ -558,9 +515,9 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem('email_template_draft_' + activityId);
     });
     
-    // Logo Upload Functionality
-    function handleLogoUpload() {
-        document.querySelectorAll('.logo-upload').forEach(fileInput => {
+    // Hero Image Upload Functionality
+    function handleHeroImageUpload() {
+        document.querySelectorAll('.hero-upload').forEach(fileInput => {
             fileInput.addEventListener('change', function() {
                 const activityId = this.dataset.activityId;
                 const templateKey = this.dataset.templateKey;
@@ -585,36 +542,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Create FormData and upload
                 const formData = new FormData();
-                formData.append('logo_file', file);
+                formData.append('hero_image', file);
                 
                 // Show loading state
-                const preview = document.getElementById(`logo-preview-${templateKey}`);
+                const preview = document.getElementById(`hero-preview-${templateKey}`);
                 const originalImg = preview.querySelector('img');
-                const loadingHtml = `<div class="d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border: 1px solid #dee2e6; border-radius: 6px; background: #f8f9fa;"><div class="spinner-border spinner-border-sm" role="status"></div></div>`;
+                const loadingHtml = `<div class="d-flex align-items-center justify-content-center" style="width: 100px; height: 60px; border: 1px solid #dee2e6; border-radius: 6px; background: #f8f9fa;"><div class="spinner-border spinner-border-sm" role="status"></div></div>`;
                 preview.innerHTML = loadingHtml;
                 
-                fetch(`/activity/${activityId}/upload-logo`, {
+                fetch(`/activity/${activityId}/upload-hero-image`, {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Update logo preview for all template sections
-                        document.querySelectorAll('[id^="logo-preview-"]').forEach(previewEl => {
-                            previewEl.innerHTML = `<img src="${data.logo_url}?${Date.now()}" alt="Current logo" style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">`;
+                        // Update hero image preview for all template sections
+                        document.querySelectorAll('[id^="hero-preview-"]').forEach(previewEl => {
+                            previewEl.innerHTML = `<img src="${data.hero_url}?${Date.now()}" alt="Current hero image" style="width: 100px; height: 60px; object-fit: cover; border: 1px solid #dee2e6; border-radius: 6px; background: white;">`;
                         });
                         
-                        // Update delete buttons
-                        document.querySelectorAll('.delete-logo-btn').forEach(btn => {
-                            btn.style.display = 'inline-block';
-                            const parent = btn.closest('.col-md-4');
-                            const defaultText = parent.querySelector('.text-muted');
-                            if (defaultText) defaultText.style.display = 'none';
-                        });
-                        
-                        // Show success message
-                        showNotification('Logo uploaded successfully!', 'success');
+                        showNotification('Hero image uploaded successfully!', 'success');
                     } else {
                         // Restore original image on error
                         preview.innerHTML = originalImg.outerHTML;
@@ -633,51 +581,68 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Logo Delete Functionality
-    function handleLogoDelete() {
-        document.querySelectorAll('.delete-logo-btn').forEach(deleteBtn => {
-            deleteBtn.addEventListener('click', function() {
+    // Owner Logo Upload Functionality
+    function handleOwnerLogoUpload() {
+        document.querySelectorAll('.owner-logo-upload').forEach(fileInput => {
+            fileInput.addEventListener('change', function() {
                 const activityId = this.dataset.activityId;
                 const templateKey = this.dataset.templateKey;
+                const file = this.files[0];
                 
-                if (!confirm('Are you sure you want to reset to the default logo?')) {
+                if (!file) return;
+                
+                // Validate file type
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Please select a valid image file (PNG, JPG, JPEG, or GIF)');
+                    this.value = '';
                     return;
                 }
                 
-                fetch(`/activity/${activityId}/delete-logo`, {
-                    method: 'POST'
+                // Validate file size (5MB max)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File too large. Maximum size is 5MB.');
+                    this.value = '';
+                    return;
+                }
+                
+                // Create FormData and upload
+                const formData = new FormData();
+                formData.append('owner_logo', file);
+                
+                // Show loading state
+                const preview = document.getElementById(`owner-logo-preview-${templateKey}`);
+                const originalImg = preview.querySelector('img');
+                const loadingHtml = `<div class="d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border: 1px solid #dee2e6; border-radius: 6px; background: #f8f9fa;"><div class="spinner-border spinner-border-sm" role="status"></div></div>`;
+                preview.innerHTML = loadingHtml;
+                
+                fetch(`/activity/${activityId}/upload-owner-logo`, {
+                    method: 'POST',
+                    body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Update logo preview for all template sections
-                        document.querySelectorAll('[id^="logo-preview-"]').forEach(previewEl => {
-                            previewEl.innerHTML = `<img src="${data.logo_url}?${Date.now()}" alt="Current logo" style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">`;
+                        // Update owner logo preview for all template sections
+                        document.querySelectorAll('[id^="owner-logo-preview-"]').forEach(previewEl => {
+                            previewEl.innerHTML = `<img src="${data.owner_logo_url}?${Date.now()}" alt="Current owner logo" style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">`;
                         });
                         
-                        // Hide delete buttons and show default text
-                        document.querySelectorAll('.delete-logo-btn').forEach(btn => {
-                            btn.style.display = 'none';
-                            const parent = btn.closest('.col-md-4');
-                            const defaultText = parent.querySelector('.text-muted');
-                            if (!defaultText) {
-                                const newDefaultText = document.createElement('small');
-                                newDefaultText.className = 'text-muted';
-                                newDefaultText.textContent = 'Using default logo';
-                                parent.appendChild(newDefaultText);
-                            } else {
-                                defaultText.style.display = 'inline';
-                            }
-                        });
-                        
-                        showNotification('Logo reset to default!', 'success');
+                        showNotification('Owner card logo uploaded successfully!', 'success');
                     } else {
-                        showNotification(data.error || 'Delete failed', 'error');
+                        // Restore original image on error
+                        preview.innerHTML = originalImg.outerHTML;
+                        showNotification(data.error || 'Upload failed', 'error');
                     }
                 })
                 .catch(error => {
-                    showNotification('Delete failed: ' + error.message, 'error');
+                    // Restore original image on error
+                    preview.innerHTML = originalImg.outerHTML;
+                    showNotification('Upload failed: ' + error.message, 'error');
                 });
+                
+                // Clear file input
+                this.value = '';
             });
         });
     }
@@ -703,9 +668,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
     
-    // Initialize logo upload and delete handlers
-    handleLogoUpload();
-    handleLogoDelete();
+    // Initialize image upload handlers
+    handleHeroImageUpload();
+    handleOwnerLogoUpload();
 });
 </script>
 
@@ -847,4 +812,18 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 }
 </style>
+
+<script>
+// Simple image preview function (minimal JS)
+function previewImage(input, previewId) {
+    const file = input.files[0];
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(previewId).src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+</script>
 {% endblock %}
