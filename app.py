@@ -3986,7 +3986,7 @@ def activity_dashboard(activity_id):
 
     # Get filter and search parameters from request
     passport_filter = request.args.get('passport_filter', 'all')
-    signup_filter = request.args.get('signup_filter', 'all')
+    signup_filter = request.args.get('signup_filter', 'pending')
     q = request.args.get('q', '').strip()  # Add search parameter support
 
     # Load all related signups with user eager-loaded
@@ -4091,6 +4091,9 @@ def activity_dashboard(activity_id):
     pending_signups = [s for s in signups if s.status == 'pending']
     approved_signups = [s for s in signups if s.status == 'approved']
     
+    has_pending_signups = len(pending_signups) > 0
+    pending_signups_count = len(pending_signups)
+    
     # Activity log entries (recent activity)
     # Use get_all_activity_logs to get properly formatted logs like dashboard does
     from utils import get_all_activity_logs
@@ -4172,7 +4175,9 @@ def activity_dashboard(activity_id):
         revenue_card=revenue_card,
         active_users_card=active_users_card,
         passports_created_card=passports_created_card,
-        passports_unpaid_card=passports_unpaid_card
+        passports_unpaid_card=passports_unpaid_card,
+        has_pending_signups=has_pending_signups,
+        pending_signups_count=pending_signups_count
     )
 
 
