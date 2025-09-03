@@ -16,11 +16,12 @@ cd minipass_env/app
 
 
 ### 3. **Fetch Latest Code**
-```bash
+
+
 git fetch origin
-git checkout v1
-git pull origin v1
-```
+git reset --hard origin/v1
+
+
 
 ### 4. **Stop Running Containers**
 ```bash

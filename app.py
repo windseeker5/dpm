@@ -607,6 +607,39 @@ def home():
     return render_template("index.html", activities=activities)
 
 
+@app.route("/health")
+def health_check():
+    """Health check endpoint with version tracking for cache detection"""
+    health_status = {
+        'status': 'healthy',
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'version': 'unknown',
+        'git_commit': 'unknown',
+        'database': 'unknown'
+    }
+    
+    # Get git version
+    try:
+        git_hash = subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'], 
+            stderr=subprocess.DEVNULL
+        ).decode('ascii').strip()[:8]
+        health_status['version'] = git_hash
+        health_status['git_commit'] = git_hash
+    except:
+        pass
+    
+    # Check database connection
+    try:
+        db.session.execute(text('SELECT 1'))
+        db.session.commit()
+        health_status['database'] = 'connected'
+    except Exception as e:
+        health_status['database'] = f'error: {str(e)}'
+        health_status['status'] = 'unhealthy'
+        return jsonify(health_status), 503
+    
+    return jsonify(health_status), 200
 
 
 @app.route("/assets/<path:filename>")
