@@ -1376,7 +1376,10 @@ def create_activity():
         elif selected_image_filename:
             image_filename = selected_image_filename
 
-        # Create the activity
+        # Get default email templates from central configuration
+        from utils_email_defaults import get_default_email_templates
+        default_email_templates = get_default_email_templates()
+        
         new_activity = Activity(
             name=name,
             type=activity_type,
@@ -1386,7 +1389,7 @@ def create_activity():
             status=status,
             created_by=session.get("admin"),
             image_filename=image_filename,
-            email_templates={},
+            email_templates=default_email_templates,
         )
 
         db.session.add(new_activity)

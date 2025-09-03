@@ -2,6 +2,10 @@
 
 {% block title %}Email Template Customization - {{ activity.name }}{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/email-template-customization.css') }}">
+{% endblock %}
+
 {% block content %}
 <!-- Modern Activity Header -->
 <div class="page-wrapper">
@@ -705,7 +709,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-{% block head %}
 <style>
 /* Mobile-first responsive improvements */
 @media (max-width: 767.98px) {
@@ -844,5 +847,4 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 }
 </style>
-{% endblock %}
 {% endblock %}

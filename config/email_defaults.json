@@ -1,0 +1,56 @@
+{
+    "newPass": {
+        "subject": "🎟️ Votre passe numérique est prête !",
+        "title": "Bienvenue !",
+        "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Bonne nouvelle ! Votre passe numérique vient tout juste d'être créée !</p>\n<p>Elle vous donne droit à <strong>{{ pass_data.uses_remaining }}</strong> participations à <strong>{{ pass_data.activity.name }}</strong> – il ne vous reste plus qu'à en profiter !</p>",
+        "conclusion_text": "<p>{% if not pass_data.paid %}</p>\n<p>Petit rappel amical :</p>\n<p>Votre passe n'a pas encore été payée 🥺</p>\n<p>Merci de faire un virement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong> afin d'activer votre accès.</p>\n<p>{% endif %}</p>\n<p>&nbsp;</p>\n<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
+        "custom_message": "",
+        "cta_text": "Voir ma passe",
+        "cta_url": "https://minipass.me/my-passes"
+    },
+    "paymentReceived": {
+        "subject": "✅ Paiement confirmé !",
+        "title": "Paiement reçu",
+        "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Merci ! Nous avons bien reçu votre paiement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong>.</p>\n<p><br>Votre passe numérique est maintenant active et prête à être utilisée pour vos prochaines activités !</p>",
+        "conclusion_text": "<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
+        "custom_message": "",
+        "cta_text": "Voir ma passe",
+        "cta_url": "https://minipass.me/my-passes"
+    },
+    "latePayment": {
+        "subject": "⚠️ Rappel - Passe numérique en attente de paiement",
+        "title": "Rappel de paiement",
+        "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Vous avez une passe numérique en attente de paiement!</p>\n<p>Pour activer votre accès aux activités, merci de compléter le virement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong>.</p>",
+        "conclusion_text": "<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
+        "custom_message": "",
+        "cta_text": "Effectuer le paiement",
+        "cta_url": "https://minipass.me/payment"
+    },
+    "signup": {
+        "subject": "✍️ Votre inscription est confirmée",
+        "title": "Bienvenue !",
+        "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p>\n<p>Merci de vous être inscrit à <strong>{{ activity_name }}</strong>!</p>\n<p>Dès réception de votre paiement, votre inscription sera confirmée et un passe numérique vous sera envoyé.</p>",
+        "conclusion_text": "<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
+        "custom_message": "",
+        "cta_text": "Voir les détails",
+        "cta_url": "https://minipass.me/my-signups"
+    },
+    "redeemPass": {
+        "subject": "🏒 Activité confirmée !",
+        "title": "Bon moment !",
+        "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Nous vous confirmons qu'une participation a été utilisée sur votre passe numérique pour l'activité suivante : <strong>{{ pass_data.activity.name }}</strong></p>\n<p>Il vous reste <strong>{{ pass_data.uses_remaining }}</strong> participations.</p>",
+        "conclusion_text": "<p>{% if not pass_data.paid %}</p>\n<p>Petit rappel amical :</p>\n<p>Votre passe n'a pas encore été payée 🥺</p>\n<p>Merci de faire un virement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong> afin d'activer votre accès.</p>\n<p>{% endif %}</p>\n<p>&nbsp;</p>\n<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
+        "custom_message": "",
+        "cta_text": "Voir ma passe",
+        "cta_url": "https://minipass.me/my-passes"
+    },
+    "survey_invitation": {
+        "subject": "📝 Nous aimerions votre avis",
+        "title": "Partagez votre expérience",
+        "intro_text": "<p>Bonjour,</p>\n<p>Nous aimerions connaître votre expérience récente avec nous!</p>\n<p>Cela ne prendra que quelques minutes et nous aidera à améliorer nos services.</p>",
+        "conclusion_text": "<p>Merci de prendre le temps de partager vos commentaires.</p>\n<p>Votre opinion compte beaucoup pour nous!</p>",
+        "custom_message": "",
+        "cta_text": "Répondre au sondage",
+        "cta_url": "{survey_url}"
+    }
+}
