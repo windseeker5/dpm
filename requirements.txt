@@ -40,3 +40,6 @@ premailer
 requests
 python-dotenv
 marshmallow
+
+# 🔒 Security
+bleach  # HTML sanitization for email templates
