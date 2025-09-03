@@ -724,7 +724,7 @@ def get_kpi_data(activity_id=None, period='7d'):
             # Build trend array
             trend = []
             for i in reversed(range(days)):
-                day = (now - timedelta(days=i+1)).date()
+                day = (now - timedelta(days=i)).date()
                 day_str = str(day)
                 daily_revenue = passport_dict.get(day_str, 0) + income_dict.get(day_str, 0)
                 trend.append(daily_revenue)
@@ -771,7 +771,7 @@ def get_kpi_data(activity_id=None, period='7d'):
             # Build trend array
             trend = []
             for i in reversed(range(days)):
-                day = (now - timedelta(days=i+1)).date()
+                day = (now - timedelta(days=i)).date()
                 day_str = str(day)
                 trend.append(count_dict.get(day_str, 0))
             return trend
@@ -1688,6 +1688,17 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
             # Fallback to default logo
             logo_data = open("static/uploads/logo.png", "rb").read()
             inline_images['logo'] = logo_data
+
+        # Check for activity-specific hero image (replaces 'good-news' CID)
+        activity_id = activity.id if activity else None
+        if activity_id:
+            hero_image_path = os.path.join("static/uploads", f"{activity_id}_hero.png")
+            if os.path.exists(hero_image_path):
+                hero_data = open(hero_image_path, "rb").read()
+                inline_images['good-news'] = hero_data  # Replace compiled 'good-news' image
+                print(f"Using activity-specific hero image: {activity_id}_hero.png")
+            else:
+                print(f"Activity hero image not found: {hero_image_path}")
 
         send_email_async(
             app=app,
