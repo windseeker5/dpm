@@ -1810,22 +1810,40 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     # Add dynamic content (QR code must be generated per passport)
     inline_images['qr_code'] = qr_data
     
-    # Get organization logo from settings
-    from utils import get_setting
-    org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-    org_logo_path = os.path.join("static/uploads", org_logo_filename)
+    # Check for activity-specific hero image (replaces 'ticket' CID)
+    activity_id = pass_data.activity.id if pass_data.activity else None
+    if activity_id:
+        hero_image_path = os.path.join("static/uploads", f"{activity_id}_hero.png")
+        if os.path.exists(hero_image_path):
+            hero_data = open(hero_image_path, "rb").read()
+            inline_images['ticket'] = hero_data  # Replace compiled 'ticket' image
+            print(f"Using activity-specific hero image: {activity_id}_hero.png")
     
-    # Add logo CID for owner_card_inline.html
-    if os.path.exists(org_logo_path):
-        logo_data = open(org_logo_path, "rb").read()
-        inline_images['logo'] = logo_data  # For owner_card_inline.html
-        # Note: logo_image is not needed - templates don't actually use it
-        print(f"Using organization logo: {org_logo_filename}")
-    else:
-        # Fallback to default logo
-        logo_data = open("static/uploads/logo.png", "rb").read()
-        inline_images['logo'] = logo_data
-        print("Using default Minipass logo")
+    # Check for activity-specific owner logo (replaces 'logo' CID)
+    logo_used = False
+    if activity_id:
+        activity_logo_path = os.path.join("static/uploads", f"{activity_id}_owner_logo.png")
+        if os.path.exists(activity_logo_path):
+            logo_data = open(activity_logo_path, "rb").read()
+            inline_images['logo'] = logo_data  # For owner_card_inline.html
+            print(f"Using activity-specific owner logo: {activity_id}_owner_logo.png")
+            logo_used = True
+    
+    # Fallback to organization logo if no activity-specific logo
+    if not logo_used:
+        from utils import get_setting
+        org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+        org_logo_path = os.path.join("static/uploads", org_logo_filename)
+        
+        if os.path.exists(org_logo_path):
+            logo_data = open(org_logo_path, "rb").read()
+            inline_images['logo'] = logo_data  # For owner_card_inline.html
+            print(f"Using organization logo: {org_logo_filename}")
+        else:
+            # Final fallback to default logo
+            logo_data = open("static/uploads/logo.png", "rb").read()
+            inline_images['logo'] = logo_data
+            print("Using default Minipass logo")
 
     # Determine user and activity for email context
     user_obj = getattr(pass_data, "user", None)
@@ -2118,11 +2136,13 @@ def get_email_context(activity, template_type, base_context=None):
     # Restore protected blocks to ensure they're never overridden
     context.update(protected_blocks)
     
-    # Add activity logo URL with fallback to default
+    # Add activity logo URL with fallback to organization logo from settings
     if activity and activity.logo_filename:
         context['activity_logo_url'] = url_for('static', filename=f'uploads/logos/{activity.logo_filename}')
     else:
-        context['activity_logo_url'] = url_for('static', filename='uploads/logo.png')
+        # Use organization logo from settings instead of hardcoded Minipass logo
+        org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+        context['activity_logo_url'] = url_for('static', filename=f'uploads/{org_logo}')
     
     return context
 
