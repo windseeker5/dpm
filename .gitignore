@@ -20,7 +20,7 @@ venv/
 
 
 # SQLite database
-#instance/prod_database.db
+instance/*.db
 
 # Backup files and directories
 static/backups/*.zip
