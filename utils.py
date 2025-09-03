@@ -51,6 +51,149 @@ import re
 from flask import current_app
 from models import Setting
 import uuid
+import bleach
+from urllib.parse import urlparse
+
+
+class ContentSanitizer:
+    """
+    Content sanitization class for email templates
+    Provides HTML sanitization and URL validation for security
+    """
+    
+    ALLOWED_TAGS = [
+        'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'a', 'ul', 'ol', 'li', 
+        'blockquote', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'hr'
+    ]
+    
+    ALLOWED_ATTRIBUTES = {
+        'a': ['href', 'target', 'rel']
+    }
+    
+    ALLOWED_PROTOCOLS = ['http', 'https', 'mailto']
+    
+    @staticmethod
+    def sanitize_html(content):
+        """
+        Sanitize HTML content to prevent XSS attacks
+        
+        Args:
+            content (str): Raw HTML content
+            
+        Returns:
+            str: Sanitized HTML content
+        """
+        if not content:
+            return ''
+            
+        # First pass: Remove script tags and their content completely
+        content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Clean the HTML content with bleach
+        cleaned = bleach.clean(
+            content,
+            tags=ContentSanitizer.ALLOWED_TAGS,
+            attributes=ContentSanitizer.ALLOWED_ATTRIBUTES,
+            protocols=ContentSanitizer.ALLOWED_PROTOCOLS,
+            strip=True
+        )
+        
+        # Additional security checks
+        # Remove any remaining javascript: protocols
+        cleaned = re.sub(r'javascript:', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'on\w+\s*=', '', cleaned, flags=re.IGNORECASE)  # Remove event handlers
+        
+        return cleaned
+    
+    @staticmethod
+    def validate_url(url):
+        """
+        Validate and sanitize URLs for CTA links
+        
+        Args:
+            url (str): URL to validate
+            
+        Returns:
+            str: Sanitized URL or empty string if invalid
+        """
+        if not url:
+            return ''
+            
+        url = url.strip()
+        
+        # Check for dangerous protocols
+        dangerous_protocols = ['javascript:', 'data:', 'vbscript:', 'file:', 'ftp:']
+        for protocol in dangerous_protocols:
+            if url.lower().startswith(protocol):
+                return ''
+        
+        # Check for dangerous patterns that could be interpreted as protocols
+        if ':' in url and not url.startswith(('http://', 'https://', 'mailto:')):
+            # If it contains : but doesn't start with allowed protocols, reject it
+            if not '@' in url:  # Unless it's an email without mailto:
+                return ''
+            
+        # Add protocol if missing
+        if not url.startswith(('http://', 'https://', 'mailto:')):
+            if '@' in url:
+                url = f'mailto:{url}'
+            else:
+                url = f'https://{url}'
+        
+        try:
+            parsed = urlparse(url)
+            # Ensure valid scheme
+            if parsed.scheme not in ContentSanitizer.ALLOWED_PROTOCOLS:
+                return ''
+                
+            # Basic validation for http/https URLs
+            if parsed.scheme in ['http', 'https']:
+                if not parsed.netloc:
+                    return ''
+                # Check for suspicious netloc
+                if ':' in parsed.netloc.split('.')[0]:  # Port in first part might be suspicious
+                    pass  # Actually ports are OK
+                    
+            return url
+        except Exception:
+            return ''
+    
+    @staticmethod
+    def sanitize_email_template_data(template_data):
+        """
+        Sanitize all fields in email template data
+        
+        Args:
+            template_data (dict): Template data dictionary
+            
+        Returns:
+            dict: Sanitized template data
+        """
+        if not template_data:
+            return {}
+            
+        sanitized = template_data.copy()
+        
+        # Fields that need HTML sanitization
+        html_fields = ['intro_text', 'custom_message', 'conclusion_text']
+        for field in html_fields:
+            if field in sanitized:
+                sanitized[field] = ContentSanitizer.sanitize_html(sanitized[field])
+        
+        # Fields that need URL validation
+        if 'cta_url' in sanitized:
+            sanitized['cta_url'] = ContentSanitizer.validate_url(sanitized['cta_url'])
+        
+        # Fields that need basic text sanitization (no HTML allowed)
+        text_fields = ['subject', 'title', 'cta_text']
+        for field in text_fields:
+            if field in sanitized:
+                # Strip HTML tags completely for these fields
+                sanitized[field] = bleach.clean(sanitized[field], tags=[], strip=True)
+                # Remove any remaining special characters that could be harmful
+                sanitized[field] = re.sub(r'[<>"\']', '', sanitized[field])
+        
+        return sanitized
 
 
 def get_gravatar_url(email, size=64):
@@ -1974,6 +2117,12 @@ def get_email_context(activity, template_type, base_context=None):
     
     # Restore protected blocks to ensure they're never overridden
     context.update(protected_blocks)
+    
+    # Add activity logo URL with fallback to default
+    if activity and activity.logo_filename:
+        context['activity_logo_url'] = url_for('static', filename=f'uploads/logos/{activity.logo_filename}')
+    else:
+        context['activity_logo_url'] = url_for('static', filename='uploads/logo.png')
     
     return context
 

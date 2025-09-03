@@ -102,6 +102,7 @@ class Activity(db.Model):
     start_date = db.Column(db.DateTime, nullable=True)
     end_date = db.Column(db.DateTime, nullable=True)
     image_filename = db.Column(db.String(255), nullable=True)
+    logo_filename = db.Column(db.String(255), nullable=True)  # Activity-specific logo for email templates
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(50), default="active")

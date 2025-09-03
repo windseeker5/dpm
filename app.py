@@ -6526,8 +6526,10 @@ def save_email_templates(activity_id):
     
     from models import Activity
     from werkzeug.utils import secure_filename
+    from utils import ContentSanitizer
     import json
     import os
+    import bleach
     
     activity = Activity.query.get_or_404(activity_id)
     
@@ -6546,14 +6548,19 @@ def save_email_templates(activity_id):
             else:
                 template_data = {}
             
-            # Get form fields
-            subject = request.form.get(f'{template_type}_subject', '').strip()
-            title = request.form.get(f'{template_type}_title', '').strip()
-            intro_text = request.form.get(f'{template_type}_intro_text', '').strip()
-            conclusion_text = request.form.get(f'{template_type}_conclusion_text', '').strip()
-            cta_text = request.form.get(f'{template_type}_cta_text', '').strip()
-            cta_url = request.form.get(f'{template_type}_cta_url', '').strip()
-            custom_message = request.form.get(f'{template_type}_custom_message', '').strip()
+            # Get form fields and sanitize them
+            subject = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_subject', '').strip())
+            title = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_title', '').strip())
+            intro_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_intro_text', '').strip())
+            conclusion_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_conclusion_text', '').strip())
+            cta_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_cta_text', '').strip())
+            cta_url = ContentSanitizer.validate_url(request.form.get(f'{template_type}_cta_url', '').strip())
+            custom_message = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_custom_message', '').strip())
+            
+            # Remove HTML tags from subject, title, and CTA text (plain text fields)
+            subject = bleach.clean(subject, tags=[], strip=True) if subject else ''
+            title = bleach.clean(title, tags=[], strip=True) if title else ''
+            cta_text = bleach.clean(cta_text, tags=[], strip=True) if cta_text else ''
             
             # Update values (preserve existing if new is empty)
             if subject:
@@ -6725,8 +6732,8 @@ def email_preview(activity_id):
         
         # Add logo image as data URI
         logo_path = None
-        if hasattr(activity, 'logo') and activity.logo:
-            logo_path = os.path.join('static', 'uploads', 'email_logos', activity.logo)
+        if hasattr(activity, 'logo_filename') and activity.logo_filename:
+            logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
         if not logo_path or not os.path.exists(logo_path):
             logo_path = 'static/uploads/logo.png'
         
@@ -6788,6 +6795,224 @@ def email_preview(activity_id):
         </html>
         """
         return error_html
+
+
+@app.route('/activity/<int:activity_id>/email-preview-live', methods=['POST'])
+def email_preview_live(activity_id):
+    """Generate live email preview without saving to database"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    from models import Activity
+    from utils import get_email_context, safe_template, generate_qr_code_image, ContentSanitizer
+    from flask import render_template
+    from datetime import datetime
+    import os
+    import json
+    import base64
+    import bleach
+    
+    activity = Activity.query.get_or_404(activity_id)
+    
+    # Get template type from request
+    template_type = request.form.get('template_type') or request.args.get('type', 'newPass')
+    device_mode = request.form.get('device', 'desktop')  # desktop or mobile
+    
+    # Create sample context data for preview
+    base_context = {
+        'user_name': 'John Doe',
+        'user_email': 'john.doe@example.com',
+        'activity_name': activity.name,
+        'pass_code': 'SAMPLE123',
+        'amount': '$50.00'
+    }
+    
+    # Add email blocks for templates that need them
+    if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
+        # Create sample pass data using proper class structure
+        class PassData:
+            def __init__(self):
+                self.activity = type('obj', (object,), {
+                    'name': activity.name,
+                    'id': activity.id
+                })()
+                self.user = type('obj', (object,), {
+                    'name': 'John Doe',
+                    'email': 'john.doe@example.com',
+                    'phone_number': '555-0123'
+                })()
+                self.pass_type = type('obj', (object,), {
+                    'name': 'Sample Pass',
+                    'price': 50.00
+                })()
+                self.created_dt = datetime.now()
+                self.sold_amt = 50.00
+                self.paid = True
+                self.pass_code = 'SAMPLE123'
+                self.remaining_activities = 5
+                self.uses_remaining = 5
+        
+        pass_data = PassData()
+        
+        # Render email blocks
+        base_context['owner_html'] = render_template(
+            "email_blocks/owner_card_inline.html", 
+            pass_data=pass_data
+        )
+        
+        # Add history for ALL templates that need it
+        history = [
+            {'date': '2025-01-09', 'action': 'Pass Created'},
+            {'date': '2025-01-10', 'action': 'Payment Received'}
+        ]
+        if template_type == 'redeemPass':
+            history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
+        
+        base_context['history_html'] = render_template(
+            "email_blocks/history_table_inline.html", 
+            history=history
+        )
+    
+    # Create temporary customizations from form data without saving to database
+    live_customizations = {}
+    
+    # Extract and sanitize customizations from form data for current template type
+    form_fields = ['subject', 'title', 'intro_text', 'conclusion_text', 'cta_text', 'cta_url', 'custom_message']
+    for field in form_fields:
+        form_key = f'{template_type}_{field}'
+        value = request.form.get(form_key, '').strip()
+        if value:  # Only add non-empty values
+            # Apply appropriate sanitization based on field type
+            if field == 'cta_url':
+                value = ContentSanitizer.validate_url(value)
+            elif field in ['subject', 'title', 'cta_text']:
+                # Plain text fields - strip all HTML
+                value = bleach.clean(value, tags=[], strip=True)
+            else:
+                # Rich text fields - sanitize HTML
+                value = ContentSanitizer.sanitize_html(value)
+            
+            if value:  # Only add if still has content after sanitization
+                live_customizations[field] = value
+    
+    # Create a temporary activity object with live customizations
+    # We'll modify the context generation to use these live customizations
+    temp_email_templates = activity.email_templates.copy() if activity.email_templates else {}
+    temp_email_templates[template_type] = live_customizations
+    
+    # Store original templates and temporarily replace them
+    original_templates = activity.email_templates
+    activity.email_templates = temp_email_templates
+    
+    try:
+        # Get merged context with live customizations
+        context = get_email_context(activity, template_type, base_context)
+        
+        # Get the compiled template path
+        template_path = safe_template(template_type)
+        
+        # Render the compiled template with the merged context
+        rendered_html = render_template(template_path, **context)
+        
+        # Load inline images and convert to data URIs for browser display
+        compiled_folder = template_path.replace('/index.html', '')
+        json_path = os.path.join('templates', compiled_folder, 'inline_images.json')
+        
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                inline_images_data = json.load(f)
+                
+                # Replace cid: references with data: URIs
+                for img_id, base64_data in inline_images_data.items():
+                    # Determine image type (most are PNG)
+                    mime_type = 'image/png'
+                    if img_id in ['facebook', 'instagram']:
+                        mime_type = 'image/png'
+                    
+                    # Replace cid:image_id with data URI
+                    cid_ref = f'cid:{img_id}'
+                    data_uri = f'data:{mime_type};base64,{base64_data}'
+                    rendered_html = rendered_html.replace(cid_ref, data_uri)
+        
+        # Add logo image as data URI
+        logo_path = None
+        if hasattr(activity, 'logo_filename') and activity.logo_filename:
+            logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
+        if not logo_path or not os.path.exists(logo_path):
+            logo_path = 'static/uploads/logo.png'
+        
+        if os.path.exists(logo_path):
+            with open(logo_path, 'rb') as f:
+                logo_base64 = base64.b64encode(f.read()).decode('utf-8')
+                # Replace both logo and logo_image references
+                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
+                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
+        
+        # Generate sample QR code for preview
+        qr_code_data = generate_qr_code_image('SAMPLE123')
+        if qr_code_data:
+            qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
+            rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
+        
+        # Add a live preview banner to distinguish from saved templates
+        preview_banner = """
+        <div style="background: #74b9ff; color: #2d3436; padding: 10px; text-align: center; font-weight: bold; border-bottom: 2px solid #0984e3;">
+            🔴 LIVE PREVIEW - Changes not saved to database
+        </div>
+        """
+        
+        # Insert the banner at the beginning of the body
+        if '<body>' in rendered_html:
+            rendered_html = rendered_html.replace('<body>', f'<body>{preview_banner}')
+        else:
+            # Fallback if no body tag found
+            rendered_html = preview_banner + rendered_html
+        
+        # Apply device-specific styling if mobile mode
+        if device_mode == 'mobile':
+            mobile_wrapper = """
+            <div style="width: 375px; margin: 0 auto; border: 2px solid #ddd; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="background: #333; color: white; padding: 5px; text-align: center; font-size: 12px;">📱 Mobile Preview</div>
+                <div style="max-width: 100%; overflow-x: auto;">
+            """
+            mobile_wrapper_end = "</div></div>"
+            rendered_html = mobile_wrapper + rendered_html + mobile_wrapper_end
+        
+        return rendered_html
+        
+    except Exception as e:
+        # Fallback to error message if template rendering fails
+        error_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Live Preview Error</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                .error {{ background: #e74c3c; color: white; padding: 20px; border-radius: 8px; }}
+                .template-info {{ background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 8px; }}
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h2>❌ Live Preview Error</h2>
+                <p>Could not render live preview: {str(e)}</p>
+            </div>
+            <div class="template-info">
+                <h3>Debug Info:</h3>
+                <p><strong>Template Type:</strong> {template_type}</p>
+                <p><strong>Activity:</strong> {activity.name}</p>
+                <p><strong>Device Mode:</strong> {device_mode}</p>
+                <p><strong>Live Customizations:</strong> {', '.join(live_customizations.keys()) if live_customizations else 'None'}</p>
+            </div>
+        </body>
+        </html>
+        """
+        return error_html
+        
+    finally:
+        # Always restore original templates
+        activity.email_templates = original_templates
 
 
 @app.route("/activity/<int:activity_id>/email-test", methods=["POST"])
@@ -6919,8 +7144,8 @@ def test_email_template(activity_id):
         
         # Add logo image from activity or default
         logo_path = None
-        if hasattr(activity, 'logo') and activity.logo:
-            logo_path = os.path.join('static', 'uploads', 'email_logos', activity.logo)
+        if hasattr(activity, 'logo_filename') and activity.logo_filename:
+            logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
         if not logo_path or not os.path.exists(logo_path):
             # Try default logo
             logo_path = 'static/uploads/logo.png'
@@ -6971,6 +7196,129 @@ def test_email_template(activity_id):
         sys.stdout.flush()  # Force flush output
     
     return redirect(url_for('email_template_customization', activity_id=activity_id))
+
+
+# ================================
+# 🖼 ACTIVITY LOGO UPLOAD ROUTES
+# ================================
+
+def get_activity_logo_url(activity):
+    """Get logo URL for activity with fallback to default logo"""
+    if activity and activity.logo_filename:
+        return url_for('static', filename=f'uploads/logos/{activity.logo_filename}')
+    return url_for('static', filename='uploads/logo.png')
+
+
+@app.route('/activity/<int:activity_id>/upload-logo', methods=['POST'])
+def upload_activity_logo(activity_id):
+    """Handle logo upload for activities"""
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Not authorized"}), 401
+    
+    from models import Activity
+    from werkzeug.utils import secure_filename
+    import os
+    
+    activity = Activity.query.get_or_404(activity_id)
+    
+    # Check if logo file was uploaded
+    if 'logo_file' not in request.files:
+        return jsonify({"success": False, "error": "No file selected"}), 400
+    
+    logo_file = request.files['logo_file']
+    
+    # Check if a file was actually selected
+    if logo_file.filename == '':
+        return jsonify({"success": False, "error": "No file selected"}), 400
+    
+    # Validate file type
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    def allowed_file(filename):
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    
+    if not allowed_file(logo_file.filename):
+        return jsonify({"success": False, "error": "Invalid file type. Please use PNG, JPG, JPEG, or GIF."}), 400
+    
+    try:
+        # Create logos directory if it doesn't exist
+        logos_dir = os.path.join('static', 'uploads', 'logos')
+        os.makedirs(logos_dir, exist_ok=True)
+        
+        # Generate unique filename to avoid conflicts
+        filename = secure_filename(logo_file.filename)
+        name, ext = os.path.splitext(filename)
+        unique_filename = f"activity_{activity_id}_{name}_{uuid.uuid4().hex[:8]}{ext}"
+        
+        logo_path = os.path.join(logos_dir, unique_filename)
+        
+        # Delete old logo if exists
+        if activity.logo_filename:
+            old_logo_path = os.path.join(logos_dir, activity.logo_filename)
+            if os.path.exists(old_logo_path):
+                os.remove(old_logo_path)
+                print(f"✅ Deleted old logo: {old_logo_path}")
+        
+        # Save new logo
+        logo_file.save(logo_path)
+        
+        # Validate file size (max 5MB)
+        if os.path.getsize(logo_path) > 5 * 1024 * 1024:  # 5MB limit
+            os.remove(logo_path)
+            return jsonify({"success": False, "error": "File too large. Maximum size is 5MB."}), 400
+        
+        # Update activity with new logo filename
+        activity.logo_filename = unique_filename
+        db.session.commit()
+        
+        # Return success response with logo URL
+        logo_url = get_activity_logo_url(activity)
+        
+        return jsonify({
+            "success": True, 
+            "message": "Logo uploaded successfully!",
+            "logo_url": logo_url
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"Upload failed: {str(e)}"}), 500
+
+
+@app.route('/activity/<int:activity_id>/delete-logo', methods=['POST'])
+def delete_activity_logo(activity_id):
+    """Delete activity logo and revert to default"""
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Not authorized"}), 401
+    
+    from models import Activity
+    import os
+    
+    activity = Activity.query.get_or_404(activity_id)
+    
+    try:
+        # Delete logo file if exists
+        if activity.logo_filename:
+            logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
+            if os.path.exists(logo_path):
+                os.remove(logo_path)
+                print(f"✅ Deleted logo file: {logo_path}")
+            
+            # Clear logo filename from database
+            activity.logo_filename = None
+            db.session.commit()
+        
+        # Return default logo URL
+        default_logo_url = url_for('static', filename='uploads/logo.png')
+        
+        return jsonify({
+            "success": True, 
+            "message": "Logo deleted successfully!",
+            "logo_url": default_logo_url
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"Delete failed: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
