@@ -1435,6 +1435,7 @@
       </div>
 
       <!-- Signups Section -->
+      {% if has_pending_signups %}
       <h2 class="mt-5 mb-3">
         <i class="ti ti-edit text-orange me-2"></i>Signups
       </h2>
@@ -1495,20 +1496,12 @@
           <div class="d-flex justify-content-center align-items-center w-100">
             <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
               <a href="#" onclick="filterSignups('all'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter', 'all') == 'all' %}active{% endif %}" id="signup-filter-all">
+                 class="github-filter-btn {% if request.args.get('signup_filter', 'pending') == 'all' %}active{% endif %}" id="signup-filter-all">
                 <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ all_signups|length }})</span>
-              </a>
-              <a href="#" onclick="filterSignups('unpaid'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter') == 'unpaid' %}active{% endif %}" id="signup-filter-unpaid">
-                <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ all_signups|selectattr('paid', 'equalto', false)|list|length }})</span>
-              </a>
-              <a href="#" onclick="filterSignups('paid'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter') == 'paid' %}active{% endif %}" id="signup-filter-paid">
-                <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ all_signups|selectattr('paid', 'equalto', true)|list|length }})</span>
               </a>
               <a href="#" onclick="filterSignups('pending'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending">
-                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ all_signups|selectattr('status', 'equalto', 'pending')|list|length }})</span>
+                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ pending_signups_count }})</span>
               </a>
               <a href="#" onclick="filterSignups('approved'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved">
@@ -1671,6 +1664,7 @@
           </p>
         </div>
       </div>
+      {% endif %}
       {% endif %}
 
 
@@ -2510,7 +2504,7 @@ function filterSignups(filterType) {
   console.log('Filtering signups:', filterType);
   
   // Update active filter button
-  document.querySelectorAll('#signup-filter-all, #signup-filter-unpaid, #signup-filter-paid, #signup-filter-pending, #signup-filter-approved').forEach(btn => {
+  document.querySelectorAll('#signup-filter-all, #signup-filter-pending, #signup-filter-approved').forEach(btn => {
     btn.classList.remove('active');
   });
   document.getElementById('signup-filter-' + filterType).classList.add('active');

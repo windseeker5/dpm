@@ -1629,7 +1629,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     title = email_context.get('title', "Votre Inscription est Confirmée")
     intro_raw = email_context.get('intro_text', '')
     conclusion_raw = email_context.get('conclusion_text', '')
-    theme = "signup/index.html"
+    theme = "signup_compiled/index.html"
 
     # Render intro and conclusion manually
     intro = render_template_string(intro_raw, user_name=signup.user.name, activity_name=activity.name)
@@ -1657,7 +1657,15 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     }
 
     # Find compiled template
-    compiled_folder = os.path.join("templates/email_templates", theme.replace(".html", "_compiled"))
+    # For signup, theme is already "signup_compiled/index.html"
+    if "_compiled" in theme:
+        # Already pointing to compiled version
+        template_dir = theme.replace("/index.html", "")
+        compiled_folder = os.path.join("templates/email_templates", template_dir)
+    else:
+        # Legacy path for non-compiled templates
+        compiled_folder = os.path.join("templates/email_templates", theme.replace(".html", "_compiled"))
+    
     index_path = os.path.join(compiled_folder, "index.html")
     json_path = os.path.join(compiled_folder, "inline_images.json")
     use_compiled = os.path.exists(index_path) and os.path.exists(json_path)
@@ -1688,18 +1696,9 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
             # Fallback to default logo
             logo_data = open("static/uploads/logo.png", "rb").read()
             inline_images['logo'] = logo_data
-
-        # Check for activity-specific hero image (replaces 'good-news' CID)
-        activity_id = activity.id if activity else None
-        if activity_id:
-            hero_image_path = os.path.join("static/uploads", f"{activity_id}_hero.png")
-            if os.path.exists(hero_image_path):
-                hero_data = open(hero_image_path, "rb").read()
-                inline_images['good-news'] = hero_data  # Replace compiled 'good-news' image
-                print(f"Using activity-specific hero image: {activity_id}_hero.png")
-            else:
-                print(f"Activity hero image not found: {hero_image_path}")
-
+        
+        # Don't replace hero image for signup emails - use the compiled template's celebration image
+        
         send_email_async(
             app=app,
             user=signup.user,
