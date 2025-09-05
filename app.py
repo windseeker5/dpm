@@ -5104,6 +5104,14 @@ def create_passport():
         passport_types = PassportType.query.filter_by(activity_id=selected_activity_id, status='active').all()
     else:
         passport_types = PassportType.query.filter_by(status='active').all()
+    
+    # Detect if activity has only one passport type for auto-selection
+    single_passport_type_id = None
+    if selected_activity_id and len(passport_types) == 1:
+        single_passport_type_id = passport_types[0].id
+        print(f"DEBUG: Auto-selecting passport type ID {single_passport_type_id} for activity {selected_activity_id}")
+    elif selected_activity_id:
+        print(f"DEBUG: Activity {selected_activity_id} has {len(passport_types)} passport types - no auto-selection")
 
     return render_template(
         "passport_form.html",
@@ -5112,7 +5120,8 @@ def create_passport():
         default_qt=default_qt,
         activity_list=activity_list,
         passport_types=passport_types,
-        selected_activity_id=selected_activity_id
+        selected_activity_id=selected_activity_id,
+        single_passport_type_id=single_passport_type_id
     )
 
 

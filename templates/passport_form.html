@@ -1,17 +1,207 @@
 {% extends "base.html" %}
 {% block title %}{{ "Edit" if passport else "Create" }} Passport{% endblock %}
 
+{% block head %}
+<!-- Google Fonts Import for Roboto Slab -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* Modern Form Styling */
+:root {
+  --form-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --form-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --form-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
+  --form-border-radius: 12px;
+  --form-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --form-focus-color: #667eea;
+  --form-text-primary: #2d3748;
+  --form-text-secondary: #718096;
+}
+
+/* Enhanced Card Styling */
+.passport-form-card {
+  box-shadow: var(--form-shadow);
+  border-radius: var(--form-border-radius);
+  transition: var(--form-transition);
+  border: none;
+}
+
+.passport-form-card:hover {
+  box-shadow: var(--form-shadow-hover);
+}
+
+/* Typography - Headers with Roboto Slab */
+.passport-form-title {
+  font-family: 'Roboto Slab', serif;
+  font-weight: 600;
+  font-size: 1.75rem;
+  color: #000000;
+  margin-bottom: 0;
+}
+
+.passport-form-legend {
+  font-family: 'Roboto Slab', serif;
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--form-text-primary);
+  margin-bottom: 1rem;
+}
+
+/* Enhanced Input Styling */
+.passport-form .form-control {
+  transition: var(--form-transition);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e2e8f0;
+}
+
+.passport-form .form-control:hover {
+  background-color: #f8f9fa;
+  border-color: #cbd5e0;
+}
+
+.passport-form .form-control:focus {
+  border-color: var(--form-focus-color);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background-color: #fff;
+}
+
+.passport-form .input-icon .form-control {
+  padding-left: 2.75rem;
+}
+
+.passport-form .input-icon-addon {
+  color: var(--form-text-secondary);
+  transition: var(--form-transition);
+}
+
+.passport-form .input-icon:hover .input-icon-addon {
+  color: var(--form-focus-color);
+}
+
+/* Enhanced Select Styling */
+.passport-form .form-select {
+  transition: var(--form-transition);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e2e8f0;
+}
+
+.passport-form .form-select:hover {
+  background-color: #f8f9fa;
+  border-color: #cbd5e0;
+}
+
+.passport-form .form-select:focus {
+  border-color: var(--form-focus-color);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Passport Icon Styling */
+.passport-icon {
+  color: #6c757d;
+  font-size: 2rem;
+}
+
+/* Fieldset Enhancement */
+.passport-form .form-fieldset {
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  transition: var(--form-transition);
+  position: relative;
+}
+
+.passport-form .form-fieldset:hover {
+  border-color: #cbd5e0;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .passport-form-title {
+    font-size: 1.5rem;
+  }
+  
+  .btn-success {
+    width: 100%;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+  }
+  
+  .passport-form .form-control,
+  .passport-form .form-select {
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+  }
+  
+  .passport-form .input-icon .form-control {
+    padding-left: 3rem;
+  }
+}
+
+/* Subtle Animation */
+.passport-form .form-fieldset {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.passport-form .form-fieldset:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Collapsible Notes Styling */
+.notes-header:hover {
+  color: var(--form-focus-color);
+}
+
+.notes-header:hover .notes-chevron {
+  color: var(--form-focus-color) !important;
+}
+
+.notes-chevron {
+  transition: transform 0.3s ease, color 0.3s ease;
+  font-size: 1.1rem;
+}
+
+.notes-collapse {
+  transition: opacity 0.3s ease, max-height 0.3s ease;
+  overflow: hidden;
+}
+
+.notes-collapse.show {
+  opacity: 1;
+  max-height: 200px;
+}
+
+.notes-collapse.hide {
+  opacity: 0;
+  max-height: 0;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center mt-4">
   <div class="col-lg-8">
-    <form method="POST" class="card shadow-sm border bg-white">
+    <form method="POST" class="card passport-form-card bg-white passport-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="card-header d-flex align-items-center justify-content-between">
-        <h3 class="card-title mb-0">
+        <h3 class="passport-form-title">
           {{ "Update Passport" if passport else "Create a New Passport" }}
         </h3>
-        <i class="ti ti-ticket fs-1 text-muted"></i>
+        <i class="ti ti-ticket passport-icon"></i>
       </div>
 
 
@@ -19,7 +209,7 @@
 
         <!-- 🧑 User Info -->
         <fieldset class="form-fieldset mb-4">
-          <legend>User Information</legend>
+          <legend class="passport-form-legend">User Information</legend>
 
           <!-- Name -->
           <div class="mb-3 position-relative input-icon">
@@ -46,7 +236,7 @@
 
         <!-- 🎟️ Passport Info -->
         <fieldset class="form-fieldset mb-4">
-          <legend class="d-flex justify-content-between align-items-center">
+          <legend class="passport-form-legend d-flex justify-content-between align-items-center">
             Passport Details
             {% if passport %}
               {% if passport.paid %}
@@ -109,16 +299,21 @@
                    id="uses_remaining" value="{{ passport.uses_remaining if passport else default_qt }}" />
           </div>
 
-          <!-- Notes -->
+          <!-- Notes - Collapsible -->
           <div class="mb-3">
-            <label class="form-label">Notes</label>
-            <textarea name="notes" id="notes" rows="3" class="form-control">{{ passport.notes if passport else '' }}</textarea>
+            <div class="notes-header d-flex align-items-center" onclick="toggleNotes()" style="cursor: pointer; user-select: none;">
+              <label class="form-label mb-0">Notes</label>
+              <i id="notes-chevron" class="ti ti-chevron-down ms-2 text-muted notes-chevron"></i>
+            </div>
+            <div id="notes-collapse" class="notes-collapse" style="display: none; margin-top: 0.75rem;">
+              <textarea name="notes" id="notes" rows="3" class="form-control">{{ passport.notes if passport else '' }}</textarea>
+            </div>
           </div>
         </fieldset>
       </div>
 
-      <div class="card-footer text-end">
-        <button type="submit" class="btn btn-primary">
+      <div class="card-footer text-start">
+        <button type="submit" class="btn btn-success">
           <i class="ti ti-ticket me-2"></i>{{ "Update Passport" if passport else "Create Passport" }}
         </button>
       </div>
@@ -128,6 +323,26 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+  // Minimal JavaScript for collapsible notes (< 15 lines)
+  function toggleNotes() {
+    const notesField = document.getElementById('notes-collapse');
+    const chevron = document.getElementById('notes-chevron');
+    
+    if (notesField.style.display === 'none' || !notesField.style.display) {
+      notesField.style.display = 'block';
+      chevron.style.transform = 'rotate(180deg)';
+      notesField.classList.add('show');
+      notesField.classList.remove('hide');
+    } else {
+      notesField.style.display = 'none';
+      chevron.style.transform = 'rotate(0deg)';
+      notesField.classList.add('hide');
+      notesField.classList.remove('show');
+    }
+  }
+</script>
+
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     let userCache = [];
@@ -194,6 +409,23 @@
       option.style.display = option.getAttribute("data-activity") === activityId ? "" : "none";
     }
     passportTypeSelect.value = ""; // Reset selection
+    
+    // Auto-select if only one passport type available
+    let visibleOptions = 0;
+    let singleOptionValue = null;
+    
+    for (let option of passportTypeSelect.options) {
+      if (option.value !== "" && option.style.display !== "none") {
+        visibleOptions++;
+        singleOptionValue = option.value;
+      }
+    }
+    
+    // If only one passport type exists, auto-select it
+    if (visibleOptions === 1 && singleOptionValue) {
+      passportTypeSelect.value = singleOptionValue;
+      updatePassportTypeDetails(passportTypeSelect);
+    }
   }
   
   function updatePassportTypeDetails(select) {
