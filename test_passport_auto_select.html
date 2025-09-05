@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Passport Auto-Select Logic</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        select, input { margin: 5px; padding: 8px; }
+        .result { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Testing Passport Auto-Select Logic</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Single Passport Type (Should Auto-Select)</h3>
+        <label>Activity:</label>
+        <select id="activity_select_1" onchange="updateActivityDetails(this)">
+            <option value="">-- Select Activity --</option>
+            <option value="1">Activity with Single Passport Type</option>
+        </select>
+        
+        <br><label>Passport Type:</label>
+        <select id="passport_type_select" name="passport_type_id">
+            <option value="">-- Select Passport Type --</option>
+            <option value="1" data-activity="1" data-price="25.00" data-sessions="5">Single Pass (Monthly)</option>
+        </select>
+        
+        <br><label>Price:</label>
+        <input type="text" id="sold_amt" placeholder="Price">
+        
+        <br><label>Sessions:</label>
+        <input type="text" id="uses_remaining" placeholder="Sessions">
+        
+        <p id="result_1" class="result"></p>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Multiple Passport Types (Should NOT Auto-Select)</h3>
+        <label>Activity:</label>
+        <select id="activity_select_2" onchange="updateActivityDetails(this)">
+            <option value="">-- Select Activity --</option>
+            <option value="2">Activity with Multiple Passport Types</option>
+        </select>
+        
+        <br><label>Passport Type:</label>
+        <select id="passport_type_select_2">
+            <option value="">-- Select Passport Type --</option>
+            <option value="2" data-activity="2" data-price="20.00" data-sessions="3">Pass A (Weekly)</option>
+            <option value="3" data-activity="2" data-price="40.00" data-sessions="10">Pass B (Monthly)</option>
+        </select>
+        
+        <p id="result_2" class="result"></p>
+    </div>
+
+    <script>
+        // Copy the exact logic from passport_form.html
+        function updateActivityDetails(select) {
+            const selected = select.options[select.selectedIndex];
+            const price = selected.getAttribute("data-price");
+            const sessions = selected.getAttribute("data-sessions");
+            if (price) document.getElementById("sold_amt").value = price;
+            if (sessions) document.getElementById("uses_remaining").value = sessions;
+            
+            // Filter passport types by activity
+            const activityId = select.value;
+            const passportTypeSelect = document.getElementById("passport_type_select") || 
+                                     document.getElementById("passport_type_select_2");
+            
+            for (let option of passportTypeSelect.options) {
+                if (option.value === "") continue;
+                option.style.display = option.getAttribute("data-activity") === activityId ? "" : "none";
+            }
+            passportTypeSelect.value = ""; // Reset selection
+            
+            // Auto-select if only one passport type available
+            let visibleOptions = 0;
+            let singleOptionValue = null;
+            
+            for (let option of passportTypeSelect.options) {
+                if (option.value !== "" && option.style.display !== "none") {
+                    visibleOptions++;
+                    singleOptionValue = option.value;
+                }
+            }
+            
+            // If only one passport type exists, auto-select it
+            if (visibleOptions === 1 && singleOptionValue) {
+                passportTypeSelect.value = singleOptionValue;
+                updatePassportTypeDetails(passportTypeSelect);
+                
+                // Update result display
+                const resultDiv = select.id.includes('1') ? 
+                    document.getElementById('result_1') : document.getElementById('result_2');
+                resultDiv.textContent = `✅ Auto-selected: ${passportTypeSelect.options[passportTypeSelect.selectedIndex].text}`;
+                resultDiv.className = 'result';
+            } else if (visibleOptions > 1) {
+                const resultDiv = select.id.includes('1') ? 
+                    document.getElementById('result_1') : document.getElementById('result_2');
+                resultDiv.textContent = `ℹ️ Multiple options available - manual selection required (${visibleOptions} options)`;
+                resultDiv.className = 'result';
+            }
+        }
+        
+        function updatePassportTypeDetails(select) {
+            const selected = select.options[select.selectedIndex];
+            const price = selected.getAttribute("data-price");
+            const sessions = selected.getAttribute("data-sessions");
+            if (price) document.getElementById("sold_amt").value = price;
+            if (sessions) document.getElementById("uses_remaining").value = sessions;
+        }
+    </script>
+</body>
+</html>
