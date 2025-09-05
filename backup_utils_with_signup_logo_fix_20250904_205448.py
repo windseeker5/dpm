@@ -524,39 +524,22 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                 continue
 
             # 💰 Extract name & amount — support multiple Interac subject formats
-            # DEBUG: Show exact subject for troubleshooting
-            print(f"🔍 DEBUG - Subject analysis:")
-            print(f"   Raw subject: '{subject}'")
-            print(f"   Subject length: {len(subject)}")
-            print(f"   Contains 'reçu': {'reçu' in subject}")
-            print(f"   Contains '$': {'$' in subject}")
-            print(f"   Contains 'de': {'de' in subject}")
-            
-            # Updated regex to handle spaces in amounts like "98, 00" and proper $ escaping
-            amount_match = re.search(r"reçu\s+([\d,\s]+)\s+\$\s+de", subject)
-            name_match = re.search(r"de\s+(.+?)\s+et ce montant", subject)
-            
-            print(f"   Amount regex match: {amount_match is not None}")
-            print(f"   Name regex match: {name_match is not None}")
+            amount_match = re.search(r"reçu\s([\d,]+)\s*\$\s*de", subject)
+            name_match = re.search(r"de\s(.+?)\set ce montant", subject)
 
             # 🔁 Fallback: e.g. "Remi Methot vous a envoyé 15,00 $"
             if not amount_match:
-                amount_match = re.search(r"envoyé\s+([\d,\s]+)\s*\$", subject)
-                print(f"   Fallback amount regex match: {amount_match is not None}")
+                amount_match = re.search(r"envoyé\s([\d,]+)\s*\$", subject)
             if not name_match:
                 name_match = re.search(r":\s*(.*?)\svous a envoyé", subject)
-                print(f"   Fallback name regex match: {name_match is not None}")
 
             # 🛡️ Skip if we still can't match
             if not (amount_match and name_match):
                 print(f"❌ Skipped unmatched subject: {subject}")
-                print(f"   Final amount_match: {amount_match is not None}")
-                print(f"   Final name_match: {name_match is not None}")
                 continue
 
             # 💵 Final parsing
-            # Remove spaces and replace comma with period for proper float conversion
-            amt_str = amount_match.group(1).replace(" ", "").replace(",", ".")
+            amt_str = amount_match.group(1).replace(",", ".")
             name = name_match.group(1).strip()
 
             try:
@@ -992,9 +975,6 @@ def match_gmail_payments_to_passes():
 
         matches = extract_interac_transfers(user, pwd, mail)
         
-        # Optimize by querying unpaid passports once outside the loop
-        unpaid_passports = Passport.query.filter_by(paid=False).all()
-        
         print(f"🔍 DEBUG: Found {len(matches)} email matches")
         for i, match in enumerate(matches):
             print(f"🔍 Email {i+1}: {match.get('subject', 'No subject')[:50]}...")
@@ -1007,41 +987,28 @@ def match_gmail_payments_to_passes():
             subject = match["subject"]
             
             print(f"🔍 Processing payment: Name='{name}', Amount=${amt}, From={from_email}")
+
+            best_score = 0
+            best_passport = None
+            unpaid_passports = Passport.query.filter_by(paid=False).all()
+            
             print(f"🔍 Found {len(unpaid_passports)} unpaid passports to match against")
 
-            # Stage 1: Find all passports matching the name (above threshold)
-            name_matches = []
             for p in unpaid_passports:
                 if not p.user:
-                    continue
+                    continue  # Safety check
                 score = fuzz.partial_ratio(name.lower(), p.user.name.lower())
-                print(f"🔍 Checking passport: User='{p.user.name}', Score={score} (threshold={threshold})")
-                if score >= threshold:
-                    name_matches.append((p, score))
-
-            print(f"📊 Stage 1: Found {len(name_matches)} name matches for '{name}'")
-
-            # Stage 2: From name matches, find amount matches
-            amount_matches = []
-            for p, score in name_matches:
-                print(f"💰 Checking amount: {p.user.name} - Passport: ${p.sold_amt} vs Payment: ${amt}")
-                if abs(p.sold_amt - amt) < 1:
-                    amount_matches.append((p, score))
-                    print(f"✅ Amount match found!")
+                print(f"🔍 Checking passport: User='{p.user.name}', Amount=${p.sold_amt}, Score={score} (threshold={threshold})")
+                if score >= threshold and abs(p.sold_amt - amt) < 1:
+                    print(f"✅ MATCH FOUND! Score={score}, Amount match: ${p.sold_amt} ≈ ${amt}")
+                    if score > best_score:
+                        best_score = score
+                        best_passport = p
                 else:
-                    print(f"❌ Amount mismatch: ${p.sold_amt} vs ${amt} (diff: ${abs(p.sold_amt - amt)})")
-
-            print(f"💰 Stage 2: Found {len(amount_matches)} amount matches")
-
-            # Stage 3: Select best match (oldest first if multiple matches)
-            best_passport = None
-            best_score = 0
-            if amount_matches:
-                # Sort by created_dt (oldest first), then by score (highest first)
-                amount_matches.sort(key=lambda x: (x[0].created_dt, -x[1]))
-                best_passport = amount_matches[0][0]
-                best_score = amount_matches[0][1]
-                print(f"🎯 Selected passport: {best_passport.user.name} - ${best_passport.sold_amt} (created: {best_passport.created_dt})")
+                    if score < threshold:
+                        print(f"❌ Score too low: {score} < {threshold}")
+                    if abs(p.sold_amt - amt) >= 1:
+                        print(f"❌ Amount mismatch: ${p.sold_amt} vs ${amt} (diff: ${abs(p.sold_amt - amt)})")
 
             if best_passport:
                 print(f"🎯 PROCESSING MATCH: {best_passport.user.name} - ${best_passport.sold_amt}")

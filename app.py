@@ -6609,7 +6609,7 @@ def email_template_customization(activity_id):
 
 @app.route("/activity/<int:activity_id>/email-templates/save", methods=["POST"])
 def save_email_templates(activity_id):
-    """Save email template customizations"""
+    """Save email template customizations - supports both individual and bulk saves"""
     if "admin" not in session:
         return redirect(url_for("login"))
     
@@ -6628,48 +6628,67 @@ def save_email_templates(activity_id):
     if activity.email_templates is None:
         activity.email_templates = {}
     
-    # Track activity-wide images that need to be processed only once
-    hero_image_processed = False
+    # Check if this is an individual template save (AJAX request)
+    single_template = request.form.get('single_template')
+    is_individual_save = single_template is not None
+    
+    # Template name mapping for responses
+    template_names = {
+        'newPass': 'New Pass Created',
+        'paymentReceived': 'Payment Received', 
+        'latePayment': 'Late Payment Reminder',
+        'signup': 'Signup Confirmation',
+        'redeemPass': 'Pass Redeemed',
+        'survey_invitation': 'Survey Invitation'
+    }
+    
+    # If individual save, validate the template type
+    if is_individual_save and single_template not in template_types:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid template type',
+            'template_type': single_template
+        }), 400
+    
+    # Determine which templates to process
+    templates_to_process = [single_template] if is_individual_save else template_types
+    
+    # Track activity-wide images that need to be processed only once  
     owner_logo_processed = False
     
     try:
-        # Handle activity-wide hero image upload (shared across all templates)
-        hero_file = None
+        # Handle template-specific hero image uploads
+        hero_files_uploaded = []
+        
+        # Process hero image uploads for each template type
+        for template_type in templates_to_process:
+            hero_file = request.files.get(f'{template_type}_hero_image')
+            if hero_file and hero_file.filename:
+                try:
+                    # Use template-specific filename
+                    hero_filename = f"{activity_id}_{template_type}_hero.png"
+                    upload_path = os.path.join('static', 'uploads', hero_filename)
+                    
+                    # Ensure uploads directory exists
+                    os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                    
+                    # Save file (overwrites if exists)
+                    hero_file.save(upload_path)
+                    hero_files_uploaded.append((template_type, hero_filename))
+                    
+                except Exception as e:
+                    flash(f"❌ Error uploading hero image for {template_type}: {str(e)}", "error")
+        
+        # Handle activity-wide owner logo upload (shared across all templates)
         owner_logo_file = None
         
-        # Look for hero image upload from any template type
-        for template_type in template_types:
-            if not hero_image_processed:
-                hero_file = request.files.get(f'{template_type}_hero_image')
-                if hero_file and hero_file.filename:
-                    hero_image_processed = True
-                    break
-        
-        # Look for owner logo upload from any template type
-        for template_type in template_types:
+        # Look for owner logo upload from relevant template type(s)
+        for template_type in templates_to_process:
             if not owner_logo_processed:
                 owner_logo_file = request.files.get(f'{template_type}_owner_logo')
                 if owner_logo_file and owner_logo_file.filename:
                     owner_logo_processed = True
                     break
-        
-        # Process hero image if uploaded
-        hero_filename = None
-        if hero_file and hero_file.filename:
-            try:
-                # Use activity-specific filename that overwrites existing
-                hero_filename = f"{activity_id}_hero.png"
-                upload_path = os.path.join('static', 'uploads', hero_filename)
-                
-                # Ensure uploads directory exists
-                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
-                
-                # Save file (overwrites if exists)
-                hero_file.save(upload_path)
-                
-            except Exception as e:
-                flash(f"❌ Error uploading hero image: {str(e)}", "error")
-                hero_filename = None
         
         # Process owner logo if uploaded
         owner_logo_filename = None
@@ -6689,8 +6708,8 @@ def save_email_templates(activity_id):
                 flash(f"❌ Error uploading owner logo: {str(e)}", "error")
                 owner_logo_filename = None
         
-        # Process each template type
-        for template_type in template_types:
+        # Process selected template type(s)
+        for template_type in templates_to_process:
             # Get existing template data or create new
             if template_type in activity.email_templates:
                 template_data = activity.email_templates[template_type].copy()
@@ -6717,9 +6736,14 @@ def save_email_templates(activity_id):
             if conclusion_text:
                 template_data['conclusion_text'] = conclusion_text
             
-            # Update image references if files were uploaded (activity-wide)
-            if hero_filename:
-                template_data['hero_image'] = hero_filename
+            # Update image references if files were uploaded
+            # Check for template-specific hero image
+            for uploaded_template, uploaded_hero in hero_files_uploaded:
+                if uploaded_template == template_type:
+                    template_data['hero_image'] = uploaded_hero
+                    break
+            
+            # Update activity-wide owner logo if uploaded
             if owner_logo_filename:
                 template_data['activity_logo'] = owner_logo_filename
             
@@ -6732,13 +6756,33 @@ def save_email_templates(activity_id):
         
         db.session.commit()
         
-        flash("✅ Email templates saved successfully!", "success")
+        # Return appropriate response based on request type
+        if is_individual_save:
+            return jsonify({
+                'success': True,
+                'message': 'Template saved successfully',
+                'template_type': single_template,
+                'template_name': template_names.get(single_template, single_template)
+            })
+        else:
+            flash("✅ Email templates saved successfully!", "success")
         
     except Exception as e:
         db.session.rollback()
-        flash(f"❌ Error saving email templates: {str(e)}", "error")
+        error_message = f"Error saving email templates: {str(e)}"
+        
+        if is_individual_save:
+            return jsonify({
+                'success': False,
+                'message': error_message,
+                'template_type': single_template if single_template else 'unknown'
+            }), 500
+        else:
+            flash(f"❌ {error_message}", "error")
     
-    return redirect(url_for('email_template_customization', activity_id=activity_id))
+    # Only redirect for bulk saves (form submissions)
+    if not is_individual_save:
+        return redirect(url_for('email_template_customization', activity_id=activity_id))
 
 
 @app.route("/activity/<int:activity_id>/email-preview")
