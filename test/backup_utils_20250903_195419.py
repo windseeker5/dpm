@@ -55,53 +55,6 @@ import bleach
 from urllib.parse import urlparse
 
 
-def get_activity_hero_image(activity, template_type):
-    """
-    Hero image selection with activity image as default:
-    1. Activity image (default - shown as hero rectangle)
-    2. Custom uploaded hero (override option)
-    3. Template default (fallback)
-    
-    Returns: tuple (image_data, is_custom, needs_circle_style)
-    """
-    import os
-    import json
-    
-    # Priority 1: Use activity image as hero (DEFAULT)
-    if activity and activity.image_filename:
-        # Try both locations: main uploads and activity_images subdirectory
-        activity_image_paths = [
-            f"static/uploads/{activity.image_filename}",
-            f"static/uploads/activity_images/{activity.image_filename}"
-        ]
-        
-        for activity_image_path in activity_image_paths:
-            if os.path.exists(activity_image_path):
-                # Check if user has uploaded custom override
-                custom_hero_path = f"static/uploads/{activity.id}_{template_type}_hero.png"
-                if os.path.exists(custom_hero_path):
-                    with open(custom_hero_path, "rb") as f:
-                        print(f"✅ Using custom hero override for {template_type}")
-                        return f.read(), True, False
-                
-                # Use activity image as default hero
-                with open(activity_image_path, "rb") as f:
-                    print(f"🎨 Using activity image as default hero for {template_type}: {activity.image_filename}")
-                    return f.read(), False, False  # Activity image displayed as rectangle, not circle
-    
-    # Priority 2: Check for custom hero if no activity image
-    if activity:
-        custom_hero_path = f"static/uploads/{activity.id}_{template_type}_hero.png"
-        if os.path.exists(custom_hero_path):
-            with open(custom_hero_path, "rb") as f:
-                print(f"✅ Using custom hero (no activity image) for {template_type}")
-                return f.read(), True, False
-    
-    # Priority 3: Return None to use template default
-    print(f"📦 Using template default hero for {template_type}")
-    return None, False, False
-
-
 class ContentSanitizer:
     """
     Content sanitization class for email templates
@@ -524,39 +477,22 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                 continue
 
             # 💰 Extract name & amount — support multiple Interac subject formats
-            # DEBUG: Show exact subject for troubleshooting
-            print(f"🔍 DEBUG - Subject analysis:")
-            print(f"   Raw subject: '{subject}'")
-            print(f"   Subject length: {len(subject)}")
-            print(f"   Contains 'reçu': {'reçu' in subject}")
-            print(f"   Contains '$': {'$' in subject}")
-            print(f"   Contains 'de': {'de' in subject}")
-            
-            # Updated regex to handle spaces in amounts like "98, 00" and proper $ escaping
-            amount_match = re.search(r"reçu\s+([\d,\s]+)\s+\$\s+de", subject)
-            name_match = re.search(r"de\s+(.+?)\s+et ce montant", subject)
-            
-            print(f"   Amount regex match: {amount_match is not None}")
-            print(f"   Name regex match: {name_match is not None}")
+            amount_match = re.search(r"reçu\s([\d,]+)\s*\$\s*de", subject)
+            name_match = re.search(r"de\s(.+?)\set ce montant", subject)
 
             # 🔁 Fallback: e.g. "Remi Methot vous a envoyé 15,00 $"
             if not amount_match:
-                amount_match = re.search(r"envoyé\s+([\d,\s]+)\s*\$", subject)
-                print(f"   Fallback amount regex match: {amount_match is not None}")
+                amount_match = re.search(r"envoyé\s([\d,]+)\s*\$", subject)
             if not name_match:
                 name_match = re.search(r":\s*(.*?)\svous a envoyé", subject)
-                print(f"   Fallback name regex match: {name_match is not None}")
 
             # 🛡️ Skip if we still can't match
             if not (amount_match and name_match):
                 print(f"❌ Skipped unmatched subject: {subject}")
-                print(f"   Final amount_match: {amount_match is not None}")
-                print(f"   Final name_match: {name_match is not None}")
                 continue
 
             # 💵 Final parsing
-            # Remove spaces and replace comma with period for proper float conversion
-            amt_str = amount_match.group(1).replace(" ", "").replace(",", ".")
+            amt_str = amount_match.group(1).replace(",", ".")
             name = name_match.group(1).strip()
 
             try:
@@ -992,9 +928,6 @@ def match_gmail_payments_to_passes():
 
         matches = extract_interac_transfers(user, pwd, mail)
         
-        # Optimize by querying unpaid passports once outside the loop
-        unpaid_passports = Passport.query.filter_by(paid=False).all()
-        
         print(f"🔍 DEBUG: Found {len(matches)} email matches")
         for i, match in enumerate(matches):
             print(f"🔍 Email {i+1}: {match.get('subject', 'No subject')[:50]}...")
@@ -1007,41 +940,28 @@ def match_gmail_payments_to_passes():
             subject = match["subject"]
             
             print(f"🔍 Processing payment: Name='{name}', Amount=${amt}, From={from_email}")
+
+            best_score = 0
+            best_passport = None
+            unpaid_passports = Passport.query.filter_by(paid=False).all()
+            
             print(f"🔍 Found {len(unpaid_passports)} unpaid passports to match against")
 
-            # Stage 1: Find all passports matching the name (above threshold)
-            name_matches = []
             for p in unpaid_passports:
                 if not p.user:
-                    continue
+                    continue  # Safety check
                 score = fuzz.partial_ratio(name.lower(), p.user.name.lower())
-                print(f"🔍 Checking passport: User='{p.user.name}', Score={score} (threshold={threshold})")
-                if score >= threshold:
-                    name_matches.append((p, score))
-
-            print(f"📊 Stage 1: Found {len(name_matches)} name matches for '{name}'")
-
-            # Stage 2: From name matches, find amount matches
-            amount_matches = []
-            for p, score in name_matches:
-                print(f"💰 Checking amount: {p.user.name} - Passport: ${p.sold_amt} vs Payment: ${amt}")
-                if abs(p.sold_amt - amt) < 1:
-                    amount_matches.append((p, score))
-                    print(f"✅ Amount match found!")
+                print(f"🔍 Checking passport: User='{p.user.name}', Amount=${p.sold_amt}, Score={score} (threshold={threshold})")
+                if score >= threshold and abs(p.sold_amt - amt) < 1:
+                    print(f"✅ MATCH FOUND! Score={score}, Amount match: ${p.sold_amt} ≈ ${amt}")
+                    if score > best_score:
+                        best_score = score
+                        best_passport = p
                 else:
-                    print(f"❌ Amount mismatch: ${p.sold_amt} vs ${amt} (diff: ${abs(p.sold_amt - amt)})")
-
-            print(f"💰 Stage 2: Found {len(amount_matches)} amount matches")
-
-            # Stage 3: Select best match (oldest first if multiple matches)
-            best_passport = None
-            best_score = 0
-            if amount_matches:
-                # Sort by created_dt (oldest first), then by score (highest first)
-                amount_matches.sort(key=lambda x: (x[0].created_dt, -x[1]))
-                best_passport = amount_matches[0][0]
-                best_score = amount_matches[0][1]
-                print(f"🎯 Selected passport: {best_passport.user.name} - ${best_passport.sold_amt} (created: {best_passport.created_dt})")
+                    if score < threshold:
+                        print(f"❌ Score too low: {score} < {threshold}")
+                    if abs(p.sold_amt - amt) >= 1:
+                        print(f"❌ Amount mismatch: ${p.sold_amt} vs ${amt} (diff: ${abs(p.sold_amt - amt)})")
 
             if best_passport:
                 print(f"🎯 PROCESSING MATCH: {best_passport.user.name} - ${best_passport.sold_amt}")
@@ -1762,9 +1682,20 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         for cid, img_base64 in cid_map.items():
             inline_images[cid] = base64.b64decode(img_base64)
         
-        # 🚫 DO NOT add logo attachments to signup emails
-        # Signup emails should not have logo attachments - they're meant to be clean celebration emails
-        # Logo is already embedded in the compiled template if needed
+        # Get organization logo from settings
+        from utils import get_setting
+        org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+        org_logo_path = os.path.join("static/uploads", org_logo_filename)
+        
+        # Add both logo CIDs for compatibility
+        if os.path.exists(org_logo_path):
+            logo_data = open(org_logo_path, "rb").read()
+            inline_images['logo'] = logo_data  # For owner_card_inline.html
+            # Note: logo_image is not needed - templates don't actually use it
+        else:
+            # Fallback to default logo
+            logo_data = open("static/uploads/logo.png", "rb").read()
+            inline_images['logo'] = logo_data
         
         # Don't replace hero image for signup emails - use the compiled template's celebration image
         
@@ -1889,25 +1820,16 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     # Add dynamic content (QR code must be generated per passport)
     inline_images['qr_code'] = qr_data
     
-    # Use new hero image selection system
-    hero_data, is_custom, needs_circle_style = get_activity_hero_image(activity, template_type)
-    if hero_data:
-        # Replace the appropriate hero image based on template type
-        hero_cid_map = {
-            'newPass': 'ticket',
-            'paymentReceived': 'currency-dollar', 
-            'latePayment': 'thumb-down'
-        }
-        
-        hero_cid = hero_cid_map.get(template_type, 'ticket')
-        inline_images[hero_cid] = hero_data  # Replace compiled hero image
-        
-        print(f"✅ Hero image applied: template={template_type}, cid={hero_cid}, custom={is_custom}")
-    else:
-        print(f"📦 Using template default hero for {template_type}")
+    # Check for activity-specific hero image (replaces 'ticket' CID)
+    activity_id = pass_data.activity.id if pass_data.activity else None
+    if activity_id:
+        hero_image_path = os.path.join("static/uploads", f"{activity_id}_hero.png")
+        if os.path.exists(hero_image_path):
+            hero_data = open(hero_image_path, "rb").read()
+            inline_images['ticket'] = hero_data  # Replace compiled 'ticket' image
+            print(f"Using activity-specific hero image: {activity_id}_hero.png")
     
     # Check for activity-specific owner logo (replaces 'logo' CID)
-    activity_id = pass_data.activity.id if pass_data.activity else None
     logo_used = False
     if activity_id:
         activity_logo_path = os.path.join("static/uploads", f"{activity_id}_owner_logo.png")
