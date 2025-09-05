@@ -45,16 +45,17 @@
         </fieldset>
 
         <!-- 🎟️ Passport Info -->
-        <legend class="d-flex justify-content-between align-items-center">
-          Passport Details
-          {% if passport %}
-            {% if passport.paid %}
-              <span class="badge badge-sm bg-green-lt">Paid</span>
-            {% else %}
-              <span class="badge badge-sm bg-red-lt">Unpaid</span>
+        <fieldset class="form-fieldset mb-4">
+          <legend class="d-flex justify-content-between align-items-center">
+            Passport Details
+            {% if passport %}
+              {% if passport.paid %}
+                <span class="badge badge-sm bg-green-lt">Paid</span>
+              {% else %}
+                <span class="badge badge-sm bg-red-lt">Unpaid</span>
+              {% endif %}
             {% endif %}
-          {% endif %}
-        </legend>
+          </legend>
         
         
 
