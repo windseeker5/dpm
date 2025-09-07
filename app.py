@@ -6616,6 +6616,77 @@ def email_template_customization(activity_id):
                          current_templates=current_templates)
 
 
+@app.route("/activity/<int:activity_id>/generate-email-thumbnails")
+def generate_email_thumbnails(activity_id):
+    """Generate thumbnail images of email templates for preview"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    from models import Activity
+    import os
+    import asyncio
+    from playwright.async_api import async_playwright
+    
+    activity = Activity.query.get_or_404(activity_id)
+    
+    # Email template types we support
+    template_types = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'redeemPass', 'survey_invitation']
+    
+    # Create thumbnails directory if it doesn't exist
+    thumbnail_dir = os.path.join('static', 'uploads', 'email_thumbnails')
+    os.makedirs(thumbnail_dir, exist_ok=True)
+    
+    async def generate_thumbnail(template_type):
+        """Generate a single thumbnail using Playwright"""
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch()
+                page = await browser.new_page()
+                
+                # Get the email preview HTML
+                preview_url = f"http://localhost:5000/activity/{activity_id}/email-preview?type={template_type}"
+                await page.goto(preview_url)
+                
+                # Wait for content to load
+                await page.wait_for_timeout(2000)
+                
+                # Take screenshot
+                thumbnail_path = os.path.join(thumbnail_dir, f"{activity.id}_{template_type}.jpg")
+                await page.screenshot(
+                    path=thumbnail_path,
+                    type='jpeg',
+                    quality=85,
+                    full_page=True,
+                    clip={'x': 0, 'y': 0, 'width': 600, 'height': 800}
+                )
+                
+                await browser.close()
+                return f"✅ {template_type}"
+        except Exception as e:
+            return f"❌ {template_type}: {str(e)}"
+    
+    # Generate all thumbnails
+    async def generate_all():
+        tasks = [generate_thumbnail(template_type) for template_type in template_types]
+        return await asyncio.gather(*tasks)
+    
+    try:
+        results = asyncio.run(generate_all())
+        
+        # Return results as HTML
+        html_results = f"""
+        <h2>📧 Email Thumbnail Generation Results</h2>
+        <ul>
+        {"".join(f"<li>{result}</li>" for result in results)}
+        </ul>
+        <p><a href="{url_for('email_template_customization', activity_id=activity_id)}">← Back to Email Templates</a></p>
+        """
+        return html_results
+        
+    except Exception as e:
+        return f"<h2>❌ Error generating thumbnails: {str(e)}</h2><p><a href='{url_for('email_template_customization', activity_id=activity_id)}'>← Back</a></p>"
+
+
 @app.route("/activity/<int:activity_id>/email-templates/save", methods=["POST"])
 def save_email_templates(activity_id):
     """Save email template customizations - supports both individual and bulk saves"""
