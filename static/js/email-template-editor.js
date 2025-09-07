@@ -23,7 +23,7 @@ function previewLogo(input) {
 
 // Event delegation and initialization
 document.addEventListener('DOMContentLoaded', function() {
-  initTinyMCE(); // Initialize TinyMCE
+  // Don't initialize TinyMCE globally - handled manually in modal
   document.addEventListener('change', function(e) { // Delegate file events
     if (e.target.type === 'file' && e.target.accept === 'image/*') previewLogo(e.target);
   });
