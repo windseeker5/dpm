@@ -6610,10 +6610,30 @@ def email_template_customization(activity_id):
     # Get existing customizations or initialize empty
     current_templates = activity.email_templates or {}
     
+    # Import and merge with default values
+    from utils_email_defaults import get_default_email_templates
+    defaults = get_default_email_templates()
+    
+    # For each template type, merge defaults with current values
+    templates_with_defaults = {}
+    for template_key in template_types:
+        template_defaults = defaults.get(template_key, {})
+        template_current = current_templates.get(template_key, {})
+        
+        # Merge: use current values if they exist, otherwise use defaults
+        templates_with_defaults[template_key] = {
+            'subject': template_current.get('subject') or template_defaults.get('subject', ''),
+            'title': template_current.get('title') or template_defaults.get('title', ''), 
+            'intro_text': template_current.get('intro_text') or template_defaults.get('intro_text', ''),
+            'conclusion_text': template_current.get('conclusion_text') or template_defaults.get('conclusion_text', ''),
+            # Keep other fields as-is
+            **{k: v for k, v in template_current.items() if k not in ['subject', 'title', 'intro_text', 'conclusion_text']}
+        }
+    
     return render_template("email_template_customization.html", 
                          activity=activity,
                          template_types=template_types,
-                         current_templates=current_templates)
+                         current_templates=templates_with_defaults)
 
 
 @app.route("/activity/<int:activity_id>/generate-email-thumbnails")

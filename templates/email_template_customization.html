@@ -283,9 +283,9 @@
   </div>
 </div>
 
-<!-- Email Template Customization Modal -->
-<div class="modal modal-lg fade" id="customizeModal" tabindex="-1" aria-labelledby="customizeModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+<!-- NEW CENTERED EMAIL TEMPLATE MODAL -->
+<div class="modal fade" id="customizeModal" tabindex="-1" aria-labelledby="customizeModalLabel" aria-hidden="true" style="backdrop-filter: blur(4px);">
+  <div class="modal-dialog modal-xl" style="margin: 2rem auto !important; max-width: 90vw !important; display: flex !important; align-items: center !important; min-height: calc(100vh - 4rem) !important;">
     <div class="modal-content">
       <!-- Modal Header -->
       <div class="modal-header">
@@ -297,7 +297,7 @@
       </div>
       
       <!-- Modal Body -->
-      <div class="modal-body">
+      <div class="modal-body" style="padding: 2rem 3rem;">
         <div id="customizeFormContent">
           <!-- Form content will be loaded here dynamically -->
         </div>
@@ -369,8 +369,8 @@
         <label for="modal_{{ template_key }}_intro_text" class="form-label">Introduction Text</label>
         <textarea name="{{ template_key }}_intro_text" 
                   id="modal_{{ template_key }}_intro_text"
-                  class="form-control" 
-                  rows="3"
+                  class="form-control template-textarea" 
+                  rows="5"
                   placeholder="Opening message for the email">{{ template_data.get('intro_text', '') }}</textarea>
       </div>
       
@@ -379,8 +379,8 @@
         <label for="modal_{{ template_key }}_conclusion_text" class="form-label">Conclusion Text</label>
         <textarea name="{{ template_key }}_conclusion_text" 
                   id="modal_{{ template_key }}_conclusion_text"
-                  class="form-control" 
-                  rows="3"
+                  class="form-control template-textarea" 
+                  rows="5"
                   placeholder="Closing message for the email">{{ template_data.get('conclusion_text', '') }}</textarea>
       </div>
       
@@ -468,6 +468,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const formContent = document.getElementById(`form-template-${template}`);
             if (formContent) {
                 document.getElementById('customizeFormContent').innerHTML = formContent.innerHTML;
+                
+                // Add tinymce class to textareas that should be rich text editors
+                document.querySelectorAll('#customizeModal .template-textarea').forEach(textarea => {
+                    textarea.classList.add('tinymce');
+                });
+                
+                // Initialize TinyMCE for textareas ONLY in the modal
+                setTimeout(() => {
+                    if (typeof tinymce !== 'undefined') {
+                        tinymce.remove('textarea.tinymce');
+                        tinymce.init({
+                            selector: '#customizeModal textarea.tinymce',
+                            height: 200,
+                            menubar: false,
+                            plugins: 'lists link',
+                            toolbar: 'bold italic | bullist numlist | link'
+                        });
+                    }
+                }, 100);
             }
         } else if (btn.classList.contains('preview-btn')) {
             console.log('Preview:', template, templateName);
