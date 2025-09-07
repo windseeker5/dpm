@@ -6643,22 +6643,37 @@ def generate_email_thumbnails(activity_id):
                 browser = await p.chromium.launch()
                 page = await browser.new_page()
                 
-                # Get the email preview HTML
-                preview_url = f"http://localhost:5000/activity/{activity_id}/email-preview?type={template_type}"
-                await page.goto(preview_url)
+                # Set viewport for email content
+                await page.set_viewport_size({"width": 600, "height": 1200})
                 
-                # Wait for content to load
-                await page.wait_for_timeout(2000)
+                # Get the email preview HTML (using unauthenticated route for thumbnails)
+                preview_url = f"http://localhost:5000/activity/{activity_id}/email-thumbnail-preview?type={template_type}"
+                await page.goto(preview_url, wait_until='networkidle')
                 
-                # Take screenshot
-                thumbnail_path = os.path.join(thumbnail_dir, f"{activity.id}_{template_type}.jpg")
-                await page.screenshot(
-                    path=thumbnail_path,
-                    type='jpeg',
-                    quality=85,
-                    full_page=True,
-                    clip={'x': 0, 'y': 0, 'width': 600, 'height': 800}
-                )
+                # Wait for email content to load completely
+                await page.wait_for_timeout(3000)
+                
+                # Look for the main email table (the actual email content)
+                email_table = await page.query_selector('table[width="600"]')
+                
+                if email_table:
+                    # Screenshot just the email content table
+                    thumbnail_path = os.path.join(thumbnail_dir, f"{activity.id}_{template_type}.jpg")
+                    await email_table.screenshot(
+                        path=thumbnail_path,
+                        type='jpeg',
+                        quality=85
+                    )
+                else:
+                    # Fallback: screenshot full page but focus on content area
+                    thumbnail_path = os.path.join(thumbnail_dir, f"{activity.id}_{template_type}.jpg")
+                    await page.screenshot(
+                        path=thumbnail_path,
+                        type='jpeg',
+                        quality=85,
+                        full_page=False,
+                        clip={'x': 0, 'y': 50, 'width': 600, 'height': 700}
+                    )
                 
                 await browser.close()
                 return f"✅ {template_type}"
@@ -6865,6 +6880,75 @@ def save_email_templates(activity_id):
         return redirect(url_for('email_template_customization', activity_id=activity_id))
 
 
+@app.route("/activity/<int:activity_id>/email-templates/reset", methods=["POST"])
+def reset_email_template(activity_id):
+    """Reset a specific email template to default values"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    from models import Activity
+    import json
+    
+    try:
+        activity = Activity.query.get_or_404(activity_id)
+        
+        # Get the template type from request
+        data = request.get_json()
+        if not data or 'template_type' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'Template type is required'
+            }), 400
+        
+        template_type = data['template_type']
+        
+        # Valid template types
+        valid_templates = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'redeemPass', 'survey_invitation']
+        if template_type not in valid_templates:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid template type'
+            }), 400
+        
+        # Initialize email_templates if it doesn't exist
+        if activity.email_templates is None:
+            activity.email_templates = {}
+        
+        # Clear all custom values for this template (reset to defaults)
+        if template_type in activity.email_templates:
+            template_data = activity.email_templates[template_type]
+            
+            # Clear the customizable fields while preserving any system fields
+            fields_to_reset = ['subject', 'title', 'intro_text', 'conclusion_text', 'hero_image', 'activity_logo']
+            for field in fields_to_reset:
+                if field in template_data:
+                    del template_data[field]
+            
+            # If template data is now empty, remove the entire template entry
+            if not template_data:
+                del activity.email_templates[template_type]
+            else:
+                activity.email_templates[template_type] = template_data
+        
+        # Mark the attribute as modified for SQLAlchemy
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(activity, 'email_templates')
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Template "{template_type}" has been reset to default values'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error resetting template: {str(e)}'
+        }), 500
+
+
 @app.route("/activity/<int:activity_id>/email-preview")
 def email_preview(activity_id):
     """Preview email template using compiled template with email blocks and real images"""
@@ -7004,6 +7088,162 @@ def email_preview(activity_id):
             # Fallback if no body tag found
             rendered_html = preview_banner + rendered_html
         
+        return rendered_html
+        
+    except Exception as e:
+        # Fallback to error message if template rendering fails
+        error_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Preview Error</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                .error {{ background: #ff7675; color: white; padding: 20px; border-radius: 8px; }}
+                .template-info {{ background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 8px; }}
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h2>❌ Preview Error</h2>
+                <p>Could not render template: {str(e)}</p>
+            </div>
+            <div class="template-info">
+                <h3>Template Info:</h3>
+                <p><strong>Template Type:</strong> {template_type}</p>
+                <p><strong>Template Path:</strong> {template_path}</p>
+                <p><strong>Activity:</strong> {activity.name}</p>
+                <p><strong>Context Keys:</strong> {', '.join(context.keys())}</p>
+            </div>
+        </body>
+        </html>
+        """
+        return error_html
+
+
+@app.route("/activity/<int:activity_id>/email-thumbnail-preview")
+def email_thumbnail_preview(activity_id):
+    """Unauthenticated email preview for thumbnail generation"""
+    from models import Activity
+    from utils import get_email_context, safe_template, generate_qr_code_image
+    from flask import render_template
+    from datetime import datetime
+    import os
+    import json
+    import base64
+    
+    activity = Activity.query.get_or_404(activity_id)
+    template_type = request.args.get('type', 'newPass')
+    
+    # Create sample context data for preview
+    base_context = {
+        'user_name': 'John Doe',
+        'user_email': 'john.doe@example.com',
+        'activity_name': activity.name,
+        'pass_code': 'SAMPLE123',
+        'amount': '$50.00'
+    }
+    
+    # Add email blocks for templates that need them
+    if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
+        # Create sample pass data using proper class structure
+        class PassData:
+            def __init__(self):
+                self.activity = type('obj', (object,), {
+                    'name': activity.name,
+                    'id': activity.id
+                })()
+                self.user = type('obj', (object,), {
+                    'name': 'John Doe',
+                    'email': 'john.doe@example.com',
+                    'phone_number': '555-0123'
+                })()
+                self.pass_type = type('obj', (object,), {
+                    'name': 'Sample Pass',
+                    'price': 50.00
+                })()
+                self.created_dt = datetime.now()
+                self.sold_amt = 50.00
+                self.paid = True
+                self.pass_code = 'SAMPLE123'
+                self.remaining_activities = 5
+                self.uses_remaining = 5
+        
+        pass_data = PassData()
+        
+        # Render email blocks
+        base_context['owner_html'] = render_template(
+            "email_blocks/owner_card_inline.html", 
+            pass_data=pass_data
+        )
+        
+        # Add history for ALL templates that need it (not just redeemPass)
+        history = [
+            {'date': '2025-01-09', 'action': 'Pass Created'},
+            {'date': '2025-01-10', 'action': 'Payment Received'}
+        ]
+        if template_type == 'redeemPass':
+            history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
+        
+        base_context['history_html'] = render_template(
+            "email_blocks/history_table_inline.html", 
+            history=history
+        )
+    
+    # Get merged context with activity customizations (preserves email blocks)
+    context = get_email_context(activity, template_type, base_context)
+    
+    # Get the compiled template path
+    template_path = safe_template(template_type)
+    
+    try:
+        # Render the compiled template with the merged context
+        rendered_html = render_template(template_path, **context)
+        
+        # Load inline images and convert to data URIs for browser display
+        compiled_folder = template_path.replace('/index.html', '')
+        json_path = os.path.join('templates', compiled_folder, 'inline_images.json')
+        
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                inline_images_data = json.load(f)
+                
+                # Replace cid: references with data: URIs
+                for img_id, base64_data in inline_images_data.items():
+                    # Determine image type (most are PNG)
+                    mime_type = 'image/png'
+                    if img_id in ['facebook', 'instagram']:
+                        mime_type = 'image/png'
+                    
+                    # Replace cid:image_id with data URI
+                    cid_ref = f'cid:{img_id}'
+                    data_uri = f'data:{mime_type};base64,{base64_data}'
+                    rendered_html = rendered_html.replace(cid_ref, data_uri)
+        
+        # Add logo image as data URI
+        logo_path = None
+        if hasattr(activity, 'logo_filename') and activity.logo_filename:
+            logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
+        if not logo_path or not os.path.exists(logo_path):
+            # Use organization logo from settings as fallback instead of hardcoded Minipass logo
+            from utils import get_setting
+            org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+            logo_path = os.path.join('static', 'uploads', org_logo)
+        
+        if os.path.exists(logo_path):
+            with open(logo_path, 'rb') as f:
+                logo_base64 = base64.b64encode(f.read()).decode('utf-8')
+                # Replace both logo and logo_image references
+                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
+                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
+        
+        # Generate sample QR code for preview
+        qr_code_data = generate_qr_code_image('SAMPLE123')
+        if qr_code_data:
+            qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
+            rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
+        
+        # No preview banner for thumbnails - we want clean images
         return rendered_html
         
     except Exception as e:
