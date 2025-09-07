@@ -7059,8 +7059,17 @@ def email_preview(activity_id):
             with open(json_path, 'r') as f:
                 inline_images_data = json.load(f)
                 
+                # Check if there's a custom hero image that should override the ticket
+                hero_filename = f"{activity.id}_{template_type}_hero.png"
+                hero_path = os.path.join('static', 'uploads', hero_filename)
+                has_custom_hero = os.path.exists(hero_path)
+                
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
+                    # Skip ticket if we have a custom hero image
+                    if img_id == 'ticket' and has_custom_hero:
+                        continue
+                        
                     # Determine image type (most are PNG)
                     mime_type = 'image/png'
                     if img_id in ['facebook', 'instagram']:
@@ -7070,6 +7079,12 @@ def email_preview(activity_id):
                     cid_ref = f'cid:{img_id}'
                     data_uri = f'data:{mime_type};base64,{base64_data}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
+                
+                # Now handle custom hero image if it exists
+                if has_custom_hero:
+                    with open(hero_path, 'rb') as f:
+                        hero_base64 = base64.b64encode(f.read()).decode('utf-8')
+                        rendered_html = rendered_html.replace('cid:ticket', f'data:image/png;base64,{hero_base64}')
         
         # Add logo image as data URI
         logo_path = None
@@ -7087,6 +7102,7 @@ def email_preview(activity_id):
                 # Replace both logo and logo_image references
                 rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
                 rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
+        
         
         # Generate sample QR code for preview
         qr_code_data = generate_qr_code_image('SAMPLE123')
@@ -7228,8 +7244,17 @@ def email_thumbnail_preview(activity_id):
             with open(json_path, 'r') as f:
                 inline_images_data = json.load(f)
                 
+                # Check if there's a custom hero image that should override the ticket
+                hero_filename = f"{activity.id}_{template_type}_hero.png"
+                hero_path = os.path.join('static', 'uploads', hero_filename)
+                has_custom_hero = os.path.exists(hero_path)
+                
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
+                    # Skip ticket if we have a custom hero image
+                    if img_id == 'ticket' and has_custom_hero:
+                        continue
+                        
                     # Determine image type (most are PNG)
                     mime_type = 'image/png'
                     if img_id in ['facebook', 'instagram']:
@@ -7239,6 +7264,12 @@ def email_thumbnail_preview(activity_id):
                     cid_ref = f'cid:{img_id}'
                     data_uri = f'data:{mime_type};base64,{base64_data}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
+                
+                # Now handle custom hero image if it exists
+                if has_custom_hero:
+                    with open(hero_path, 'rb') as f:
+                        hero_base64 = base64.b64encode(f.read()).decode('utf-8')
+                        rendered_html = rendered_html.replace('cid:ticket', f'data:image/png;base64,{hero_base64}')
         
         # Add logo image as data URI
         logo_path = None
@@ -7422,8 +7453,17 @@ def email_preview_live(activity_id):
             with open(json_path, 'r') as f:
                 inline_images_data = json.load(f)
                 
+                # Check if there's a custom hero image that should override the ticket
+                hero_filename = f"{activity.id}_{template_type}_hero.png"
+                hero_path = os.path.join('static', 'uploads', hero_filename)
+                has_custom_hero = os.path.exists(hero_path)
+                
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
+                    # Skip ticket if we have a custom hero image
+                    if img_id == 'ticket' and has_custom_hero:
+                        continue
+                        
                     # Determine image type (most are PNG)
                     mime_type = 'image/png'
                     if img_id in ['facebook', 'instagram']:
@@ -7433,6 +7473,12 @@ def email_preview_live(activity_id):
                     cid_ref = f'cid:{img_id}'
                     data_uri = f'data:{mime_type};base64,{base64_data}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
+                
+                # Now handle custom hero image if it exists
+                if has_custom_hero:
+                    with open(hero_path, 'rb') as f:
+                        hero_base64 = base64.b64encode(f.read()).decode('utf-8')
+                        rendered_html = rendered_html.replace('cid:ticket', f'data:image/png;base64,{hero_base64}')
         
         # Add logo image as data URI
         logo_path = None
@@ -7450,6 +7496,48 @@ def email_preview_live(activity_id):
                 # Replace both logo and logo_image references
                 rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
                 rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
+        
+        # Handle uploaded hero image for live preview
+        hero_image_key = f'{template_type}_hero_image'
+        if hero_image_key in request.files:
+            hero_file = request.files[hero_image_key]
+            if hero_file and hero_file.filename:
+                try:
+                    # Read the uploaded file directly into memory for preview
+                    hero_data = hero_file.read()
+                    hero_base64 = base64.b64encode(hero_data).decode('utf-8')
+                    
+                    # Determine mime type based on file extension
+                    file_ext = hero_file.filename.lower().split('.')[-1]
+                    if file_ext in ['jpg', 'jpeg']:
+                        mime_type = 'image/jpeg'
+                    elif file_ext == 'png':
+                        mime_type = 'image/png'
+                    elif file_ext == 'gif':
+                        mime_type = 'image/gif'
+                    elif file_ext == 'webp':
+                        mime_type = 'image/webp'
+                    else:
+                        mime_type = 'image/png'  # Default fallback
+                    
+                    # Replace hero image reference with uploaded image data URI
+                    hero_data_uri = f'data:{mime_type};base64,{hero_base64}'
+                    rendered_html = rendered_html.replace('cid:hero_image', hero_data_uri)
+                    
+                    # Reset file pointer in case it's used elsewhere
+                    hero_file.seek(0)
+                except Exception as e:
+                    print(f"Error processing hero image for preview: {e}")
+        
+        # If no uploaded hero image, try to use existing saved hero image
+        else:
+            # Check if there's a saved hero image for this template
+            hero_filename = f"{activity.id}_{template_type}_hero.png"
+            hero_path = os.path.join('static', 'uploads', hero_filename)
+            if os.path.exists(hero_path):
+                with open(hero_path, 'rb') as f:
+                    hero_base64 = base64.b64encode(f.read()).decode('utf-8')
+                    rendered_html = rendered_html.replace('cid:hero_image', f'data:image/png;base64,{hero_base64}')
         
         # Generate sample QR code for preview
         qr_code_data = generate_qr_code_image('SAMPLE123')
