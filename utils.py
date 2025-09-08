@@ -55,19 +55,96 @@ import bleach
 from urllib.parse import urlparse
 
 
-def get_activity_hero_image(activity, template_type):
+def get_template_default_hero(template_type):
     """
-    Hero image selection with activity image as default:
-    1. Activity image (default - shown as hero rectangle)
-    2. Custom uploaded hero (override option)
-    3. Template default (fallback)
+    Load the default hero image from compiled template's inline_images.json
     
-    Returns: tuple (image_data, is_custom, needs_circle_style)
+    Args:
+        template_type: Type of template (newPass, paymentReceived, etc.)
+        
+    Returns:
+        bytes: Hero image data, or None if not found
     """
     import os
     import json
+    import base64
     
-    # Priority 1: Use activity image as hero (DEFAULT)
+    # Map template types to their compiled folders
+    template_map = {
+        'newPass': 'newPass_compiled',
+        'paymentReceived': 'paymentReceived_compiled',
+        'latePayment': 'latePayment_compiled',
+        'signup': 'signup_compiled',
+        'waitlist': 'waitlist_compiled'
+    }
+    
+    compiled_folder = template_map.get(template_type)
+    if not compiled_folder:
+        print(f"❌ Unknown template type: {template_type}")
+        return None
+    
+    # Load inline_images.json from compiled template
+    json_path = os.path.join('templates', 'email_templates', compiled_folder, 'inline_images.json')
+    
+    if not os.path.exists(json_path):
+        print(f"❌ Template JSON not found: {json_path}")
+        return None
+    
+    try:
+        with open(json_path, 'r') as f:
+            compiled_images = json.load(f)
+        
+        # Map template types to their hero image keys
+        hero_key_map = {
+            'newPass': 'hero_new_pass',
+            'paymentReceived': 'hero_payment_received', 
+            'latePayment': 'hero_late_payment',
+            'signup': 'hero_signup',
+            'waitlist': 'hero_waitlist'
+        }
+        
+        hero_key = hero_key_map.get(template_type)
+        if not hero_key or hero_key not in compiled_images:
+            print(f"❌ Hero key '{hero_key}' not found in {json_path}")
+            return None
+        
+        # Decode base64 image data
+        hero_base64 = compiled_images[hero_key]
+        hero_data = base64.b64decode(hero_base64)
+        print(f"📦 Loaded template default hero: {template_type} -> {hero_key}")
+        return hero_data
+        
+    except Exception as e:
+        print(f"❌ Error loading template hero: {e}")
+        return None
+
+
+def get_activity_hero_image(activity, template_type):
+    """
+    Hero image selection with CORRECT priority order:
+    1. Custom uploaded hero (highest priority)
+    2. Compiled template default (proper default) 
+    3. Activity image (last resort only)
+    
+    Returns: tuple (image_data, is_custom, is_template_default)
+    """
+    import os
+    
+    # Priority 1: Check for custom uploaded hero FIRST
+    if activity:
+        custom_hero_path = f"static/uploads/{activity.id}_{template_type}_hero.png"
+        if os.path.exists(custom_hero_path):
+            with open(custom_hero_path, "rb") as f:
+                print(f"✅ Using custom hero override for {template_type}")
+                return f.read(), True, False
+    
+    # Priority 2: Load compiled template default
+    template_hero_data = get_template_default_hero(template_type)
+    if template_hero_data:
+        print(f"📦 Using compiled template default hero for {template_type}")
+        return template_hero_data, False, True  # is_template_default=True
+    
+    # Priority 3: Fall back to activity image only if no template exists (last resort)
     if activity and activity.image_filename:
         # Try both locations: main uploads and activity_images subdirectory
         activity_image_paths = [
@@ -77,28 +154,12 @@ def get_activity_hero_image(activity, template_type):
         
         for activity_image_path in activity_image_paths:
             if os.path.exists(activity_image_path):
-                # Check if user has uploaded custom override
-                custom_hero_path = f"static/uploads/{activity.id}_{template_type}_hero.png"
-                if os.path.exists(custom_hero_path):
-                    with open(custom_hero_path, "rb") as f:
-                        print(f"✅ Using custom hero override for {template_type}")
-                        return f.read(), True, False
-                
-                # Use activity image as default hero
                 with open(activity_image_path, "rb") as f:
-                    print(f"🎨 Using activity image as default hero for {template_type}: {activity.image_filename}")
-                    return f.read(), False, False  # Activity image displayed as rectangle, not circle
+                    print(f"⚠️ Using activity image as fallback hero for {template_type}: {activity.image_filename}")
+                    return f.read(), False, False  # is_template_default=False
     
-    # Priority 2: Check for custom hero if no activity image
-    if activity:
-        custom_hero_path = f"static/uploads/{activity.id}_{template_type}_hero.png"
-        if os.path.exists(custom_hero_path):
-            with open(custom_hero_path, "rb") as f:
-                print(f"✅ Using custom hero (no activity image) for {template_type}")
-                return f.read(), True, False
-    
-    # Priority 3: Return None to use template default
-    print(f"📦 Using template default hero for {template_type}")
+    # No hero image found
+    print(f"❌ No hero image found for {template_type}")
     return None, False, False
 
 
@@ -1890,21 +1951,29 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     inline_images['qr_code'] = qr_data
     
     # Use new hero image selection system
-    hero_data, is_custom, needs_circle_style = get_activity_hero_image(activity, template_type)
-    if hero_data:
-        # Replace the appropriate hero image based on template type
+    hero_data, is_custom, is_template_default = get_activity_hero_image(activity, template_type)
+    if hero_data and not is_template_default:
+        # Replace template images with custom uploads or activity fallbacks
+        # Template defaults are already loaded in inline_images from the JSON
         hero_cid_map = {
-            'newPass': 'ticket',
-            'paymentReceived': 'currency-dollar', 
-            'latePayment': 'thumb-down'
+            'newPass': 'hero_new_pass',
+            'paymentReceived': 'hero_payment_received', 
+            'latePayment': 'hero_late_payment',
+            'signup': 'hero_signup',
+            'waitlist': 'hero_waitlist'
         }
         
-        hero_cid = hero_cid_map.get(template_type, 'ticket')
-        inline_images[hero_cid] = hero_data  # Replace compiled hero image
-        
-        print(f"✅ Hero image applied: template={template_type}, cid={hero_cid}, custom={is_custom}")
+        hero_cid = hero_cid_map.get(template_type)
+        if hero_cid:
+            inline_images[hero_cid] = hero_data  # Replace template default with custom/fallback
+            hero_type = "custom" if is_custom else "activity fallback"
+            print(f"✅ {hero_type} hero image applied: template={template_type}, cid={hero_cid}")
+        else:
+            print(f"⚠️ No CID mapping for template type: {template_type}")
+    elif hero_data and is_template_default:
+        print(f"📦 Using template default hero for {template_type} (already loaded)")
     else:
-        print(f"📦 Using template default hero for {template_type}")
+        print(f"📦 No hero image found for {template_type}")
     
     # Check for activity-specific owner logo (replaces 'logo' CID)
     activity_id = pass_data.activity.id if pass_data.activity else None
