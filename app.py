@@ -7695,6 +7695,7 @@ def test_email_template(activity_id):
     try:
         activity = Activity.query.get_or_404(activity_id)
         template_type = request.form.get('template_type', 'newPass')
+        test_email = request.form.get('test_email', 'kdresdell@gmail.com')
         
         print(f"📧 Activity: {activity.name}")
         print(f"📧 Template type: {template_type}")
@@ -7821,7 +7822,7 @@ def test_email_template(activity_id):
         # Send using compiled template
         result = send_email(
             subject=subject,
-            to_email="kdresdell@gmail.com",
+            to_email=test_email,
             template_name=template_path,
             context=context,
             inline_images=inline_images if inline_images else None
@@ -7829,25 +7830,25 @@ def test_email_template(activity_id):
         
         print(f"\n✅ send_email() RETURNED: {result}")
         
-        flash(f"✅ Test email sent using compiled template to kdresdell@gmail.com", "success")
+        flash(f"✅ Test email sent using compiled template to {test_email}", "success")
         
         # Log it for debugging
-        print(f"\n📬 TEST EMAIL SENT: {subject} to kdresdell@gmail.com")
+        print(f"\n📬 TEST EMAIL SENT: {subject} to {test_email}")
         print(f"📬 Template: {template_path}")
         print(f"📬 Return value: {result}")
         print("="*80 + "\n")
         sys.stdout.flush()
         
+        return jsonify({'success': True, 'message': f'Test email sent successfully to {test_email}'})
+        
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
-        flash(f"❌ Error: {str(e)}", "error")
         print(f"\n❌ ERROR SENDING TEST EMAIL:")
         print(error_detail)
         print("="*80 + "\n")
         sys.stdout.flush()  # Force flush output
-    
-    return redirect(url_for('email_template_customization', activity_id=activity_id))
+        return jsonify({'success': False, 'message': str(e)})
 
 
 # ================================
