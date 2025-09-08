@@ -77,25 +77,6 @@
                 <i class="ti ti-edit"></i>
               </button>
               
-              <button type="button" class="action-btn preview-btn" 
-                      data-action="preview" 
-                      data-template="{{ template_key }}"
-                      data-template-name="{{ template_name }}"
-                      data-bs-toggle="modal" 
-                      data-bs-target="#previewModal"
-                      data-template-type="{{ template_key }}"
-                      title="Preview">
-                <i class="ti ti-eye"></i>
-              </button>
-              
-              <button type="button" class="action-btn test-btn" 
-                      data-action="test" 
-                      data-template="{{ template_key }}"
-                      onclick="document.getElementById('test-email-form-{{ template_key }}').submit();"
-                      title="Send Test">
-                <i class="ti ti-mail"></i>
-              </button>
-              
               <button type="button" class="action-btn reset-btn" 
                       data-action="reset" 
                       data-template="{{ template_key }}"
@@ -313,26 +294,30 @@
                placeholder="Leave empty to use system default">
       </div>
       
-      <!-- Hero Image (moved from global settings) -->
+      <!-- Hero Image -->
       <div class="mb-3">
         <label class="form-label">Hero Image</label>
-        <div class="d-flex align-items-center gap-2">
-          <div class="current-image-preview" id="modal-hero-preview-{{ template_key }}">
-            {% set hero_filename = activity.id|string + '_' + template_key + '_hero.png' %}
-            <img id="modal-hero-img-preview-{{ template_key }}" 
-                 src="{{ url_for('get_hero_image', activity_id=activity.id, template_type=template_key) }}" 
-                 alt="Current hero image" 
-                 style="width: 100px; height: 60px; object-fit: cover; border: 1px solid #dee2e6; border-radius: 6px; background: white;"
-                 onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}'; this.style.backgroundColor='#f8f9fa';">
-          </div>
-          <div class="flex-fill">
-            <input type="file" 
-                   name="{{ template_key }}_hero_image" 
-                   id="modal_{{ template_key }}_hero_image"
-                   class="form-control" 
-                   accept="image/*"
-                   onchange="previewImage(this, 'modal-hero-img-preview-{{ template_key }}')">
-            <small class="form-hint d-block">Banner image shown at top of email (replaces ticket icon)</small>
+        <div class="hero-image-section">
+          <div class="d-flex align-items-start gap-3">
+            <div class="hero-image-preview">
+              <img id="modal-hero-img-preview-{{ template_key }}" 
+                   src="{{ url_for('get_hero_image', activity_id=activity.id, template_type=template_key) }}" 
+                   alt="Current hero image" 
+                   class="hero-preview-img"
+                   onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}';">
+            </div>
+            <div class="hero-upload-controls">
+              <input type="file" 
+                     name="{{ template_key }}_hero_image" 
+                     id="modal_{{ template_key }}_hero_image"
+                     class="hero-file-input" 
+                     accept="image/*"
+                     onchange="previewImage(this, 'modal-hero-img-preview-{{ template_key }}')">
+              <label for="modal_{{ template_key }}_hero_image" class="btn btn-outline-primary btn-sm hero-upload-btn">
+                <i class="ti ti-upload me-1"></i>
+                Choose Image
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -463,13 +448,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     }
                 }, 100);
-            }
-        } else if (btn.classList.contains('preview-btn')) {
-            console.log('Preview:', template, templateName);
-            // Update preview iframe URL
-            const iframe = document.getElementById('previewIframe');
-            if (iframe) {
-                iframe.src = `/activity/{{ activity.id }}/email-preview?type=${template}`;
             }
         } else if (btn.classList.contains('reset-btn')) {
             console.log('Reset:', template, templateName);

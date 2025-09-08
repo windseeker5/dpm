@@ -7503,33 +7503,8 @@ def email_preview_live(activity_id):
             with open(json_path, 'r') as f:
                 inline_images_data = json.load(f)
                 
-                # Use proper hero image logic for live preview (prioritize uploaded, then saved)
-                from utils import get_activity_hero_image
-                if uploaded_hero_data is not None:
-                    # Use uploaded hero data from form for live preview
-                    hero_data = uploaded_hero_data
-                    has_custom_hero = True
-                else:
-                    # Use saved hero image
-                    hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
-                    has_custom_hero = hero_data is not None and not is_template_default
-                    print(f"🔍 DEBUG: get_activity_hero_image returned - data_exists: {hero_data is not None}, is_custom: {is_custom_hero}, is_template_default: {is_template_default}")
-                    print(f"🔍 DEBUG: calculated has_custom_hero = {has_custom_hero}")
-                
-                # Auto-detect hero CID references from the template
-                hero_cids = []
-                import re
-                # Always detect hero CIDs, regardless of whether custom hero exists
-                cid_pattern = r'cid:([a-zA-Z_][a-zA-Z0-9_]*(?:hero|ticket|main|banner|image)[a-zA-Z0-9_]*)'
-                matches = re.findall(cid_pattern, rendered_html, re.IGNORECASE)
-                hero_cids = list(set(matches))  # Remove duplicates
-                
-                # Replace cid: references with data: URIs
+                # Replace cid: references with data: URIs (template defaults first)
                 for img_id, base64_data in inline_images_data.items():
-                    # Skip hero-related images ONLY if we have a custom hero image
-                    if (img_id in hero_cids and has_custom_hero):
-                        continue
-                        
                     # Determine image type (most are PNG)
                     mime_type = 'image/png'
                     if img_id in ['facebook', 'instagram']:
@@ -7540,12 +7515,25 @@ def email_preview_live(activity_id):
                     data_uri = f'data:{mime_type};base64,{base64_data}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
                 
-                # Now handle custom hero image if it exists
-                if has_custom_hero:
-                    hero_base64 = base64.b64encode(hero_data).decode('utf-8')
-                    # Replace all detected hero CID references with custom hero
+                # OVERRIDE: If hero uploaded, replace hero images with uploaded version (preserves defaults)
+                if uploaded_hero_data is not None:
+                    hero_base64 = base64.b64encode(uploaded_hero_data).decode('utf-8')
+                    # Find and replace hero images in the already-processed HTML
+                    import re
+                    cid_pattern = r'cid:([a-zA-Z_][a-zA-Z0-9_]*(?:hero|ticket|main|banner|image)[a-zA-Z0-9_]*)'
+                    matches = re.findall(cid_pattern, rendered_html, re.IGNORECASE)
+                    hero_cids = list(set(matches))  # Remove duplicates
+                    
+                    # Replace hero data URIs with uploaded hero
+                    hero_data_uri = f'data:image/png;base64,{hero_base64}'
                     for hero_cid in hero_cids:
-                        rendered_html = rendered_html.replace(f'cid:{hero_cid}', f'data:image/png;base64,{hero_base64}')
+                        # Find existing hero data URIs and replace them
+                        hero_pattern = rf'src="data:image/png;base64,[^"]*"([^>]*class="[^"]*hero[^"]*"[^>]*>)'
+                        def replace_hero_src(match):
+                            return f'src="{hero_data_uri}"{match.group(1)}'
+                        rendered_html = re.sub(hero_pattern, replace_hero_src, rendered_html, flags=re.IGNORECASE)
+                
+                # Hero image is already handled in the compilation step above
         
         # Add logo image as data URI
         logo_path = None

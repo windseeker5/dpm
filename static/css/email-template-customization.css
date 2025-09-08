@@ -254,7 +254,7 @@
 
 .form-control:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.125rem rgba(32, 107, 196, 0.25);
+  outline: none;
 }
 
 .form-control::placeholder {
@@ -910,10 +910,7 @@ textarea.form-control {
     box-shadow: var(--shadow-md);
   }
   
-  /* Enhanced form experience */
-  .form-control:focus {
-    transform: scale(1.02);
-  }
+  /* Enhanced form experience - removed transform effects */
 }
 
 /* ==== LANDSCAPE MOBILE STYLES ==== */
@@ -1075,7 +1072,6 @@ textarea.form-control {
 
 .form-control:focus {
   border-color: #206bc4;
-  box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.1);
   outline: none;
 }
 
@@ -1621,7 +1617,6 @@ textarea.form-control {
 
 #customizeModal .form-control:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.1);
   outline: none;
 }
 
@@ -1766,6 +1761,78 @@ textarea.form-control {
 
 .customize-btn:focus {
   box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.3);
+}
+
+/* ==== HERO IMAGE UPLOAD STYLES ==== */
+
+.hero-image-section {
+  padding: 1rem;
+  background-color: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.hero-image-preview {
+  flex-shrink: 0;
+}
+
+.hero-preview-img {
+  width: 120px;
+  height: 75px;
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: white;
+  display: block;
+}
+
+.hero-upload-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hero-file-input {
+  display: none;
+}
+
+.hero-upload-btn {
+  align-self: flex-start;
+  min-width: 120px;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  background: white;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.hero-upload-btn:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.hero-upload-btn i {
+  font-size: 0.875rem;
+}
+
+/* Mobile responsive hero image */
+@media (max-width: 767px) {
+  .hero-image-section .d-flex {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .hero-upload-controls {
+    align-items: center;
+  }
+  
+  .hero-upload-btn {
+    min-width: 140px;
+  }
 }
 
 /* ==== PRINT STYLES ==== */
