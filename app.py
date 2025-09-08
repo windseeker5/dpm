@@ -6950,6 +6950,25 @@ def reset_email_template(activity_id):
             else:
                 activity.email_templates[template_type] = template_data
         
+        # CRITICAL FIX: Delete the physical hero image file when resetting
+        import os
+        hero_file_path = f"static/uploads/{activity_id}_{template_type}_hero.png"
+        if os.path.exists(hero_file_path):
+            try:
+                os.remove(hero_file_path)
+                print(f"✅ Deleted custom hero image file: {hero_file_path}")
+            except Exception as e:
+                print(f"⚠️ Could not delete hero image file {hero_file_path}: {e}")
+        
+        # Also delete owner logo file when resetting if this is the first template (contains global settings)
+        owner_logo_path = f"static/uploads/{activity_id}_owner_logo.png"  
+        if template_type == 'newPass' and os.path.exists(owner_logo_path):
+            try:
+                os.remove(owner_logo_path)
+                print(f"✅ Deleted custom owner logo file: {owner_logo_path}")
+            except Exception as e:
+                print(f"⚠️ Could not delete owner logo file {owner_logo_path}: {e}")
+        
         # Mark the attribute as modified for SQLAlchemy
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(activity, 'email_templates')
@@ -7059,15 +7078,23 @@ def email_preview(activity_id):
             with open(json_path, 'r') as f:
                 inline_images_data = json.load(f)
                 
-                # Check if there's a custom hero image that should override the ticket
-                hero_filename = f"{activity.id}_{template_type}_hero.png"
-                hero_path = os.path.join('static', 'uploads', hero_filename)
-                has_custom_hero = os.path.exists(hero_path)
+                # Use the proper hero image utility function to determine current hero
+                from utils import get_activity_hero_image
+                hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
+                has_custom_hero = hero_data is not None and is_custom_hero
+                
+                # Auto-detect hero CID references from the template
+                hero_cids = []
+                import re
+                # Always detect hero CIDs, regardless of whether custom hero exists
+                cid_pattern = r'cid:([a-zA-Z_][a-zA-Z0-9_]*(?:hero|ticket|main|banner|image)[a-zA-Z0-9_]*)'
+                matches = re.findall(cid_pattern, rendered_html, re.IGNORECASE)
+                hero_cids = list(set(matches))  # Remove duplicates
                 
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
-                    # Skip ticket if we have a custom hero image
-                    if img_id == 'ticket' and has_custom_hero:
+                    # Skip hero-related images ONLY if we have a custom hero image
+                    if (img_id in hero_cids and has_custom_hero):
                         continue
                         
                     # Determine image type (most are PNG)
@@ -7082,9 +7109,10 @@ def email_preview(activity_id):
                 
                 # Now handle custom hero image if it exists
                 if has_custom_hero:
-                    with open(hero_path, 'rb') as f:
-                        hero_base64 = base64.b64encode(f.read()).decode('utf-8')
-                        rendered_html = rendered_html.replace('cid:ticket', f'data:image/png;base64,{hero_base64}')
+                    hero_base64 = base64.b64encode(hero_data).decode('utf-8')
+                    # Replace all detected hero CID references with custom hero
+                    for hero_cid in hero_cids:
+                        rendered_html = rendered_html.replace(f'cid:{hero_cid}', f'data:image/png;base64,{hero_base64}')
         
         # Add logo image as data URI
         logo_path = None
@@ -7244,15 +7272,23 @@ def email_thumbnail_preview(activity_id):
             with open(json_path, 'r') as f:
                 inline_images_data = json.load(f)
                 
-                # Check if there's a custom hero image that should override the ticket
-                hero_filename = f"{activity.id}_{template_type}_hero.png"
-                hero_path = os.path.join('static', 'uploads', hero_filename)
-                has_custom_hero = os.path.exists(hero_path)
+                # Use the proper hero image utility function to determine current hero
+                from utils import get_activity_hero_image
+                hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
+                has_custom_hero = hero_data is not None and is_custom_hero
+                
+                # Auto-detect hero CID references from the template
+                hero_cids = []
+                import re
+                # Always detect hero CIDs, regardless of whether custom hero exists
+                cid_pattern = r'cid:([a-zA-Z_][a-zA-Z0-9_]*(?:hero|ticket|main|banner|image)[a-zA-Z0-9_]*)'
+                matches = re.findall(cid_pattern, rendered_html, re.IGNORECASE)
+                hero_cids = list(set(matches))  # Remove duplicates
                 
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
-                    # Skip ticket if we have a custom hero image
-                    if img_id == 'ticket' and has_custom_hero:
+                    # Skip hero-related images ONLY if we have a custom hero image
+                    if (img_id in hero_cids and has_custom_hero):
                         continue
                         
                     # Determine image type (most are PNG)
@@ -7267,9 +7303,10 @@ def email_thumbnail_preview(activity_id):
                 
                 # Now handle custom hero image if it exists
                 if has_custom_hero:
-                    with open(hero_path, 'rb') as f:
-                        hero_base64 = base64.b64encode(f.read()).decode('utf-8')
-                        rendered_html = rendered_html.replace('cid:ticket', f'data:image/png;base64,{hero_base64}')
+                    hero_base64 = base64.b64encode(hero_data).decode('utf-8')
+                    # Replace all detected hero CID references with custom hero
+                    for hero_cid in hero_cids:
+                        rendered_html = rendered_html.replace(f'cid:{hero_cid}', f'data:image/png;base64,{hero_base64}')
         
         # Add logo image as data URI
         logo_path = None
@@ -7445,6 +7482,19 @@ def email_preview_live(activity_id):
         # Render the compiled template with the merged context
         rendered_html = render_template(template_path, **context)
         
+        # Handle uploaded hero image from form data BEFORE processing default images
+        uploaded_hero_data = None
+        hero_file_key = f'{template_type}_hero_image'
+        if hero_file_key in request.files:
+            hero_file = request.files[hero_file_key]
+            if hero_file and hero_file.filename:
+                try:
+                    # Read uploaded file data directly without saving to disk
+                    hero_file.seek(0)  # Reset file pointer
+                    uploaded_hero_data = hero_file.read()
+                except Exception as e:
+                    print(f"Error reading uploaded hero file: {e}")
+        
         # Load inline images and convert to data URIs for browser display
         compiled_folder = template_path.replace('/index.html', '')
         json_path = os.path.join('templates', compiled_folder, 'inline_images.json')
@@ -7453,15 +7503,31 @@ def email_preview_live(activity_id):
             with open(json_path, 'r') as f:
                 inline_images_data = json.load(f)
                 
-                # Check if there's a custom hero image that should override the ticket
-                hero_filename = f"{activity.id}_{template_type}_hero.png"
-                hero_path = os.path.join('static', 'uploads', hero_filename)
-                has_custom_hero = os.path.exists(hero_path)
+                # Use proper hero image logic for live preview (prioritize uploaded, then saved)
+                from utils import get_activity_hero_image
+                if uploaded_hero_data is not None:
+                    # Use uploaded hero data from form for live preview
+                    hero_data = uploaded_hero_data
+                    has_custom_hero = True
+                else:
+                    # Use saved hero image
+                    hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
+                    has_custom_hero = hero_data is not None and not is_template_default
+                    print(f"🔍 DEBUG: get_activity_hero_image returned - data_exists: {hero_data is not None}, is_custom: {is_custom_hero}, is_template_default: {is_template_default}")
+                    print(f"🔍 DEBUG: calculated has_custom_hero = {has_custom_hero}")
+                
+                # Auto-detect hero CID references from the template
+                hero_cids = []
+                import re
+                # Always detect hero CIDs, regardless of whether custom hero exists
+                cid_pattern = r'cid:([a-zA-Z_][a-zA-Z0-9_]*(?:hero|ticket|main|banner|image)[a-zA-Z0-9_]*)'
+                matches = re.findall(cid_pattern, rendered_html, re.IGNORECASE)
+                hero_cids = list(set(matches))  # Remove duplicates
                 
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
-                    # Skip ticket if we have a custom hero image
-                    if img_id == 'ticket' and has_custom_hero:
+                    # Skip hero-related images ONLY if we have a custom hero image
+                    if (img_id in hero_cids and has_custom_hero):
                         continue
                         
                     # Determine image type (most are PNG)
@@ -7476,9 +7542,10 @@ def email_preview_live(activity_id):
                 
                 # Now handle custom hero image if it exists
                 if has_custom_hero:
-                    with open(hero_path, 'rb') as f:
-                        hero_base64 = base64.b64encode(f.read()).decode('utf-8')
-                        rendered_html = rendered_html.replace('cid:ticket', f'data:image/png;base64,{hero_base64}')
+                    hero_base64 = base64.b64encode(hero_data).decode('utf-8')
+                    # Replace all detected hero CID references with custom hero
+                    for hero_cid in hero_cids:
+                        rendered_html = rendered_html.replace(f'cid:{hero_cid}', f'data:image/png;base64,{hero_base64}')
         
         # Add logo image as data URI
         logo_path = None
@@ -7497,47 +7564,8 @@ def email_preview_live(activity_id):
                 rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
                 rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
         
-        # Handle uploaded hero image for live preview
-        hero_image_key = f'{template_type}_hero_image'
-        if hero_image_key in request.files:
-            hero_file = request.files[hero_image_key]
-            if hero_file and hero_file.filename:
-                try:
-                    # Read the uploaded file directly into memory for preview
-                    hero_data = hero_file.read()
-                    hero_base64 = base64.b64encode(hero_data).decode('utf-8')
-                    
-                    # Determine mime type based on file extension
-                    file_ext = hero_file.filename.lower().split('.')[-1]
-                    if file_ext in ['jpg', 'jpeg']:
-                        mime_type = 'image/jpeg'
-                    elif file_ext == 'png':
-                        mime_type = 'image/png'
-                    elif file_ext == 'gif':
-                        mime_type = 'image/gif'
-                    elif file_ext == 'webp':
-                        mime_type = 'image/webp'
-                    else:
-                        mime_type = 'image/png'  # Default fallback
-                    
-                    # Replace hero image reference with uploaded image data URI
-                    hero_data_uri = f'data:{mime_type};base64,{hero_base64}'
-                    rendered_html = rendered_html.replace('cid:hero_image', hero_data_uri)
-                    
-                    # Reset file pointer in case it's used elsewhere
-                    hero_file.seek(0)
-                except Exception as e:
-                    print(f"Error processing hero image for preview: {e}")
-        
-        # If no uploaded hero image, try to use existing saved hero image
-        else:
-            # Check if there's a saved hero image for this template
-            hero_filename = f"{activity.id}_{template_type}_hero.png"
-            hero_path = os.path.join('static', 'uploads', hero_filename)
-            if os.path.exists(hero_path):
-                with open(hero_path, 'rb') as f:
-                    hero_base64 = base64.b64encode(f.read()).decode('utf-8')
-                    rendered_html = rendered_html.replace('cid:hero_image', f'data:image/png;base64,{hero_base64}')
+        # The uploaded hero image is now handled above in the main image processing loop
+        # This ensures it works with auto-detected CID references
         
         # Generate sample QR code for preview
         qr_code_data = generate_qr_code_image('SAMPLE123')
@@ -7604,6 +7632,51 @@ def email_preview_live(activity_id):
     finally:
         # Always restore original templates
         activity.email_templates = original_templates
+
+
+@app.route('/activity/<int:activity_id>/hero-image/<template_type>')
+def get_hero_image(activity_id, template_type):
+    """Get the current hero image for a specific template type"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    
+    from models import Activity
+    from utils import get_activity_hero_image
+    from flask import Response
+    import io
+    
+    activity = Activity.query.get_or_404(activity_id)
+    
+    # Get hero image data using existing utility function
+    hero_data, is_custom, is_template_default = get_activity_hero_image(activity, template_type)
+    
+    if hero_data:
+        # Return the image data as a response
+        return Response(
+            io.BytesIO(hero_data),
+            mimetype='image/png',
+            headers={'Cache-Control': 'no-cache, no-store, must-revalidate'}
+        )
+    else:
+        # Return default hero image
+        import os
+        default_path = os.path.join('static', 'uploads', 'defaults', 'default_hero.png')
+        if os.path.exists(default_path):
+            with open(default_path, 'rb') as f:
+                return Response(
+                    f.read(),
+                    mimetype='image/png',
+                    headers={'Cache-Control': 'no-cache, no-store, must-revalidate'}
+                )
+        else:
+            # Return a 1x1 transparent PNG as absolute fallback
+            import base64
+            transparent_png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==')
+            return Response(
+                transparent_png,
+                mimetype='image/png',
+                headers={'Cache-Control': 'no-cache, no-store, must-revalidate'}
+            )
 
 
 @app.route("/activity/<int:activity_id>/email-test", methods=["POST"])

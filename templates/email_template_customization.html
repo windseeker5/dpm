@@ -319,9 +319,8 @@
         <div class="d-flex align-items-center gap-2">
           <div class="current-image-preview" id="modal-hero-preview-{{ template_key }}">
             {% set hero_filename = activity.id|string + '_' + template_key + '_hero.png' %}
-            {% set has_custom_hero = raw_template_data.get('hero_image') %}
             <img id="modal-hero-img-preview-{{ template_key }}" 
-                 src="{% if has_custom_hero %}{{ url_for('static', filename='uploads/' + hero_filename) }}{% else %}{{ url_for('static', filename='uploads/defaults/default_hero.png') }}{% endif %}" 
+                 src="{{ url_for('get_hero_image', activity_id=activity.id, template_type=template_key) }}" 
                  alt="Current hero image" 
                  style="width: 100px; height: 60px; object-fit: cover; border: 1px solid #dee2e6; border-radius: 6px; background: white;"
                  onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}'; this.style.backgroundColor='#f8f9fa';">
@@ -436,6 +435,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     modalTitleElement.textContent = templateName;
                 }
                 
+                // Ensure hero images are loaded with cache-busting to show current state
+                const heroImg = document.getElementById(`modal-hero-img-preview-${template}`);
+                if (heroImg) {
+                    const currentSrc = heroImg.src;
+                    // Add cache-busting parameter to ensure fresh load
+                    if (!currentSrc.includes('?t=')) {
+                        heroImg.src = currentSrc + `?t=${Date.now()}`;
+                    }
+                }
+                
                 // Add tinymce class to textareas that should be rich text editors
                 document.querySelectorAll('#customizeModal .template-textarea').forEach(textarea => {
                     textarea.classList.add('tinymce');
@@ -500,16 +509,51 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Basic image preview for modals
+    // Enhanced image preview for modals with hero image support
     window.previewImage = (input, previewId) => {
         const file = input.files?.[0];
         if (file && file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = e => {
                 const img = document.getElementById(previewId);
-                if (img) img.src = e.target.result;
+                if (img) {
+                    img.src = e.target.result;
+                    // Add visual feedback for new image selection
+                    img.style.border = '2px solid #206bc4';
+                    img.style.borderRadius = '6px';
+                    
+                    // Add a small "NEW" badge if this is a hero image
+                    if (previewId.includes('hero-img-preview')) {
+                        // Remove any existing badge
+                        const existingBadge = img.parentElement.querySelector('.new-image-badge');
+                        if (existingBadge) existingBadge.remove();
+                        
+                        // Add new badge
+                        const badge = document.createElement('div');
+                        badge.className = 'new-image-badge';
+                        badge.innerHTML = '<i class="ti ti-upload"></i> NEW';
+                        badge.style.cssText = 'position: absolute; top: -8px; right: -8px; background: #206bc4; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10;';
+                        
+                        img.parentElement.style.position = 'relative';
+                        img.parentElement.appendChild(badge);
+                    }
+                }
             };
             reader.readAsDataURL(file);
+        } else if (input.files?.length === 0) {
+            // Handle file clear - revert to original image
+            const img = document.getElementById(previewId);
+            if (img && previewId.includes('hero-img-preview')) {
+                // Extract template type from preview ID
+                const templateType = previewId.replace('modal-hero-img-preview-', '');
+                // Reload original hero image
+                img.src = `/activity/{{ activity.id }}/hero-image/${templateType}?t=${Date.now()}`;
+                img.style.border = '1px solid #dee2e6';
+                
+                // Remove new badge
+                const badge = img.parentElement.querySelector('.new-image-badge');
+                if (badge) badge.remove();
+            }
         }
     };
     
