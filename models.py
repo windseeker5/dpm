@@ -85,6 +85,9 @@ class User(db.Model):
 
     phone_number = db.Column(db.String(20))
     
+    # Email preferences
+    email_opt_out = db.Column(db.Boolean, default=False, nullable=False)
+    
     # Organization relationship for email context
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
 

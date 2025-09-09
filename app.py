@@ -8065,6 +8065,96 @@ def delete_activity_logo(activity_id):
         return jsonify({"success": False, "error": f"Delete failed: {str(e)}"}), 500
 
 
+@app.route('/unsubscribe', methods=['GET', 'POST'])
+@csrf.exempt
+def unsubscribe():
+    """Handle email unsubscribe requests"""
+    from models import User
+    import hashlib
+    
+    if request.method == 'GET':
+        email = request.args.get('email', '')
+        token = request.args.get('token', '')
+        
+        # Simple unsubscribe form
+        return f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Unsubscribe - Minipass</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+                       max-width: 500px; margin: 50px auto; padding: 20px; }}
+                .form {{ background: #f8f9fa; padding: 30px; border-radius: 8px; }}
+                input, button {{ width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; 
+                                border-radius: 4px; box-sizing: border-box; }}
+                button {{ background: #dc3545; color: white; cursor: pointer; }}
+                button:hover {{ background: #c82333; }}
+                .success {{ color: #28a745; }} .error {{ color: #dc3545; }}
+            </style>
+        </head>
+        <body>
+            <div class="form">
+                <h2>Unsubscribe from Minipass Emails</h2>
+                <p>Enter your email address to opt out of future emails:</p>
+                <form method="POST">
+                    <input type="email" name="email" placeholder="your@email.com" value="{email}" required>
+                    <input type="hidden" name="token" value="{token}">
+                    <button type="submit">Unsubscribe</button>
+                </form>
+                <p><small>This will stop all promotional emails. You may still receive transactional emails related to your purchases.</small></p>
+            </div>
+        </body>
+        </html>
+        '''
+    
+    elif request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        token = request.form.get('token', '')
+        
+        if not email:
+            return "Email address is required", 400
+        
+        try:
+            # Find user and set opt-out
+            user = User.query.filter_by(email=email).first()
+            if user:
+                user.email_opt_out = True
+                db.session.commit()
+                message = f"Successfully unsubscribed {email} from future emails."
+            else:
+                # Even if user not found, show success message for privacy
+                message = f"Successfully unsubscribed {email} from future emails."
+            
+            return f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Unsubscribed - Minipass</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+                           max-width: 500px; margin: 50px auto; padding: 20px; }}
+                    .success {{ background: #d4edda; padding: 30px; border-radius: 8px; 
+                              color: #155724; border: 1px solid #c3e6cb; }}
+                </style>
+            </head>
+            <body>
+                <div class="success">
+                    <h2>✅ Unsubscribed Successfully</h2>
+                    <p>{message}</p>
+                    <p>If you need to resubscribe in the future, please contact support@minipass.me</p>
+                </div>
+            </body>
+            </html>
+            '''
+            
+        except Exception as e:
+            print(f"❌ Unsubscribe error: {e}")
+            return "An error occurred. Please try again later.", 500
+
+
 if __name__ == "__main__":
     port = 5000
     print(f"🚀 Running on port {port}")
