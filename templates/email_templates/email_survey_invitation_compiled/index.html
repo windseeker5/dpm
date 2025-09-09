@@ -206,17 +206,18 @@
             </p>
         </div>
         
-        <!-- Footer -->
+        <!-- Legal Compliance Footer -->
         <div class="footer">
-            <p>
-                This survey was sent because you participated in {{ activity_name }}.<br>
-                Your responses are confidential and help us improve our services.
-            </p>
-            
-            <p style="font-size: 12px; color: #94a3b8;">
-                {{ organization_name }} {% if organization_address %}| {{ organization_address }}{% endif %}<br>
-                Questions? Contact us at {{ support_email }}
-            </p>
+            <div class="footer-legal" style="text-align: center; padding: 20px 0;">
+                <p style="margin: 0 0 10px 0;">Questions? Contact us at {{ support_email }}</p>
+                <p style="margin: 5px 0; color:#6b7280; font-size: 12px;">{{ organization_name }} - {{ organization_address }}</p>
+                <p style="margin: 5px 0; font-size: 12px;">
+                    <a href="{{ unsubscribe_url }}" style="color:#3b82f6; text-decoration:none;">Unsubscribe</a> | 
+                    <a href="{{ privacy_url }}" style="color:#3b82f6; text-decoration:none;">Privacy Policy</a>
+                </p>
+                <p style="margin: 5px 0; color:#94a3b8; font-size: 11px;">You received this email because you participated in {{ activity_name }}</p>
+                <p style="color:#94a3b8; margin: 5px 0;">{{ organization_name }}{% if organization_address %} | {{ organization_address }}{% endif %}</p>
+            </div>
         </div>
     </div>
 </body>

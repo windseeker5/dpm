@@ -428,6 +428,92 @@ def generate_qr_code_image(pass_code):
     return img_bytes
 
 
+# ✅ PHASE 3: Optimized QR Code Generation & Hosted Image System
+def generate_optimized_qr_code(pass_code):
+    """Generate QR code optimized for email (200x200px)"""
+    try:
+        from PIL import Image
+    except ImportError:
+        # Fallback to original method if PIL not available
+        return generate_qr_code_image(pass_code)
+    
+    import os
+    
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=8,  # Smaller box size for 200x200
+        border=2,
+    )
+    qr.add_data(pass_code)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Resize to exactly 200x200
+    img = img.resize((200, 200), Image.Resampling.LANCZOS)
+    
+    img_bytes = io.BytesIO()
+    img.save(img_bytes, format="PNG", optimize=True)
+    img_bytes.seek(0)
+    
+    return img_bytes
+
+
+def save_qr_code_to_static(pass_code, qr_data, base_url):
+    """Save QR code to static directory and return URL"""
+    import os
+    
+    os.makedirs('static/uploads/qr', exist_ok=True)
+    file_path = f'static/uploads/qr/{pass_code}.png'
+    
+    with open(file_path, 'wb') as f:
+        f.write(qr_data)
+    
+    return f"{base_url}/static/uploads/qr/{pass_code}.png"
+
+
+def get_or_create_qr_code_url(pass_code, base_url):
+    """Get existing QR code URL or create new one"""
+    import os
+    
+    qr_path = f'static/uploads/qr/{pass_code}.png'
+    
+    if os.path.exists(qr_path):
+        return f"{base_url}/static/uploads/qr/{pass_code}.png"
+    
+    # Generate new optimized QR code
+    qr_data = generate_optimized_qr_code(pass_code).read()
+    return save_qr_code_to_static(pass_code, qr_data, base_url)
+
+
+def generate_image_urls(context, base_url):
+    """Generate URLs for email images based on context"""
+    import os
+    
+    urls = {}
+    
+    # QR code URL
+    if 'pass_code' in context:
+        urls['qr_code_url'] = get_or_create_qr_code_url(context['pass_code'], base_url)
+    
+    # Hero image URL
+    if 'activity_id' in context:
+        activity_id = context['activity_id']
+        # Check if custom hero exists
+        hero_path = f'static/uploads/{activity_id}_hero.png'
+        if os.path.exists(hero_path):
+            urls['hero_image_url'] = f"{base_url}/static/uploads/{activity_id}_hero.png"
+    
+    # Logo URL  
+    if 'activity_id' in context:
+        activity_id = context['activity_id']
+        logo_path = f'static/uploads/{activity_id}_owner_logo.png'
+        if os.path.exists(logo_path):
+            urls['logo_url'] = f"{base_url}/static/uploads/{activity_id}_owner_logo.png"
+    
+    return urls
+
 
 def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
     """
@@ -1471,7 +1557,7 @@ def render_and_send_email(
         )
 
 
-def send_email(subject, to_email, template_name=None, context=None, inline_images=None, html_body=None, timestamp_override=None, email_config=None):
+def send_email(subject, to_email, template_name=None, context=None, inline_images=None, html_body=None, timestamp_override=None, email_config=None, use_hosted_images=False):
     from flask import render_template
     import smtplib
     from email.mime.multipart import MIMEMultipart
@@ -1484,6 +1570,13 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     from datetime import datetime
     import sys
 
+    # ✅ Check if user has opted out of emails
+    from models import User
+    user = User.query.filter_by(email=to_email).first()
+    if user and user.email_opt_out:
+        print(f"⚠️ Email blocked: {to_email} has opted out")
+        return False
+    
     print("\n" + "🔵"*40)
     print("📨 SEND_EMAIL FUNCTION CALLED")
     print("🔵"*40)
@@ -1498,6 +1591,54 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     context = context or {}
     inline_images = inline_images or {}
 
+    # ✅ ORGANIZATION DETECTION & SUBDOMAIN-AWARE URLs
+    from models import Organization
+    from flask import session
+    org = None
+    
+    # Detect organization from context or session
+    if context and 'organization_id' in context:
+        org = Organization.query.get(context['organization_id'])
+    else:
+        # Safe session access for background threads
+        try:
+            if 'organization_domain' in session:
+                org = Organization.query.filter_by(domain=session['organization_domain']).first()
+        except RuntimeError:
+            # Working outside request context - skip session access
+            pass
+    
+    # Generate base URL
+    if org and org.domain:
+        base_url = f"https://{org.domain}.minipass.me"
+    else:
+        base_url = "https://minipass.me"  # Fallback
+    
+    # Add organization context to template variables
+    context['base_url'] = base_url
+    context['unsubscribe_url'] = f"{base_url}/unsubscribe?email={to_email}"
+    context['privacy_url'] = f"{base_url}/privacy"
+    context['organization_name'] = org.name if org else "Minipass"
+    context['organization_address'] = "123 Main Street, Montreal, QC H1A 1A1"  # Default address
+    
+    print(f"🏢 Organization detected: {org.name if org else 'None'}")
+    print(f"🌐 Base URL: {base_url}")
+    
+    # ✅ PHASE 3: Hosted Image System
+    if use_hosted_images:
+        # Generate hosted image URLs instead of inline data
+        image_urls = generate_image_urls(context, base_url)
+        context.update(image_urls)
+        
+        print(f"🖼️ Using hosted images: {len(image_urls)} URLs generated")
+        
+        # Clear inline images for hosted mode
+        inline_images = {}
+    else:
+        print(f"📎 Using inline images: {len(inline_images)} embedded")
+    
+    sys.stdout.flush()
+
     # 🛡️ FINAL FIX: Render properly depending on whether html_body is given
     if html_body:
         final_html = html_body
@@ -1510,6 +1651,47 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     # 🧠 Inline CSS
     final_html = transform(final_html)
 
+    # ✅ PHASE 2: Dynamic subject line generation
+    def generate_dynamic_subject(original_subject, template_name, context):
+        """Generate context-aware subject lines"""
+        subject_templates = {
+            'newPass': '[{activity_name}] Your digital pass is ready',
+            'paymentReceived': '[{activity_name}] Payment confirmed - Pass activated', 
+            'signup': '[{activity_name}] Registration confirmation',
+            'redeemPass': '[{activity_name}] Pass redeemed successfully',
+            'latePayment': '[{activity_name}] Payment reminder',
+            'email_survey_invitation': '[{activity_name}] We\'d love your feedback'
+        }
+        
+        # Extract template type from template_name
+        template_type = None
+        if template_name:
+            if 'newPass' in template_name:
+                template_type = 'newPass'
+            elif 'paymentReceived' in template_name:
+                template_type = 'paymentReceived'
+            elif 'signup' in template_name:
+                template_type = 'signup'
+            elif 'redeemPass' in template_name:
+                template_type = 'redeemPass'
+            elif 'latePayment' in template_name:
+                template_type = 'latePayment'
+            elif 'survey' in template_name:
+                template_type = 'email_survey_invitation'
+        
+        # Use template-based subject if available and context has activity_name
+        if template_type and template_type in subject_templates and context.get('activity_name'):
+            try:
+                return subject_templates[template_type].format(**context)
+            except (KeyError, ValueError):
+                # Fallback to original if formatting fails
+                pass
+        
+        return original_subject
+    
+    # Generate dynamic subject if template and context available
+    subject = generate_dynamic_subject(subject, template_name, context)
+
     # Build email
     msg = MIMEMultipart("related")
     msg["Subject"] = subject
@@ -1518,12 +1700,62 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     from_email = get_setting("MAIL_DEFAULT_SENDER") or "noreply@minipass.me"
     sender_name = get_setting("MAIL_SENDER_NAME") or "Minipass"
     msg["From"] = formataddr((sender_name, from_email))
+    
+    # ✅ Add deliverability headers
+    reply_to_email = from_email
+    msg["Reply-To"] = reply_to_email
+    msg["List-Unsubscribe"] = f"<{context['unsubscribe_url']}>"
+    msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+    msg["Precedence"] = "bulk"
+    msg["X-Mailer"] = "Minipass/1.0"
+    
+    # Generate unique Message-ID
+    timestamp = int(datetime.now(timezone.utc).timestamp() * 1000000)  # microsecond precision
+    msg["Message-ID"] = f"<{timestamp}@minipass.me>"
+    
+    # Add organization tracking if available
+    if hasattr(context, 'get') and context.get('organization_id'):
+        msg["X-Entity-Ref-ID"] = str(context['organization_id'])
 
     alt_part = MIMEMultipart("alternative")
-    # Generate plain text from context or use a better fallback
-    plain_text = context.get('preview_text', context.get('heading', 'Your digital pass is ready'))
-    if context.get('body_text'):
-        plain_text = f"{plain_text}\n\n{context.get('body_text')}"
+    
+    # ✅ PHASE 2: Generate comprehensive plain text from HTML
+    def generate_plain_text(html_content, context):
+        """Generate comprehensive plain text from HTML"""
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Remove script and style elements
+            for script in soup(["script", "style"]):
+                script.decompose()
+            
+            # Get text and preserve structure
+            text = soup.get_text(separator='\n', strip=True)
+            
+            # Add important links in parentheses (only unsubscribe and important links)
+            for link in soup.find_all('a', href=True):
+                if 'unsubscribe' in link.get('href', '').lower() or 'privacy' in link.get('href', '').lower():
+                    link_text = link.get_text(strip=True)
+                    if link_text and link_text not in text:
+                        text += f"\n\n{link_text}: {link['href']}"
+            
+            # Clean up extra whitespace
+            lines = [line.strip() for line in text.split('\n') if line.strip()]
+            return '\n'.join(lines)
+            
+        except ImportError:
+            # Fallback if BeautifulSoup not available
+            return context.get('preview_text', context.get('heading', 'Your digital pass is ready'))
+    
+    # Generate plain text from HTML content
+    if final_html:
+        plain_text = generate_plain_text(final_html, context)
+    else:
+        plain_text = context.get('preview_text', context.get('heading', 'Your digital pass is ready'))
+        if context.get('body_text'):
+            plain_text = f"{plain_text}\n\n{context.get('body_text')}"
+    
     alt_part.attach(MIMEText(plain_text, "plain"))
     alt_part.attach(MIMEText(final_html, "html"))
     msg.attach(alt_part)
