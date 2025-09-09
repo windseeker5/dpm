@@ -69,22 +69,22 @@ def get_template_default_hero(template_type):
     import json
     import base64
     
-    # Map template types to their compiled folders
+    # Map template types to their ORIGINAL folders (pristine defaults)
     template_map = {
-        'newPass': 'newPass_compiled',
-        'paymentReceived': 'paymentReceived_compiled',
-        'latePayment': 'latePayment_compiled',
-        'signup': 'signup_compiled',
-        'waitlist': 'waitlist_compiled'
+        'newPass': 'newPass_original',
+        'paymentReceived': 'paymentReceived_original',
+        'latePayment': 'latePayment_original',
+        'signup': 'signup_original',
+        'waitlist': 'waitlist_original'
     }
     
-    compiled_folder = template_map.get(template_type)
-    if not compiled_folder:
+    original_folder = template_map.get(template_type)
+    if not original_folder:
         print(f"❌ Unknown template type: {template_type}")
         return None
     
-    # Load inline_images.json from compiled template
-    json_path = os.path.join('templates', 'email_templates', compiled_folder, 'inline_images.json')
+    # Load inline_images.json from ORIGINAL template (pristine default)
+    json_path = os.path.join('templates', 'email_templates', original_folder, 'inline_images.json')
     
     if not os.path.exists(json_path):
         print(f"❌ Template JSON not found: {json_path}")
@@ -111,7 +111,7 @@ def get_template_default_hero(template_type):
         # Decode base64 image data
         hero_base64 = compiled_images[hero_key]
         hero_data = base64.b64decode(hero_base64)
-        print(f"📦 Loaded template default hero: {template_type} -> {hero_key}")
+        print(f"📦 Loaded original template default hero: {template_type} -> {hero_key}")
         return hero_data
         
     except Exception as e:
@@ -123,25 +123,35 @@ def get_activity_hero_image(activity, template_type):
     """
     Hero image selection with CORRECT priority order:
     1. Custom uploaded hero (highest priority)
-    2. Compiled template default (proper default) 
+    2. Original template default (proper default) 
     3. Activity image (last resort only)
     
     Returns: tuple (image_data, is_custom, is_template_default)
     """
     import os
     
+    print(f"🔍 get_activity_hero_image: activity={activity.id if activity else None}, template_type={template_type}")
+    
     # Priority 1: Check for custom uploaded hero FIRST
     if activity:
         custom_hero_path = f"static/uploads/{activity.id}_{template_type}_hero.png"
+        print(f"🔍 Checking for custom hero at: {custom_hero_path}")
+        
         if os.path.exists(custom_hero_path):
-            with open(custom_hero_path, "rb") as f:
-                print(f"✅ Using custom hero override for {template_type}")
-                return f.read(), True, False
+            try:
+                with open(custom_hero_path, "rb") as f:
+                    hero_data = f.read()
+                    print(f"✅ Found custom hero override for activity {activity.id}, template {template_type} - {len(hero_data)} bytes")
+                    return hero_data, True, False
+            except Exception as e:
+                print(f"❌ Error reading custom hero file {custom_hero_path}: {e}")
+        else:
+            print(f"ℹ️ No custom hero found at {custom_hero_path}")
     
-    # Priority 2: Load compiled template default
+    # Priority 2: Load original template default (pristine version)
     template_hero_data = get_template_default_hero(template_type)
     if template_hero_data:
-        print(f"📦 Using compiled template default hero for {template_type}")
+        print(f"📦 Using original template default hero for {template_type}")
         return template_hero_data, False, True  # is_template_default=True
     
     # Priority 3: Fall back to activity image only if no template exists (last resort)
@@ -2303,6 +2313,86 @@ def get_email_context(activity, template_type, base_context=None):
     
     return context
 
+
+def get_template_hero_dimensions(template_type):
+    """
+    Get the expected dimensions for hero images based on template type.
+    Returns (width, height) tuple or None if template doesn't use hero images.
+    """
+    # Template-specific hero image dimensions based on original template assets
+    hero_dimensions = {
+        'newPass': (1408, 768),      # Wide banner format
+        'signup': (1600, 1200),      # Large hero format
+        'welcome': (1408, 768),      # Same as newPass
+        'renewal': (1408, 768),      # Same as newPass
+        # Note: other templates (latePayment, paymentReceived, redeemPass) use small icons (128x128), not heroes
+    }
+    
+    return hero_dimensions.get(template_type)
+
+def resize_hero_image(image_data, template_type, max_file_size_mb=2):
+    """
+    Resize uploaded hero image to match the original template dimensions.
+    
+    Args:
+        image_data: Raw image bytes
+        template_type: Template type (e.g., 'newPass', 'signup')
+        max_file_size_mb: Maximum file size in MB
+    
+    Returns:
+        tuple: (resized_image_bytes, success_message) or (None, error_message)
+    """
+    try:
+        from PIL import Image
+        import io
+        
+        # Check file size
+        if len(image_data) > max_file_size_mb * 1024 * 1024:
+            return None, f"Image file too large. Maximum size is {max_file_size_mb}MB"
+        
+        # Get expected dimensions for this template type
+        target_dimensions = get_template_hero_dimensions(template_type)
+        if not target_dimensions:
+            return None, f"Template type '{template_type}' does not support custom hero images"
+        
+        target_width, target_height = target_dimensions
+        
+        # Open and validate the image
+        try:
+            image = Image.open(io.BytesIO(image_data))
+        except Exception as e:
+            return None, f"Invalid image file: {str(e)}"
+        
+        # Convert to RGB if needed (removes alpha channel for consistency)
+        if image.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        original_width, original_height = image.size
+        print(f"🖼️ Resizing hero image: {original_width}x{original_height} → {target_width}x{target_height}")
+        
+        # Resize image to exact template dimensions
+        # Use LANCZOS for high-quality resizing
+        resized_image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        
+        # Save to bytes
+        output_buffer = io.BytesIO()
+        resized_image.save(output_buffer, format='PNG', optimize=True)
+        resized_bytes = output_buffer.getvalue()
+        
+        print(f"🖼️ Hero image resized successfully: {len(image_data)} → {len(resized_bytes)} bytes")
+        
+        return resized_bytes, f"Image resized to {target_width}x{target_height} pixels"
+        
+    except ImportError:
+        return None, "PIL (Pillow) library not available for image processing"
+    except Exception as e:
+        return None, f"Error resizing image: {str(e)}"
 
 
 

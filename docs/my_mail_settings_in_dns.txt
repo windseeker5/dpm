@@ -1,0 +1,29 @@
+MAIL SETTINGS IN DNS
+
+TXT
+
+_dmarc
+v=DMARC1; p=none; rua=mailto:admin@minipass.me
+hosting
+
+1 Hour
+
+
+
+
+TXT
+
+mail._domainkey
+v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmxlrKQW5Jp9Cm6tVS3SHy0voWcEBU2rgLC9rbiYpe/oPvDTUHj3YYveuWFpUHx49vAa0eQ53vqZGRi0IHaGRncpspDMGJjeKQFOHaAtNj9JWXoyYmBsLQ8+k6q5H/tMGZ9zJC6BfSgbl55PBNi+QcUGSwf1A3vqrX5pAdtGeczuCZUkIX5xfIYWStHSi9CY+v5hojdygA86I5utnnL8g3TtVo+fDdo5MxH50hXzJQkTCBGpN5G7nnrYazF0jdmOQIaRwO50DC3qcmLC2PTGnvkIY/2Wi7J5zkLE29zxp84iNl1K8VTbjRAJ3a/GgFcSX+eE0Uv/jQAcQSTZ+yJnKfwIDAQAB
+hosting
+
+15 minutes 
+
+
+TXT
+
+@
+v=spf1 ip4:138.199.152.128 ~all
+hosting
+
+15 minutes
