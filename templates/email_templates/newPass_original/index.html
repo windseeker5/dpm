@@ -1,0 +1,180 @@
+{% set logo_url = 'cid:logo_image' %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Minipass Confirmation</title>
+  
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
+  
+  <style type="text/css">
+    /* Mobile-first CSS with fallbacks */
+    @media only screen and (max-width: 600px) {
+      .main-table {
+        width: 100% !important;
+        min-width: 320px !important;
+        margin: 20px auto !important;
+      }
+      .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .hero-image {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 100% !important;
+      }
+      .content-padding {
+        padding: 20px 20px 24px 20px !important;
+      }
+      .intro-padding {
+        padding: 20px 20px 24px 20px !important;
+      }
+      .conclusion-padding {
+        padding: 0 20px 30px 20px !important;
+      }
+      .qr-code {
+        width: 280px !important;
+        height: 280px !important;
+        max-width: 90% !important;
+      }
+      .footer-table {
+        width: 100% !important;
+        padding: 0 20px !important;
+      }
+      .footer-text {
+        padding: 0 20px 20px 20px !important;
+        font-size: 12px !important;
+      }
+      .mobile-font-size {
+        font-size: 16px !important;
+      }
+      .mobile-title {
+        font-size: 22px !important;
+        padding-bottom: 20px !important;
+      }
+    }
+    
+    @media only screen and (max-width: 480px) {
+      .qr-code {
+        width: 240px !important;
+        height: 240px !important;
+      }
+      .hero-container {
+        padding: 0 !important;
+      }
+    }
+    
+    /* Outlook specific fixes */
+    <!--[if mso]>
+    .main-table {
+      width: 600px !important;
+    }
+    <![endif]-->
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #4b5563; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f6fa; min-width: 100%;">
+    <tr>
+      <td align="center" style="padding: 0;">
+        
+        <!-- Outer Card Container -->
+        <table class="main-table" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius: 8px; overflow:hidden; margin: 40px auto; max-width: 600px;">
+
+          <!-- Hero Image Section -->
+          <tr>
+            <td class="hero-container" align="center" style="padding: 0; line-height: 0;">
+              <img class="hero-image" src="cid:hero_new_pass" alt="Nouveau Pass - Célébration" width="600" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; outline: none; text-decoration: none;">
+            </td>
+          </tr>
+
+          <!-- Dynamic Title -->
+          {% if title %}
+          <tr>
+            <td class="mobile-title" align="center" style="font-size: 20px; font-weight: bold; color: #232b38; padding: 40px 20px 16px 20px;">
+              {{ title }}
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- Intro Text -->
+          {% if intro_text %}
+          <tr>
+            <td class="intro-padding mobile-font-size" style="padding: 30px 75px 32px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
+              {{ intro_text | safe }}
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- QR Code -->
+          <tr>
+            <td align="center" style="padding-bottom: 32px;">
+              <img class="qr-code" src="cid:qr_code" alt="QR Code" width="360" height="360" style="border-radius:8px; border:1px solid #e2e8f0; display: block; max-width: 90%;">
+            </td>
+          </tr>
+
+          <!-- Owner Card -->
+          <tr>
+            <td class="content-padding" style="padding: 0 40px 24px;">
+              {{ owner_html | safe }}
+            </td>
+          </tr>
+
+          <!-- History Table -->
+          <tr>
+            <td class="content-padding" style="padding: 0 40px 24px;">
+              {{ history_html | safe }}
+            </td>
+          </tr>
+
+          <!-- Conclusion Text -->
+          {% if conclusion_text %}
+          <tr>
+            <td class="conclusion-padding mobile-font-size" style="padding: 0 75px 50px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
+              {{ conclusion_text | safe }}
+            </td>
+          </tr>
+          {% endif %}
+
+        </table>
+
+        <!-- Footer Icons with Facebook and Instagram -->
+        <table class="footer-table" width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 7px; max-width: 600px;">
+          <tr>
+            <td align="center" style="padding: 7px 0; font-size:0;">
+              <a href="https://www.facebook.com/profile.php?id=61554658763800" style="text-decoration: none;">
+                <img src="cid:facebook" alt="Facebook" width="30" height="30" style="margin: 0 8px; display: inline-block; border: 0; outline: none;">
+              </a>
+              <a href="#" style="text-decoration: none;">
+                <img src="cid:instagram" alt="Instagram" width="30" height="30" style="margin: 0 8px; display: inline-block; border: 0; outline: none;">
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer Text -->
+        <table class="footer-table" width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto; max-width: 600px;">
+          <tr>
+            <td class="footer-text" align="center" style="font-size: 13px; color: #6b7280; padding: 0 32px 32px;">
+              <p style="margin: 0 0 10px 0;">Pour toute question, contactez-nous à <a href="mailto:support@minipass.me" style="color:#3b82f6; text-decoration:none;">support@minipass.me</a>.</p>
+              <p style="color:#94a3b8; margin: 0;">© 2025 Minipass. Tous droits réservés.</p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
