@@ -1,4 +1,4 @@
-{% set logo_url = logo_url or '/static/logo.png' %}
+{% set logo_url = 'cid:logo_image' %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -44,7 +44,7 @@
           <!-- ✅ QR Code -->
           <tr>
             <td align="center" style="padding-bottom: 32px;">
-              <img src="{{ qr_code_url }}" alt="QR Code" width="200" height="200" style="border-radius:8px; border:1px solid #e2e8f0;">
+              <img src="cid:qr_code" alt="QR Code" width="200" height="200" style="border-radius:8px; border:1px solid #e2e8f0;">
             </td>
           </tr>
 

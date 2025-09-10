@@ -37,3 +37,4 @@ test_restore_*.py
 
 # SQL exports
 SQL/
+static/uploads/

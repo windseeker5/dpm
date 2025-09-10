@@ -3,7 +3,7 @@
         "subject": "🎟️ Votre passe numérique est prête !",
         "title": "Bienvenue !",
         "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Bonne nouvelle ! Votre passe numérique vient tout juste d'être créée !</p>\n<p>Elle vous donne droit à <strong>{{ pass_data.uses_remaining }}</strong> participations à <strong>{{ pass_data.activity.name }}</strong> – il ne vous reste plus qu'à en profiter !</p>",
-        "conclusion_text": "<p>{% if not pass_data.paid %}</p>\n<p>Petit rappel amical :</p>\n<p>Votre passe n'a pas encore été payée 🥺</p>\n<p>Merci de faire un virement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong> afin d'activer votre accès.</p>\n<p>{% endif %}</p>\n<p>&nbsp;</p>\n<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
+        "conclusion_text": "{% if not pass_data.paid %}<p>Petit rappel amical :</p>\n<p>Votre passe n'a pas encore été payée 🥺</p>\n<p>Merci de faire un virement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong> afin d'activer votre accès.</p>{% endif %}\n<p>&nbsp;</p>\n<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
         "custom_message": "",
         "cta_text": "Voir ma passe",
         "cta_url": "https://minipass.me/my-passes"
@@ -39,7 +39,7 @@
         "subject": "🏒 Activité confirmée !",
         "title": "Bon moment !",
         "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Nous vous confirmons qu'une participation a été utilisée sur votre passe numérique pour l'activité suivante : <strong>{{ pass_data.activity.name }}</strong></p>\n<p>Il vous reste <strong>{{ pass_data.uses_remaining }}</strong> participations.</p>",
-        "conclusion_text": "<p>{% if not pass_data.paid %}</p>\n<p>Petit rappel amical :</p>\n<p>Votre passe n'a pas encore été payée 🥺</p>\n<p>Merci de faire un virement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong> afin d'activer votre accès.</p>\n<p>{% endif %}</p>\n<p>&nbsp;</p>\n<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
+        "conclusion_text": "{% if not pass_data.paid %}<p>Petit rappel amical :</p>\n<p>Votre passe n'a pas encore été payée 🥺</p>\n<p>Merci de faire un virement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong> afin d'activer votre accès.</p>{% endif %}\n<p>&nbsp;</p>\n<p>💖 Un énorme merci de faire partie de notre belle communauté!</p>\n<p><br>À très bientôt!</p>\n<p><em><strong>— L'équipe</strong></em></p>",
         "custom_message": "",
         "cta_text": "Voir ma passe",
         "cta_url": "https://minipass.me/my-passes"
