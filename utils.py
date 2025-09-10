@@ -1639,6 +1639,23 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     # Add support_email using MAIL_DEFAULT_SENDER setting
     context['support_email'] = get_setting("MAIL_DEFAULT_SENDER") or "lhgi@minipass.me"
     
+    # Debug: Print context variables for ALL emails
+    print(f"📧 SEND_EMAIL DEBUG - Template: {template_name}")
+    print(f"  support_email: {context.get('support_email', 'MISSING!')}")
+    print(f"  organization_name: {context.get('organization_name', 'MISSING!')}")
+    print(f"  unsubscribe_url: {context.get('unsubscribe_url', 'MISSING!')}")
+    print(f"  privacy_url: {context.get('privacy_url', 'MISSING!')}")
+    print(f"  activity provided: {activity is not None}")
+    print(f"  org detected: {org.name if org else 'None'}")
+    
+    # Debug: Print context variables for signup emails
+    if template_name and 'signup' in template_name:
+        print(f"📧 SIGNUP EMAIL DEBUG:")
+        print(f"  support_email: {context['support_email']}")
+        print(f"  organization_name: {context['organization_name']}")
+        print(f"  unsubscribe_url: {context['unsubscribe_url']}")
+        print(f"  privacy_url: {context['privacy_url']}")
+    
     # Ensure activity_name is set for footer text
     if activity and not context.get('activity_name'):
         context['activity_name'] = activity.name
@@ -2124,8 +2141,6 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         "intro_text": intro,
         "conclusion_text": conclusion,
         "logo_url": "/static/uploads/logo.png",
-        "unsubscribe_url": "",  # Will be filled by send_email with subdomain
-        "privacy_url": "",      # Will be filled by send_email with subdomain
     }
     
     # Add organization variables for footer
@@ -2170,7 +2185,8 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
             activity=activity,
             subject=subject,
             to_email=signup.user.email,
-            html_body=html_body,
+            template_name="signup_compiled/index.html",
+            context=context,
             inline_images=inline_images,
             timestamp_override=timestamp
         )

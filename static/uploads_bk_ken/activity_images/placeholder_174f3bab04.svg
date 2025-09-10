@@ -1,0 +1,5 @@
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+            <rect width="400" height="300" fill="#FF6B6B"/>
+            <text x="200" y="140" text-anchor="middle" fill="white" font-size="18" font-family="Arial, sans-serif">Golf</text>
+            <text x="200" y="170" text-anchor="middle" fill="white" font-size="14" font-family="Arial, sans-serif">Sample 1</text>
+        </svg>
