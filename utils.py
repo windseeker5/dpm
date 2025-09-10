@@ -1493,6 +1493,9 @@ def render_and_send_email(
         "title": title,
         "intro_text": intro,
         "conclusion_text": conclusion,
+        "unsubscribe_url": "",  # Will be filled by send_email with subdomain
+        "privacy_url": "",      # Will be filled by send_email with subdomain
+        "activity_name": activity.name if activity else "",
     }
 
     if context_extra:
@@ -1557,7 +1560,7 @@ def render_and_send_email(
         )
 
 
-def send_email(subject, to_email, template_name=None, context=None, inline_images=None, html_body=None, timestamp_override=None, email_config=None, use_hosted_images=False):
+def send_email(subject, to_email, template_name=None, context=None, inline_images=None, html_body=None, timestamp_override=None, email_config=None, use_hosted_images=False, user=None, activity=None):
     from flask import render_template
     import smtplib
     from email.mime.multipart import MIMEMultipart
@@ -1572,8 +1575,8 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
 
     # ✅ Check if user has opted out of emails
     from models import User
-    user = User.query.filter_by(email=to_email).first()
-    if user and user.email_opt_out:
+    email_user = User.query.filter_by(email=to_email).first()
+    if email_user and email_user.email_opt_out:
         print(f"⚠️ Email blocked: {to_email} has opted out")
         return False
     
@@ -1596,30 +1599,53 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     from flask import session
     org = None
     
-    # Detect organization from context or session
-    if context and 'organization_id' in context:
+    # Priority 1: Get organization from activity parameter (most reliable)
+    if activity and hasattr(activity, 'organization') and activity.organization:
+        org = activity.organization
+        print(f"📧 Using organization from activity: {org.name}")
+    # Priority 2: Get from context
+    elif context and 'organization_id' in context:
         org = Organization.query.get(context['organization_id'])
+        print(f"📧 Using organization from context: {org.name if org else 'None'}")
+    # Priority 3: Try session (for non-activity emails)
     else:
         # Safe session access for background threads
         try:
             if 'organization_domain' in session:
                 org = Organization.query.filter_by(domain=session['organization_domain']).first()
+                print(f"📧 Using organization from session: {org.name if org else 'None'}")
         except RuntimeError:
             # Working outside request context - skip session access
             pass
     
-    # Generate base URL
-    if org and org.domain:
-        base_url = f"https://{org.domain}.minipass.me"
+    # Generate URLs and organization info with proper data
+    if org:
+        # Use organization's actual domain
+        base_url = f"https://{org.domain}.minipass.me" if org.domain else "https://minipass.me"
+        context['organization_name'] = org.name
     else:
-        base_url = "https://minipass.me"  # Fallback
+        # Fallback for system emails without organization context
+        base_url = "https://lhgi.minipass.me"
+        context['organization_name'] = "Foundation LHGI"
     
-    # Add organization context to template variables
-    context['base_url'] = base_url
+    # Use ORG_ADDRESS setting for address (consistent with survey code)
+    context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
+    
+    # Always set these URLs and support email
     context['unsubscribe_url'] = f"{base_url}/unsubscribe?email={to_email}"
     context['privacy_url'] = f"{base_url}/privacy"
-    context['organization_name'] = org.name if org else "Minipass"
-    context['organization_address'] = "123 Main Street, Montreal, QC H1A 1A1"  # Default address
+    context['base_url'] = base_url
+    
+    # Add support_email using MAIL_DEFAULT_SENDER setting
+    context['support_email'] = get_setting("MAIL_DEFAULT_SENDER") or "lhgi@minipass.me"
+    
+    # Ensure activity_name is set for footer text
+    if activity and not context.get('activity_name'):
+        context['activity_name'] = activity.name
+    
+    print(f"📧 Email context: org={context['organization_name']}, base_url={base_url}, activity={context.get('activity_name', 'None')}")
+    
+    # Note: activity_name should be provided by the calling function - no fallback needed
     
     print(f"🏢 Organization detected: {org.name if org else 'None'}")
     print(f"🌐 Base URL: {base_url}")
@@ -1653,14 +1679,34 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
 
     # ✅ PHASE 2: Dynamic subject line generation
     def generate_dynamic_subject(original_subject, template_name, context):
-        """Generate context-aware subject lines"""
+        """Generate context-aware subject lines - ONLY as fallback when no custom subject"""
+        
+        # Check if this is a custom subject (user-defined) vs default fallback
+        # Custom subjects should NEVER be overridden
+        default_fallbacks = [
+            "Minipass Notification",
+            "[Minipass]",
+            "Confirmation d'inscription", 
+            "Registration confirmation",
+            "Payment confirmed",
+            "Pass redeemed",
+            "Payment reminder",
+            "We'd love your feedback"
+        ]
+        
+        # If original_subject is not a default fallback, it's a custom subject - keep it as-is
+        is_custom_subject = not any(fallback in original_subject for fallback in default_fallbacks)
+        if is_custom_subject:
+            return original_subject
+        
+        # Only use dynamic templates for default fallback subjects
         subject_templates = {
-            'newPass': '[{activity_name}] Your digital pass is ready',
-            'paymentReceived': '[{activity_name}] Payment confirmed - Pass activated', 
-            'signup': '[{activity_name}] Registration confirmation',
-            'redeemPass': '[{activity_name}] Pass redeemed successfully',
-            'latePayment': '[{activity_name}] Payment reminder',
-            'email_survey_invitation': '[{activity_name}] We\'d love your feedback'
+            'newPass': 'Your digital pass is ready',
+            'paymentReceived': 'Payment confirmed - Pass activated', 
+            'signup': 'Registration confirmation',
+            'redeemPass': 'Pass redeemed successfully',
+            'latePayment': 'Payment reminder',
+            'email_survey_invitation': 'We\'d love your feedback'
         }
         
         # Extract template type from template_name
@@ -1679,13 +1725,9 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             elif 'survey' in template_name:
                 template_type = 'email_survey_invitation'
         
-        # Use template-based subject if available and context has activity_name
-        if template_type and template_type in subject_templates and context.get('activity_name'):
-            try:
-                return subject_templates[template_type].format(**context)
-            except (KeyError, ValueError):
-                # Fallback to original if formatting fails
-                pass
+        # Use template-based subject only for fallback cases
+        if template_type and template_type in subject_templates:
+            return subject_templates[template_type]
         
         return original_subject
     
@@ -1913,6 +1955,17 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                             for cid, img_base64 in compiled_images.items():
                                 inline_images[cid] = base64.b64decode(img_base64)
 
+                # --- Determine organization from context ---
+                org_id = None
+                if activity and hasattr(activity, 'organization_id'):
+                    org_id = activity.organization_id
+                elif organization_id:
+                    org_id = organization_id
+                
+                # Add organization_id to context for proper URL generation
+                if org_id and 'organization_id' not in context:
+                    context['organization_id'] = org_id
+                
                 # --- Send the email ---
                 send_email(
                     subject=subject,
@@ -1921,7 +1974,9 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                     context=context,
                     inline_images=inline_images,
                     html_body=html_body,
-                    timestamp_override=timestamp_override
+                    timestamp_override=timestamp_override,
+                    user=user,
+                    activity=activity
                 )
 
                 # --- Save EmailLog after successful send ---
@@ -1998,7 +2053,45 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
 
     timestamp = timestamp or datetime.now(timezone.utc)
 
-    # Build base context
+    # Get passport type information if available
+    passport_type = None
+    if hasattr(signup, 'passport_type_id') and signup.passport_type_id:
+        from models import PassportType
+        passport_type = PassportType.query.get(signup.passport_type_id)
+
+    # Check if activity has custom signup template
+    has_custom_template = (activity.email_templates and 
+                          'signup' in activity.email_templates and 
+                          activity.email_templates['signup'])
+    
+    # If no custom template (reset/default state), use regular email path
+    if not has_custom_template:
+        # Use the standard send_email function with compiled template
+        send_email_async(
+            app=app,
+            user=signup.user,
+            activity=activity,
+            subject="Confirmation d'inscription",
+            to_email=signup.user.email,
+            template_name="signup_compiled/index.html",
+            context={
+                "user_name": signup.user.name,
+                "user_email": signup.user.email,
+                "phone_number": signup.user.phone_number,
+                "activity_name": activity.name,
+                "activity_price": f"${passport_type.price_per_user:.2f}" if passport_type else "$0.00",
+                "sessions_included": passport_type.sessions_included if passport_type else 1,
+                "payment_instructions": passport_type.payment_instructions if passport_type else "",
+                "title": "Votre Inscription est Confirmée",
+                "intro_text": "Merci de vous être inscrit!",
+                "conclusion_text": "Nous vous contacterons bientôt.",
+                "logo_url": "/static/uploads/logo.png",
+            },
+            timestamp_override=timestamp
+        )
+        return
+    
+    # Build base context for custom templates
     base_context = {
         "user_name": signup.user.name,
         "activity_name": activity.name
@@ -2018,12 +2111,6 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     intro = render_template_string(intro_raw, user_name=signup.user.name, activity_name=activity.name)
     conclusion = render_template_string(conclusion_raw, user_name=signup.user.name, activity_name=activity.name)
 
-    # Get passport type information if available
-    passport_type = None
-    if hasattr(signup, 'passport_type_id') and signup.passport_type_id:
-        from models import PassportType
-        passport_type = PassportType.query.get(signup.passport_type_id)
-    
     # Build context
     context = {
         "user_name": signup.user.name,
@@ -2037,7 +2124,13 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         "intro_text": intro,
         "conclusion_text": conclusion,
         "logo_url": "/static/uploads/logo.png",
+        "unsubscribe_url": "",  # Will be filled by send_email with subdomain
+        "privacy_url": "",      # Will be filled by send_email with subdomain
     }
+    
+    # Add organization variables for footer
+    context['organization_name'] = activity.organization.name if activity.organization else "Fondation LHGI"
+    context['organization_address'] = "821 rue des Sables, Rimouski, QC G5L 6Y7"
 
     # Find compiled template
     # For signup, theme is already "signup_compiled/index.html"
@@ -2116,7 +2209,46 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     
     template_type = event_type_mapping.get(event_type, 'newPass')
     
-    # Build base context
+    # Check if activity has custom template for this event type
+    has_custom_template = (activity.email_templates and 
+                          template_type in activity.email_templates and 
+                          activity.email_templates[template_type])
+    
+    # If no custom template (reset/default state), use regular email path
+    if not has_custom_template:
+        # Map event type to compiled template paths
+        template_mapping = {
+            'pass_created': 'newPass_compiled/index.html',
+            'payment_received': 'paymentReceived_compiled/index.html',
+            'payment_late': 'latePayment_compiled/index.html',
+            'pass_redeemed': 'redeemPass_compiled/index.html'
+        }
+        template_name = template_mapping.get(event_type, 'newPass_compiled/index.html')
+        
+        # Use the standard send_email function with compiled template
+        send_email_async(
+            app=app,
+            user=pass_data.user,
+            activity=activity,
+            subject=f"[{activity.organization.name if activity and activity.organization else 'Foundation LHGI'}] {event_type.title()} Notification",
+            to_email=pass_data.user.email,
+            template_name=template_name,
+            context={
+                "pass_data": pass_data,
+                "title": f"{event_type.title()} Confirmation",
+                "intro_text": "Your pass has been updated.",
+                "conclusion_text": f"Thank you for using {activity.organization.name if activity and activity.organization else 'Foundation LHGI'}!",
+                "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data),
+                "history_html": render_template("email_blocks/history_table_inline.html", history=get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)),
+                "activity_name": activity.name if activity else "",
+                "qr_code": generate_qr_code_image(pass_data.pass_code).read(),
+            },
+            timestamp_override=timestamp,
+            inline_images={"qr_code": generate_qr_code_image(pass_data.pass_code).read()}
+        )
+        return
+    
+    # Build base context for custom templates
     base_context = {
         "pass_data": pass_data,
         "default_qt": getattr(pass_data, "uses_remaining", 0),
@@ -2171,8 +2303,15 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "history_html": render_template("email_blocks/history_table_inline.html", history=history),
         "email_info": "",
         "logo_url": "/static/uploads/logo.png",
-        "special_message": ""
+        "special_message": "",
+        "activity_name": activity.name if activity else "",
+        "unsubscribe_url": "",  # Will be filled by send_email with subdomain
+        "privacy_url": "",      # Will be filled by send_email with subdomain
     }
+    
+    # Add organization variables for footer
+    context['organization_name'] = activity.organization.name if activity.organization else "Fondation LHGI"
+    context['organization_address'] = "821 rue des Sables, Rimouski, QC G5L 6Y7"
 
     # Load compiled inline_images.json
     import json

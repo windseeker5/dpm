@@ -1,4 +1,4 @@
-{% set logo_url = 'cid:logo_image' %}
+{% set logo_url = logo_url or '/static/logo.png' %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -14,10 +14,11 @@
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius: 8px; overflow:hidden; margin: 40px auto;">
 
 
-          <!-- ✅ Hero Image -->
+          <!-- ✅ Check Icon -->
           <tr>
-            <td align="center" style="padding:40px 40px 16px;">
-              <img src="cid:currency-dollar" alt="Hero Image" style="width:300px; height:180px; object-fit:cover; border-radius:12px; border: 2px solid #e2e8f0; display:block;">
+            <td align="center" style="padding:80px 0 16px;">
+              <img src="cid:currency-dollar" alt="Check" width="48" style="background:#23a519; border-radius:50%; padding:8px;">
+
             </td>
           </tr>
 
@@ -43,7 +44,7 @@
           <!-- ✅ QR Code -->
           <tr>
             <td align="center" style="padding-bottom: 32px;">
-              <img src="cid:qr_code" alt="QR Code" width="360" height="360" style="border-radius:8px; border:1px solid #e2e8f0;">
+              <img src="{{ qr_code_url }}" alt="QR Code" width="200" height="200" style="border-radius:8px; border:1px solid #e2e8f0;">
             </td>
           </tr>
 
@@ -81,38 +82,26 @@
 
 
 
-        <!-- ✅ Footer Icons with Facebook and Instagram only -->
-        <table width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 7px;">
-          <tr>
-
-
-            <td align="center" style="padding: 7px 0; font-size:0;">
-              <a href="https://www.facebook.com/profile.php?id=61554658763800">
-                <img src="cid:facebook" alt="Facebook" width="30" style="margin: 0 8px;">
-              </a>
-              <a href="#">
-                <img src="cid:instagram" alt="Instagram" width="30" style="margin: 0 8px;">
-              </a>
-            </td>
-            
-
-          </tr>
-        </table>
-
-
-
-
-
-
-
-
-
-        <!-- ✅ Footer Text -->
+        <!-- Legal Compliance Footer -->
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
           <tr>
-            <td align="center" style="font-size: 13px; color: #6b7280; padding: 0 32px 32px;">
-              <p>Pour toute question, contactez-nous à <a href="mailto:support@minipass.me" style="color:#3b82f6; text-decoration:none;">support@minipass.me</a>.</p>
-              <p style="color:#94a3b8;">© 2025 Minipass. Tous droits réservés.</p>
+            <td align="center" style="font-size: 13px; color: #6b7280; padding: 20px 32px;">
+              <p style="margin: 0 0 10px 0;">Pour toute question, contactez-nous à 
+                <a href="mailto:{{ support_email }}" style="color:#3b82f6; text-decoration:none;">{{ support_email }}</a>
+              </p>
+              <p style="margin: 5px 0; color:#6b7280; font-size: 12px;">
+                {{ organization_name }} • {{ organization_address }}
+              </p>
+              <p style="margin: 10px 0; font-size: 12px;">
+                <a href="{{ unsubscribe_url }}" style="color:#3b82f6; text-decoration:none;">Se désabonner</a> | 
+                <a href="{{ privacy_url }}" style="color:#3b82f6; text-decoration:none;">Politique de confidentialité</a>
+              </p>
+              <p style="margin: 5px 0; color:#94a3b8; font-size: 11px;">
+                Vous recevez ce courriel car vous êtes inscrit à {{ activity_name }}
+              </p>
+              <p style="color:#94a3b8; margin: 10px 0 0 0; font-size: 11px;">
+                © 2025 {{ organization_name }}. Tous droits réservés.
+              </p>
             </td>
           </tr>
         </table>
