@@ -82,20 +82,26 @@
 
 
 
-        <!-- ✅ PHASE 2: Optimized Footer (removed social media icons, consolidated tables) -->
+        <!-- Legal Compliance Footer -->
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
           <tr>
-            <td align="center" style="font-size: 13px; color: #6b7280; padding: 0 32px 20px;">
-              <div class="footer-legal" style="text-align: center; padding: 20px 0;">
-                <p style="margin: 0 0 10px 0;">Pour toute question, contactez-nous à <a href="mailto:support@minipass.me" style="color:#3b82f6; text-decoration:none;">support@minipass.me</a>.</p>
-                <p style="margin: 5px 0; color:#6b7280; font-size: 12px;">{{ organization_name }} - {{ organization_address }}</p>
-                <p style="margin: 5px 0; font-size: 12px;">
-                  <a href="{{ unsubscribe_url }}" style="color:#3b82f6; text-decoration:none;">Unsubscribe</a> | 
-                  <a href="{{ privacy_url }}" style="color:#3b82f6; text-decoration:none;">Privacy Policy</a>
-                </p>
-                <p style="margin: 5px 0; color:#94a3b8; font-size: 11px;">You received this email because you signed up for {{ activity_name }}</p>
-                <p style="color:#94a3b8; margin: 0;">© 2025 Minipass. Tous droits réservés.</p>
-              </div>
+            <td align="center" style="font-size: 13px; color: #6b7280; padding: 20px 32px;">
+              <p style="margin: 0 0 10px 0;">Pour toute question, contactez-nous à 
+                <a href="mailto:{{ support_email }}" style="color:#3b82f6; text-decoration:none;">{{ support_email }}</a>
+              </p>
+              <p style="margin: 5px 0; color:#6b7280; font-size: 12px;">
+                {{ organization_name }} • {{ organization_address }}
+              </p>
+              <p style="margin: 10px 0; font-size: 12px;">
+                <a href="{{ unsubscribe_url }}" style="color:#3b82f6; text-decoration:none;">Se désabonner</a> | 
+                <a href="{{ privacy_url }}" style="color:#3b82f6; text-decoration:none;">Politique de confidentialité</a>
+              </p>
+              <p style="margin: 5px 0; color:#94a3b8; font-size: 11px;">
+                Vous recevez ce courriel car vous êtes inscrit à {{ activity_name }}
+              </p>
+              <p style="color:#94a3b8; margin: 10px 0 0 0; font-size: 11px;">
+                © 2025 {{ organization_name }}. Tous droits réservés.
+              </p>
             </td>
           </tr>
         </table>

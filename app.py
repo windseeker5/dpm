@@ -6194,7 +6194,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me')
                 }
@@ -6240,7 +6240,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'title': email_context.get('title', 'We\'d Love Your Feedback!'),
@@ -6250,6 +6250,8 @@ def send_survey_invitations(survey_id):
                 
                 send_email_async(
                     app=current_app._get_current_object(),
+                    user=passport.user,
+                    activity=survey.activity,
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
@@ -6283,7 +6285,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me')
                 }
@@ -6329,7 +6331,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'title': email_context.get('title', 'We\'d Love Your Feedback!'),
@@ -6339,6 +6341,8 @@ def send_survey_invitations(survey_id):
                 
                 send_email_async(
                     app=current_app._get_current_object(),
+                    user=passport.user,
+                    activity=survey.activity,
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
@@ -8153,6 +8157,80 @@ def unsubscribe():
         except Exception as e:
             print(f"❌ Unsubscribe error: {e}")
             return "An error occurred. Please try again later.", 500
+
+
+@app.route('/privacy', methods=['GET'])
+def privacy():
+    """Privacy Policy page"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Privacy Policy - Foundation LHGI</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+                max-width: 800px; 
+                margin: 40px auto; 
+                padding: 20px; 
+                line-height: 1.6;
+                color: #333;
+            }
+            h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+            h2 { color: #34495e; margin-top: 30px; }
+            .container { background: #f8f9fa; padding: 30px; border-radius: 8px; }
+            .contact { background: #e3f2fd; padding: 20px; border-radius: 6px; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Privacy Policy</h1>
+            <p><strong>Foundation LHGI</strong> is committed to protecting your privacy.</p>
+            
+            <h2>Information We Collect</h2>
+            <p>We collect information you provide when you:</p>
+            <ul>
+                <li>Sign up for activities</li>
+                <li>Create an account</li>
+                <li>Make payments</li>
+                <li>Contact us for support</li>
+            </ul>
+            
+            <h2>How We Use Your Information</h2>
+            <p>We use your information to:</p>
+            <ul>
+                <li>Process registrations and payments</li>
+                <li>Send activity confirmations and updates</li>
+                <li>Provide customer support</li>
+                <li>Improve our services</li>
+            </ul>
+            
+            <h2>Email Communications</h2>
+            <p>We may send you emails related to:</p>
+            <ul>
+                <li>Activity confirmations</li>
+                <li>Payment receipts</li>
+                <li>Account updates</li>
+                <li>Service announcements</li>
+            </ul>
+            <p>You can unsubscribe from promotional emails at any time using the unsubscribe link in our emails.</p>
+            
+            <h2>Data Security</h2>
+            <p>We implement appropriate security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
+            
+            <div class="contact">
+                <h2>Contact Us</h2>
+                <p>If you have questions about this privacy policy, please contact us at:</p>
+                <p><strong>Email:</strong> lhgi@minipass.me</p>
+                <p><strong>Address:</strong> 821 rue des Sables, Rimouski, QC G5L 6Y7</p>
+            </div>
+            
+            <p><small>Last updated: September 2025</small></p>
+        </div>
+    </body>
+    </html>
+    '''
 
 
 if __name__ == "__main__":
