@@ -404,27 +404,41 @@
     // Filter passport types by activity
     const activityId = select.value;
     const passportTypeSelect = document.getElementById("passport_type_select");
+    const currentPassportType = passportTypeSelect.value; // Preserve current selection
+    
     for (let option of passportTypeSelect.options) {
       if (option.value === "") continue;
       option.style.display = option.getAttribute("data-activity") === activityId ? "" : "none";
     }
-    passportTypeSelect.value = ""; // Reset selection
     
-    // Auto-select if only one passport type available
-    let visibleOptions = 0;
-    let singleOptionValue = null;
-    
+    // Only reset selection if current passport type is not valid for this activity
+    let currentTypeStillVisible = false;
     for (let option of passportTypeSelect.options) {
-      if (option.value !== "" && option.style.display !== "none") {
-        visibleOptions++;
-        singleOptionValue = option.value;
+      if (option.value === currentPassportType && option.style.display !== "none") {
+        currentTypeStillVisible = true;
+        break;
       }
     }
     
-    // If only one passport type exists, auto-select it
-    if (visibleOptions === 1 && singleOptionValue) {
-      passportTypeSelect.value = singleOptionValue;
-      updatePassportTypeDetails(passportTypeSelect);
+    if (!currentTypeStillVisible) {
+      passportTypeSelect.value = ""; // Reset only if current selection is no longer valid
+      
+      // Auto-select if only one passport type available
+      let visibleOptions = 0;
+      let singleOptionValue = null;
+      
+      for (let option of passportTypeSelect.options) {
+        if (option.value !== "" && option.style.display !== "none") {
+          visibleOptions++;
+          singleOptionValue = option.value;
+        }
+      }
+      
+      // If only one passport type exists, auto-select it
+      if (visibleOptions === 1 && singleOptionValue) {
+        passportTypeSelect.value = singleOptionValue;
+        updatePassportTypeDetails(passportTypeSelect);
+      }
     }
   }
   
