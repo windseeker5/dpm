@@ -1329,6 +1329,11 @@ def get_all_activity_logs():
     with current_app.app_context():
         # 🟢 Admin Actions (Passport Created, Activity Created, etc.)
         for a in AdminActionLog.query.all():
+            # Skip specific API call logs that clutter the dashboard
+            if ("API Call: GET get_kpi_data_api" in a.action or 
+                "API Call: GET get_activity_dashboard_data" in a.action):
+                continue
+                
             action_text = a.action.lower()
 
             if "passport created" in action_text:
