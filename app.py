@@ -3133,10 +3133,21 @@ def edit_passport(passport_id):
         return redirect(url_for("dashboard2"))
 
     if request.method == "POST":
+        # Update passport fields
         passport.sold_amt = float(request.form.get("sold_amt", passport.sold_amt))
         passport.uses_remaining = int(request.form.get("uses_remaining", passport.uses_remaining))
         passport.paid = "paid_ind" in request.form
         passport.notes = request.form.get("notes", passport.notes).strip()
+        
+        # Update user information
+        user_name = request.form.get("user_name", "").strip()
+        user_email = request.form.get("user_email", "").strip()
+        phone_number = request.form.get("phone_number", "").strip()
+        
+        if passport.user:
+            passport.user.name = user_name
+            passport.user.email = user_email
+            passport.user.phone_number = phone_number
         
         # Handle passport type update
         passport_type_id = request.form.get("passport_type_id")
