@@ -2,16 +2,26 @@
 {% block title %}Transaction Historique{% endblock %}
 
 {% block content %}
-<div class="container-xl">
 
-  <!-- 🔹 Title -->
-  <div class="mb-4">
-    <div class="text-uppercase text-muted fw-bold lh-1" style="font-size: 0.75rem;">TRANSACTION</div>
-    <h2 class="page-title">HISTORIQUE</h2>
+<div class="page-wrapper">
+  <!-- Page Header -->
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <div class="text-uppercase text-muted fw-bold lh-1" style="font-size: 0.75rem;">TRANSACTION</div>
+          <h1 class="page-title">HISTORIQUE</h1>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- 🔹 Search + Filter Controls -->
-  <div class="card mb-3">
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="dashboard-container">
+
+    <!-- 🔹 Search + Filter Controls -->
+    <div class="card mb-3">
     <div class="card-body">
       <div class="row g-2 align-items-center">
 
@@ -51,8 +61,8 @@
     </div>
   </div>
 
-  <!-- 🔹 Table -->
-  <div class="card">
+    <!-- 🔹 Table -->
+    <div class="card">
     <div class="card-header">
       <h3 class="card-title">Last Transactions</h3>
     </div>
@@ -115,6 +125,9 @@
     <div class="card-footer d-flex align-items-center">
       <p class="m-0 text-muted">Showing <span id="showingCount">0</span> of {{ logs|length }}</p>
       <ul class="pagination m-0 ms-auto" id="paginationControls"></ul>
+    </div>
+    </div>
+
     </div>
   </div>
 </div>

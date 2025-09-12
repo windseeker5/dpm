@@ -1163,51 +1163,24 @@ def match_gmail_payments_to_passes():
             uid = match.get("uid")
             subject = match["subject"]
             
-            # NEW: Check if we already processed this exact payment to prevent duplicates
-            existing_payment = EbankPayment.query.filter_by(
-                bank_info_name=name,
-                bank_info_amt=amt,
-                from_email=from_email
-            ).first()
-            
-            if existing_payment:
-                print(f"⚠️ Payment already processed: {name} - ${amt} from {from_email}")
-                print(f"   Skipping duplicate (originally processed: {existing_payment.timestamp})")
-                continue  # Skip to next email
-            
             print(f"🔍 Processing payment: Name='{name}', Amount=${amt}, From={from_email}")
             print(f"🔍 Found {len(unpaid_passports)} unpaid passports to match against")
 
-            # NEW ALGORITHM: Stage 1 - Try exact matches first (≥95%), then fuzzy matches (≥threshold)
-            exact_matches = []
-            fuzzy_matches = []
-            
+            # Stage 1: Find all passports matching the name (above threshold)
+            name_matches = []
             for p in unpaid_passports:
                 if not p.user:
                     continue
-                    
-                # Calculate match score using full ratio (not partial_ratio for better precision)
-                score = fuzz.ratio(name.lower(), p.user.name.lower())
-                print(f"🔍 Checking passport: User='{p.user.name}', Score={score}")
-                
-                # NEW: Categorize matches by quality
-                if score >= 95:  # Near-exact match (95-100%)
-                    exact_matches.append((p, score))
-                    print(f"🎯 EXACT MATCH: {p.user.name} (Score: {score})")
-                elif score >= threshold:  # Fuzzy match (threshold-94%)
-                    fuzzy_matches.append((p, score))
-                    print(f"🔍 Fuzzy match: {p.user.name} (Score: {score})")
+                score = fuzz.partial_ratio(name.lower(), p.user.name.lower())
+                print(f"🔍 Checking passport: User='{p.user.name}', Score={score} (threshold={threshold})")
+                if score >= threshold:
+                    name_matches.append((p, score))
 
-            print(f"📊 Stage 1: Found {len(exact_matches)} exact matches, {len(fuzzy_matches)} fuzzy matches for '{name}'")
+            print(f"📊 Stage 1: Found {len(name_matches)} name matches for '{name}'")
 
-            # NEW: Prioritize exact matches over fuzzy matches
-            candidates = exact_matches if exact_matches else fuzzy_matches
-            candidate_type = "exact" if exact_matches else "fuzzy"
-            print(f"🎯 Using {candidate_type} matches for processing")
-
-            # Stage 2: From candidates, find amount matches
+            # Stage 2: From name matches, find amount matches
             amount_matches = []
-            for p, score in candidates:
+            for p, score in name_matches:
                 print(f"💰 Checking amount: {p.user.name} - Passport: ${p.sold_amt} vs Payment: ${amt}")
                 if abs(p.sold_amt - amt) < 1:
                     amount_matches.append((p, score))
@@ -1217,28 +1190,15 @@ def match_gmail_payments_to_passes():
 
             print(f"💰 Stage 2: Found {len(amount_matches)} amount matches")
 
-            # NEW: Stage 3 - Handle ambiguous matches
+            # Stage 3: Select best match (oldest first if multiple matches)
             best_passport = None
             best_score = 0
-            if len(amount_matches) > 1:
-                # Check if we have multiple matches with similar scores (ambiguous)
-                scores = [score for _, score in amount_matches]
-                score_range = max(scores) - min(scores)
-                print(f"⚠️ Multiple matches found! Score range: {score_range}")
-                
-                if score_range < 5:  # All scores within 5 points = ambiguous
-                    print(f"🚨 AMBIGUOUS MATCH detected for '{name}' - Multiple similar candidates")
-                    # For now, log and continue with best match - Phase 3 will add manual review queue
-                    for p, score in amount_matches:
-                        print(f"   - {p.user.name}: {score}% (Passport #{p.id})")
-
-            # Stage 4: Select best match (highest score, then oldest)
             if amount_matches:
-                # Sort by score (highest first), then by created_dt (oldest first)
-                amount_matches.sort(key=lambda x: (-x[1], x[0].created_dt))
+                # Sort by created_dt (oldest first), then by score (highest first)
+                amount_matches.sort(key=lambda x: (x[0].created_dt, -x[1]))
                 best_passport = amount_matches[0][0]
                 best_score = amount_matches[0][1]
-                print(f"🎯 Selected passport: {best_passport.user.name} - ${best_passport.sold_amt} (Score: {best_score}%, created: {best_passport.created_dt})")
+                print(f"🎯 Selected passport: {best_passport.user.name} - ${best_passport.sold_amt} (created: {best_passport.created_dt})")
 
             if best_passport:
                 print(f"🎯 PROCESSING MATCH: {best_passport.user.name} - ${best_passport.sold_amt}")
@@ -1322,25 +1282,6 @@ def match_gmail_payments_to_passes():
                         print(f"⚠️ Error moving email to processed folder: {e}")
                         # Don't delete the email if we couldn't move it
             else:
-                # NEW: Calculate closest candidates for admin visibility
-                all_candidates = []
-                for p in unpaid_passports:
-                    if not p.user:
-                        continue
-                    score = fuzz.ratio(name.lower(), p.user.name.lower())
-                    if score >= 50:  # Only show candidates above 50% to avoid noise
-                        all_candidates.append((p.user.name, score))
-                
-                # Sort by score and take top 3
-                all_candidates.sort(key=lambda x: x[1], reverse=True)
-                top_candidates = all_candidates[:3]
-                
-                # Format candidates for note
-                note_text = "No matching passport found."
-                if top_candidates:
-                    candidate_strs = [f"{name} {score:.0f}%" for name, score in top_candidates]
-                    note_text = f"No matching passport found. Closest: {', '.join(candidate_strs)}"
-                
                 db.session.add(EbankPayment(
                     from_email=from_email,
                     subject=subject,
@@ -1349,7 +1290,7 @@ def match_gmail_payments_to_passes():
                     name_score=0,
                     result="NO_MATCH",
                     mark_as_paid=False,
-                    note=note_text
+                    note="No matching passport found."
                 ))
 
         db.session.commit()
@@ -1439,25 +1380,10 @@ def get_all_activity_logs():
         for p in EbankPayment.query.all():
             if p.result == "MATCHED":
                 log_type = "Interact Payment"
-                # NEW: Show bank name and match score for transparency
-                bank_name = p.bank_info_name or "Unknown"
-                match_score = f"{p.name_score:.1f}" if p.name_score else "N/A"
-                
-                # NEW: Get activity name from the matched passport
-                activity_name = ""
-                if p.matched_pass_id:
-                    from models import Passport
-                    passport = Passport.query.get(p.matched_pass_id)
-                    if passport and passport.activity:
-                        activity_name = f" for Activity '{passport.activity.name}'"
-                
-                details = f"From {p.matched_name}, Amount: ${p.bank_info_amt:.2f} (Bank: '{bank_name}' matched at {match_score}%){activity_name}, Passport ID: {p.matched_pass_id}"
+                details = f"From {p.matched_name}, Amount: {p.bank_info_amt:.2f}, Passport ID: {p.matched_pass_id}"
             else:
                 log_type = "Payment No Match"
-                details = f"From {p.bank_info_name}, Amount: ${p.bank_info_amt:.2f}"
-                # NEW: Include candidate info if available in note
-                if p.note and "Closest:" in p.note:
-                    details += f" - {p.note}"
+                details = f"From {p.bank_info_name}, Amount: {p.bank_info_amt:.2f}"
 
             logs.append({
                 "timestamp": p.timestamp,
