@@ -46,11 +46,77 @@
           {% set is_customized = raw_template_data.get('subject') or raw_template_data.get('title') or raw_template_data.get('intro_text') or raw_template_data.get('conclusion_text') or raw_template_data.get('hero_image') or raw_template_data.get('activity_logo') %}
           
           <div class="template-item" data-template="{{ template_key }}">
-            <img src="{{ url_for('static', filename='uploads/email_thumbnails/' + activity.id|string + '_' + template_key + '.jpg') }}" 
-                 alt="{{ template_name }}" 
-                 class="template-preview"
-                 onerror="this.src='{{ url_for('static', filename='uploads/email_template_previews/' + template_key + '.svg') }}';">
-            
+            <!-- Email Template Hybrid Preview -->
+            <div class="email-preview-placeholder">
+              <!-- Mini Hero Image -->
+              <div class="mini-hero mb-1">
+                <img src="{{ url_for('get_hero_image', activity_id=activity.id, template_type=template_key) }}"
+                     alt="Hero"
+                     class="mini-hero-img"
+                     onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}';">
+              </div>
+
+              <!-- Mini Subject line placeholder -->
+              <div class="placeholder col-8 mb-1"></div>
+
+              <!-- Mini text content placeholders -->
+              <div class="placeholder col-10 mb-1"></div>
+              <div class="placeholder col-7 mb-1"></div>
+              <div class="placeholder col-9 mb-1"></div>
+
+              {% if template_key in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment'] %}
+                <!-- Mini Owner Card -->
+                <div class="mini-owner-card mb-1">
+                  <div class="d-flex align-items-center gap-1">
+                    <img src="{{ url_for('static', filename='uploads/' + activity.id|string + '_owner_logo.png') }}"
+                         alt="Logo"
+                         class="mini-logo"
+                         onerror="this.src='{{ url_for('static', filename='uploads/flhgi.png') }}';">
+                    <div class="flex-grow-1">
+                      <div class="placeholder col-12 mb-0"></div>
+                      <div class="placeholder col-8 mb-0"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mini History Table -->
+                <div class="mini-history-table mb-1">
+                  <div class="mini-table-row d-flex gap-1 mb-0">
+                    <div class="placeholder col-3"></div>
+                    <div class="placeholder col-6"></div>
+                  </div>
+                  <div class="mini-table-row d-flex gap-1 mb-0">
+                    <div class="placeholder col-3"></div>
+                    <div class="placeholder col-5"></div>
+                  </div>
+                </div>
+              {% endif %}
+
+              <!-- Mini Button placeholder based on template type -->
+              {% if template_key == 'newPass' %}
+                <div class="placeholder placeholder-button placeholder-button-green col-4 mb-1"></div>
+              {% elif template_key == 'paymentReceived' %}
+                <div class="placeholder placeholder-button placeholder-button-blue col-4 mb-1"></div>
+              {% elif template_key == 'latePayment' %}
+                <div class="placeholder placeholder-button placeholder-button-orange col-4 mb-1"></div>
+              {% elif template_key == 'signup' %}
+                <div class="d-flex gap-1 mb-1">
+                  <div class="placeholder placeholder-button placeholder-button-green col-3"></div>
+                  <div class="placeholder placeholder-button placeholder-button-blue col-3"></div>
+                </div>
+              {% elif template_key == 'redeemPass' %}
+                <!-- Mini QR Code -->
+                <div class="mini-qr mb-1">
+                  <div class="placeholder placeholder-qr col-3"></div>
+                </div>
+              {% elif template_key == 'survey_invitation' %}
+                <div class="placeholder placeholder-button placeholder-button-purple col-4 mb-1"></div>
+              {% endif %}
+
+              <!-- Mini footer text -->
+              <div class="placeholder col-6"></div>
+            </div>
+
             <div class="template-overlay">
               <button type="button" class="action-btn customize-btn" 
                       data-action="customize" 
@@ -894,6 +960,121 @@ document.addEventListener('DOMContentLoaded', function() {
   margin-left: 4px;
   font-weight: 600;
 }
+
+/* Email Template Hybrid Preview Styling */
+.email-preview-placeholder {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 18px; /* Increased from 8px to 18px (10px more padding) */
+  height: 280px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+
+.email-preview-placeholder:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+  border-color: #206bc4;
+}
+
+.email-preview-placeholder .placeholder {
+  background: #dee2e6 !important; /* Static light gray - no animation */
+  border-radius: 1px;
+  height: 4px !important; /* Double the height */
+  min-height: 4px !important; /* Override Tabler's min-height: 1em */
+}
+
+@keyframes placeholder-glow {
+  0% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* Mini Hero Image */
+.mini-hero {
+  height: 40px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #f8f9fa;
+}
+
+.mini-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* Mini Logo */
+.mini-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 2px;
+  background: white;
+  border: 1px solid #e9ecef;
+}
+
+/* Mini Owner Card */
+.mini-owner-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+/* Mini History Table */
+.mini-history-table {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 3px;
+}
+
+.mini-table-row {
+  margin-bottom: 1px;
+}
+
+/* Mini QR Code */
+.mini-qr {
+  display: flex;
+  justify-content: center;
+}
+
+/* Button placeholder colors */
+.placeholder-button {
+  height: 10px !important;
+}
+
+.placeholder-button-green {
+  background: #4CAF50 !important;
+}
+
+.placeholder-button-blue {
+  background: #2196F3 !important;
+}
+
+.placeholder-button-orange {
+  background: #FF9800 !important;
+}
+
+.placeholder-button-purple {
+  background: #9C27B0 !important;
+}
+
+.placeholder-qr {
+  height: 18px !important;
+  background: #f1f3f4 !important;
+  border: 1px dashed #d1d5db !important;
+}
+
+/* All templates now use the main Tabler gray color for placeholders */
+
+
+
+
+
 </style>
 
 {% endblock %}
