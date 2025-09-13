@@ -1149,7 +1149,10 @@ def match_gmail_payments_to_passes():
         mail.select("inbox")
 
         matches = extract_interac_transfers(user, pwd, mail)
-
+        
+        # Optimize by querying unpaid passports once outside the loop
+        unpaid_passports = Passport.query.filter_by(paid=False).all()
+        
         print(f"🔍 DEBUG: Found {len(matches)} email matches")
         for i, match in enumerate(matches):
             print(f"🔍 Email {i+1}: {match.get('subject', 'No subject')[:50]}...")
@@ -1170,22 +1173,14 @@ def match_gmail_payments_to_passes():
                 EbankPayment.from_email == from_email,
                 EbankPayment.timestamp >= time_window
             ).first()
-
-            # Track if we're updating an existing record to avoid duplicates
-            update_existing_record = False
             
             if existing_payment:
-                if existing_payment.result == "MATCHED":
-                    print(f"✅ ALREADY SUCCESSFULLY MATCHED: {name} - ${amt} from {from_email}")
-                    print(f"   Processed on: {existing_payment.timestamp}")
+                print(f"⚠️ DUPLICATE DETECTED: {name} - ${amt} from {from_email}")
+                print(f"   Already processed on: {existing_payment.timestamp}")
+                print(f"   Match status: {existing_payment.result}")
+                if existing_payment.matched_pass_id:
                     print(f"   Matched to passport ID: {existing_payment.matched_pass_id}")
-                    continue  # Skip only successfully matched payments
-                elif existing_payment.result == "NO_MATCH":
-                    print(f"🔄 RETRYING PREVIOUSLY FAILED MATCH: {name} - ${amt} from {from_email}")
-                    print(f"   Previous attempt on: {existing_payment.timestamp}")
-                    print(f"   Will update existing record if successful")
-                    update_existing_record = True
-                    # Continue processing to retry the match
+                continue  # Skip to next email
             
             print(f"\n" + "="*80)
             print(f"💳 PROCESSING NEW PAYMENT")
@@ -1193,45 +1188,7 @@ def match_gmail_payments_to_passes():
             print(f"   Amount: ${amt}")
             print(f"   Email: {from_email}")
             print(f"   Subject: {subject[:50]}...")
-
-            # OPTIMIZATION: Filter by exact amount FIRST for massive performance gain
-            # Convert to float for reliable comparison
-            payment_amount = float(amt)
-
-            # Get all unpaid passports first, then filter by amount in Python
-            all_unpaid = Passport.query.filter_by(paid=False).all()
-            unpaid_passports = [p for p in all_unpaid if float(p.sold_amt) == payment_amount]
-
-            if not unpaid_passports:
-                print(f"❌ NO PASSPORTS FOUND for ${payment_amount:.2f}")
-                print(f"   Payment may have arrived before passport creation")
-                # Debug: Show available amounts for troubleshooting
-                available_amounts = list(set(float(p.sold_amt) for p in all_unpaid))
-                available_amounts.sort()
-                print(f"   Available amounts: {[f'${a:.2f}' for a in available_amounts[:10]]}")
-
-                if update_existing_record and existing_payment:
-                    # Update existing record instead of creating new one
-                    existing_payment.result = "NO_MATCH"
-                    existing_payment.name_score = 0
-                    existing_payment.note = f"No unpaid passports for ${payment_amount:.2f} - payment may have arrived before passport creation"
-                    existing_payment.timestamp = datetime.now(timezone.utc)
-                    print(f"   📝 Updated existing NO_MATCH record")
-                else:
-                    # Create new record
-                    db.session.add(EbankPayment(
-                        from_email=from_email,
-                        subject=subject,
-                        bank_info_name=name,
-                        bank_info_amt=amt,
-                        name_score=0,
-                        result="NO_MATCH",
-                        mark_as_paid=False,
-                        note=f"No unpaid passports for ${payment_amount:.2f} - payment may have arrived before passport creation"
-                    ))
-                continue  # Skip to next payment
-
-            print(f"🔍 Found {len(unpaid_passports)} unpaid passports for ${payment_amount:.2f}")
+            print(f"🔍 Searching among {len(unpaid_passports)} unpaid passports")
             print("="*80)
 
             # IMPROVED ALGORITHM: Stage 1 - Normalize names and try matching
@@ -1283,30 +1240,41 @@ def match_gmail_payments_to_passes():
             candidate_type = "exact" if exact_matches else "fuzzy"
             print(f"🎯 Using {candidate_type} matches for processing")
 
-            # Stage 2: Select best match from candidates (all already have correct amount)
+            # Stage 2: From candidates, find amount matches
+            amount_matches = []
+            amount_mismatches = []  # Track mismatches for logging
+            
+            for p, score in candidates:
+                if abs(p.sold_amt - amt) < 1:
+                    amount_matches.append((p, score))
+                    print(f"✅ MATCH FOUND: {p.user.name} - Amount: ${p.sold_amt} (Score: {score}%)")
+                else:
+                    amount_mismatches.append((p, score))
+                    print(f"⚠️ Amount mismatch: {p.user.name} has ${p.sold_amt}, payment is ${amt} (diff: ${abs(p.sold_amt - amt)})")
+
+            print(f"💰 Stage 2: Found {len(amount_matches)} amount matches")
+
+            # NEW: Stage 3 - Handle ambiguous matches
             best_passport = None
             best_score = 0
-
-            # All candidates already have the correct amount, so just find best name match
-            valid_matches = candidates  # All candidates are valid since amount already matches
-
-            if len(valid_matches) > 1:
+            if len(amount_matches) > 1:
                 # Check if we have multiple matches with similar scores (ambiguous)
-                scores = [score for _, score in valid_matches]
+                scores = [score for _, score in amount_matches]
                 score_range = max(scores) - min(scores)
                 print(f"⚠️ Multiple matches found! Score range: {score_range}")
-
+                
                 if score_range < 5:  # All scores within 5 points = ambiguous
                     print(f"🚨 AMBIGUOUS MATCH detected for '{name}' - Multiple similar candidates")
-                    for p, score in valid_matches:
+                    # For now, log and continue with best match - Phase 3 will add manual review queue
+                    for p, score in amount_matches:
                         print(f"   - {p.user.name}: {score}% (Passport #{p.id})")
 
-            # Select best match (highest score, then oldest)
-            if valid_matches:
+            # Stage 4: Select best match (highest score, then oldest)
+            if amount_matches:
                 # Sort by score (highest first), then by created_dt (oldest first)
-                valid_matches.sort(key=lambda x: (-x[1], x[0].created_dt))
-                best_passport = valid_matches[0][0]
-                best_score = valid_matches[0][1]
+                amount_matches.sort(key=lambda x: (-x[1], x[0].created_dt))
+                best_passport = amount_matches[0][0]
+                best_score = amount_matches[0][1]
                 print(f"🎯 Selected passport: {best_passport.user.name} - ${best_passport.sold_amt} (Score: {best_score}%, created: {best_passport.created_dt})")
 
             if best_passport:
@@ -1314,24 +1282,22 @@ def match_gmail_payments_to_passes():
             else:
                 print(f"\n❌ NO MATCH FOUND")
                 print(f"   Payment: {name} - ${amt}")
-
-                # Log why no match was found (improved logic for amount-first filtering)
+                
+                # Log why no match was found
                 if not candidates:
                     print(f"   Reason: No name matches above {threshold}% threshold")
-                    # Show the closest matches for debugging
-                    closest_matches = []
-                    for p in unpaid_passports:
-                        if not p.user:
-                            continue
-                        score = fuzz.ratio(normalize_name(name), normalize_name(p.user.name))
-                        if score >= 50:  # Show matches above 50% for context
-                            closest_matches.append((p.user.name, score))
-
-                    if closest_matches:
-                        closest_matches.sort(key=lambda x: x[1], reverse=True)
-                        print(f"   Closest matches for ${amt}:")
-                        for user_name, score in closest_matches[:3]:
-                            print(f"      - {user_name}: {score}%")
+                elif amount_mismatches:
+                    print(f"   Reason: Name matched but amounts don't match")
+                    print(f"   Found passports with different amounts:")
+                    for p, score in amount_mismatches[:3]:  # Show top 3
+                        print(f"      - {p.user.name}: ${p.sold_amt} (name match: {score}%)")
+                
+                # Show all passports for users with similar names
+                normalized_key = normalize_name(name)
+                if normalized_key in all_passport_amounts:
+                    print(f"   All passports for similar names:")
+                    for pass_id, pass_amt, pass_name in all_passport_amounts[normalized_key]:
+                        print(f"      - Passport #{pass_id}: {pass_name} - ${pass_amt}")
                 
             if best_passport:
                 now_utc = datetime.now(timezone.utc)
@@ -1339,32 +1305,19 @@ def match_gmail_payments_to_passes():
                 best_passport.paid_date = now_utc
                 db.session.add(best_passport)
 
-                if update_existing_record and existing_payment:
-                    # Update existing record instead of creating new one
-                    existing_payment.matched_pass_id = best_passport.id
-                    existing_payment.matched_name = best_passport.user.name
-                    existing_payment.matched_amt = best_passport.sold_amt
-                    existing_payment.name_score = best_score
-                    existing_payment.result = "MATCHED"
-                    existing_payment.mark_as_paid = True
-                    existing_payment.note = "Matched by Gmail Bot (retry successful)."
-                    existing_payment.timestamp = datetime.now(timezone.utc)
-                    print(f"   📝 Updated existing record to MATCHED")
-                else:
-                    # Create new record
-                    db.session.add(EbankPayment(
-                        from_email=from_email,
-                        subject=subject,
-                        bank_info_name=name,
-                        bank_info_amt=amt,
-                        matched_pass_id=best_passport.id,
-                        matched_name=best_passport.user.name,
-                        matched_amt=best_passport.sold_amt,
-                        name_score=best_score,
-                        result="MATCHED",
-                        mark_as_paid=True,
-                        note="Matched by Gmail Bot."
-                    ))
+                db.session.add(EbankPayment(
+                    from_email=from_email,
+                    subject=subject,
+                    bank_info_name=name,
+                    bank_info_amt=amt,
+                    matched_pass_id=best_passport.id,
+                    matched_name=best_passport.user.name,
+                    matched_amt=best_passport.sold_amt,
+                    name_score=best_score,
+                    result="MATCHED",
+                    mark_as_paid=True,
+                    note="Matched by Gmail Bot."
+                ))
 
                 db.session.commit()
 
@@ -1423,50 +1376,47 @@ def match_gmail_payments_to_passes():
                         print(f"⚠️ Error moving email to processed folder: {e}")
                         # Don't delete the email if we couldn't move it
             else:
-                # Improved: Calculate closest candidates for admin visibility
+                # NEW: Calculate closest candidates for admin visibility
                 all_candidates = []
                 for p in unpaid_passports:
                     if not p.user:
                         continue
-                    score = fuzz.ratio(normalize_name(name), normalize_name(p.user.name))
+                    score = fuzz.ratio(name.lower(), p.user.name.lower())
                     if score >= 50:  # Only show candidates above 50% to avoid noise
                         all_candidates.append((p.user.name, score))
-
+                
                 # Sort by score and take top 3
                 all_candidates.sort(key=lambda x: x[1], reverse=True)
                 top_candidates = all_candidates[:3]
-
+                
                 # Format candidates for note with more detail
-                note_parts = [f"No names above {threshold}% threshold for ${amt}."]
-
+                note_parts = ["No matching passport found."]
+                
+                # Add reason for no match
+                if not candidates:
+                    note_parts.append(f"No names above {threshold}% match threshold.")
+                elif amount_mismatches:
+                    mismatch_info = f"Amount mismatch (payment: ${amt}, found: "
+                    amounts = [f"${p.sold_amt}" for p, _ in amount_mismatches[:2]]
+                    mismatch_info += ", ".join(amounts) + ")"
+                    note_parts.append(mismatch_info)
+                
                 if top_candidates:
-                    candidate_strs = [f"{name} ({score:.0f}%)" for name, score in top_candidates]
-                    note_parts.append(f"Closest matches: {', '.join(candidate_strs)}")
-                else:
-                    note_parts.append("No similar names found.")
-
+                    candidate_strs = [f"{name} {score:.0f}%" for name, score in top_candidates]
+                    note_parts.append(f"Closest: {', '.join(candidate_strs)}")
+                
                 note_text = " ".join(note_parts)
                 
-                if update_existing_record and existing_payment:
-                    # Update existing record instead of creating new one
-                    existing_payment.result = "NO_MATCH"
-                    existing_payment.name_score = 0
-                    existing_payment.mark_as_paid = False
-                    existing_payment.note = note_text
-                    existing_payment.timestamp = datetime.now(timezone.utc)
-                    print(f"   📝 Updated existing NO_MATCH record")
-                else:
-                    # Create new record
-                    db.session.add(EbankPayment(
-                        from_email=from_email,
-                        subject=subject,
-                        bank_info_name=name,
-                        bank_info_amt=amt,
-                        name_score=0,
-                        result="NO_MATCH",
-                        mark_as_paid=False,
-                        note=note_text
-                    ))
+                db.session.add(EbankPayment(
+                    from_email=from_email,
+                    subject=subject,
+                    bank_info_name=name,
+                    bank_info_amt=amt,
+                    name_score=0,
+                    result="NO_MATCH",
+                    mark_as_paid=False,
+                    note=note_text
+                ))
 
         db.session.commit()
         mail.expunge()

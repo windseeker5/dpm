@@ -202,6 +202,7 @@ class Passport(db.Model):
     marked_paid_by = db.Column(db.String(120))
     notes = db.Column(db.Text)
 
+    # Relationships (user and activity are defined via backrefs on User and Activity models)
     signups = db.relationship("Signup", backref="passport", lazy=True)
     passport_type = db.relationship("PassportType", backref="passports")
 
