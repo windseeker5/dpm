@@ -1106,10 +1106,11 @@ def send_unpaid_reminders(app, force_send=False):
 def match_gmail_payments_to_passes():
     from utils import extract_interac_transfers, get_setting, notify_pass_event
     from models import EbankPayment, Passport, db
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     from flask import current_app
     from rapidfuzz import fuzz
     import imaplib
+    import unicodedata
 
     with current_app.app_context():
         user = get_setting("MAIL_USERNAME")
@@ -1163,32 +1164,66 @@ def match_gmail_payments_to_passes():
             uid = match.get("uid")
             subject = match["subject"]
             
-            # NEW: Check if we already processed this exact payment to prevent duplicates
-            existing_payment = EbankPayment.query.filter_by(
-                bank_info_name=name,
-                bank_info_amt=amt,
-                from_email=from_email
+            # IMPROVED: Check if we already processed this payment (with time window to prevent duplicates)
+            # Check for duplicates within last 48 hours to handle re-sent notifications
+            time_window = datetime.now(timezone.utc) - timedelta(hours=48)
+            existing_payment = EbankPayment.query.filter(
+                EbankPayment.bank_info_name == name,
+                EbankPayment.bank_info_amt == amt,
+                EbankPayment.from_email == from_email,
+                EbankPayment.timestamp >= time_window
             ).first()
             
             if existing_payment:
-                print(f"⚠️ Payment already processed: {name} - ${amt} from {from_email}")
-                print(f"   Skipping duplicate (originally processed: {existing_payment.timestamp})")
+                print(f"⚠️ DUPLICATE DETECTED: {name} - ${amt} from {from_email}")
+                print(f"   Already processed on: {existing_payment.timestamp}")
+                print(f"   Match status: {existing_payment.result}")
+                if existing_payment.matched_pass_id:
+                    print(f"   Matched to passport ID: {existing_payment.matched_pass_id}")
                 continue  # Skip to next email
             
-            print(f"🔍 Processing payment: Name='{name}', Amount=${amt}, From={from_email}")
-            print(f"🔍 Found {len(unpaid_passports)} unpaid passports to match against")
+            print(f"\n" + "="*80)
+            print(f"💳 PROCESSING NEW PAYMENT")
+            print(f"   From: {name}")
+            print(f"   Amount: ${amt}")
+            print(f"   Email: {from_email}")
+            print(f"   Subject: {subject[:50]}...")
+            print(f"🔍 Searching among {len(unpaid_passports)} unpaid passports")
+            print("="*80)
 
-            # NEW ALGORITHM: Stage 1 - Try exact matches first (≥95%), then fuzzy matches (≥threshold)
+            # IMPROVED ALGORITHM: Stage 1 - Normalize names and try matching
+            # Helper function to normalize names (remove accents)
+            def normalize_name(text):
+                """Remove accents and normalize text for better matching"""
+                # NFD decompose, then filter out combining marks
+                normalized = unicodedata.normalize('NFD', text)
+                without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+                return without_accents.lower().strip()
+            
+            normalized_payment_name = normalize_name(name)
+            print(f"📝 Normalized payment name: '{name}' → '{normalized_payment_name}'")
+            
             exact_matches = []
             fuzzy_matches = []
+            all_passport_amounts = {}  # Track all amounts for better logging
             
             for p in unpaid_passports:
                 if not p.user:
                     continue
-                    
-                # Calculate match score using full ratio (not partial_ratio for better precision)
-                score = fuzz.ratio(name.lower(), p.user.name.lower())
-                print(f"🔍 Checking passport: User='{p.user.name}', Score={score}")
+                
+                # Store all passport amounts for this user for debugging
+                user_key = normalize_name(p.user.name)
+                if user_key not in all_passport_amounts:
+                    all_passport_amounts[user_key] = []
+                all_passport_amounts[user_key].append((p.id, p.sold_amt, p.user.name))
+                
+                # Calculate match score using normalized names
+                normalized_passport_name = normalize_name(p.user.name)
+                score = fuzz.ratio(normalized_payment_name, normalized_passport_name)
+                
+                # Only log high-scoring matches to reduce noise
+                if score >= 70:
+                    print(f"🔍 Checking: '{p.user.name}' (normalized: '{normalized_passport_name}') - Score: {score}%, Amount: ${p.sold_amt}")
                 
                 # NEW: Categorize matches by quality
                 if score >= 95:  # Near-exact match (95-100%)
@@ -1207,13 +1242,15 @@ def match_gmail_payments_to_passes():
 
             # Stage 2: From candidates, find amount matches
             amount_matches = []
+            amount_mismatches = []  # Track mismatches for logging
+            
             for p, score in candidates:
-                print(f"💰 Checking amount: {p.user.name} - Passport: ${p.sold_amt} vs Payment: ${amt}")
                 if abs(p.sold_amt - amt) < 1:
                     amount_matches.append((p, score))
-                    print(f"✅ Amount match found!")
+                    print(f"✅ MATCH FOUND: {p.user.name} - Amount: ${p.sold_amt} (Score: {score}%)")
                 else:
-                    print(f"❌ Amount mismatch: ${p.sold_amt} vs ${amt} (diff: ${abs(p.sold_amt - amt)})")
+                    amount_mismatches.append((p, score))
+                    print(f"⚠️ Amount mismatch: {p.user.name} has ${p.sold_amt}, payment is ${amt} (diff: ${abs(p.sold_amt - amt)})")
 
             print(f"💰 Stage 2: Found {len(amount_matches)} amount matches")
 
@@ -1241,9 +1278,26 @@ def match_gmail_payments_to_passes():
                 print(f"🎯 Selected passport: {best_passport.user.name} - ${best_passport.sold_amt} (Score: {best_score}%, created: {best_passport.created_dt})")
 
             if best_passport:
-                print(f"🎯 PROCESSING MATCH: {best_passport.user.name} - ${best_passport.sold_amt}")
+                print(f"\n🎯 FINAL MATCH: {best_passport.user.name} - ${best_passport.sold_amt} (Passport ID: {best_passport.id})")
             else:
-                print(f"❌ NO MATCH FOUND for payment: Name='{name}', Amount=${amt}")
+                print(f"\n❌ NO MATCH FOUND")
+                print(f"   Payment: {name} - ${amt}")
+                
+                # Log why no match was found
+                if not candidates:
+                    print(f"   Reason: No name matches above {threshold}% threshold")
+                elif amount_mismatches:
+                    print(f"   Reason: Name matched but amounts don't match")
+                    print(f"   Found passports with different amounts:")
+                    for p, score in amount_mismatches[:3]:  # Show top 3
+                        print(f"      - {p.user.name}: ${p.sold_amt} (name match: {score}%)")
+                
+                # Show all passports for users with similar names
+                normalized_key = normalize_name(name)
+                if normalized_key in all_passport_amounts:
+                    print(f"   All passports for similar names:")
+                    for pass_id, pass_amt, pass_name in all_passport_amounts[normalized_key]:
+                        print(f"      - Passport #{pass_id}: {pass_name} - ${pass_amt}")
                 
             if best_passport:
                 now_utc = datetime.now(timezone.utc)
@@ -1335,11 +1389,23 @@ def match_gmail_payments_to_passes():
                 all_candidates.sort(key=lambda x: x[1], reverse=True)
                 top_candidates = all_candidates[:3]
                 
-                # Format candidates for note
-                note_text = "No matching passport found."
+                # Format candidates for note with more detail
+                note_parts = ["No matching passport found."]
+                
+                # Add reason for no match
+                if not candidates:
+                    note_parts.append(f"No names above {threshold}% match threshold.")
+                elif amount_mismatches:
+                    mismatch_info = f"Amount mismatch (payment: ${amt}, found: "
+                    amounts = [f"${p.sold_amt}" for p, _ in amount_mismatches[:2]]
+                    mismatch_info += ", ".join(amounts) + ")"
+                    note_parts.append(mismatch_info)
+                
                 if top_candidates:
                     candidate_strs = [f"{name} {score:.0f}%" for name, score in top_candidates]
-                    note_text = f"No matching passport found. Closest: {', '.join(candidate_strs)}"
+                    note_parts.append(f"Closest: {', '.join(candidate_strs)}")
+                
+                note_text = " ".join(note_parts)
                 
                 db.session.add(EbankPayment(
                     from_email=from_email,
