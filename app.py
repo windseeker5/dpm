@@ -2788,7 +2788,7 @@ def generate_backup():
         print("❌ Backup failed:", str(e))
         flash("❌ Backup failed. Check logs.", "danger")
 
-    return redirect(url_for("setup", backup_file=zip_filename))
+    return redirect(url_for("setup", backup_file=zip_filename) + "#tab-backup")
 
 
 @app.route("/delete-backup/<filename>", methods=["POST"])
@@ -2800,7 +2800,7 @@ def delete_backup(filename):
         # Security: Only allow .zip files and prevent path traversal
         if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
             flash("❌ Invalid backup filename.", "danger")
-            return redirect(url_for("setup"))
+            return redirect(url_for("setup") + "#tab-backup")
 
         backup_path = os.path.join("static", "backups", filename)
         if os.path.exists(backup_path):
@@ -2813,7 +2813,7 @@ def delete_backup(filename):
         print("❌ Delete backup failed:", str(e))
         flash("❌ Failed to delete backup. Check logs.", "danger")
 
-    return redirect(url_for("setup"))
+    return redirect(url_for("setup") + "#tab-backup")
 
 
 @app.route("/restore-backup/<filename>", methods=["POST"])
@@ -2825,12 +2825,12 @@ def restore_backup(filename):
         # Security: Only allow .zip files and prevent path traversal
         if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
             flash("❌ Invalid backup filename.", "danger")
-            return redirect(url_for("setup"))
+            return redirect(url_for("setup") + "#tab-backup")
 
         backup_path = os.path.join("static", "backups", filename)
         if not os.path.exists(backup_path):
             flash("❌ Backup file not found.", "danger")
-            return redirect(url_for("setup"))
+            return redirect(url_for("setup") + "#tab-backup")
 
         # Import restore functions directly
         from api.backup import restore_database, restore_uploads, restore_templates, create_restore_point
@@ -2861,7 +2861,7 @@ def restore_backup(filename):
         print("❌ Restore backup failed:", str(e))
         flash("❌ Failed to restore backup. Check logs.", "danger")
 
-    return redirect(url_for("setup"))
+    return redirect(url_for("setup") + "#tab-backup")
 
 
 @app.route("/upload-and-restore-backup", methods=["POST"])
@@ -2873,17 +2873,17 @@ def upload_and_restore_backup():
         # Check if file was uploaded
         if 'backup_file' not in request.files:
             flash("❌ No backup file selected.", "danger")
-            return redirect(url_for("setup"))
+            return redirect(url_for("setup") + "#tab-backup")
 
         file = request.files['backup_file']
         if file.filename == '':
             flash("❌ No backup file selected.", "danger")
-            return redirect(url_for("setup"))
+            return redirect(url_for("setup") + "#tab-backup")
 
         # Validate file extension
         if not file.filename.endswith('.zip'):
             flash("❌ Only ZIP backup files are supported.", "danger")
-            return redirect(url_for("setup"))
+            return redirect(url_for("setup") + "#tab-backup")
 
         # Save uploaded file temporarily
         import tempfile
@@ -2942,7 +2942,7 @@ def upload_and_restore_backup():
         print("❌ Upload and restore failed:", str(e))
         flash("❌ Failed to upload and restore backup. Check logs.", "danger")
 
-    return redirect(url_for("setup"))
+    return redirect(url_for("setup") + "#tab-backup")
 
 
 @app.route("/users.json")

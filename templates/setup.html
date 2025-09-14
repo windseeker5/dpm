@@ -554,7 +554,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Get the stored tab from localStorage
   const storedTab = localStorage.getItem('settings-active-tab') || 'admins';
-  
+
   // Function to show a specific tab
   function showTab(tabName) {
     // Hide all tab panes
@@ -562,14 +562,14 @@ document.addEventListener('DOMContentLoaded', function() {
       pane.classList.remove('show', 'active');
       pane.classList.add('fade');
     });
-    
+
     // Show the selected tab
     const targetTab = document.getElementById('tab-' + tabName);
     if (targetTab) {
       targetTab.classList.remove('fade');
       targetTab.classList.add('show', 'active');
     }
-    
+
     // Update active state in sidebar submenu
     const submenuLinks = document.querySelectorAll('#settings-submenu .nav-link');
     submenuLinks.forEach(link => {
@@ -581,13 +581,22 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-  
+
   // Make the function globally available for sidebar navigation
   window.showSettingsTab = showTab;
-  
-  // Show the stored tab on page load
-  showTab(storedTab);
-  
+
+  // Check for URL fragment first, then stored tab
+  const urlHash = window.location.hash;
+  let activeTab = storedTab;
+
+  if (urlHash && urlHash.startsWith('#tab-')) {
+    // Extract tab name from fragment (e.g., #tab-backup -> backup)
+    activeTab = urlHash.substring(5);
+  }
+
+  // Show the determined tab on page load
+  showTab(activeTab);
+
   // Clear localStorage after using it (so it doesn't persist across sessions)
   localStorage.removeItem('settings-active-tab');
 });
