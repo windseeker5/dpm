@@ -600,11 +600,7 @@ def download_unsplash_image():
 
 @app.route("/")
 def home():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    activities = Activity.query.all()
-    return render_template("index.html", activities=activities)
+    return dashboard()
 
 
 @app.route("/health")
