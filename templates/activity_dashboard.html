@@ -3298,20 +3298,27 @@ function copyToClipboard(event, element) {
   });
 }
 
-// Show/hide dropdown on hover - using querySelector on specific element
+// Show/hide dropdown on hover with delay to allow clicking
 document.addEventListener('DOMContentLoaded', function() {
   const shareStat = document.querySelector('.share-stat');
   if (shareStat) {
+    let hideTimeout;
+
     shareStat.addEventListener('mouseenter', function() {
+      clearTimeout(hideTimeout);
       const dropdown = this.querySelector('.share-dropdown');
       if (dropdown && dropdown.children.length > 0) {
         dropdown.style.display = 'block';
       }
     });
-    
+
     shareStat.addEventListener('mouseleave', function() {
       const dropdown = this.querySelector('.share-dropdown');
-      if (dropdown) dropdown.style.display = 'none';
+      if (dropdown) {
+        hideTimeout = setTimeout(() => {
+          dropdown.style.display = 'none';
+        }, 300); // 300ms delay allows clicking
+      }
     });
   }
 });
