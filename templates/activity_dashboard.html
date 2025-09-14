@@ -572,16 +572,11 @@
         <div class="card-body">
           <!-- Header Top Section -->
           <div class="activity-header-top">
-            <!-- Activity Picture -->
-            <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'unsplash_0b73855c.jpg')) }}" 
-                 alt="{{ activity.name }}"
-                 class="activity-image">
-            
-            <!-- Title and Description -->
+            <!-- Title and Description (Left Side) -->
             <div class="activity-info">
               <div class="activity-title-row">
                 <h2 class="activity-title">{{ activity.name }}</h2>
-                <span class="badge bg-success">
+                <span class="badge badge-active-improved">
                   Active
                   <span class="badge-pulse"></span>
                 </span>
@@ -590,74 +585,61 @@
                 {{ activity.description or "Transform your game with professional coaching and structured training sessions." }}
               </p>
             </div>
-            
-            <!-- Right Section: Avatars (Desktop) / Dropdown (Mobile) -->
-            <div class="activity-header-right">
-              <!-- Desktop: User Avatars -->
-              <div class="avatar-list avatar-list-stacked d-none d-md-flex">
-                {% for p in passes[:5] %}
-                <span class="avatar avatar-sm" style="background-image: url(https://www.gravatar.com/avatar/{{ (p.user.email|lower|trim|encode_md5) if p.user and p.user.email else '00000000000000000000000000000000' }}?d=identicon&s=72)"
-                      data-bs-toggle="tooltip"
-                      title="{{ p.user.name if p.user and p.user.name else 'Unknown User' }}"></span>
-                {% endfor %}
-                {% if passes|length > 5 %}
-                <span class="avatar avatar-sm">+{{ passes|length - 5 }}</span>
-                {% endif %}
-              </div>
-              
-              <!-- Mobile: Action Dropdown -->
-              <div class="dropdown d-md-none">
-                <button class="btn btn-primary btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                    <circle cx="12" cy="12" r="1" />
-                    <circle cx="12" cy="19" r="1" />
-                    <circle cx="12" cy="5" r="1" />
-                  </svg>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                  <li><a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                    <i class="ti ti-edit me-2"></i>Edit Activity
-                  </a></li>
-                  <li><a class="dropdown-item" href="{{ url_for('email_template_customization', activity_id=activity.id) }}">
-                    <i class="ti ti-mail me-2"></i>Email Templates
-                  </a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="{{ url_for('scan_qr') }}">
-                    <i class="ti ti-scan me-2"></i>Scan QR
-                  </a></li>
-                  <li><a class="dropdown-item" href="{{ url_for('create_passport', activity_id=activity.id) }}">
-                    <i class="ti ti-ticket me-2"></i>Create Passport
-                  </a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-danger" href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
-                    <i class="ti ti-trash me-2"></i>Delete Activity
-                  </a></li>
-                </ul>
-              </div>
+
+            <!-- Activity Picture (Right Side) -->
+            <div class="activity-image-container">
+              <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'unsplash_0b73855c.jpg')) }}"
+                   alt="{{ activity.name }}"
+                   class="activity-image-large">
             </div>
+
           </div>
 
-          <!-- Stats Row -->
-          <div class="activity-stats-row">
-            <div class="stat-item">
-              <i class="ti ti-users text-primary"></i>
-              <span>{{ passes|length }} users</span>
+          <!-- Stats Row - Hidden on mobile -->
+          <div class="activity-stats-row d-none d-md-flex">
+            <!-- Users with Avatars (No Icon) - Hidden on mobile -->
+            <div class="stat-item stat-item-users-improved d-none d-md-flex">
+              <div class="user-count-display-improved">
+                <div class="user-avatars-improved">
+                  {% for p in passes[:3] %}
+                  <span class="avatar avatar-sm"
+                        style="background-image: url(https://www.gravatar.com/avatar/{{ (p.user.email|lower|trim|encode_md5) if p.user and p.user.email else '00000000000000000000000000000000' }}?d=identicon&s=40)"
+                        data-bs-toggle="tooltip"
+                        title="{{ p.user.name if p.user and p.user.name else 'Unknown User' }}"></span>
+                  {% endfor %}
+                </div>
+                <span class="user-count-improved">
+                  {% if passes|length > 3 %}+{{ passes|length - 3 }}{% else %}{{ passes|length }}{% endif %}
+                </span>
+              </div>
             </div>
-            <div class="stat-item">
-              <i class="ti ti-star-filled text-warning"></i>
-              <span>4.8</span>
+
+            <!-- Survey Rating - Hidden on mobile -->
+            <div class="stat-item d-none d-md-flex">
+              <i class="ti ti-star-filled text-warning stat-icon-improved"></i>
+              <span>
+                {% if survey_rating %}
+                  {{ survey_rating }}
+                  <span class="text-muted small">({{ survey_count }})</span>
+                {% else %}
+                  <span class="text-muted">N/A</span>
+                {% endif %}
+              </span>
             </div>
-            <div class="stat-item">
-              <i class="ti ti-map-pin text-info"></i>
+
+            <!-- Location - Hidden on mobile -->
+            <div class="stat-item d-none d-md-flex">
+              <i class="ti ti-map-pin text-info stat-icon-improved"></i>
               <span>{{ activity.location or 'Location' }}</span>
             </div>
-            <div class="stat-item share-stat">
-              <i class="ti ti-clipboard text-success"></i>
+
+            <!-- Passport Types - Hidden on mobile -->
+            <div class="stat-item share-stat d-none d-md-flex">
+              <i class="ti ti-clipboard text-success stat-icon-improved"></i>
               <span>{{ passport_types|length }} {{ 'type' if passport_types|length == 1 else 'types' }}</span>
               <div class="share-dropdown" style="display: none;">
                 {% for pt in passport_types %}
-                <a href="#" class="share-link" 
+                <a href="#" class="share-link"
                    data-url="{{ url_for('signup', activity_id=activity.id, passport_type_id=pt.id, _external=True) }}"
                    onclick="copyToClipboard(event, this)">
                   {{ pt.name }}
@@ -667,38 +649,80 @@
             </div>
           </div>
 
-          <!-- Revenue Progress Bar -->
+          <!-- Revenue Progress Bar (Simplified) -->
           {% set actual_revenue = kpi_data['revenue']['current']|float if kpi_data and kpi_data['revenue'] else 0 %}
           {% set target_revenue = activity.target_revenue|float if activity.target_revenue else 1000 %}
           {% set progress_percentage = ((actual_revenue / target_revenue * 100) if target_revenue > 0 else 0)|round %}
           <div class="revenue-progress-section">
             <div class="revenue-header">
-              <span class="revenue-label">Revenue Progress</span>
-              <span class="revenue-amount">${{ "{:,.0f}".format(actual_revenue) }}</span>
+              <span class="revenue-label">Progress</span>
             </div>
-            <div class="progress">
-              <div class="progress-bar bg-success" role="progressbar" style="width: {{ [progress_percentage, 100]|min }}%" 
+            <div class="progress progress-thin">
+              <div class="progress-bar bg-success" role="progressbar" style="width: {{ [progress_percentage, 100]|min }}%"
                    aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+
+          <!-- Mobile Action Buttons - Below Progress Bar -->
+          <div class="activity-actions-mobile-bottom d-md-none">
+            <!-- Blue Create Passport Button -->
+            <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-primary">
+              <i class="ti ti-plus"></i> Passport
+            </a>
+            <!-- Gray Actions Dropdown -->
+            <div class="dropdown">
+              <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Actions
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ url_for('scan_qr') }}">
+                  <i class="ti ti-scan me-2"></i>Scan QR
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
+                  <i class="ti ti-edit me-2"></i>Edit Activity
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('email_template_customization', activity_id=activity.id) }}">
+                  <i class="ti ti-mail me-2"></i>Email Templates
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
+                  <i class="ti ti-trash me-2"></i>Delete Activity
+                </a></li>
+              </ul>
             </div>
           </div>
 
           <!-- Desktop Action Buttons -->
           <div class="activity-actions d-none d-md-flex">
-            <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="btn btn-sm btn-secondary">
-              <i class="ti ti-edit"></i> Edit
-            </a>
-            <a href="{{ url_for('email_template_customization', activity_id=activity.id) }}" class="btn btn-sm btn-outline-primary">
-              <i class="ti ti-mail"></i> Email Templates
-            </a>
-            <a href="{{ url_for('scan_qr') }}" class="btn btn-sm btn-outline-success">
+            <!-- Standalone Green Scan Button -->
+            <a href="{{ url_for('scan_qr') }}" class="btn btn-sm btn-success">
               <i class="ti ti-scan"></i> Scan
             </a>
+
+            <!-- Standalone Blue Passport Button -->
             <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-sm btn-primary">
-              <i class="ti ti-ticket"></i> Create Passport
+              <i class="ti ti-ticket"></i> <i class="ti ti-plus"></i> Passport
             </a>
-            <a href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;" class="btn btn-sm btn-outline-danger">
-              <i class="ti ti-trash"></i> Delete
-            </a>
+
+            <!-- Gray Actions Dropdown -->
+            <div class="dropdown">
+              <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Actions
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
+                  <i class="ti ti-edit me-2"></i>Edit Activity
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('email_template_customization', activity_id=activity.id) }}">
+                  <i class="ti ti-mail me-2"></i>Email Templates
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
+                  <i class="ti ti-trash me-2"></i>Delete Activity
+                </a></li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

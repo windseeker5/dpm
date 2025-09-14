@@ -2969,6 +2969,51 @@ def users_json():
 
 
 
+# ================================
+# Helper Functions
+# ================================
+
+def calculate_activity_survey_rating(activity_id):
+    """
+    Calculate the average survey rating for an activity based on completed survey responses.
+    Returns tuple (average_rating, total_responses) or (None, 0) if no data available.
+    """
+    try:
+        # Find all completed survey responses for this activity
+        survey_responses = db.session.query(SurveyResponse).join(
+            Survey, SurveyResponse.survey_id == Survey.id
+        ).filter(
+            Survey.activity_id == activity_id,
+            SurveyResponse.completed == True
+        ).all()
+
+        if not survey_responses:
+            return None, 0
+
+        ratings = []
+        for response in survey_responses:
+            if response.responses:
+                try:
+                    response_data = json.loads(response.responses)
+                    # Look for rating questions (typically 1-5 scale)
+                    for question_key, answer in response_data.items():
+                        if isinstance(answer, (int, float)) and 1 <= answer <= 5:
+                            ratings.append(float(answer))
+                            break  # Take first rating found per response
+                except (json.JSONDecodeError, ValueError):
+                    continue
+
+        if not ratings:
+            return None, len(survey_responses)
+
+        average_rating = sum(ratings) / len(ratings)
+        return round(average_rating, 1), len(ratings)
+
+    except Exception as e:
+        print(f"Error calculating survey rating for activity {activity_id}: {e}")
+        return None, 0
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -4203,6 +4248,9 @@ def activity_dashboard(activity_id):
     from models import PassportType
     passport_types = PassportType.query.filter_by(activity_id=activity_id, status='active').all()
 
+    # Calculate survey rating for activity header
+    survey_rating, survey_count = calculate_activity_survey_rating(activity_id)
+
     # Render KPI cards with activity filter
     revenue_card = render_revenue_card(activity_id=activity_id)
     active_users_card = render_active_users_card(activity_id=activity_id)  
@@ -4229,7 +4277,9 @@ def activity_dashboard(activity_id):
         passports_created_card=passports_created_card,
         passports_unpaid_card=passports_unpaid_card,
         has_pending_signups=has_pending_signups,
-        pending_signups_count=pending_signups_count
+        pending_signups_count=pending_signups_count,
+        survey_rating=survey_rating,
+        survey_count=survey_count
     )
 
 
