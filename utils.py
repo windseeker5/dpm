@@ -573,7 +573,7 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
         # 👤 Created by
         created_by = getattr(hockey_pass, "created_by", None)
         if created_by:
-            admin = Admin.query.get(created_by)
+            admin = db.session.get(Admin, created_by)
             history["created_by"] = admin.email if admin else "-"
 
 
@@ -1563,7 +1563,7 @@ def get_all_activity_logs():
                 activity_name = ""
                 if p.matched_pass_id:
                     from models import Passport
-                    passport = Passport.query.get(p.matched_pass_id)
+                    passport = db.session.get(Passport, p.matched_pass_id)
                     if passport and passport.activity:
                         activity_name = f" for Activity '{passport.activity.name}'"
                 
@@ -1800,7 +1800,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         print(f"📧 Using organization from activity: {org.name}")
     # Priority 2: Get from context
     elif context and 'organization_id' in context:
-        org = Organization.query.get(context['organization_id'])
+        org = db.session.get(Organization, context['organization_id'])
         print(f"📧 Using organization from context: {org.name if org else 'None'}")
     # Priority 3: Try session (for non-activity emails)
     else:
@@ -2269,7 +2269,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     passport_type = None
     if hasattr(signup, 'passport_type_id') and signup.passport_type_id:
         from models import PassportType
-        passport_type = PassportType.query.get(signup.passport_type_id)
+        passport_type = db.session.get(PassportType, signup.passport_type_id)
 
     # Check if activity has custom signup template
     has_custom_template = (activity.email_templates and 
@@ -2649,7 +2649,7 @@ def get_email_config_for_context(user=None, activity=None, organization_id=None)
     with current_app.app_context():
         # Priority 1: Direct organization_id
         if organization_id:
-            org = Organization.query.get(organization_id)
+            org = db.session.get(Organization, organization_id)
             if org and org.email_enabled and org.is_active:
                 return org.get_email_config()
         
@@ -2771,7 +2771,7 @@ def update_organization_email_config(organization_id, **kwargs):
     from flask import current_app
     
     with current_app.app_context():
-        org = Organization.query.get(organization_id)
+        org = db.session.get(Organization, organization_id)
         if not org:
             raise ValueError(f"Organization with ID {organization_id} not found")
         
@@ -2803,7 +2803,7 @@ def test_organization_email_config(organization_id):
     import smtplib
     
     with current_app.app_context():
-        org = Organization.query.get(organization_id)
+        org = db.session.get(Organization, organization_id)
         if not org or not org.email_enabled:
             return False, "Organization not found or email not enabled"
         

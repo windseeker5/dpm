@@ -183,7 +183,7 @@ class ConversationManager:
     def _update_conversation_timestamp(self, conversation_id: int):
         """Update conversation's updated_at timestamp"""
         
-        conversation = ChatConversation.query.get(conversation_id)
+        conversation = db.session.get(ChatConversation, conversation_id)
         if conversation:
             # Store as naive datetime (SQLite default behavior)
             conversation.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -239,7 +239,7 @@ class ConversationManager:
     def archive_conversation(self, conversation_id: int):
         """Archive a conversation"""
         
-        conversation = ChatConversation.query.get(conversation_id)
+        conversation = db.session.get(ChatConversation, conversation_id)
         if conversation:
             conversation.status = 'archived'
             db.session.commit()
@@ -247,7 +247,7 @@ class ConversationManager:
     def delete_conversation(self, conversation_id: int):
         """Delete a conversation and all its messages"""
         
-        conversation = ChatConversation.query.get(conversation_id)
+        conversation = db.session.get(ChatConversation, conversation_id)
         if conversation:
             # Messages will be deleted automatically due to cascade
             db.session.delete(conversation)
@@ -264,7 +264,7 @@ class ConversationManager:
     def get_conversation_stats(self, conversation_id: int) -> Dict[str, Any]:
         """Get statistics for a conversation"""
         
-        conversation = ChatConversation.query.get(conversation_id)
+        conversation = db.session.get(ChatConversation, conversation_id)
         if not conversation:
             return {}
         

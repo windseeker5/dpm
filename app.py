@@ -696,7 +696,7 @@ def dashboard():
         all_passports = Passport.query.filter_by(activity_id=a.id).all()
         paid_passports = [p for p in all_passports if p.paid]
         unpaid_passports = [p for p in all_passports if not p.paid]
-        active_passports = [p for p in paid_passports if p.uses_remaining > 0]
+        active_passports = [p for p in all_passports if p.uses_remaining > 0]
 
         # Revenue
         paid_amount = round(sum(p.sold_amt for p in paid_passports), 2)
@@ -1208,7 +1208,7 @@ def create_pass_from_signup(signup_id):
     # Get passport type from signup or fallback to first one for this activity
     passport_type = None
     if signup.passport_type_id:
-        passport_type = PassportType.query.get(signup.passport_type_id)
+        passport_type = db.session.get(PassportType, signup.passport_type_id)
     else:
         passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
     
@@ -1316,7 +1316,7 @@ def approve_and_create_pass(signup_id):
     # Use passport type from signup if available, otherwise get first one for activity
     passport_type = None
     if signup.passport_type_id:
-        passport_type = PassportType.query.get(signup.passport_type_id)
+        passport_type = db.session.get(PassportType, signup.passport_type_id)
     else:
         passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
     
@@ -1689,7 +1689,7 @@ def signup(activity_id):
     passport_type_id = request.args.get('passport_type_id')
     selected_passport_type = None
     if passport_type_id:
-        selected_passport_type = PassportType.query.get(passport_type_id)
+        selected_passport_type = db.session.get(PassportType, passport_type_id)
     
     # Get all passport types for this activity
     passport_types = PassportType.query.filter_by(activity_id=activity.id, status='active').all()
@@ -1710,7 +1710,7 @@ def signup(activity_id):
         # Get the selected passport type
         passport_type = None
         if selected_passport_type_id:
-            passport_type = PassportType.query.get(selected_passport_type_id)
+            passport_type = db.session.get(PassportType, selected_passport_type_id)
         
         signup = Signup(
             user_id=user.id,
@@ -2370,7 +2370,7 @@ def test_organization_email(org_id):
         success, message = test_organization_email_config(org_id)
         
         # Log admin action
-        org = Organization.query.get(org_id)
+        org = db.session.get(Organization, org_id)
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
             action=f"Email configuration test for '{org.name if org else 'Unknown'}': {message}"
@@ -3151,7 +3151,7 @@ def edit_passport(passport_id):
             passport.passport_type_id = int(passport_type_id)
             # Update passport type name
             from models import PassportType
-            passport_type = PassportType.query.get(passport.passport_type_id)
+            passport_type = db.session.get(PassportType, passport.passport_type_id)
             if passport_type:
                 passport.passport_type_name = passport_type.name
         else:
@@ -3676,7 +3676,7 @@ def export_passports():
 @app.route("/admin/activity-income/<int:activity_id>/edit/<int:income_id>", methods=["GET", "POST"])
 def activity_income(activity_id, income_id=None):
     activity = Activity.query.get_or_404(activity_id)
-    income = Income.query.get(income_id) if income_id else None
+    income = db.session.get(Income, income_id) if income_id else None
 
     income_categories = [
         "Ticket Sales", "Sponsorship", "Donations",
@@ -3752,7 +3752,7 @@ def activity_income(activity_id, income_id=None):
 @app.route("/admin/activity-expenses/<int:activity_id>/edit/<int:expense_id>", methods=["GET", "POST"])
 def activity_expenses(activity_id, expense_id=None):
     activity = Activity.query.get_or_404(activity_id)
-    expense = Expense.query.get(expense_id) if expense_id else None
+    expense = db.session.get(Expense, expense_id) if expense_id else None
 
     expense_categories = [
         "Cost of Goods Sold", "Staff", "Venue", "Equipment Rental",
@@ -3867,7 +3867,7 @@ def delete_expense(expense_id):
 @app.route("/admin/activity", methods=["GET", "POST"])
 @app.route("/admin/activity/<int:activity_id>", methods=["GET", "POST"])
 def activity_form(activity_id=None):
-    activity = Activity.query.get(activity_id) if activity_id else None
+    activity = db.session.get(Activity, activity_id) if activity_id else None
     is_edit = bool(activity)
 
     if request.method == "POST":
@@ -4031,7 +4031,7 @@ def activity_dashboard(activity_id):
     from datetime import datetime, timezone, timedelta
     from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card
 
-    activity = Activity.query.get(activity_id)
+    activity = db.session.get(Activity, activity_id)
     if not activity:
         flash("❌ Activity not found", "error")
         return redirect(url_for("dashboard2"))
@@ -4941,7 +4941,7 @@ def get_kpi_data_api():
         
         # Validate activity_id if provided
         if activity_id is not None:
-            activity = Activity.query.get(activity_id)
+            activity = db.session.get(Activity, activity_id)
             if not activity:
                 return jsonify({
                     'success': False,
@@ -5043,7 +5043,7 @@ def create_passport():
         passport_type_name = None
         if passport_type_id:
             from models import PassportType
-            passport_type = PassportType.query.get(passport_type_id)
+            passport_type = db.session.get(PassportType, passport_type_id)
             if passport_type:
                 passport_type_name = passport_type.name
 
@@ -5471,7 +5471,7 @@ def create_survey():
         # Get template from database or use hardcoded fallback
         if template_id.isdigit():
             # Numeric template ID - get from database
-            template = SurveyTemplate.query.get(int(template_id))
+            template = db.session.get(SurveyTemplate, int(template_id))
             if not template:
                 flash("❌ Invalid survey template", "error")
                 return redirect(url_for("activity_dashboard", activity_id=activity_id))
@@ -5527,7 +5527,7 @@ def create_quick_survey():
             return redirect(url_for("activity_dashboard", activity_id=activity_id or 1))
         
         # Verify activity exists
-        activity = Activity.query.get(activity_id)
+        activity = db.session.get(Activity, activity_id)
         if not activity:
             flash("❌ Activity not found", "error")
             return redirect(url_for("dashboard"))
