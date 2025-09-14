@@ -4607,7 +4607,7 @@ def get_activity_dashboard_data(activity_id):
         search_query = escape(str(request.args.get('q', ''))).strip()[:100]
         
         # Validate filter values
-        valid_passport_filters = ['all', 'paid', 'unpaid']
+        valid_passport_filters = ['all', 'paid', 'unpaid', 'active']
         valid_signup_filters = ['all', 'paid', 'unpaid', 'pending']
         
         if passport_filter not in valid_passport_filters:
