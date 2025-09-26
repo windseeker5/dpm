@@ -112,6 +112,40 @@
   {% endfor %}
 </div>
 
+<!-- Delete Confirmation Modals (one per admin) -->
+{% for admin in admins %}
+{% if admin.email != session.get('admin') %}
+<div class="modal modal-blur fade" id="delete-admin-modal-{{ loop.index }}" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-danger"></div>
+
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">
+          <i class="ti ti-trash me-2"></i> Confirm Delete
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body text-center">
+        <p class="text-muted mb-3">Are you sure you want to remove admin:</p>
+        <p class="fw-bold">{{ admin.email }}</p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger confirm-delete-admin-btn"
+                data-admin-email="{{ admin.email }}"
+                data-admin-index="{{ loop.index }}">
+          <i class="ti ti-trash me-2"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
 <!-- Add Admin Button -->
 <div class="d-flex justify-content-end">
   <button type="button" class="btn btn-primary" id="add-admin-btn">
@@ -604,14 +638,18 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Remove admin with confirmation
+  // Handle modal delete confirmation
   document.addEventListener('click', function(e) {
-    if (e.target.closest('.remove-admin-btn')) {
-      const button = e.target.closest('.remove-admin-btn');
-      const block = button.closest(".admin-block");
-      const email = block.querySelector('.admin-email').value;
-      
-      if (confirm(`Are you sure you want to remove admin: ${email}?`)) {
+    if (e.target.closest('.confirm-delete-admin-btn')) {
+      const button = e.target.closest('.confirm-delete-admin-btn');
+      const email = button.dataset.adminEmail;
+      const adminIndex = button.dataset.adminIndex;
+
+      // Find the admin block by index
+      const adminBlocks = document.querySelectorAll('.admin-block[data-loaded="true"]');
+      const block = adminBlocks[adminIndex - 1]; // loop.index is 1-based
+
+      if (block) {
         // Track deletion
         const deletedField = document.getElementById("deleted_admins");
         let current = deletedField.value ? deletedField.value.split(",") : [];
@@ -619,7 +657,27 @@ document.addEventListener("DOMContentLoaded", function () {
           current.push(email);
           deletedField.value = current.join(",");
         }
-        
+
+        // Close modal
+        const modal = button.closest('.modal');
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) bsModal.hide();
+
+        // Animate removal
+        block.style.transition = 'opacity 0.3s, transform 0.3s';
+        block.style.opacity = '0';
+        block.style.transform = 'translateX(-20px)';
+        setTimeout(() => block.remove(), 300);
+      }
+    }
+
+    // Handle remove button for new admins (keep original logic for dynamically added admins)
+    if (e.target.closest('.remove-admin-btn')) {
+      const button = e.target.closest('.remove-admin-btn');
+      const block = button.closest(".admin-block");
+      const email = block.querySelector('.admin-email').value;
+
+      if (confirm(`Are you sure you want to remove admin: ${email}?`)) {
         // Animate removal
         block.style.transition = 'opacity 0.3s, transform 0.3s';
         block.style.opacity = '0';
