@@ -3114,6 +3114,37 @@ def redeem_passport_qr(pass_code):
         flash("❌ Passport not found!", "error")
         return redirect(url_for("dashboard"))
 
+    # 🛡️ Prevent duplicate redemptions (double-click protection)
+    global recent_redemptions
+    admin_id = session.get("admin", "unknown")
+    throttle_key = f"{passport.id}_{admin_id}"
+
+    # Check in-memory cache for recent redemptions (last 5 seconds)
+    if throttle_key in recent_redemptions:
+        last_redemption_time = recent_redemptions[throttle_key]
+        if (now_utc - last_redemption_time).total_seconds() < 5:
+            flash("⚠️ Redemption already in progress. Please wait.", "warning")
+            return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+
+    # Check database for recent redemptions (last 10 seconds) for persistent protection
+    five_seconds_ago = now_utc - timedelta(seconds=10)
+    recent_db_redemption = Redemption.query.filter_by(
+        passport_id=passport.id
+    ).filter(
+        Redemption.date_used >= five_seconds_ago
+    ).first()
+
+    if recent_db_redemption:
+        flash("⚠️ This passport was recently redeemed. Please refresh the page.", "warning")
+        return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+
+    # Record this redemption attempt in memory cache
+    recent_redemptions[throttle_key] = now_utc
+
+    # Clean up old entries from memory cache (keep only last 30 seconds)
+    cutoff_time = now_utc - timedelta(seconds=30)
+    recent_redemptions = {k: v for k, v in recent_redemptions.items() if v > cutoff_time}
+
     if passport.uses_remaining > 0:
         passport.uses_remaining -= 1
         db.session.add(passport)
@@ -5203,6 +5234,37 @@ def redeem_passport(pass_code):
     if not passport:
         flash("❌ Passport not found!", "error")
         return redirect(url_for("dashboard"))
+
+    # 🛡️ Prevent duplicate redemptions (double-click protection)
+    global recent_redemptions
+    admin_id = session.get("admin", "unknown")
+    throttle_key = f"{passport.id}_{admin_id}"
+
+    # Check in-memory cache for recent redemptions (last 5 seconds)
+    if throttle_key in recent_redemptions:
+        last_redemption_time = recent_redemptions[throttle_key]
+        if (now_utc - last_redemption_time).total_seconds() < 5:
+            flash("⚠️ Redemption already in progress. Please wait.", "warning")
+            return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+
+    # Check database for recent redemptions (last 10 seconds) for persistent protection
+    five_seconds_ago = now_utc - timedelta(seconds=10)
+    recent_db_redemption = Redemption.query.filter_by(
+        passport_id=passport.id
+    ).filter(
+        Redemption.date_used >= five_seconds_ago
+    ).first()
+
+    if recent_db_redemption:
+        flash("⚠️ This passport was recently redeemed. Please refresh the page.", "warning")
+        return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+
+    # Record this redemption attempt in memory cache
+    recent_redemptions[throttle_key] = now_utc
+
+    # Clean up old entries from memory cache (keep only last 30 seconds)
+    cutoff_time = now_utc - timedelta(seconds=30)
+    recent_redemptions = {k: v for k, v in recent_redemptions.items() if v > cutoff_time}
 
     if passport.uses_remaining > 0:
         passport.uses_remaining -= 1

@@ -3575,3 +3575,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
 </style>
 {% endblock %}
+
+{% block scripts %}
+<script>
+// Prevent double-clicks on redemption forms
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('form[action*="/redeem/"]').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      const btn = this.querySelector('button[type="submit"]');
+      if (btn.disabled) {
+        e.preventDefault();
+        return;
+      }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redeeming...';
+    });
+  });
+});
+</script>
+{% endblock %}
