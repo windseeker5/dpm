@@ -1118,6 +1118,7 @@
         <thead>
           <tr>
             <th>User</th>
+            <th class="d-md-none text-center">#</th>
             <th class="d-none d-md-table-cell">Activity</th>
             <th class="d-none d-lg-table-cell">Passport Type</th>
             <th class="d-none d-md-table-cell text-center">Amount</th>
@@ -1133,13 +1134,26 @@
           <tr data-paid="{{ 'true' if passport.paid else 'false' }}" data-active="{{ 'true' if passport.uses_remaining > 0 else 'false' }}">
             <td style="vertical-align: middle;">
               <div class="d-flex align-items-center">
-                <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+                <!-- Desktop: User Gravatar -->
+                <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40"
                      class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+                <!-- Mobile: Activity Logo -->
+                {% if activity and (activity.image_filename or activity.logo_filename) %}
+                  <img src="{{ url_for('static', filename='uploads/activity_images/' + (activity.image_filename or activity.logo_filename)) }}"
+                       class="rounded-circle me-3 user-avatar d-md-none" alt="{{ activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
+                {% else %}
+                  <div class="rounded-circle me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
+                    {{ activity.name[0] if activity and activity.name else 'A' }}
+                  </div>
+                {% endif %}
                 <div>
                   <div class="fw-bold">{{ passport.user.name or 'Anonymous' }}</div>
-                  <div class="text-muted small">{{ passport.user.email or 'No email' }}</div>
+                  <div class="text-muted small d-none d-md-block">{{ passport.user.email or 'No email' }}</div>
                 </div>
               </div>
+            </td>
+            <td class="d-md-none text-center" style="vertical-align: middle;">
+              <span class="fw-bold" style="color: #6c757d;">{{ passport.uses_remaining or 0 }}</span>
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
               <div>
