@@ -96,7 +96,9 @@
         <!-- Actions -->
         <div class="col-12 col-md-2 text-end">
           {% if admin.email != session.get('admin') %}
-          <button type="button" class="btn btn-outline-danger remove-admin-btn">
+          <button type="button" class="btn btn-outline-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#delete-admin-modal-{{ loop.index }}">
             <i class="ti ti-trash"></i>
             <span class="d-none d-md-inline ms-1">Remove</span>
           </button>
