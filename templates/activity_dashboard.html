@@ -15,17 +15,58 @@
 .table-responsive .dropdown {
   position: relative;
 }
-.table-responsive .dropdown-menu {
+.table-responsive .dropdown-menu,
+.table-responsive .dropdown-menu[data-bs-popper],
+.table-responsive .dropdown-menu.show,
+.table-responsive .dropdown-menu.show[data-bs-popper] {
+  --tblr-dropdown-bg: #ffffff !important;
+  --tblr-bg-surface: #ffffff !important;
   z-index: 9999 !important;
   position: absolute !important;
   transform: none !important;
   top: 100% !important;
   min-width: 160px;
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.375rem !important;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
 }
 .table-responsive .dropdown-menu.dropdown-menu-end {
   right: 0 !important;
   left: auto !important;
+}
+
+/* GLOBAL FIX: All dropdown menus must have white background */
+/* Bootstrap Popper.js moves dropdowns outside .table-responsive, so we need global rules */
+.dropdown-menu,
+.dropdown-menu[data-bs-popper],
+.dropdown-menu.show,
+.dropdown-menu.show[data-bs-popper],
+div.dropdown-menu,
+div.dropdown-menu[data-bs-popper] {
+  --tblr-dropdown-bg: #ffffff !important;
+  --tblr-bg-surface: #ffffff !important;
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.375rem !important;
+}
+
+/* FIX: Dropdown items MUST have white background - this was the missing piece */
+.dropdown-item,
+.dropdown-menu .dropdown-item,
+a.dropdown-item,
+button.dropdown-item {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+.dropdown-item:hover,
+.dropdown-menu .dropdown-item:hover {
+  background-color: #f8f9fa !important;
+  background: #f8f9fa !important;
 }
 
 /* Ensure cards with dropdowns don't clip dropdowns */

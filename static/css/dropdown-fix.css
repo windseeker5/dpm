@@ -215,6 +215,63 @@ html body .dropdown.show .dropdown-menu {
     visibility: visible !important;
 }
 
+/* ===== ULTRA-NUCLEAR BACKGROUND FIX ===== */
+/*
+ * Force background color with MAXIMUM specificity to override ANY inline styles
+ * This fixes transparent dropdown backgrounds that appear in tables
+ */
+
+.dropdown-menu,
+.dropdown-menu.show,
+.table .dropdown-menu,
+.table .dropdown-menu.show,
+.table-responsive .dropdown-menu,
+.table-responsive .dropdown-menu.show,
+.card .dropdown-menu,
+.card .dropdown-menu.show,
+.page-body .dropdown-menu,
+.page-body .dropdown-menu.show,
+.dashboard-container .dropdown-menu,
+.dashboard-container .dropdown-menu.show,
+[class*="dropdown-menu"],
+[class*="dropdown-menu"].show,
+div .dropdown-menu,
+div .dropdown-menu.show,
+body .dropdown-menu,
+body .dropdown-menu.show,
+html body .dropdown-menu,
+html body .dropdown-menu.show {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    border-radius: 0.375rem !important;
+    padding: 0.5rem 0 !important;
+}
+
+/* Ensure dropdown items have proper background on hover */
+.dropdown-item:hover,
+.dropdown-item:focus,
+.dropdown-menu .dropdown-item:hover,
+.dropdown-menu .dropdown-item:focus,
+.table .dropdown-menu .dropdown-item:hover,
+.table .dropdown-menu .dropdown-item:focus,
+.table-responsive .dropdown-menu .dropdown-item:hover,
+.table-responsive .dropdown-menu .dropdown-item:focus {
+    background-color: #f8f9fa !important;
+    color: #1f2937 !important;
+}
+
+/* Dropdown dividers - ensure visibility */
+.dropdown-divider {
+    height: 0 !important;
+    margin: 0.5rem 0 !important;
+    overflow: hidden !important;
+    border-top: 1px solid #e5e7eb !important;
+    opacity: 1 !important;
+}
+
 /* ===== DEBUGGING (remove in production) ===== */
 /*
 .dropdown.show {
