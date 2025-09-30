@@ -82,17 +82,15 @@
           <i class="ti ti-mail me-2"></i>Send Reminder
         </a>
         <div class="dropdown-divider"></div>
-        <a class="dropdown-item text-danger" href="#" 
-           onclick="if(confirm('Delete this passport?')) { 
-             var form = document.getElementById('deleteForm{{ passport.id }}'); 
-             if(form) form.submit(); 
-           }">
+        <a class="dropdown-item text-danger" href="#"
+           onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
           <i class="ti ti-trash me-2"></i>Delete
         </a>
       </div>
     </div>
     <!-- Hidden delete form -->
     <form id="deleteForm{{ passport.id }}" method="POST" action="{{ url_for('passports_bulk_action') }}" style="display: none;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="delete">
       <input type="hidden" name="selected_passports" value="{{ passport.id }}">
     </form>

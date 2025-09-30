@@ -248,7 +248,7 @@
                   </a>
                 </div>
               </div>
-              <!-- Hidden delete form -->
+              <!-- Hidden delete form - removed, using modal instead -->
               <form id="deleteForm{{ passport.id }}" method="POST" action="{{ url_for('passports_bulk_action') }}" style="display: none;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="delete">
