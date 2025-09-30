@@ -143,15 +143,12 @@ app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
+app.config.from_object(Config)
+
+# Set after Config loading to ensure these take precedence
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB limit
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.jpeg', '.png', '.gif']
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads', 'activity_images')
-
-
-
-
-
-app.config.from_object(Config)
 
 # ✅ Initialize database
 db.init_app(app)
