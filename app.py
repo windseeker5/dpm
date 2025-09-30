@@ -1032,19 +1032,24 @@ def bulk_signup_action():
         elif action == 'delete':
             count = len(signups)
             signup_info = [f"{s.user.name} - {s.activity.name}" for s in signups]
-            
+
             for signup in signups:
                 db.session.delete(signup)
-            
+
             db.session.commit()
-            
+
             # Log admin action
+            signup_word = "signup" if count == 1 else "signups"
+            details = ', '.join(signup_info[:5])
+            if len(signup_info) > 5:
+                details += '...'
+
             db.session.add(AdminActionLog(
                 admin_email=admin_email,
-                action=f"Deleted {count} signups: {', '.join(signup_info[:5])}{'...' if len(signup_info) > 5 else ''}"
+                action=f"Deleted {count} {signup_word}: {details} by {admin_email}"
             ))
             db.session.commit()
-            
+
             flash(f"✅ {count} signups deleted.", "success")
             
         else:
@@ -3626,18 +3631,28 @@ def passports_bulk_action():
     
     elif action == "delete":
         count = len(passports)
+        # Collect passport details before deletion
+        passport_info = []
         for passport in passports:
+            user_name = passport.user.name if passport.user else "Unknown User"
+            activity_name = passport.activity.name if passport.activity else "Unknown Activity"
+            passport_info.append(f"{user_name} - {activity_name}")
             db.session.delete(passport)
-        
+
         db.session.commit()
-        
-        # Log admin action
+
+        # Log admin action with detailed information
+        passport_word = "passport" if count == 1 else "passports"
+        details = ', '.join(passport_info[:5])
+        if len(passport_info) > 5:
+            details += '...'
+
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
-            action=f"Bulk deleted {count} passports by {session.get('admin', 'unknown')}"
+            action=f"Deleted {count} {passport_word}: {details} by {session.get('admin', 'unknown')}"
         ))
         db.session.commit()
-        
+
         flash(f"🗑️ Deleted {count} passports.", "success")
     
     else:
@@ -4037,7 +4052,7 @@ def delete_activity(activity_id):
         return redirect(url_for("login"))
 
     # Import models at the beginning
-    from models import PassportType, Expense, Income, Signup, Passport, Survey
+    from models import PassportType, Expense, Income, Signup, Passport, Survey, AdminActionLog
 
     activity = db.session.get(Activity, activity_id)
     if not activity:
@@ -4048,22 +4063,33 @@ def delete_activity(activity_id):
     active_passports = Passport.query.filter_by(
         activity_id=activity_id
     ).filter(Passport.uses_remaining > 0).count()
-    
+
     if active_passports > 0:
         flash(f"❌ Cannot delete activity. There are {active_passports} active passports.", "error")
         return redirect(url_for("list_activities"))
 
+    # Capture activity details BEFORE deletion for logging
+    activity_name = activity.name
+    activity_type = activity.type if activity.type else "Unknown Type"
+
     # Delete related records first (in order to avoid FK constraints)
-    
+
     PassportType.query.filter_by(activity_id=activity_id).delete()
     Expense.query.filter_by(activity_id=activity_id).delete()
     Income.query.filter_by(activity_id=activity_id).delete()
     Survey.query.filter_by(activity_id=activity_id).delete()
     Signup.query.filter_by(activity_id=activity_id).delete()
     Passport.query.filter_by(activity_id=activity_id).delete()
-    
+
     # Now delete the activity
     db.session.delete(activity)
+
+    # Log the deletion
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin", "unknown"),
+        action=f"Deleted activity: {activity_name} ({activity_type}) by {session.get('admin', 'unknown')}"
+    ))
+
     db.session.commit()
     flash("✅ Activity deleted successfully.", "success")
     return redirect(url_for("list_activities"))
@@ -4215,9 +4241,9 @@ def activity_dashboard(activity_id):
     # Signup statistics
     pending_signups = [s for s in signups if s.status == 'pending']
     approved_signups = [s for s in signups if s.status == 'approved']
-    
+
     has_pending_signups = len(pending_signups) > 0
-    pending_signups_count = len(pending_signups)
+    activity_pending_signups_count = len(pending_signups)
     
     # Activity log entries (recent activity)
     # Use get_all_activity_logs to get properly formatted logs like dashboard does
@@ -4305,7 +4331,7 @@ def activity_dashboard(activity_id):
         passports_created_card=passports_created_card,
         passports_unpaid_card=passports_unpaid_card,
         has_pending_signups=has_pending_signups,
-        pending_signups_count=pending_signups_count,
+        activity_pending_signups_count=activity_pending_signups_count,
         survey_rating=survey_rating,
         survey_count=survey_count
     )

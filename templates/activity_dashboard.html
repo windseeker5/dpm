@@ -1472,7 +1472,7 @@ button.dropdown-item {
               </a>
               <a href="#" onclick="filterSignups('pending'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending">
-                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ pending_signups_count }})</span>
+                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ activity_pending_signups_count }})</span>
               </a>
               <a href="#" onclick="filterSignups('approved'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved">
