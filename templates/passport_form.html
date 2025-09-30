@@ -278,7 +278,7 @@
                   data-activity="{{ passport_type.activity_id }}"
                   data-price="{{ passport_type.price_per_user }}"
                   data-sessions="{{ passport_type.sessions_included }}"
-                  {% if passport and passport.passport_type_id == passport_type.id %}selected{% endif %}>
+                  {% if (passport and passport.passport_type_id == passport_type.id) or (single_passport_type_id and single_passport_type_id == passport_type.id) %}selected{% endif %}>
                   {{ passport_type.name }} ({{ passport_type.type }})
                 </option>
               {% endfor %}
@@ -453,8 +453,15 @@
   // Auto-populate activity details on page load if activity is pre-selected
   document.addEventListener("DOMContentLoaded", function() {
     const activitySelect = document.getElementById("activity_select");
+    const passportTypeSelect = document.getElementById("passport_type_select");
+
     if (activitySelect && activitySelect.value) {
       updateActivityDetails(activitySelect);
+    }
+
+    // Also populate passport type details if passport type is pre-selected
+    if (passportTypeSelect && passportTypeSelect.value) {
+      updatePassportTypeDetails(passportTypeSelect);
     }
   });
 </script>
