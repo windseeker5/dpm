@@ -1054,11 +1054,16 @@ def bulk_signup_action():
             
         else:
             flash("❌ Invalid action.", "error")
-            
+
     except Exception as e:
         db.session.rollback()
         flash(f"❌ Error processing bulk action: {str(e)}", "error")
-    
+
+    # Check if request came from activity dashboard
+    activity_id = request.form.get("activity_id")
+    if activity_id:
+        return redirect(url_for("activity_dashboard", activity_id=activity_id))
+
     return redirect(url_for("list_signups"))
 
 
@@ -3654,10 +3659,15 @@ def passports_bulk_action():
         db.session.commit()
 
         flash(f"🗑️ Deleted {count} passports.", "success")
-    
+
     else:
         flash("❌ Invalid bulk action.", "error")
-    
+
+    # Check if request came from activity dashboard
+    activity_id = request.form.get("activity_id")
+    if activity_id:
+        return redirect(url_for("activity_dashboard", activity_id=activity_id))
+
     return redirect(url_for("list_passports"))
 
 
@@ -4066,7 +4076,7 @@ def delete_activity(activity_id):
 
     if active_passports > 0:
         flash(f"❌ Cannot delete activity. There are {active_passports} active passports.", "error")
-        return redirect(url_for("list_activities"))
+        return redirect(url_for("activity_dashboard", activity_id=activity_id))
 
     # Capture activity details BEFORE deletion for logging
     activity_name = activity.name
@@ -4092,7 +4102,7 @@ def delete_activity(activity_id):
 
     db.session.commit()
     flash("✅ Activity deleted successfully.", "success")
-    return redirect(url_for("list_activities"))
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/check-activity-passports/<int:activity_id>")
