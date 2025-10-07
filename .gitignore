@@ -20,8 +20,8 @@ venv/
 
 
 # SQLite database
-#*.db
-#instance/minipass.db
+*.db
+instance/*.db
 
 # Backup files and directories
 static/backups/*.zip
