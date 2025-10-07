@@ -1473,6 +1473,159 @@ def match_gmail_payments_to_passes():
         mail.logout()
 
 
+def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
+    """
+    Manually move a payment email to the manually_processed folder.
+    Used when email wasn't automatically moved due to a glitch.
+
+    Returns: (success: bool, message: str)
+    """
+    from utils import get_setting
+    from models import EbankPayment, db
+    from datetime import datetime, timezone
+    import imaplib
+    import email
+    import re
+
+    user = get_setting("MAIL_USERNAME")
+    pwd = get_setting("MAIL_PASSWORD")
+
+    if not user or not pwd:
+        return False, "Email credentials not configured"
+
+    processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
+    manually_processed_folder = "ManualProcessed"
+
+    # Get IMAP server
+    imap_server = get_setting("IMAP_SERVER")
+    if not imap_server:
+        mail_server = get_setting("MAIL_SERVER")
+        imap_server = mail_server if mail_server else "imap.gmail.com"
+
+    try:
+        # Connect to IMAP
+        try:
+            mail = imaplib.IMAP4_SSL(imap_server)
+        except:
+            mail = imaplib.IMAP4(imap_server, 143)
+            mail.starttls()
+
+        mail.login(user, pwd)
+        mail.select("inbox")
+
+        # Search for email matching criteria
+        # We'll search for emails from the interac notification address
+        from_expected = get_setting("BANK_EMAIL_FROM", "notify@payments.interac.ca")
+        status, data = mail.search(None, f'FROM "{from_expected}"')
+
+        if status != "OK" or not data[0]:
+            mail.logout()
+            return False, "No payment emails found in inbox"
+
+        email_found = False
+        uid_to_move = None
+
+        for num in data[0].split():
+            # Fetch email
+            status, msg_data = mail.fetch(num, "(BODY.PEEK[] UID)")
+            if status != "OK":
+                continue
+
+            raw_email = msg_data[0][1]
+            uid_line = msg_data[0][0].decode()
+            uid_match = re.search(r"UID (\d+)", uid_line)
+            uid = uid_match.group(1) if uid_match else None
+
+            # Parse email
+            msg = email.message_from_bytes(raw_email)
+            subject = msg["Subject"]
+
+            # Extract name and amount from subject
+            amount_match = re.search(r"reçu\s+([\d,\s]+)\s+\$\s+de", subject)
+            name_match = re.search(r"de\s+(.+?)\s+et ce montant", subject)
+
+            if not amount_match:
+                amount_match = re.search(r"envoyé\s+([\d,\s]+)\s*\$", subject)
+            if not name_match:
+                name_match = re.search(r":\s*(.*?)\svous a envoyé", subject)
+
+            if amount_match and name_match:
+                amt_str = amount_match.group(1).replace(" ", "").replace(",", ".")
+                name = name_match.group(1).strip()
+
+                try:
+                    amount = float(amt_str)
+                except:
+                    continue
+
+                # Check if this matches our criteria
+                if (name.lower().strip() == bank_info_name.lower().strip() and
+                    abs(amount - float(bank_info_amt)) < 0.01):
+                    email_found = True
+                    uid_to_move = uid
+                    break
+
+        if not email_found or not uid_to_move:
+            mail.logout()
+
+            # Even if email not found, update database to MANUAL_PROCESSED to prevent button from showing again
+            recent_payment = EbankPayment.query.filter(
+                EbankPayment.bank_info_name == bank_info_name,
+                EbankPayment.bank_info_amt == bank_info_amt,
+                EbankPayment.from_email == from_email,
+                EbankPayment.result == "NO_MATCH"
+            ).order_by(EbankPayment.timestamp.desc()).first()
+
+            if recent_payment:
+                recent_payment.result = "MANUAL_PROCESSED"
+                recent_payment.note = (recent_payment.note or "") + f" [Email not found in inbox - likely already archived]"
+                db.session.commit()
+
+            return False, f"No payment emails found in inbox"
+
+        # Create manually_processed folder if it doesn't exist
+        try:
+            result, folder_list = mail.list()
+            folder_exists = False
+            if result == 'OK':
+                for folder_info in folder_list:
+                    if folder_info and manually_processed_folder in (folder_info.decode() if isinstance(folder_info, bytes) else folder_info):
+                        folder_exists = True
+                        break
+
+            if not folder_exists:
+                mail.create(manually_processed_folder)
+        except Exception as e:
+            print(f"Warning: Could not create folder: {e}")
+
+        # Move email to manually_processed folder
+        copy_result = mail.uid("COPY", uid_to_move, manually_processed_folder)
+        if copy_result[0] == 'OK':
+            mail.uid("STORE", uid_to_move, "+FLAGS", "(\\Deleted)")
+            mail.expunge()
+
+            # Update the most recent NO_MATCH entry for this payment
+            recent_payment = EbankPayment.query.filter(
+                EbankPayment.bank_info_name == bank_info_name,
+                EbankPayment.bank_info_amt == bank_info_amt,
+                EbankPayment.from_email == from_email,
+                EbankPayment.result == "NO_MATCH"
+            ).order_by(EbankPayment.timestamp.desc()).first()
+
+            if recent_payment:
+                # Change status to MANUAL_PROCESSED so it no longer shows Archive button
+                recent_payment.result = "MANUAL_PROCESSED"
+                recent_payment.note = (recent_payment.note or "") + f" [Email manually archived to {manually_processed_folder} folder]"
+                db.session.commit()
+
+            mail.logout()
+            return True, f"Email successfully moved to {manually_processed_folder} folder"
+        else:
+            mail.logout()
+            return False, f"Failed to move email: {copy_result}"
+
+    except Exception as e:
+        return False, f"Error: {str(e)}"
 
 
 def strip_html_tags(html):
@@ -1558,7 +1711,7 @@ def get_all_activity_logs():
                 # NEW: Show bank name and match score for transparency
                 bank_name = p.bank_info_name or "Unknown"
                 match_score = f"{p.name_score:.1f}" if p.name_score else "N/A"
-                
+
                 # NEW: Get activity name from the matched passport
                 activity_name = ""
                 if p.matched_pass_id:
@@ -1566,8 +1719,11 @@ def get_all_activity_logs():
                     passport = db.session.get(Passport, p.matched_pass_id)
                     if passport and passport.activity:
                         activity_name = f" for Activity '{passport.activity.name}'"
-                
+
                 details = f"From {p.matched_name}, Amount: ${p.bank_info_amt:.2f} (Bank: '{bank_name}' matched at {match_score}%){activity_name}, Passport ID: {p.matched_pass_id}"
+            elif p.result == "MANUAL_PROCESSED":
+                log_type = "Payment Manually Processed"
+                details = f"From {p.bank_info_name}, Amount: ${p.bank_info_amt:.2f} - Manually archived"
             else:
                 log_type = "Payment No Match"
                 details = f"From {p.bank_info_name}, Amount: ${p.bank_info_amt:.2f}"
@@ -1575,12 +1731,21 @@ def get_all_activity_logs():
                 if p.note and "Closest:" in p.note:
                     details += f" - {p.note}"
 
-            logs.append({
+            log_entry = {
                 "timestamp": p.timestamp,
                 "type": log_type,
                 "user": p.from_email or "-",
                 "details": details
-            })
+            }
+
+            # Add extra fields for Payment No Match entries (for Archive Email button)
+            # Do NOT add these for MANUAL_PROCESSED - we don't want the button to show
+            if log_type == "Payment No Match":
+                log_entry["bank_info_name"] = p.bank_info_name or ""
+                log_entry["bank_info_amt"] = str(p.bank_info_amt) if p.bank_info_amt else ""
+                log_entry["from_email"] = p.from_email or ""
+
+            logs.append(log_entry)
 
 
         # 🟣 Reminders

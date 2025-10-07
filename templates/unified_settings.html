@@ -194,6 +194,21 @@
           </div>
         </div>
 
+        <!-- Database Maintenance Card -->
+        <div class="card bg-white mb-3">
+          <div class="card-body">
+            <h2 class="mb-4">Database Maintenance</h2>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold">Clean Duplicate Payment Logs</label>
+              <div class="form-text mb-2">Remove duplicate "Payment No Match" log entries caused by email processing glitches. This keeps only the latest entry for each unique payment.</div>
+              <button type="button" class="btn btn-warning" onclick="cleanDuplicateLogs()">
+                <i class="ti ti-trash me-1"></i>Clean Duplicate Payment Logs
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Bottom Save Button -->
         <div class="d-flex justify-content-end mb-3">
           <button type="submit" class="btn btn-success">

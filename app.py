@@ -1944,6 +1944,96 @@ def api_payment_bot_check_emails():
             }), 500
 
 
+@app.route("/api/move-payment-email", methods=["POST"])
+@csrf.exempt
+def api_move_payment_email():
+    """Manually move a payment email to the manually_processed folder"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    bank_info_name = data.get("bank_info_name")
+    bank_info_amt = data.get("bank_info_amt")
+    from_email = data.get("from_email")
+
+    if not all([bank_info_name, bank_info_amt, from_email]):
+        return jsonify({"error": "Missing required fields: bank_info_name, bank_info_amt, from_email"}), 400
+
+    try:
+        from utils import move_payment_email_by_criteria, log_admin_action
+
+        success, message = move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email)
+
+        if success:
+            log_admin_action(f"Manually moved payment email: {bank_info_name} - ${bank_info_amt}")
+            return jsonify({"success": True, "message": message}), 200
+        else:
+            return jsonify({"success": False, "error": message}), 400
+
+    except Exception as e:
+        import traceback
+        print(f"Error moving payment email: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({"error": f"Failed to move email: {str(e)}"}), 500
+
+
+@app.route("/api/cleanup-duplicate-logs", methods=["POST"])
+@csrf.exempt
+def api_cleanup_duplicate_logs():
+    """Clean up duplicate NO_MATCH payment logs, keeping only the latest for each unique payment"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        from models import EbankPayment, db
+        from utils import log_admin_action
+
+        # First, get count of duplicates to be deleted
+        # Find all NO_MATCH entries that are NOT the latest for each unique payment
+        duplicates_query = db.session.query(EbankPayment).filter(
+            EbankPayment.result == "NO_MATCH",
+            EbankPayment.id.notin_(
+                db.session.query(db.func.max(EbankPayment.id))
+                .filter(EbankPayment.result == "NO_MATCH")
+                .group_by(
+                    EbankPayment.bank_info_name,
+                    EbankPayment.bank_info_amt,
+                    EbankPayment.from_email
+                )
+            )
+        )
+
+        duplicate_count = duplicates_query.count()
+
+        if duplicate_count == 0:
+            return jsonify({
+                "success": True,
+                "message": "No duplicate logs found",
+                "deleted_count": 0
+            }), 200
+
+        # Delete the duplicates
+        duplicates_query.delete(synchronize_session=False)
+        db.session.commit()
+
+        log_admin_action(f"Cleaned up {duplicate_count} duplicate payment logs")
+
+        return jsonify({
+            "success": True,
+            "message": f"Successfully deleted {duplicate_count} duplicate log entries",
+            "deleted_count": duplicate_count
+        }), 200
+
+    except Exception as e:
+        import traceback
+        print(f"Error cleaning duplicate logs: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        return jsonify({"error": f"Failed to clean logs: {str(e)}"}), 500
+
 
 @app.route("/api/payment-notification-html/<notification_id>", methods=["POST"])
 @csrf.exempt
