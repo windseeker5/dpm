@@ -2098,7 +2098,17 @@ class LogsPagination {
       
       row.className = 'log-row';
       row.setAttribute('data-type', log.type.toLowerCase().replace(' ', '-'));
-      
+
+      // Check if this is a Payment No Match entry
+      const isPaymentNoMatch = log.type === 'Payment No Match';
+      const moveEmailButton = isPaymentNoMatch ? `
+        <button class="btn btn-sm btn-outline-primary ms-2"
+                onclick="movePaymentEmail('${log.bank_info_name || ''}', '${log.bank_info_amt || ''}', '${log.from_email || ''}', event)"
+                title="Move email to processed folder">
+          <i class="ti ti-mail-forward me-1"></i>Archive Email
+        </button>
+      ` : '';
+
       row.innerHTML = `
         <td style="vertical-align: middle;">
           <div class="text-nowrap">
@@ -2107,8 +2117,11 @@ class LogsPagination {
         </td>
         <td class="d-none d-md-table-cell" style="vertical-align: middle;">${icon} ${log.type}</td>
         <td style="vertical-align: middle;">
-          <div class="text-truncate" style="max-width: 100%;" title="${log.details || ''}">
-            ${log.details || ''}
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="text-truncate flex-grow-1" style="max-width: 100%;" title="${log.details || ''}">
+              ${log.details || ''}
+            </div>
+            ${moveEmailButton}
           </div>
         </td>
       `;
@@ -2503,7 +2516,193 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Move Payment Email function
+function movePaymentEmail(bankName, amount, fromEmail, event) {
+  const btn = event.target.closest('button');
+
+  // Show modal with email details
+  document.getElementById('archiveEmailUser').textContent = bankName;
+  document.getElementById('archiveEmailAmount').textContent = `$${amount}`;
+
+  const modal = new bootstrap.Modal(document.getElementById('archiveEmailModal'));
+  modal.show();
+
+  // Handle confirm button
+  document.getElementById('confirmArchiveEmail').onclick = async () => {
+    modal.hide();
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Moving...';
+
+    try {
+      const res = await fetch('/api/move-payment-email', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({bank_info_name: bankName, bank_info_amt: amount, from_email: fromEmail})
+      });
+      const data = await res.json();
+      if (data.success) {
+        btn.innerHTML = '<i class="ti ti-check"></i> Archived';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-primary');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        throw new Error(data.error || data.message || 'Unknown error');
+      }
+    } catch (err) {
+      const errorAlert = document.createElement('div');
+      errorAlert.className = 'alert alert-dismissible position-fixed top-0 start-50 translate-middle-x mt-3';
+      errorAlert.style.zIndex = '9999';
+      errorAlert.style.minWidth = '300px';
+      errorAlert.style.backgroundColor = '#d63939';
+      errorAlert.style.color = 'white';
+      errorAlert.innerHTML = `
+        <div><strong>Error:</strong> ${err.message}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      document.body.appendChild(errorAlert);
+      setTimeout(() => errorAlert.remove(), 5000);
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-mail-forward me-1"></i>Archive Email';
+    }
+  };
+}
+
+// Clean Duplicate Logs function (called from settings page)
+function cleanDuplicateLogs() {
+  const modal = new bootstrap.Modal(document.getElementById('cleanupLogsModal'));
+  modal.show();
+}
+
 </script>
 
+<!-- Archive Email Confirmation Modal -->
+<div class="modal modal-blur fade" id="archiveEmailModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-warning icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z"/>
+          <path d="M3 7l9 6l9 -6"/>
+        </svg>
+        <h3>Archive Email?</h3>
+        <div class="text-secondary">Move email for <strong id="archiveEmailUser"></strong> (<strong id="archiveEmailAmount"></strong>) to ManualProcessed folder?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+            </div>
+            <div class="col">
+              <button type="button" class="btn btn-primary w-100" id="confirmArchiveEmail">
+                <i class="ti ti-mail-forward me-1"></i>Archive
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clean Duplicate Logs Confirmation Modal -->
+<div class="modal modal-blur fade" id="cleanupLogsModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M4 7h16"/>
+          <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+          <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+          <path d="M10 12l0 6"/>
+          <path d="M14 12l0 6"/>
+        </svg>
+        <h3>Clean Duplicate Logs?</h3>
+        <div class="text-secondary">Delete all duplicate Payment No Match logs? Only the latest entry for each unique payment will be kept.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+            </div>
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" id="confirmCleanupLogs">
+                <i class="ti ti-trash me-1"></i>Clean Logs
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Handle cleanup logs confirmation
+document.addEventListener('DOMContentLoaded', () => {
+  const confirmBtn = document.getElementById('confirmCleanupLogs');
+  if (confirmBtn) {
+    confirmBtn.onclick = async () => {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('cleanupLogsModal'));
+      modal.hide();
+
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Cleaning...';
+
+      try {
+        const res = await fetch('/api/cleanup-duplicate-logs', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        const data = await res.json();
+        if (data.success) {
+          const successAlert = document.createElement('div');
+          successAlert.className = 'alert alert-success alert-dismissible position-fixed top-0 start-50 translate-middle-x mt-3';
+          successAlert.style.zIndex = '9999';
+          successAlert.style.minWidth = '300px';
+          successAlert.innerHTML = `
+            <div class="d-flex">
+              <div><svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4 -4"/></svg></div>
+              <div><strong>Success!</strong> Deleted ${data.deleted_count} duplicate logs.</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          document.body.appendChild(successAlert);
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          throw new Error(data.error || data.message || 'Unknown error');
+        }
+      } catch (err) {
+        const errorAlert = document.createElement('div');
+        errorAlert.className = 'alert alert-danger alert-dismissible position-fixed top-0 start-50 translate-middle-x mt-3';
+        errorAlert.style.zIndex = '9999';
+        errorAlert.style.minWidth = '300px';
+        errorAlert.innerHTML = `
+          <div class="d-flex">
+            <div><svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+            <div><strong>Error:</strong> ${err.message}</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(errorAlert);
+        setTimeout(() => errorAlert.remove(), 5000);
+
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="ti ti-trash me-1"></i>Clean Logs';
+      }
+    };
+  }
+});
+</script>
 
 {% endblock %}

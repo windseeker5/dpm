@@ -37,4 +37,14 @@
     <input type="text" class="form-control" name="mail_sender_name" value="{{ settings.MAIL_SENDER_NAME or '' }}" placeholder="e.g., LHGI, Your Organization">
     <div class="form-text">The display name shown in email clients (e.g., "LHGI &lt;lhgi@minipass.me&gt;")</div>
   </div>
+
+  <!-- Database Maintenance -->
+  <div class="mb-3">
+    <hr class="my-4">
+    <label class="form-label fw-bold">Database Maintenance</label>
+    <div class="form-text mb-2">Clean up duplicate payment log entries from email processing glitches</div>
+    <button type="button" class="btn btn-warning" onclick="cleanDuplicateLogs()">
+      <i class="ti ti-trash me-1"></i>Clean Duplicate Payment Logs
+    </button>
+  </div>
 </div>
