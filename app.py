@@ -1965,12 +1965,20 @@ def api_move_payment_email():
     try:
         from utils import move_payment_email_by_criteria, log_admin_action
 
+        print(f"🔧 API DEBUG: Calling move_payment_email_by_criteria with:")
+        print(f"   Name: {bank_info_name}")
+        print(f"   Amount: {bank_info_amt}")
+        print(f"   Email: {from_email}")
+
         success, message = move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email)
+
+        print(f"🔧 API DEBUG: Function returned - Success: {success}, Message: {message}")
 
         if success:
             log_admin_action(f"Manually moved payment email: {bank_info_name} - ${bank_info_amt}")
             return jsonify({"success": True, "message": message}), 200
         else:
+            print(f"⚠️ API DEBUG: Returning error 400 with message: {message}")
             return jsonify({"success": False, "error": message}), 400
 
     except Exception as e:

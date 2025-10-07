@@ -1569,17 +1569,21 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
             mail.logout()
 
             # Even if email not found, update database to MANUAL_PROCESSED to prevent button from showing again
+            print(f"🔍 DEBUG: Searching for payment - Name: {bank_info_name}, Amount: {bank_info_amt}, Email: {from_email}")
             recent_payment = EbankPayment.query.filter(
                 EbankPayment.bank_info_name == bank_info_name,
-                EbankPayment.bank_info_amt == bank_info_amt,
+                EbankPayment.bank_info_amt == float(bank_info_amt),
                 EbankPayment.from_email == from_email,
                 EbankPayment.result == "NO_MATCH"
             ).order_by(EbankPayment.timestamp.desc()).first()
 
+            print(f"🔍 DEBUG: Found payment? {recent_payment is not None}")
             if recent_payment:
+                print(f"🔍 DEBUG: Updating payment ID {recent_payment.id} to MANUAL_PROCESSED")
                 recent_payment.result = "MANUAL_PROCESSED"
                 recent_payment.note = (recent_payment.note or "") + f" [Email not found in inbox - likely already archived]"
                 db.session.commit()
+                print(f"✅ DEBUG: Database committed successfully")
 
             return False, f"No payment emails found in inbox"
 
