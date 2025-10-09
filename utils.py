@@ -1516,11 +1516,17 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
         # Search for email matching criteria
         # We'll search for emails from the interac notification address
         from_expected = get_setting("BANK_EMAIL_FROM", "notify@payments.interac.ca")
+        print(f"🔍 SEARCH DEBUG: Searching inbox for emails from {from_expected}")
+        print(f"   Looking for: {bank_info_name}, ${bank_info_amt}")
+
         status, data = mail.search(None, f'FROM "{from_expected}"')
 
         if status != "OK" or not data[0]:
             mail.logout()
+            print(f"❌ SEARCH DEBUG: No emails found from {from_expected}")
             return False, "No payment emails found in inbox"
+
+        print(f"📧 SEARCH DEBUG: Found {len(data[0].split())} emails from {from_expected}")
 
         email_found = False
         uid_to_move = None
@@ -1528,6 +1534,7 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
         for num in data[0].split():
             # Fetch email
             status, msg_data = mail.fetch(num, "(BODY.PEEK[] UID)")
+            print(f"📨 SEARCH DEBUG: Checking email #{num}")
             if status != "OK":
                 continue
 
@@ -1556,14 +1563,22 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
                 try:
                     amount = float(amt_str)
                 except:
+                    print(f"⚠️ SEARCH DEBUG: Could not parse amount: {amt_str}")
                     continue
+
+                print(f"   📋 Extracted: Name='{name}', Amount=${amount}")
+                print(f"   🎯 Comparing: '{name.lower().strip()}' vs '{bank_info_name.lower().strip()}'")
+                print(f"   💰 Comparing: ${amount} vs ${float(bank_info_amt)}")
 
                 # Check if this matches our criteria
                 if (name.lower().strip() == bank_info_name.lower().strip() and
                     abs(amount - float(bank_info_amt)) < 0.01):
+                    print(f"✅ SEARCH DEBUG: MATCH FOUND! UID={uid}")
                     email_found = True
                     uid_to_move = uid
                     break
+                else:
+                    print(f"❌ SEARCH DEBUG: No match")
 
         if not email_found or not uid_to_move:
             mail.logout()
