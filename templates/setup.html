@@ -54,6 +54,32 @@
                 <h2 class="mb-4">Your Data</h2>
                 <div class="row">
                   <div class="col-lg-8">
+                    <!-- Database Maintenance Section -->
+                    <h3 class="mb-4">
+                      <i class="ti ti-database-cog me-2"></i>
+                      Database Maintenance
+                    </h3>
+
+                    <div class="card mb-4">
+                      <div class="card-header">
+                        <h4 class="card-title mb-0">
+                          <i class="ti ti-trash me-2"></i>
+                          Clean Duplicate Payment Logs
+                        </h4>
+                      </div>
+                      <div class="card-body">
+                        <p class="text-muted mb-3">
+                          Remove duplicate "Payment No Match" log entries caused by email processing glitches.
+                          This keeps only the latest entry for each unique payment.
+                        </p>
+
+                        <button type="button" class="btn btn-warning" onclick="cleanDuplicateLogs()">
+                          <i class="ti ti-trash me-2"></i>
+                          Clean Duplicate Payment Logs
+                        </button>
+                      </div>
+                    </div>
+
                     <h3 class="mb-4">
                       <i class="ti ti-alert-triangle text-danger me-2"></i>
                       Danger Zone
@@ -491,6 +517,42 @@
   </div>
 </div>
 
+<!-- Clean Duplicate Logs Confirmation Modal -->
+<div class="modal modal-blur fade" id="cleanupLogsModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M4 7h16"/>
+          <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+          <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+          <path d="M10 12l0 6"/>
+          <path d="M14 12l0 6"/>
+        </svg>
+        <h3>Clean Duplicate Logs?</h3>
+        <div class="text-secondary">Delete all duplicate Payment No Match logs? Only the latest entry for each unique payment will be kept.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+            </div>
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" id="confirmCleanupLogs">
+                <i class="ti ti-trash me-1"></i>Clean Logs
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block head %}
@@ -642,5 +704,67 @@ function copyFileToModal() {
   modalInput.files = displayInput.files;
   return true;
 }
+
+// Clean Duplicate Logs function
+function cleanDuplicateLogs() {
+  const modal = new bootstrap.Modal(document.getElementById('cleanupLogsModal'));
+  modal.show();
+}
+
+// Handle cleanup logs confirmation
+document.addEventListener('DOMContentLoaded', () => {
+  const confirmBtn = document.getElementById('confirmCleanupLogs');
+  if (confirmBtn) {
+    confirmBtn.onclick = async () => {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('cleanupLogsModal'));
+      modal.hide();
+
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Cleaning...';
+
+      try {
+        const res = await fetch('/api/cleanup-duplicate-logs', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        const data = await res.json();
+        if (data.success) {
+          const successAlert = document.createElement('div');
+          successAlert.className = 'alert alert-success alert-dismissible position-fixed top-0 start-50 translate-middle-x mt-3';
+          successAlert.style.zIndex = '9999';
+          successAlert.style.minWidth = '300px';
+          successAlert.innerHTML = `
+            <div class="d-flex">
+              <div><svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4 -4"/></svg></div>
+              <div><strong>Success!</strong> Deleted ${data.deleted_count} duplicate logs.</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          document.body.appendChild(successAlert);
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          throw new Error(data.error || data.message || 'Unknown error');
+        }
+      } catch (err) {
+        const errorAlert = document.createElement('div');
+        errorAlert.className = 'alert alert-danger alert-dismissible position-fixed top-0 start-50 translate-middle-x mt-3';
+        errorAlert.style.zIndex = '9999';
+        errorAlert.style.minWidth = '300px';
+        errorAlert.innerHTML = `
+          <div class="d-flex">
+            <div><svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+            <div><strong>Error:</strong> ${err.message}</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(errorAlert);
+        setTimeout(() => errorAlert.remove(), 5000);
+
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="ti ti-trash me-1"></i>Clean Logs';
+      }
+    };
+  }
+});
 </script>
 {% endblock %}
