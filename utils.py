@@ -1203,18 +1203,45 @@ def match_gmail_payments_to_passes():
             unpaid_passports = [p for p in all_unpaid if float(p.sold_amt) == payment_amount]
 
             if not unpaid_passports:
-                print(f"❌ NO PASSPORTS FOUND for ${payment_amount:.2f}")
-                print(f"   Payment may have arrived before passport creation")
-                # Debug: Show available amounts for troubleshooting
-                available_amounts = list(set(float(p.sold_amt) for p in all_unpaid))
-                available_amounts.sort()
-                print(f"   Available amounts: {[f'${a:.2f}' for a in available_amounts[:10]]}")
+                print(f"❌ NO UNPAID PASSPORTS FOUND for ${payment_amount:.2f}")
+
+                # Check if a PAID passport exists with matching amount and similar name
+                all_paid = Passport.query.filter_by(paid=True).all()
+                paid_passports_same_amount = [p for p in all_paid if float(p.sold_amt) == payment_amount]
+
+                # Normalize payment name for comparison
+                def normalize_for_comparison(text):
+                    normalized = unicodedata.normalize('NFD', text)
+                    without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+                    return without_accents.lower().strip()
+
+                payment_name_normalized = normalize_for_comparison(name)
+
+                # Check if any paid passport has matching name
+                matching_paid_passport = None
+                for p in paid_passports_same_amount:
+                    passport_name_normalized = normalize_for_comparison(p.user.name)
+                    if payment_name_normalized == passport_name_normalized:
+                        matching_paid_passport = p
+                        break
+
+                # Determine appropriate note
+                if matching_paid_passport:
+                    note_text = f"Passport already marked as PAID (manually by admin) - {matching_paid_passport.user.name} ${payment_amount:.2f}"
+                    print(f"   ⚠️ Found PAID passport: {matching_paid_passport.user.name}")
+                else:
+                    note_text = f"No unpaid passports for ${payment_amount:.2f} - payment may have arrived before passport creation"
+                    print(f"   Payment may have arrived before passport creation")
+                    # Debug: Show available amounts for troubleshooting
+                    available_amounts = list(set(float(p.sold_amt) for p in all_unpaid))
+                    available_amounts.sort()
+                    print(f"   Available unpaid amounts: {[f'${a:.2f}' for a in available_amounts[:10]]}")
 
                 if update_existing_record and existing_payment:
                     # Update existing record instead of creating new one
                     existing_payment.result = "NO_MATCH"
                     existing_payment.name_score = 0
-                    existing_payment.note = f"No unpaid passports for ${payment_amount:.2f} - payment may have arrived before passport creation"
+                    existing_payment.note = note_text
                     existing_payment.timestamp = datetime.now(timezone.utc)
                     print(f"   📝 Updated existing NO_MATCH record")
                 else:
@@ -1227,7 +1254,7 @@ def match_gmail_payments_to_passes():
                         name_score=0,
                         result="NO_MATCH",
                         mark_as_paid=False,
-                        note=f"No unpaid passports for ${payment_amount:.2f} - payment may have arrived before passport creation"
+                        note=note_text
                     ))
                 continue  # Skip to next payment
 
@@ -1486,6 +1513,17 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
     import imaplib
     import email
     import re
+    import unicodedata
+
+    def normalize_name(text):
+        """Normalize name for comparison - handles accents, special chars"""
+        if not text:
+            return ""
+        # Normalize Unicode (NFKD = decompose accents)
+        normalized = unicodedata.normalize('NFKD', str(text))
+        # Remove accents by filtering out combining characters
+        ascii_text = normalized.encode('ASCII', 'ignore').decode('ASCII')
+        return ascii_text.lower().strip()
 
     user = get_setting("MAIL_USERNAME")
     pwd = get_setting("MAIL_PASSWORD")
@@ -1514,19 +1552,18 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
         mail.select("inbox")
 
         # Search for email matching criteria
-        # We'll search for emails from the interac notification address
-        from_expected = get_setting("BANK_EMAIL_FROM", "notify@payments.interac.ca")
-        print(f"🔍 SEARCH DEBUG: Searching inbox for emails from {from_expected}")
+        # Use the actual from_email parameter (from database) instead of setting
+        print(f"🔍 SEARCH DEBUG: Searching inbox for emails from {from_email}")
         print(f"   Looking for: {bank_info_name}, ${bank_info_amt}")
 
-        status, data = mail.search(None, f'FROM "{from_expected}"')
+        status, data = mail.search(None, f'FROM "{from_email}"')
 
         if status != "OK" or not data[0]:
             mail.logout()
-            print(f"❌ SEARCH DEBUG: No emails found from {from_expected}")
+            print(f"❌ SEARCH DEBUG: No emails found from {from_email}")
             return False, "No payment emails found in inbox"
 
-        print(f"📧 SEARCH DEBUG: Found {len(data[0].split())} emails from {from_expected}")
+        print(f"📧 SEARCH DEBUG: Found {len(data[0].split())} emails from {from_email}")
 
         email_found = False
         uid_to_move = None
@@ -1547,43 +1584,66 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
             msg = email.message_from_bytes(raw_email)
             subject = msg["Subject"]
 
+            # Decode subject properly (handles encoded headers)
+            decoded_parts = email.header.decode_header(subject)
+            if decoded_parts:
+                subject_text = ""
+                for part, encoding in decoded_parts:
+                    if isinstance(part, bytes):
+                        subject_text += part.decode(encoding or 'utf-8', errors='ignore')
+                    else:
+                        subject_text += part
+                subject = subject_text
+
+            # Debug: Print FULL subject
+            print(f"   📧 FULL SUBJECT: '{subject}'")
+            print(f"   📧 Subject length: {len(subject)}")
+
             # Extract name and amount from subject
             amount_match = re.search(r"reçu\s+([\d,\s]+)\s+\$\s+de", subject)
             name_match = re.search(r"de\s+(.+?)\s+et ce montant", subject)
 
+            print(f"   📊 Pattern 1 - Amount match: {amount_match is not None}")
+            print(f"   📊 Pattern 1 - Name match: {name_match is not None}")
+
             if not amount_match:
                 amount_match = re.search(r"envoyé\s+([\d,\s]+)\s*\$", subject)
+                print(f"   📊 Pattern 2 - Amount match: {amount_match is not None}")
             if not name_match:
                 name_match = re.search(r":\s*(.*?)\svous a envoyé", subject)
+                print(f"   📊 Pattern 2 - Name match: {name_match is not None}")
 
             if amount_match and name_match:
                 amt_str = amount_match.group(1).replace(" ", "").replace(",", ".")
                 name = name_match.group(1).strip()
 
+                print(f"   ✅ EXTRACTED: Name='{name}', Amount String='{amt_str}'")
+
                 try:
                     amount = float(amt_str)
                 except:
-                    print(f"⚠️ SEARCH DEBUG: Could not parse amount: {amt_str}")
+                    print(f"   ❌ Could not parse amount: {amt_str}")
                     continue
 
-                print(f"   📋 Extracted: Name='{name}', Amount=${amount}")
-                print(f"   🎯 Comparing: '{name.lower().strip()}' vs '{bank_info_name.lower().strip()}'")
+                print(f"   🎯 Comparing (normalized): '{normalize_name(name)}' vs '{normalize_name(bank_info_name)}'")
                 print(f"   💰 Comparing: ${amount} vs ${float(bank_info_amt)}")
 
-                # Check if this matches our criteria
-                if (name.lower().strip() == bank_info_name.lower().strip() and
+                # Check if this matches our criteria (with Unicode normalization)
+                if (normalize_name(name) == normalize_name(bank_info_name) and
                     abs(amount - float(bank_info_amt)) < 0.01):
                     print(f"✅ SEARCH DEBUG: MATCH FOUND! UID={uid}")
                     email_found = True
                     uid_to_move = uid
                     break
                 else:
-                    print(f"❌ SEARCH DEBUG: No match")
+                    print(f"❌ SEARCH DEBUG: No match (name or amount differs)")
+            else:
+                print(f"   ⚠️ Subject parsing failed - patterns didn't match")
 
         if not email_found or not uid_to_move:
             mail.logout()
 
-            # Even if email not found, update database to MANUAL_PROCESSED to prevent button from showing again
+            # Update database to MANUAL_PROCESSED to prevent button from showing again
             print(f"🔍 DEBUG: Searching for payment - Name: {bank_info_name}, Amount: {bank_info_amt}, Email: {from_email}")
             recent_payment = EbankPayment.query.filter(
                 EbankPayment.bank_info_name == bank_info_name,
@@ -1596,11 +1656,14 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
             if recent_payment:
                 print(f"🔍 DEBUG: Updating payment ID {recent_payment.id} to MANUAL_PROCESSED")
                 recent_payment.result = "MANUAL_PROCESSED"
-                recent_payment.note = (recent_payment.note or "") + f" [Email not found in inbox - likely already archived]"
+                recent_payment.note = (recent_payment.note or "") + " [Email not found in inbox - already archived or deleted]"
                 db.session.commit()
                 print(f"✅ DEBUG: Database committed successfully")
-
-            return False, f"No payment emails found in inbox"
+                # Return success so page refreshes and button disappears
+                return True, "Email not found in inbox (already archived). Database updated."
+            else:
+                print(f"⚠️ DEBUG: Payment record not found in database")
+                return False, "Payment record not found in database"
 
         # Create manually_processed folder if it doesn't exist
         try:

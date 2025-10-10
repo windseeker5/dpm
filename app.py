@@ -326,25 +326,35 @@ def get_git_branch():
 @app.context_processor
 def inject_globals_and_csrf():
     from flask_wtf.csrf import generate_csrf
-    
+
     # Calculate pending signups count for sidebar badge
     pending_signups_count = 0
     active_passport_count = 0
+    unmatched_payment_count = 0
     current_admin = None
-    
+
     try:
         if "admin" in session:  # Only calculate if admin is logged in
             pending_signups_count = Signup.query.filter_by(status='pending').count()
             # Calculate active passports (uses_remaining > 0)
             active_passport_count = Passport.query.filter(Passport.uses_remaining > 0).count()
+            # Calculate unmatched payments (deduplicated count of NO_MATCH)
+            unmatched_payment_count = db.session.query(EbankPayment.id).filter(
+                EbankPayment.result == 'NO_MATCH',
+                EbankPayment.id.in_(
+                    db.session.query(db.func.max(EbankPayment.id))
+                    .group_by(EbankPayment.bank_info_name, EbankPayment.bank_info_amt, EbankPayment.from_email)
+                )
+            ).count()
             # Get current admin info for personalization
             current_admin = Admin.query.filter_by(email=session.get("admin")).first()
     except Exception:
         # If there's any database error, default to 0
         pending_signups_count = 0
         active_passport_count = 0
+        unmatched_payment_count = 0
         current_admin = None
-    
+
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
@@ -352,6 +362,7 @@ def inject_globals_and_csrf():
         'csrf_token': generate_csrf,  # returns the raw CSRF token
         'pending_signups_count': pending_signups_count,
         'active_passport_count': active_passport_count,
+        'unmatched_payment_count': unmatched_payment_count,
         'current_admin': current_admin  # Add current admin for template personalization
     }
 
@@ -3666,6 +3677,87 @@ def list_passports():
                              'end_date': end_date,
                              'min_amount': min_amount,
                              'max_amount': max_amount
+                         })
+
+
+@app.route("/payment-bot-matches")
+def payment_bot_matches():
+    """Display all payment bot activity with deduplication and filtering"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    # Get filter parameters
+    q = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "all")
+    page = request.args.get("page", 1, type=int)
+    per_page = 50
+
+    # Subquery to get latest ID for each unique payment (deduplication)
+    latest_payment_ids = db.session.query(
+        db.func.max(EbankPayment.id).label('max_id')
+    ).group_by(
+        EbankPayment.bank_info_name,
+        EbankPayment.bank_info_amt,
+        EbankPayment.from_email
+    ).subquery()
+
+    # Base query with deduplication
+    query = db.session.query(EbankPayment).filter(
+        EbankPayment.id.in_(
+            db.session.query(latest_payment_ids.c.max_id)
+        )
+    ).order_by(EbankPayment.timestamp.desc())
+
+    # Apply status filter
+    if status_filter == "no_match":
+        query = query.filter(EbankPayment.result == 'NO_MATCH')
+    elif status_filter == "matched":
+        query = query.filter(EbankPayment.result == 'MATCHED')
+    elif status_filter == "manual":
+        query = query.filter(EbankPayment.result == 'MANUAL_PROCESSED')
+
+    # Apply search filter (name and amount only, not email)
+    if q:
+        query = query.filter(
+            db.or_(
+                EbankPayment.bank_info_name.ilike(f"%{q}%"),
+                db.cast(EbankPayment.bank_info_amt, db.String).ilike(f"%{q}%")
+            )
+        )
+
+    # Paginate results
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    payments = pagination.items
+
+    # Calculate statistics
+    total_payments = pagination.total
+    no_match_count = db.session.query(EbankPayment.id).filter(
+        EbankPayment.result == 'NO_MATCH',
+        EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id))
+    ).count()
+    matched_count = db.session.query(EbankPayment.id).filter(
+        EbankPayment.result == 'MATCHED',
+        EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id))
+    ).count()
+    manual_count = db.session.query(EbankPayment.id).filter(
+        EbankPayment.result == 'MANUAL_PROCESSED',
+        EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id))
+    ).count()
+
+    statistics = {
+        'total_payments': total_payments,
+        'no_match_count': no_match_count,
+        'matched_count': matched_count,
+        'manual_count': manual_count
+    }
+
+    return render_template("payment_bot_matches.html",
+                         payments=payments,
+                         pagination=pagination,
+                         statistics=statistics,
+                         current_filters={
+                             'q': q,
+                             'status': status_filter
                          })
 
 

@@ -27,9 +27,9 @@ window.SearchComponent = (function() {
         tableContainerSelector: '.table-responsive',
         preserveParams: ['status', 'payment_status', 'activity', 'template'],
         minSearchLength: 3,
-        debounceDelay: 250,
+        debounceDelay: 500,
         soundEnabled: true,
-        preserveScrollPosition: true
+        preserveScrollPosition: false
     };
 
     function init(userConfig = {}) {
@@ -58,12 +58,7 @@ window.SearchComponent = (function() {
 
         setupEventListeners();
         updateSearchFeedback(enhancedSearchInput.value || '');
-        
-        // Initialize scroll restoration if enabled
-        if (config.preserveScrollPosition) {
-            initScrollRestoration();
-        }
-        
+
         console.log('SearchComponent initialized');
     }
 
@@ -214,8 +209,8 @@ window.SearchComponent = (function() {
 
         // Handle browser back/forward navigation
         window.addEventListener('popstate', function(e) {
-            // Page will reload automatically, just ensure we're not in a loading state
-            setLoadingState(false);
+            // Reload page on back/forward to ensure correct state
+            window.location.reload();
         });
     }
 
@@ -271,31 +266,13 @@ window.SearchComponent = (function() {
     }
 
     function performSearch(query) {
-        if (isSearching) return; // Prevent multiple simultaneous searches
-        
-        setLoadingState(true);
-        
-        // Store scroll position with additional context for better restoration
-        if (config.preserveScrollPosition) {
-            const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-            const timestamp = Date.now();
-            const currentUrl = window.location.href;
-            
-            // Store scroll data with metadata
-            const scrollData = {
-                position: scrollY,
-                timestamp: timestamp,
-                url: currentUrl,
-                query: query.trim(),
-                userAgent: navigator.userAgent.substring(0, 50)
-            };
-            
-            sessionStorage.setItem('searchScrollPosition', scrollY.toString());
-            sessionStorage.setItem('searchScrollData', JSON.stringify(scrollData));
-            
-            console.log('SearchComponent: Stored scroll position', scrollY, 'for search:', query.trim());
+        if (isSearching) {
+            console.warn('SearchComponent: Search already in progress, ignoring request');
+            return; // Prevent multiple simultaneous searches
         }
-        
+
+        setLoadingState(true);
+
         // Build URL with search query while preserving filter parameters
         const url = new URL(window.location.href);
         if (query && query.trim().length >= config.minSearchLength) {
@@ -303,7 +280,7 @@ window.SearchComponent = (function() {
         } else {
             url.searchParams.delete('q');
         }
-        
+
         // Preserve existing filter parameters
         const currentParams = new URLSearchParams(window.location.search);
         config.preserveParams.forEach(param => {
@@ -312,9 +289,35 @@ window.SearchComponent = (function() {
                 url.searchParams.set(param, value);
             }
         });
-        
-        // Navigate to the search URL - this will reload the page with results
-        window.location.href = url.toString();
+
+        // Fetch search results via AJAX (no page reload)
+        fetch(url.toString())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Search request failed');
+                }
+                return response.text();
+            })
+            .then(html => {
+                // Update the table content without page reload
+                updateTableContent(html);
+
+                // Update URL without page reload (for back button support)
+                history.pushState({ query: query.trim() }, '', url.toString());
+
+                // Keep search input focused (mobile-friendly)
+                enhancedSearchInput.focus();
+
+                setLoadingState(false);
+                console.log('SearchComponent: Search completed for query:', query.trim());
+            })
+            .catch(error => {
+                console.error('SearchComponent: Search failed:', error);
+                setLoadingState(false);
+
+                // Fallback: Full page reload on error
+                window.location.href = url.toString();
+            });
     }
 
     function setLoadingState(loading) {
@@ -337,84 +340,34 @@ window.SearchComponent = (function() {
         }
     }
 
-    // Robust scroll position restoration for search operations
-    function initScrollRestoration() {
-        const restoreScroll = () => {
-            const savedPosition = sessionStorage.getItem('searchScrollPosition');
-            if (savedPosition) {
-                const targetY = parseInt(savedPosition);
-                
-                // Robust scroll restoration with multiple attempts
-                const attemptRestore = (attempt = 1, maxAttempts = 10) => {
-                    // Ensure page is fully loaded before scrolling
-                    if (document.readyState === 'complete' && 
-                        document.body && 
-                        document.body.scrollHeight > targetY) {
-                        
-                        // Use multiple scroll methods for maximum compatibility
-                        try {
-                            window.scrollTo({
-                                top: targetY,
-                                left: 0,
-                                behavior: 'instant'
-                            });
-                            
-                            // Fallback for older browsers
-                            if (window.scrollY !== targetY) {
-                                document.documentElement.scrollTop = targetY;
-                                document.body.scrollTop = targetY;
-                            }
-                            
-                            // Verify scroll position was set correctly
-                            setTimeout(() => {
-                                if (Math.abs(window.scrollY - targetY) < 50) {
-                                    // Success - remove saved position
-                                    sessionStorage.removeItem('searchScrollPosition');
-                                    console.log('SearchComponent: Scroll restored to', targetY);
-                                } else if (attempt < maxAttempts) {
-                                    // Try again if scroll didn't work
-                                    attemptRestore(attempt + 1, maxAttempts);
-                                }
-                            }, 50);
-                            
-                        } catch (e) {
-                            console.warn('SearchComponent: Scroll restoration failed:', e);
-                            if (attempt < maxAttempts) {
-                                attemptRestore(attempt + 1, maxAttempts);
-                            }
-                        }
-                    } else if (attempt < maxAttempts) {
-                        // Page not ready yet, try again
-                        setTimeout(() => attemptRestore(attempt + 1, maxAttempts), 100);
-                    } else {
-                        // Max attempts reached, clean up
-                        sessionStorage.removeItem('searchScrollPosition');
-                        console.warn('SearchComponent: Could not restore scroll position after', maxAttempts, 'attempts');
-                    }
-                };
-                
-                attemptRestore();
+    function updateTableContent(html) {
+        // Parse the HTML response
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Extract the main table card (includes filters, table, and pagination)
+        const newCard = doc.querySelector('.main-table-card');
+        const currentCard = document.querySelector('.main-table-card');
+
+        if (newCard && currentCard) {
+            // Replace the entire card (includes filters with updated counts, table, pagination)
+            currentCard.innerHTML = newCard.innerHTML;
+
+            // Re-initialize table container reference
+            tableContainer = document.querySelector(config.tableContainerSelector);
+
+            // Re-initialize loading indicator for the new table
+            if (tableContainer) {
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+                initializeLoadingIndicator();
             }
-        };
-        
-        // Multiple restoration strategies
-        if (document.readyState === 'loading') {
-            // Page still loading
-            document.addEventListener('DOMContentLoaded', () => {
-                setTimeout(restoreScroll, 150);
-            });
-        } else if (document.readyState === 'interactive') {
-            // DOM loaded but resources may still be loading
-            setTimeout(restoreScroll, 200);
+
+            console.log('SearchComponent: Table and filters updated');
         } else {
-            // Page fully loaded
-            setTimeout(restoreScroll, 50);
+            console.warn('SearchComponent: Could not find table card in response');
         }
-        
-        // Additional safety net for late-loading content
-        window.addEventListener('load', () => {
-            setTimeout(restoreScroll, 100);
-        });
     }
 
     // Public API
@@ -422,7 +375,6 @@ window.SearchComponent = (function() {
         init: init,
         performSearch: performSearch,
         setLoadingState: setLoadingState,
-        updateSearchFeedback: updateSearchFeedback,
-        initScrollRestoration: initScrollRestoration
+        updateSearchFeedback: updateSearchFeedback
     };
 })();
