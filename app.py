@@ -3680,6 +3680,124 @@ def list_passports():
                          })
 
 
+# ================================
+# 📊 FINANCIAL REPORTING ROUTES
+# ================================
+
+@app.route("/reports/financial")
+def financial_report():
+    """Display comprehensive financial report with income, expenses, and activity breakdown"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from utils import get_financial_data
+    from datetime import datetime, timedelta, timezone
+
+    # Get filter parameters
+    period = request.args.get("period", "all")  # all, month, quarter, year, custom
+    activity_id = request.args.get("activity_id", type=int)
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+
+    # Calculate date range based on period
+    now = datetime.now(timezone.utc)
+    start_date = None
+    end_date = now
+
+    if period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "quarter":
+        start_date = now - timedelta(days=90)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    elif period == "custom" and start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        except ValueError:
+            flash("Invalid date format", "error")
+            start_date = None
+            end_date = now
+
+    # Get financial data
+    financial_data = get_financial_data(start_date, end_date, activity_id)
+
+    # Get all activities for filter dropdown
+    activities = Activity.query.order_by(Activity.name).all()
+
+    return render_template("financial_report.html",
+                         financial_data=financial_data,
+                         activities=activities,
+                         current_period=period,
+                         current_activity_id=activity_id,
+                         start_date=start_date_str,
+                         end_date=end_date_str)
+
+
+@app.route("/reports/financial/export")
+def financial_report_export():
+    """Export financial report in various formats (CSV, IIF, XLSX)"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from utils import get_financial_data, export_financial_csv
+    from datetime import datetime, timedelta, timezone
+    from flask import Response
+
+    # Get filter parameters (same as main report)
+    period = request.args.get("period", "all")
+    activity_id = request.args.get("activity_id", type=int)
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    export_format = request.args.get("format", "csv")  # csv, iif, xlsx
+
+    # Calculate date range
+    now = datetime.now(timezone.utc)
+    start_date = None
+    end_date = now
+
+    if period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "quarter":
+        start_date = now - timedelta(days=90)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    elif period == "custom" and start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        except ValueError:
+            flash("Invalid date format", "error")
+            return redirect(url_for("financial_report"))
+
+    # Get financial data
+    financial_data = get_financial_data(start_date, end_date, activity_id)
+
+    # Generate filename
+    period_label = financial_data['summary']['period_label'].replace(' ', '_').replace(',', '')
+    filename = f"financial_report_{period_label}.{export_format}"
+
+    # Export based on format
+    if export_format == "csv":
+        csv_content = export_financial_csv(financial_data)
+        return Response(
+            csv_content,
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    elif export_format == "iif":
+        # TODO: Implement QuickBooks IIF export in Phase 2
+        flash("QuickBooks IIF export coming soon! Use CSV for now.", "info")
+        return redirect(url_for("financial_report"))
+    elif export_format == "xlsx":
+        # TODO: Implement Excel export in Phase 2
+        flash("Excel export coming soon! Use CSV for now.", "info")
+        return redirect(url_for("financial_report"))
+    else:
+        flash("Invalid export format", "error")
+        return redirect(url_for("financial_report"))
+
+
 @app.route("/payment-bot-matches")
 def payment_bot_matches():
     """Display all payment bot activity with deduplication and filtering"""

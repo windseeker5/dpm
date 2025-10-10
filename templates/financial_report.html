@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+{% block title %}Financial{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+  <!-- Page Header -->
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title"><i class="ti ti-report-money text-blue me-2"></i>Financial</h1>
+          <p class="text-muted">View comprehensive income and expense data for accounting</p>
+        </div>
+        <div class="col-auto d-none d-md-block">
+          <!-- Export Button (Hidden on Mobile) -->
+          <a href="{{ url_for('financial_report_export', period=current_period, activity_id=current_activity_id, start_date=start_date, end_date=end_date, format='csv') }}" class="btn btn-primary">
+            <i class="ti ti-download me-2"></i>Export CSV
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="dashboard-container">
+
+      <!-- Filters -->
+      <form method="GET" action="{{ url_for('financial_report') }}" class="mb-4">
+        <div class="card">
+          <div class="card-body">
+            <div class="row g-3">
+              <!-- Period Selector -->
+              <div class="col-md-3">
+                <label class="form-label">Period</label>
+                <select name="period" class="form-select" onchange="this.form.submit()">
+                  <option value="all" {% if current_period == 'all' %}selected{% endif %}>All Time</option>
+                  <option value="month" {% if current_period == 'month' %}selected{% endif %}>Last 30 Days</option>
+                  <option value="quarter" {% if current_period == 'quarter' %}selected{% endif %}>Last 90 Days</option>
+                  <option value="year" {% if current_period == 'year' %}selected{% endif %}>Last Year</option>
+                  <option value="custom" {% if current_period == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+              </div>
+
+              <!-- Custom Date Range (show only if custom period selected) -->
+              <div class="col-md-3" id="customStartDate" style="display: {% if current_period == 'custom' %}block{% else %}none{% endif %};">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}">
+              </div>
+              <div class="col-md-3" id="customEndDate" style="display: {% if current_period == 'custom' %}block{% else %}none{% endif %};">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}">
+              </div>
+
+              <!-- Activity Filter -->
+              <div class="col-md-3">
+                <label class="form-label">Activity</label>
+                <select name="activity_id" class="form-select" onchange="this.form.submit()">
+                  <option value="">All Activities</option>
+                  {% for activity in activities %}
+                  <option value="{{ activity.id }}" {% if current_activity_id == activity.id %}selected{% endif %}>
+                    {{ activity.name }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Apply Button (for custom dates) -->
+              {% if current_period == 'custom' %}
+              <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="ti ti-filter me-2"></i>Apply Filter
+                </button>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Mobile View (Visible on Mobile Only) -->
+      <div class="d-md-none">
+        <!-- Mobile Summary Cards -->
+        <div class="row g-2 mb-3">
+          <!-- Total Revenue -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                  <span class="stamp stamp-md bg-green me-3">
+                    <i class="ti ti-trending-up"></i>
+                  </span>
+                  <div>
+                    <div class="text-muted small">Total Revenue</div>
+                    <div class="h3 mb-0">${{ "%.2f"|format(financial_data.summary.total_revenue) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Expenses -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                  <span class="stamp stamp-md bg-red me-3">
+                    <i class="ti ti-trending-down"></i>
+                  </span>
+                  <div>
+                    <div class="text-muted small">Total Expenses</div>
+                    <div class="h3 mb-0">${{ "%.2f"|format(financial_data.summary.total_expenses) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Net Income -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                  <span class="stamp stamp-md {% if financial_data.summary.net_income >= 0 %}bg-blue{% else %}bg-orange{% endif %} me-3">
+                    <i class="ti ti-currency-dollar"></i>
+                  </span>
+                  <div>
+                    <div class="text-muted small">Net Income</div>
+                    <div class="h3 mb-0 {% if financial_data.summary.net_income < 0 %}text-danger{% endif %}">
+                      ${{ "%.2f"|format(financial_data.summary.net_income) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simplified Activity Table for Mobile -->
+        {% if financial_data.by_activity|length > 0 %}
+        <div class="card mb-3">
+          <div class="card-header">
+            <h4 class="card-title mb-0">By Activity</h4>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 50px;"></th>
+                  <th class="text-end">Revenue</th>
+                  <th class="text-end">Expenses</th>
+                  <th class="text-end">Net</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for activity in financial_data.by_activity %}
+                <tr>
+                  <td class="p-2">
+                    {% if activity.activity_image %}
+                      <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.activity_image) }}"
+                           class="rounded-circle" alt="{{ activity.activity_name }}"
+                           style="width: 30px; height: 30px; object-fit: cover;">
+                    {% else %}
+                      <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
+                           style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
+                        {{ activity.activity_name[0] }}
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td class="text-end text-green p-2" style="font-size: 0.85rem;">
+                    {% if activity.total_revenue >= 1000 %}
+                      ${{ "%.1f"|format(activity.total_revenue / 1000) }}K
+                    {% else %}
+                      ${{ "%.0f"|format(activity.total_revenue) }}
+                    {% endif %}
+                  </td>
+                  <td class="text-end text-red p-2" style="font-size: 0.85rem;">
+                    {% if activity.total_expenses >= 1000 %}
+                      ${{ "%.1f"|format(activity.total_expenses / 1000) }}K
+                    {% else %}
+                      ${{ "%.0f"|format(activity.total_expenses) }}
+                    {% endif %}
+                  </td>
+                  <td class="text-end p-2" style="font-size: 0.85rem;">
+                    <strong {% if activity.net_income < 0 %}class="text-danger"{% endif %}>
+                      {% if activity.net_income >= 1000 or activity.net_income <= -1000 %}
+                        ${{ "%.1f"|format(activity.net_income / 1000) }}K
+                      {% else %}
+                        ${{ "%.0f"|format(activity.net_income) }}
+                      {% endif %}
+                    </strong>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Mobile Guidance Message -->
+        <div class="alert alert-info">
+          <div class="d-flex align-items-start">
+            <div class="me-2">
+              <i class="ti ti-device-desktop" style="font-size: 1.5rem;"></i>
+            </div>
+            <div>
+              <strong>For detailed transactions and CSV export</strong>, use desktop or web browser.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Content (Hidden on Mobile) -->
+      <div class="d-none d-md-block">
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+          <!-- Total Revenue -->
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex align-items-center">
+                  <span class="stamp stamp-md bg-green me-3">
+                    <i class="ti ti-trending-up"></i>
+                  </span>
+                  <div>
+                    <div class="text-muted small">Total Revenue</div>
+                    <div class="h2 mb-0">${{ "%.2f"|format(financial_data.summary.total_revenue) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Expenses -->
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex align-items-center">
+                  <span class="stamp stamp-md bg-red me-3">
+                    <i class="ti ti-trending-down"></i>
+                  </span>
+                  <div>
+                    <div class="text-muted small">Total Expenses</div>
+                    <div class="h2 mb-0">${{ "%.2f"|format(financial_data.summary.total_expenses) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Net Income -->
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex align-items-center">
+                  <span class="stamp stamp-md {% if financial_data.summary.net_income >= 0 %}bg-blue{% else %}bg-orange{% endif %} me-3">
+                    <i class="ti ti-currency-dollar"></i>
+                  </span>
+                  <div>
+                    <div class="text-muted small">Net Income</div>
+                    <div class="h2 mb-0 {% if financial_data.summary.net_income < 0 %}text-danger{% endif %}">
+                      ${{ "%.2f"|format(financial_data.summary.net_income) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Period Label -->
+        <div class="mb-3">
+          <span class="badge bg-blue-lt text-blue">
+            <i class="ti ti-calendar me-1"></i>{{ financial_data.summary.period_label }}
+          </span>
+        </div>
+
+        <!-- Activity Breakdown Table -->
+        <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Transactions by Activity</h3>
+        </div>
+        <div class="table-responsive">
+          {% if financial_data.by_activity|length > 0 %}
+          <table class="table card-table table-vcenter">
+            <thead>
+              <tr>
+                <th>Activity</th>
+                <th class="text-end">Revenue</th>
+                <th class="text-end">Expenses</th>
+                <th class="text-end">Net Income</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for activity in financial_data.by_activity %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <i class="ti ti-activity text-muted me-2"></i>
+                    <strong>{{ activity.activity_name }}</strong>
+                  </div>
+                </td>
+                <td class="text-end text-green">
+                  ${{ "%.2f"|format(activity.total_revenue) }}
+                </td>
+                <td class="text-end text-red">
+                  ${{ "%.2f"|format(activity.total_expenses) }}
+                </td>
+                <td class="text-end">
+                  <strong {% if activity.net_income < 0 %}class="text-danger"{% endif %}>
+                    ${{ "%.2f"|format(activity.net_income) }}
+                  </strong>
+                </td>
+                <td class="text-center">
+                  <button class="btn btn-sm btn-ghost-primary"
+                          type="button"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#activity{{ activity.activity_id }}"
+                          aria-expanded="false">
+                    <i class="ti ti-chevron-down me-1"></i>View Details
+                  </button>
+                </td>
+              </tr>
+              <!-- Collapsible Transaction Details -->
+              <tr class="collapse" id="activity{{ activity.activity_id }}">
+                <td colspan="5" class="p-0">
+                  <div class="card m-3 bg-light">
+                    <div class="card-header">
+                      <h4 class="card-title">{{ activity.activity_name }} - Detailed Transactions</h4>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-sm mb-0">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-center">Receipt</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for transaction in activity.transactions %}
+                          <tr>
+                            <td>{{ transaction.date }}</td>
+                            <td>
+                              {% if transaction.type == 'Income' %}
+                                <span class="badge bg-green-lt">
+                                  <i class="ti ti-arrow-up me-1"></i>Income
+                                </span>
+                              {% else %}
+                                <span class="badge bg-red-lt">
+                                  <i class="ti ti-arrow-down me-1"></i>Expense
+                                </span>
+                              {% endif %}
+                            </td>
+                            <td>{{ transaction.category }}</td>
+                            <td>{{ transaction.description }}</td>
+                            <td class="text-end {% if transaction.type == 'Income' %}text-green{% else %}text-red{% endif %}">
+                              ${{ "%.2f"|format(transaction.amount) }}
+                            </td>
+                            <td class="text-center">
+                              {% if transaction.receipt_filename %}
+                                <button class="btn btn-sm btn-ghost-secondary" onclick="viewReceipt('{{ transaction.receipt_filename }}')">
+                                  <i class="ti ti-file"></i>
+                                </button>
+                              {% else %}
+                                <span class="text-muted">—</span>
+                              {% endif %}
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                        <tfoot>
+                          <tr class="fw-bold">
+                            <td colspan="4" class="text-end">Activity Total:</td>
+                            <td class="text-end">
+                              <span class="text-green">+${{ "%.2f"|format(activity.total_revenue) }}</span><br>
+                              <span class="text-red">-${{ "%.2f"|format(activity.total_expenses) }}</span>
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr class="fw-bold bg-light">
+                <td>TOTAL</td>
+                <td class="text-end text-green">${{ "%.2f"|format(financial_data.summary.total_revenue) }}</td>
+                <td class="text-end text-red">${{ "%.2f"|format(financial_data.summary.total_expenses) }}</td>
+                <td class="text-end">${{ "%.2f"|format(financial_data.summary.net_income) }}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+          {% else %}
+          <!-- Empty State -->
+          <div class="empty">
+            <div class="empty-icon">
+              <i class="ti ti-report-money"></i>
+            </div>
+            <p class="empty-title">No Financial Data</p>
+            <p class="empty-subtitle">
+              No transactions found for the selected period and activity.
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      </div>
+      <!-- End Desktop Content -->
+
+    </div>
+  </div>
+</div>
+
+<!-- Receipt View Modal -->
+<div class="modal modal-blur fade" id="receiptModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Receipt/Document</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="receiptContent" class="text-center">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Show/hide custom date inputs based on period selection
+document.addEventListener('DOMContentLoaded', function() {
+  const periodSelect = document.querySelector('select[name="period"]');
+  const customStartDate = document.getElementById('customStartDate');
+  const customEndDate = document.getElementById('customEndDate');
+
+  if (periodSelect) {
+    periodSelect.addEventListener('change', function() {
+      if (this.value === 'custom') {
+        customStartDate.style.display = 'block';
+        customEndDate.style.display = 'block';
+      } else {
+        customStartDate.style.display = 'none';
+        customEndDate.style.display = 'none';
+      }
+    });
+  }
+});
+
+// View receipt in modal
+function viewReceipt(filename) {
+  const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+  const contentDiv = document.getElementById('receiptContent');
+
+  // Show loading spinner
+  contentDiv.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>';
+
+  // Determine file type and display accordingly
+  const ext = filename.split('.').pop().toLowerCase();
+  const receiptUrl = `/uploads/${filename}`;
+
+  if (ext === 'pdf') {
+    // Display PDF in iframe
+    contentDiv.innerHTML = `<iframe src="${receiptUrl}" style="width:100%; height:500px;" frameborder="0"></iframe>`;
+  } else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+    // Display image
+    contentDiv.innerHTML = `<img src="${receiptUrl}" class="img-fluid" alt="Receipt">`;
+  } else {
+    // Download link for other files
+    contentDiv.innerHTML = `
+      <p>This file type cannot be previewed.</p>
+      <a href="${receiptUrl}" class="btn btn-primary" download>
+        <i class="ti ti-download me-2"></i>Download ${filename}
+      </a>
+    `;
+  }
+
+  modal.show();
+}
+</script>
+
+<style>
+/* Dashboard Container */
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Card Styling */
+.card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Page Header */
+.page-header {
+  background: transparent;
+  border: none;
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 2.25rem;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+/* Table Styling */
+.table {
+  background-color: transparent !important;
+}
+
+.table th {
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem;
+  color: #334155;
+  vertical-align: middle;
+}
+
+/* Empty State */
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+.empty-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.empty-subtitle {
+  color: #64748b;
+}
+
+/* Mobile Responsive */
+@media (max-width: 767px) {
+  .dashboard-container {
+    padding: 0 1rem;
+  }
+
+  .page-title {
+    font-size: 1.75rem;
+  }
+
+  .table th {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+</style>
+{% endblock %}

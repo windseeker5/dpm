@@ -3224,4 +3224,213 @@ def resize_hero_image(image_data, template_type, max_file_size_mb=2):
         return None, f"Error resizing image: {str(e)}"
 
 
+# ================================
+# 📊 FINANCIAL REPORTING FUNCTIONS
+# ================================
+
+def get_financial_data(start_date=None, end_date=None, activity_id=None):
+    """
+    Aggregate financial data from Passport sales, Income, and Expenses.
+
+    Args:
+        start_date: datetime object for start of period (UTC, optional)
+        end_date: datetime object for end of period (UTC, optional)
+        activity_id: Optional activity ID to filter by specific activity
+
+    Returns:
+        dict: Financial data with summary and by-activity breakdown
+    """
+    from models import Passport, Income, Expense, Activity, User
+    from sqlalchemy import func
+    from datetime import datetime, timezone
+
+    # Default to all-time if no dates provided
+    if not start_date:
+        start_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    if not end_date:
+        end_date = datetime.now(timezone.utc)
+
+    # Ensure dates are timezone-aware
+    if start_date.tzinfo is None:
+        start_date = start_date.replace(tzinfo=timezone.utc)
+    if end_date.tzinfo is None:
+        end_date = end_date.replace(tzinfo=timezone.utc)
+
+    # Build base queries with date filtering
+    passport_query = db.session.query(Passport).filter(
+        Passport.created_dt >= start_date,
+        Passport.created_dt <= end_date
+    )
+    income_query = db.session.query(Income).filter(
+        Income.date >= start_date,
+        Income.date <= end_date
+    )
+    expense_query = db.session.query(Expense).filter(
+        Expense.date >= start_date,
+        Expense.date <= end_date
+    )
+
+    # Apply activity filter if provided
+    if activity_id:
+        passport_query = passport_query.filter(Passport.activity_id == activity_id)
+        income_query = income_query.filter(Income.activity_id == activity_id)
+        expense_query = expense_query.filter(Expense.activity_id == activity_id)
+
+    # Get all activities involved
+    if activity_id:
+        activities = [db.session.get(Activity, activity_id)]
+    else:
+        activity_ids = set()
+        for p in passport_query.all():
+            activity_ids.add(p.activity_id)
+        for i in income_query.all():
+            activity_ids.add(i.activity_id)
+        for e in expense_query.all():
+            activity_ids.add(e.activity_id)
+        activities = [db.session.get(Activity, aid) for aid in activity_ids if db.session.get(Activity, aid)]
+
+    # Initialize summary
+    total_revenue = 0.0
+    total_expenses = 0.0
+    by_activity = []
+    all_transactions = []
+
+    # Process each activity
+    for activity in activities:
+        activity_revenue = 0.0
+        activity_expenses = 0.0
+        activity_transactions = []
+
+        # Get passport sales for this activity
+        passports = passport_query.filter(Passport.activity_id == activity.id).all()
+        for passport in passports:
+            user = db.session.get(User, passport.user_id) if passport.user_id else None
+            transaction = {
+                'date': passport.created_dt.strftime('%Y-%m-%d'),
+                'datetime': passport.created_dt,
+                'type': 'Income',
+                'category': 'Passport Sales',
+                'description': f"{passport.passport_type_name or 'Passport'} - {user.name if user else 'Unknown'}",
+                'amount': float(passport.sold_amt or 0),
+                'receipt_filename': None,
+                'activity_id': activity.id,
+                'activity_name': activity.name
+            }
+            activity_revenue += transaction['amount']
+            activity_transactions.append(transaction)
+            all_transactions.append(transaction)
+
+        # Get other income for this activity
+        incomes = income_query.filter(Income.activity_id == activity.id).all()
+        for income in incomes:
+            transaction = {
+                'date': income.date.strftime('%Y-%m-%d'),
+                'datetime': income.date,
+                'type': 'Income',
+                'category': income.category,
+                'description': income.note or income.category,
+                'amount': float(income.amount),
+                'receipt_filename': income.receipt_filename,
+                'activity_id': activity.id,
+                'activity_name': activity.name
+            }
+            activity_revenue += transaction['amount']
+            activity_transactions.append(transaction)
+            all_transactions.append(transaction)
+
+        # Get expenses for this activity
+        expenses = expense_query.filter(Expense.activity_id == activity.id).all()
+        for expense in expenses:
+            transaction = {
+                'date': expense.date.strftime('%Y-%m-%d'),
+                'datetime': expense.date,
+                'type': 'Expense',
+                'category': expense.category,
+                'description': expense.description or expense.category,
+                'amount': float(expense.amount),
+                'receipt_filename': expense.receipt_filename,
+                'activity_id': activity.id,
+                'activity_name': activity.name
+            }
+            activity_expenses += transaction['amount']
+            activity_transactions.append(transaction)
+            all_transactions.append(transaction)
+
+        # Sort activity transactions by date (newest first)
+        activity_transactions.sort(key=lambda x: x['datetime'], reverse=True)
+
+        # Add to by_activity list
+        by_activity.append({
+            'activity_id': activity.id,
+            'activity_name': activity.name,
+            'activity_image': activity.image_filename or activity.logo_filename,
+            'total_revenue': activity_revenue,
+            'total_expenses': activity_expenses,
+            'net_income': activity_revenue - activity_expenses,
+            'transactions': activity_transactions
+        })
+
+        total_revenue += activity_revenue
+        total_expenses += activity_expenses
+
+    # Sort activities by revenue (highest first)
+    by_activity.sort(key=lambda x: x['total_revenue'], reverse=True)
+
+    # Sort all transactions by date (newest first)
+    all_transactions.sort(key=lambda x: x['datetime'], reverse=True)
+
+    # Determine period label
+    if start_date.year == 2000 and end_date >= datetime.now(timezone.utc):
+        period_label = 'All Time'
+    else:
+        period_label = f"{start_date.strftime('%b %d, %Y')} - {end_date.strftime('%b %d, %Y')}"
+
+    return {
+        'summary': {
+            'total_revenue': total_revenue,
+            'total_expenses': total_expenses,
+            'net_income': total_revenue - total_expenses,
+            'period_label': period_label,
+            'start_date': start_date,
+            'end_date': end_date
+        },
+        'by_activity': by_activity,
+        'all_transactions': all_transactions
+    }
+
+
+def export_financial_csv(financial_data):
+    """
+    Export financial data to CSV format compatible with all accounting software.
+
+    Args:
+        financial_data: dict from get_financial_data()
+
+    Returns:
+        str: CSV formatted string
+    """
+    import csv
+    from io import StringIO
+
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow(['Date', 'Activity', 'Type', 'Category', 'Description', 'Amount', 'Receipt'])
+
+    # Write all transactions
+    for transaction in financial_data['all_transactions']:
+        writer.writerow([
+            transaction['date'],
+            transaction['activity_name'],
+            transaction['type'],
+            transaction['category'],
+            transaction['description'],
+            f"{transaction['amount']:.2f}",
+            transaction['receipt_filename'] or 'N/A'
+        ])
+
+    return output.getvalue()
+
+
 
