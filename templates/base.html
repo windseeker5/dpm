@@ -478,19 +478,28 @@
           <ul class="nav-list">
             <li class="nav-item nav-item-expandable">
               <a href="#"
-                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint == 'payment_bot_matches' }}"
+                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['payment_bot_matches', 'financial_report'] }}"
                  data-bs-toggle="collapse"
                  data-bs-target="#reports-submenu"
-                 aria-expanded="{{ 'true' if request.endpoint == 'payment_bot_matches' else 'false' }}">
+                 aria-expanded="{{ 'true' if request.endpoint in ['payment_bot_matches', 'financial_report'] else 'false' }}">
                 <i class="nav-icon ti ti-chart-bar"></i>
                 <span class="nav-text">Reports</span>
                 <i class="nav-chevron ti ti-chevron-right"></i>
-                {% if request.endpoint == 'payment_bot_matches' %}
+                {% if request.endpoint in ['payment_bot_matches', 'financial_report'] %}
                 <span class="nav-indicator"></span>
                 {% endif %}
               </a>
-              <div class="collapse nav-submenu {{ 'show' if request.endpoint == 'payment_bot_matches' }}" id="reports-submenu">
+              <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['payment_bot_matches', 'financial_report'] }}" id="reports-submenu">
                 <ul class="nav-list">
+                  <li class="nav-item">
+                    <a href="{{ url_for('financial_report') }}" class="nav-link {{ 'active' if request.endpoint == 'financial_report' }}">
+                      <i class="nav-icon ti ti-report-money"></i>
+                      <span class="nav-text">Financial</span>
+                      {% if request.endpoint == 'financial_report' %}
+                      <span class="nav-indicator"></span>
+                      {% endif %}
+                    </a>
+                  </li>
                   <li class="nav-item">
                     <a href="{{ url_for('payment_bot_matches') }}" class="nav-link {{ 'active' if request.endpoint == 'payment_bot_matches' }}">
                       <i class="nav-icon ti ti-mail-dollar"></i>
