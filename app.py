@@ -3798,6 +3798,127 @@ def financial_report_export():
         return redirect(url_for("financial_report"))
 
 
+@app.route("/reports/user-contacts")
+def user_contacts_report():
+    """Display user contact list with engagement metrics"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from utils import get_user_contact_report
+    from datetime import datetime, timedelta, timezone
+
+    # Get filter parameters
+    activity_id = request.args.get("activity_id", type=int)
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    period = request.args.get("period", "all")  # all, month, quarter, year, custom
+    exclude_opt_outs = request.args.get("exclude_opt_outs", "false") == "true"
+    sort_by = request.args.get("sort_by", "passports_desc")
+
+    # Calculate date range based on period
+    now = datetime.now(timezone.utc)
+    start_date = None
+    end_date = now
+
+    if period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "quarter":
+        start_date = now - timedelta(days=90)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    elif period == "custom" and start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        except ValueError:
+            flash("Invalid date format", "error")
+            start_date = None
+            end_date = now
+
+    # Get user contact data
+    user_data = get_user_contact_report(
+        activity_id=activity_id,
+        start_date=start_date,
+        end_date=end_date,
+        exclude_opt_outs=exclude_opt_outs,
+        sort_by=sort_by
+    )
+
+    # Get all activities for filter dropdown
+    activities = Activity.query.order_by(Activity.name).all()
+
+    return render_template("user_contacts_report.html",
+                         user_data=user_data,
+                         activities=activities,
+                         current_period=period,
+                         current_activity_id=activity_id,
+                         start_date=start_date_str,
+                         end_date=end_date_str,
+                         exclude_opt_outs=exclude_opt_outs,
+                         sort_by=sort_by)
+
+
+@app.route("/reports/user-contacts/export")
+def user_contacts_export():
+    """Export user contact list in CSV format"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from utils import get_user_contact_report, export_user_contacts_csv
+    from datetime import datetime, timedelta, timezone
+    from flask import Response
+
+    # Get filter parameters (same as main report)
+    activity_id = request.args.get("activity_id", type=int)
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    period = request.args.get("period", "all")
+    exclude_opt_outs = request.args.get("exclude_opt_outs", "false") == "true"
+    sort_by = request.args.get("sort_by", "passports_desc")
+
+    # Calculate date range
+    now = datetime.now(timezone.utc)
+    start_date = None
+    end_date = now
+
+    if period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "quarter":
+        start_date = now - timedelta(days=90)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    elif period == "custom" and start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        except ValueError:
+            flash("Invalid date format", "error")
+            return redirect(url_for("user_contacts_report"))
+
+    # Get user contact data
+    user_data = get_user_contact_report(
+        activity_id=activity_id,
+        start_date=start_date,
+        end_date=end_date,
+        exclude_opt_outs=exclude_opt_outs,
+        sort_by=sort_by
+    )
+
+    # Generate filename
+    activity_part = user_data['summary']['activity_name'].replace(' ', '_').lower() if activity_id else 'all_activities'
+    opt_out_part = '_no_optouts' if exclude_opt_outs else ''
+    filename = f"user_contacts_{activity_part}{opt_out_part}_{now.strftime('%Y-%m-%d')}.csv"
+
+    # Export to CSV
+    csv_content = export_user_contacts_csv(user_data)
+
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @app.route("/payment-bot-matches")
 def payment_bot_matches():
     """Display all payment bot activity with deduplication and filtering"""
