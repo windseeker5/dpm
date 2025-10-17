@@ -7711,86 +7711,6 @@ def save_email_templates(activity_id):
         return redirect(url_for('email_template_customization', activity_id=activity_id))
 
 
-@app.route("/activity/<int:activity_id>/email-preview-live", methods=["POST"])
-def preview_email_live(activity_id):
-    """Generate live preview of email template with current form data (without saving)"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    from models import Activity
-    from utils import get_email_context, get_setting
-
-    activity = Activity.query.get_or_404(activity_id)
-    template_type = request.form.get('template_type')
-
-    if not template_type:
-        return "Error: No template type specified", 400
-
-    # Get form values (unsaved customizations)
-    subject = request.form.get(f'{template_type}_subject', '')
-    title = request.form.get(f'{template_type}_title', '')
-    intro_text = request.form.get(f'{template_type}_intro_text', '')
-    conclusion_text = request.form.get(f'{template_type}_conclusion_text', '')
-
-    # Build preview context based on template type
-    if template_type == 'survey_invitation':
-        base_context = {
-            'user_name': 'John Doe',
-            'activity_name': activity.name,
-            'survey_name': 'Post-Activity Feedback Survey',
-            'survey_url': 'https://minipass.me/survey/preview',
-            'question_count': 5,
-            'organization_name': activity.organization.name if activity.organization else get_setting('ORG_NAME', 'Minipass'),
-            'organization_address': get_setting('ORG_ADDRESS', ''),
-            'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
-            'unsubscribe_url': '#',
-            'privacy_url': '#'
-        }
-    else:
-        # Default context for other template types
-        base_context = {
-            'user_name': 'John Doe',
-            'activity_name': activity.name,
-            'organization_name': activity.organization.name if activity.organization else get_setting('ORG_NAME', 'Minipass'),
-            'organization_address': get_setting('ORG_ADDRESS', ''),
-            'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me')
-        }
-
-    # Merge with form customizations (these override saved values)
-    context = base_context.copy()
-    if title:
-        context['title'] = title
-    if intro_text:
-        context['intro_text'] = intro_text
-    if conclusion_text:
-        context['conclusion_text'] = conclusion_text
-
-    # Render the compiled template
-    template_path = f'email_templates/{template_type}_compiled/index.html'
-
-    try:
-        html = render_template(template_path, **context)
-
-        # Replace CID references with actual image URLs for preview
-        import re
-        import os
-
-        # Replace hero image CID with actual saved file URL
-        hero_filename = f"{activity_id}_{template_type}_hero.png"
-        hero_path = f"static/uploads/{hero_filename}"
-        if os.path.exists(hero_path):
-            hero_url = url_for('static', filename=f'uploads/{hero_filename}', _external=True)
-            html = re.sub(r'cid:hero_' + template_type, hero_url, html)
-        else:
-            # Fallback to default hero if exists
-            default_hero = url_for('static', filename='uploads/defaults/default_hero.png', _external=True)
-            html = re.sub(r'cid:hero_' + template_type, default_hero, html)
-
-        return html
-    except Exception as e:
-        return f"Error rendering template: {str(e)}<br><br>Template path: {template_path}<br>Context keys: {list(context.keys())}", 500
-
-
 @app.route("/activity/<int:activity_id>/email-templates/reset", methods=["POST"])
 def reset_email_template(activity_id):
     """Reset a specific email template to default values"""
@@ -8136,14 +8056,16 @@ def email_preview_live(activity_id):
     # Get template type from request
     template_type = request.form.get('template_type') or request.args.get('type', 'newPass')
     device_mode = request.form.get('device', 'desktop')  # desktop or mobile
-    
+
     # Create sample context data for preview
     base_context = {
         'user_name': 'John Doe',
         'user_email': 'john.doe@example.com',
         'activity_name': activity.name,
         'pass_code': 'SAMPLE123',
-        'amount': '$50.00'
+        'amount': '$50.00',
+        'question_count': 8,  # For survey_invitation template
+        'survey_url': 'https://example.com/survey/sample'  # For survey_invitation template
     }
     
     # Add email blocks for templates that need them
@@ -8217,8 +8139,13 @@ def email_preview_live(activity_id):
     # Create a temporary activity object with live customizations
     # We'll modify the context generation to use these live customizations
     temp_email_templates = activity.email_templates.copy() if activity.email_templates else {}
-    temp_email_templates[template_type] = live_customizations
-    
+
+    # Merge live customizations with existing template (don't replace entirely)
+    existing_template = temp_email_templates.get(template_type, {})
+    merged_template = existing_template.copy() if existing_template else {}
+    merged_template.update(live_customizations)  # Only override fields that were changed
+    temp_email_templates[template_type] = merged_template
+
     # Store original templates and temporarily replace them
     original_templates = activity.email_templates
     activity.email_templates = temp_email_templates
@@ -8262,12 +8189,13 @@ def email_preview_live(activity_id):
                 
                 print(f"📧 EMAIL LIVE PREVIEW: activity={activity.id}, template_type={template_type}")
                 print(f"📧 EMAIL LIVE PREVIEW: Custom hero found: {has_custom_hero}, uploaded hero: {has_uploaded_hero}")
-                
+
                 # Known hero CID mappings for different template types
                 hero_cid_map = {
                     'newPass': 'hero_new_pass',
                     'welcome': 'hero_welcome',
-                    'renewal': 'hero_renewal'
+                    'renewal': 'hero_renewal',
+                    'survey_invitation': 'sondage'
                 }
                 
                 # Replace cid: references with data: URIs
