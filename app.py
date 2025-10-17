@@ -6086,58 +6086,87 @@ def create_survey():
         return redirect(url_for("activity_dashboard", activity_id=activity_id))
 
 
+@app.route("/api/survey-template/<int:template_id>", methods=["GET"])
+def api_get_survey_template(template_id):
+    """API endpoint to get survey template questions as JSON"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        template = SurveyTemplate.query.get(template_id)
+        if not template:
+            return jsonify({"error": "Template not found"}), 404
+
+        # Parse questions JSON
+        questions_data = json.loads(template.questions)
+        questions = questions_data.get("questions", [])
+
+        return jsonify({
+            "id": template.id,
+            "name": template.name,
+            "description": template.description,
+            "questions": questions
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/create-quick-survey", methods=["POST"])
 def create_quick_survey():
-    """Create a quick survey using the default Post-Activity Feedback template"""
+    """Create a quick survey using a selected template"""
     if "admin" not in session:
         return redirect(url_for("login"))
-    
+
+    # Import logging function
+    from utils import log_admin_action
+
     try:
         activity_id = request.form.get("activity_id")
         survey_name = request.form.get("survey_name", "").strip()
-        
-        if not activity_id or not survey_name:
-            flash("❌ Activity and survey name are required", "error")
-            return redirect(url_for("activity_dashboard", activity_id=activity_id or 1))
-        
+        template_id = request.form.get("template_id")
+
+        if not activity_id or not survey_name or not template_id:
+            flash("❌ Activity, survey name, and template are required", "error")
+            return redirect(url_for("list_surveys"))
+
         # Verify activity exists
         activity = db.session.get(Activity, activity_id)
         if not activity:
             flash("❌ Activity not found", "error")
             return redirect(url_for("dashboard"))
-        
-        # Get or create the default template
-        default_template = create_default_survey_template()
-        if not default_template:
-            flash("❌ Error creating default survey template", "error")
-            return redirect(url_for("activity_dashboard", activity_id=activity_id))
-        
+
+        # Verify template exists
+        template = db.session.get(SurveyTemplate, template_id)
+        if not template:
+            flash("❌ Survey template not found", "error")
+            return redirect(url_for("list_surveys"))
+
         # Generate unique survey token
         survey_token = generate_survey_token()
-        
+
         # Create the survey
         survey = Survey(
             activity_id=activity_id,
-            template_id=default_template.id,
+            template_id=template.id,
             name=survey_name,
-            description=f"Post-activity feedback survey for {activity.name}",
+            description=f"Feedback survey for {activity.name} using {template.name}",
             survey_token=survey_token,
             status="active"
         )
-        
+
         db.session.add(survey)
         db.session.commit()
-        
+
         # Log the action
-        log_admin_action(f"Created quick survey '{survey_name}' for activity '{activity.name}' using default template")
-        
-        flash(f"✅ Quick survey '{survey_name}' created successfully using default template", "success")
-        return redirect(url_for("survey_results", survey_id=survey.id))
-        
+        log_admin_action(f"Created quick survey '{survey_name}' for activity '{activity.name}' using template '{template.name}'")
+
+        flash(f"✅ Survey '{survey_name}' created successfully using {template.name} template", "success")
+        return redirect(url_for("list_surveys"))
+
     except Exception as e:
         db.session.rollback()
-        flash(f"❌ Error creating quick survey: {str(e)}", "error")
-        return redirect(url_for("activity_dashboard", activity_id=activity_id))
+        flash(f"❌ Error creating survey: {str(e)}", "error")
+        return redirect(url_for("list_surveys"))
 
 
 @app.route("/survey/<survey_token>")
@@ -6423,6 +6452,139 @@ def create_default_survey_template():
         return None
 
 
+def create_french_simple_survey_template():
+    """Create a simple French post-activity feedback survey template"""
+    template_name = "Sondage d'Activité - Simple (questions)"
+
+    # Check if template already exists - if so, delete it to recreate with proper format
+    existing_template = SurveyTemplate.query.filter_by(name=template_name).first()
+    if existing_template:
+        try:
+            db.session.delete(existing_template)
+            db.session.commit()
+            print(f"🗑️  Deleted existing French template to recreate with proper format")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Warning: Could not delete existing template: {str(e)}")
+
+    # Create French survey questions with UI-compatible format
+    # IMPORTANT: Use "question" key (not "text") and simple string arrays for options
+    french_questions = [
+        {
+            "id": 1,
+            "question": "Comment évaluez-vous votre satisfaction globale concernant cette activité?",
+            "type": "rating",
+            "required": True,
+            "min_rating": 1,
+            "max_rating": 5,
+            "labels": {
+                "1": "Très insatisfait",
+                "2": "Insatisfait",
+                "3": "Neutre",
+                "4": "Satisfait",
+                "5": "Très satisfait"
+            }
+        },
+        {
+            "id": 2,
+            "question": "Le prix demandé pour cette activité est-il justifié?",
+            "type": "multiple_choice",
+            "required": True,
+            "options": [
+                "Trop cher",
+                "Un peu cher",
+                "Juste",
+                "Bon rapport qualité-prix",
+                "Excellent rapport qualité-prix"
+            ]
+        },
+        {
+            "id": 3,
+            "question": "Recommanderiez-vous cette activité à un ami?",
+            "type": "multiple_choice",
+            "required": True,
+            "options": [
+                "Certainement",
+                "Probablement",
+                "Peut-être",
+                "Probablement pas",
+                "Certainement pas"
+            ]
+        },
+        {
+            "id": 4,
+            "question": "Comment évaluez-vous l'emplacement/les installations?",
+            "type": "multiple_choice",
+            "required": False,
+            "options": [
+                "Excellent",
+                "Très bien",
+                "Bien",
+                "Moyen",
+                "Insuffisant"
+            ]
+        },
+        {
+            "id": 5,
+            "question": "L'horaire de l'activité vous convenait-il?",
+            "type": "multiple_choice",
+            "required": False,
+            "options": [
+                "Parfaitement",
+                "Bien",
+                "Acceptable",
+                "Peu pratique",
+                "Très peu pratique"
+            ]
+        },
+        {
+            "id": 6,
+            "question": "Qu'avez-vous le plus apprécié de cette activité?",
+            "type": "open_ended",
+            "required": False,
+            "max_length": 300,
+            "placeholder": "Partagez ce que vous avez le plus aimé..."
+        },
+        {
+            "id": 7,
+            "question": "Qu'est-ce qui pourrait être amélioré?",
+            "type": "open_ended",
+            "required": False,
+            "max_length": 300,
+            "placeholder": "Partagez vos suggestions d'amélioration..."
+        },
+        {
+            "id": 8,
+            "question": "Souhaiteriez-vous participer à nouveau à une activité similaire?",
+            "type": "multiple_choice",
+            "required": True,
+            "options": [
+                "Oui, certainement",
+                "Oui, probablement",
+                "Peut-être",
+                "Probablement pas",
+                "Non"
+            ]
+        }
+    ]
+
+    # Create the template
+    template = SurveyTemplate(
+        name=template_name,
+        description="Sondage simple en français pour recueillir les retours après une activité ponctuelle (tournoi de golf, événement sportif, etc.). Temps de réponse: ~2 minutes.",
+        questions=json.dumps({"questions": french_questions}),
+        status="active"
+    )
+
+    try:
+        db.session.add(template)
+        db.session.commit()
+        print(f"✅ French survey template '{template_name}' created successfully with proper format")
+        return template
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error creating French survey template: {str(e)}")
+        return None
 
 
 # ================================
@@ -6566,7 +6728,7 @@ def edit_survey_template(template_id):
             question_text = request.form.get(f"question_{question_index}", "").strip()
             question_type = request.form.get(f"question_type_{question_index}", "multiple_choice")
             required = f"required_{question_index}" in request.form
-            
+
             if question_text:
                 question_data = {
                     "id": question_index,
@@ -6574,8 +6736,25 @@ def edit_survey_template(template_id):
                     "type": question_type,
                     "required": required
                 }
-                
-                if question_type == "multiple_choice":
+
+                if question_type == "rating":
+                    # For rating questions, preserve existing rating data from original template
+                    # Rating questions are read-only in the UI, so we need to fetch original data
+                    try:
+                        original_data = json.loads(template.questions)
+                        original_questions = original_data.get("questions", [])
+                        original_q = next((q for q in original_questions if q.get("id") == question_index), None)
+                        if original_q:
+                            question_data["min_rating"] = original_q.get("min_rating", 1)
+                            question_data["max_rating"] = original_q.get("max_rating", 5)
+                            question_data["labels"] = original_q.get("labels", {})
+                    except:
+                        # Fallback defaults if we can't find original
+                        question_data["min_rating"] = 1
+                        question_data["max_rating"] = 5
+                        question_data["labels"] = {}
+
+                elif question_type == "multiple_choice":
                     options = []
                     option_index = 1
                     while f"question_{question_index}_option_{option_index}" in request.form:
@@ -6584,19 +6763,19 @@ def edit_survey_template(template_id):
                             options.append(option)
                         option_index += 1
                     question_data["options"] = options
-                
-                elif question_type == "open_ended":
+
+                elif question_type == "open_ended" or question_type == "text":
                     max_length = request.form.get(f"max_length_{question_index}", "")
                     if max_length:
                         try:
                             question_data["max_length"] = int(max_length)
                         except ValueError:
                             pass
-                
+
                 questions.append(question_data)
-            
+
             question_index += 1
-        
+
         if not questions:
             flash("At least one question is required", "error")
             return redirect(url_for("edit_survey_template", template_id=template_id))
@@ -6611,13 +6790,67 @@ def edit_survey_template(template_id):
             db.session.rollback()
             flash("Error updating survey template", "error")
     
-    # Parse questions for editing
+    # Parse questions for editing with backward compatibility
     try:
         questions_data = json.loads(template.questions)
-        template.parsed_questions = questions_data.get('questions', [])
-    except:
+        raw_questions = questions_data.get('questions', [])
+
+        # Normalize questions to standard format for editing
+        # Standard format: {"question": "...", "type": "multiple_choice|open_ended", "options": ["str1", "str2"]}
+        normalized_questions = []
+        for q in raw_questions:
+            normalized = {
+                "id": q.get("id", len(normalized_questions) + 1),
+                "required": q.get("required", True)
+            }
+
+            # Handle question text (both "text" and "question" keys)
+            normalized["question"] = q.get("question") or q.get("text", "")
+
+            # Handle question type normalization
+            q_type = q.get("type", "multiple_choice")
+            if q_type == "rating":
+                # Keep rating questions as rating
+                normalized["type"] = "rating"
+                # Copy rating-specific fields
+                if "min_rating" in q:
+                    normalized["min_rating"] = q["min_rating"]
+                if "max_rating" in q:
+                    normalized["max_rating"] = q["max_rating"]
+                if "labels" in q:
+                    normalized["labels"] = q["labels"]
+            elif q_type == "multiple_choice":
+                normalized["type"] = "multiple_choice"
+            elif q_type == "text":
+                normalized["type"] = "open_ended"
+            else:
+                normalized["type"] = q_type
+
+            # Handle options (both object format and string array format)
+            if "options" in q and normalized["type"] != "rating":
+                if isinstance(q["options"], list) and len(q["options"]) > 0:
+                    if isinstance(q["options"][0], dict):
+                        # Convert object format to string array
+                        normalized["options"] = [opt.get("text", str(opt)) for opt in q["options"]]
+                    else:
+                        # Already string array
+                        normalized["options"] = q["options"]
+                else:
+                    normalized["options"] = []
+            else:
+                normalized["options"] = []
+
+            # Handle max_length for open-ended questions
+            if "max_length" in q:
+                normalized["max_length"] = q["max_length"]
+
+            normalized_questions.append(normalized)
+
+        template.parsed_questions = normalized_questions
+    except Exception as e:
+        print(f"Error parsing questions: {e}")
         template.parsed_questions = []
-    
+
     return render_template("edit_survey_template.html", template=template)
 
 
@@ -6693,21 +6926,55 @@ def survey_results(survey_id):
                          analysis=analysis)
 
 
-@app.route("/survey/<int:survey_id>/send-invitations", methods=["POST"])
+@app.route("/send-survey-invitations/<int:survey_id>", methods=["POST"])
 def send_survey_invitations(survey_id):
+    import sys
+    log_file = open("/tmp/survey_debug.log", "a")
+    def log(msg):
+        print(msg)
+        log_file.write(msg + "\n")
+        log_file.flush()
+        sys.stdout.flush()
+
+    log(f"\n{'='*80}")
+    log(f"🚀 SEND_SURVEY_INVITATIONS ROUTE CALLED - Survey ID: {survey_id}")
+    log(f"{'='*80}\n")
+
     if "admin" not in session:
+        log("❌ No admin in session - redirecting to login")
+        log_file.close()
         return redirect(url_for("login"))
-    
-    survey = Survey.query.get_or_404(survey_id)
+
+    from sqlalchemy.orm import joinedload
+    print(f"📥 Loading survey with eager loading...")
+    survey = Survey.query.options(
+        joinedload(Survey.activity).joinedload(Activity.organization)
+    ).get(survey_id)
+
+    if not survey:
+        print(f"❌ Survey {survey_id} not found!")
+        flash("Survey not found", "error")
+        return redirect(url_for("list_surveys"))
+
+    print(f"✅ Survey loaded: {survey.name}")
+    print(f"   Activity: {survey.activity.name}")
+    print(f"   Organization: {survey.activity.organization.name if survey.activity.organization else 'None'}")
     
     # For surveys, include all participants (paid and unpaid)
+    # Eagerly load user and activity relationships to avoid detached instance errors
     if survey.passport_type_id:
-        passports = Passport.query.filter_by(
+        passports = Passport.query.options(
+            joinedload(Passport.user),
+            joinedload(Passport.activity)
+        ).filter_by(
             activity_id=survey.activity_id,
             passport_type_id=survey.passport_type_id
         ).all()
     else:
-        passports = Passport.query.filter_by(
+        passports = Passport.query.options(
+            joinedload(Passport.user),
+            joinedload(Passport.activity)
+        ).filter_by(
             activity_id=survey.activity_id
         ).all()
     
@@ -6734,7 +7001,9 @@ def send_survey_invitations(survey_id):
     
     sent_count = 0
     already_invited = 0
-    
+    failed_count = 0
+    failed_emails = []
+
     for passport in passports:
         # Check if user already has a response token for this survey
         existing_response = SurveyResponse.query.filter_by(
@@ -6762,12 +7031,22 @@ def send_survey_invitations(survey_id):
             
             # Send email invitation
             try:
-                survey_url = url_for('take_survey', survey_token=survey.survey_token, 
+                log(f"🔵 Preparing to send survey invitation to {passport.user.email}")
+                survey_url = url_for('take_survey', survey_token=survey.survey_token,
                                    _external=True) + f"?token={response.response_token}"
-                
+                log(f"🔵 Survey URL created: {survey_url}")
+
                 # Use activity-specific email templates
-                from utils import get_email_context
-                
+                from utils import get_email_context, get_setting
+                print(f"🔵 get_email_context and get_setting imported")
+
+                # Build logo URL in request context (url_for needs request context)
+                if survey.activity and survey.activity.logo_filename:
+                    activity_logo_url = url_for('static', filename=f'uploads/logos/{survey.activity.logo_filename}')
+                else:
+                    org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+                    activity_logo_url = url_for('static', filename=f'uploads/{org_logo}')
+
                 # Build base context
                 base_context = {
                     'user_name': passport.user.name or 'Participant',
@@ -6777,43 +7056,17 @@ def send_survey_invitations(survey_id):
                     'question_count': question_count,
                     'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
-                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me')
+                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                    'activity_logo_url': activity_logo_url  # Add logo URL to base context
                 }
-                
+
                 # Get email context using activity-specific templates
                 email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
-                
+
                 subject = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
-                template_name = 'email_survey_invitation_compiled/index.html'
+                template_name = 'survey_invitation'  # Match the template folder name
 
-                # Load inline_images.json for survey invitation template
-                import json
-                import base64
-                import os
-                compiled_folder = template_name.replace('/index.html', '')
-                json_path = os.path.join('templates/email_templates', compiled_folder, 'inline_images.json')
-
-                inline_images = {}
-                if os.path.exists(json_path):
-                    with open(json_path, 'r') as f:
-                        compiled_images = json.load(f)
-                        for cid, img_base64 in compiled_images.items():
-                            inline_images[cid] = base64.b64decode(img_base64)
-                
-                # Get organization logo from settings
-                from utils import get_setting
-                org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-                org_logo_path = os.path.join("static/uploads", org_logo_filename)
-                
-                # Add both logo CIDs for compatibility
-                if os.path.exists(org_logo_path):
-                    logo_data = open(org_logo_path, "rb").read()
-                    inline_images['logo'] = logo_data  # For owner_card_inline.html
-                    # Note: logo_image is not needed - templates don't actually use it
-                else:
-                    # Fallback to default logo
-                    logo_data = open("static/uploads/logo.png", "rb").read()
-                    inline_images['logo'] = logo_data
+                # Note: inline_images and logo loading is handled automatically by send_email_async()
                 
                 context = {
                     'user_name': passport.user.name or 'Participant',
@@ -6821,31 +7074,48 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
+                    'organization_id': survey.activity.organization_id if survey.activity.organization_id else None,
                     'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                    # Survey email template variables - must match template exactly
                     'title': email_context.get('title', 'We\'d Love Your Feedback!'),
-                    'intro': email_context.get('intro_text', 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'),
-                    'conclusion': email_context.get('conclusion_text', 'Thank you for helping us create better experiences!')
+                    'intro_text': email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>'),
+                    'conclusion_text': email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
                 }
                 
+                print(f"🔵 About to call send_email_async()")
+                print(f"🔵 Template: {template_name}")
+                print(f"🔵 Subject: {subject}")
+                print(f"🔵 To: {passport.user.email}")
+                print(f"🔵 Context keys: {list(context.keys())}")
+
                 send_email_async(
                     app=current_app._get_current_object(),
                     user=passport.user,
-                    activity=survey.activity,
+                    activity=survey.activity,  # Pass activity to use customized email templates
+                    organization_id=survey.activity.organization_id if survey.activity.organization_id else None,
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
-                    context=context,
-                    inline_images=inline_images
+                    context=context
                 )
-                
+
+                print(f"✅ send_email_async() called successfully for {passport.user.email}")
                 sent_count += 1
                 
             except Exception as e:
                 # Log error but continue with other invitations
-                print(f"Failed to send email to {passport.user.email}: {e}")
-                flash(f"Warning: Failed to send email to {passport.user.email}", "warning")
+                import traceback
+                import io
+                log(f"❌ Failed to send survey invitation to {passport.user.email}")
+                log(f"❌ Error: {e}")
+                log(f"❌ Traceback:")
+                tb_output = io.StringIO()
+                traceback.print_exc(file=tb_output)
+                log(tb_output.getvalue())
+                failed_count += 1
+                failed_emails.append(passport.user.email)
                 
         elif existing_response and not existing_response.invited_dt:
             # User exists but hasn't been invited yet (maybe created manually)
@@ -6858,7 +7128,14 @@ def send_survey_invitations(survey_id):
                 
                 # Use activity-specific email templates
                 from utils import get_email_context
-                
+
+                # Build logo URL in request context (url_for needs request context)
+                if survey.activity and survey.activity.logo_filename:
+                    activity_logo_url = url_for('static', filename=f'uploads/logos/{survey.activity.logo_filename}')
+                else:
+                    org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+                    activity_logo_url = url_for('static', filename=f'uploads/{org_logo}')
+
                 # Build base context
                 base_context = {
                     'user_name': passport.user.name or 'Participant',
@@ -6868,43 +7145,17 @@ def send_survey_invitations(survey_id):
                     'question_count': question_count,
                     'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
-                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me')
+                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                    'activity_logo_url': activity_logo_url  # Add logo URL to base context
                 }
-                
+
                 # Get email context using activity-specific templates
                 email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
-                
+
                 subject = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
-                template_name = 'email_survey_invitation_compiled/index.html'
+                template_name = 'survey_invitation'  # Match the template folder name
 
-                # Load inline_images.json for survey invitation template
-                import json
-                import base64
-                import os
-                compiled_folder = template_name.replace('/index.html', '')
-                json_path = os.path.join('templates/email_templates', compiled_folder, 'inline_images.json')
-
-                inline_images = {}
-                if os.path.exists(json_path):
-                    with open(json_path, 'r') as f:
-                        compiled_images = json.load(f)
-                        for cid, img_base64 in compiled_images.items():
-                            inline_images[cid] = base64.b64decode(img_base64)
-                
-                # Get organization logo from settings
-                from utils import get_setting
-                org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-                org_logo_path = os.path.join("static/uploads", org_logo_filename)
-                
-                # Add both logo CIDs for compatibility
-                if os.path.exists(org_logo_path):
-                    logo_data = open(org_logo_path, "rb").read()
-                    inline_images['logo'] = logo_data  # For owner_card_inline.html
-                    # Note: logo_image is not needed - templates don't actually use it
-                else:
-                    # Fallback to default logo
-                    logo_data = open("static/uploads/logo.png", "rb").read()
-                    inline_images['logo'] = logo_data
+                # Note: inline_images and logo loading is handled automatically by send_email_async()
                 
                 context = {
                     'user_name': passport.user.name or 'Participant',
@@ -6912,41 +7163,68 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
+                    'organization_id': survey.activity.organization_id if survey.activity.organization_id else None,
                     'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                    # Survey email template variables - must match template exactly
                     'title': email_context.get('title', 'We\'d Love Your Feedback!'),
-                    'intro': email_context.get('intro_text', 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'),
-                    'conclusion': email_context.get('conclusion_text', 'Thank you for helping us create better experiences!')
+                    'intro_text': email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>'),
+                    'conclusion_text': email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
                 }
                 
+                print(f"🔵 About to call send_email_async()")
+                print(f"🔵 Template: {template_name}")
+                print(f"🔵 Subject: {subject}")
+                print(f"🔵 To: {passport.user.email}")
+                print(f"🔵 Context keys: {list(context.keys())}")
+
                 send_email_async(
                     app=current_app._get_current_object(),
                     user=passport.user,
-                    activity=survey.activity,
+                    activity=survey.activity,  # Pass activity to use customized email templates
+                    organization_id=survey.activity.organization_id if survey.activity.organization_id else None,
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
-                    context=context,
-                    inline_images=inline_images
+                    context=context
                 )
-                
+
+                print(f"✅ send_email_async() called successfully for {passport.user.email}")
                 sent_count += 1
                 
             except Exception as e:
-                print(f"Failed to send email to {passport.user.email}: {e}")
-                flash(f"Warning: Failed to send email to {passport.user.email}", "warning")
-                
+                import traceback
+                print(f"❌ Failed to send survey invitation to {passport.user.email}")
+                print(f"❌ Error: {e}")
+                print(f"❌ Traceback:")
+                traceback.print_exc()
+                failed_count += 1
+                failed_emails.append(passport.user.email)
+
         else:
             already_invited += 1
     
     db.session.commit()
-    
-    if already_invited > 0:
+
+    # Smart messaging based on results
+    if failed_count > 0 and sent_count == 0:
+        # All emails failed
+        failed_sample = ', '.join(failed_emails[:3])
+        if len(failed_emails) > 3:
+            failed_sample += f" (and {len(failed_emails) - 3} more)"
+        flash(f"Error: Failed to send all {failed_count} invitations. Failed emails: {failed_sample}", "error")
+    elif failed_count > 0:
+        # Some emails failed
+        failed_sample = ', '.join(failed_emails[:3])
+        if len(failed_emails) > 3:
+            failed_sample += f" (and {len(failed_emails) - 3} more)"
+        flash(f"Partial success: Sent to {sent_count} participants, but {failed_count} failed. Failed emails: {failed_sample}", "warning")
+    elif already_invited > 0:
         flash(f"Survey invitations sent to {sent_count} participants. {already_invited} were already invited.", "success")
     else:
         flash(f"Survey invitations sent to {sent_count} participants", "success")
-    
+
     return redirect(url_for("list_surveys"))
 
 
@@ -7047,7 +7325,7 @@ def export_survey_results(survey_id):
         return redirect(url_for("survey_results", survey_id=survey_id))
 
 
-@app.route("/survey/<int:survey_id>/close", methods=["POST"])
+@app.route("/close-survey/<int:survey_id>", methods=["POST"])
 def close_survey(survey_id):
     if "admin" not in session:
         return redirect(url_for("login"))
@@ -7065,7 +7343,7 @@ def close_survey(survey_id):
     return redirect(url_for("list_surveys"))
 
 
-@app.route("/survey/<int:survey_id>/reopen", methods=["POST"])
+@app.route("/reopen-survey/<int:survey_id>", methods=["POST"])
 def reopen_survey(survey_id):
     if "admin" not in session:
         return redirect(url_for("login"))
@@ -7129,13 +7407,9 @@ def test_notification_endpoints_page():
 
 
 
-# Initialize default survey template on startup
+# NOTE: Default survey templates are created on first admin login, not on startup
+# This prevents deleted templates from resurrecting on every app restart
 with app.app_context():
-    try:
-        create_default_survey_template()
-    except Exception as e:
-        print(f"Warning: Could not initialize default survey template: {str(e)}")
-    
     # Initialize scheduler after app setup
     try:
         initialize_background_tasks()
@@ -7388,7 +7662,26 @@ def save_email_templates(activity_id):
         flag_modified(activity, 'email_templates')
         
         db.session.commit()
-        
+
+        # AUTO-COMPILE survey_invitation template after save
+        if is_individual_save and single_template == 'survey_invitation':
+            try:
+                import subprocess
+                compile_script = os.path.join('templates', 'email_templates', 'compileEmailTemplate.py')
+                result = subprocess.run(
+                    ['python', compile_script, 'survey_invitation'],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=os.path.dirname(compile_script)
+                )
+                if result.returncode != 0:
+                    print(f"⚠️ Warning: Survey template compilation failed: {result.stderr}")
+                else:
+                    print(f"✅ Survey invitation template compiled successfully after save")
+            except Exception as e:
+                print(f"⚠️ Warning: Could not auto-compile survey template: {e}")
+
         # Return appropriate response based on request type
         if is_individual_save:
             return jsonify({
@@ -7416,6 +7709,86 @@ def save_email_templates(activity_id):
     # Only redirect for bulk saves (form submissions)
     if not is_individual_save:
         return redirect(url_for('email_template_customization', activity_id=activity_id))
+
+
+@app.route("/activity/<int:activity_id>/email-preview-live", methods=["POST"])
+def preview_email_live(activity_id):
+    """Generate live preview of email template with current form data (without saving)"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Activity
+    from utils import get_email_context, get_setting
+
+    activity = Activity.query.get_or_404(activity_id)
+    template_type = request.form.get('template_type')
+
+    if not template_type:
+        return "Error: No template type specified", 400
+
+    # Get form values (unsaved customizations)
+    subject = request.form.get(f'{template_type}_subject', '')
+    title = request.form.get(f'{template_type}_title', '')
+    intro_text = request.form.get(f'{template_type}_intro_text', '')
+    conclusion_text = request.form.get(f'{template_type}_conclusion_text', '')
+
+    # Build preview context based on template type
+    if template_type == 'survey_invitation':
+        base_context = {
+            'user_name': 'John Doe',
+            'activity_name': activity.name,
+            'survey_name': 'Post-Activity Feedback Survey',
+            'survey_url': 'https://minipass.me/survey/preview',
+            'question_count': 5,
+            'organization_name': activity.organization.name if activity.organization else get_setting('ORG_NAME', 'Minipass'),
+            'organization_address': get_setting('ORG_ADDRESS', ''),
+            'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+            'unsubscribe_url': '#',
+            'privacy_url': '#'
+        }
+    else:
+        # Default context for other template types
+        base_context = {
+            'user_name': 'John Doe',
+            'activity_name': activity.name,
+            'organization_name': activity.organization.name if activity.organization else get_setting('ORG_NAME', 'Minipass'),
+            'organization_address': get_setting('ORG_ADDRESS', ''),
+            'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me')
+        }
+
+    # Merge with form customizations (these override saved values)
+    context = base_context.copy()
+    if title:
+        context['title'] = title
+    if intro_text:
+        context['intro_text'] = intro_text
+    if conclusion_text:
+        context['conclusion_text'] = conclusion_text
+
+    # Render the compiled template
+    template_path = f'email_templates/{template_type}_compiled/index.html'
+
+    try:
+        html = render_template(template_path, **context)
+
+        # Replace CID references with actual image URLs for preview
+        import re
+        import os
+
+        # Replace hero image CID with actual saved file URL
+        hero_filename = f"{activity_id}_{template_type}_hero.png"
+        hero_path = f"static/uploads/{hero_filename}"
+        if os.path.exists(hero_path):
+            hero_url = url_for('static', filename=f'uploads/{hero_filename}', _external=True)
+            html = re.sub(r'cid:hero_' + template_type, hero_url, html)
+        else:
+            # Fallback to default hero if exists
+            default_hero = url_for('static', filename='uploads/defaults/default_hero.png', _external=True)
+            html = re.sub(r'cid:hero_' + template_type, default_hero, html)
+
+        return html
+    except Exception as e:
+        return f"Error rendering template: {str(e)}<br><br>Template path: {template_path}<br>Context keys: {list(context.keys())}", 500
 
 
 @app.route("/activity/<int:activity_id>/email-templates/reset", methods=["POST"])
@@ -7549,8 +7922,21 @@ def email_preview(activity_id):
         'amount': '$50.00'
     }
     
+    # Add special context for survey_invitation
+    if template_type == 'survey_invitation':
+        base_context['survey_name'] = 'Customer Satisfaction Survey'
+        base_context['survey_url'] = 'https://example.com/survey/sample'
+        base_context['question_count'] = 8
+        base_context['organization_name'] = activity.organization.name if activity.organization else 'Minipass'
+        base_context['organization_address'] = '123 Main St, City, State'
+        base_context['support_email'] = 'support@minipass.me'
+        # These will be overridden by get_email_context if customized
+        base_context['title'] = 'We\'d Love Your Feedback!'
+        base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
+        base_context['conclusion'] = 'Thank you for helping us create better experiences!'
+
     # Add email blocks for templates that need them
-    if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
+    elif template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
         # Create sample pass data using proper class structure
         class PassData:
             def __init__(self):
@@ -7573,15 +7959,15 @@ def email_preview(activity_id):
                 self.pass_code = 'SAMPLE123'
                 self.remaining_activities = 5
                 self.uses_remaining = 5
-        
+
         pass_data = PassData()
-        
+
         # Render email blocks
         base_context['owner_html'] = render_template(
-            "email_blocks/owner_card_inline.html", 
+            "email_blocks/owner_card_inline.html",
             pass_data=pass_data
         )
-        
+
         # Add history for ALL templates that need it (not just redeemPass)
         history = [
             {'date': '2025-01-09', 'action': 'Pass Created'},
@@ -7589,9 +7975,9 @@ def email_preview(activity_id):
         ]
         if template_type == 'redeemPass':
             history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
-        
+
         base_context['history_html'] = render_template(
-            "email_blocks/history_table_inline.html", 
+            "email_blocks/history_table_inline.html",
             history=history
         )
     
@@ -8094,8 +8480,21 @@ def test_email_template(activity_id):
             'test_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         
+        # Add special context for survey_invitation
+        if template_type == 'survey_invitation':
+            base_context['survey_name'] = 'Test Satisfaction Survey'
+            base_context['survey_url'] = 'https://example.com/survey/test123'
+            base_context['question_count'] = 8
+            base_context['organization_name'] = activity.organization.name if activity.organization else 'Minipass'
+            base_context['organization_address'] = '123 Main St, City, State'
+            base_context['support_email'] = 'support@minipass.me'
+            # These will be overridden by get_email_context if customized
+            base_context['title'] = 'We\'d Love Your Feedback!'
+            base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
+            base_context['conclusion'] = 'Thank you for helping us create better experiences!'
+
         # Add email blocks for templates that need them
-        if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
+        elif template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
             # Create test pass data for email blocks
             # Using a simple class to provide dot notation access
             class PassData:
@@ -8119,15 +8518,15 @@ def test_email_template(activity_id):
                     self.pass_code = 'TEST123'
                     self.remaining_activities = 3
                     self.uses_remaining = 3
-            
+
             pass_data = PassData()
-            
+
             # Render email blocks
             base_context['owner_html'] = render_template(
-                "email_blocks/owner_card_inline.html", 
+                "email_blocks/owner_card_inline.html",
                 pass_data=pass_data
             )
-            
+
             # Add history for templates that need it
             if template_type in ['redeemPass', 'latePayment']:
                 history = [
@@ -8136,7 +8535,7 @@ def test_email_template(activity_id):
                     {'date': '2025-01-11', 'action': 'Pass Redeemed'}
                 ]
                 base_context['history_html'] = render_template(
-                    "email_blocks/history_table_inline.html", 
+                    "email_blocks/history_table_inline.html",
                     history=history
                 )
             

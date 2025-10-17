@@ -82,6 +82,24 @@ curl http://localhost:5000/
 - **Minimal JavaScript** (<10 lines per function constraint)
 - **Progressive Web App** features for mobile experience
 
+### 🚨 CRITICAL UI RULES - READ BEFORE ANY TABLE/CSS WORK
+
+**TABLE STYLING RULES (NON-NEGOTIABLE):**
+1. **NO HOVER EFFECTS** - No transform, translateY, scale, or shadow changes on hover
+2. **NO ANIMATIONS** - No fancy CSS transitions or effects on cards/tables
+3. **PLAIN WHITE CARDS** - Simple `background-color: #fff !important;` only
+4. **REFERENCE PAGES** - When creating ANY new table page, copy CSS from:
+   - `templates/passports.html`
+   - `templates/signups.html`
+5. **NEVER ADD:**
+   - `transform: translateY(-2px)` on hover
+   - `box-shadow` changes on hover
+   - `transition: all 0.3s ease` effects
+   - `backdrop-filter: blur()` effects
+   - Gradient backgrounds (use plain white)
+
+**If you add ANY hover effects or animations to tables, you WILL be told to remove them.**
+
 ### Database Design
 - **SQLite** database with timezone-aware datetime handling
 - **Migration system** using Flask-Migrate

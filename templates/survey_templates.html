@@ -3,21 +3,16 @@
 
 {% block head %}
 <style>
-.template-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.template-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
+/* NO hover effects on template cards */
 .filter-panel {
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* White background for all cards and tables */
+/* Card Design - NO HOVER EFFECTS - matches Passports/Signups */
 .card {
   background-color: #fff !important;
 }
@@ -26,8 +21,25 @@
   background-color: #fff !important;
 }
 
-.template-card {
-  background-color: #fff !important;
+/* Page structure */
+.page-wrapper {
+  min-height: 100vh;
+}
+
+.page-body {
+  padding: 2rem 0;
+}
+
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.page-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 2.25rem;
 }
 
 @media (max-width: 768px) {
@@ -39,6 +51,12 @@
   }
   .filter-panel {
     padding: 0.75rem;
+  }
+  .dashboard-container {
+    padding: 0 1rem;
+  }
+  .page-title {
+    font-size: 1.75rem;
   }
 }
 @media (min-width: 769px) {
@@ -53,27 +71,32 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xl mt-4">
-
+<div class="page-wrapper">
   <!-- Page Header -->
-  <div class="page-header mb-4">
-    <div class="row align-items-center">
-      <div class="col">
-        <h2 class="page-pretitle text-muted text-uppercase mb-1">Management</h2>
-        <h1 class="page-title mb-0">Survey Templates</h1>
-      </div>
-      <div class="col-auto">
-        <div class="btn-list">
-          <a href="{{ url_for('list_surveys') }}" class="btn btn-outline-secondary">
-            <i class="ti ti-arrow-left"></i> Back to Surveys
-          </a>
-          <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary btn-pill">
-            <i class="ti ti-plus"></i> Create New Template
-          </a>
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title"><i class="ti ti-template text-blue me-2"></i>Survey Templates</h1>
+          <p class="text-muted mt-1">Create reusable survey templates to quickly deploy feedback forms</p>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{{ url_for('list_surveys') }}" class="btn btn-outline-secondary">
+              <i class="ti ti-arrow-left"></i> Back to Surveys
+            </a>
+            <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+              <i class="ti ti-plus"></i> Create New Template
+            </a>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="dashboard-container">
 
   <!-- Search Panel -->
   <div class="filter-panel">
@@ -161,14 +184,6 @@
                   <a class="dropdown-item" href="{{ url_for('edit_survey_template', template_id=template.id) }}">
                     <i class="ti ti-edit me-2"></i>Edit Template
                   </a>
-                  <a class="dropdown-item" href="#" onclick="showPreview({{ template.id }}, '{{ template.name }}', {{ template.questions|e }})">
-                    <i class="ti ti-eye me-2"></i>Preview Questions
-                  </a>
-                  {% if template.name == 'Post-Activity Feedback' %}
-                  <a class="dropdown-item" href="#" onclick="showDefaultPreview()">
-                    <i class="ti ti-star me-2"></i>Show Default Template
-                  </a>
-                  {% endif %}
                   <div class="dropdown-divider"></div>
                   {% if template.usage_count == 0 %}
                   <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}')">
@@ -252,14 +267,6 @@
                 <a class="dropdown-item" href="{{ url_for('edit_survey_template', template_id=template.id) }}">
                   <i class="ti ti-edit me-2"></i>Edit Template
                 </a>
-                <a class="dropdown-item" href="#" onclick="showPreview({{ template.id }}, '{{ template.name }}', {{ template.questions|e }})">
-                  <i class="ti ti-eye me-2"></i>Preview Questions
-                </a>
-                {% if template.name == 'Post-Activity Feedback' %}
-                <a class="dropdown-item" href="#" onclick="showDefaultPreview()">
-                  <i class="ti ti-star me-2"></i>Show Default Template
-                </a>
-                {% endif %}
                 <div class="dropdown-divider"></div>
                 {% if template.usage_count == 0 %}
                 <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}')">
@@ -298,26 +305,6 @@
     {% endfor %}
   </div>
 
-</div>
-
-<!-- Preview Modal -->
-<div class="modal modal-blur fade" id="previewModal" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="ti ti-eye me-2"></i>Template Preview: <span id="previewTemplateName"></span>
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div id="previewContent">
-          <!-- Questions will be loaded here -->
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
     </div>
   </div>
 </div>
@@ -355,114 +342,6 @@ document.getElementById('searchInput').addEventListener('keypress', function(e) 
     document.getElementById('filterForm').submit();
   }
 });
-
-// Preview template questions
-function showPreview(templateId, templateName, questionsJson) {
-  document.getElementById('previewTemplateName').textContent = templateName;
-  
-  try {
-    const templateData = JSON.parse(questionsJson);
-    const questions = templateData.questions || [];
-    
-    let previewHtml = '';
-    questions.forEach((question, index) => {
-      previewHtml += `
-        <div class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex align-items-start mb-2">
-              <span class="badge bg-primary me-2">${index + 1}</span>
-              <div class="flex-grow-1">
-                <h6 class="card-title mb-1">${question.question}</h6>
-                <div class="text-muted small mb-2">
-                  Type: ${question.type === 'multiple_choice' ? 'Multiple Choice' : 'Open-ended'}
-                  ${question.required ? ' • Required' : ' • Optional'}
-                </div>
-                ${question.type === 'multiple_choice' && question.options ? 
-                  `<div class="ms-3">
-                    ${question.options.map(option => `<div class="text-muted small">• ${option}</div>`).join('')}
-                  </div>` : ''}
-                ${question.type === 'open_ended' && question.max_length ? 
-                  `<div class="text-muted small">Maximum ${question.max_length} characters</div>` : ''}
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    });
-    
-    if (questions.length === 0) {
-      previewHtml = '<div class="text-muted">No questions found in this template.</div>';
-    }
-    
-    document.getElementById('previewContent').innerHTML = previewHtml;
-  } catch (e) {
-    document.getElementById('previewContent').innerHTML = '<div class="text-danger">Error loading template questions.</div>';
-  }
-  
-  new bootstrap.Modal(document.getElementById('previewModal')).show();
-}
-
-// Show default template preview
-function showDefaultPreview() {
-  document.getElementById('previewTemplateName').textContent = 'Post-Activity Feedback (Default Template)';
-  
-  const defaultQuestions = [
-    {
-      question: 'How would you rate your overall experience with this activity?',
-      type: 'multiple_choice',
-      required: true,
-      options: ['Excellent', 'Very Good', 'Good', 'Fair', 'Poor']
-    },
-    {
-      question: 'What did you enjoy most about this activity?',
-      type: 'open_ended',
-      required: false,
-      max_length: 500
-    },
-    {
-      question: 'Is there anything you would like us to improve?',
-      type: 'open_ended',
-      required: false,
-      max_length: 500
-    },
-    {
-      question: 'Would you recommend this activity to others?',
-      type: 'multiple_choice',
-      required: true,
-      options: ['Definitely Yes', 'Probably Yes', 'Not Sure', 'Probably No', 'Definitely No']
-    }
-  ];
-  
-  let previewHtml = '<div class="alert alert-info"><i class="ti ti-info-circle me-2"></i>This is the recommended default template for post-activity feedback surveys.</div>';
-  
-  defaultQuestions.forEach((question, index) => {
-    previewHtml += `
-      <div class="card mb-3">
-        <div class="card-body">
-          <div class="d-flex align-items-start mb-2">
-            <span class="badge bg-success me-2">${index + 1}</span>
-            <div class="flex-grow-1">
-              <h6 class="card-title mb-1">${question.question}</h6>
-              <div class="text-muted small mb-2">
-                Type: ${question.type === 'multiple_choice' ? 'Multiple Choice' : 'Open-ended'}
-                ${question.required ? ' • Required' : ' • Optional'}
-              </div>
-              ${question.type === 'multiple_choice' && question.options ? 
-                `<div class="ms-3">
-                  ${question.options.map(option => `<div class="text-muted small">• ${option}</div>`).join('')}
-                </div>` : ''}
-              ${question.type === 'open_ended' && question.max_length ? 
-                `<div class="text-muted small">Maximum ${question.max_length} characters</div>` : ''}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-  
-  document.getElementById('previewContent').innerHTML = previewHtml;
-  new bootstrap.Modal(document.getElementById('previewModal')).show();
-}
 
 // Delete confirmation
 function confirmDelete(templateId, templateName) {
