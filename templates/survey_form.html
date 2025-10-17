@@ -181,13 +181,29 @@
           {% endif %}
         </div>
         
-        {% if question.type == 'multiple_choice' %}
+        {% if question.type == 'rating' %}
+          {% for i in range(question.min_rating, question.max_rating + 1) %}
+            <div class="form-check">
+              <input class="form-check-input"
+                     type="radio"
+                     name="question_{{ question.id }}"
+                     value="{{ i }}"
+                     id="q{{ question.id }}_{{ i }}"
+                     {% if question.required %}required{% endif %}
+                     onchange="updateProgress()">
+              <label class="form-check-label" for="q{{ question.id }}_{{ i }}">
+                ⭐ {{ i }}{% if question.labels and question.labels.get(i|string) %} - {{ question.labels[i|string] }}{% endif %}
+              </label>
+            </div>
+          {% endfor %}
+
+        {% elif question.type == 'multiple_choice' %}
           {% for option in question.options %}
             <div class="form-check">
-              <input class="form-check-input" 
-                     type="radio" 
-                     name="question_{{ question.id }}" 
-                     value="{{ option }}" 
+              <input class="form-check-input"
+                     type="radio"
+                     name="question_{{ question.id }}"
+                     value="{{ option }}"
                      id="q{{ question.id }}_{{ loop.index }}"
                      {% if question.required %}required{% endif %}
                      onchange="updateProgress()">
@@ -196,7 +212,7 @@
               </label>
             </div>
           {% endfor %}
-          
+
         {% elif question.type == 'open_ended' %}
           <div class="text-area-question">
             <textarea class="form-control" 

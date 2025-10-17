@@ -2387,7 +2387,10 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                         'redeemPass': 'redeemPass',
                         'email_templates/survey_invitation/index.html': 'survey_invitation',
                         'email_templates/survey_invitation_compiled/index.html': 'survey_invitation',
-                        'survey_invitation': 'survey_invitation'
+                        'survey_invitation': 'survey_invitation',
+                        'email_templates/email_survey_invitation/index.html': 'survey_invitation',
+                        'email_templates/email_survey_invitation_compiled/index.html': 'survey_invitation',
+                        'email_survey_invitation': 'survey_invitation'
                     }
                     
                     template_type = template_type_mapping.get(template_name)
@@ -3131,15 +3134,26 @@ def get_email_context(activity, template_type, base_context=None):
     
     # Restore protected blocks to ensure they're never overridden
     context.update(protected_blocks)
-    
-    # Add activity logo URL with fallback to organization logo from settings
-    if activity and activity.logo_filename:
-        context['activity_logo_url'] = url_for('static', filename=f'uploads/logos/{activity.logo_filename}')
-    else:
-        # Use organization logo from settings instead of hardcoded Minipass logo
-        org_logo = get_setting('LOGO_FILENAME', 'logo.png')
-        context['activity_logo_url'] = url_for('static', filename=f'uploads/{org_logo}')
-    
+
+    # Add activity logo URL if not already provided in context
+    # (URL should be built in request context before calling get_email_context)
+    if 'activity_logo_url' not in context:
+        # Fallback: try to build URL (only works in request context)
+        try:
+            if activity and activity.logo_filename:
+                context['activity_logo_url'] = url_for('static', filename=f'uploads/logos/{activity.logo_filename}')
+            else:
+                # Use organization logo from settings instead of hardcoded Minipass logo
+                org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+                context['activity_logo_url'] = url_for('static', filename=f'uploads/{org_logo}')
+        except RuntimeError:
+            # url_for() failed (not in request context) - use relative path as fallback
+            if activity and activity.logo_filename:
+                context['activity_logo_url'] = f'/static/uploads/logos/{activity.logo_filename}'
+            else:
+                org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+                context['activity_logo_url'] = f'/static/uploads/{org_logo}'
+
     return context
 
 

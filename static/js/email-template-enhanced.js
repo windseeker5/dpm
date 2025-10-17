@@ -203,17 +203,16 @@
             });
             
             const html = await response.text();
-            
-            // Open in new tab with enhanced styling
-            const newTab = window.open();
-            newTab.document.write(`
+
+            // Create enhanced HTML with wrapper styling
+            const enhancedHtml = `
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <title>Email Preview - ${templateType}</title>
                     <style>
                         body { margin: 20px; background: #f5f5f5; font-family: Arial, sans-serif; }
-                        .preview-wrapper { max-width: 800px; margin: 0 auto; background: white; 
+                        .preview-wrapper { max-width: 800px; margin: 0 auto; background: white;
                                            padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
                         .preview-header { text-align: center; padding: 10px 0; border-bottom: 1px solid #eee; margin-bottom: 20px; }
                     </style>
@@ -228,8 +227,17 @@
                     </div>
                 </body>
                 </html>
-            `);
-            newTab.document.close();
+            `;
+
+            // Use blob URL with UTF-8 charset to handle French characters correctly
+            const blob = new Blob([enhancedHtml], { type: 'text/html; charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const newTab = window.open(url, '_blank');
+
+            // Clean up blob URL after browser loads it
+            if (newTab) {
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
             
             console.log('✅ Preview opened successfully');
             

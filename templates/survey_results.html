@@ -27,6 +27,28 @@
   margin-bottom: 1rem;
 }
 
+/* Page structure - NO GRADIENT - plain white background per CLAUDE.md */
+.page-wrapper {
+  min-height: 100vh;
+  background-color: #fff !important;
+}
+
+.page-body {
+  padding: 2rem 0;
+}
+
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.page-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 2.25rem;
+}
+
 /* White background for all cards */
 .card {
   background-color: #fff !important;
@@ -120,33 +142,38 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xl mt-4">
-
+<div class="page-wrapper">
   <!-- Page Header -->
-  <div class="page-header mb-4">
-    <div class="row align-items-center">
-      <div class="col">
-        <h2 class="page-pretitle text-muted text-uppercase mb-1">Survey Results</h2>
-        <h1 class="page-title mb-0">{{ survey.name }}</h1>
-        <div class="text-muted mt-1">{{ survey.activity.name if survey.activity else 'No activity' }}</div>
-      </div>
-      <div class="col-auto">
-        <div class="btn-list">
-          <a href="{{ url_for('list_surveys') }}" class="btn btn-outline-secondary">
-            <i class="ti ti-arrow-left"></i> Back to Surveys
-          </a>
-          {% if responses %}
-          <a href="{{ url_for('survey_export', survey_id=survey.id) }}" class="btn btn-success">
-            <i class="ti ti-download"></i> Export Results
-          </a>
-          {% endif %}
-          <a href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank" class="btn btn-primary">
-            <i class="ti ti-external-link"></i> View Survey
-          </a>
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h2 class="page-pretitle text-muted text-uppercase mb-1">Survey Results</h2>
+          <h1 class="page-title mb-0">{{ survey.name }}</h1>
+          <div class="text-muted mt-1">{{ survey.activity.name if survey.activity else 'No activity' }}</div>
+        </div>
+        <div class="col-auto">
+          <div class="btn-list">
+            <a href="{{ url_for('list_surveys') }}" class="btn btn-outline-secondary">
+              <i class="ti ti-arrow-left"></i> Back to Surveys
+            </a>
+            {% if responses %}
+            <a href="{{ url_for('survey_export', survey_id=survey.id) }}" class="btn btn-success">
+              <i class="ti ti-download"></i> Export Results
+            </a>
+            {% endif %}
+            <a href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank" class="btn btn-primary">
+              <i class="ti ti-external-link"></i> View Survey
+            </a>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="dashboard-container">
 
   <!-- Summary Cards -->
   <div class="row g-3 mb-4">
@@ -356,6 +383,8 @@
   </div>
   {% endif %}
 
+    </div>
+  </div>
 </div>
 
 <!-- Individual Response Modal -->
