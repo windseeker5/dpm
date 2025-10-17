@@ -3188,9 +3188,27 @@ def get_email_context(activity, template_type, base_context=None):
             if key not in ['owner_html', 'history_html']:
                 if value is not None and value != '':
                     context[key] = value
-    
+
     # Restore protected blocks to ensure they're never overridden
     context.update(protected_blocks)
+
+    # Render Jinja2 variables in intro_text and conclusion_text
+    # (e.g., {{ activity_name }}, {{ question_count }})
+    from jinja2 import Template
+    for field in ['intro_text', 'conclusion_text']:
+        if field in context and context[field]:
+            try:
+                # Check if the field contains Jinja2 variables
+                if '{{' in context[field] and '}}' in context[field]:
+                    print(f"🔧 JINJA2 RENDERING: Found variables in {field}")
+                    print(f"🔧 Before: {context[field][:100]}")
+                    # Render as Jinja2 template with current context
+                    template = Template(context[field])
+                    context[field] = template.render(**context)
+                    print(f"🔧 After: {context[field][:100]}")
+            except Exception as e:
+                # If rendering fails, keep original value
+                print(f"Warning: Failed to render Jinja2 template in {field}: {e}")
 
     # Add activity logo URL if not already provided in context
     # (URL should be built in request context before calling get_email_context)
