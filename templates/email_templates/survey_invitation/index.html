@@ -66,14 +66,15 @@
         padding: 0 !important;
       }
     }
+  </style>
 
-    /* Outlook specific fixes */
-    <!--[if mso]>
+  <!--[if mso]>
+  <style type="text/css">
     .main-table {
       width: 600px !important;
     }
-    <![endif]-->
   </style>
+  <![endif]-->
 </head>
 <body style="margin:0; padding:0; background-color:#f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #4b5563; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f6fa; min-width: 100%;">
@@ -83,10 +84,10 @@
         <!-- Outer Card Container - IDENTICAL to newPass -->
         <table class="main-table" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius: 8px; overflow:hidden; margin: 40px auto; max-width: 600px;">
 
-          <!-- Hero Image Section - IDENTICAL to newPass -->
+          <!-- Hero Image Section - Uses sondage.png (centered, medium) -->
           <tr>
-            <td class="hero-container" align="center" style="padding: 0; line-height: 0;">
-              <img class="hero-image" src="cid:hero_survey_invitation" alt="Invitation sondage" width="600" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; outline: none; text-decoration: none;">
+            <td class="hero-container" align="center" style="padding: 20px 0;">
+              <img class="hero-image" src="sondage.png" alt="Invitation sondage" width="270" style="display: block; width: 270px; height: auto; border: 0; outline: none; text-decoration: none; margin: 0 auto;">
             </td>
           </tr>
 
@@ -99,7 +100,7 @@
           </tr>
           {% endif %}
 
-          <!-- Intro Text - IDENTICAL to newPass -->
+          <!-- Intro Text - Uses activity_name and question_count variables -->
           {% if intro_text %}
           <tr>
             <td class="intro-padding mobile-font-size" style="padding: 30px 75px 32px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
@@ -108,53 +109,14 @@
           </tr>
           {% endif %}
 
-          <!-- Survey Info Card - SURVEY SPECIFIC (replaces QR code / owner card) -->
-          <tr>
-            <td class="content-padding" style="padding: 0 40px 24px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc; border-radius:8px; border: 1px solid #e2e8f0; overflow:hidden;">
-                <tr>
-                  <td style="padding: 20px 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="font-size: 13px; color: #64748b; padding-bottom: 8px;">
-                          Activité
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="font-size: 16px; color: #1e293b; font-weight: 600; padding-bottom: 16px;">
-                          {{ activity_name }}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="font-size: 13px; color: #64748b; padding-bottom: 8px;">
-                          Sondage
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="font-size: 16px; color: #1e293b; font-weight: 600; padding-bottom: 16px;">
-                          {{ survey_name }}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 12px; text-align: center; color: #856404; font-size: 14px; font-weight: 600;">
-                          ⏱️ Seulement {{ question_count }} questions rapides
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- CTA Button - SURVEY SPECIFIC -->
+          <!-- CTA Button - Simple, transactional style -->
           <tr>
             <td align="center" style="padding: 0 40px 32px;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="center">
-                    <a href="{{ survey_url }}" style="display: inline-block; background: linear-gradient(135deg, #9333ea, #7c3aed); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; text-align: center; min-width: 200px;">
-                      📝 Répondre au sondage
+                    <a href="{{ survey_url }}" style="display: inline-block; background: #22c55e; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 500; font-size: 15px; text-align: center; min-width: 180px;">
+                      Répondre au sondage
                     </a>
                   </td>
                 </tr>
@@ -162,16 +124,7 @@
             </td>
           </tr>
 
-          <!-- Fallback Link - SURVEY SPECIFIC -->
-          <tr>
-            <td class="content-padding mobile-font-size" style="padding: 0 40px 24px; font-size: 13px; color: #64748b; text-align: center; line-height: 1.6;">
-              <strong>Problème avec le bouton?</strong><br>
-              Copiez ce lien dans votre navigateur:<br>
-              <a href="{{ survey_url }}" style="color:#3b82f6; text-decoration:none; word-break: break-all;">{{ survey_url }}</a>
-            </td>
-          </tr>
-
-          <!-- Conclusion Text - IDENTICAL to newPass -->
+          <!-- Conclusion Text -->
           {% if conclusion_text %}
           <tr>
             <td class="conclusion-padding mobile-font-size" style="padding: 0 75px 50px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">

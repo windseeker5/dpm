@@ -75,7 +75,8 @@ def get_template_default_hero(template_type):
         'paymentReceived': 'paymentReceived_original',
         'latePayment': 'latePayment_original',
         'signup': 'signup_original',
-        'waitlist': 'waitlist_original'
+        'waitlist': 'waitlist_original',
+        'survey_invitation': 'survey_invitation_original'
     }
     
     original_folder = template_map.get(template_type)
@@ -97,10 +98,11 @@ def get_template_default_hero(template_type):
         # Map template types to their hero image keys
         hero_key_map = {
             'newPass': 'hero_new_pass',
-            'paymentReceived': 'hero_payment_received', 
+            'paymentReceived': 'hero_payment_received',
             'latePayment': 'hero_late_payment',
             'signup': 'hero_signup',
-            'waitlist': 'hero_waitlist'
+            'waitlist': 'hero_waitlist',
+            'survey_invitation': 'sondage'
         }
         
         hero_key = hero_key_map.get(template_type)
@@ -2207,7 +2209,17 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     msg["Reply-To"] = reply_to_email
     msg["List-Unsubscribe"] = f"<{context['unsubscribe_url']}>"
     msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-    msg["Precedence"] = "bulk"
+
+    # Set email priority based on template type (transactional vs bulk)
+    # Survey invitations are relationship emails, not bulk marketing
+    is_transactional = template_name and ('survey' in template_name or 'Pass' in template_name or 'payment' in template_name or 'signup' in template_name)
+    if is_transactional:
+        msg["Precedence"] = "normal"  # Transactional email
+        msg["X-Priority"] = "3"  # Normal priority (1=high, 3=normal, 5=low)
+        msg["Importance"] = "normal"
+    else:
+        msg["Precedence"] = "bulk"  # Bulk/newsletter emails
+
     msg["X-Mailer"] = "Minipass/1.0"
     
     # Generate unique Message-ID
@@ -2344,13 +2356,23 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
 
 def send_email_async(app, user=None, activity=None, organization_id=None, **kwargs):
     import threading
+
+    # Extract activity ID before thread starts (avoid detached instance error)
+    activity_id = activity.id if activity and hasattr(activity, 'id') else None
+
     def send_in_thread():
         with app.app_context():
             try:
                 from utils import send_email
-                from models import EmailLog
+                from models import EmailLog, Activity
                 import json
                 from datetime import datetime, timezone
+
+                # Reload activity in thread context if needed
+                if activity_id:
+                    activity_in_thread = Activity.query.get(activity_id)
+                else:
+                    activity_in_thread = None
 
                 # --- Extract arguments ---
                 subject = kwargs.get("subject")
@@ -2367,7 +2389,7 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                     context = {}
                 
                 # 📧 Apply email template customizations if activity is provided
-                if activity and template_name and not html_body:
+                if activity_in_thread and template_name and not html_body:
                     # Map template names to our template types
                     template_type_mapping = {
                         'email_templates/newPass/index.html': 'newPass',
@@ -2392,12 +2414,12 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                         'email_templates/email_survey_invitation_compiled/index.html': 'survey_invitation',
                         'email_survey_invitation': 'survey_invitation'
                     }
-                    
+
                     template_type = template_type_mapping.get(template_name)
                     if template_type:
                         from utils import get_email_context
                         # Apply activity customizations to context
-                        context = get_email_context(activity, template_type, context)
+                        context = get_email_context(activity_in_thread, template_type, context)
                         # Update subject if customized
                         if context.get('subject'):
                             subject = context['subject']
@@ -2408,7 +2430,7 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                     base_template = template_name.replace('email_templates/', '').replace('/index.html', '').replace('.html', '')
                     compiled_folder = os.path.join("templates/email_templates", f"{base_template}_compiled")
                     json_path = os.path.join(compiled_folder, "inline_images.json")
-                    
+
                     # If compiled version exists, load the inline images
                     if os.path.exists(json_path):
                         import base64
@@ -2417,17 +2439,51 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                             for cid, img_base64 in compiled_images.items():
                                 inline_images[cid] = base64.b64decode(img_base64)
 
+                    # Load custom hero images for activity (if activity provided)
+                    # NOTE: survey_invitation hero is embedded in compiled template, skip dynamic loading
+                    if activity_in_thread and base_template != 'survey_invitation':
+                        from utils import get_activity_hero_image
+
+                        # Map template names to template types
+                        template_type_map = {
+                            'newPass': 'newPass',
+                            'paymentReceived': 'paymentReceived',
+                            'latePayment': 'latePayment',
+                            'signup': 'signup',
+                            'redeemPass': 'redeemPass'
+                        }
+
+                        template_type = template_type_map.get(base_template)
+                        if template_type:
+                            hero_data, is_custom, is_template_default = get_activity_hero_image(activity_in_thread, template_type)
+
+                            if hero_data and not is_template_default:
+                                # Map template types to their CID names
+                                hero_cid_map = {
+                                    'newPass': 'hero_new_pass',
+                                    'paymentReceived': 'hero_payment_received',
+                                    'latePayment': 'hero_late_payment',
+                                    'signup': 'hero_signup',
+                                    'survey_invitation': 'hero_survey_invitation'
+                                }
+
+                                hero_cid = hero_cid_map.get(template_type)
+                                if hero_cid:
+                                    inline_images[hero_cid] = hero_data
+                                    hero_type = "custom" if is_custom else "activity fallback"
+                                    print(f"✅ {hero_type} hero image loaded in send_email_async: template={template_type}, cid={hero_cid}, size={len(hero_data)} bytes")
+
                 # --- Determine organization from context ---
                 org_id = None
-                if activity and hasattr(activity, 'organization_id'):
-                    org_id = activity.organization_id
+                if activity_in_thread and hasattr(activity_in_thread, 'organization_id'):
+                    org_id = activity_in_thread.organization_id
                 elif organization_id:
                     org_id = organization_id
-                
+
                 # Add organization_id to context for proper URL generation
                 if org_id and 'organization_id' not in context:
                     context['organization_id'] = org_id
-                
+
                 # --- Send the email ---
                 send_email(
                     subject=subject,
@@ -2438,7 +2494,7 @@ def send_email_async(app, user=None, activity=None, organization_id=None, **kwar
                     html_body=html_body,
                     timestamp_override=timestamp_override,
                     user=user,
-                    activity=activity
+                    activity=activity_in_thread
                 )
 
                 # --- Save EmailLog after successful send ---
@@ -2799,10 +2855,11 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         # Template defaults are already loaded in inline_images from the JSON
         hero_cid_map = {
             'newPass': 'hero_new_pass',
-            'paymentReceived': 'hero_payment_received', 
+            'paymentReceived': 'hero_payment_received',
             'latePayment': 'hero_late_payment',
             'signup': 'hero_signup',
-            'waitlist': 'hero_waitlist'
+            'waitlist': 'hero_waitlist',
+            'survey_invitation': 'hero_survey_invitation'
         }
         
         hero_cid = hero_cid_map.get(template_type)
