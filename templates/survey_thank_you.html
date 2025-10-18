@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-{% block title %}Thank You - {{ survey.name }}{% endblock %}
+{% extends "survey_base.html" %}
+{% block title %}Merci - {{ survey.name }}{% endblock %}
 
 {% block content %}
 <style>
@@ -8,8 +8,12 @@
     margin: 2rem auto;
     padding: 2rem;
     text-align: center;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
-  
+
   .success-icon {
     width: 80px;
     height: 80px;
@@ -21,12 +25,12 @@
     margin: 0 auto 2rem;
     animation: bounceIn 0.6s ease;
   }
-  
+
   .success-icon i {
     font-size: 2.5rem;
     color: white;
   }
-  
+
   @keyframes bounceIn {
     0% {
       transform: scale(0.3);
@@ -43,28 +47,53 @@
       opacity: 1;
     }
   }
-  
+
   .thank-you-title {
     font-size: 2rem;
     font-weight: bold;
     color: #1e293b;
     margin-bottom: 1rem;
   }
-  
+
   .thank-you-message {
     color: #64748b;
     font-size: 1.125rem;
     line-height: 1.6;
     margin-bottom: 2rem;
   }
-  
+
   .activity-info {
     background: #f8f9fa;
     border-radius: 0.5rem;
     padding: 1.5rem;
     margin-bottom: 2rem;
   }
-  
+
+  .close-button {
+    background: linear-gradient(135deg, #0054a6, #206bc4);
+    border: none;
+    color: white;
+    padding: 0.875rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 1rem;
+  }
+
+  .close-button:hover {
+    background: linear-gradient(135deg, #004494, #1a5ba8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(32, 107, 196, 0.3);
+  }
+
+  .redirect-notice {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+  }
+
   .confetti {
     position: fixed;
     top: 0;
@@ -74,7 +103,7 @@
     pointer-events: none;
     z-index: 1000;
   }
-  
+
   .confetti-piece {
     position: absolute;
     width: 10px;
@@ -82,24 +111,24 @@
     background: #206bc4;
     animation: confetti-fall 3s linear forwards;
   }
-  
+
   @keyframes confetti-fall {
     to {
       transform: translateY(100vh) rotate(360deg);
     }
   }
-  
+
   /* Mobile optimizations */
   @media (max-width: 576px) {
     .thank-you-container {
       margin: 1rem auto;
       padding: 1.5rem;
     }
-    
+
     .thank-you-title {
       font-size: 1.5rem;
     }
-    
+
     .thank-you-message {
       font-size: 1rem;
     }
@@ -111,31 +140,41 @@
   <div class="success-icon">
     <i class="ti ti-check"></i>
   </div>
-  
+
   <!-- Thank You Message -->
-  <h1 class="thank-you-title">Thank You!</h1>
-  
+  <h1 class="thank-you-title">Merci !</h1>
+
   <p class="thank-you-message">
-    Your feedback has been successfully submitted. We appreciate you taking the time to help us improve!
+    Vos commentaires ont été soumis avec succès. Nous apprécions que vous ayez pris le temps de nous aider à nous améliorer !
   </p>
-  
+
   <!-- Activity Info -->
   <div class="activity-info">
     <h3 class="h5 mb-2">{{ survey.activity.name }}</h3>
     <p class="text-muted mb-0">{{ survey.name }}</p>
   </div>
-  
+
   <!-- Additional Message -->
   <p class="text-muted">
     <i class="ti ti-heart text-danger me-1"></i>
-    Your input helps us create better experiences for everyone
+    Vos commentaires nous aident à créer de meilleures expériences pour tous
   </p>
-  
+
+  <!-- Close Button -->
+  <button class="close-button" onclick="window.close()">
+    <i class="ti ti-x me-2"></i>Fermer
+  </button>
+
+  <!-- Redirect Notice -->
+  <p class="redirect-notice">
+    Redirection automatique vers Minipass dans <span id="countdown">10</span> secondes...
+  </p>
+
   <!-- Optional: Link back to activity -->
   {% if survey.activity.image_filename %}
     <div class="mt-4">
       <small class="text-muted">
-        We hope to see you again soon!
+        Nous espérons vous revoir bientôt !
       </small>
     </div>
   {% endif %}
@@ -149,7 +188,7 @@
   function createConfetti() {
     const confettiContainer = document.getElementById('confetti');
     const colors = ['#206bc4', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
-    
+
     for (let i = 0; i < 50; i++) {
       const confettiPiece = document.createElement('div');
       confettiPiece.className = 'confetti-piece';
@@ -157,25 +196,34 @@
       confettiPiece.style.background = colors[Math.floor(Math.random() * colors.length)];
       confettiPiece.style.animationDelay = Math.random() * 2 + 's';
       confettiPiece.style.animationDuration = (Math.random() * 2 + 2) + 's';
-      
+
       confettiContainer.appendChild(confettiPiece);
     }
-    
+
     // Remove confetti after animation
     setTimeout(() => {
       confettiContainer.innerHTML = '';
     }, 4000);
   }
-  
+
+  // Countdown and auto-redirect
+  let countdown = 10;
+  const countdownElement = document.getElementById('countdown');
+
+  const countdownInterval = setInterval(() => {
+    countdown--;
+    countdownElement.textContent = countdown;
+
+    if (countdown <= 0) {
+      clearInterval(countdownInterval);
+      window.location.href = 'https://www.minipass.me';
+    }
+  }, 1000);
+
   // Start confetti when page loads
   document.addEventListener('DOMContentLoaded', function() {
     setTimeout(createConfetti, 500);
   });
-  
-  // Auto-redirect after 10 seconds (optional)
-  // setTimeout(() => {
-  //   window.location.href = '/';
-  // }, 10000);
 </script>
 
 {% endblock %}

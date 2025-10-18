@@ -102,55 +102,76 @@
   }
 
   .question-card {
+    position: relative;
     background: white;
     border: 1px solid #e9ecef;
     border-radius: 0.5rem;
-    padding: 1.5rem;
+    padding: 1.25rem 2rem 1.5rem;
     margin-bottom: 1.5rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   }
 
-  .question-number {
-    background: #206bc4;
-    color: white;
-    border-radius: 50%;
-    width: 2rem;
-    height: 2rem;
+  .question-header {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.625rem;
+    gap: 1rem;
+  }
+
+  .question-counter {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+    opacity: 0.7;
+    white-space: nowrap;
   }
 
   .question-text {
-    font-size: 1.125rem;
-    font-weight: 500;
-    margin-bottom: 1rem;
+    flex: 1;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0;
     color: #1e293b;
   }
 
-  .form-check-input {
-    margin-top: 0.25rem;
-  }
-
-  .form-check {
-    padding: 0.75rem;
-    margin-bottom: 0.5rem;
-    border: 1px solid #e9ecef;
-    border-radius: 0.375rem;
+  /* Modern Option Cards */
+  .option-card {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    margin-bottom: 0.25rem;
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    background: white;
+    cursor: pointer;
     transition: all 0.2s ease;
+    font-size: 1rem;
+    color: #1e293b;
   }
 
-  .form-check:hover {
-    background-color: #f8f9fa;
+  .option-card:hover {
     border-color: #206bc4;
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(32, 107, 196, 0.1);
   }
 
-  .form-check-input:checked + .form-check-label {
-    color: #206bc4;
+  .option-card.selected {
+    border-color: #206bc4;
+    background: rgba(32, 107, 196, 0.08);
     font-weight: 500;
+  }
+
+  .option-card input[type="radio"],
+  .option-card input[type="checkbox"] {
+    display: none;
+  }
+
+  .option-content {
+    flex: 1;
   }
 
   .text-area-question textarea {
@@ -218,16 +239,27 @@
     }
 
     .question-card {
-      padding: 1rem;
+      padding: 1rem 1rem 1.25rem;
       margin-bottom: 1rem;
     }
 
-    .question-text {
-      font-size: 1rem;
+    .question-header {
+      margin-bottom: 0.5rem;
+      gap: 0.75rem;
     }
 
-    .form-check {
-      padding: 0.5rem;
+    .question-counter {
+      font-size: 0.7rem;
+    }
+
+    .question-text {
+      font-size: 1.25rem;
+    }
+
+    .option-card {
+      padding: 0.65rem 1.25rem;
+      margin-bottom: 0.25rem;
+      min-height: 44px;
     }
   }
 </style>
@@ -274,45 +306,40 @@
 
       {% for question in questions.questions %}
         <div class="question-card" data-question="{{ question.id }}">
-          <div class="question-number">{{ question.id }}</div>
-
-          <div class="question-text">
-            {{ question.question }}
-            {% if question.required %}
-              <span class="required-indicator">*</span>
-            {% endif %}
+          <div class="question-header">
+            <div class="question-text">
+              {{ question.question }}
+              {% if question.required %}
+                <span class="required-indicator">*</span>
+              {% endif %}
+            </div>
+            <div class="question-counter">Question {{ loop.index }} sur {{ questions.questions|length }}</div>
           </div>
 
           {% if question.type == 'rating' %}
             {% for i in range(question.min_rating, question.max_rating + 1) %}
-              <div class="form-check">
-                <input class="form-check-input"
-                       type="radio"
+              <label class="option-card" for="q{{ question.id }}_{{ i }}">
+                <input type="radio"
                        name="question_{{ question.id }}"
                        value="{{ i }}"
                        id="q{{ question.id }}_{{ i }}"
-                       {% if question.required %}required{% endif %}
-                       onchange="updateProgress()">
-                <label class="form-check-label" for="q{{ question.id }}_{{ i }}">
+                       {% if question.required %}required{% endif %}>
+                <span class="option-content">
                   ⭐ {{ i }}{% if question.labels and question.labels.get(i|string) %} - {{ question.labels[i|string] }}{% endif %}
-                </label>
-              </div>
+                </span>
+              </label>
             {% endfor %}
 
           {% elif question.type == 'multiple_choice' %}
             {% for option in question.options %}
-              <div class="form-check">
-                <input class="form-check-input"
-                       type="radio"
+              <label class="option-card" for="q{{ question.id }}_{{ loop.index }}">
+                <input type="radio"
                        name="question_{{ question.id }}"
                        value="{{ option }}"
                        id="q{{ question.id }}_{{ loop.index }}"
-                       {% if question.required %}required{% endif %}
-                       onchange="updateProgress()">
-                <label class="form-check-label" for="q{{ question.id }}_{{ loop.index }}">
-                  {{ option }}
-                </label>
-              </div>
+                       {% if question.required %}required{% endif %}>
+                <span class="option-content">{{ option }}</span>
+              </label>
             {% endfor %}
 
           {% elif question.type == 'open_ended' %}
@@ -374,16 +401,33 @@
     document.getElementById('progressBar').style.width = progressPercent + '%';
   }
 
-  // Auto-scroll to next question on selection
-  document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
+  // Option card click handling
+  document.querySelectorAll('.option-card').forEach(function(card) {
+    card.addEventListener('click', function(e) {
+      // Prevent double trigger if clicking directly on input
+      if (e.target.tagName === 'INPUT') return;
+
+      const input = this.querySelector('input[type="radio"]');
+      if (!input) return;
+
+      // Remove selected class from all cards in same question
+      const questionCard = this.closest('.question-card');
+      questionCard.querySelectorAll('.option-card').forEach(function(c) {
+        c.classList.remove('selected');
+      });
+
+      // Add selected class to clicked card
+      this.classList.add('selected');
+
+      // Check the radio input
+      input.checked = true;
+
+      // Update progress
       updateProgress();
 
-      // Small delay then scroll to next question
+      // Auto-scroll to next question
       setTimeout(function() {
-        const currentQuestion = radio.closest('.question-card');
-        const nextQuestion = currentQuestion.nextElementSibling;
-
+        const nextQuestion = questionCard.nextElementSibling;
         if (nextQuestion && nextQuestion.classList.contains('question-card')) {
           nextQuestion.scrollIntoView({
             behavior: 'smooth',
@@ -391,6 +435,23 @@
           });
         }
       }, 300);
+    });
+  });
+
+  // Handle direct input change (for keyboard navigation)
+  document.querySelectorAll('.option-card input[type="radio"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      const card = this.closest('.option-card');
+      const questionCard = card.closest('.question-card');
+
+      // Remove selected from siblings
+      questionCard.querySelectorAll('.option-card').forEach(function(c) {
+        c.classList.remove('selected');
+      });
+
+      // Add selected to parent card
+      card.classList.add('selected');
+      updateProgress();
     });
   });
 

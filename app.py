@@ -6906,10 +6906,15 @@ def survey_results(survey_id):
             'responses': [],
             'summary': {}
         }
-        
+
         for response in responses:
-            if response.responses and question_id in response.responses:
-                analysis[question_id]['responses'].append(response.responses[question_id])
+            if response.responses:
+                try:
+                    response_data = json.loads(response.responses)
+                    if question_id in response_data:
+                        analysis[question_id]['responses'].append(response_data[question_id])
+                except (json.JSONDecodeError, TypeError):
+                    continue  # Skip malformed responses
         
         # Generate summary based on question type
         if question['type'] == 'multiple_choice':
