@@ -158,7 +158,7 @@
               <i class="ti ti-arrow-left"></i> Back to Surveys
             </a>
             {% if responses %}
-            <a href="{{ url_for('survey_export', survey_id=survey.id) }}" class="btn btn-success">
+            <a href="{{ url_for('export_survey_results', survey_id=survey.id) }}" class="btn btn-success">
               <i class="ti ti-download"></i> Export Results
             </a>
             {% endif %}
@@ -263,7 +263,7 @@
   <div class="results-card">
     <div class="question-header">
       <div class="d-flex align-items-start">
-        <span class="badge bg-primary me-3">Q{{ analysis_data.question.id }}</span>
+        <span class="badge bg-primary text-white me-3" style="font-size: 1rem; padding: 0.5rem 0.75rem;">Q{{ loop.index }}</span>
         <div class="flex-grow-1">
           <h4 class="mb-1">{{ analysis_data.question.question }}</h4>
           <div class="text-muted small">
@@ -275,25 +275,51 @@
       </div>
     </div>
 
-    {% if analysis_data.question.type == 'multiple_choice' %}
-    <!-- Multiple Choice Results -->
+    {% if analysis_data.question.type == 'multiple_choice' or analysis_data.question.type == 'rating' %}
+    <!-- Multiple Choice and Rating Results -->
     <div class="mb-3">
       <h5 class="mb-3">Response Distribution</h5>
       {% set total_responses = analysis_data.responses|length %}
-      {% for option, count in analysis_data.summary.items() %}
-      {% set percentage = (count / total_responses * 100) if total_responses > 0 else 0 %}
-      <div class="mb-2">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <span class="small fw-medium">{{ option }}</span>
-          <span class="badge bg-blue-lt text-blue">{{ count }} ({{ "%.1f"|format(percentage) }}%)</span>
+
+      {% if analysis_data.question.type == 'rating' %}
+        {# For rating questions, count occurrences of each rating value #}
+        {% set rating_counts = {} %}
+        {% for response in analysis_data.responses %}
+          {% set rating_str = response|string %}
+          {% if rating_counts.update({rating_str: rating_counts.get(rating_str, 0) + 1}) %}{% endif %}
+        {% endfor %}
+
+        {# Display rating distribution sorted by rating value #}
+        {% for rating in rating_counts.keys()|sort %}
+          {% set count = rating_counts[rating] %}
+          {% set percentage = (count / total_responses * 100) if total_responses > 0 else 0 %}
+          <div class="mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small fw-medium">Rating: {{ rating }}</span>
+              <span class="badge bg-green-lt text-green">{{ count }} ({{ "%.1f"|format(percentage) }}%)</span>
+            </div>
+            <div class="progress progress-sm">
+              <div class="progress-bar bg-success" style="width: {{ percentage }}%"></div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        {# Multiple choice distribution #}
+        {% for option, count in analysis_data.summary.items() %}
+        {% set percentage = (count / total_responses * 100) if total_responses > 0 else 0 %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="small fw-medium">{{ option }}</span>
+            <span class="badge bg-green-lt text-green">{{ count }} ({{ "%.1f"|format(percentage) }}%)</span>
+          </div>
+          <div class="progress progress-sm">
+            <div class="progress-bar bg-success" style="width: {{ percentage }}%"></div>
+          </div>
         </div>
-        <div class="progress progress-sm">
-          <div class="progress-bar bg-primary" style="width: {{ percentage }}%"></div>
-        </div>
-      </div>
-      {% endfor %}
+        {% endfor %}
+      {% endif %}
     </div>
-    
+
     {% else %}
     <!-- Open-ended Results -->
     <div class="mb-3">
@@ -320,6 +346,9 @@
       <h3 class="card-title">
         <i class="ti ti-users me-2"></i>Response Details
       </h3>
+      <div class="card-subtitle text-muted mt-2">
+        Individual responses are tracked using unique invitation links sent to each participant
+      </div>
     </div>
     <div class="table-responsive">
       <table class="table card-table table-vcenter">
@@ -368,7 +397,7 @@
             </td>
             <td>
               {% if response.responses %}
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="showIndividualResponse({{ response.id }}, '{{ response.user.name if response.user else 'Anonymous' }}', {{ response.responses|tojson|e }})">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick='showIndividualResponse({{ response.id }}, "{{ (response.user.name if response.user else "Anonymous")|replace('"', '\\"') }}", {{ response.responses|safe }})'>
                 <i class="ti ti-eye me-1"></i>View Response
               </button>
               {% else %}
@@ -428,10 +457,11 @@ function showIndividualResponse(responseId, userName, responseData) {
       const question = analysis.question;
       const userAnswer = responseData[questionId] || 'No answer';
       
+      let questionNum = Object.keys(questionData).indexOf(questionId) + 1;
       responseHtml += `
         <div class="mb-4">
           <div class="d-flex align-items-start mb-2">
-            <span class="badge bg-primary me-2">Q${question.id}</span>
+            <span class="badge bg-primary text-white me-2" style="font-size: 0.9rem; padding: 0.4rem 0.6rem;">Q${questionNum}</span>
             <div class="flex-grow-1">
               <h6 class="mb-1">${question.question}</h6>
               <div class="text-muted small">${question.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
