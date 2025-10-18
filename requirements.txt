@@ -31,6 +31,7 @@ faker
 ollama  # Python client for your Ollama server
 anthropic>=0.25.0  # Claude API client
 openai>=1.30.0     # OpenAI API client
+groq>=0.32.0       # Groq API client (fast inference, 14,400 RPD free tier)
 aiohttp>=3.8.0     # Async HTTP client for AI providers
 tiktoken>=0.6.0    # Token counting for OpenAI models
 tenacity>=8.2.0    # Retry logic for API calls

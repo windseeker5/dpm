@@ -348,24 +348,15 @@ Now generate a SQL query for the following question:"""
             row = [row_dict.get(col, '') for col in columns]
             rows.append(row)
         
-        # Check for PII and mask if needed
-        masked_rows = []
-        for row in rows:
-            masked_row = []
-            for cell in row:
-                if isinstance(cell, str):
-                    masked_cell = PIIDetector.mask_pii(str(cell))
-                    masked_row.append(masked_cell)
-                else:
-                    masked_row.append(cell)
-            masked_rows.append(masked_row)
-        
+        # PII masking disabled - only admins use this chatbot
+        # They need full email addresses to contact users
+
         # Suggest chart type based on data structure
         chart_suggestion = self._suggest_chart_type(columns, data, question)
-        
+
         return {
             'columns': columns,
-            'rows': masked_rows,
+            'rows': rows,  # Return unmasked rows
             'row_count': len(data),
             'chart_suggestion': chart_suggestion,
             'sql_executed': query_result.get('sql_executed')

@@ -181,11 +181,11 @@ app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
-# 🤖 Register Chatbot Blueprint - Using simplified version
+# 🤖 Register Chatbot Blueprint - Using correct template with Gemini
 try:
     from chatbot_v2.routes_simple import chatbot_bp
     app.register_blueprint(chatbot_bp)
-    print("✅ Simplified chatbot registered successfully")
+    print("✅ Gemini chatbot (correct template) registered successfully")
     
     # Register Settings API Blueprint
     from api.settings import settings_api

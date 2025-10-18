@@ -8,10 +8,16 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 # Import all necessary modules
 from .ai_providers import provider_manager
 from .providers.ollama import create_ollama_provider
+from .providers.gemini import create_gemini_provider
 from .query_engine import create_query_engine
 from .conversation import conversation_manager
 from .utils import get_current_admin_email, validate_question_length
-from .config import OLLAMA_BASE_URL, CHATBOT_ENABLE_OLLAMA
+from .config import (
+    OLLAMA_BASE_URL,
+    CHATBOT_ENABLE_OLLAMA,
+    CHATBOT_ENABLE_GEMINI,
+    GOOGLE_AI_API_KEY
+)
 
 
 # Create the blueprint
@@ -20,39 +26,31 @@ chatbot_bp = Blueprint('chatbot', __name__, url_prefix='/chatbot')
 
 def initialize_chatbot():
     """Initialize AI providers"""
-    
-    # Try Ollama as primary provider if enabled
-    if CHATBOT_ENABLE_OLLAMA:
+
+    # Try Gemini as primary provider if enabled
+    if CHATBOT_ENABLE_GEMINI and GOOGLE_AI_API_KEY:
         try:
-            ollama_provider = create_ollama_provider(OLLAMA_BASE_URL)
-            # Check if Ollama is actually available
-            if ollama_provider.check_availability():
-                models = ollama_provider.get_available_models()
+            gemini_provider = create_gemini_provider(GOOGLE_AI_API_KEY)
+            # Check if Gemini is actually available
+            if gemini_provider.check_availability():
+                models = gemini_provider.get_available_models()
                 if models:
-                    provider_manager.register_provider(ollama_provider, is_primary=True)
-                    print(f"✅ Ollama provider registered as primary with {len(models)} models")
+                    provider_manager.register_provider(gemini_provider, is_primary=True)
+                    print(f"✅ Gemini provider registered as primary with {len(models)} models")
                     print(f"   Available models: {', '.join(models)}")
                 else:
-                    print("⚠️ Ollama provider has no models available")
+                    print("⚠️ Gemini provider has no models available")
             else:
-                print("⚠️ Ollama server not reachable")
+                print("⚠️ Gemini API not reachable")
         except Exception as e:
-            print(f"⚠️ Ollama not available: {e}")
-    
-    # Use database query provider as fallback
-    try:
-        from .providers.database_query import create_database_query_provider
-        db_provider = create_database_query_provider()
-        if db_provider.check_availability():
-            # Register as secondary if Ollama is primary, otherwise as primary
-            is_primary = provider_manager.primary_provider is None
-            provider_manager.register_provider(db_provider, is_primary=is_primary)
-            status = "primary" if is_primary else "fallback"
-            print(f"✅ Database Query provider registered as {status}")
-        else:
-            print("⚠️ Database not available")
-    except Exception as e:
-        print(f"❌ Failed to register Database Query provider: {e}")
+            print(f"❌ Gemini not available: {e}")
+    elif CHATBOT_ENABLE_GEMINI:
+        print("⚠️ Gemini enabled but GOOGLE_AI_API_KEY not configured")
+
+    # If no primary provider is set, show error
+    if provider_manager.primary_provider is None:
+        print("❌ No AI provider available! Please configure GOOGLE_AI_API_KEY.")
+        print("   Get your API key from: https://ai.google.dev/aistudio")
 
 # Initialize chatbot when module is imported
 initialize_chatbot()
@@ -68,55 +66,42 @@ def index():
         flash("You must be logged in as admin to access the chatbot.", "error")
         return redirect(url_for("login"))
     
-    # Get available Ollama models
+    # Get available Gemini models
     available_models = []
-    provider_status = {'ollama': {'available': False, 'models': []}, 'database': {'available': False}}
-    
-    # Check Ollama models
-    try:
-        from .providers.ollama import create_ollama_provider
-        ollama_provider = create_ollama_provider(OLLAMA_BASE_URL)
-        if ollama_provider.check_availability():
-            models = ollama_provider.get_available_models()
-            provider_status['ollama']['available'] = True
-            provider_status['ollama']['models'] = models
-            
-            for model in models:
-                # Clean up model names for display
-                display_name = model.replace(':latest', '').replace(':', ' ').title()
-                available_models.append({
-                    'provider': 'ollama',
-                    'model': model,
-                    'display_name': display_name,
-                    'description': f'Ollama: {display_name}'
-                })
-        else:
-            print("Ollama server not available for model listing")
-    except Exception as e:
-        print(f"Failed to get Ollama models: {e}")
-    
-    # Check database provider
-    try:
-        from .providers.database_query import create_database_query_provider
-        db_provider = create_database_query_provider()
-        if db_provider.check_availability():
-            provider_status['database']['available'] = True
-            available_models.append({
-                'provider': 'database', 
-                'model': 'database-query', 
-                'display_name': 'Database Query',
-                'description': 'Direct database analysis (fallback)'
-            })
-    except Exception as e:
-        print(f"Database provider check failed: {e}")
-    
-    # Fallback to mock data if no models available
+    provider_status = {'gemini': {'available': False, 'models': []}}
+
+    # Check Gemini models
+    if CHATBOT_ENABLE_GEMINI and GOOGLE_AI_API_KEY:
+        try:
+            gemini_provider = create_gemini_provider(GOOGLE_AI_API_KEY)
+            if gemini_provider.check_availability():
+                models = gemini_provider.get_available_models()
+                provider_status['gemini']['available'] = True
+                provider_status['gemini']['models'] = models
+
+                for model in models:
+                    # Clean up model names for display
+                    display_name = model.replace('gemini-', '').replace('-', ' ').title()
+                    available_models.append({
+                        'provider': 'gemini',
+                        'model': model,
+                        'display_name': f"Gemini {display_name}",
+                        'description': f'Google Gemini: {display_name}'
+                    })
+            else:
+                print("Gemini API not available for model listing")
+        except Exception as e:
+            print(f"Failed to get Gemini models: {e}")
+    else:
+        print("⚠️ Gemini not configured. Set GOOGLE_AI_API_KEY environment variable.")
+
+    # Fallback message if no models available
     if not available_models:
         available_models = [{
-            'provider': 'mock', 
-            'model': 'database-query', 
-            'display_name': 'Database Query (Default)',
-            'description': 'Fallback mode - basic database queries'
+            'provider': 'none',
+            'model': 'none',
+            'display_name': 'AI Analytics Unavailable',
+            'description': 'Please contact Minipass support - API key not configured'
         }]
     
     messages = []
@@ -166,8 +151,8 @@ def ask_question():
     
     question = data.get('question', '').strip()
     conversation_id = data.get('conversation_id')
-    preferred_provider = data.get('provider', 'ollama')
-    preferred_model = data.get('model', 'dolphin-mistral:latest')
+    preferred_provider = data.get('provider', 'gemini')
+    preferred_model = data.get('model', 'gemini-1.5-flash')
     
     print(f"Question: {question}")
     print(f"Conversation ID: {conversation_id}")
@@ -182,21 +167,30 @@ def ask_question():
         }), 400
     
     try:
-        # Use query engine to process question with Ollama
+        # Use query engine to process question with Gemini
         print(f"💬 Processing question with {preferred_provider}/{preferred_model}: {question}")
-        
-        # Validate model selection for Ollama
-        if preferred_provider == 'ollama':
+
+        # Validate model selection for Gemini
+        if preferred_provider == 'gemini':
+            if not (CHATBOT_ENABLE_GEMINI and GOOGLE_AI_API_KEY):
+                return jsonify({
+                    'success': False,
+                    'error': '⚠️ AI Analytics temporarily unavailable. Please contact Minipass support.',
+                    'conversation_id': conversation_id
+                }), 503
+
             try:
-                ollama_provider = create_ollama_provider(OLLAMA_BASE_URL)
-                if not ollama_provider.check_availability():
-                    print("⚠️ Ollama not available, falling back to database provider")
-                    preferred_provider = 'database'
-                    preferred_model = 'database-query'
+                gemini_provider = create_gemini_provider(GOOGLE_AI_API_KEY)
+                if not gemini_provider.check_availability():
+                    return jsonify({
+                        'success': False,
+                        'error': '⚠️ AI Analytics temporarily unavailable. Please contact Minipass support.',
+                        'conversation_id': conversation_id
+                    }), 503
                 else:
-                    available_models = ollama_provider.get_available_models()
+                    available_models = gemini_provider.get_available_models()
                     if preferred_model not in available_models:
-                        print(f"⚠️ Model {preferred_model} not found, using {PREFERRED_MODELS[0]}")
+                        print(f"⚠️ Model {preferred_model} not found, using first available")
                         # Use first available preferred model
                         from .config import PREFERRED_MODELS
                         for model in PREFERRED_MODELS:
@@ -204,11 +198,14 @@ def ask_question():
                                 preferred_model = model
                                 break
                         else:
-                            preferred_model = available_models[0] if available_models else 'dolphin-mistral:latest'
+                            preferred_model = available_models[0] if available_models else 'gemini-1.5-flash'
             except Exception as e:
-                print(f"⚠️ Ollama validation failed: {e}, falling back")
-                preferred_provider = 'database'
-                preferred_model = 'database-query'
+                print(f"❌ Gemini validation failed: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': '⚠️ AI Analytics temporarily unavailable. Please contact Minipass support.',
+                    'conversation_id': conversation_id
+                }), 503
         
         # Get database path from Flask config
         db_path = current_app.config.get('DATABASE_PATH', 'instance/minipass.db')
@@ -272,28 +269,35 @@ def provider_status():
     
     # Get provider manager status
     status = provider_manager.get_all_status()
-    
-    # Add additional Ollama connection details
-    try:
-        from .providers.ollama import create_ollama_provider
-        ollama_provider = create_ollama_provider(OLLAMA_BASE_URL)
-        ollama_available = ollama_provider.check_availability()
-        ollama_models = ollama_provider.get_available_models() if ollama_available else []
-        
-        status['ollama_direct'] = {
-            'base_url': OLLAMA_BASE_URL,
-            'available': ollama_available,
-            'models': ollama_models,
-            'model_count': len(ollama_models)
-        }
-    except Exception as e:
-        status['ollama_direct'] = {
-            'base_url': OLLAMA_BASE_URL,
+
+    # Add additional Gemini connection details
+    if CHATBOT_ENABLE_GEMINI and GOOGLE_AI_API_KEY:
+        try:
+            gemini_provider = create_gemini_provider(GOOGLE_AI_API_KEY)
+            gemini_available = gemini_provider.check_availability()
+            gemini_models = gemini_provider.get_available_models() if gemini_available else []
+
+            status['gemini_direct'] = {
+                'api_configured': True,
+                'available': gemini_available,
+                'models': gemini_models,
+                'model_count': len(gemini_models)
+            }
+        except Exception as e:
+            status['gemini_direct'] = {
+                'api_configured': True,
+                'available': False,
+                'error': str(e),
+                'models': []
+            }
+    else:
+        status['gemini_direct'] = {
+            'api_configured': False,
             'available': False,
-            'error': str(e),
+            'error': 'GOOGLE_AI_API_KEY not configured',
             'models': []
         }
-    
+
     return jsonify(status)
 
 
@@ -386,35 +390,34 @@ def check_model():
         }), 400
     
     try:
-        # Check if it's the database query model
-        if model == 'database-query':
-            return jsonify({
-                'success': True,
-                'available': True,
-                'model': model
-            })
-        
-        # Check Ollama models
-        from .providers.ollama import create_ollama_provider
-        ollama_provider = create_ollama_provider()
-        
-        if ollama_provider.check_availability():
-            available_models = ollama_provider.get_available_models()
-            is_available = model in available_models
-            
-            return jsonify({
-                'success': True,
-                'available': is_available,
-                'model': model
-            })
+        # Check Gemini models
+        if CHATBOT_ENABLE_GEMINI and GOOGLE_AI_API_KEY:
+            gemini_provider = create_gemini_provider(GOOGLE_AI_API_KEY)
+
+            if gemini_provider.check_availability():
+                available_models = gemini_provider.get_available_models()
+                is_available = model in available_models
+
+                return jsonify({
+                    'success': True,
+                    'available': is_available,
+                    'model': model
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'available': False,
+                    'model': model,
+                    'error': 'Gemini API not available'
+                })
         else:
             return jsonify({
                 'success': True,
                 'available': False,
                 'model': model,
-                'error': 'Ollama service not available'
+                'error': 'Gemini API key not configured'
             })
-            
+
     except Exception as e:
         return jsonify({
             'success': False,
