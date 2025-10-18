@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#206bc4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <title>{% block title %}Sondage{% endblock %}</title>
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+
+  <!-- Font Preconnects -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tabler Core CSS -->
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
+
+  <!-- Flash Alert System -->
+  <style>
+    /* Modern notification system */
+    .flash-alert-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+      pointer-events: none;
+      padding: 1.5rem;
+      padding-top: 1rem;
+    }
+
+    .flash-alert-container {
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .flash-alert {
+      pointer-events: auto;
+      position: relative;
+      transform: translateY(-120%) scale(0.95);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border-radius: 12px;
+      border: none;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    }
+
+    .flash-alert.show {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .flash-alert.hide {
+      transform: translateY(-120%) scale(0.95);
+      opacity: 0;
+    }
+
+    .flash-alert.alert-success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.95) 100%);
+      color: white;
+    }
+
+    .flash-alert.alert-danger {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 0.95) 100%);
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      .flash-alert-overlay {
+        padding: 1rem;
+      }
+    }
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+<body class="antialiased" style="background-color: #f8f9fa; font-family: 'Inter', sans-serif;">
+
+  <!-- Flash Alert Overlay -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-alert-overlay" id="flashAlertOverlay">
+        <div class="flash-alert-container">
+          {% for category, message in messages %}
+            <div class="flash-alert alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible" role="alert">
+              <div class="d-flex align-items-center">
+                <div>{{ message }}</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Standalone Content -->
+  {% block content %}{% endblock %}
+
+  <!-- Tabler Core JS -->
+  <script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Flash alert system
+      const flashOverlay = document.getElementById('flashAlertOverlay');
+      if (flashOverlay) {
+        const flashAlerts = flashOverlay.querySelectorAll('.flash-alert');
+
+        flashAlerts.forEach((alert, index) => {
+          setTimeout(() => {
+            alert.classList.add('show');
+          }, index * 120);
+
+          setTimeout(() => {
+            dismissFlashAlert(alert);
+          }, 6000 + (index * 120));
+        });
+
+        flashAlerts.forEach(alert => {
+          const closeBtn = alert.querySelector('.btn-close');
+          if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              dismissFlashAlert(alert);
+            });
+          }
+        });
+      }
+
+      function dismissFlashAlert(alert) {
+        alert.classList.add('hide');
+        alert.classList.remove('show');
+
+        setTimeout(() => {
+          if (alert.parentNode) {
+            alert.remove();
+          }
+
+          const overlay = document.getElementById('flashAlertOverlay');
+          if (overlay && overlay.querySelectorAll('.flash-alert').length === 0) {
+            overlay.remove();
+          }
+        }, 400);
+      }
+    });
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
