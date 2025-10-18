@@ -144,3 +144,44 @@ class AIProviderManager:
 
 # Global provider manager instance
 provider_manager = AIProviderManager()
+
+
+# Auto-register available providers
+def _initialize_providers():
+    """Initialize and register all enabled AI providers"""
+    from .config import (
+        CHATBOT_ENABLE_GEMINI, GOOGLE_AI_API_KEY,
+        CHATBOT_ENABLE_GROQ, GROQ_API_KEY,
+        CHATBOT_ENABLE_OLLAMA, OLLAMA_BASE_URL
+    )
+
+    # Register Gemini (primary)
+    if CHATBOT_ENABLE_GEMINI and GOOGLE_AI_API_KEY:
+        try:
+            from .providers.gemini import create_gemini_provider
+            gemini_provider = create_gemini_provider(GOOGLE_AI_API_KEY)
+            provider_manager.register_provider(gemini_provider, is_primary=True)
+        except Exception as e:
+            print(f"Warning: Failed to register Gemini provider: {e}")
+
+    # Register Groq (fallback)
+    if CHATBOT_ENABLE_GROQ and GROQ_API_KEY:
+        try:
+            from .providers.groq import create_groq_provider
+            groq_provider = create_groq_provider(GROQ_API_KEY)
+            provider_manager.register_provider(groq_provider, is_primary=False)
+        except Exception as e:
+            print(f"Warning: Failed to register Groq provider: {e}")
+
+    # Register Ollama (if enabled)
+    if CHATBOT_ENABLE_OLLAMA:
+        try:
+            from .providers.ollama import OllamaProvider
+            ollama_provider = OllamaProvider(OLLAMA_BASE_URL)
+            provider_manager.register_provider(ollama_provider, is_primary=False)
+        except Exception as e:
+            print(f"Warning: Failed to register Ollama provider: {e}")
+
+
+# Initialize providers on module load
+_initialize_providers()

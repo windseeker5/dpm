@@ -9,7 +9,7 @@ venv/
 #uploads/
 
 # Environment files
-#.env
+.env
 
 # VS Code or PyCharm settings
 .vscode/

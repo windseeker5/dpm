@@ -291,17 +291,30 @@
     width: 100%;
     max-width: 900px;
     margin: 0 auto;
+    padding: 2rem 1rem;
 }
 
 .conversation-state.active {
     display: flex;
 }
 
+/* White card container for messages */
+.messages-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
 /* Messages area */
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 2rem 1rem;
+    padding: 2rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -573,35 +586,38 @@
             
             <!-- Conversation state -->
             <div class="conversation-state" id="conversationState">
-                <div class="chat-messages" id="chatMessages">
-                    <!-- Messages will be added here -->
-                    
-                    <!-- Typing indicator -->
-                    <div class="typing-indicator" id="typingIndicator">
-                        <div class="typing-dots">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                <!-- White card container for messages AND input (unified) -->
+                <div class="messages-card">
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Messages will be added here -->
+
+                        <!-- Typing indicator -->
+                        <div class="typing-indicator" id="typingIndicator">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Compact input area -->
-                <div class="chat-input-compact">
-                    <form class="input-container-compact" id="chatForm" onsubmit="sendMessage(event, false)">
-                        <textarea 
-                            class="message-input-compact" 
-                            id="messageInputCompact"
-                            placeholder="Message Minipass AI..."
-                            rows="1"
-                            maxlength="500"
-                            onkeydown="handleKeyDown(event, 'compact')"
-                            oninput="autoResize(this)"
-                        ></textarea>
-                        <button type="submit" class="send-button-compact" id="sendBtnCompact">
-                            <i class="ti ti-send"></i>
-                        </button>
-                    </form>
+
+                    <!-- Compact input area (now INSIDE the white card) -->
+                    <div class="chat-input-compact">
+                        <form class="input-container-compact" id="chatForm" onsubmit="sendMessage(event, false)">
+                            <textarea
+                                class="message-input-compact"
+                                id="messageInputCompact"
+                                placeholder="Message Minipass AI..."
+                                rows="1"
+                                maxlength="500"
+                                onkeydown="handleKeyDown(event, 'compact')"
+                                oninput="autoResize(this)"
+                            ></textarea>
+                            <button type="submit" class="send-button-compact" id="sendBtnCompact">
+                                <i class="ti ti-send"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -759,15 +775,15 @@ async function sendMessage(event, isLargeInput) {
         hideTypingIndicator();
         
         if (data.success) {
-            // Add AI response
-            addMessage('assistant', data.answer || 'I processed your request.');
+            // Add AI response with full data
+            addMessage('assistant', data.answer || 'I processed your request.', data);
         } else {
-            addMessage('assistant', `Sorry, I encountered an error: ${data.error || 'Unknown error'}`);
+            addMessage('assistant', `Sorry, I encountered an error: ${data.error || 'Unknown error'}`, null);
         }
     } catch (error) {
         console.error('Chat error:', error);
         hideTypingIndicator();
-        addMessage('assistant', 'Sorry, I couldn\'t process your request. Please try again.');
+        addMessage('assistant', 'Sorry, I couldn\'t process your request. Please try again.', null);
     } finally {
         isProcessing = false;
         document.getElementById('sendBtnLarge').disabled = false;
@@ -777,24 +793,242 @@ async function sendMessage(event, isLargeInput) {
 }
 
 // Add message to chat
-function addMessage(type, content) {
+function addMessage(type, content, responseData = null) {
     const messagesContainer = document.getElementById('chatMessages');
     const typingIndicator = document.getElementById('typingIndicator');
-    
+
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
-    
+
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    contentDiv.textContent = content;
-    
+
+    // Add the answer text
+    const answerP = document.createElement('p');
+    answerP.textContent = content;
+    answerP.style.marginBottom = responseData && responseData.rows ? '1rem' : '0';
+    contentDiv.appendChild(answerP);
+
+    // If this is a data query response with results, show SQL and table
+    if (responseData && responseData.rows && responseData.rows.length > 0) {
+        // Show SQL query
+        if (responseData.sql) {
+            const sqlDiv = renderSQL(responseData.sql);
+            contentDiv.appendChild(sqlDiv);
+        }
+
+        // Show data table
+        const tableDiv = renderDataTable(responseData.columns, responseData.rows);
+        contentDiv.appendChild(tableDiv);
+    }
+
     messageDiv.appendChild(contentDiv);
-    
+
     // Insert before typing indicator
     messagesContainer.insertBefore(messageDiv, typingIndicator);
-    
+
     // Scroll to bottom
     scrollToBottom();
+}
+
+// Render SQL query in a code block
+function renderSQL(sql) {
+    const sqlContainer = document.createElement('div');
+    sqlContainer.style.marginBottom = '0.75rem';
+
+    // Header with label and copy button
+    const sqlHeader = document.createElement('div');
+    sqlHeader.style.display = 'flex';
+    sqlHeader.style.justifyContent = 'space-between';
+    sqlHeader.style.alignItems = 'center';
+    sqlHeader.style.marginBottom = '0.25rem';
+
+    const sqlLabel = document.createElement('div');
+    sqlLabel.textContent = 'SQL Query:';
+    sqlLabel.style.fontSize = '0.75rem';
+    sqlLabel.style.color = '#6b7280';
+    sqlLabel.style.fontWeight = '500';
+
+    const copySQLBtn = document.createElement('button');
+    copySQLBtn.innerHTML = '📋 Copy SQL';
+    copySQLBtn.style.fontSize = '0.75rem';
+    copySQLBtn.style.color = '#6b7280';
+    copySQLBtn.style.background = 'transparent';
+    copySQLBtn.style.border = 'none';
+    copySQLBtn.style.cursor = 'pointer';
+    copySQLBtn.style.padding = '0.25rem 0.5rem';
+    copySQLBtn.style.borderRadius = '4px';
+    copySQLBtn.style.transition = 'background 0.2s';
+    copySQLBtn.onmouseover = () => copySQLBtn.style.background = '#f3f4f6';
+    copySQLBtn.onmouseout = () => copySQLBtn.style.background = 'transparent';
+    copySQLBtn.onclick = () => copyToClipboard(sql, copySQLBtn);
+
+    sqlHeader.appendChild(sqlLabel);
+    sqlHeader.appendChild(copySQLBtn);
+
+    const sqlCode = document.createElement('code');
+    sqlCode.textContent = sql;
+    sqlCode.style.display = 'block';
+    sqlCode.style.padding = '0.5rem';
+    sqlCode.style.backgroundColor = '#f3f4f6';
+    sqlCode.style.borderRadius = '4px';
+    sqlCode.style.fontSize = '0.75rem';
+    sqlCode.style.fontFamily = 'monospace';
+    sqlCode.style.overflowX = 'auto';
+    sqlCode.style.whiteSpace = 'pre-wrap';
+    sqlCode.style.wordBreak = 'break-all';
+
+    sqlContainer.appendChild(sqlHeader);
+    sqlContainer.appendChild(sqlCode);
+
+    return sqlContainer;
+}
+
+// Render data table
+function renderDataTable(columns, rows) {
+    const outerContainer = document.createElement('div');
+
+    // Header with row count and copy button
+    const tableHeader = document.createElement('div');
+    tableHeader.style.display = 'flex';
+    tableHeader.style.justifyContent = 'space-between';
+    tableHeader.style.alignItems = 'center';
+    tableHeader.style.marginTop = '0.75rem';
+    tableHeader.style.marginBottom = '0.5rem';
+
+    const rowCount = document.createElement('div');
+    rowCount.textContent = `Results (${rows.length} rows):`;
+    rowCount.style.fontSize = '0.75rem';
+    rowCount.style.color = '#6b7280';
+    rowCount.style.fontWeight = '500';
+
+    const copyTableBtn = document.createElement('button');
+    copyTableBtn.innerHTML = '📋 Copy as CSV';
+    copyTableBtn.style.fontSize = '0.75rem';
+    copyTableBtn.style.color = '#6b7280';
+    copyTableBtn.style.background = 'transparent';
+    copyTableBtn.style.border = 'none';
+    copyTableBtn.style.cursor = 'pointer';
+    copyTableBtn.style.padding = '0.25rem 0.5rem';
+    copyTableBtn.style.borderRadius = '4px';
+    copyTableBtn.style.transition = 'background 0.2s';
+    copyTableBtn.onmouseover = () => copyTableBtn.style.background = '#f3f4f6';
+    copyTableBtn.onmouseout = () => copyTableBtn.style.background = 'transparent';
+    copyTableBtn.onclick = () => {
+        const csv = formatAsCSV(columns, rows);
+        copyToClipboard(csv, copyTableBtn);
+    };
+
+    tableHeader.appendChild(rowCount);
+    tableHeader.appendChild(copyTableBtn);
+
+    const tableContainer = document.createElement('div');
+    tableContainer.style.overflowX = 'auto';
+
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.fontSize = '0.875rem';
+    table.style.backgroundColor = '#fff';
+    table.style.border = '1px solid #e5e7eb';
+    table.style.borderRadius = '4px';
+
+    // Table header
+    const thead = document.createElement('thead');
+    thead.style.backgroundColor = '#f9fafb';
+    const headerRow = document.createElement('tr');
+
+    columns.forEach(col => {
+        const th = document.createElement('th');
+        th.textContent = col;
+        th.style.padding = '0.5rem';
+        th.style.textAlign = 'left';
+        th.style.borderBottom = '1px solid #e5e7eb';
+        th.style.fontWeight = '600';
+        th.style.color = '#374151';
+        headerRow.appendChild(th);
+    });
+
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Table body
+    const tbody = document.createElement('tbody');
+
+    rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        if (idx % 2 === 1) {
+            tr.style.backgroundColor = '#f9fafb';
+        }
+
+        row.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = cell !== null ? cell : '';
+            td.style.padding = '0.5rem';
+            td.style.borderBottom = '1px solid #e5e7eb';
+            td.style.color = '#1f2937';
+            tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+
+    outerContainer.appendChild(tableHeader);
+    outerContainer.appendChild(tableContainer);
+
+    return outerContainer;
+}
+
+// Format table data as CSV
+function formatAsCSV(columns, rows) {
+    // Header row
+    let csv = columns.join(',') + '\n';
+
+    // Data rows
+    rows.forEach(row => {
+        const csvRow = row.map(cell => {
+            // Escape cells that contain commas or quotes
+            const cellStr = cell !== null ? String(cell) : '';
+            if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                return `"${cellStr.replace(/"/g, '""')}"`;
+            }
+            return cellStr;
+        });
+        csv += csvRow.join(',') + '\n';
+    });
+
+    return csv;
+}
+
+// Copy text to clipboard
+async function copyToClipboard(text, buttonElement) {
+    try {
+        await navigator.clipboard.writeText(text);
+
+        // Show success feedback
+        const originalText = buttonElement.innerHTML;
+        buttonElement.innerHTML = '✓ Copied!';
+        buttonElement.style.color = '#10b981';
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+            buttonElement.innerHTML = originalText;
+            buttonElement.style.color = '#6b7280';
+        }, 2000);
+
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        buttonElement.innerHTML = '✗ Failed';
+        buttonElement.style.color = '#ef4444';
+
+        setTimeout(() => {
+            buttonElement.innerHTML = originalText;
+            buttonElement.style.color = '#6b7280';
+        }, 2000);
+    }
 }
 
 // Show typing indicator
