@@ -1,15 +1,92 @@
-{% extends "base.html" %}
+{% extends "survey_base.html" %}
 {% block title %}{{ survey.name }}{% endblock %}
 
 {% block content %}
 <style>
   /* Mobile-first survey styling */
   .survey-container {
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
-    padding: 1rem;
+    padding: 0;
+    min-height: 100vh;
+    background-color: #fff;
   }
-  
+
+  /* Activity Branding Header - Beautiful Image Card */
+  .survey-branding {
+    position: relative;
+    height: 200px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+  }
+
+  /* Fallback gradient when no image */
+  .survey-branding.no-image {
+    background: linear-gradient(135deg, #64748b, #475569);
+  }
+
+  /* Dark overlay for better text readability */
+  .survey-branding::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+  }
+
+  .survey-branding > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .survey-branding-org {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .survey-branding-activity {
+    font-size: 1.25rem;
+    color: #ffffff;
+    font-weight: 500;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+    text-align: center;
+  }
+
+  /* Survey Content Area */
+  .survey-content {
+    padding: 2rem 1.5rem;
+  }
+
+  .survey-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .survey-description {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+  }
+
   .survey-progress {
     height: 6px;
     background-color: #e9ecef;
@@ -17,13 +94,13 @@
     overflow: hidden;
     margin-bottom: 2rem;
   }
-  
+
   .survey-progress-bar {
     height: 100%;
     background: linear-gradient(90deg, #0054a6, #206bc4);
     transition: width 0.3s ease;
   }
-  
+
   .question-card {
     background: white;
     border: 1px solid #e9ecef;
@@ -32,7 +109,7 @@
     margin-bottom: 1.5rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   }
-  
+
   .question-number {
     background: #206bc4;
     color: white;
@@ -46,18 +123,18 @@
     font-size: 0.875rem;
     margin-bottom: 1rem;
   }
-  
+
   .question-text {
     font-size: 1.125rem;
     font-weight: 500;
     margin-bottom: 1rem;
     color: #1e293b;
   }
-  
+
   .form-check-input {
     margin-top: 0.25rem;
   }
-  
+
   .form-check {
     padding: 0.75rem;
     margin-bottom: 0.5rem;
@@ -65,22 +142,22 @@
     border-radius: 0.375rem;
     transition: all 0.2s ease;
   }
-  
+
   .form-check:hover {
     background-color: #f8f9fa;
     border-color: #206bc4;
   }
-  
+
   .form-check-input:checked + .form-check-label {
     color: #206bc4;
     font-weight: 500;
   }
-  
+
   .text-area-question textarea {
     min-height: 100px;
     resize: vertical;
   }
-  
+
   .survey-submit {
     background: linear-gradient(135deg, #0054a6, #206bc4);
     border: none;
@@ -92,22 +169,15 @@
     width: 100%;
     margin-top: 1rem;
     transition: all 0.2s ease;
+    cursor: pointer;
   }
-  
+
   .survey-submit:hover {
     background: linear-gradient(135deg, #004494, #1a5ba8);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(32, 107, 196, 0.3);
   }
-  
-  .activity-info {
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    text-align: center;
-  }
-  
+
   .completion-estimate {
     background: #fff3cd;
     border: 1px solid #ffeaa7;
@@ -118,27 +188,44 @@
     font-size: 0.875rem;
     color: #856404;
   }
-  
+
   .required-indicator {
     color: #dc3545;
     font-weight: bold;
   }
 
+  .survey-footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: #64748b;
+    font-size: 0.875rem;
+    border-top: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+  }
+
   /* Mobile optimizations */
   @media (max-width: 576px) {
-    .survey-container {
-      padding: 0.75rem;
+    .survey-branding {
+      padding: 1.5rem 1rem;
     }
-    
+
+    .survey-content {
+      padding: 1.5rem 1rem;
+    }
+
+    .survey-title {
+      font-size: 1.5rem;
+    }
+
     .question-card {
       padding: 1rem;
       margin-bottom: 1rem;
     }
-    
+
     .question-text {
       font-size: 1rem;
     }
-    
+
     .form-check {
       padding: 0.5rem;
     }
@@ -146,102 +233,116 @@
 </style>
 
 <div class="survey-container">
-  <!-- Survey Header -->
-  <div class="activity-info">
-    <h1 class="h3 mb-2">{{ survey.name }}</h1>
-    <p class="text-muted mb-0">{{ survey.activity.name }}</p>
+  <!-- Activity Branding Header - Beautiful Image Card -->
+  <div class="survey-branding{% if not survey.activity.image_filename %} no-image{% endif %}"
+       {% if survey.activity.image_filename %}
+       style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + survey.activity.image_filename) }}');"
+       {% endif %}>
+
+    <div class="survey-branding-org">
+      {{ ORG_NAME if ORG_NAME else survey.activity.name }}
+    </div>
+
+    <div class="survey-branding-activity">
+      {{ survey.activity.name }}
+    </div>
+  </div>
+
+  <!-- Survey Content -->
+  <div class="survey-content">
+    <!-- Survey Title -->
+    <h1 class="survey-title">{{ survey.name }}</h1>
+
     {% if survey.description %}
-      <p class="mt-2 mb-0">{{ survey.description }}</p>
+      <p class="survey-description">{{ survey.description }}</p>
     {% endif %}
-  </div>
-  
-  <!-- Completion Estimate -->
-  <div class="completion-estimate">
-    <i class="ti ti-clock me-1"></i>
-    <strong>Estimated time:</strong> About 1 minute
-  </div>
-  
-  <!-- Progress Bar -->
-  <div class="survey-progress">
-    <div class="survey-progress-bar" id="progressBar" style="width: 0%"></div>
-  </div>
-  
-  <!-- Survey Form -->
-  <form method="POST" action="{{ url_for('submit_survey_response', survey_token=survey.survey_token) }}" id="surveyForm">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    
-    {% for question in questions.questions %}
-      <div class="question-card" data-question="{{ question.id }}">
-        <div class="question-number">{{ question.id }}</div>
-        
-        <div class="question-text">
-          {{ question.question }}
-          {% if question.required %}
-            <span class="required-indicator">*</span>
-          {% endif %}
-        </div>
-        
-        {% if question.type == 'rating' %}
-          {% for i in range(question.min_rating, question.max_rating + 1) %}
-            <div class="form-check">
-              <input class="form-check-input"
-                     type="radio"
-                     name="question_{{ question.id }}"
-                     value="{{ i }}"
-                     id="q{{ question.id }}_{{ i }}"
-                     {% if question.required %}required{% endif %}
-                     onchange="updateProgress()">
-              <label class="form-check-label" for="q{{ question.id }}_{{ i }}">
-                ⭐ {{ i }}{% if question.labels and question.labels.get(i|string) %} - {{ question.labels[i|string] }}{% endif %}
-              </label>
-            </div>
-          {% endfor %}
 
-        {% elif question.type == 'multiple_choice' %}
-          {% for option in question.options %}
-            <div class="form-check">
-              <input class="form-check-input"
-                     type="radio"
-                     name="question_{{ question.id }}"
-                     value="{{ option }}"
-                     id="q{{ question.id }}_{{ loop.index }}"
-                     {% if question.required %}required{% endif %}
-                     onchange="updateProgress()">
-              <label class="form-check-label" for="q{{ question.id }}_{{ loop.index }}">
-                {{ option }}
-              </label>
-            </div>
-          {% endfor %}
+    <!-- Completion Estimate -->
+    <div class="completion-estimate">
+      <i class="ti ti-clock me-1"></i>
+      <strong>Temps estimé :</strong> Environ 1 minute
+    </div>
 
-        {% elif question.type == 'open_ended' %}
-          <div class="text-area-question">
-            <textarea class="form-control" 
-                      name="question_{{ question.id }}" 
-                      placeholder="Share your thoughts..."
-                      {% if question.max_length %}maxlength="{{ question.max_length }}"{% endif %}
-                      {% if question.required %}required{% endif %}
-                      onkeyup="updateProgress()"></textarea>
-            {% if question.max_length %}
-              <div class="form-hint mt-1">Maximum {{ question.max_length }} characters</div>
+    <!-- Progress Bar -->
+    <div class="survey-progress">
+      <div class="survey-progress-bar" id="progressBar" style="width: 0%"></div>
+    </div>
+
+    <!-- Survey Form -->
+    <form method="POST" action="{{ url_for('submit_survey_response', survey_token=survey.survey_token) }}" id="surveyForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      {% for question in questions.questions %}
+        <div class="question-card" data-question="{{ question.id }}">
+          <div class="question-number">{{ question.id }}</div>
+
+          <div class="question-text">
+            {{ question.question }}
+            {% if question.required %}
+              <span class="required-indicator">*</span>
             {% endif %}
           </div>
-        {% endif %}
-      </div>
-    {% endfor %}
-    
-    <!-- Submit Button -->
-    <button type="submit" class="survey-submit">
-      <i class="ti ti-check me-2"></i>Submit Survey
-    </button>
-    
-    <!-- Privacy Note -->
-    <div class="text-center mt-3">
-      <small class="text-muted">
-        <i class="ti ti-shield-check me-1"></i>
-        Your responses are confidential and help us improve our activities
-      </small>
-    </div>
-  </form>
+
+          {% if question.type == 'rating' %}
+            {% for i in range(question.min_rating, question.max_rating + 1) %}
+              <div class="form-check">
+                <input class="form-check-input"
+                       type="radio"
+                       name="question_{{ question.id }}"
+                       value="{{ i }}"
+                       id="q{{ question.id }}_{{ i }}"
+                       {% if question.required %}required{% endif %}
+                       onchange="updateProgress()">
+                <label class="form-check-label" for="q{{ question.id }}_{{ i }}">
+                  ⭐ {{ i }}{% if question.labels and question.labels.get(i|string) %} - {{ question.labels[i|string] }}{% endif %}
+                </label>
+              </div>
+            {% endfor %}
+
+          {% elif question.type == 'multiple_choice' %}
+            {% for option in question.options %}
+              <div class="form-check">
+                <input class="form-check-input"
+                       type="radio"
+                       name="question_{{ question.id }}"
+                       value="{{ option }}"
+                       id="q{{ question.id }}_{{ loop.index }}"
+                       {% if question.required %}required{% endif %}
+                       onchange="updateProgress()">
+                <label class="form-check-label" for="q{{ question.id }}_{{ loop.index }}">
+                  {{ option }}
+                </label>
+              </div>
+            {% endfor %}
+
+          {% elif question.type == 'open_ended' %}
+            <div class="text-area-question">
+              <textarea class="form-control"
+                        name="question_{{ question.id }}"
+                        placeholder="Partagez vos impressions..."
+                        {% if question.max_length %}maxlength="{{ question.max_length }}"{% endif %}
+                        {% if question.required %}required{% endif %}
+                        onkeyup="updateProgress()"></textarea>
+              {% if question.max_length %}
+                <div class="form-hint mt-1">Maximum {{ question.max_length }} caractères</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <!-- Submit Button -->
+      <button type="submit" class="survey-submit">
+        <i class="ti ti-check me-2"></i>Soumettre le sondage
+      </button>
+    </form>
+  </div>
+
+  <!-- Privacy Footer -->
+  <div class="survey-footer">
+    <i class="ti ti-shield-check me-1"></i>
+    Vos réponses sont confidentielles et nous aident à améliorer nos activités
+  </div>
 </div>
 
 <script>
@@ -251,11 +352,11 @@
     const questions = document.querySelectorAll('.question-card');
     const totalQuestions = questions.length;
     let answeredQuestions = 0;
-    
+
     questions.forEach(function(questionCard) {
       const inputs = questionCard.querySelectorAll('input[type="radio"]:checked, textarea');
       let hasAnswer = false;
-      
+
       inputs.forEach(function(input) {
         if (input.type === 'radio' && input.checked) {
           hasAnswer = true;
@@ -263,41 +364,41 @@
           hasAnswer = true;
         }
       });
-      
+
       if (hasAnswer) {
         answeredQuestions++;
       }
     });
-    
+
     const progressPercent = (answeredQuestions / totalQuestions) * 100;
     document.getElementById('progressBar').style.width = progressPercent + '%';
   }
-  
+
   // Auto-scroll to next question on selection
   document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
       updateProgress();
-      
+
       // Small delay then scroll to next question
       setTimeout(function() {
         const currentQuestion = radio.closest('.question-card');
         const nextQuestion = currentQuestion.nextElementSibling;
-        
+
         if (nextQuestion && nextQuestion.classList.contains('question-card')) {
-          nextQuestion.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
+          nextQuestion.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
           });
         }
       }, 300);
     });
   });
-  
+
   // Form validation with better UX
   document.getElementById('surveyForm').addEventListener('submit', function(e) {
     const requiredInputs = document.querySelectorAll('input[required], textarea[required]');
     let isValid = true;
-    
+
     requiredInputs.forEach(function(input) {
       if (input.type === 'radio') {
         const radioGroup = document.querySelectorAll(`input[name="${input.name}"]`);
@@ -317,7 +418,7 @@
         }
       }
     });
-    
+
     if (!isValid) {
       e.preventDefault();
       // Scroll to first invalid question
@@ -327,14 +428,14 @@
       }
     }
   });
-  
+
   // Initialize progress
   updateProgress();
-  
+
   // Add loading state to submit button
   document.getElementById('surveyForm').addEventListener('submit', function() {
     const submitBtn = document.querySelector('.survey-submit');
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Envoi en cours...';
     submitBtn.disabled = true;
   });
 </script>
