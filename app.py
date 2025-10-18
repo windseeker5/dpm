@@ -7249,6 +7249,7 @@ def export_survey_results(survey_id):
         
         # Get survey questions from template
         import json
+        import csv
         template_data = json.loads(survey.template.questions)
         
         # Handle both old and new template formats
@@ -7269,7 +7270,7 @@ def export_survey_results(survey_id):
         
         # Add question headers
         for question in template_questions:
-            headers.append(f"Q{question['id']}: {question['text']}")
+            headers.append(f"Q{question['id']}: {question['question']}")
         
         writer.writerow(headers)
         
