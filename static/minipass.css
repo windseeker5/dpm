@@ -721,7 +721,7 @@ html {
 .minipass-app {
   display: flex;
   height: 100vh;
-  background: #f8f9fa;
+  background: white; /* White background - sidebar area needs white, main content has its own gray */
   overflow: hidden;
 }
 
@@ -916,7 +916,7 @@ html {
 /* Sidebar Navigation */
 .minipass-sidebar-nav {
   flex: 1;
-  padding: 1rem 0;
+  padding: 0.5rem 0 1rem 0; /* Minimal top padding - menu starts near top */
   overflow-y: auto;
 }
 
@@ -2153,5 +2153,234 @@ html, body {
 @media (min-width: 992px) {
   .sidebar-close {
     display: none;
+  }
+}
+
+/* ============================================
+   GRADIENT HEADER REDESIGN - STRIPE STYLE
+   Fixed at top, spans full viewport width
+   ============================================ */
+
+/* Gradient Header - Fixed at Top (OUTSIDE minipass-app) */
+.gradient-header-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  height: 80px;
+  z-index: 9999;
+
+  /* REAL Stripe gradient: vibrant purple/magenta → pink/red → orange → yellow */
+  background:
+    radial-gradient(ellipse 150% 100% at 10% -20%, rgba(139, 92, 246, 0.5), transparent),
+    radial-gradient(ellipse 150% 100% at 90% -20%, rgba(251, 191, 36, 0.4), transparent),
+    radial-gradient(ellipse 100% 80% at 50% 120%, rgba(239, 68, 68, 0.25), transparent),
+    linear-gradient(100deg,
+      #8b5cf6 0%,
+      #a855f7 15%,
+      #d946ef 30%,
+      #ec4899 45%,
+      #f43f5e 60%,
+      #f97316 75%,
+      #fb923c 85%,
+      #fbbf24 100%
+    );
+  background-size: 200% 200%;
+
+  display: flex;
+  flex-direction: column;
+  /* box-shadow removed - was causing weird line below header with wave */
+}
+
+/* Header Content - Three Column Layout */
+.gradient-header-content {
+  display: flex;
+  align-items: center;
+  height: 60px; /* Main content area (80px - 20px wave) */
+  width: 100%;
+  padding: 0;
+}
+
+/* LEFT: Logo Area (260px to match sidebar width) */
+.gradient-header-logo {
+  width: 260px;
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* Left align logo */
+  height: 100%;
+  padding-left: 24px; /* Align with Dashboard text (nav-item margin 12px + nav-link padding 12px) */
+  padding-right: 1.5rem;
+}
+
+.gradient-header-logo a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.header-logo-white {
+  height: 20px; /* Reduced by 40% from original 34px */
+  width: auto;
+  object-fit: contain;
+  /* No filter - use logo as-is (already white) */
+}
+
+/* CENTER: Organization Name (flexible width) */
+.gradient-header-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 2rem;
+}
+
+.gradient-header-org-name {
+  font-family: 'Anton', sans-serif;
+  font-size: 31px; /* Increased by 20% from 26px */
+  font-weight: 400;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+/* RIGHT: User Avatar */
+.gradient-header-user {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Dynamic padding to align with dashboard content right edge */
+  /* When viewport > 1400px: (viewport - 1400px) / 2 + 24px container padding */
+  /* When viewport <= 1400px: just 24px to match container padding */
+  padding-right: calc(max((100vw - 1400px - 260px) / 2, 0px) + 1.5rem);
+  height: 100%;
+}
+
+.gradient-header-user .dropdown {
+  display: flex;
+  align-items: center;
+}
+
+/* Avatar - use default Tabler styling (no custom border) */
+
+/* Subtle Wave at Bottom of Header */
+.gradient-header-wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 20px;
+  display: block;
+}
+
+/* Adjust Body and Layout for Fixed Header */
+body {
+  padding-top: 80px; /* Match header height */
+}
+
+.minipass-app {
+  margin-top: 0; /* Reset any existing margin */
+}
+
+/* Adjust Sidebar for Header */
+.minipass-sidebar {
+  top: 80px !important; /* Start below header */
+  height: calc(100vh - 80px) !important; /* Reduce height by header */
+  margin-top: 0 !important; /* Eliminate any gap */
+  padding-top: 0 !important; /* No top padding - menu starts immediately */
+  background: white !important; /* Ensure solid white background */
+}
+
+/* Remove old sidebar brand section spacing */
+.minipass-sidebar-brand {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border-bottom: none !important;
+  overflow: hidden;
+  display: none !important; /* Hide completely on desktop */
+}
+
+/* Show only on mobile for close button */
+@media (max-width: 991px) {
+  .minipass-sidebar-brand {
+    display: flex !important;
+    height: auto !important;
+    min-height: 40px !important;
+    padding: 0.5rem 1.5rem !important;
+    justify-content: flex-end;
+  }
+}
+
+/* Adjust Main Content for Header */
+.minipass-main {
+  margin-top: 0; /* Content starts right after fixed header */
+  height: calc(100vh - 80px) !important; /* Reduce height by header */
+}
+
+/* Mobile Adjustments */
+@media (max-width: 991px) {
+  .gradient-header-fixed {
+    height: 60px; /* Shorter on mobile */
+  }
+
+  .gradient-header-content {
+    height: 50px;
+  }
+
+  .gradient-header-logo {
+    width: 60px;
+    min-width: 60px;
+    padding: 0 0.5rem;
+  }
+
+  .header-logo-white {
+    height: 32px;
+  }
+
+  .gradient-header-org-name {
+    font-size: 18px;
+  }
+
+  .gradient-header-user {
+    padding-right: 1rem;
+  }
+
+  .gradient-header-wave {
+    height: 10px;
+  }
+
+  body {
+    padding-top: 60px;
+  }
+
+  .minipass-sidebar {
+    top: 60px !important;
+    height: calc(100vh - 60px) !important;
+  }
+
+  .minipass-main {
+    height: calc(100vh - 60px) !important;
+  }
+}
+
+/* Desktop: Sidebar is fixed, so needs to account for header */
+@media (min-width: 992px) {
+  .minipass-sidebar {
+    position: fixed;
+    left: 0;
+    top: 80px; /* Below header */
+    width: 260px;
+    height: calc(100vh - 80px);
+  }
+
+  .minipass-main {
+    margin-left: 260px;
+    margin-top: 0;
+    height: calc(100vh - 80px);
   }
 }
