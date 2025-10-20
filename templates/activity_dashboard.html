@@ -54,19 +54,18 @@ div.dropdown-menu[data-bs-popper] {
   border-radius: 0.375rem !important;
 }
 
-/* FIX: Dropdown items MUST have white background - this was the missing piece */
-.dropdown-item,
-.dropdown-menu .dropdown-item,
-a.dropdown-item,
-button.dropdown-item {
-  background-color: #ffffff !important;
-  background: #ffffff !important;
-}
+/* Popper.js flipped dropdown fixes are now handled in static/css/dropdown-fix.css */
 
-.dropdown-item:hover,
-.dropdown-menu .dropdown-item:hover {
-  background-color: #f8f9fa !important;
-  background: #f8f9fa !important;
+/* Fix dropdown divider background - remove gray/transparent glitch */
+.dropdown-divider,
+.dropdown-menu .dropdown-divider,
+div.dropdown-divider {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  height: 1px !important;
+  margin: 0.5rem 0 !important;
+  overflow: hidden !important;
+  opacity: 1 !important;
+  border: none !important;
 }
 
 /* Ensure cards with dropdowns don't clip dropdowns */
@@ -1254,7 +1253,6 @@ button.dropdown-item {
                     <i class="ti ti-mail me-2"></i>Send Reminder
                   </button>
                   {% endif %}
-                  <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#" 
                      onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
                     <i class="ti ti-trash me-2"></i>Delete

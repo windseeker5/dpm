@@ -272,6 +272,54 @@ html body .dropdown-menu.show {
     opacity: 1 !important;
 }
 
+/* ===== POPPER.JS FLIPPED DROPDOWN FIX ===== */
+/*
+ * CRITICAL FIX: Handle dropdowns when Popper.js flips them upward (last rows of tables)
+ * When dropdown is at bottom of table, Popper adds data-popper-placement attribute and flips it upward
+ * This ensures white backgrounds on flipped dropdowns
+ */
+
+.dropdown-menu[data-popper-placement],
+.dropdown-menu[data-popper-placement^="top"],
+.dropdown-menu[data-popper-placement^="bottom"],
+.dropdown-menu.show[data-popper-placement],
+.table-responsive .dropdown-menu[data-popper-placement],
+.table .dropdown-menu[data-popper-placement],
+.card .dropdown-menu[data-popper-placement],
+div.dropdown-menu[data-popper-placement] {
+    --tblr-dropdown-bg: #ffffff !important;
+    --tblr-bg-surface: #ffffff !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    border: 1px solid rgba(0, 0, 0, 0.125) !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    border-radius: 0.375rem !important;
+    padding: 0.5rem 0 !important;
+}
+
+/* CRITICAL FIX: Dropdown items inside flipped dropdowns MUST have white background */
+.dropdown-menu[data-popper-placement] .dropdown-item,
+.dropdown-menu[data-popper-placement^="top"] .dropdown-item,
+.dropdown-menu[data-popper-placement^="bottom"] .dropdown-item,
+.dropdown-menu[data-popper-placement] a.dropdown-item,
+.dropdown-menu[data-popper-placement] button.dropdown-item,
+.table .dropdown-menu[data-popper-placement] .dropdown-item,
+.card .dropdown-menu[data-popper-placement] .dropdown-item {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #182433 !important;
+}
+
+.dropdown-menu[data-popper-placement] .dropdown-item:hover,
+.dropdown-menu[data-popper-placement^="top"] .dropdown-item:hover,
+.dropdown-menu[data-popper-placement^="bottom"] .dropdown-item:hover,
+.table .dropdown-menu[data-popper-placement] .dropdown-item:hover,
+.card .dropdown-menu[data-popper-placement] .dropdown-item:hover {
+    background-color: #f8f9fa !important;
+    background: #f8f9fa !important;
+}
+
 /* ===== DEBUGGING (remove in production) ===== */
 /*
 .dropdown.show {

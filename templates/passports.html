@@ -236,7 +236,6 @@
                     <i class="ti ti-mail me-2"></i>Send Reminder
                   </button>
                   {% endif %}
-                  <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#" 
                      onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
                     <i class="ti ti-trash me-2"></i>Delete
@@ -628,6 +627,8 @@ body #bulkActions.card {
   border-radius: 0.5rem;
   background-color: #fff;
 }
+
+/* Popper.js flipped dropdown fixes are now handled in static/css/dropdown-fix.css */
 
 /* Card container - let global dropdown-fix.css handle overflow */
 .card {
