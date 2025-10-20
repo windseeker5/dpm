@@ -916,7 +916,7 @@ html {
 /* Sidebar Navigation */
 .minipass-sidebar-nav {
   flex: 1;
-  padding: 0.5rem 0 1rem 0; /* Minimal top padding - menu starts near top */
+  padding: 3rem 0 1rem 0; /* Move down further - align Dashboard with Passports title baseline */
   overflow-y: auto;
 }
 
@@ -2210,7 +2210,7 @@ html, body {
   align-items: center;
   justify-content: flex-start; /* Left align logo */
   height: 100%;
-  padding-left: 24px; /* Align with Dashboard text (nav-item margin 12px + nav-link padding 12px) */
+  padding-left: 56px; /* Align with first letter of menu text (skip icon) */
   padding-right: 1.5rem;
 }
 
@@ -2221,7 +2221,7 @@ html, body {
 }
 
 .header-logo-white {
-  height: 20px; /* Reduced by 40% from original 34px */
+  height: 17px; /* Reduced by 15% from 20px (20 × 0.85 = 17px) */
   width: auto;
   object-fit: contain;
   /* No filter - use logo as-is (already white) */
@@ -2343,11 +2343,62 @@ body {
   }
 
   .gradient-header-org-name {
-    font-size: 18px;
+    font-size: 22px !important; /* Reduced by additional 15% (26px × 0.85 = 22px) for better mobile fit */
+  }
+
+  /* Ensure perfect vertical centering on mobile */
+  .gradient-header-content {
+    align-items: center !important;
+  }
+
+  .gradient-header-org-name {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .gradient-header-user {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   .gradient-header-user {
     padding-right: 1rem;
+  }
+
+  /* Fix avatar dropdown - ensure full visibility on mobile */
+  .gradient-header-user .dropdown-menu {
+    position: fixed !important;
+    top: 55px !important; /* Just below header */
+    right: 10px !important;
+    left: auto !important;
+    transform: none !important;
+    z-index: 10000 !important;
+    min-width: 200px !important;
+    width: auto !important;
+    margin: 0 !important;
+  }
+
+  /* Disable Popper.js positioning on mobile */
+  .gradient-header-user .dropdown-menu[data-popper-placement] {
+    position: fixed !important;
+    inset: auto !important;
+    top: 55px !important;
+    right: 10px !important;
+  }
+
+  /* Ensure parent containers don't interfere */
+  .gradient-header-fixed,
+  .gradient-header-content,
+  .gradient-header-user,
+  .gradient-header-user .dropdown {
+    overflow: visible !important;
+  }
+
+  /* Hide logo on mobile to save space */
+  .gradient-header-logo {
+    display: none !important;
   }
 
   .gradient-header-wave {
