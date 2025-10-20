@@ -1132,9 +1132,9 @@ button.dropdown-item {
           <!-- Filter Buttons -->
           <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
             <a href="#"
-               onclick="filterPassports('all'); return false;"
-               class="github-filter-btn {% if request.args.get('passport_filter', 'all') == 'all' %}active{% endif %}" id="filter-all">
-              <i class="ti ti-list"></i>All <span class="filter-count">({{ all_passports|length }})</span>
+               onclick="filterPassports('active'); return false;"
+               class="github-filter-btn {% if request.args.get('passport_filter', 'active') == 'active' and request.args.get('passport_filter') != 'all' %}active{% endif %}" id="filter-active">
+              <i class="ti ti-activity"></i>Active <span class="filter-count">({{ (all_passports|selectattr('uses_remaining', 'greaterthan', 0)|list + all_passports|selectattr('paid', 'equalto', false)|list)|unique|list|length }})</span>
             </a>
             <a href="#"
                onclick="filterPassports('unpaid'); return false;"
@@ -1142,14 +1142,9 @@ button.dropdown-item {
               <i class="ti ti-clock"></i>Unpaid <span class="filter-count">({{ all_passports|selectattr('paid', 'equalto', false)|list|length }})</span>
             </a>
             <a href="#"
-               onclick="filterPassports('paid'); return false;"
-               class="github-filter-btn {% if request.args.get('passport_filter') == 'paid' %}active{% endif %}" id="filter-paid">
-              <i class="ti ti-circle-check"></i>Paid <span class="filter-count">({{ all_passports|selectattr('paid', 'equalto', true)|list|length }})</span>
-            </a>
-            <a href="#"
-               onclick="filterPassports('active'); return false;"
-               class="github-filter-btn {% if request.args.get('passport_filter') == 'active' %}active{% endif %}" id="filter-active">
-              <i class="ti ti-activity"></i>Active <span class="filter-count">({{ all_passports|selectattr('uses_remaining', 'greaterthan', 0)|list|length }})</span>
+               onclick="filterPassports('all'); return false;"
+               class="github-filter-btn {% if request.args.get('passport_filter') == 'all' %}active{% endif %}" id="filter-all">
+              <i class="ti ti-list"></i>All <span class="filter-count">({{ all_passports|length }})</span>
             </a>
           </div>
         </div>
@@ -2450,13 +2445,13 @@ function initializeActivityDashboard() {
 // AJAX filter functions for activity dashboard
 function filterPassports(filterType) {
   console.log('Filtering passports:', filterType);
-  
+
   // Update active filter button
-  document.querySelectorAll('#filter-all, #filter-unpaid, #filter-paid, #filter-active').forEach(btn => {
+  document.querySelectorAll('#filter-all, #filter-unpaid, #filter-active').forEach(btn => {
     btn.classList.remove('active');
   });
   document.getElementById('filter-' + filterType).classList.add('active');
-  
+
   loadFilteredData('passport', filterType);
 }
 

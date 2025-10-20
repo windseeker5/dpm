@@ -3584,17 +3584,26 @@ def list_passports():
     q = request.args.get("q", "").strip()
     activity_id = request.args.get("activity", "")
     payment_status = request.args.get("payment_status", "")
+    status = request.args.get("status", "")
+    show_all_param = request.args.get("show_all", "")
     start_date = request.args.get("start_date", "")
     end_date = request.args.get("end_date", "")
     min_amount = request.args.get("min_amount", "")
     max_amount = request.args.get("max_amount", "")
-    
+
+    # Default to 'active' filter if no status or payment_status specified (unless explicitly showing all)
+    if not status and not payment_status and show_all_param != "true":
+        status = "active"
+
     # Base query with eager loading for performance
     query = Passport.query.options(
         db.joinedload(Passport.user),
         db.joinedload(Passport.activity),
         db.joinedload(Passport.passport_type)
     ).order_by(Passport.created_dt.desc())
+
+    # Calculate TRUE total passports (before any filters) for "All" button
+    all_passports_count = Passport.query.count()
 
     # Apply filters
     if q:
@@ -3606,11 +3615,19 @@ def list_passports():
                 Passport.notes.ilike(f"%{q}%")
             )
         )
-    
+
     if activity_id:
         query = query.filter(Passport.activity_id == activity_id)
-    
-    if payment_status == "paid":
+
+    # Status filter for "active" (has remaining uses OR unpaid)
+    if status == "active":
+        query = query.filter(
+            db.or_(
+                Passport.uses_remaining > 0,
+                Passport.paid == False
+            )
+        )
+    elif payment_status == "paid":
         query = query.filter(Passport.paid == True)
     elif payment_status == "unpaid":
         query = query.filter(Passport.paid == False)
@@ -3644,39 +3661,47 @@ def list_passports():
             pass
 
     passports = query.all()
-    
+
     # Get activities for filter dropdown
     activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
-    
-    # Calculate statistics
-    total_passports = len(passports)
-    paid_passports = len([p for p in passports if p.paid])
-    unpaid_passports = total_passports - paid_passports
-    active_passports = len([p for p in passports if p.uses_remaining > 0])
-    total_revenue = sum(p.sold_amt for p in passports if p.paid)
-    pending_revenue = sum(p.sold_amt for p in passports if not p.paid)
-    
+
+    # Get all passports for statistics (unfiltered counts)
+    all_passports = Passport.query.all()
+
+    # Calculate statistics using ALL passports (not filtered results)
+    paid_passports = len([p for p in all_passports if p.paid])
+    unpaid_passports = len([p for p in all_passports if not p.paid])
+    # Active = has remaining uses OR unpaid
+    active_passports = len([p for p in all_passports if p.uses_remaining > 0 or not p.paid])
+    total_revenue = sum(p.sold_amt for p in all_passports if p.paid)
+    pending_revenue = sum(p.sold_amt for p in all_passports if not p.paid)
+
     statistics = {
-        'total_passports': total_passports,
+        'total_passports': all_passports_count,
         'paid_passports': paid_passports,
         'unpaid_passports': unpaid_passports,
         'active_passports': active_passports,
         'total_revenue': total_revenue,
         'pending_revenue': pending_revenue
     }
-    
-    return render_template("passports.html", 
-                         passports=passports, 
+
+    # Determine if showing all (explicitly requested)
+    show_all = show_all_param == "true"
+
+    return render_template("passports.html",
+                         passports=passports,
                          activities=activities,
                          statistics=statistics,
                          current_filters={
                              'q': q,
                              'activity': activity_id,
                              'payment_status': payment_status,
+                             'status': status,
                              'start_date': start_date,
                              'end_date': end_date,
                              'min_amount': min_amount,
-                             'max_amount': max_amount
+                             'max_amount': max_amount,
+                             'show_all': show_all
                          })
 
 
@@ -5095,16 +5120,16 @@ def get_activity_dashboard_data(activity_id):
             }), 400
         
         # Validate and sanitize filter parameters
-        passport_filter = escape(str(request.args.get('passport_filter', 'all'))).strip()[:20]
+        passport_filter = escape(str(request.args.get('passport_filter', 'active'))).strip()[:20]
         signup_filter = escape(str(request.args.get('signup_filter', 'all'))).strip()[:20]
         search_query = escape(str(request.args.get('q', ''))).strip()[:100]
         
         # Validate filter values
-        valid_passport_filters = ['all', 'paid', 'unpaid', 'active']
+        valid_passport_filters = ['all', 'unpaid', 'active']
         valid_signup_filters = ['all', 'paid', 'unpaid', 'pending']
-        
+
         if passport_filter not in valid_passport_filters:
-            passport_filter = 'all'
+            passport_filter = 'active'  # Default to active
         if signup_filter not in valid_signup_filters:
             signup_filter = 'all'
             
@@ -5167,17 +5192,15 @@ def get_activity_dashboard_data(activity_id):
         
         if passport_filter == 'unpaid':
             passports_query = passports_query.filter_by(paid=False)
-        elif passport_filter == 'paid':
-            passports_query = passports_query.filter_by(paid=True)
         elif passport_filter == 'active':
-            passports_query = passports_query.filter(Passport.uses_remaining > 0)
-        else:  # 'all' - show unpaid OR with uses remaining
+            # Active = has remaining uses OR unpaid
             passports_query = passports_query.filter(
                 or_(
                     Passport.uses_remaining > 0,
                     Passport.paid == False
                 )
             )
+        # 'all' - no additional filter, show all passports
         
         # Apply search filter if provided
         if q:
@@ -5212,10 +5235,9 @@ def get_activity_dashboard_data(activity_id):
         
         # Calculate filter counts
         passport_counts = {
-            'all': len([p for p in all_passports if not p.paid or p.uses_remaining > 0]),
+            'all': len(all_passports),
             'unpaid': len([p for p in all_passports if not p.paid]),
-            'paid': len([p for p in all_passports if p.paid]),
-            'active': len([p for p in all_passports if p.uses_remaining > 0])
+            'active': len([p for p in all_passports if p.uses_remaining > 0 or not p.paid])
         }
         
         signup_counts = {
