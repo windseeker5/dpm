@@ -78,10 +78,11 @@
         <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
           <i class="ti ti-qrcode me-2"></i>View QR Code
         </a>
+        <!-- TODO: Implement Send Reminder functionality
         <a class="dropdown-item" href="#">
           <i class="ti ti-mail me-2"></i>Send Reminder
         </a>
-        <div class="dropdown-divider"></div>
+        -->
         <a class="dropdown-item text-danger" href="#"
            onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
           <i class="ti ti-trash me-2"></i>Delete
