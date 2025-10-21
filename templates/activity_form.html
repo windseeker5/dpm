@@ -238,10 +238,10 @@
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Type</th>
-                      <th>Price</th>
-                      <th>Sessions</th>
-                      <th>Signup Link</th>
+                      <th class="d-none d-md-table-cell">Type</th>
+                      <th class="d-none d-md-table-cell">Price</th>
+                      <th class="d-none d-md-table-cell">Sessions</th>
+                      <th class="d-none d-md-table-cell">Signup Link</th>
                       <th class="w-1">Actions</th>
                     </tr>
                   </thead>
@@ -250,7 +250,7 @@
                   </tbody>
                 </table>
               </div>
-              
+
               <div id="noPassportTypes" class="text-center p-4">
                 <i class="ti ti-id-off text-muted mb-3" style="font-size: 3rem;"></i>
                 <h5 class="text-muted mb-2">No passport types defined</h5>
@@ -852,27 +852,21 @@
   gap: 1rem;
 }
 
+
 @media (max-width: 768px) {
   .financial-quick-actions {
     grid-template-columns: 1fr;
   }
-  
-  #passportTypesTable .input-group {
-    max-width: 100% !important;
-  }
-  
-  #passportTypesTable td {
-    padding: 0.5rem 0.25rem;
-  }
-  
+
   .card-body {
     padding: 1rem;
   }
-  
+
   .modal-dialog {
     margin: 1rem;
   }
 }
+
 
 .signup-link-card {
   border: 1px solid #dee2e6;
@@ -1114,36 +1108,36 @@
     function createPassportTypeTableRow(passportType) {
       const id = passportType.id || `new_${passportTypeCounter++}`;
       const typeBadgeClass = passportType.type === 'permanent' ? 'bg-green-lt text-green' : 'bg-yellow-lt text-yellow';
-      
+
       // Check if this is an existing passport type for signup link
       const isExisting = id && !id.toString().startsWith('new_');
       let signupUrl = '[Available after saving]';
       let signupButtonsDisabled = true;
-      
+
       if (isExisting && '{{ activity.id if activity }}') {
         signupUrl = `{{ url_for('signup', activity_id=activity.id, _external=True) if activity }}?passport_type_id=${id}`;
         signupButtonsDisabled = false;
       }
-      
+
       return `
         <tr data-id="${id}">
           <td>
             <div class="fw-bold">${passportType.name || 'New Passport Type'}</div>
           </td>
-          <td>
+          <td class="d-none d-md-table-cell">
             <span class="badge ${typeBadgeClass}">${passportType.type || 'permanent'}</span>
           </td>
-          <td>
+          <td class="d-none d-md-table-cell">
             <span class="fw-bold text-muted">$${passportType.price_per_user || '0.00'}</span>
           </td>
-          <td>
+          <td class="d-none d-md-table-cell">
             <span class="text-muted">${passportType.sessions_included || '1'} sessions</span>
           </td>
-          <td>
+          <td class="d-none d-md-table-cell">
             <div class="input-group input-group-flat" style="max-width: 300px;">
               <input type="text" class="form-control form-control-sm signup-url-input" readonly value="${signupUrl}">
               <span class="input-group-text">
-                <button class="btn btn-sm btn-outline-secondary copy-signup-btn" type="button" ${signupButtonsDisabled ? 'disabled' : ''} 
+                <button class="btn btn-sm btn-outline-secondary copy-signup-btn" type="button" ${signupButtonsDisabled ? 'disabled' : ''}
                         onclick="copySignupLink(this)" title="Copy link">
                   <i class="ti ti-copy"></i>
                 </button>
@@ -1160,6 +1154,11 @@
                 <a class="dropdown-item" href="#" onclick="editPassportType('${id}')">
                   <i class="ti ti-edit me-2"></i> Edit
                 </a>
+                ${!signupButtonsDisabled ? `
+                <a class="dropdown-item" href="#" onclick="copySignupLinkFromDropdown('${id}', '${signupUrl}')">
+                  <i class="ti ti-copy me-2"></i> Copy Signup Link
+                </a>
+                ` : ''}
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item text-danger" href="#" onclick="confirmDeletePassportType('${id}', '${passportType.name || 'New Passport Type'}')">
                   <i class="ti ti-trash me-2"></i> Delete
@@ -1177,7 +1176,7 @@
         </tr>
       `;
     }
-    
+
     // Modal Management Functions
     const addPassportTypeModal = new bootstrap.Modal(document.getElementById('addPassportTypeModal'));
     const editPassportTypeModal = new bootstrap.Modal(document.getElementById('editPassportTypeModal'));
@@ -1194,13 +1193,13 @@
       const sessions = document.getElementById('newPassportTypeSessions').value;
       const revenue = document.getElementById('newPassportTypeRevenue').value;
       const instructions = document.getElementById('newPassportTypeInstructions').value.trim();
-      
+
       // Validation
       if (!name) {
         alert('Please enter a passport type name.');
         return;
       }
-      
+
       const newPassportType = {
         id: `new_${passportTypeCounter++}`,
         name: name,
@@ -1210,14 +1209,14 @@
         target_revenue: revenue,
         payment_instructions: instructions
       };
-      
+
       passportTypes.push(newPassportType);
-      
+
       const rowHtml = createPassportTypeTableRow(newPassportType);
       passportTypesContainer.insertAdjacentHTML('beforeend', rowHtml);
-      
+
       updateVisibility();
-      
+
       // Clear modal and close
       clearAddModal();
       addPassportTypeModal.hide();
@@ -1242,7 +1241,7 @@
     
     function saveEditPassportType() {
       if (!currentEditingId) return;
-      
+
       // Get values from modal
       const name = document.getElementById('editPassportTypeName').value.trim();
       const type = document.getElementById('editPassportTypeType').value;
@@ -1250,13 +1249,13 @@
       const sessions = document.getElementById('editPassportTypeSessions').value;
       const revenue = document.getElementById('editPassportTypeRevenue').value;
       const instructions = document.getElementById('editPassportTypeInstructions').value.trim();
-      
+
       // Validation
       if (!name) {
         alert('Please enter a passport type name.');
         return;
       }
-      
+
       // Update passport type
       const updatedPassportType = {
         id: currentEditingId,
@@ -1267,18 +1266,19 @@
         target_revenue: revenue,
         payment_instructions: instructions
       };
-      
+
       // Update in array
       const index = passportTypes.findIndex(pt => pt.id == currentEditingId);
       if (index !== -1) {
         passportTypes[index] = updatedPassportType;
       }
-      
+
       // Update UI
       const row = document.querySelector(`[data-id="${currentEditingId}"]`);
       if (row) {
         row.outerHTML = createPassportTypeTableRow(updatedPassportType);
       }
+
       editPassportTypeModal.hide();
       currentEditingId = null;
     }
@@ -1414,6 +1414,7 @@
           if (row) {
             row.remove();
           }
+
           passportTypes = passportTypes.filter(pt => pt.id != id);
           updateVisibility();
           
@@ -1492,15 +1493,15 @@
     
     function deletePassportType() {
       if (!currentDeletingId) return;
-      
+
       const row = document.querySelector(`[data-id="${currentDeletingId}"]`);
       if (row) {
         row.remove();
       }
-      
+
       passportTypes = passportTypes.filter(pt => pt.id != currentDeletingId);
       updateVisibility();
-      
+
       deletePassportTypeModal.hide();
       currentDeletingId = null;
     }
@@ -1532,7 +1533,7 @@
     function updateVisibility() {
       const hasPassportTypes = passportTypesContainer.children.length > 0;
       const passportTypesTable = document.getElementById('passportTypesTable');
-      
+
       if (hasPassportTypes) {
         noPassportTypes.style.display = 'none';
         passportTypesTable.style.display = 'table';
@@ -1555,9 +1556,93 @@
       button.innerHTML = '<i class="ti ti-check"></i>';
       setTimeout(() => { button.innerHTML = '<i class="ti ti-copy"></i>'; }, 1500);
     }
-    
-    // Make function global
+
+    function copySignupLinkFromDropdown(id, url) {
+      event.preventDefault();
+      navigator.clipboard.writeText(url).then(() => {
+        showFlashMessage('Signup link copied to clipboard!', 'success');
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        showFlashMessage('Failed to copy link', 'error');
+      });
+    }
+
+    function showFlashMessage(message, category = 'success') {
+      // Create or get flash overlay
+      let overlay = document.getElementById('flashAlertOverlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'flashAlertOverlay';
+        overlay.className = 'flash-alert-overlay';
+        overlay.innerHTML = '<div class="flash-alert-container"></div>';
+        document.body.insertBefore(overlay, document.body.firstChild);
+      }
+
+      const container = overlay.querySelector('.flash-alert-container');
+
+      // Determine alert style
+      const alertClass = category === 'success' ? 'alert-success' :
+                         category === 'error' ? 'alert-danger' :
+                         category === 'warning' ? 'alert-warning' : 'alert-info';
+      const iconClass = category === 'success' ? 'ti-check-circle' :
+                        category === 'error' ? 'ti-alert-circle' :
+                        category === 'warning' ? 'ti-alert-triangle' : 'ti-info-circle';
+      const title = category === 'success' ? 'Success' :
+                    category === 'error' ? 'Error' :
+                    category === 'warning' ? 'Warning' : 'Information';
+
+      // Create flash alert
+      const alert = document.createElement('div');
+      alert.className = `flash-alert alert ${alertClass} alert-dismissible`;
+      alert.setAttribute('role', 'alert');
+      alert.setAttribute('aria-live', 'polite');
+      alert.setAttribute('aria-atomic', 'true');
+      alert.innerHTML = `
+        <div class="d-flex">
+          <div class="alert-icon-container">
+            <i class="ti ${iconClass} alert-icon"></i>
+          </div>
+          <div class="flex-fill">
+            <div class="alert-title">${title}</div>
+            <div class="alert-message">${message}</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close notification"></button>
+        </div>
+        <div class="flash-alert-progress"></div>
+      `;
+
+      container.appendChild(alert);
+
+      // Animate in
+      setTimeout(() => alert.classList.add('show'), 10);
+
+      // Auto-dismiss after 3 seconds
+      setTimeout(() => {
+        alert.classList.add('hide');
+        setTimeout(() => {
+          alert.remove();
+          if (container.children.length === 0) {
+            overlay.remove();
+          }
+        }, 400);
+      }, 3000);
+
+      // Handle manual close
+      const closeBtn = alert.querySelector('.btn-close');
+      closeBtn.addEventListener('click', () => {
+        alert.classList.add('hide');
+        setTimeout(() => {
+          alert.remove();
+          if (container.children.length === 0) {
+            overlay.remove();
+          }
+        }, 400);
+      });
+    }
+
+    // Make functions global
     window.copySignupLink = copySignupLink;
+    window.copySignupLinkFromDropdown = copySignupLinkFromDropdown;
     
     // Event Listeners for modals
     document.getElementById('saveNewPassportType').addEventListener('click', addNewPassportType);
@@ -1714,7 +1799,7 @@
     {% if passport_types %}
     try {
       const existingPassportTypesData = {{ passport_types|tojson }};
-      
+
       existingPassportTypesData.forEach((pt, index) => {
         const existingPassportType = {
           id: pt.id.toString(),
@@ -1725,7 +1810,7 @@
           target_revenue: pt.target_revenue.toString(),
           payment_instructions: pt.payment_instructions || ''
         };
-        
+
         passportTypes.push(existingPassportType);
         const rowHtml = createPassportTypeTableRow(existingPassportType);
         passportTypesContainer.insertAdjacentHTML('beforeend', rowHtml);
