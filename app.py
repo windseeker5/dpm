@@ -22,6 +22,7 @@ load_dotenv()
 
 # 📁 API Blueprints
 from api.backup import backup_api
+from api.geocode import geocode_api
 
 
 # 🌐 Flask Core
@@ -155,6 +156,7 @@ db.init_app(app)
 
 # 📁 Register API blueprints
 app.register_blueprint(backup_api)
+app.register_blueprint(geocode_api)
 
 
 
@@ -201,6 +203,10 @@ try:
     # Exempt chatbot API from CSRF for testing
     csrf.exempt(chatbot_bp)
     print("✅ Chatbot API exempted from CSRF")
+
+    # Exempt geocode API from CSRF (for AJAX calls)
+    csrf.exempt(geocode_api)
+    print("✅ Geocode API exempted from CSRF")
     
     # Add test notification route
     @app.route("/test-notifications")
@@ -1403,6 +1409,11 @@ def create_activity():
         description = request.form.get("description", "").strip()
         status = request.form.get("status", "active")
 
+        # 📍 Handle location fields (optional)
+        location_address_raw = request.form.get("location_address_raw", "").strip()
+        location_address_formatted = request.form.get("location_address_formatted", "").strip()
+        location_coordinates = request.form.get("location_coordinates", "").strip()
+
         # 🖼️ Handle image selection
         uploaded_file = request.files.get('upload_image')
         selected_image_filename = request.form.get("selected_image_filename", "").strip()
@@ -1436,6 +1447,9 @@ def create_activity():
             created_by=session.get("admin"),
             image_filename=image_filename,
             email_templates=default_email_templates,
+            location_address_raw=location_address_raw if location_address_raw else None,
+            location_address_formatted=location_address_formatted if location_address_formatted else None,
+            location_coordinates=location_coordinates if location_coordinates else None,
         )
 
         db.session.add(new_activity)
@@ -1542,6 +1556,11 @@ def edit_activity(activity_id):
         activity.type = request.form.get("type", "").strip()
         activity.description = request.form.get("description", "").strip()
         activity.status = request.form.get("status", "active")
+
+        # 📍 Update location fields (optional)
+        activity.location_address_raw = request.form.get("location_address_raw", "").strip() or None
+        activity.location_address_formatted = request.form.get("location_address_formatted", "").strip() or None
+        activity.location_coordinates = request.form.get("location_coordinates", "").strip() or None
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")

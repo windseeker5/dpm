@@ -115,7 +115,12 @@ class Activity(db.Model):
     
     # Organization relationship for email context
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
-    
+
+    # Location fields for geospatial data and sharing
+    location_address_raw = db.Column(db.Text, nullable=True)  # What admin typed
+    location_address_formatted = db.Column(db.Text, nullable=True)  # Google's corrected/formatted address
+    location_coordinates = db.Column(db.String(100), nullable=True)  # "lat,lng" for shareable map links
+
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 
