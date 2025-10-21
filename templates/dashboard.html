@@ -239,10 +239,10 @@
         <div class="mobile-kpi-scroll">
           <!-- Revenue Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">REVENUE</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(mobile_kpi_data['revenue']['current']) }}</div>
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">REVENUE</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(mobile_kpi_data['revenue']['current']) }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>
@@ -252,10 +252,10 @@
 
           <!-- Active Passports Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">ACTIVE PASSPORTS</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['active_users']['current'] }}</div>
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">ACTIVE PASSPORTS</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['active_users']['current'] }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>
@@ -265,10 +265,10 @@
 
           <!-- Passports Created Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">PASSPORTS CREATED</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['passports_created']['current'] }}</div>
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">PASSPORTS CREATED</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['passports_created']['current'] }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>
@@ -278,10 +278,10 @@
 
           <!-- Unpaid Passports Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">UNPAID PASSPORTS</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">{{ mobile_kpi_data['unpaid_passports']['current'] }}</div>
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">UNPAID PASSPORTS</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">{{ mobile_kpi_data['unpaid_passports']['current'] }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>
@@ -480,9 +480,9 @@
             <table class="table table-hover" id="logTable">
             <thead>
               <tr>
-                <th style="width: 15%;">Date/Time</th>
+                <th class="d-none d-md-table-cell" style="width: 15%;">Date/Time</th>
                 <th class="d-none d-md-table-cell" style="width: 20%;">Type</th>
-                <th style="width: 65%;">Description</th>
+                <th>Description</th>
               </tr>
             </thead>
             <tbody>
@@ -490,10 +490,10 @@
             </tbody>
           </table>
           </div>
-          
+
           <!-- Pagination -->
-          <div class="card-footer d-flex justify-content-between align-items-center">
-            <span class="text-muted" id="entriesInfo">Showing <span id="showingCount">1-{{ [logs|length, 10]|min }}</span> of {{ logs|length }} entries</span>
+          <div class="card-footer d-flex justify-content-between align-items-center flex-wrap">
+            <span class="text-muted" id="entriesInfo" style="font-size: 0.875rem;">Showing <span id="showingCount">1-{{ [logs|length, 10]|min }}</span> of {{ logs|length }} entries</span>
             <nav id="paginationNav">
               <ul class="pagination pagination-sm mb-0" id="paginationControls">
                 <!-- Pagination will be populated by JavaScript -->
@@ -1102,6 +1102,58 @@
 .apexcharts-tooltip {
   z-index: 1000 !important;
 }
+
+/* Mobile Table Responsive Styles */
+@media (max-width: 767.98px) {
+  /* Table cell padding with breathing room */
+  #logTable td {
+    padding: 0.75rem 1rem !important;
+  }
+
+  /* Description cell - enable multi-line wrapping */
+  .log-description-cell {
+    padding: 0.75rem 1rem !important;
+  }
+
+  /* Description text - allow wrapping, no truncation */
+  .log-description-text {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+  }
+
+  /* Date badge styling */
+  .badge-sm {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  /* Pagination footer adjustments */
+  .card-footer {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  #entriesInfo {
+    font-size: 0.75rem !important;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  #paginationNav {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Simplified pagination buttons for mobile */
+  .pagination-sm .page-link {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+  }
+}
 </style>
 {% endblock %}
 
@@ -1168,7 +1220,7 @@
   }
   
   .mobile-kpi-card {
-    flex: 0 0 calc(100vw - 2rem);
+    flex: 0 0 85%;
     scroll-snap-align: start;
   }
   
@@ -2105,15 +2157,21 @@ class LogsPagination {
       row.className = 'log-row';
       row.setAttribute('data-type', log.type.toLowerCase().replace(' ', '-'));
 
+      // Extract just the date (no time) for mobile badge
+      const dateOnly = formattedDate.split(' ')[0];
+
       row.innerHTML = `
-        <td style="vertical-align: middle;">
+        <td class="d-none d-md-table-cell" style="vertical-align: middle;">
           <div class="text-nowrap">
             ${formattedDate}
           </div>
         </td>
         <td class="d-none d-md-table-cell" style="vertical-align: middle;">${icon} ${log.type}</td>
-        <td style="vertical-align: middle;">
-          <div class="text-truncate" style="max-width: 100%;" title="${log.details || ''}">
+        <td class="log-description-cell" style="vertical-align: middle;">
+          <div class="d-md-none mb-1">
+            <span class="badge badge-sm bg-gray-lt">${dateOnly}</span>
+          </div>
+          <div class="log-description-text">
             ${log.details || ''}
           </div>
         </td>
@@ -2141,77 +2199,82 @@ class LogsPagination {
   renderPagination() {
     const pagination = this.paginationControls;
     pagination.innerHTML = '';
-    
+
+    const isMobile = window.innerWidth < 768;
+
     // Previous button
     const prevLi = document.createElement('li');
     prevLi.className = `page-item ${this.currentPage === 1 ? 'disabled' : ''}`;
     prevLi.innerHTML = `<a href="#" class="page-link" data-page="${this.currentPage - 1}">Previous</a>`;
     pagination.appendChild(prevLi);
-    
-    // Page numbers logic
-    const maxVisiblePages = 5;
-    let startPage, endPage;
-    
-    if (this.totalPages <= maxVisiblePages) {
-      startPage = 1;
-      endPage = this.totalPages;
-    } else {
-      if (this.currentPage <= 3) {
+
+    // Only show page numbers on desktop
+    if (!isMobile) {
+      // Page numbers logic
+      const maxVisiblePages = 5;
+      let startPage, endPage;
+
+      if (this.totalPages <= maxVisiblePages) {
         startPage = 1;
-        endPage = maxVisiblePages;
-      } else if (this.currentPage >= this.totalPages - 2) {
-        startPage = this.totalPages - maxVisiblePages + 1;
         endPage = this.totalPages;
       } else {
-        startPage = this.currentPage - 2;
-        endPage = this.currentPage + 2;
+        if (this.currentPage <= 3) {
+          startPage = 1;
+          endPage = maxVisiblePages;
+        } else if (this.currentPage >= this.totalPages - 2) {
+          startPage = this.totalPages - maxVisiblePages + 1;
+          endPage = this.totalPages;
+        } else {
+          startPage = this.currentPage - 2;
+          endPage = this.currentPage + 2;
+        }
+      }
+
+      // First page + ellipsis if needed
+      if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        firstLi.className = 'page-item';
+        firstLi.innerHTML = '<a href="#" class="page-link" data-page="1">1</a>';
+        pagination.appendChild(firstLi);
+
+        if (startPage > 2) {
+          const ellipsisLi = document.createElement('li');
+          ellipsisLi.className = 'page-item disabled';
+          ellipsisLi.innerHTML = '<a href="#" class="page-link">...</a>';
+          pagination.appendChild(ellipsisLi);
+        }
+      }
+
+      // Main page numbers
+      for (let i = startPage; i <= endPage; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === this.currentPage ? 'active' : ''}`;
+        li.innerHTML = `<a href="#" class="page-link" data-page="${i}">${i}</a>`;
+        pagination.appendChild(li);
+      }
+
+      // Last page + ellipsis if needed
+      if (endPage < this.totalPages) {
+        if (endPage < this.totalPages - 1) {
+          const ellipsisLi = document.createElement('li');
+          ellipsisLi.className = 'page-item disabled';
+          ellipsisLi.innerHTML = '<a href="#" class="page-link">...</a>';
+          pagination.appendChild(ellipsisLi);
+        }
+
+        const lastLi = document.createElement('li');
+        lastLi.className = 'page-item';
+        lastLi.innerHTML = `<a href="#" class="page-link" data-page="${this.totalPages}">${this.totalPages}</a>`;
+        pagination.appendChild(lastLi);
       }
     }
-    
-    // First page + ellipsis if needed
-    if (startPage > 1) {
-      const firstLi = document.createElement('li');
-      firstLi.className = 'page-item';
-      firstLi.innerHTML = '<a href="#" class="page-link" data-page="1">1</a>';
-      pagination.appendChild(firstLi);
-      
-      if (startPage > 2) {
-        const ellipsisLi = document.createElement('li');
-        ellipsisLi.className = 'page-item disabled';
-        ellipsisLi.innerHTML = '<a href="#" class="page-link">...</a>';
-        pagination.appendChild(ellipsisLi);
-      }
-    }
-    
-    // Main page numbers
-    for (let i = startPage; i <= endPage; i++) {
-      const li = document.createElement('li');
-      li.className = `page-item ${i === this.currentPage ? 'active' : ''}`;
-      li.innerHTML = `<a href="#" class="page-link" data-page="${i}">${i}</a>`;
-      pagination.appendChild(li);
-    }
-    
-    // Last page + ellipsis if needed
-    if (endPage < this.totalPages) {
-      if (endPage < this.totalPages - 1) {
-        const ellipsisLi = document.createElement('li');
-        ellipsisLi.className = 'page-item disabled';
-        ellipsisLi.innerHTML = '<a href="#" class="page-link">...</a>';
-        pagination.appendChild(ellipsisLi);
-      }
-      
-      const lastLi = document.createElement('li');
-      lastLi.className = 'page-item';
-      lastLi.innerHTML = `<a href="#" class="page-link" data-page="${this.totalPages}">${this.totalPages}</a>`;
-      pagination.appendChild(lastLi);
-    }
-    
+
     // Next button
     const nextLi = document.createElement('li');
     nextLi.className = `page-item ${this.currentPage === this.totalPages ? 'disabled' : ''}`;
     nextLi.innerHTML = `<a href="#" class="page-link" data-page="${this.currentPage + 1}">Next</a>`;
     pagination.appendChild(nextLi);
-    
+
     // Add click event listeners
     pagination.addEventListener('click', (e) => {
       e.preventDefault();
@@ -2392,6 +2455,17 @@ document.addEventListener('DOMContentLoaded', function() {
     logsPagination = new LogsPagination(allLogs, 10);
     logsPagination.init();
   }
+
+  // Re-render pagination on window resize for responsive behavior
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      if (logsPagination) {
+        logsPagination.renderPagination();
+      }
+    }, 150);
+  });
 });
 
 // Filter functionality
