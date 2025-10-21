@@ -121,6 +121,9 @@ class Activity(db.Model):
     location_address_formatted = db.Column(db.Text, nullable=True)  # Google's corrected/formatted address
     location_coordinates = db.Column(db.String(100), nullable=True)  # "lat,lng" for shareable map links
 
+    # Financial tracking
+    goal_revenue = db.Column(db.Float, default=0.0, nullable=True)  # Revenue goal for progress tracking (existing column)
+
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 

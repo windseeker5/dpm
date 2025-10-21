@@ -79,11 +79,14 @@
 
             <!-- Verified Location Display (hidden initially) -->
             <div id="locationVerifiedSection" class="mt-3" style="display: none;">
-              <div class="alert alert-success d-flex align-items-center" role="alert">
+              <div id="locationVerifiedAlert" class="alert alert-success d-flex align-items-center" role="alert">
                 <i class="ti ti-check icon me-2"></i>
                 <div class="flex-grow-1">
-                  <strong>Location Verified!</strong>
+                  <strong id="locationStatusTitle">Location Verified!</strong>
                   <div id="verifiedAddressDisplay" class="mt-1"></div>
+                  <div id="locationApprovedMessage" class="mt-1 text-muted small" style="display: none;">
+                    Ready to save this activity
+                  </div>
                 </div>
               </div>
               <div class="d-flex gap-2">
@@ -91,7 +94,7 @@
                   <i class="ti ti-check me-2"></i>Approve Location
                 </button>
                 <button type="button" id="clearLocationBtn" class="btn btn-secondary">
-                  <i class="ti ti-refresh me-2"></i>Search Again
+                  <i class="ti ti-refresh me-2"></i>Change Location
                 </button>
                 <a href="#" id="viewOnMapLink" target="_blank" class="btn btn-outline-primary">
                   <i class="ti ti-map-pin me-2"></i>View on Map
@@ -121,15 +124,35 @@
             <input type="hidden" name="location_coordinates" id="locationCoordinates" value="{{ activity.location_coordinates if activity and activity.location_coordinates else '' }}">
           </div>
 
-          <!-- Start and End Dates -->
-          <div class="row">
+          <!-- Start and End Dates (with spacing) -->
+          <div class="row mt-4">
             <div class="col-md-6 mb-3">
-              <label class="form-label">Start Date</label>
+              <label class="form-label">Activity Start Date</label>
               <input type="date" name="start_date" class="form-control" value="{{ activity.start_date.strftime('%Y-%m-%d') if activity and activity.start_date else '' }}">
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">End Date</label>
+              <label class="form-label">Activity End Date</label>
               <input type="date" name="end_date" class="form-control" value="{{ activity.end_date.strftime('%Y-%m-%d') if activity and activity.end_date else '' }}">
+            </div>
+          </div>
+
+          <!-- Activity Target Revenue -->
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label class="form-label">Activity Target Revenue (Optional)</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number"
+                       class="form-control"
+                       name="goal_revenue"
+                       step="0.01"
+                       min="0"
+                       placeholder="0.00"
+                       value="{{ '%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else '' }}">
+              </div>
+              <small class="form-text text-muted">
+                Set a revenue goal to track progress on your activity dashboard
+              </small>
             </div>
           </div>
 
@@ -249,7 +272,7 @@
                   <i class="ti ti-plus me-2"></i>Income
                 </button>
                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                  <i class="ti ti-minus me-2"></i>Expense
+                  <i class="ti ti-plus me-2"></i>Expense
                 </button>
               </div>
             </div>
@@ -267,8 +290,8 @@
                       <div class="ps-3 mb-2">Other Income</div>
                     </div>
                     <div class="col-4 text-end">
-                      <div class="mb-2 text-success fw-bold">${{ "%.2f"|format(summary.passport_income) }}</div>
-                      <div class="mb-2 text-info fw-bold">${{ "%.2f"|format(summary.other_income) }}</div>
+                      <div class="mb-2 text-muted fw-bold">{{ summary.passport_income|accounting_format }}</div>
+                      <div class="mb-2 text-muted fw-bold">{{ summary.other_income|accounting_format }}</div>
                     </div>
                   </div>
                   <hr class="my-2">
@@ -277,7 +300,7 @@
                       <div class="fw-bold">Total Revenue</div>
                     </div>
                     <div class="col-4 text-end">
-                      <div class="fw-bold text-success">${{ "%.2f"|format(summary.passport_income + summary.other_income) }}</div>
+                      <div class="fw-bold">{{ (summary.passport_income + summary.other_income)|accounting_format }}</div>
                     </div>
                   </div>
                 </div>
@@ -290,7 +313,7 @@
                       <div class="ps-3 mb-2">Total Expenses</div>
                     </div>
                     <div class="col-4 text-end">
-                      <div class="mb-2 text-danger fw-bold">${{ "%.2f"|format(summary.total_expenses) }}</div>
+                      <div class="mb-2 text-muted fw-bold">{{ summary.total_expenses|accounting_format }}</div>
                     </div>
                   </div>
                 </div>
@@ -302,8 +325,8 @@
                     <div class="fw-bold mb-0" style="font-size: 1.1rem;">Net Income</div>
                   </div>
                   <div class="col-4 text-end">
-                    <div class="fw-bold mb-0 {{ 'text-success' if summary.net_income >= 0 else 'text-danger' }}" style="font-size: 1.1rem;">
-                      ${{ "%.2f"|format(summary.net_income) }}
+                    <div class="fw-bold mb-0" style="font-size: 1.1rem;">
+                      {{ summary.net_income|accounting_format }}
                     </div>
                   </div>
                 </div>
@@ -1240,7 +1263,7 @@
             <span class="badge ${typeBadgeClass}">${passportType.type || 'permanent'}</span>
           </td>
           <td>
-            <span class="fw-bold text-primary">$${passportType.price_per_user || '0.00'}</span>
+            <span class="fw-bold text-muted">$${passportType.price_per_user || '0.00'}</span>
           </td>
           <td>
             <span class="text-muted">${passportType.sessions_included || '1'} sessions</span>
@@ -1885,7 +1908,12 @@
         document.getElementById('locationAddressFormatted').value = pendingLocationData.formatted;
         document.getElementById('locationCoordinates').value = pendingLocationData.coordinates;
 
-        alert('✓ Location approved! You can now save the activity.');
+        // Visual feedback: Update UI to show approved state
+        document.getElementById('locationStatusTitle').textContent = 'LOCATION APPROVED!';
+        document.getElementById('locationApprovedMessage').style.display = 'block';
+        document.getElementById('locationVerifiedAlert').className = 'alert alert-success d-flex align-items-center border-success';
+        document.getElementById('locationVerifiedAlert').style.backgroundColor = '#d1f2eb'; // Light green background
+        approveLocationBtn.style.display = 'none'; // Hide approve button (already approved)
       }
     });
 
@@ -1894,6 +1922,13 @@
       locationVerifiedSection.style.display = 'none';
       locationErrorSection.style.display = 'none';
       pendingLocationData = null;
+
+      // Reset UI state
+      document.getElementById('locationStatusTitle').textContent = 'Location Verified!';
+      document.getElementById('locationApprovedMessage').style.display = 'none';
+      document.getElementById('locationVerifiedAlert').className = 'alert alert-success d-flex align-items-center';
+      document.getElementById('locationVerifiedAlert').style.backgroundColor = ''; // Reset to default (white)
+      approveLocationBtn.style.display = 'inline-block'; // Show approve button again
     });
 
     // Verify location via API
@@ -1941,6 +1976,18 @@
     verifiedAddressDisplay.textContent = '{{ activity.location_address_formatted }}';
     viewOnMapLink.href = 'https://maps.google.com/?q={{ activity.location_coordinates }}';
     locationVerifiedSection.style.display = 'block';
+
+    // Apply approved state since location is already saved in database
+    document.getElementById('locationStatusTitle').textContent = 'LOCATION APPROVED!';
+    document.getElementById('locationApprovedMessage').style.display = 'block';
+    document.getElementById('locationVerifiedAlert').className = 'alert alert-success d-flex align-items-center border-success';
+    document.getElementById('locationVerifiedAlert').style.backgroundColor = '#d1f2eb'; // Light green background
+    approveLocationBtn.style.display = 'none'; // Hide approve button (already approved)
+
+    // Also populate hidden form fields
+    document.getElementById('locationAddressRaw').value = '{{ activity.location_address_raw }}';
+    document.getElementById('locationAddressFormatted').value = '{{ activity.location_address_formatted }}';
+    document.getElementById('locationCoordinates').value = '{{ activity.location_coordinates }}';
     {% endif %}
 
   });

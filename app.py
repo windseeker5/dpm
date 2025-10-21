@@ -1414,6 +1414,10 @@ def create_activity():
         location_address_formatted = request.form.get("location_address_formatted", "").strip()
         location_coordinates = request.form.get("location_coordinates", "").strip()
 
+        # 💰 Handle goal revenue (optional)
+        goal_revenue_str = request.form.get("goal_revenue", "").strip()
+        goal_revenue = float(goal_revenue_str) if goal_revenue_str else 0.0
+
         # 🖼️ Handle image selection
         uploaded_file = request.files.get('upload_image')
         selected_image_filename = request.form.get("selected_image_filename", "").strip()
@@ -1450,6 +1454,7 @@ def create_activity():
             location_address_raw=location_address_raw if location_address_raw else None,
             location_address_formatted=location_address_formatted if location_address_formatted else None,
             location_coordinates=location_coordinates if location_coordinates else None,
+            goal_revenue=goal_revenue,
         )
 
         db.session.add(new_activity)
@@ -1561,6 +1566,10 @@ def edit_activity(activity_id):
         activity.location_address_raw = request.form.get("location_address_raw", "").strip() or None
         activity.location_address_formatted = request.form.get("location_address_formatted", "").strip() or None
         activity.location_coordinates = request.form.get("location_coordinates", "").strip() or None
+
+        # 💰 Update goal revenue (optional)
+        goal_revenue_str = request.form.get("goal_revenue", "").strip()
+        activity.goal_revenue = float(goal_revenue_str) if goal_revenue_str else 0.0
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
@@ -5576,6 +5585,18 @@ def days_ago_filter(dt):
 def jinja_utc_to_local_filter(dt):
     from utils import utc_to_local
     return utc_to_local(dt)
+
+@app.template_filter("accounting_format")
+def accounting_format(value):
+    """Format numbers in accounting style with parentheses for negatives"""
+    try:
+        num = float(value)
+        if num < 0:
+            return f"(${abs(num):.2f})"
+        else:
+            return f"${num:.2f}"
+    except (ValueError, TypeError):
+        return "$0.00"
 
 
 
