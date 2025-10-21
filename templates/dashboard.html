@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - Minipass{% endblock %}
+{% block title %}{{ ORG_NAME if ORG_NAME else "Minipass" }}{% endblock %}
 
 {% block content %}
 <div class="page-wrapper">
