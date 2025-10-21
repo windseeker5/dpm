@@ -274,6 +274,11 @@
                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
                   <i class="ti ti-plus me-2"></i>Expense
                 </button>
+                <a href="{{ url_for('financial_report') }}?activity_id={{ activity.id }}"
+                   target="_blank"
+                   class="btn btn-primary">
+                  Edit Financial
+                </a>
               </div>
             </div>
             
@@ -333,140 +338,6 @@
               </div>
             </div>
             {% endif %}
-          </div>
-          
-          <!-- Income Ledger Section -->
-          {% if activity and activity.incomes %}
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h4 class="mb-0">Income Ledger</h4>
-              <span class="badge bg-blue-lt text-blue">{{ activity.incomes|length }} entries</span>
-            </div>
-            
-            <div class="card">
-              <div class="table-responsive">
-                <table class="table table-vcenter card-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Category</th>
-                      <th>Amount</th>
-                      <th>Note</th>
-                      <th>Receipt</th>
-                      <th class="w-1">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="incomeLedgerContainer">
-                    {% for income in activity.incomes %}
-                    <tr data-income-id="{{ income.id }}">
-                      <td>{{ income.date.strftime('%Y-%m-%d') }}</td>
-                      <td>
-                        <span class="badge bg-gray-lt text-gray">{{ income.category }}</span>
-                      </td>
-                      <td>
-                        <span class="fw-bold text-success">${{ "%.2f"|format(income.amount) }}</span>
-                      </td>
-                      <td>{{ income.note or "-" }}</td>
-                      <td>
-                        {% if income.receipt_filename %}
-                          <button type="button" onclick="openReceiptWindow('{{ url_for('static', filename='uploads/receipts/' + income.receipt_filename) }}')" 
-                             title="View Receipt" class="btn btn-sm btn-outline-secondary">
-                            <i class="ti ti-file-search"></i>
-                          </button>
-                        {% else %}
-                          <span class="text-muted">-</span>
-                        {% endif %}
-                      </td>
-                      <td>
-                        <div class="dropdown">
-                          <a href="#" class="btn btn-outline-secondary dropdown-toggle btn-sm" data-bs-toggle="dropdown">
-                            Actions
-                          </a>
-                          <div class="dropdown-menu">
-                            <a class="dropdown-item" href="#" onclick="editIncome({{ income.id }})">
-                              <i class="ti ti-edit me-2"></i> Edit
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-danger" href="#" onclick="confirmDeleteIncome({{ income.id }}, '{{ income.category }}')">
-                              <i class="ti ti-trash me-2"></i> Delete
-                            </a>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-          {% endif %}
-
-          <!-- Expense Ledger Section -->
-          {% if activity and activity.expenses %}
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h4 class="mb-0">Expense Ledger</h4>
-              <span class="badge bg-blue-lt text-blue">{{ activity.expenses|length }} entries</span>
-            </div>
-            
-            <div class="card">
-              <div class="table-responsive">
-                <table class="table table-vcenter card-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Category</th>
-                      <th>Amount</th>
-                      <th>Description</th>
-                      <th>Receipt</th>
-                      <th class="w-1">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="expenseLedgerContainer">
-                    {% for expense in activity.expenses %}
-                    <tr data-expense-id="{{ expense.id }}">
-                      <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
-                      <td>
-                        <span class="badge bg-gray-lt text-gray">{{ expense.category }}</span>
-                      </td>
-                      <td>
-                        <span class="fw-bold text-danger">${{ "%.2f"|format(expense.amount) }}</span>
-                      </td>
-                      <td>{{ expense.description or "-" }}</td>
-                      <td>
-                        {% if expense.receipt_filename %}
-                          <button type="button" onclick="openReceiptWindow('{{ url_for('static', filename='uploads/receipts/' + expense.receipt_filename) }}')" 
-                             title="View Receipt" class="btn btn-sm btn-outline-secondary">
-                            <i class="ti ti-file-search"></i>
-                          </button>
-                        {% else %}
-                          <span class="text-muted">-</span>
-                        {% endif %}
-                      </td>
-                      <td>
-                        <div class="dropdown">
-                          <a href="#" class="btn btn-outline-secondary dropdown-toggle btn-sm" data-bs-toggle="dropdown">
-                            Actions
-                          </a>
-                          <div class="dropdown-menu">
-                            <a class="dropdown-item" href="#" onclick="editExpense({{ expense.id }})">
-                              <i class="ti ti-edit me-2"></i> Edit
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-danger" href="#" onclick="confirmDeleteExpense({{ expense.id }}, '{{ expense.category }}')">
-                              <i class="ti ti-trash me-2"></i> Delete
-                            </a>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </div>
           {% endif %}
 
