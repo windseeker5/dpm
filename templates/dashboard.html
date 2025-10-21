@@ -234,6 +234,7 @@
       </div>
       
       <!-- Mobile Version (DEAD SIMPLE) -->
+      {% if mobile_kpi_data %}
       <div class="mobile-kpi-container d-md-none mb-4">
         <div class="mobile-kpi-scroll">
           <!-- Revenue Card -->
@@ -241,46 +242,46 @@
             <div class="card" style="border-radius: 12px; min-height: 160px;">
               <div class="card-body text-center">
                 <div class="text-muted small text-uppercase mb-3">REVENUE</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">$2,688</div>
+                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(mobile_kpi_data['revenue']['current']) }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>
               </div>
             </div>
           </div>
-          
+
           <!-- Active Passports Card -->
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 160px;">
               <div class="card-body text-center">
                 <div class="text-muted small text-uppercase mb-3">ACTIVE PASSPORTS</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">24</div>
+                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['active_users']['current'] }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>
               </div>
             </div>
           </div>
-          
+
           <!-- Passports Created Card -->
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 160px;">
               <div class="card-body text-center">
                 <div class="text-muted small text-uppercase mb-3">PASSPORTS CREATED</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">24</div>
+                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['passports_created']['current'] }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>
               </div>
             </div>
           </div>
-          
+
           <!-- Unpaid Passports Card -->
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 160px;">
               <div class="card-body text-center">
                 <div class="text-muted small text-uppercase mb-3">UNPAID PASSPORTS</div>
-                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">8</div>
+                <div class="h1 mb-3" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">{{ mobile_kpi_data['unpaid_passports']['current'] }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>
@@ -288,7 +289,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Dots Navigation -->
         <div class="mobile-kpi-dots">
           <div class="mobile-dot active" data-index="0"></div>
@@ -297,6 +298,7 @@
           <div class="mobile-dot" data-index="3"></div>
         </div>
       </div>
+      {% endif %}
       
       <!-- Activities Section -->
       <div class="activities-section mb-5 pt-3">
