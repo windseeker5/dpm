@@ -687,11 +687,9 @@ def dashboard():
     
     # Use new simplified KPI data function
     kpi_data = get_kpi_data()
-    
-    # Get all-time data for mobile users
-    mobile_kpi_data = None
-    if is_mobile:
-        mobile_kpi_data = get_kpi_data(activity_id=None, period='all')
+
+    # Always generate all-time data for mobile view (CSS d-md-none handles visibility)
+    mobile_kpi_data = get_kpi_data(activity_id=None, period='all')
     activities = db.session.query(Activity).filter_by(status='active').all()
     activity_cards = []
 
