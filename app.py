@@ -4224,9 +4224,24 @@ def activity_income(activity_id, income_id=None):
             )
             db.session.add(income)
 
+        # Handle receipt deletion if requested
+        remove_receipt = request.form.get("remove_receipt") == "true"
+        if remove_receipt and income and income.receipt_filename:
+            # Delete old receipt file from disk
+            old_receipt_path = os.path.join(app.static_folder, "uploads/receipts", income.receipt_filename)
+            if os.path.exists(old_receipt_path):
+                os.remove(old_receipt_path)
+            income.receipt_filename = None
+
         # Handle file upload
         receipt_file = request.files.get("receipt")
         if receipt_file and receipt_file.filename:
+            # Delete old receipt if exists and new one is being uploaded
+            if income and income.receipt_filename:
+                old_receipt_path = os.path.join(app.static_folder, "uploads/receipts", income.receipt_filename)
+                if os.path.exists(old_receipt_path):
+                    os.remove(old_receipt_path)
+
             ext = os.path.splitext(receipt_file.filename)[1]
             filename = f"income_{uuid.uuid4().hex}{ext}"
             receipts_dir = os.path.join(app.static_folder, "uploads/receipts")
@@ -4236,7 +4251,7 @@ def activity_income(activity_id, income_id=None):
             income.receipt_filename = filename
 
         db.session.commit()
-        flash("Income saved.", "success")
+        flash("✅ Income saved successfully!", "success")
 
         # Handle AJAX requests (from financial report drawer)
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -4317,9 +4332,24 @@ def activity_expenses(activity_id, expense_id=None):
             )
             db.session.add(expense)
 
+        # Handle receipt deletion if requested
+        remove_receipt = request.form.get("remove_receipt") == "true"
+        if remove_receipt and expense and expense.receipt_filename:
+            # Delete old receipt file from disk
+            old_receipt_path = os.path.join(app.static_folder, "uploads/receipts", expense.receipt_filename)
+            if os.path.exists(old_receipt_path):
+                os.remove(old_receipt_path)
+            expense.receipt_filename = None
+
         # Upload receipt
         receipt_file = request.files.get("receipt")
         if receipt_file and receipt_file.filename:
+            # Delete old receipt if exists and new one is being uploaded
+            if expense and expense.receipt_filename:
+                old_receipt_path = os.path.join(app.static_folder, "uploads/receipts", expense.receipt_filename)
+                if os.path.exists(old_receipt_path):
+                    os.remove(old_receipt_path)
+
             ext = os.path.splitext(receipt_file.filename)[1]
             filename = f"expense_{uuid.uuid4().hex}{ext}"
             receipts_dir = os.path.join(app.static_folder, "uploads/receipts")
@@ -4329,7 +4359,7 @@ def activity_expenses(activity_id, expense_id=None):
             expense.receipt_filename = filename
 
         db.session.commit()
-        flash("Expense saved.", "success")
+        flash("✅ Expense saved successfully!", "success")
 
         # Handle AJAX requests (from financial report drawer)
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
