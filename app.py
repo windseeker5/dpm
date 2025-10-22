@@ -3742,47 +3742,16 @@ def financial_report():
         return redirect(url_for("login"))
 
     from utils import get_financial_data
-    from datetime import datetime, timedelta, timezone
 
-    # Get filter parameters
-    period = request.args.get("period", "all")  # all, month, quarter, year, custom
-    activity_id = request.args.get("activity_id", type=int)
-    start_date_str = request.args.get("start_date")
-    end_date_str = request.args.get("end_date")
+    # Get financial data (all time, all activities)
+    financial_data = get_financial_data(start_date=None, end_date=None, activity_id=None)
 
-    # Calculate date range based on period
-    now = datetime.now(timezone.utc)
-    start_date = None
-    end_date = now
-
-    if period == "month":
-        start_date = now - timedelta(days=30)
-    elif period == "quarter":
-        start_date = now - timedelta(days=90)
-    elif period == "year":
-        start_date = now - timedelta(days=365)
-    elif period == "custom" and start_date_str and end_date_str:
-        try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-        except ValueError:
-            flash("Invalid date format", "error")
-            start_date = None
-            end_date = now
-
-    # Get financial data
-    financial_data = get_financial_data(start_date, end_date, activity_id)
-
-    # Get all activities for filter dropdown
+    # Get all activities for the drawer form
     activities = Activity.query.order_by(Activity.name).all()
 
     return render_template("financial_report.html",
                          financial_data=financial_data,
-                         activities=activities,
-                         current_period=period,
-                         current_activity_id=activity_id,
-                         start_date=start_date_str,
-                         end_date=end_date_str)
+                         activities=activities)
 
 
 @app.route("/reports/financial/export")
@@ -3792,37 +3761,12 @@ def financial_report_export():
         return redirect(url_for("login"))
 
     from utils import get_financial_data, export_financial_csv
-    from datetime import datetime, timedelta, timezone
     from flask import Response
 
-    # Get filter parameters (same as main report)
-    period = request.args.get("period", "all")
-    activity_id = request.args.get("activity_id", type=int)
-    start_date_str = request.args.get("start_date")
-    end_date_str = request.args.get("end_date")
-    export_format = request.args.get("format", "csv")  # csv, iif, xlsx
+    export_format = request.args.get("format", "csv")
 
-    # Calculate date range
-    now = datetime.now(timezone.utc)
-    start_date = None
-    end_date = now
-
-    if period == "month":
-        start_date = now - timedelta(days=30)
-    elif period == "quarter":
-        start_date = now - timedelta(days=90)
-    elif period == "year":
-        start_date = now - timedelta(days=365)
-    elif period == "custom" and start_date_str and end_date_str:
-        try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-        except ValueError:
-            flash("Invalid date format", "error")
-            return redirect(url_for("financial_report"))
-
-    # Get financial data
-    financial_data = get_financial_data(start_date, end_date, activity_id)
+    # Get financial data (all time, all activities)
+    financial_data = get_financial_data(start_date=None, end_date=None, activity_id=None)
 
     # Generate filename
     period_label = financial_data['summary']['period_label'].replace(' ', '_').replace(',', '')
@@ -4293,11 +4237,28 @@ def activity_income(activity_id, income_id=None):
 
         db.session.commit()
         flash("Income saved.", "success")
-        
-        # Check if we should return to activity form
-        return_to = request.args.get('return_to')
+
+        # Handle AJAX requests (from financial report drawer)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': True,
+                'message': 'Income saved successfully',
+                'transaction': {
+                    'id': income.id,
+                    'date': income.date.strftime('%Y-%m-%d'),
+                    'category': income.category,
+                    'amount': float(income.amount),
+                    'description': income.note or income.category,
+                    'receipt_filename': income.receipt_filename
+                }
+            })
+
+        # Check if we should return to activity form or financial report
+        return_to = request.form.get('return_to') or request.args.get('return_to')
         if return_to == 'activity_form':
             return redirect(url_for("activity_form", activity_id=activity.id))
+        elif return_to == 'financial_report':
+            return redirect(url_for("financial_report"))
         else:
             return redirect(url_for("activity_income", activity_id=activity.id))
 
@@ -4369,11 +4330,28 @@ def activity_expenses(activity_id, expense_id=None):
 
         db.session.commit()
         flash("Expense saved.", "success")
-        
-        # Check if we should return to activity form
+
+        # Handle AJAX requests (from financial report drawer)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': True,
+                'message': 'Expense saved successfully',
+                'transaction': {
+                    'id': expense.id,
+                    'date': expense.date.strftime('%Y-%m-%d'),
+                    'category': expense.category,
+                    'amount': float(expense.amount),
+                    'description': expense.description or expense.category,
+                    'receipt_filename': expense.receipt_filename
+                }
+            })
+
+        # Check if we should return to activity form or financial report
         return_to = request.form.get('return_to') or request.args.get('return_to')
         if return_to == 'activity_form':
             return redirect(url_for("activity_form", activity_id=activity.id))
+        elif return_to == 'financial_report':
+            return redirect(url_for("financial_report"))
         else:
             return redirect(url_for("activity_expenses", activity_id=activity.id))
 
@@ -4415,11 +4393,20 @@ def delete_income(income_id):
     db.session.delete(income)
     db.session.commit()
     flash("Income deleted.", "success")
-    
-    # Check if we should return to activity form
-    return_to = request.args.get('return_to')
+
+    # Handle AJAX requests (from financial report)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': 'Income deleted successfully'
+        })
+
+    # Check if we should return to activity form or financial report
+    return_to = request.form.get('return_to') or request.args.get('return_to')
     if return_to == 'activity_form':
         return redirect(url_for("activity_form", activity_id=activity_id))
+    elif return_to == 'financial_report':
+        return redirect(url_for("financial_report"))
     else:
         return redirect(url_for("activity_income", activity_id=activity_id))
 
@@ -4431,11 +4418,20 @@ def delete_expense(expense_id):
     db.session.delete(expense)
     db.session.commit()
     flash("Expense deleted.", "success")
-    
-    # Check if we should return to activity form
-    return_to = request.args.get('return_to')
+
+    # Handle AJAX requests (from financial report)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': 'Expense deleted successfully'
+        })
+
+    # Check if we should return to activity form or financial report
+    return_to = request.form.get('return_to') or request.args.get('return_to')
     if return_to == 'activity_form':
         return redirect(url_for("activity_form", activity_id=activity_id))
+    elif return_to == 'financial_report':
+        return redirect(url_for("financial_report"))
     else:
         return redirect(url_for("activity_expenses", activity_id=activity_id))
 

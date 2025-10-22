@@ -3395,6 +3395,7 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
         for passport in passports:
             user = db.session.get(User, passport.user_id) if passport.user_id else None
             transaction = {
+                'id': None,  # Passport sales don't have income ID
                 'date': passport.created_dt.strftime('%Y-%m-%d'),
                 'datetime': passport.created_dt,
                 'type': 'Income',
@@ -3403,7 +3404,9 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
                 'amount': float(passport.sold_amt or 0),
                 'receipt_filename': None,
                 'activity_id': activity.id,
-                'activity_name': activity.name
+                'activity_name': activity.name,
+                'editable': False,  # Passport sales are system-generated, not editable
+                'source_type': 'passport'
             }
             activity_revenue += transaction['amount']
             activity_transactions.append(transaction)
@@ -3413,6 +3416,7 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
         incomes = income_query.filter(Income.activity_id == activity.id).all()
         for income in incomes:
             transaction = {
+                'id': income.id,  # Income record ID for editing/deleting
                 'date': income.date.strftime('%Y-%m-%d'),
                 'datetime': income.date,
                 'type': 'Income',
@@ -3421,7 +3425,9 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
                 'amount': float(income.amount),
                 'receipt_filename': income.receipt_filename,
                 'activity_id': activity.id,
-                'activity_name': activity.name
+                'activity_name': activity.name,
+                'editable': True,  # User-created income entries are editable
+                'source_type': 'income'
             }
             activity_revenue += transaction['amount']
             activity_transactions.append(transaction)
@@ -3431,6 +3437,7 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
         expenses = expense_query.filter(Expense.activity_id == activity.id).all()
         for expense in expenses:
             transaction = {
+                'id': expense.id,  # Expense record ID for editing/deleting
                 'date': expense.date.strftime('%Y-%m-%d'),
                 'datetime': expense.date,
                 'type': 'Expense',
@@ -3439,7 +3446,9 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
                 'amount': float(expense.amount),
                 'receipt_filename': expense.receipt_filename,
                 'activity_id': activity.id,
-                'activity_name': activity.name
+                'activity_name': activity.name,
+                'editable': True,  # User-created expense entries are editable
+                'source_type': 'expense'
             }
             activity_expenses += transaction['amount']
             activity_transactions.append(transaction)
