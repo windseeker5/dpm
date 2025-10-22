@@ -296,11 +296,12 @@
                                       <i class="ti ti-file me-2"></i>View Receipt
                                     </a>
                                     {% endif %}
-                                    <a class="dropdown-item" href="#" onclick="openDrawer('{{ transaction.source_type }}', {{ transaction.id }}); return false;">
+                                    <a class="dropdown-item" href="#"
+                                       onclick="openDrawerWithData('{{ transaction.source_type }}', {{ transaction.id }}, '{{ transaction.date }}', {{ transaction.activity_id }}, '{{ transaction.category }}', {{ transaction.amount }}, '{{ transaction.description }}', '{{ transaction.receipt_filename or '' }}'); return false;">
                                       <i class="ti ti-edit me-2"></i>Edit Entry
                                     </a>
                                     <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete('{{ transaction.source_type }}', {{ transaction.id }}, '{{ transaction.description }}'); return false;">
+                                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete('{{ transaction.source_type }}', {{ transaction.id }}, '{{ transaction.description|replace("'", "\\'") }}'); return false;">
                                       <i class="ti ti-trash me-2"></i>Delete Entry
                                     </a>
                                   </div>
@@ -398,12 +399,20 @@
 <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
 <div id="transactionDrawer" class="transaction-drawer">
   <div class="drawer-header">
-    <h3 id="drawerTitle">Add Income</h3>
+    <h3 id="drawerTitle">
+      <span id="drawerTypeBadge" class="badge bg-primary-lt">Income</span> <span id="drawerAction">Add</span>
+    </h3>
     <button type="button" class="btn-close" onclick="closeDrawer()"></button>
   </div>
   <form id="transactionForm" class="drawer-body" enctype="multipart/form-data">
     <input type="hidden" id="transactionId" name="transaction_id">
     <input type="hidden" id="transactionType" name="transaction_type">
+    <input type="hidden" id="removeReceiptFlag" name="remove_receipt" value="false">
+
+    <!-- Transaction Type Badge -->
+    <div class="mb-3">
+      <span id="drawerFormTypeBadge" class="badge bg-primary-lt">Income</span>
+    </div>
 
     <!-- Date Field -->
     <div class="mb-3">
@@ -442,7 +451,7 @@
     <!-- Description/Note Field -->
     <div class="mb-3">
       <label class="form-label" id="descriptionLabel">Description</label>
-      <textarea class="form-control" id="txDescription" name="description" rows="3" placeholder="Enter details..."></textarea>
+      <textarea class="form-control" id="txDescription" name="note" rows="3" placeholder="Enter details..."></textarea>
     </div>
 
     <!-- Receipt Upload -->
@@ -486,7 +495,7 @@ function viewReceipt(filename) {
 
   // Determine file type and display accordingly
   const ext = filename.split('.').pop().toLowerCase();
-  const receiptUrl = `/uploads/${filename}`;
+  const receiptUrl = `/static/uploads/receipts/${filename}`;
 
   if (ext === 'pdf') {
     // Display PDF in iframe
@@ -513,8 +522,13 @@ function viewReceipt(filename) {
 const incomeCategories = ["Ticket Sales", "Sponsorship", "Donations", "Vendor Fees", "Service Income", "Merchandise Sales", "Other"];
 const expenseCategories = ["Cost of Goods Sold", "Staff", "Venue", "Equipment Rental", "Insurance", "Marketing", "Travel", "Supplies", "Other"];
 
-// Open drawer (for adding new or editing existing transaction)
+// Open drawer for adding new transaction (without data)
 function openDrawer(type, transactionId) {
+  openDrawerWithData(type, transactionId, null, null, null, null, null, null);
+}
+
+// Open drawer with transaction data (for editing)
+function openDrawerWithData(type, transactionId, date, activityId, category, amount, description, receiptFilename) {
   const drawer = document.getElementById('transactionDrawer');
   const backdrop = document.getElementById('drawerBackdrop');
   const form = document.getElementById('transactionForm');
@@ -525,30 +539,57 @@ function openDrawer(type, transactionId) {
   // Reset form
   form.reset();
   document.getElementById('existingReceipt').style.display = 'none';
+  document.getElementById('removeReceiptFlag').value = 'false';
 
   // Set transaction type
   document.getElementById('transactionType').value = type;
   document.getElementById('transactionId').value = transactionId || '';
 
   // Update title and categories based on type
+  const typeBadge = document.getElementById('drawerTypeBadge');
+  const actionText = document.getElementById('drawerAction');
+  const formTypeBadge = document.getElementById('drawerFormTypeBadge');
+
+  const descriptionField = document.getElementById('txDescription');
+
   if (type === 'income') {
-    title.textContent = transactionId ? 'Edit Income' : 'Add Income';
-    title.style.color = '#2fb344';
+    typeBadge.textContent = 'Income';
+    typeBadge.className = 'badge bg-primary-lt';
+    actionText.textContent = transactionId ? 'Edit' : 'Add';
+    formTypeBadge.textContent = 'Income';
+    formTypeBadge.className = 'badge bg-primary-lt';
     populateCategories(incomeCategories);
     descriptionLabel.textContent = 'Note';
+    descriptionField.setAttribute('name', 'note');
   } else if (type === 'expense') {
-    title.textContent = transactionId ? 'Edit Expense' : 'Add Expense';
-    title.style.color = '#d63939';
+    typeBadge.textContent = 'Expense';
+    typeBadge.className = 'badge bg-orange-lt';
+    actionText.textContent = transactionId ? 'Edit' : 'Add';
+    formTypeBadge.textContent = 'Expense';
+    formTypeBadge.className = 'badge bg-orange-lt';
     populateCategories(expenseCategories);
     descriptionLabel.textContent = 'Description';
+    descriptionField.setAttribute('name', 'description');
   }
 
-  // If editing, fetch transaction data
-  if (transactionId) {
-    fetchTransactionData(type, transactionId);
+  // If editing, populate form with data
+  if (transactionId && date) {
+    document.getElementById('txDate').value = date;
+    document.getElementById('txActivity').value = activityId;
+    document.getElementById('txCategory').value = category;
+    document.getElementById('txAmount').value = amount;
+    document.getElementById('txDescription').value = description;
+
+    // Handle existing receipt
+    if (receiptFilename && receiptFilename !== '') {
+      document.getElementById('existingReceiptName').textContent = receiptFilename;
+      document.getElementById('existingReceipt').style.display = 'block';
+      document.getElementById('existingReceipt').dataset.filename = receiptFilename;
+    }
   } else {
     // Set today's date for new transactions
-    document.getElementById('txDate').valueAsDate = new Date();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('txDate').value = today;
   }
 
   // Show drawer
@@ -576,48 +617,10 @@ function populateCategories(categories) {
   });
 }
 
-// Fetch transaction data for editing
-async function fetchTransactionData(type, id) {
-  // For now, we'll get the data from the page
-  // In a production app, you might fetch from an API endpoint
-  const rows = document.querySelectorAll('tr');
-  let found = false;
-
-  rows.forEach(row => {
-    const editBtn = row.querySelector(`button[onclick*="openDrawer('${type}', ${id})"]`);
-    if (editBtn) {
-      const cells = row.querySelectorAll('td');
-      document.getElementById('txDate').value = cells[0].textContent.trim();
-      document.getElementById('txCategory').value = cells[2].textContent.trim();
-      document.getElementById('txDescription').value = cells[3].textContent.trim();
-      const amount = cells[4].textContent.trim().replace('$', '').replace(',', '');
-      document.getElementById('txAmount').value = amount;
-
-      // Get activity from parent collapse section
-      const collapseParent = row.closest('.collapse');
-      if (collapseParent) {
-        const activityId = collapseParent.id.replace('activity', '');
-        document.getElementById('txActivity').value = activityId;
-      }
-
-      // Check for existing receipt
-      const receiptBtn = cells[5].querySelector('button');
-      if (receiptBtn) {
-        const receiptFilename = receiptBtn.getAttribute('onclick').match(/'([^']+)'/)[1];
-        document.getElementById('existingReceiptName').textContent = receiptFilename;
-        document.getElementById('existingReceipt').style.display = 'block';
-        document.getElementById('existingReceipt').dataset.filename = receiptFilename;
-      }
-
-      found = true;
-    }
-  });
-}
-
 // Remove existing receipt
 function removeExistingReceipt() {
   document.getElementById('existingReceipt').style.display = 'none';
-  document.getElementById('existingReceipt').dataset.removeReceipt = 'true';
+  document.getElementById('removeReceiptFlag').value = 'true';
 }
 
 // Handle form submission
@@ -641,6 +644,7 @@ document.getElementById('transactionForm').addEventListener('submit', async func
   // Prepare form data
   const formData = new FormData(this);
   formData.set('activity_id', activityId);
+  formData.append('return_to', 'financial_report');
 
   // Determine URL
   let url;
@@ -655,35 +659,42 @@ document.getElementById('transactionForm').addEventListener('submit', async func
   }
 
   try {
+    // Get CSRF token and add to formData
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+      formData.append('csrf_token', csrfToken);
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData
+      body: formData,
+      redirect: 'manual'  // Don't follow redirects automatically
     });
 
-    const data = await response.json();
-
-    if (data.success) {
-      // Show success message
-      showToast(data.message, 'success');
-
-      // Close drawer
-      closeDrawer();
-
-      // Reload page to show updated data
-      // In production, you might update the table dynamically
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+    // Check if redirect (success case with Flask flash message)
+    if (response.type === 'opaqueredirect' || response.status === 0) {
+      // Manual redirect preserves flash messages in session
+      window.location.href = url.includes('edit')
+        ? '/reports/financial'  // After edit, go to financial report
+        : '/reports/financial'; // After create, go to financial report
+    } else if (response.ok) {
+      // Success without redirect
+      window.location.href = '/reports/financial';
     } else {
-      showToast(data.message || 'Failed to save transaction', 'error');
+      // Handle error
+      const text = await response.text();
+      alert('Error: ' + (text || 'Failed to save transaction'));
+
+      // Reset button state
+      saveBtn.disabled = false;
+      saveSpinner.style.display = 'none';
+      saveIcon.style.display = 'inline';
+      saveBtnText.textContent = 'Save';
     }
   } catch (error) {
     console.error('Error:', error);
-    showToast('Network error. Please try again.', 'error');
-  } finally {
+    alert('Network error. Please try again.');
+
     // Reset button state
     saveBtn.disabled = false;
     saveSpinner.style.display = 'none';
@@ -719,60 +730,37 @@ async function executeDelete() {
     : `/admin/delete-expense/${id}`;
 
   try {
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrfToken
       }
     });
 
     const data = await response.json();
 
     if (data.success) {
-      showToast(data.message, 'success');
-
       // Close modal
       bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
 
-      // Reload page
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Reload page to show Flask flash message
+      window.location.reload();
     } else {
-      showToast(data.message || 'Failed to delete transaction', 'error');
+      alert(data.message || 'Failed to delete transaction');
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="ti ti-trash me-2"></i>Delete';
     }
   } catch (error) {
     console.error('Error:', error);
-    showToast('Network error. Please try again.', 'error');
-  } finally {
+    alert('Network error. Please try again.');
     confirmBtn.disabled = false;
     confirmBtn.innerHTML = '<i class="ti ti-trash me-2"></i>Delete';
   }
-}
-
-// Toast notification helper
-function showToast(message, type = 'info') {
-  // Create toast element
-  const toast = document.createElement('div');
-  toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible`;
-  toast.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
-  toast.innerHTML = `
-    <div class="d-flex">
-      <div>
-        <i class="ti ti-${type === 'success' ? 'check' : 'alert-circle'} me-2"></i>
-        ${message}
-      </div>
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-  `;
-
-  document.body.appendChild(toast);
-
-  // Auto-remove after 5 seconds
-  setTimeout(() => {
-    toast.remove();
-  }, 5000);
 }
 </script>
 
