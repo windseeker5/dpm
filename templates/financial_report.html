@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Financial{% endblock %}
 
+{# Macro for formatting currency with negative values in parentheses #}
+{% macro format_currency(amount) %}
+  {% if amount < 0 %}
+    (${{ "%.2f"|format(amount|abs) }})
+  {% else %}
+    ${{ "%.2f"|format(amount) }}
+  {% endif %}
+{% endmacro %}
+
 {% block content %}
 
 <div class="page-wrapper">
@@ -13,10 +22,18 @@
           <p class="text-muted">View comprehensive income and expense data for accounting</p>
         </div>
         <div class="col-auto d-none d-md-block">
-          <!-- Export Button (Hidden on Mobile) -->
-          <a href="{{ url_for('financial_report_export', period=current_period, activity_id=current_activity_id, start_date=start_date, end_date=end_date, format='csv') }}" class="btn btn-primary">
-            <i class="ti ti-download me-2"></i>Export CSV
-          </a>
+          <!-- Action Buttons (Hidden on Mobile) -->
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success" onclick="openDrawer('income', null)">
+              <i class="ti ti-plus me-2"></i>Income
+            </button>
+            <button type="button" class="btn btn-danger" onclick="openDrawer('expense', null)">
+              <i class="ti ti-plus me-2"></i>Expense
+            </button>
+            <a href="{{ url_for('financial_report_export', format='csv') }}" class="btn btn-primary">
+              <i class="ti ti-download me-2"></i>Export CSV
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -26,58 +43,6 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-      <!-- Filters -->
-      <form method="GET" action="{{ url_for('financial_report') }}" class="mb-4">
-        <div class="card">
-          <div class="card-body">
-            <div class="row g-3">
-              <!-- Period Selector -->
-              <div class="col-md-3">
-                <label class="form-label">Period</label>
-                <select name="period" class="form-select" onchange="this.form.submit()">
-                  <option value="all" {% if current_period == 'all' %}selected{% endif %}>All Time</option>
-                  <option value="month" {% if current_period == 'month' %}selected{% endif %}>Last 30 Days</option>
-                  <option value="quarter" {% if current_period == 'quarter' %}selected{% endif %}>Last 90 Days</option>
-                  <option value="year" {% if current_period == 'year' %}selected{% endif %}>Last Year</option>
-                  <option value="custom" {% if current_period == 'custom' %}selected{% endif %}>Custom Range</option>
-                </select>
-              </div>
-
-              <!-- Custom Date Range (show only if custom period selected) -->
-              <div class="col-md-3" id="customStartDate" style="display: {% if current_period == 'custom' %}block{% else %}none{% endif %};">
-                <label class="form-label">Start Date</label>
-                <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}">
-              </div>
-              <div class="col-md-3" id="customEndDate" style="display: {% if current_period == 'custom' %}block{% else %}none{% endif %};">
-                <label class="form-label">End Date</label>
-                <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}">
-              </div>
-
-              <!-- Activity Filter -->
-              <div class="col-md-3">
-                <label class="form-label">Activity</label>
-                <select name="activity_id" class="form-select" onchange="this.form.submit()">
-                  <option value="">All Activities</option>
-                  {% for activity in activities %}
-                  <option value="{{ activity.id }}" {% if current_activity_id == activity.id %}selected{% endif %}>
-                    {{ activity.name }}
-                  </option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <!-- Apply Button (for custom dates) -->
-              {% if current_period == 'custom' %}
-              <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">
-                  <i class="ti ti-filter me-2"></i>Apply Filter
-                </button>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </form>
 
       <!-- Mobile View (Visible on Mobile Only) -->
       <div class="d-md-none">
@@ -93,7 +58,7 @@
                   </span>
                   <div>
                     <div class="text-muted small">Total Revenue</div>
-                    <div class="h3 mb-0 text-primary">${{ "%.2f"|format(financial_data.summary.total_revenue) }}</div>
+                    <div class="h3 mb-0 text-muted">{{ format_currency(financial_data.summary.total_revenue) }}</div>
                   </div>
                 </div>
               </div>
@@ -110,7 +75,7 @@
                   </span>
                   <div>
                     <div class="text-muted small">Total Expenses</div>
-                    <div class="h3 mb-0 text-orange">${{ "%.2f"|format(financial_data.summary.total_expenses) }}</div>
+                    <div class="h3 mb-0 text-muted">{{ format_currency(financial_data.summary.total_expenses) }}</div>
                   </div>
                 </div>
               </div>
@@ -127,9 +92,7 @@
                   </span>
                   <div>
                     <div class="text-muted small">Net Income</div>
-                    <div class="h3 mb-0 {% if financial_data.summary.net_income >= 0 %}text-success{% else %}text-warning{% endif %}">
-                      ${{ "%.2f"|format(financial_data.summary.net_income) }}
-                    </div>
+                    <div class="h3 mb-0">{{ format_currency(financial_data.summary.net_income) }}</div>
                   </div>
                 </div>
               </div>
@@ -168,28 +131,26 @@
                       </div>
                     {% endif %}
                   </td>
-                  <td class="text-end text-primary p-2" style="font-size: 0.85rem;">
+                  <td class="text-end text-muted p-2" style="font-size: 0.85rem;">
                     {% if activity.total_revenue >= 1000 %}
                       ${{ "%.1f"|format(activity.total_revenue / 1000) }}K
                     {% else %}
                       ${{ "%.0f"|format(activity.total_revenue) }}
                     {% endif %}
                   </td>
-                  <td class="text-end text-orange p-2" style="font-size: 0.85rem;">
+                  <td class="text-end text-muted p-2" style="font-size: 0.85rem;">
                     {% if activity.total_expenses >= 1000 %}
                       ${{ "%.1f"|format(activity.total_expenses / 1000) }}K
                     {% else %}
                       ${{ "%.0f"|format(activity.total_expenses) }}
                     {% endif %}
                   </td>
-                  <td class="text-end p-2" style="font-size: 0.85rem;">
-                    <strong {% if activity.net_income < 0 %}class="text-warning"{% else %}class="text-success"{% endif %}>
-                      {% if activity.net_income >= 1000 or activity.net_income <= -1000 %}
-                        ${{ "%.1f"|format(activity.net_income / 1000) }}K
-                      {% else %}
-                        ${{ "%.0f"|format(activity.net_income) }}
-                      {% endif %}
-                    </strong>
+                  <td class="text-end text-muted p-2" style="font-size: 0.85rem;">
+                    {% if activity.net_income >= 1000 or activity.net_income <= -1000 %}
+                      ${{ "%.1f"|format(activity.net_income / 1000) }}K
+                    {% else %}
+                      ${{ "%.0f"|format(activity.net_income) }}
+                    {% endif %}
                   </td>
                 </tr>
                 {% endfor %}
@@ -219,16 +180,9 @@
           <!-- Total Revenue -->
           <div class="col-md-4">
             <div class="card">
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <span class="financial-icon financial-icon-blue me-3">
-                    <i class="ti ti-chart-line"></i>
-                  </span>
-                  <div>
-                    <div class="text-muted small">Total Revenue</div>
-                    <div class="h2 mb-0 text-primary">${{ "%.2f"|format(financial_data.summary.total_revenue) }}</div>
-                  </div>
-                </div>
+              <div class="card-body text-center py-4">
+                <div class="text-muted small text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Total Revenue</div>
+                <div class="h2 mb-0 text-muted">{{ format_currency(financial_data.summary.total_revenue) }}</div>
               </div>
             </div>
           </div>
@@ -236,16 +190,9 @@
           <!-- Total Expenses -->
           <div class="col-md-4">
             <div class="card">
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <span class="financial-icon financial-icon-orange me-3">
-                    <i class="ti ti-receipt"></i>
-                  </span>
-                  <div>
-                    <div class="text-muted small">Total Expenses</div>
-                    <div class="h2 mb-0 text-orange">${{ "%.2f"|format(financial_data.summary.total_expenses) }}</div>
-                  </div>
-                </div>
+              <div class="card-body text-center py-4">
+                <div class="text-muted small text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Total Expenses</div>
+                <div class="h2 mb-0 text-muted">{{ format_currency(financial_data.summary.total_expenses) }}</div>
               </div>
             </div>
           </div>
@@ -253,28 +200,12 @@
           <!-- Net Income -->
           <div class="col-md-4">
             <div class="card">
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <span class="financial-icon {% if financial_data.summary.net_income >= 0 %}financial-icon-success{% else %}financial-icon-warning{% endif %} me-3">
-                    <i class="ti ti-coin"></i>
-                  </span>
-                  <div>
-                    <div class="text-muted small">Net Income</div>
-                    <div class="h2 mb-0 {% if financial_data.summary.net_income >= 0 %}text-success{% else %}text-warning{% endif %}">
-                      ${{ "%.2f"|format(financial_data.summary.net_income) }}
-                    </div>
-                  </div>
-                </div>
+              <div class="card-body text-center py-4">
+                <div class="text-muted small text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Net Income</div>
+                <div class="h2 mb-0 text-muted">{{ format_currency(financial_data.summary.net_income) }}</div>
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- Period Label -->
-        <div class="mb-3">
-          <span class="badge bg-blue-lt text-blue">
-            <i class="ti ti-calendar me-1"></i>{{ financial_data.summary.period_label }}
-          </span>
         </div>
 
         <!-- Activity Breakdown Table -->
@@ -298,39 +229,32 @@
               {% for activity in financial_data.by_activity %}
               <tr>
                 <td>
-                  <div class="d-flex align-items-center">
-                    <i class="ti ti-activity text-muted me-2"></i>
-                    <strong>{{ activity.activity_name }}</strong>
-                  </div>
+                  <strong>{{ activity.activity_name }}</strong>
                 </td>
-                <td class="text-end text-primary">
-                  ${{ "%.2f"|format(activity.total_revenue) }}
+                <td class="text-end text-muted">
+                  {{ format_currency(activity.total_revenue) }}
                 </td>
-                <td class="text-end text-orange">
-                  ${{ "%.2f"|format(activity.total_expenses) }}
+                <td class="text-end text-muted">
+                  {{ format_currency(activity.total_expenses) }}
                 </td>
-                <td class="text-end">
-                  <strong {% if activity.net_income < 0 %}class="text-warning"{% else %}class="text-success"{% endif %}>
-                    ${{ "%.2f"|format(activity.net_income) }}
-                  </strong>
+                <td class="text-end text-muted">
+                  {{ format_currency(activity.net_income) }}
                 </td>
                 <td class="text-center">
-                  <button class="btn btn-sm btn-ghost-primary"
-                          type="button"
-                          data-bs-toggle="collapse"
-                          data-bs-target="#activity{{ activity.activity_id }}"
-                          aria-expanded="false">
-                    <i class="ti ti-chevron-down me-1"></i>View Details
-                  </button>
+                  <a class="text-muted"
+                     href="#"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#activity{{ activity.activity_id }}"
+                     aria-expanded="false"
+                     style="text-decoration: none; cursor: pointer;">
+                    <i class="ti ti-chevron-down me-1"></i>Details
+                  </a>
                 </td>
               </tr>
               <!-- Collapsible Transaction Details -->
               <tr class="collapse" id="activity{{ activity.activity_id }}">
                 <td colspan="5" class="p-0">
                   <div class="card m-3 bg-light">
-                    <div class="card-header">
-                      <h4 class="card-title">{{ activity.activity_name }} - Detailed Transactions</h4>
-                    </div>
                     <div class="table-responsive">
                       <table class="table table-sm mb-0">
                         <thead>
@@ -340,7 +264,7 @@
                             <th>Category</th>
                             <th>Description</th>
                             <th class="text-end">Amount</th>
-                            <th class="text-center">Receipt</th>
+                            <th class="text-center">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -349,42 +273,47 @@
                             <td>{{ transaction.date }}</td>
                             <td>
                               {% if transaction.type == 'Income' %}
-                                <span class="badge bg-primary-lt">
-                                  <i class="ti ti-arrow-up me-1"></i>Income
-                                </span>
+                                <span class="badge bg-primary-lt">Income</span>
                               {% else %}
-                                <span class="badge bg-orange-lt">
-                                  <i class="ti ti-arrow-down me-1"></i>Expense
-                                </span>
+                                <span class="badge bg-orange-lt">Expense</span>
                               {% endif %}
                             </td>
                             <td>{{ transaction.category }}</td>
                             <td>{{ transaction.description }}</td>
-                            <td class="text-end {% if transaction.type == 'Income' %}text-primary{% else %}text-orange{% endif %}">
-                              ${{ "%.2f"|format(transaction.amount) }}
+                            <td class="text-end text-muted">
+                              {{ format_currency(transaction.amount) }}
                             </td>
                             <td class="text-center">
-                              {% if transaction.receipt_filename %}
-                                <button class="btn btn-sm btn-ghost-secondary" onclick="viewReceipt('{{ transaction.receipt_filename }}')">
-                                  <i class="ti ti-file"></i>
-                                </button>
+                              {% if transaction.editable %}
+                                <div class="dropdown">
+                                  <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                    <span class="d-none d-md-inline">Actions</span>
+                                    <i class="ti ti-menu-2 d-md-none"></i>
+                                  </a>
+                                  <div class="dropdown-menu dropdown-menu-end">
+                                    {% if transaction.receipt_filename %}
+                                    <a class="dropdown-item" href="#" onclick="viewReceipt('{{ transaction.receipt_filename }}'); return false;">
+                                      <i class="ti ti-file me-2"></i>View Receipt
+                                    </a>
+                                    {% endif %}
+                                    <a class="dropdown-item" href="#" onclick="openDrawer('{{ transaction.source_type }}', {{ transaction.id }}); return false;">
+                                      <i class="ti ti-edit me-2"></i>Edit Entry
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete('{{ transaction.source_type }}', {{ transaction.id }}, '{{ transaction.description }}'); return false;">
+                                      <i class="ti ti-trash me-2"></i>Delete Entry
+                                    </a>
+                                  </div>
+                                </div>
                               {% else %}
-                                <span class="text-muted">—</span>
+                                <span class="badge bg-secondary-lt">
+                                  <i class="ti ti-lock me-1"></i>System
+                                </span>
                               {% endif %}
                             </td>
                           </tr>
                           {% endfor %}
                         </tbody>
-                        <tfoot>
-                          <tr class="fw-bold">
-                            <td colspan="4" class="text-end">Activity Total:</td>
-                            <td class="text-end">
-                              <span class="text-primary">+${{ "%.2f"|format(activity.total_revenue) }}</span><br>
-                              <span class="text-orange">-${{ "%.2f"|format(activity.total_expenses) }}</span>
-                            </td>
-                            <td></td>
-                          </tr>
-                        </tfoot>
                       </table>
                     </div>
                   </div>
@@ -395,9 +324,9 @@
             <tfoot>
               <tr class="fw-bold bg-light">
                 <td>TOTAL</td>
-                <td class="text-end text-primary">${{ "%.2f"|format(financial_data.summary.total_revenue) }}</td>
-                <td class="text-end text-orange">${{ "%.2f"|format(financial_data.summary.total_expenses) }}</td>
-                <td class="text-end {% if financial_data.summary.net_income < 0 %}text-warning{% else %}text-success{% endif %}">${{ "%.2f"|format(financial_data.summary.net_income) }}</td>
+                <td class="text-end">{{ format_currency(financial_data.summary.total_revenue) }}</td>
+                <td class="text-end">{{ format_currency(financial_data.summary.total_expenses) }}</td>
+                <td class="text-end">{{ format_currency(financial_data.summary.net_income) }}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -442,29 +371,111 @@
   </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal modal-blur fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-title text-center mb-3">
+          <i class="ti ti-alert-triangle text-danger" style="font-size: 3rem;"></i>
+        </div>
+        <h3 class="text-center mb-3">Are you sure?</h3>
+        <p class="text-muted text-center" id="deleteConfirmText">
+          This will permanently delete this transaction.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="executeDelete()">
+          <i class="ti ti-trash me-2"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Transaction Drawer (slides in from right on desktop, bottom on mobile) -->
+<div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
+<div id="transactionDrawer" class="transaction-drawer">
+  <div class="drawer-header">
+    <h3 id="drawerTitle">Add Income</h3>
+    <button type="button" class="btn-close" onclick="closeDrawer()"></button>
+  </div>
+  <form id="transactionForm" class="drawer-body" enctype="multipart/form-data">
+    <input type="hidden" id="transactionId" name="transaction_id">
+    <input type="hidden" id="transactionType" name="transaction_type">
+
+    <!-- Date Field -->
+    <div class="mb-3">
+      <label class="form-label required">Date</label>
+      <input type="date" class="form-control" id="txDate" name="date" required>
+    </div>
+
+    <!-- Activity Selector -->
+    <div class="mb-3">
+      <label class="form-label required">Activity</label>
+      <select class="form-select" id="txActivity" name="activity_id" required>
+        <option value="">Select activity...</option>
+        {% for activity in activities %}
+        <option value="{{ activity.id }}">{{ activity.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Category Selector -->
+    <div class="mb-3">
+      <label class="form-label required">Category</label>
+      <select class="form-select" id="txCategory" name="category" required>
+        <option value="">Select category...</option>
+      </select>
+    </div>
+
+    <!-- Amount Field -->
+    <div class="mb-3">
+      <label class="form-label required">Amount</label>
+      <div class="input-group">
+        <span class="input-group-text">$</span>
+        <input type="number" step="0.01" min="0" class="form-control" id="txAmount" name="amount" placeholder="0.00" required>
+      </div>
+    </div>
+
+    <!-- Description/Note Field -->
+    <div class="mb-3">
+      <label class="form-label" id="descriptionLabel">Description</label>
+      <textarea class="form-control" id="txDescription" name="description" rows="3" placeholder="Enter details..."></textarea>
+    </div>
+
+    <!-- Receipt Upload -->
+    <div class="mb-3">
+      <label class="form-label">Receipt/Document</label>
+      <div id="existingReceipt" class="mb-2" style="display: none;">
+        <div class="alert alert-info d-flex align-items-center">
+          <i class="ti ti-file me-2"></i>
+          <span id="existingReceiptName"></span>
+          <button type="button" class="btn btn-sm btn-ghost-danger ms-auto" onclick="removeExistingReceipt()">
+            <i class="ti ti-x"></i>
+          </button>
+        </div>
+      </div>
+      <input type="file" class="form-control" id="txReceipt" name="receipt" accept=".pdf,.jpg,.jpeg,.png">
+      <small class="form-text text-muted">PDF, JPG, or PNG (max 5MB)</small>
+    </div>
+
+    <div class="drawer-footer">
+      <button type="button" class="btn" onclick="closeDrawer()">Cancel</button>
+      <button type="submit" class="btn btn-primary" id="saveBtn">
+        <span class="spinner-border spinner-border-sm me-2" role="status" style="display: none;" id="saveSpinner"></span>
+        <i class="ti ti-check me-2" id="saveIcon"></i>
+        <span id="saveBtnText">Save</span>
+      </button>
+    </div>
+  </form>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Show/hide custom date inputs based on period selection
-document.addEventListener('DOMContentLoaded', function() {
-  const periodSelect = document.querySelector('select[name="period"]');
-  const customStartDate = document.getElementById('customStartDate');
-  const customEndDate = document.getElementById('customEndDate');
-
-  if (periodSelect) {
-    periodSelect.addEventListener('change', function() {
-      if (this.value === 'custom') {
-        customStartDate.style.display = 'block';
-        customEndDate.style.display = 'block';
-      } else {
-        customStartDate.style.display = 'none';
-        customEndDate.style.display = 'none';
-      }
-    });
-  }
-});
-
 // View receipt in modal
 function viewReceipt(filename) {
   const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
@@ -494,6 +505,274 @@ function viewReceipt(filename) {
   }
 
   modal.show();
+}
+
+// ===== DRAWER FUNCTIONALITY =====
+
+// Category lists
+const incomeCategories = ["Ticket Sales", "Sponsorship", "Donations", "Vendor Fees", "Service Income", "Merchandise Sales", "Other"];
+const expenseCategories = ["Cost of Goods Sold", "Staff", "Venue", "Equipment Rental", "Insurance", "Marketing", "Travel", "Supplies", "Other"];
+
+// Open drawer (for adding new or editing existing transaction)
+function openDrawer(type, transactionId) {
+  const drawer = document.getElementById('transactionDrawer');
+  const backdrop = document.getElementById('drawerBackdrop');
+  const form = document.getElementById('transactionForm');
+  const title = document.getElementById('drawerTitle');
+  const categorySelect = document.getElementById('txCategory');
+  const descriptionLabel = document.getElementById('descriptionLabel');
+
+  // Reset form
+  form.reset();
+  document.getElementById('existingReceipt').style.display = 'none';
+
+  // Set transaction type
+  document.getElementById('transactionType').value = type;
+  document.getElementById('transactionId').value = transactionId || '';
+
+  // Update title and categories based on type
+  if (type === 'income') {
+    title.textContent = transactionId ? 'Edit Income' : 'Add Income';
+    title.style.color = '#2fb344';
+    populateCategories(incomeCategories);
+    descriptionLabel.textContent = 'Note';
+  } else if (type === 'expense') {
+    title.textContent = transactionId ? 'Edit Expense' : 'Add Expense';
+    title.style.color = '#d63939';
+    populateCategories(expenseCategories);
+    descriptionLabel.textContent = 'Description';
+  }
+
+  // If editing, fetch transaction data
+  if (transactionId) {
+    fetchTransactionData(type, transactionId);
+  } else {
+    // Set today's date for new transactions
+    document.getElementById('txDate').valueAsDate = new Date();
+  }
+
+  // Show drawer
+  setTimeout(() => {
+    backdrop.classList.add('active');
+    drawer.classList.add('active');
+  }, 10);
+}
+
+// Close drawer
+function closeDrawer() {
+  const drawer = document.getElementById('transactionDrawer');
+  const backdrop = document.getElementById('drawerBackdrop');
+
+  drawer.classList.remove('active');
+  backdrop.classList.remove('active');
+}
+
+// Populate category dropdown
+function populateCategories(categories) {
+  const select = document.getElementById('txCategory');
+  select.innerHTML = '<option value="">Select category...</option>';
+  categories.forEach(cat => {
+    select.innerHTML += `<option value="${cat}">${cat}</option>`;
+  });
+}
+
+// Fetch transaction data for editing
+async function fetchTransactionData(type, id) {
+  // For now, we'll get the data from the page
+  // In a production app, you might fetch from an API endpoint
+  const rows = document.querySelectorAll('tr');
+  let found = false;
+
+  rows.forEach(row => {
+    const editBtn = row.querySelector(`button[onclick*="openDrawer('${type}', ${id})"]`);
+    if (editBtn) {
+      const cells = row.querySelectorAll('td');
+      document.getElementById('txDate').value = cells[0].textContent.trim();
+      document.getElementById('txCategory').value = cells[2].textContent.trim();
+      document.getElementById('txDescription').value = cells[3].textContent.trim();
+      const amount = cells[4].textContent.trim().replace('$', '').replace(',', '');
+      document.getElementById('txAmount').value = amount;
+
+      // Get activity from parent collapse section
+      const collapseParent = row.closest('.collapse');
+      if (collapseParent) {
+        const activityId = collapseParent.id.replace('activity', '');
+        document.getElementById('txActivity').value = activityId;
+      }
+
+      // Check for existing receipt
+      const receiptBtn = cells[5].querySelector('button');
+      if (receiptBtn) {
+        const receiptFilename = receiptBtn.getAttribute('onclick').match(/'([^']+)'/)[1];
+        document.getElementById('existingReceiptName').textContent = receiptFilename;
+        document.getElementById('existingReceipt').style.display = 'block';
+        document.getElementById('existingReceipt').dataset.filename = receiptFilename;
+      }
+
+      found = true;
+    }
+  });
+}
+
+// Remove existing receipt
+function removeExistingReceipt() {
+  document.getElementById('existingReceipt').style.display = 'none';
+  document.getElementById('existingReceipt').dataset.removeReceipt = 'true';
+}
+
+// Handle form submission
+document.getElementById('transactionForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const type = document.getElementById('transactionType').value;
+  const transactionId = document.getElementById('transactionId').value;
+  const activityId = document.getElementById('txActivity').value;
+  const saveBtn = document.getElementById('saveBtn');
+  const saveSpinner = document.getElementById('saveSpinner');
+  const saveIcon = document.getElementById('saveIcon');
+  const saveBtnText = document.getElementById('saveBtnText');
+
+  // Show loading state
+  saveBtn.disabled = true;
+  saveSpinner.style.display = 'inline-block';
+  saveIcon.style.display = 'none';
+  saveBtnText.textContent = 'Saving...';
+
+  // Prepare form data
+  const formData = new FormData(this);
+  formData.set('activity_id', activityId);
+
+  // Determine URL
+  let url;
+  if (type === 'income') {
+    url = transactionId
+      ? `/admin/activity-income/${activityId}/edit/${transactionId}`
+      : `/admin/activity-income/${activityId}`;
+  } else {
+    url = transactionId
+      ? `/admin/activity-expenses/${activityId}/edit/${transactionId}`
+      : `/admin/activity-expenses/${activityId}`;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Show success message
+      showToast(data.message, 'success');
+
+      // Close drawer
+      closeDrawer();
+
+      // Reload page to show updated data
+      // In production, you might update the table dynamically
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } else {
+      showToast(data.message || 'Failed to save transaction', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('Network error. Please try again.', 'error');
+  } finally {
+    // Reset button state
+    saveBtn.disabled = false;
+    saveSpinner.style.display = 'none';
+    saveIcon.style.display = 'inline';
+    saveBtnText.textContent = 'Save';
+  }
+});
+
+// ===== DELETE FUNCTIONALITY =====
+
+let deleteTarget = null;
+
+// Show delete confirmation modal
+function confirmDelete(type, id, description) {
+  deleteTarget = { type, id };
+  const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+  document.getElementById('deleteConfirmText').textContent =
+    `This will permanently delete: ${description}`;
+  modal.show();
+}
+
+// Execute delete
+async function executeDelete() {
+  if (!deleteTarget) return;
+
+  const { type, id } = deleteTarget;
+  const confirmBtn = document.getElementById('confirmDeleteBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+
+  const url = type === 'income'
+    ? `/admin/delete-income/${id}`
+    : `/admin/delete-expense/${id}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      showToast(data.message, 'success');
+
+      // Close modal
+      bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+
+      // Reload page
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } else {
+      showToast(data.message || 'Failed to delete transaction', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('Network error. Please try again.', 'error');
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="ti ti-trash me-2"></i>Delete';
+  }
+}
+
+// Toast notification helper
+function showToast(message, type = 'info') {
+  // Create toast element
+  const toast = document.createElement('div');
+  toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible`;
+  toast.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div>
+        <i class="ti ti-${type === 'success' ? 'check' : 'alert-circle'} me-2"></i>
+        ${message}
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+
+  document.body.appendChild(toast);
+
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    toast.remove();
+  }, 5000);
 }
 </script>
 
@@ -533,42 +812,6 @@ function viewReceipt(filename) {
   margin-bottom: 0.5rem;
 }
 
-/* Financial Icon Badges - Modern Subtle Style */
-.financial-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  font-size: 1.25rem;
-  transition: all 0.2s ease;
-}
-
-.financial-icon-blue {
-  background: rgba(32, 107, 196, 0.08);
-  color: #206bc4;
-}
-
-.financial-icon-orange {
-  background: rgba(247, 103, 7, 0.08);
-  color: #f76707;
-}
-
-.financial-icon-success {
-  background: rgba(47, 179, 68, 0.08);
-  color: #2fb344;
-}
-
-.financial-icon-warning {
-  background: rgba(245, 159, 0, 0.08);
-  color: #f59f00;
-}
-
-/* Text Color Utilities for Colorblind Accessibility */
-.text-orange {
-  color: #f76707 !important;
-}
 
 /* Table Styling */
 .table {
@@ -638,6 +881,137 @@ function viewReceipt(filename) {
   .table td {
     padding: 0.5rem;
     font-size: 0.875rem;
+  }
+}
+
+/* ===== DRAWER STYLES ===== */
+
+/* Drawer Backdrop */
+.drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.drawer-backdrop.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Transaction Drawer - Desktop (slides from right) */
+.transaction-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 500px;
+  height: 100vh;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  z-index: 1050;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.transaction-drawer.active {
+  transform: translateX(0);
+}
+
+/* Drawer Header */
+.drawer-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.drawer-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Drawer Body (Scrollable Form) */
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+/* Drawer Footer */
+.drawer-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  background: #f8fafc;
+}
+
+/* Mobile Styles - Drawer slides from BOTTOM */
+@media (max-width: 767px) {
+  .transaction-drawer {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 90vh;
+    max-height: 90vh;
+    transform: translateY(100%);
+    border-radius: 16px 16px 0 0;
+  }
+
+  .transaction-drawer.active {
+    transform: translateY(0);
+  }
+
+  .drawer-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+  }
+
+  /* Add swipe indicator on mobile */
+  .drawer-header::before {
+    content: '';
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 2px;
+  }
+
+  .drawer-header h3 {
+    font-size: 1.1rem;
+    margin-top: 1rem;
+  }
+
+  .drawer-body {
+    padding: 1rem;
+  }
+
+  .drawer-footer {
+    padding: 1rem;
+    flex-direction: column;
+  }
+
+  .drawer-footer button {
+    width: 100%;
   }
 }
 </style>
