@@ -46,57 +46,54 @@
 
       <!-- Mobile View (Visible on Mobile Only) -->
       <div class="d-md-none">
-        <!-- Mobile Summary Cards -->
-        <div class="row g-2 mb-3">
-          <!-- Total Revenue -->
-          <div class="col-12">
-            <div class="card">
-              <div class="card-body p-3">
-                <div class="d-flex align-items-center">
-                  <span class="financial-icon financial-icon-blue me-3">
-                    <i class="ti ti-chart-line"></i>
-                  </span>
-                  <div>
-                    <div class="text-muted small">Total Revenue</div>
-                    <div class="h3 mb-0 text-muted">{{ format_currency(financial_data.summary.total_revenue) }}</div>
+        <!-- Mobile Summary Cards Carousel -->
+        <div class="mobile-kpi-container mb-3">
+          <div class="mobile-kpi-scroll">
+            <!-- Total Revenue Card -->
+            <div class="mobile-kpi-card">
+              <div class="card" style="border-radius: 12px; min-height: 130px;">
+                <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                  <div class="text-muted small text-uppercase mb-2">REVENUE</div>
+                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.total_revenue) }}</div>
+                  <div class="text-muted small">
+                    All activities
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total Expenses Card -->
+            <div class="mobile-kpi-card">
+              <div class="card" style="border-radius: 12px; min-height: 130px;">
+                <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                  <div class="text-muted small text-uppercase mb-2">EXPENSES</div>
+                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.total_expenses) }}</div>
+                  <div class="text-muted small">
+                    All activities
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Net Income Card -->
+            <div class="mobile-kpi-card">
+              <div class="card" style="border-radius: 12px; min-height: 130px;">
+                <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                  <div class="text-muted small text-uppercase mb-2">NET INCOME</div>
+                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.net_income) }}</div>
+                  <div class="text-muted small">
+                    All activities
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Total Expenses -->
-          <div class="col-12">
-            <div class="card">
-              <div class="card-body p-3">
-                <div class="d-flex align-items-center">
-                  <span class="financial-icon financial-icon-orange me-3">
-                    <i class="ti ti-receipt"></i>
-                  </span>
-                  <div>
-                    <div class="text-muted small">Total Expenses</div>
-                    <div class="h3 mb-0 text-muted">{{ format_currency(financial_data.summary.total_expenses) }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Net Income -->
-          <div class="col-12">
-            <div class="card">
-              <div class="card-body p-3">
-                <div class="d-flex align-items-center">
-                  <span class="financial-icon {% if financial_data.summary.net_income >= 0 %}financial-icon-success{% else %}financial-icon-warning{% endif %} me-3">
-                    <i class="ti ti-coin"></i>
-                  </span>
-                  <div>
-                    <div class="text-muted small">Net Income</div>
-                    <div class="h3 mb-0">{{ format_currency(financial_data.summary.net_income) }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <!-- Dots Navigation -->
+          <div class="mobile-kpi-dots">
+            <div class="mobile-dot active" data-index="0"></div>
+            <div class="mobile-dot" data-index="1"></div>
+            <div class="mobile-dot" data-index="2"></div>
           </div>
         </div>
 
@@ -110,42 +107,37 @@
             <table class="table table-sm mb-0">
               <thead>
                 <tr>
-                  <th style="width: 50px;"></th>
-                  <th class="text-end">Revenue</th>
-                  <th class="text-end">Expenses</th>
-                  <th class="text-end">Net</th>
+                  <th style="width: 70px; padding-left: 1.5rem;"></th>
+                  <th class="text-center" style="width: 27%;">Revenue</th>
+                  <th class="text-center" style="width: 27%;">Expenses</th>
+                  <th class="text-center" style="width: 27%; padding-right: 1rem;">Net</th>
                 </tr>
               </thead>
               <tbody>
                 {% for activity in financial_data.by_activity %}
                 <tr>
-                  <td class="p-2">
+                  <td style="padding: 0.5rem 0.5rem 0.5rem 1.5rem;">
                     {% if activity.activity_image %}
-                      <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.activity_image) }}"
-                           class="rounded-circle" alt="{{ activity.activity_name }}"
-                           style="width: 30px; height: 30px; object-fit: cover;">
+                      <span class="avatar avatar-sm" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.activity_image) }});"></span>
                     {% else %}
-                      <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
-                           style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
-                        {{ activity.activity_name[0] }}
-                      </div>
+                      <span class="avatar avatar-sm bg-secondary-lt text-secondary">{{ activity.activity_name[0].upper() }}</span>
                     {% endif %}
                   </td>
-                  <td class="text-end text-muted p-2" style="font-size: 0.85rem;">
+                  <td class="text-center text-muted p-2" style="font-size: 0.85rem;">
                     {% if activity.total_revenue >= 1000 %}
                       ${{ "%.1f"|format(activity.total_revenue / 1000) }}K
                     {% else %}
                       ${{ "%.0f"|format(activity.total_revenue) }}
                     {% endif %}
                   </td>
-                  <td class="text-end text-muted p-2" style="font-size: 0.85rem;">
+                  <td class="text-center text-muted p-2" style="font-size: 0.85rem;">
                     {% if activity.total_expenses >= 1000 %}
                       ${{ "%.1f"|format(activity.total_expenses / 1000) }}K
                     {% else %}
                       ${{ "%.0f"|format(activity.total_expenses) }}
                     {% endif %}
                   </td>
-                  <td class="text-end text-muted p-2" style="font-size: 0.85rem;">
+                  <td class="text-center text-muted p-2" style="font-size: 0.85rem; padding-right: 1rem;">
                     {% if activity.net_income >= 1000 or activity.net_income <= -1000 %}
                       ${{ "%.1f"|format(activity.net_income / 1000) }}K
                     {% else %}
@@ -1001,6 +993,66 @@ async function executeDelete() {
   .drawer-footer button {
     width: 100%;
   }
+
+  /* Mobile KPI Carousel Styles */
+  .mobile-kpi-container {
+    position: relative;
+  }
+
+  .mobile-kpi-scroll {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+
+  .mobile-kpi-scroll::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  .mobile-kpi-card {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+  }
+
+  .mobile-kpi-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 1rem;
+  }
+
+  .mobile-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dee2e6;
+    transition: background 0.3s ease;
+    cursor: pointer;
+  }
+
+  .mobile-dot.active {
+    background: #206bc4;
+  }
 }
 </style>
+
+<script>
+// Mobile KPI dot navigation
+document.addEventListener('DOMContentLoaded', function() {
+  const scroll = document.querySelector('.mobile-kpi-scroll');
+  const dots = document.querySelectorAll('.mobile-dot');
+  if (scroll && dots.length > 0) {
+    scroll.addEventListener('scroll', () => {
+      const index = Math.round(scroll.scrollLeft / scroll.offsetWidth);
+      dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+    });
+  }
+});
+</script>
+
 {% endblock %}
