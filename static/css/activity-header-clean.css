@@ -1,298 +1,185 @@
-/* Activity Header Card - Clean Design */
-/* Professional card-based layout with proper containment */
+/* Activity Header Card - Integrated Image Design */
+/* Clean, modern design with image seamlessly integrated into card */
 
 /* Main card styling */
 .activity-header-card {
   margin-bottom: 24px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  background: linear-gradient(180deg, #dbeafe 0%, #ffffff 100%);
-}
-
-.activity-header-card .card-body {
-  padding: 20px;
-}
-
-/* Header top section - NEW LAYOUT with image on right */
-.activity-header-top {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  overflow: hidden;
   position: relative;
 }
 
-/* Activity info section - now takes primary space on left */
-.activity-info {
-  flex: 1;
-  min-width: 0;
-  order: 1;
+.activity-header-card .card-body {
+  padding: 0;
 }
 
-/* Title row with badge */
-.activity-title-row {
+/* Header top section - Horizontal split on desktop */
+.activity-header-top {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
+  align-items: stretch;
+  position: relative;
+  min-height: 280px;
+}
+
+/* Activity Image Section - 40% width on desktop, integrated background */
+.activity-image-section {
+  width: 40%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px 0 0 12px; /* Round left corners only on desktop */
+}
+
+.activity-image-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* CSS Mask for gradient fade - narrower transition to white */
+.activity-image-background::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right,
+    transparent 0%,
+    transparent 65%,
+    rgba(255, 255, 255, 0.3) 75%,
+    rgba(255, 255, 255, 0.8) 90%,
+    rgba(255, 255, 255, 1) 100%);
+}
+
+/* Content Section - 60% width on desktop */
+.activity-content-section {
+  width: 60%;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background: #ffffff;
+  border-radius: 0 12px 12px 0; /* Round right corners only on desktop */
 }
 
 /* Activity title */
 .activity-title {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: #111827;
-  margin: 0;
+  margin: 0 0 12px 0;
   line-height: 1.2;
 }
 
 /* Activity description */
 .activity-description {
-  font-size: 14px;
-  line-height: 1.5;
-  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+  color: #6b7280;
 }
 
-/* NEW: Activity image container - positioned on right */
-.activity-image-container {
-  flex-shrink: 0;
-  order: 2;
-}
-
-/* NEW: Larger activity image on right */
-.activity-image-large {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Mobile dropdown positioning */
-.activity-mobile-dropdown {
-  position: absolute;
-  top: 0;
-  right: 0;
-  order: 3;
-}
-
-/* NEW: Improved Active badge with light green background */
-.badge-active-improved {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  background-color: #d1fae5; /* Very light green */
-  color: #047857; /* Dark green text */
-  border-radius: 100px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  border: 1px solid #a7f3d0; /* Light green border */
-}
-
-/* Active badge pulse animation */
-.badge-pulse {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background-color: #047857; /* Match the text color */
-  border-radius: 50%;
-  margin-left: 4px;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(0.8);
-  }
-}
-
-/* Stats row */
-.activity-stats-row {
+/* Minimal stats row - gray icons + black numbers only */
+.activity-stats-minimal {
   display: flex;
   align-items: center;
   gap: 24px;
   margin-bottom: 20px;
-  padding: 12px;
-  background: #ffffff;
-  border-radius: 6px;
+  flex-wrap: wrap;
 }
 
-.stat-item {
+.stat-minimal {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  color: #374151;
-}
-
-.stat-item i {
-  font-size: 18px;
-}
-
-/* NEW: Improved user count display without user icon */
-.stat-item-users-improved {
-  display: flex;
-  align-items: center;
-  gap: 0px;
-  font-size: 14px;
-  color: #374151;
-}
-
-.user-count-display-improved {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.user-avatars-improved {
-  display: flex;
-  align-items: center;
-  gap: -6px; /* Better overlap for larger avatars */
-}
-
-.user-avatars-improved .avatar {
-  border: 2px solid white;
-  margin-left: -6px;
-  width: 32px !important;
-  height: 32px !important;
-}
-
-.user-avatars-improved .avatar:first-child {
-  margin-left: 0;
-}
-
-.user-count-improved {
-  font-weight: 600;
-  color: #374151;
-  white-space: nowrap;
   font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  cursor: default;
 }
 
-/* NEW: Improved stat icons - all same size and aligned */
-.stat-icon-improved {
-  font-size: 20px !important;
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.stat-minimal i {
+  font-size: 20px;
+  color: #9ca3af;
 }
 
-/* OLD: Enhanced user count display with avatars */
-.stat-item-users {
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  gap: 4px !important;
+.stat-minimal span {
+  color: #111827;
 }
 
-.stat-item-users i {
-  margin-bottom: 2px;
+/* Clickable stat (location) */
+.stat-clickable {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
 }
 
-.user-count-display {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.stat-clickable:hover {
+  opacity: 0.7;
 }
 
-.user-avatars {
-  display: flex;
-  align-items: center;
-  gap: -4px; /* Slight overlap */
-}
-
-.user-avatars .avatar {
-  border: 2px solid white;
-  margin-left: -4px;
-}
-
-.user-avatars .avatar:first-child {
-  margin-left: 0;
-}
-
-.user-count {
-  font-weight: 500;
-  color: #374151;
-  white-space: nowrap;
-}
-
-/* Share dropdown positioning */
-.share-stat {
+/* Dropdown stat (passport types) */
+.stat-dropdown {
   position: relative;
+  cursor: pointer;
+  z-index: 10000; /* Ensure parent has high z-index for proper stacking */
 }
 
-.share-dropdown {
+.stat-dropdown:hover {
+  /* Removed opacity here - it was making the entire dropdown menu transparent */
+}
+
+.stat-dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px);
   left: 0;
   background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 8px;
-  margin-top: 4px;
-  min-width: 180px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-}
-
-.share-link {
-  display: block;
-  padding: 6px 12px;
-  color: #374151;
-  text-decoration: none;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  padding: 4px 0;
+  min-width: 200px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 99999;
 }
 
-.share-link:hover {
-  background-color: #f3f4f6;
+.stat-dropdown-link {
+  display: block;
+  padding: 8px 12px;
+  color: #333;
+  text-decoration: none;
+  background: white;
 }
 
-/* Revenue progress section */
-.revenue-progress-section {
+.stat-dropdown-link:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+/* Minimal progress bar - thin, simple */
+.revenue-progress-minimal {
   margin-bottom: 20px;
 }
 
-.revenue-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.revenue-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #6b7280;
-}
-
-.revenue-amount {
-  font-size: 20px;
-  font-weight: 700;
-  color: #10b981;
-}
-
-/* Progress bar styling */
-.progress {
-  height: 8px;
+.progress-minimal {
+  height: 4px;
   background-color: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
 }
 
-/* NEW: Thinner progress bar for simplified revenue section */
-.progress-thin {
-  height: 6px;
-  background-color: #e5e7eb;
-  border-radius: 3px;
+.progress-minimal .progress-bar {
+  background-color: #10b981;
+  height: 100%;
+  transition: width 0.3s ease;
 }
 
-/* Action buttons container */
+/* Action buttons */
 .activity-actions {
   display: flex;
   gap: 8px;
@@ -300,8 +187,9 @@
 }
 
 .activity-actions .btn {
-  padding: 6px 12px;
-  font-size: 13px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .activity-actions .btn i {
@@ -309,7 +197,7 @@
   font-size: 16px;
 }
 
-/* NEW: Mobile action buttons below progress bar - Side by side */
+/* Mobile action buttons */
 .activity-actions-mobile-bottom {
   margin-top: 20px;
   display: flex;
@@ -337,35 +225,65 @@
   min-width: unset;
 }
 
-/* Mobile responsive styles */
+/* Mobile responsive styles - Vertical layout */
 @media (max-width: 768px) {
-  .activity-header-card .card-body {
-    padding: 16px;
-  }
-
   .activity-header-top {
-    gap: 16px;
-    margin-bottom: 16px;
     flex-direction: column;
-    position: relative;
+    min-height: auto;
   }
 
-  /* Mobile: Stack layout with image at top */
-  .activity-info {
-    order: 2;
+  /* Image section at top - 40% height */
+  .activity-image-section {
     width: 100%;
+    height: 200px;
+    border-radius: 12px 12px 0 0; /* Round top corners only on mobile */
   }
 
-  .activity-image-container {
-    order: 1;
-    align-self: center;
+  /* Gradient fade from top to bottom on mobile - narrower transition */
+  .activity-image-background::after {
+    background: linear-gradient(to bottom,
+      transparent 0%,
+      transparent 65%,
+      rgba(255, 255, 255, 0.3) 75%,
+      rgba(255, 255, 255, 0.8) 90%,
+      rgba(255, 255, 255, 1) 100%);
   }
 
-  /* Smaller image on mobile */
-  .activity-image-large {
-    width: 60px;
-    height: 60px;
-    border-radius: 8px;
+  /* Content section below - 60% */
+  .activity-content-section {
+    width: 100%;
+    padding: 24px 20px;
+    border-radius: 0 0 12px 12px; /* Round bottom corners on mobile */
+  }
+
+  .activity-title {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+
+  .activity-description {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  /* Hide stats on mobile to keep it clean */
+  .activity-stats-minimal {
+    display: none;
+  }
+
+  .revenue-progress-minimal {
+    margin-bottom: 16px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 375px) {
+  .activity-image-section {
+    height: 160px;
+  }
+
+  .activity-content-section {
+    padding: 20px 16px;
   }
 
   .activity-title {
@@ -374,117 +292,5 @@
 
   .activity-description {
     font-size: 13px;
-  }
-
-  /* Mobile dropdown positioning */
-  .activity-mobile-dropdown {
-    position: absolute;
-    top: 0;
-    right: 0;
-    order: 3;
-  }
-
-  /* Stats in 2x2 grid on mobile */
-  .activity-stats-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    padding: 10px;
-  }
-
-  .stat-item {
-    font-size: 13px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .stat-item i {
-    font-size: 16px;
-  }
-
-  /* Mobile user count display - improved */
-  .stat-item-users-improved {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-  }
-
-  .user-avatars-improved .avatar {
-    width: 28px !important;
-    height: 28px !important;
-    margin-left: -4px;
-  }
-
-  .user-count-improved {
-    font-size: 14px;
-  }
-
-  .stat-icon-improved {
-    font-size: 18px !important;
-    width: 20px;
-    height: 20px;
-  }
-
-  /* OLD Mobile user count display */
-  .stat-item-users {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-  }
-
-  .user-avatars .avatar {
-    width: 24px;
-    height: 24px;
-  }
-
-  /* Smaller revenue text on mobile */
-  .revenue-label {
-    font-size: 13px;
-  }
-
-  /* Mobile dropdown button */
-  .dropdown .btn-icon {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-/* Extra small devices */
-@media (max-width: 375px) {
-  .activity-title {
-    font-size: 18px;
-  }
-
-  .activity-image-large {
-    width: 50px;
-    height: 50px;
-  }
-
-  .activity-header-card .card-body {
-    padding: 12px;
-  }
-
-  .user-avatars-improved .avatar {
-    width: 24px !important;
-    height: 24px !important;
-  }
-
-  .stat-icon-improved {
-    font-size: 16px !important;
-    width: 18px;
-    height: 18px;
-  }
-
-  .user-avatars .avatar {
-    width: 20px;
-    height: 20px;
-  }
-
-  .activity-stats-row {
-    padding: 8px;
-    gap: 8px;
   }
 }
