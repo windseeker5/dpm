@@ -12,22 +12,6 @@
   opacity: 1 !important;
 }
 
-@media (max-width: 768px) {
-  .survey-table {
-    display: none;
-  }
-  .survey-cards {
-    display: block;
-  }
-}
-@media (min-width: 769px) {
-  .survey-table {
-    display: block;
-  }
-  .survey-cards {
-    display: none;
-  }
-}
 
 /* White background for all cards and tables */
 .card {
@@ -136,21 +120,17 @@
         <div class="d-flex justify-content-center align-items-center w-100">
           <!-- Filter Buttons -->
           <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-            <a href="{{ url_for('list_surveys') }}" 
-               class="github-filter-btn {% if not current_filters.status and not current_filters.activity %}active{% endif %}">
-              <i class="ti ti-list"></i>All Surveys <span class="filter-count">({{ statistics.total_surveys }})</span>
+            <a href="{{ url_for('list_surveys', status='active') }}"
+               class="github-filter-btn {% if current_filters.status == 'active' and not current_filters.show_all %}active{% endif %}">
+              <i class="ti ti-activity"></i>Active <span class="filter-count">({{ statistics.active_surveys }})</span>
             </a>
-            <a href="{{ url_for('list_surveys', status='active') }}" 
-               class="github-filter-btn {% if current_filters.status == 'active' %}active{% endif %}">
-              <i class="ti ti-play"></i>Active <span class="filter-count">({{ statistics.active_surveys }})</span>
-            </a>
-            <a href="{{ url_for('list_surveys', status='closed') }}" 
+            <a href="{{ url_for('list_surveys', status='closed') }}"
                class="github-filter-btn {% if current_filters.status == 'closed' %}active{% endif %}">
-              <i class="ti ti-pause"></i>Closed <span class="filter-count"></span>
+              <i class="ti ti-pause"></i>Closed <span class="filter-count">({{ statistics.closed_surveys|default(0) }})</span>
             </a>
-            <a href="{{ url_for('list_surveys', status='draft') }}" 
-               class="github-filter-btn {% if current_filters.status == 'draft' %}active{% endif %}">
-              <i class="ti ti-file-text"></i>Draft <span class="filter-count"></span>
+            <a href="{{ url_for('list_surveys', show_all='true') }}"
+               class="github-filter-btn {% if current_filters.show_all %}active{% endif %}">
+              <i class="ti ti-list"></i>All <span class="filter-count">({{ statistics.total_surveys }})</span>
             </a>
           </div>
         </div>
@@ -358,106 +338,6 @@
       </div>
       </div>
     </div>
-
-  <!-- Mobile Card View -->
-  <div class="survey-cards">
-    {% for survey in surveys %}
-    <div class="card survey-card mb-3">
-      <div class="card-body p-2 p-md-3">
-        <div class="row align-items-center">
-          <div class="col-auto">
-            <div class="avatar avatar-md" style="background-color: #206bc4;">
-              <i class="ti ti-clipboard-check text-white"></i>
-            </div>
-          </div>
-          <div class="col">
-            <h4 class="card-title mb-1">{{ survey.name }}</h4>
-            <div class="mb-2">
-              {% if survey.status == 'active' %}
-              <span class="badge bg-green-lt text-green">Active</span>
-              {% elif survey.status == 'closed' %}
-              <span class="badge bg-red-lt text-red">Closed</span>
-              {% else %}
-              <span class="badge bg-gray-lt text-gray">{{ survey.status|title }}</span>
-              {% endif %}
-              {% if survey.template %}
-              <span class="badge bg-gray-lt text-gray">{{ survey.template.name }}</span>
-              {% endif %}
-            </div>
-            <div class="small text-muted mb-2">{{ survey.activity.name if survey.activity else '-' }}</div>
-            <div class="row text-center">
-              <div class="col-4">
-                <div class="stat-number small">{{ survey.invitation_count }}</div>
-                <div class="stat-label">Invited</div>
-              </div>
-              <div class="col-4">
-                <div class="stat-number small">{{ survey.completed_count }}</div>
-                <div class="stat-label">Completed</div>
-              </div>
-              <div class="col-4">
-                <div class="stat-number small">{{ "%.1f"|format(survey.completion_rate) }}%</div>
-                <div class="stat-label">Rate</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-auto">
-            <div class="dropdown">
-              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <i class="ti ti-dots-vertical"></i>
-              </button>
-              <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item" href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank">
-                  <i class="ti ti-external-link me-2"></i>View Survey
-                </a>
-                <a class="dropdown-item" href="{{ url_for('survey_results', survey_id=survey.id) }}">
-                  <i class="ti ti-chart-bar me-2"></i>View Results
-                </a>
-                {% if survey.status == 'active' %}
-                <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="dropdown-item" onclick="return confirmSendInvitations({{ survey.id }}, '{{ survey.name }}', '{{ survey.activity.name if survey.activity else 'Unknown' }}')">
-                    <i class="ti ti-mail me-2"></i>Send Invitations
-                  </button>
-                </form>
-                <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="resend_all" value="true">
-                  <button type="submit" class="dropdown-item" onclick="return confirmResendAll({{ survey.id }}, '{{ survey.name }}')">
-                    <i class="ti ti-refresh me-2"></i>Resend All
-                  </button>
-                </form>
-                {% endif %}
-                {% if survey.responses %}
-                <a class="dropdown-item" href="{{ url_for('export_survey_results', survey_id=survey.id) }}">
-                  <i class="ti ti-download me-2"></i>Export Results
-                </a>
-                {% endif %}
-                <div class="dropdown-divider"></div>
-                <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ survey.id }}, '{{ survey.name }}'); return false;">
-                  <i class="ti ti-trash me-2"></i>Delete Survey
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% else %}
-    <div class="empty py-5">
-      <div class="empty-img">
-        <i class="ti ti-clipboard-check" style="font-size: 4rem; color: #ccc;"></i>
-      </div>
-      <p class="empty-title">No surveys found</p>
-      <p class="empty-subtitle text-muted">
-        {% if current_filters.q or current_filters.status or current_filters.activity or current_filters.template %}
-          Try adjusting your search filters or <a href="{{ url_for('list_surveys') }}">clear all filters</a>
-        {% else %}
-          Get started by creating a survey using one of your templates, or create a new template
-        {% endif %}
-      </p>
-    </div>
-    {% endfor %}
-  </div>
 
     </div>
   </div>

@@ -232,10 +232,10 @@
     min-height: auto;
   }
 
-  /* Image section at top - 40% height */
+  /* Image section at top - 30% height (reduced for shorter card) */
   .activity-image-section {
     width: 100%;
-    height: 200px;
+    height: 120px;
     border-radius: 12px 12px 0 0; /* Round top corners only on mobile */
   }
 
@@ -263,12 +263,22 @@
 
   .activity-description {
     font-size: 14px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
-  /* Hide stats on mobile to keep it clean */
+  /* Show stats on mobile with smaller font sizes */
   .activity-stats-minimal {
-    display: none;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .activity-stats-minimal .stat-minimal {
+    font-size: 12px;
+  }
+
+  .activity-stats-minimal .stat-minimal i {
+    font-size: 16px;
   }
 
   .revenue-progress-minimal {
@@ -279,7 +289,7 @@
 /* Extra small devices */
 @media (max-width: 375px) {
   .activity-image-section {
-    height: 160px;
+    height: 100px;
   }
 
   .activity-content-section {
@@ -292,5 +302,13 @@
 
   .activity-description {
     font-size: 13px;
+  }
+
+  .activity-stats-minimal .stat-minimal {
+    font-size: 11px;
+  }
+
+  .activity-stats-minimal .stat-minimal i {
+    font-size: 14px;
   }
 }
