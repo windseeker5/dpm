@@ -2322,6 +2322,35 @@ body {
   height: calc(100vh - 80px) !important; /* Reduce height by header */
 }
 
+/* Hamburger Menu Button Styling in Gradient Header */
+.gradient-header-logo .header-menu-toggle {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
+.gradient-header-logo .header-menu-toggle:hover {
+  opacity: 0.8;
+}
+
+.gradient-header-logo .header-menu-toggle:active {
+  opacity: 0.6;
+}
+
+.gradient-header-logo .header-menu-toggle i {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #ffffff;
+}
+
 /* Mobile Adjustments */
 @media (max-width: 991px) {
   .gradient-header-fixed {
@@ -2335,7 +2364,10 @@ body {
   .gradient-header-logo {
     width: 60px;
     min-width: 60px;
-    padding: 0 0.5rem;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .header-logo-white {
@@ -2396,9 +2428,13 @@ body {
     overflow: visible !important;
   }
 
-  /* Hide logo on mobile to save space */
+  /* Show hamburger on mobile, hide desktop logo */
   .gradient-header-logo {
-    display: none !important;
+    display: flex !important; /* Keep container visible for hamburger */
+  }
+
+  .gradient-header-logo a {
+    display: none !important; /* Hide only the desktop logo link */
   }
 
   .gradient-header-wave {
