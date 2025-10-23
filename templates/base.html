@@ -835,7 +835,7 @@
       
       // Close sidebar when clicking outside
       document.addEventListener('click', function(event) {
-        if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
+        if (sidebar && sidebarToggle && !sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
           sidebar.classList.remove('show');
           document.body.classList.remove('sidebar-open');
         }
