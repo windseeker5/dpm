@@ -396,9 +396,15 @@
   <!-- Gradient Header - Fixed at Top (OUTSIDE minipass-app) -->
   <header class="gradient-header-fixed">
     <div class="gradient-header-content">
-      <!-- LEFT: Logo (260px area) -->
+      <!-- LEFT: Logo (260px area) + Mobile Hamburger -->
       <div class="gradient-header-logo">
-        <a href="{{ url_for('dashboard') }}">
+        <!-- Mobile Hamburger Menu Button (visible only on mobile) -->
+        <button class="d-lg-none header-menu-toggle" type="button" id="sidebarToggle" aria-label="Open menu">
+          <i class="ti ti-menu-2"></i>
+        </button>
+
+        <!-- Desktop Logo (hidden on mobile) -->
+        <a href="{{ url_for('dashboard') }}" class="d-none d-lg-block">
           <img src="{{ url_for('static', filename='minipass_logo.png') }}"
                alt="Minipass" class="header-logo-white">
         </a>
