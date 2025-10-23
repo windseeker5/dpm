@@ -27,10 +27,10 @@
   margin-bottom: 1rem;
 }
 
-/* Page structure - NO GRADIENT - plain white background per CLAUDE.md */
+/* Page structure - Light gray background to match all other pages */
 .page-wrapper {
   min-height: 100vh;
-  background-color: #fff !important;
+  background-color: #f6f8fb !important;
 }
 
 .page-body {
@@ -148,9 +148,8 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h2 class="page-pretitle text-muted text-uppercase mb-1">Survey Results</h2>
-          <h1 class="page-title mb-0">{{ survey.name }}</h1>
-          <div class="text-muted mt-1">{{ survey.activity.name if survey.activity else 'No activity' }}</div>
+          <h1 class="page-title"><i class="ti ti-chart-bar text-orange me-2"></i>Survey Results</h1>
+          <div class="text-muted mt-2">{{ survey.name }} - {{ survey.activity.name if survey.activity else 'No activity' }}</div>
         </div>
         <div class="col-auto">
           <div class="btn-list">

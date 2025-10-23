@@ -3508,11 +3508,16 @@ def list_surveys():
     # Get filter parameters
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "")
+    show_all_param = request.args.get("show_all", "")
     activity_id = request.args.get("activity", "")
     template_id = request.args.get("template", "")
     start_date = request.args.get("start_date", "")
     end_date = request.args.get("end_date", "")
-    
+
+    # Default to 'active' filter if no status specified (unless explicitly showing all)
+    if not status and show_all_param != "true":
+        status = "active"
+
     # Base query with eager loading for performance
     query = Survey.query.options(
         db.joinedload(Survey.activity),
@@ -3553,13 +3558,20 @@ def list_surveys():
         except ValueError:
             pass
 
+    # Calculate TRUE statistics BEFORE filters (for filter button counts)
+    all_surveys = Survey.query.all()
+    total_surveys_count = len(all_surveys)
+    active_surveys_count = len([s for s in all_surveys if s.status == 'active'])
+    closed_surveys_count = len([s for s in all_surveys if s.status == 'closed'])
+
+    # NOW apply filters to get the displayed surveys
     surveys = query.all()
-    
+
     # Get activities and templates for filter dropdowns
     activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
     survey_templates = SurveyTemplate.query.order_by(SurveyTemplate.name).all()
-    
-    # Calculate KPI statistics
+
+    # Calculate KPI statistics for displayed surveys only
     total_surveys = len(surveys)
     active_surveys = len([s for s in surveys if s.status == 'active'])
     inactive_surveys = total_surveys - active_surveys
@@ -3577,8 +3589,9 @@ def list_surveys():
         survey.completion_rate = (survey.completed_count / survey.invitation_count * 100) if survey.invitation_count > 0 else 0
     
     statistics = {
-        'total_surveys': total_surveys,
-        'active_surveys': active_surveys,
+        'total_surveys': total_surveys_count,  # TRUE total for filter button
+        'active_surveys': active_surveys_count,  # TRUE active count for filter button
+        'closed_surveys': closed_surveys_count,  # TRUE closed count for filter button
         'inactive_surveys': inactive_surveys,
         'total_invitations': total_invitations,
         'total_responses': completed_responses,  # Keep this for compatibility
@@ -3594,6 +3607,7 @@ def list_surveys():
                          current_filters={
                              'q': q,
                              'status': status,
+                             'show_all': show_all_param == "true",
                              'activity': activity_id,
                              'template': template_id,
                              'start_date': start_date,
