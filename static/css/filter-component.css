@@ -284,7 +284,14 @@ a.github-filter-btn.active:hover {
   
   .github-filter-btn .filter-count,
   .github-filter-btn span[style*="opacity"] {
-    display: none; /* Hide counts on mobile to save space */
+    display: inline !important; /* Show counts on mobile */
+    font-size: 11px !important;
+    opacity: 0.85 !important;
+  }
+
+  .github-filter-btn.active .filter-count,
+  .github-filter-btn.active span[style*="opacity"] {
+    opacity: 1 !important;
   }
 }
 
