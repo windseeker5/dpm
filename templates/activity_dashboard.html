@@ -655,6 +655,14 @@ div.dropdown-divider {
                 {% endfor %}
               </div>
             </div>
+
+            <!-- Survey Rating - Only show if survey responses exist -->
+            {% if survey_rating is not none %}
+            <div class="stat-minimal" title="Average survey rating from {{ survey_count }} response{{ 's' if survey_count != 1 else '' }}">
+              <i class="ti ti-star-filled"></i>
+              <span>{{ survey_rating }}<span style="font-size: 0.85em; color: #9ca3af;">({{ survey_count }})</span></span>
+            </div>
+            {% endif %}
               </div>
 
               <!-- Revenue Progress Bar - Simple thin bar only -->

@@ -3139,8 +3139,20 @@ def calculate_activity_survey_rating(activity_id):
                     response_data = json.loads(response.responses)
                     # Look for rating questions (typically 1-5 scale)
                     for question_key, answer in response_data.items():
+                        # Handle both numeric and string ratings
+                        rating_value = None
                         if isinstance(answer, (int, float)) and 1 <= answer <= 5:
-                            ratings.append(float(answer))
+                            rating_value = float(answer)
+                        elif isinstance(answer, str) and answer.replace('.', '', 1).isdigit():
+                            try:
+                                rating_value = float(answer)
+                                if not (1 <= rating_value <= 5):
+                                    rating_value = None
+                            except ValueError:
+                                rating_value = None
+
+                        if rating_value is not None:
+                            ratings.append(rating_value)
                             break  # Take first rating found per response
                 except (json.JSONDecodeError, ValueError):
                     continue
