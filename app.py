@@ -6316,48 +6316,71 @@ def submit_survey_response(survey_token):
         # Collect responses
         responses = {}
         template_questions = json.loads(survey.template.questions)
-        
+
         for question in template_questions.get("questions", []):
             question_id = str(question["id"])
             response_value = request.form.get(f"question_{question_id}")
-            
+
             if question.get("required", False) and not response_value:
                 flash(f"❌ Please answer question: {question['question']}", "error")
                 return redirect(url_for("take_survey", survey_token=survey_token))
-            
+
             if response_value:
                 responses[question_id] = response_value
-        
-        # Create survey response
-        response_token = generate_response_token()
-        
-        # Get user ID from session or create anonymous user
-        user_id = session.get("user_id")
-        if not user_id:
-            # For anonymous responses, try to find or create a user
-            # For now, we'll use a default anonymous user ID or create one
-            anonymous_user = User.query.filter_by(email="anonymous@survey.local").first()
-            if not anonymous_user:
-                anonymous_user = User(
-                    name="Anonymous Survey User",
-                    email="anonymous@survey.local"
-                )
-                db.session.add(anonymous_user)
-                db.session.flush()  # Get the ID
-            user_id = anonymous_user.id
-        
-        survey_response = SurveyResponse(
-            survey_id=survey.id,
-            user_id=user_id,
-            response_token=response_token,
-            responses=json.dumps(responses),
-            completed=True,
-            completed_dt=datetime.now(timezone.utc),
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent')
-        )
-        
-        db.session.add(survey_response)
+
+        # Check if this is from an email invitation with response token
+        response_token = request.form.get("response_token", "").strip()
+
+        if response_token:
+            # User came via email invitation - find their existing response record
+            survey_response = SurveyResponse.query.filter_by(
+                survey_id=survey.id,
+                response_token=response_token
+            ).first()
+
+            if survey_response:
+                # Update existing response record
+                survey_response.responses = json.dumps(responses)
+                survey_response.completed = True
+                survey_response.completed_dt = datetime.now(timezone.utc)
+                survey_response.ip_address = request.remote_addr
+                survey_response.user_agent = request.headers.get('User-Agent')
+            else:
+                # Token not found - this shouldn't happen but handle gracefully
+                flash("❌ Invalid survey token. Please use the link from your email.", "error")
+                return redirect(url_for("take_survey", survey_token=survey_token))
+        else:
+            # No response token - this is an anonymous submission
+            # Generate new token for this anonymous response
+            new_response_token = generate_response_token()
+
+            # Get user ID from session or create anonymous user
+            user_id = session.get("user_id")
+            if not user_id:
+                # For anonymous responses, try to find or create a user
+                anonymous_user = User.query.filter_by(email="anonymous@survey.local").first()
+                if not anonymous_user:
+                    anonymous_user = User(
+                        name="Anonymous Survey User",
+                        email="anonymous@survey.local"
+                    )
+                    db.session.add(anonymous_user)
+                    db.session.flush()  # Get the ID
+                user_id = anonymous_user.id
+
+            survey_response = SurveyResponse(
+                survey_id=survey.id,
+                user_id=user_id,
+                response_token=new_response_token,
+                responses=json.dumps(responses),
+                completed=True,
+                completed_dt=datetime.now(timezone.utc),
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+
+            db.session.add(survey_response)
+
         db.session.commit()
         
         return render_template("survey_thank_you.html", survey=survey)

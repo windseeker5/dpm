@@ -203,7 +203,9 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title"><i class="ti ti-chart-bar text-orange me-2"></i>Results</h1>
+          <h1 class="page-title mb-1"><i class="ti ti-chart-bar text-orange me-2"></i>Results</h1>
+          <p class="text-muted mb-0" style="padding-left: 2.5rem; text-align: left;">{{ survey.name }}</p>
+          {% if survey.activity %}<p class="text-muted small" style="padding-left: 2.5rem; text-align: left;">({{ survey.activity.name }})</p>{% endif %}
         </div>
         <div class="col-auto">
           <div class="dropdown">
@@ -486,29 +488,45 @@
   {% endfor %}
 
   <!-- Response Details -->
-  <div class="card">
+  <div class="card main-table-card">
     <div class="card-header">
-      <h3 class="card-title">
-        <i class="ti ti-users me-2"></i>Response Details
-      </h3>
-      <div class="card-subtitle text-muted mt-2">
-        Individual responses are tracked using unique invitation links sent to each participant
+      <div class="d-flex justify-content-center align-items-center w-100">
+        <!-- Filter Buttons -->
+        <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+          <a href="javascript:void(0)"
+             class="github-filter-btn active"
+             data-filter="completed">
+            <i class="ti ti-check"></i>Completed <span class="filter-count">({{ responses|selectattr('completed', 'equalto', True)|list|length }})</span>
+          </a>
+          <a href="javascript:void(0)"
+             class="github-filter-btn"
+             data-filter="in_progress">
+            In Progress <span class="filter-count">({{ responses|selectattr('completed', 'equalto', False)|list|length }})</span>
+          </a>
+          <a href="javascript:void(0)"
+             class="github-filter-btn"
+             data-filter="all">
+            <i class="ti ti-list"></i>All <span class="filter-count">({{ responses|length }})</span>
+          </a>
+        </div>
       </div>
     </div>
+
+    <!-- Table Layout (Mobile & Desktop) -->
     <div class="table-responsive">
-      <table class="table card-table table-vcenter">
+      <table class="table card-table table-vcenter table-hover">
         <thead>
           <tr>
             <th>User</th>
-            <th>Status</th>
-            <th>Started</th>
-            <th>Completed</th>
+            <th class="d-none d-md-table-cell">Status</th>
+            <th class="d-none d-md-table-cell">Started</th>
+            <th class="d-none d-md-table-cell">Completed</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for response in responses %}
-          <tr>
+          <tr class="response-row" data-status="{% if response.completed %}completed{% else %}in_progress{% endif %}">
             <td>
               <div class="d-flex align-items-center">
                 {% if response.user %}
@@ -523,28 +541,36 @@
                 {% endif %}
               </div>
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
               {% if response.completed %}
               <span class="badge bg-green-lt text-green">Completed</span>
               {% else %}
               <span class="badge bg-yellow-lt text-yellow">In Progress</span>
               {% endif %}
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
               <div class="small">
                 {{ response.created_dt.strftime('%Y-%m-%d %H:%M') if response.created_dt else '-' }}
               </div>
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
               <div class="small">
                 {{ response.completed_dt.strftime('%Y-%m-%d %H:%M') if response.completed_dt else '-' }}
               </div>
             </td>
-            <td>
+            <td class="text-center" style="vertical-align: middle;">
               {% if response.responses %}
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick='showIndividualResponse({{ response.id }}, "{{ (response.user.name if response.user else "Anonymous")|replace('"', '\\"') }}", {{ response.responses|safe }})'>
-                <i class="ti ti-eye me-1"></i>View Response
-              </button>
+              <div class="dropdown d-inline-block">
+                <a href="#" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                  <span class="d-none d-md-inline">Actions</span>
+                  <i class="ti ti-menu-2 d-md-none"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <a class="dropdown-item" href="javascript:void(0)" onclick='showIndividualResponse({{ response.id }}, "{{ (response.user.name if response.user else "Anonymous")|replace('"', '\\"') }}", {{ response.responses|safe }})'>
+                    <i class="ti ti-eye me-2"></i>View Response
+                  </a>
+                </div>
+              </div>
               {% else %}
               <span class="text-muted small">No data</span>
               {% endif %}
@@ -643,6 +669,36 @@ document.addEventListener('DOMContentLoaded', function() {
       dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
     });
   }
+
+  // Initialize GitHub-style filter component for Response Details
+  const filterButtons = document.querySelectorAll('.github-filter-btn');
+  const responseRows = document.querySelectorAll('.response-row');
+
+  filterButtons.forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+
+      // Remove active class from all buttons
+      filterButtons.forEach(btn => btn.classList.remove('active'));
+
+      // Add active class to clicked button
+      this.classList.add('active');
+
+      // Get filter value
+      const filter = this.getAttribute('data-filter');
+
+      // Filter rows
+      responseRows.forEach(row => {
+        const status = row.getAttribute('data-status');
+
+        if (filter === 'all') {
+          row.style.display = '';
+        } else {
+          row.style.display = status === filter ? '' : 'none';
+        }
+      });
+    });
+  });
 });
 </script>
 {% endblock %}
