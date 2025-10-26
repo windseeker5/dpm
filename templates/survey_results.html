@@ -77,75 +77,120 @@
   .page-header {
     text-align: center;
   }
-  
+
   .btn-list {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .container-xl {
     padding-left: 1rem;
     padding-right: 1rem;
   }
-  
+
   .btn {
     min-height: 44px;
     padding: 0.75rem 1rem;
   }
-  
+
   /* Stack summary cards on very small screens */
   .col-md-3 {
     margin-bottom: 0.75rem;
   }
-  
+
   /* Mobile table improvements */
   .table-responsive {
     border: none;
   }
-  
+
   .card-table th,
   .card-table td {
     padding: 0.75rem 0.5rem;
     font-size: 0.875rem;
   }
-  
+
   /* Better mobile spacing for results */
   .results-card {
     margin-bottom: 1rem;
     padding: 1rem;
   }
-  
+
   .question-header {
     padding: 0.75rem;
     margin-bottom: 0.75rem;
   }
-  
+
   .badge {
     font-size: 0.75rem;
   }
-  
+
   /* Open response mobile layout */
   .open-response {
     padding: 0.75rem;
     margin-bottom: 0.5rem;
     font-size: 0.875rem;
   }
-  
+
   /* Modal mobile adjustments */
   .modal-lg {
     margin: 1rem;
   }
-  
+
   .modal-header .btn-close {
     min-width: 44px;
     min-height: 44px;
   }
-  
+
   /* Mobile form improvements */
   .form-control,
   .form-select {
     font-size: 16px;
     min-height: 48px;
+  }
+
+  /* Mobile KPI Carousel Styles */
+  .mobile-kpi-container {
+    position: relative;
+  }
+
+  .mobile-kpi-scroll {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+
+  .mobile-kpi-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-kpi-card {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+  }
+
+  .mobile-kpi-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 1rem;
+  }
+
+  .mobile-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dee2e6;
+    transition: background 0.3s ease;
+    cursor: pointer;
+  }
+
+  .mobile-dot.active {
+    background: #206bc4;
   }
 }
 </style>
@@ -188,54 +233,141 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-  <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="card card-sm">
-        <div class="card-body text-center p-2 p-md-3">
-          <div class="h2 mb-1 text-blue">
-            {{ responses|length }}
-          </div>
-          <div class="text-muted small">Total Responses</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card card-sm">
-        <div class="card-body text-center p-2 p-md-3">
-          <div class="h2 mb-1 text-green">
-            {{ responses|selectattr('completed', 'equalto', True)|list|length }}
-          </div>
-          <div class="text-muted small">Completed</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card card-sm">
-        <div class="card-body text-center p-2 p-md-3">
-          {% set completion_rate = ((responses|selectattr('completed', 'equalto', True)|list|length / responses|length) * 100) if responses|length > 0 else 0 %}
-          <div class="h2 mb-1 text-primary">{{ "%.1f"|format(completion_rate) }}%</div>
-          <div class="text-muted small">Completion Rate</div>
-          <div class="progress progress-sm mt-2">
-            <div class="progress-bar bg-primary" style="width: {{ completion_rate }}%"></div>
+  <!-- Mobile View (Visible on Mobile Only) -->
+  <div class="d-md-none">
+    <!-- Mobile Summary Cards Carousel -->
+    <div class="mobile-kpi-container mb-3">
+      <div class="mobile-kpi-scroll">
+        <!-- Total Responses Card -->
+        <div class="mobile-kpi-card">
+          <div class="card" style="border-radius: 12px; min-height: 130px;">
+            <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+              <div class="text-muted small text-uppercase mb-2">TOTAL RESPONSES</div>
+              <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ responses|length }}</div>
+              <div class="text-muted small">
+                Survey participants
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- Completed Card -->
+        <div class="mobile-kpi-card">
+          <div class="card" style="border-radius: 12px; min-height: 130px;">
+            <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+              <div class="text-muted small text-uppercase mb-2">COMPLETED</div>
+              <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ responses|selectattr('completed', 'equalto', True)|list|length }}</div>
+              <div class="text-muted small">
+                Finished surveys
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completion Rate Card -->
+        <div class="mobile-kpi-card">
+          <div class="card" style="border-radius: 12px; min-height: 130px;">
+            <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+              {% set completion_rate = ((responses|selectattr('completed', 'equalto', True)|list|length / responses|length) * 100) if responses|length > 0 else 0 %}
+              <div class="text-muted small text-uppercase mb-2">COMPLETION RATE</div>
+              <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ "%.1f"|format(completion_rate) }}%</div>
+              <div class="text-muted small">
+                Success rate
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Survey Status Card -->
+        <div class="mobile-kpi-card">
+          <div class="card" style="border-radius: 12px; min-height: 130px;">
+            <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+              <div class="text-muted small text-uppercase mb-2">SURVEY STATUS</div>
+              <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ survey.status|title }}</div>
+              <div class="text-muted small">
+                {% if survey.status == 'active' %}
+                <span class="badge bg-green-lt text-green mt-1">Live</span>
+                {% elif survey.status == 'closed' %}
+                <span class="badge bg-red-lt text-red mt-1">Ended</span>
+                {% else %}
+                <span class="badge bg-yellow-lt text-yellow mt-1">{{ survey.status|title }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dots Navigation -->
+      <div class="mobile-kpi-dots">
+        <div class="mobile-dot active" data-index="0"></div>
+        <div class="mobile-dot" data-index="1"></div>
+        <div class="mobile-dot" data-index="2"></div>
+        <div class="mobile-dot" data-index="3"></div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="card card-sm">
-        <div class="card-body text-center p-2 p-md-3">
-          <div class="h2 mb-1 {% if survey.status == 'active' %}text-green{% elif survey.status == 'closed' %}text-red{% else %}text-yellow{% endif %}">
-            {{ survey.status|title }}
+  </div>
+
+  <!-- Desktop Content (Hidden on Mobile) -->
+  <div class="d-none d-md-block">
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+      <!-- Total Responses -->
+      <div class="col-md-3">
+        <div class="card" style="border-radius: 12px; min-height: 130px;">
+          <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="text-muted small text-uppercase mb-2">TOTAL RESPONSES</div>
+            <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ responses|length }}</div>
+            <div class="text-muted small">
+              Survey participants
+            </div>
           </div>
-          <div class="text-muted small">Survey Status</div>
-          {% if survey.status == 'active' %}
-          <span class="badge bg-green-lt text-green mt-1">Live</span>
-          {% elif survey.status == 'closed' %}
-          <span class="badge bg-red-lt text-red mt-1">Ended</span>
-          {% else %}
-          <span class="badge bg-yellow-lt text-yellow mt-1">{{ survey.status|title }}</span>
-          {% endif %}
+        </div>
+      </div>
+
+      <!-- Completed -->
+      <div class="col-md-3">
+        <div class="card" style="border-radius: 12px; min-height: 130px;">
+          <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="text-muted small text-uppercase mb-2">COMPLETED</div>
+            <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ responses|selectattr('completed', 'equalto', True)|list|length }}</div>
+            <div class="text-muted small">
+              Finished surveys
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Completion Rate -->
+      <div class="col-md-3">
+        <div class="card" style="border-radius: 12px; min-height: 130px;">
+          <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+            {% set completion_rate = ((responses|selectattr('completed', 'equalto', True)|list|length / responses|length) * 100) if responses|length > 0 else 0 %}
+            <div class="text-muted small text-uppercase mb-2">COMPLETION RATE</div>
+            <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ "%.1f"|format(completion_rate) }}%</div>
+            <div class="text-muted small">
+              Success rate
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Survey Status -->
+      <div class="col-md-3">
+        <div class="card" style="border-radius: 12px; min-height: 130px;">
+          <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="text-muted small text-uppercase mb-2">SURVEY STATUS</div>
+            <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ survey.status|title }}</div>
+            <div class="text-muted small">
+              {% if survey.status == 'active' %}
+              <span class="badge bg-green-lt text-green mt-1">Live</span>
+              {% elif survey.status == 'closed' %}
+              <span class="badge bg-red-lt text-red mt-1">Ended</span>
+              {% else %}
+              <span class="badge bg-yellow-lt text-yellow mt-1">{{ survey.status|title }}</span>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -500,5 +632,17 @@ function showIndividualResponse(responseId, userName, responseData) {
   
   new bootstrap.Modal(document.getElementById('responseModal')).show();
 }
+
+// Mobile KPI dot navigation
+document.addEventListener('DOMContentLoaded', function() {
+  const scroll = document.querySelector('.mobile-kpi-scroll');
+  const dots = document.querySelectorAll('.mobile-dot');
+  if (scroll && dots.length > 0) {
+    scroll.addEventListener('scroll', () => {
+      const index = Math.round(scroll.scrollLeft / scroll.offsetWidth);
+      dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+    });
+  }
+});
 </script>
 {% endblock %}

@@ -3406,7 +3406,8 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
                 'activity_id': activity.id,
                 'activity_name': activity.name,
                 'editable': False,  # Passport sales are system-generated, not editable
-                'source_type': 'passport'
+                'source_type': 'passport',
+                'created_by': 'System'  # Passport sales are auto-generated
             }
             activity_revenue += transaction['amount']
             activity_transactions.append(transaction)
@@ -3427,7 +3428,8 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
                 'activity_id': activity.id,
                 'activity_name': activity.name,
                 'editable': True,  # User-created income entries are editable
-                'source_type': 'income'
+                'source_type': 'income',
+                'created_by': income.created_by or 'System'  # Admin who created this entry
             }
             activity_revenue += transaction['amount']
             activity_transactions.append(transaction)
@@ -3448,7 +3450,8 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
                 'activity_id': activity.id,
                 'activity_name': activity.name,
                 'editable': True,  # User-created expense entries are editable
-                'source_type': 'expense'
+                'source_type': 'expense',
+                'created_by': expense.created_by or 'System'  # Admin who created this entry
             }
             activity_expenses += transaction['amount']
             activity_transactions.append(transaction)

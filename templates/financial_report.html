@@ -229,7 +229,14 @@
               {% for activity in financial_data.by_activity %}
               <tr>
                 <td>
-                  <strong>{{ activity.activity_name }}</strong>
+                  <div class="d-flex align-items-center">
+                    {% if activity.activity_image %}
+                      <span class="avatar avatar-sm me-2" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.activity_image) }});"></span>
+                    {% else %}
+                      <span class="avatar avatar-sm bg-secondary-lt text-secondary me-2">{{ activity.activity_name[0].upper() }}</span>
+                    {% endif %}
+                    <strong>{{ activity.activity_name }}</strong>
+                  </div>
                 </td>
                 <td class="text-end text-muted">
                   {{ format_currency(activity.total_revenue) }}
@@ -263,6 +270,7 @@
                             <th>Type</th>
                             <th>Category</th>
                             <th>Description</th>
+                            <th class="d-none d-md-table-cell">Created By</th>
                             <th class="text-end">Amount</th>
                             <th class="text-center">Actions</th>
                           </tr>
@@ -280,6 +288,7 @@
                             </td>
                             <td>{{ transaction.category }}</td>
                             <td>{{ transaction.description }}</td>
+                            <td class="d-none d-md-table-cell text-muted">{{ transaction.created_by }}</td>
                             <td class="text-end text-muted">
                               {{ format_currency(transaction.amount) }}
                             </td>

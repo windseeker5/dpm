@@ -4234,7 +4234,7 @@ def activity_income(activity_id, income_id=None):
                 amount=request.form.get("amount", type=float),
                 note=request.form.get("note"),
                 date=datetime.strptime(request.form.get("date"), "%Y-%m-%d"),
-                created_by="admin"
+                created_by=session.get("admin")
             )
             db.session.add(income)
 
@@ -4342,7 +4342,7 @@ def activity_expenses(activity_id, expense_id=None):
                 amount=request.form.get("amount", type=float),
                 description=request.form.get("description"),
                 date=datetime.strptime(request.form.get("date"), "%Y-%m-%d"),
-                created_by="admin"
+                created_by=session.get("admin")
             )
             db.session.add(expense)
 
