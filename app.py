@@ -342,8 +342,13 @@ def inject_globals_and_csrf():
     try:
         if "admin" in session:  # Only calculate if admin is logged in
             pending_signups_count = Signup.query.filter_by(status='pending').count()
-            # Calculate active passports (uses_remaining > 0)
-            active_passport_count = Passport.query.filter(Passport.uses_remaining > 0).count()
+            # Calculate active passports (uses_remaining > 0 OR unpaid) - matches Active filter logic
+            active_passport_count = Passport.query.filter(
+                db.or_(
+                    Passport.uses_remaining > 0,
+                    Passport.paid == False
+                )
+            ).count()
             # Calculate unmatched payments (deduplicated count of NO_MATCH)
             unmatched_payment_count = db.session.query(EbankPayment.id).filter(
                 EbankPayment.result == 'NO_MATCH',
