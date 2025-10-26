@@ -12,6 +12,16 @@
   opacity: 1 !important;
 }
 
+/* Force dropdown menu right edge to align with button right edge */
+.page-header .dropdown {
+  position: relative;
+}
+
+.page-header .dropdown-menu-end[data-popper-placement] {
+  right: 0 !important;
+  left: auto !important;
+}
+
 
 /* White background for all cards and tables */
 .card {
@@ -67,17 +77,18 @@
   <!-- Page Header -->
   <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
-      <div class="row g-2 align-items-center">
-        <div class="col">
-          <h1 class="page-title"><i class="ti ti-clipboard-check text-blue me-2"></i>Surveys</h1>
-        </div>
-        <div class="col-auto">
-          <div class="btn-list">
-            <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
-              <i class="ti ti-plus me-2"></i> Survey
-            </button>
-            <a href="{{ url_for('list_survey_templates') }}" class="btn btn-success shadow-sm">
-              <i class="ti ti-template me-2"></i> Manage Templates
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="page-title mb-0"><i class="ti ti-clipboard-check text-blue me-2"></i>Surveys</h1>
+        <div class="dropdown">
+          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            Actions
+          </button>
+          <div class="dropdown-menu dropdown-menu-end">
+            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
+              <i class="ti ti-plus me-2"></i>Create Survey
+            </a>
+            <a class="dropdown-item" href="{{ url_for('list_survey_templates') }}">
+              <i class="ti ti-edit me-2"></i>Edit Templates
             </a>
           </div>
         </div>
@@ -140,11 +151,11 @@
         <thead>
           <tr>
             <th>Survey</th>
-            <th>Created</th>
-            <th>Activity</th>
-            <th>Status</th>
-            <th>Sent/Completed</th>
-            <th>Completion Rate</th>
+            <th class="d-none d-md-table-cell">Created</th>
+            <th class="d-none d-md-table-cell">Activity</th>
+            <th class="d-none d-md-table-cell">Status</th>
+            <th class="d-none d-md-table-cell">Sent/Completed</th>
+            <th class="d-none d-md-table-cell">Completion Rate</th>
             <th class="text-center">Actions</th>
           </tr>
         </thead>
@@ -166,18 +177,18 @@
                 </div>
               </div>
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
               <div class="small">
                 {{ survey.created_dt.strftime('%Y-%m-%d') }}
               </div>
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
               <strong>{{ survey.activity.name if survey.activity else '-' }}</strong>
               {% if survey.passport_type %}
               <br><span class="text-muted small">{{ survey.passport_type.name }} participants</span>
               {% endif %}
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
               {% if survey.status == 'active' %}
               <span class="badge bg-green-lt text-green">Active</span>
               {% elif survey.status == 'closed' %}
@@ -186,13 +197,13 @@
               <span class="badge bg-gray-lt text-gray">{{ survey.status|title }}</span>
               {% endif %}
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
               <strong>{{ survey.invitation_count }} invited</strong>
               {% if survey.completed_count > 0 %}
               <br><span class="text-success small">{{ survey.completed_count }} completed</span>
               {% endif %}
             </td>
-            <td>
+            <td class="d-none d-md-table-cell">
               {% if survey.invitation_count > 0 %}
               <strong>{{ "%.1f"|format(survey.completion_rate) }}%</strong>
               {% else %}
@@ -878,6 +889,8 @@ document.getElementById('quickSurveyModal').addEventListener('hidden.bs.modal', 
   createBtn.innerHTML = '<i class="ti ti-check me-1"></i>Create Survey';
 });
 
+// NO JAVASCRIPT NEEDED - Bootstrap handles it all!
+
 // Direct form submission with loading state (no confirmation modal)
 document.getElementById('quickSurveyForm').addEventListener('submit', function(e) {
   // Show loading state immediately
@@ -922,6 +935,7 @@ function confirmCloseSurvey(surveyId, surveyName) {
 function confirmReopenSurvey(surveyName) {
   return confirm(`Reopen survey "${surveyName}"?\n\nThis will:\n• Allow new responses again\n• Make the survey active\n• Enable sending invitations`);
 }
+
 </script>
 {% endblock %}
 {% block styles %}
@@ -1027,10 +1041,25 @@ function confirmReopenSurvey(surveyName) {
 
 /* Component styles loaded via base.html */
 
+/* Mobile dropdown fix - make menu wider to show full text */
+@media (max-width: 767.98px) {
+  .page-header .dropdown-menu {
+    min-width: 220px !important; /* Increased to fit "Manage Templates" */
+    white-space: nowrap !important;
+  }
+
+  .page-header .dropdown-menu .dropdown-item {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    min-width: 100% !important;
+  }
+}
+
 /* Enhanced Dropdown Improvements */
 .dropdown-menu {
   z-index: 1060 !important;
-  /* Removed fixed width constraints - let Bootstrap auto-size to fit content */
+  min-width: 200px;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
   border: 1px solid rgba(0, 0, 0, 0.125);
   border-radius: 8px;
@@ -1044,6 +1073,112 @@ function confirmReopenSurvey(surveyName) {
   padding: 0.5rem 1rem;
   overflow: visible !important;
   text-overflow: clip !important;
+}
+
+/* CRITICAL: Force proper dropdown positioning in tables */
+.table .dropdown-menu {
+  position: absolute !important;
+  top: 100% !important;
+  right: 0 !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+  z-index: 1060 !important;
+}
+
+/* CRITICAL: Force all parent containers to allow overflow when dropdown is open */
+.dropdown.show {
+  position: relative;
+  z-index: 1000;
+}
+
+/* Ensure table cells don't clip dropdown content */
+.table td:has(.dropdown.show),
+.table th:has(.dropdown.show) {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1061;
+}
+
+/* Legacy support for browsers without :has() */
+.table td.dropdown-open,
+.table th.dropdown-open {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1061;
+}
+
+/* Ensure dropdown positioning within table cells */
+.table .dropdown {
+  position: relative;
+}
+
+/* Mobile dropdown fix - ensure full text is visible */
+@media (max-width: 767px) {
+  /* CRITICAL: Allow overflow for page header to show dropdown */
+  .page-header,
+  .page-header > div,
+  .page-header .row,
+  .page-header .col-auto {
+    overflow: visible !important;
+    position: relative !important;
+  }
+
+  /* Fix for ALL dropdowns on mobile, especially page header */
+  .dropdown {
+    position: relative !important;
+    overflow: visible !important;
+  }
+
+  /* Critical: Force ALL dropdown menus to be properly positioned on mobile */
+  .dropdown-menu,
+  .dropdown-menu.dropdown-menu-end,
+  .page-header .dropdown-menu,
+  .page-header .dropdown-menu.dropdown-menu-end {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: auto !important;
+    margin-top: 0.125rem !important;
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+    margin-left: 0 !important;
+    min-width: 250px !important; /* Increased to ensure full text fits */
+    max-width: none !important;
+    transform: none !important;
+    inset: unset !important;
+    width: 250px !important; /* Fixed width */
+    white-space: nowrap !important;
+    z-index: 9999 !important; /* Very high z-index to ensure it appears above everything */
+    overflow: visible !important;
+  }
+
+  /* Ensure dropdown items don't wrap or truncate */
+  .dropdown-menu .dropdown-item,
+  .page-header .dropdown-menu .dropdown-item {
+    white-space: nowrap !important;
+    font-size: 14px !important;
+    padding: 0.5rem 1rem !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+  }
+
+  /* Force table dropdowns to work properly on mobile */
+  .table .dropdown-menu {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    min-width: 200px !important;
+    z-index: 1060 !important;
+  }
 }
 
 .dropdown.show .dropdown-menu {
