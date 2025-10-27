@@ -3455,7 +3455,32 @@ def list_activities():
     activity_type = request.args.get("type", "")
     start_date = request.args.get("start_date", "")
     end_date = request.args.get("end_date", "")
-    
+    show_all_param = request.args.get("show_all", "")
+
+    # Default to 'active' filter if no status specified (unless explicitly showing all)
+    if not status and show_all_param != "true":
+        status = "active"
+
+    # Query ALL activities first for statistics (before any filters)
+    all_activities = Activity.query.options(
+        db.joinedload(Activity.passports),
+        db.joinedload(Activity.passport_types)
+    ).all()
+
+    # Calculate TRUE total activities count for "All" button
+    all_activities_count = Activity.query.count()
+
+    # Calculate statistics using ALL activities (not filtered results)
+    active_activities = len([a for a in all_activities if a.status == 'active'])
+    inactive_activities = len([a for a in all_activities if a.status == 'inactive'])
+
+    # Create statistics dict to pass to template
+    statistics = {
+        'total_activities': all_activities_count,
+        'active_activities': active_activities,
+        'inactive_activities': inactive_activities,
+    }
+
     # Base query with eager loading for performance
     query = Activity.query.options(
         db.joinedload(Activity.passports),
@@ -3471,20 +3496,20 @@ def list_activities():
                 Activity.type.ilike(f"%{q}%")
             )
         )
-    
+
     if status:
         query = query.filter(Activity.status == status)
-    
+
     if activity_type:
         query = query.filter(Activity.type.ilike(f"%{activity_type}%"))
-    
+
     if start_date:
         try:
             start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             query = query.filter(Activity.start_date >= start_dt)
         except ValueError:
             pass
-    
+
     if end_date:
         try:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d")
@@ -3493,27 +3518,32 @@ def list_activities():
             pass
 
     activities = query.all()
-    
+
+    # Determine if showing all (explicitly requested)
+    show_all = show_all_param == "true"
+
     # Calculate statistics for each activity
     for activity in activities:
         activity.signup_count = len([p for p in activity.passports if p.paid])
         activity.total_revenue = sum(p.sold_amt for p in activity.passports if p.paid)
         activity.passport_types_count = len(activity.passport_types)
         activity.active_passports_count = len([p for p in activity.passports if p.paid and p.uses_remaining > 0])
-    
+
     # Get unique activity types for filter dropdown
     activity_types = db.session.query(Activity.type).distinct().filter(Activity.type.isnot(None)).all()
     activity_types = [t[0] for t in activity_types if t[0]]
-    
-    return render_template("activities.html", 
-                         activities=activities, 
+
+    return render_template("activities.html",
+                         activities=activities,
                          activity_types=activity_types,
+                         statistics=statistics,
                          current_filters={
                              'q': q,
                              'status': status,
                              'type': activity_type,
                              'start_date': start_date,
-                             'end_date': end_date
+                             'end_date': end_date,
+                             'show_all': show_all
                          })
 
 
