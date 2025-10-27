@@ -130,7 +130,8 @@
           </div>
         </div>
 
-        <!-- Passports Created Card -->
+        <!-- Passports Created Card - REPLACED WITH PASSPORTS REDEEMED -->
+        <!--
         <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_created" data-kpi-id="{{ passports_created_card.id if passports_created_card else 'passports-created-default' }}">
             <div class="card-body">
@@ -177,6 +178,50 @@
                 {% endif %}
               </div>
               <div id="passports-created-chart" style="height: 40px;"></div>
+            </div>
+          </div>
+        </div>
+        -->
+
+        <!-- Passports Redeemed Card (Replaces Passports Created) -->
+        <div class="col-md-3 mb-3">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_redeemed" data-kpi-id="passports-redeemed-default">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">PASSPORTS REDEEMED</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports_redeemed">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="passports_redeemed">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="passports_redeemed">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="passports_redeemed">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="passports_redeemed">All time</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1" id="passports-redeemed-value">
+                {% if kpi_data and kpi_data['passports_redeemed'] %}
+                  {{ "{:,.0f}".format(kpi_data['passports_redeemed']['current']) }}
+                {% else %}
+                  0
+                {% endif %}
+              </div>
+              <div class="d-flex align-items-center mb-3">
+                {% if kpi_data and kpi_data['passports_redeemed'] and kpi_data['passports_redeemed']['change'] is not none %}
+                  {% if kpi_data['passports_redeemed']['change'] > 0 %}
+                    <div class="text-success me-2" id="passports-redeemed-trend">{{ kpi_data['passports_redeemed']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['passports_redeemed']['change'] < 0 %}
+                    <div class="text-danger me-2" id="passports-redeemed-trend">{{ kpi_data['passports_redeemed']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2" id="passports-redeemed-trend">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted me-2" id="passports-redeemed-trend">-- <i class="ti ti-minus"></i></div>
+                {% endif %}
+              </div>
+              <div id="passports-redeemed-chart" style="height: 40px;"></div>
             </div>
           </div>
         </div>
@@ -231,49 +276,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Passports Redeemed Card (NEW - Testing as 5th card) -->
-        <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_redeemed" data-kpi-id="passports-redeemed-default">
-            <div class="card-body">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">PASSPORTS REDEEMED</div>
-                <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports_redeemed">
-                    Last 7 days
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="passports_redeemed">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="passports_redeemed">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="passports_redeemed">Last 90 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="passports_redeemed">All time</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="h2 mb-1" id="passports-redeemed-value">
-                {% if kpi_data and kpi_data['passports_redeemed'] %}
-                  {{ "{:,.0f}".format(kpi_data['passports_redeemed']['current']) }}
-                {% else %}
-                  0
-                {% endif %}
-              </div>
-              <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data['passports_redeemed'] and kpi_data['passports_redeemed']['change'] is not none %}
-                  {% if kpi_data['passports_redeemed']['change'] > 0 %}
-                    <div class="text-success me-2" id="passports-redeemed-trend">{{ kpi_data['passports_redeemed']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif kpi_data['passports_redeemed']['change'] < 0 %}
-                    <div class="text-danger me-2" id="passports-redeemed-trend">{{ kpi_data['passports_redeemed']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
-                  {% else %}
-                    <div class="text-muted me-2" id="passports-redeemed-trend">0% <i class="ti ti-minus"></i></div>
-                  {% endif %}
-                {% else %}
-                  <div class="text-muted me-2" id="passports-redeemed-trend">-- <i class="ti ti-minus"></i></div>
-                {% endif %}
-              </div>
-              <div id="passports-redeemed-chart" style="height: 40px;"></div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Mobile Version (DEAD SIMPLE) -->
@@ -306,12 +308,12 @@
             </div>
           </div>
 
-          <!-- Passports Created Card -->
+          <!-- Passports Redeemed Card (Replaces Passports Created) -->
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">PASSPORTS CREATED</div>
-                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['passports_created']['current'] }}</div>
+                <div class="text-muted small text-uppercase mb-2">PASSPORTS REDEEMED</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['passports_redeemed']['current'] if mobile_kpi_data['passports_redeemed'] else 0 }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-timeline me-1"></i>All-time
                 </div>

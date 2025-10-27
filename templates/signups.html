@@ -57,10 +57,10 @@
                style="{% if current_filters.status == 'pending' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
               <i class="ti ti-alert-circle" style="font-size: 16px; margin-right: 4px;"></i>Pending <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.pending|default(0) }})</span>
             </a>
-            <a href="{{ url_for('list_signups', payment_status='unpaid') }}"
-               class="github-filter-btn {% if current_filters.payment_status == 'unpaid' %}active{% endif %}"
-               style="{% if current_filters.payment_status == 'unpaid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"></i>Unpaid <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.unpaid|default(0) }})</span>
+            <a href="{{ url_for('list_signups', status='approved') }}"
+               class="github-filter-btn {% if current_filters.status == 'approved' and not current_filters.show_all %}active{% endif %}"
+               style="{% if current_filters.status == 'approved' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+              <i class="ti ti-check-circle" style="font-size: 16px; margin-right: 4px;"></i>Approved <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.approved|default(0) }})</span>
             </a>
             <a href="{{ url_for('list_signups', show_all='true') }}"
                class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
@@ -159,10 +159,9 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-end">
                   {% if signup.status == 'pending' %}
-                  <a class="dropdown-item text-primary" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
-                     onclick="return confirm('Approve and create passport?')">
-                    <i class="ti ti-check me-2"></i>Approve & Create Pass
-                  </a>
+                  <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+                    <i class="ti ti-check me-2"></i>Approve & Create Passport
+                  </button>
                   {% endif %}
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#"
@@ -264,6 +263,30 @@
   </div>
 </div>
 
+<!-- Approve Signup Modals -->
+{% for signup in signups %}
+{% if signup.status == 'pending' %}
+<div class="modal modal-blur fade" id="approveSignupModal-{{ signup.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-primary"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-check icon mb-2 text-primary" style="font-size: 2rem;"></i>
+        <h3>Approve & Create Passport</h3>
+        <div class="text-muted">Approve signup and create passport for {{ signup.user.name or 'this user' }}?</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <form method="GET" action="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}" class="w-100">
+          <button type="submit" class="btn btn-primary w-100">Yes, Approve & Create</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
 <!-- Delete Signup Confirmation Modal -->
 <div class="modal modal-blur fade" id="signupDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
@@ -310,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
         window.SearchComponent.init({
             formId: 'dynamicSearchForm',
             inputId: 'enhancedSearchInput',
-            preserveParams: ['payment_status', 'status']
+            preserveParams: ['status']
         });
     }
 

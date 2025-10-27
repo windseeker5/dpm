@@ -956,7 +956,6 @@ def list_signups():
                          current_filters={
                              'q': q,
                              'activity_id': activity_id,
-                             'payment_status': payment_status,
                              'status': signup_status,
                              'start_date': start_date,
                              'end_date': end_date,
