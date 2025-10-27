@@ -97,15 +97,15 @@
           <tr>
             <td style="vertical-align: middle;">
               <div class="d-flex align-items-center">
-                <!-- Desktop: User Gravatar -->
+                <!-- Desktop: User Gravatar (circular) -->
                 <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40"
                      class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
-                <!-- Mobile: Activity Logo -->
+                <!-- Mobile: Activity Logo (square with rounded corners) -->
                 {% if passport.activity and (passport.activity.image_filename or passport.activity.logo_filename) %}
                   <img src="{{ url_for('static', filename='uploads/activity_images/' + (passport.activity.image_filename or passport.activity.logo_filename)) }}"
-                       class="rounded-circle me-3 user-avatar d-md-none" alt="{{ passport.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
+                       class="rounded me-3 user-avatar d-md-none" alt="{{ passport.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
                 {% else %}
-                  <div class="rounded-circle me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
+                  <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
                     {{ passport.activity.name[0] if passport.activity and passport.activity.name else 'A' }}
                   </div>
                 {% endif %}

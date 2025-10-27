@@ -231,8 +231,51 @@
             </div>
           </div>
         </div>
+
+        <!-- Passports Redeemed Card (NEW - Testing as 5th card) -->
+        <div class="col-md-3 mb-3">
+          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_redeemed" data-kpi-id="passports-redeemed-default">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="text-muted small text-uppercase">PASSPORTS REDEEMED</div>
+                <div class="dropdown">
+                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports_redeemed">
+                    Last 7 days
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="passports_redeemed">Last 7 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="passports_redeemed">Last 30 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="passports_redeemed">Last 90 days</a></li>
+                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="passports_redeemed">All time</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="h2 mb-1" id="passports-redeemed-value">
+                {% if kpi_data and kpi_data['passports_redeemed'] %}
+                  {{ "{:,.0f}".format(kpi_data['passports_redeemed']['current']) }}
+                {% else %}
+                  0
+                {% endif %}
+              </div>
+              <div class="d-flex align-items-center mb-3">
+                {% if kpi_data and kpi_data['passports_redeemed'] and kpi_data['passports_redeemed']['change'] is not none %}
+                  {% if kpi_data['passports_redeemed']['change'] > 0 %}
+                    <div class="text-success me-2" id="passports-redeemed-trend">{{ kpi_data['passports_redeemed']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
+                  {% elif kpi_data['passports_redeemed']['change'] < 0 %}
+                    <div class="text-danger me-2" id="passports-redeemed-trend">{{ kpi_data['passports_redeemed']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
+                  {% else %}
+                    <div class="text-muted me-2" id="passports-redeemed-trend">0% <i class="ti ti-minus"></i></div>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted me-2" id="passports-redeemed-trend">-- <i class="ti ti-minus"></i></div>
+                {% endif %}
+              </div>
+              <div id="passports-redeemed-chart" style="height: 40px;"></div>
+            </div>
+          </div>
+        </div>
       </div>
-      
+
       <!-- Mobile Version (DEAD SIMPLE) -->
       {% if mobile_kpi_data %}
       <div class="mobile-kpi-container d-md-none mb-4">
@@ -1623,11 +1666,12 @@ function determineKPIType(cardElement) {
     console.error('determineKPIType called with null cardElement');
     return 'revenue'; // fallback
   }
-  
+
   // Determine KPI type based on card content - use FRONTEND keys consistently
   const cardText = cardElement.textContent.toLowerCase();
   if (cardText.includes('revenue')) return 'revenue';
   if (cardText.includes('active passports') || cardText.includes('active users')) return 'active_passports';
+  if (cardText.includes('passports redeemed')) return 'passports_redeemed';
   if (cardText.includes('passports created')) return 'passports_created';
   if (cardText.includes('unpaid passports') || cardText.includes('pending sign ups')) return 'pending_signups';
   return 'revenue'; // fallback
@@ -1666,7 +1710,8 @@ async function updateKPICard(period, kpiType, cardElement) {
     const apiKeyMapping = {
       'revenue': 'revenue',
       'active_passports': 'active_users',
-      'passports_created': 'passports_created', 
+      'passports_created': 'passports_created',
+      'passports_redeemed': 'passports_redeemed',
       'pending_signups': 'unpaid_passports'
     };
     
@@ -1685,6 +1730,8 @@ async function updateKPICard(period, kpiType, cardElement) {
       valueElement = cardElement.querySelector('#active-passports-value');
     } else if (kpiType === 'passports_created') {
       valueElement = cardElement.querySelector('#passports-created-value');
+    } else if (kpiType === 'passports_redeemed') {
+      valueElement = cardElement.querySelector('#passports-redeemed-value');
     } else if (kpiType === 'pending_signups') {
       valueElement = cardElement.querySelector('#pending-signups-value');
     }
@@ -1708,6 +1755,8 @@ async function updateKPICard(period, kpiType, cardElement) {
       trendElement = cardElement.querySelector('#active-passports-trend');
     } else if (kpiType === 'passports_created') {
       trendElement = cardElement.querySelector('#passports-created-trend');
+    } else if (kpiType === 'passports_redeemed') {
+      trendElement = cardElement.querySelector('#passports-redeemed-trend');
     } else if (kpiType === 'pending_signups') {
       trendElement = cardElement.querySelector('#pending-signups-trend');
     }
@@ -1822,9 +1871,11 @@ function updateSingleChart(cardElement, kpiData, kpiType) {
   } else {
     // Bar chart for other KPIs
     const options = {
-      series: [{ 
-        name: kpiType === 'pending_signups' ? 'Unpaid Passports' : kpiType.replace('_', ' '),
-        data: kpiData.trend_data 
+      series: [{
+        name: kpiType === 'pending_signups' ? 'Unpaid Passports' :
+              kpiType === 'passports_redeemed' ? 'Passports Redeemed' :
+              kpiType.replace('_', ' '),
+        data: kpiData.trend_data
       }],
       chart: { 
         type: 'bar', 
@@ -2344,6 +2395,12 @@ function initializeApexCharts() {
   if (kpiData.unpaid_passports && kpiData.unpaid_passports.trend_data) {
     const el = document.querySelector('#pending-signups-chart');
     if (el) new ApexCharts(el, {series: [{data: kpiData.unpaid_passports.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
+  }
+
+  // Passports redeemed bar chart (NEW)
+  if (kpiData.passports_redeemed && kpiData.passports_redeemed.trend_data) {
+    const el = document.querySelector('#passports-redeemed-chart');
+    if (el) new ApexCharts(el, {series: [{data: kpiData.passports_redeemed.trend_data}], chart: {type: 'bar', height: 40, sparkline: {enabled: true}}, colors: ['#206bc4']}).render();
   }
 }
 

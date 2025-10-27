@@ -594,6 +594,74 @@ This CSS file contains the SearchComponent global object and all related styles.
 
 ---
 
+## Avatar Styling Rules
+
+### User Avatars vs Activity Avatars
+
+**CRITICAL DISTINCTION:**
+- **User avatars**: Always circular (`rounded-circle`)
+- **Activity avatars**: Always square with rounded corners (`rounded`)
+
+This distinction helps users instantly understand the visual hierarchy:
+- **Circular = Person** (user identity)
+- **Square = Brand** (activity/organization identity)
+
+### Desktop View (≥768px)
+- Show user gravatar avatars
+- Always use `rounded-circle` class
+- Standard size: 40px × 40px
+
+### Mobile View (<768px)
+- Show activity logo/image instead of user avatar
+- Always use `rounded` class (NOT `rounded-circle`)
+- Standard size: 30px × 30px
+- Use `object-fit: cover` to maintain aspect ratio
+
+### HTML Pattern for Tables
+
+```html
+<td style="vertical-align: middle;">
+  <div class="d-flex align-items-center">
+    <!-- Desktop: User Gravatar (circular) -->
+    <img src="https://www.gravatar.com/avatar/..."
+         class="rounded-circle me-3 user-avatar d-none d-md-block"
+         alt="Avatar">
+
+    <!-- Mobile: Activity Logo (square with rounded corners) -->
+    {% if activity.logo_filename %}
+      <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.logo_filename) }}"
+           class="rounded me-3 user-avatar d-md-none"
+           alt="{{ activity.name }}"
+           style="width: 30px; height: 30px; object-fit: cover;">
+    {% else %}
+      <!-- Fallback: Activity initial in square container -->
+      <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center"
+           style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
+        {{ activity.name[0] if activity and activity.name else 'A' }}
+      </div>
+    {% endif %}
+
+    <div>
+      <div class="fw-bold">{{ user.name }}</div>
+      <div class="text-muted small d-none d-md-block">{{ user.email }}</div>
+    </div>
+  </div>
+</td>
+```
+
+### Why This Matters
+
+1. **Universal Standards**: Circular avatars are the web standard for people, square logos are standard for brands
+2. **Instant Recognition**: Users can immediately distinguish personal vs organizational context
+3. **Visual Consistency**: Matches the passport card design where activity logos are square
+4. **Design System Coherence**: Maintains consistency with other Minipass UI elements
+
+### Reference Implementation
+
+See `templates/passports.html` (lines 100-111) and `templates/signups.html` (lines 91-102) for complete working examples.
+
+---
+
 ## CSS Files to Include
 
 ### Required CSS Files (In Order)

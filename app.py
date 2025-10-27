@@ -689,7 +689,7 @@ def dashboard():
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
     from datetime import datetime
-    from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card
+    from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card, render_passports_redeemed_card
     import re
     
     # Detect mobile user agent
@@ -843,6 +843,11 @@ def list_signups():
     signup_status = request.args.get('status')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
+    show_all_param = request.args.get('show_all')
+
+    # Default to pending status when no filters are set (like passport defaults to active)
+    if not signup_status and not payment_status and show_all_param != "true":
+        signup_status = "pending"
     
     # Build query with eager loading for performance
     query = Signup.query.options(
@@ -941,8 +946,8 @@ def list_signups():
     # Get all passport types for display
     passport_types = PassportType.query.all()
     
-    return render_template('signups.html', 
-                         signups=signups, 
+    return render_template('signups.html',
+                         signups=signups,
                          pagination=signups_pagination,
                          activities=activities,
                          statuses=statuses,
@@ -954,7 +959,8 @@ def list_signups():
                              'payment_status': payment_status,
                              'status': signup_status,
                              'start_date': start_date,
-                             'end_date': end_date
+                             'end_date': end_date,
+                             'show_all': show_all_param == "true"
                          })
 
 
@@ -4705,7 +4711,7 @@ def activity_dashboard(activity_id):
     from sqlalchemy.orm import joinedload
     from sqlalchemy import or_, func
     from datetime import datetime, timezone, timedelta
-    from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card
+    from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card, render_passports_redeemed_card
 
     activity = db.session.get(Activity, activity_id)
     if not activity:
