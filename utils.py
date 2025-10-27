@@ -757,7 +757,7 @@ def get_kpi_data(activity_id=None, period='7d'):
         dict: KPI data with current values, previous values, changes, and trends
     """
     from datetime import datetime, timedelta, timezone
-    from models import Passport, Signup, Income, db
+    from models import Passport, Signup, Income, Redemption, db
     from flask import current_app
     from sqlalchemy import func, and_, or_
     
@@ -886,7 +886,7 @@ def get_kpi_data(activity_id=None, period='7d'):
         current_unpaid = get_base_passport_query().filter(
             Passport.paid == False
         ).count()
-        
+
         if period != 'all':
             # For unpaid, compare new unpaid passports created in each period
             prev_unpaid = get_base_passport_query().filter(
@@ -894,14 +894,14 @@ def get_kpi_data(activity_id=None, period='7d'):
                 Passport.created_dt <= prev_end,
                 Passport.paid == False
             ).count()
-            
+
             # Also get current period new unpaid for fair comparison
             current_period_unpaid = get_base_passport_query().filter(
                 Passport.created_dt >= current_start,
                 Passport.created_dt <= current_end,
                 Passport.paid == False
             ).count()
-            
+
             if prev_unpaid > 0:
                 unpaid_change = ((current_period_unpaid - prev_unpaid) / prev_unpaid * 100)
             elif current_period_unpaid > 0:
@@ -911,7 +911,38 @@ def get_kpi_data(activity_id=None, period='7d'):
         else:
             prev_unpaid = None
             unpaid_change = None
-        
+
+        # KPI 5: Passports Redeemed
+        # Count redemptions by joining Redemption with Passport for activity filtering
+        redemption_query = db.session.query(Redemption).join(Passport)
+        if activity_id:
+            redemption_query = redemption_query.filter(Passport.activity_id == activity_id)
+
+        current_passports_redeemed = redemption_query.filter(
+            Redemption.date_used >= current_start,
+            Redemption.date_used <= current_end
+        ).count()
+
+        if period != 'all':
+            prev_redemption_query = db.session.query(Redemption).join(Passport)
+            if activity_id:
+                prev_redemption_query = prev_redemption_query.filter(Passport.activity_id == activity_id)
+
+            prev_passports_redeemed = prev_redemption_query.filter(
+                Redemption.date_used >= prev_start,
+                Redemption.date_used <= prev_end
+            ).count()
+
+            if prev_passports_redeemed > 0:
+                passports_redeemed_change = ((current_passports_redeemed - prev_passports_redeemed) / prev_passports_redeemed * 100)
+            elif current_passports_redeemed > 0:
+                passports_redeemed_change = 100.0  # New redemptions, show as 100% increase
+            else:
+                passports_redeemed_change = 0
+        else:
+            prev_passports_redeemed = None
+            passports_redeemed_change = None
+
         # Build trend data (optimized - single query with grouping)
         def build_trend(days):
             trend_start = now - timedelta(days=days)
@@ -1002,7 +1033,39 @@ def get_kpi_data(activity_id=None, period='7d'):
         active_users_trend = build_count_trend(Passport, Passport.uses_remaining > 0, trend_days)
         passports_created_trend = build_count_trend(Passport, None, trend_days)
         unpaid_trend = build_count_trend(Passport, Passport.paid == False, trend_days)
-        
+
+        # Build redemptions trend (requires join with Passport for activity filtering)
+        def build_redemptions_trend(days):
+            trend_start = now - timedelta(days=days)
+
+            query = db.session.query(
+                func.date(Redemption.date_used).label('day'),
+                func.count().label('count')
+            ).join(Passport)
+
+            if activity_id:
+                query = query.filter(Passport.activity_id == activity_id)
+
+            query = query.filter(
+                Redemption.date_used >= trend_start,
+                Redemption.date_used <= now
+            )
+
+            daily_counts = query.group_by(func.date(Redemption.date_used)).all()
+
+            # Convert to dictionary for fast lookup
+            count_dict = {str(row.day): row.count for row in daily_counts}
+
+            # Build trend array
+            trend = []
+            for i in reversed(range(days)):
+                day = (now - timedelta(days=i)).date()
+                day_str = str(day)
+                trend.append(count_dict.get(day_str, 0))
+            return trend
+
+        passports_redeemed_trend = build_redemptions_trend(trend_days)
+
         return {
             'revenue': {
                 'current': round(current_revenue, 2),
@@ -1028,6 +1091,12 @@ def get_kpi_data(activity_id=None, period='7d'):
                 'change': round(unpaid_change, 1) if unpaid_change is not None else None,
                 'trend_data': unpaid_trend,
                 'current_period': current_period_unpaid if period != 'all' else None  # New unpaid in current period
+            },
+            'passports_redeemed': {
+                'current': current_passports_redeemed,
+                'previous': prev_passports_redeemed,
+                'change': round(passports_redeemed_change, 1) if passports_redeemed_change is not None else None,
+                'trend_data': passports_redeemed_trend
             }
         }
 

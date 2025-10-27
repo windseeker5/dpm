@@ -1966,7 +1966,7 @@ html, body {
     margin-left: 0;
     overflow: hidden;
     position: relative;
-    z-index: 1;
+    /* z-index: 1; - Removed: was interfering with Bootstrap modals on mobile */
   }
   
   /* Option B: Mobile header with organization name and user avatar */
@@ -2173,22 +2173,15 @@ html, body {
   height: 80px;
   z-index: 9999;
 
-  /* REAL Stripe gradient: vibrant purple/magenta → pink/red → orange → yellow */
-  background:
-    radial-gradient(ellipse 150% 100% at 10% -20%, rgba(139, 92, 246, 0.5), transparent),
-    radial-gradient(ellipse 150% 100% at 90% -20%, rgba(251, 191, 36, 0.4), transparent),
-    radial-gradient(ellipse 100% 80% at 50% 120%, rgba(239, 68, 68, 0.25), transparent),
-    linear-gradient(100deg,
-      #8b5cf6 0%,
-      #a855f7 15%,
-      #d946ef 30%,
-      #ec4899 45%,
-      #f43f5e 60%,
-      #f97316 75%,
-      #fb923c 85%,
-      #fbbf24 100%
-    );
-  background-size: 200% 200%;
+  /* Option 3: Professional Wealth - Intelligence → Trust → Clarity → Technology → Growth → Success */
+  background: linear-gradient(110deg,
+    #6366F1 0%,    /* Intelligence Indigo */
+    #3B82F6 20%,   /* Trust Blue */
+    #06B6D4 40%,   /* Clarity Cyan */
+    #14B8A6 60%,   /* Tech Teal */
+    #10B981 80%,   /* Growth Green */
+    #059669 100%   /* Success Emerald */
+  );
 
   display: flex;
   flex-direction: column;

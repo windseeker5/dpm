@@ -102,12 +102,12 @@ def render_passports_created_card(activity_id=None, period='7d'):
 def render_passports_unpaid_card(activity_id=None, period='7d'):
     """Render passports unpaid KPI card with bar chart"""
     data = get_kpi_data(activity_id=activity_id, period=period)
-    
+
     unpaid_data = data.get('unpaid_passports', {})
     current_value = unpaid_data.get('current', 0)
     change = unpaid_data.get('change', 0) or 0
     trend = unpaid_data.get('trend_data', [0] * 7)
-    
+
     # Format change with proper sign and color class
     if change > 0:
         change_class = "text-success"
@@ -118,10 +118,40 @@ def render_passports_unpaid_card(activity_id=None, period='7d'):
     else:
         change_class = "text-muted"
         change_icon = "ti-minus"
-    
+
     return render_template('kpi_card_bar.html',
                           title='Passports Unpaid',
                           card_id='unpaid_passports',
+                          value=f"{current_value:,}",
+                          change=abs(change) if change != 0 else 0,
+                          change_class=change_class,
+                          change_icon=change_icon,
+                          trend_data=trend)
+
+
+def render_passports_redeemed_card(activity_id=None, period='7d'):
+    """Render passports redeemed KPI card with bar chart"""
+    data = get_kpi_data(activity_id=activity_id, period=period)
+
+    redeemed_data = data.get('passports_redeemed', {})
+    current_value = redeemed_data.get('current', 0)
+    change = redeemed_data.get('change', 0) or 0
+    trend = redeemed_data.get('trend_data', [0] * 7)
+
+    # Format change with proper sign and color class
+    if change > 0:
+        change_class = "text-success"
+        change_icon = "ti-trending-up"
+    elif change < 0:
+        change_class = "text-danger"
+        change_icon = "ti-trending-down"
+    else:
+        change_class = "text-muted"
+        change_icon = "ti-minus"
+
+    return render_template('kpi_card_bar.html',
+                          title='Passports Redeemed',
+                          card_id='passports_redeemed',
                           value=f"{current_value:,}",
                           change=abs(change) if change != 0 else 0,
                           change_class=change_class,
