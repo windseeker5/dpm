@@ -663,33 +663,28 @@
       </main>
     </div>
     
-    <!-- Mobile Bottom Navigation (PRESERVED EXACTLY) -->
+    <!-- Mobile Bottom Navigation - Quick Shortcuts -->
     {% if session.get("admin") %}
     <nav class="minipass-mobile-nav d-lg-none">
-      <a href="{{ url_for('dashboard') }}" 
-         class="mobile-nav-item {{ 'active' if request.endpoint == 'dashboard' }}">
-        <i class="ti ti-layout-dashboard"></i>
-        <span>Home</span>
+      <a href="{{ url_for('scan_qr') }}"
+         class="mobile-nav-item {{ 'active' if request.endpoint == 'scan_qr' }}">
+        <i class="ti ti-scan"></i>
+        <span>Scan</span>
       </a>
-      <a href="{{ url_for('list_activities') }}" 
+      <a href="{{ url_for('list_activities') }}"
          class="mobile-nav-item {{ 'active' if request.endpoint == 'list_activities' }}">
         <i class="ti ti-activity"></i>
         <span>Activities</span>
       </a>
-      <a href="{{ url_for('scan_qr') }}" class="mobile-nav-item mobile-nav-center">
-        <div class="mobile-nav-center-btn">
-          <i class="ti ti-scan"></i>
-        </div>
+      <a href="{{ url_for('list_passports') }}"
+         class="mobile-nav-item {{ 'active' if request.endpoint == 'list_passports' }}">
+        <i class="ti ti-ticket"></i>
+        <span>Passports</span>
       </a>
-      <a href="{{ url_for('list_signups') }}" 
+      <a href="{{ url_for('list_signups') }}"
          class="mobile-nav-item {{ 'active' if request.endpoint == 'list_signups' }}">
         <i class="ti ti-user-check"></i>
         <span>Signups</span>
-      </a>
-      <a href="{{ url_for('list_passports') }}" 
-         class="mobile-nav-item {{ 'active' if request.endpoint == 'list_passports' }}">
-        <i class="ti ti-ticket"></i>
-        <span>Passes</span>
       </a>
     </nav>
     {% endif %}

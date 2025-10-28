@@ -1,22 +1,22 @@
 {% for signup in signups %}
-<tr data-paid="{{ 'true' if signup.paid else 'false' }}" data-status="{{ signup.status or 'pending' }}">
-  <td>
-    <input type="checkbox" 
-           class="form-check-input signup-checkbox" 
-           name="selected_signups" 
-           value="{{ signup.id }}" 
-           form="bulkForm"
-           data-status="{{ signup.status or 'pending' }}"
-           data-paid="{{ 'true' if signup.paid else 'false' }}"
-           aria-label="Select signup {{ signup.id }}">
-  </td>
+<tr>
   <td style="vertical-align: middle;">
     <div class="d-flex align-items-center">
-      <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+      <!-- Desktop: User Gravatar -->
+      <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40"
            class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+      <!-- Mobile: Activity Logo (square with rounded corners) -->
+      {% if signup.activity and (signup.activity.image_filename or signup.activity.logo_filename) %}
+        <img src="{{ url_for('static', filename='uploads/activity_images/' + (signup.activity.image_filename or signup.activity.logo_filename)) }}"
+             class="rounded me-3 user-avatar d-md-none" alt="{{ signup.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
+      {% else %}
+        <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
+          {{ signup.activity.name[0] if signup.activity and signup.activity.name else 'A' }}
+        </div>
+      {% endif %}
       <div>
         <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
-        <div class="text-muted small">{{ signup.user.email or 'No email' }}</div>
+        <div class="text-muted small d-none d-md-block">{{ signup.user.email or 'No email' }}</div>
       </div>
     </div>
   </td>
@@ -73,36 +73,21 @@
         <i class="ti ti-menu-2 d-md-none"></i>
       </a>
       <div class="dropdown-menu dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
-          <i class="ti ti-pencil me-2"></i>Edit Details
-        </a>
-        {% if not signup.paid %}
-        <a class="dropdown-item text-success" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}" 
-           onclick="return confirm('Mark this signup as paid?')">
-          <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-        </a>
-        {% endif %}
         {% if signup.status == 'pending' %}
-        <a class="dropdown-item text-primary" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
-           onclick="return confirm('Approve and create passport?')">
-          <i class="ti ti-check me-2"></i>Approve & Create Pass
-        </a>
+        <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+          <i class="ti ti-check me-2"></i>Approve & Create Passport
+        </button>
         {% endif %}
-        <a class="dropdown-item" href="#">
-          <i class="ti ti-mail me-2"></i>Send Reminder
-        </a>
         <div class="dropdown-divider"></div>
-        <a class="dropdown-item text-danger" href="#" 
-           onclick="if(confirm('Delete this signup?')) { 
-             var form = document.getElementById('deleteForm{{ signup.id }}'); 
-             if(form) form.submit(); 
-           }">
+        <a class="dropdown-item text-danger" href="#"
+           onclick="confirmSignupDelete({{ signup.id }}, '{{ signup.user.email or signup.user.name or 'Unknown user' }}'); return false;">
           <i class="ti ti-trash me-2"></i>Delete
         </a>
       </div>
     </div>
     <!-- Hidden delete form -->
     <form id="deleteForm{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="delete">
       <input type="hidden" name="selected_signups" value="{{ signup.id }}">
     </form>
