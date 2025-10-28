@@ -109,12 +109,13 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title"><i class="ti ti-edit text-blue me-2"></i>Edit Template: {{ template.name }}</h1>
-          <p class="text-muted mt-1">Update survey template questions and settings</p>
+          <h2 class="page-title">
+            <i class="ti ti-template me-2" style="color: #206bc4;"></i>Survey Template
+          </h2>
         </div>
-        <div class="col-auto">
+        <div class="col-auto ms-auto d-print-none">
           <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-secondary">
-            <i class="ti ti-arrow-left"></i> Back to Templates
+            <i class="ti ti-arrow-left"></i> Back
           </a>
         </div>
       </div>
@@ -250,11 +251,6 @@ function addQuestion(existingQuestion = null) {
 
       <!-- Rating Options -->
       <div id="rating_${questionCounter}" class="rating-container" ${questionType !== 'rating' ? 'style="display: none;"' : ''}>
-        <div class="alert alert-info">
-          <i class="ti ti-info-circle me-2"></i>
-          <strong>Rating questions use a standard 1-5 star scale with predefined labels.</strong>
-          This format ensures consistency across surveys. To use a custom scale, create a multiple choice question instead.
-        </div>
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Rating Scale (Read-only)</label>

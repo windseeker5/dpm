@@ -4783,9 +4783,30 @@ def activity_dashboard(activity_id):
     # Use the enhanced get_kpi_data function with activity filtering
     from utils import get_kpi_data
     kpi_data = get_kpi_data(activity_id=activity_id)  # Filter for this specific activity
-    
+
     # Get the 7-day KPI data by default (this will be the initial view)
     current_kpi = kpi_data.get('revenue', {})
+
+    # Calculate all-time revenue for progress bar (cash basis accounting)
+    # Sum all PAID passport revenue + all income for this activity
+    from sqlalchemy import func
+    paid_passport_revenue = db.session.query(func.sum(Passport.sold_amt)).filter(
+        Passport.activity_id == activity_id,
+        Passport.paid == True
+    ).scalar() or 0
+
+    all_passport_revenue = db.session.query(func.sum(Passport.sold_amt)).filter(
+        Passport.activity_id == activity_id
+    ).scalar() or 0
+
+    income_revenue = db.session.query(func.sum(Income.amount)).filter(
+        Income.activity_id == activity_id
+    ).scalar() or 0
+
+    # Total paid revenue (for progress bar - cash basis)
+    total_paid_revenue = paid_passport_revenue + income_revenue
+    # Total sold revenue (for display - shows all sales)
+    total_sold_revenue = all_passport_revenue + income_revenue
     
     # Calculate additional activity-specific metrics
     now = datetime.now(timezone.utc)
@@ -4915,7 +4936,9 @@ def activity_dashboard(activity_id):
         has_pending_signups=has_pending_signups,
         activity_pending_signups_count=activity_pending_signups_count,
         survey_rating=survey_rating,
-        survey_count=survey_count
+        survey_count=survey_count,
+        total_paid_revenue=total_paid_revenue,
+        total_sold_revenue=total_sold_revenue
     )
 
 
@@ -6770,26 +6793,18 @@ def create_french_simple_survey_template():
 def list_survey_templates():
     if "admin" not in session:
         return redirect(url_for("login"))
-    
+
     # Get filter parameters
     q = request.args.get("q", "").strip()
-    
-    # Base query
-    query = SurveyTemplate.query.order_by(SurveyTemplate.created_dt.desc())
-    
-    # Apply search filter
-    if q:
-        query = query.filter(
-            db.or_(
-                SurveyTemplate.name.ilike(f"%{q}%"),
-                SurveyTemplate.description.ilike(f"%{q}%")
-            )
-        )
-    
-    templates = query.all()
-    
-    # Calculate usage statistics for each template
-    for template in templates:
+    usage_filter = request.args.get("usage_filter", "")
+    show_all_param = request.args.get("show_all", "")
+
+    # Query ALL templates first (for statistics)
+    all_templates = SurveyTemplate.query.all()
+    all_templates_count = SurveyTemplate.query.count()
+
+    # Calculate usage statistics for ALL templates
+    for template in all_templates:
         template.usage_count = Survey.query.filter_by(template_id=template.id).count()
         # Parse questions to get count
         try:
@@ -6797,10 +6812,56 @@ def list_survey_templates():
             template.question_count = len(questions_data.get('questions', []))
         except:
             template.question_count = 0
-    
-    return render_template("survey_templates.html", 
+
+    # Calculate statistics from ALL templates (before filtering)
+    used_templates = len([t for t in all_templates if t.usage_count > 0])
+
+    statistics = {
+        'total_templates': all_templates_count,
+        'used_templates': used_templates,
+    }
+
+    # Set default filter if no parameters - "used" is now the default
+    if not usage_filter and show_all_param != "true":
+        usage_filter = "used"
+
+    # Base query for filtered results
+    query = SurveyTemplate.query.order_by(SurveyTemplate.created_dt.desc())
+
+    # Apply search filter to query
+    if q:
+        query = query.filter(
+            db.or_(
+                SurveyTemplate.name.ilike(f"%{q}%"),
+                SurveyTemplate.description.ilike(f"%{q}%")
+            )
+        )
+
+    # Get filtered templates
+    templates = query.all()
+
+    # Calculate usage statistics for filtered templates (if not already done)
+    for template in templates:
+        if not hasattr(template, 'usage_count'):
+            template.usage_count = Survey.query.filter_by(template_id=template.id).count()
+            try:
+                questions_data = json.loads(template.questions)
+                template.question_count = len(questions_data.get('questions', []))
+            except:
+                template.question_count = 0
+
+    # Apply usage filter to templates list
+    if usage_filter == "used":
+        templates = [t for t in templates if t.usage_count > 0]
+
+    return render_template("survey_templates.html",
                          templates=templates,
-                         current_filters={'q': q})
+                         statistics=statistics,
+                         current_filters={
+                             'q': q,
+                             'usage_filter': usage_filter,
+                             'show_all': show_all_param == 'true'
+                         })
 
 
 @app.route("/create-survey-template", methods=["GET", "POST"])
