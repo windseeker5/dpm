@@ -3955,9 +3955,14 @@ def payment_bot_matches():
 
     # Get filter parameters
     q = request.args.get("q", "").strip()
-    status_filter = request.args.get("status", "all")
+    status_filter = request.args.get("status", "")
+    show_all_param = request.args.get("show_all", "")
     page = request.args.get("page", 1, type=int)
     per_page = 50
+
+    # Set default filter to 'no_match' if no filter specified
+    if not status_filter and show_all_param != "true":
+        status_filter = "no_match"
 
     # Subquery to get latest ID for each unique payment (deduplication)
     latest_payment_ids = db.session.query(
@@ -3975,13 +3980,14 @@ def payment_bot_matches():
         )
     ).order_by(EbankPayment.timestamp.desc())
 
-    # Apply status filter
-    if status_filter == "no_match":
-        query = query.filter(EbankPayment.result == 'NO_MATCH')
-    elif status_filter == "matched":
-        query = query.filter(EbankPayment.result == 'MATCHED')
-    elif status_filter == "manual":
-        query = query.filter(EbankPayment.result == 'MANUAL_PROCESSED')
+    # Apply status filter (skip if show_all is true)
+    if show_all_param != "true":
+        if status_filter == "no_match":
+            query = query.filter(EbankPayment.result == 'NO_MATCH')
+        elif status_filter == "matched":
+            query = query.filter(EbankPayment.result == 'MATCHED')
+        elif status_filter == "manual":
+            query = query.filter(EbankPayment.result == 'MANUAL_PROCESSED')
 
     # Apply search filter (name and amount only, not email)
     if q:
@@ -3996,8 +4002,10 @@ def payment_bot_matches():
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     payments = pagination.items
 
-    # Calculate statistics
-    total_payments = pagination.total
+    # Calculate statistics from ALL records (not filtered)
+    total_payments = db.session.query(EbankPayment.id).filter(
+        EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id))
+    ).count()
     no_match_count = db.session.query(EbankPayment.id).filter(
         EbankPayment.result == 'NO_MATCH',
         EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id))
@@ -4024,7 +4032,8 @@ def payment_bot_matches():
                          statistics=statistics,
                          current_filters={
                              'q': q,
-                             'status': status_filter
+                             'status': status_filter,
+                             'show_all': show_all_param == "true"
                          })
 
 
