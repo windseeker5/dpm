@@ -3607,95 +3607,60 @@ def export_financial_csv(financial_data):
 # 👥 USER CONTACT REPORT FUNCTIONS
 # ================================
 
-def get_user_contact_report(activity_id=None, start_date=None, end_date=None,
-                           exclude_opt_outs=False, sort_by='passports_desc'):
+def get_user_contact_report(search_query="", status_filter="", show_all=False):
     """
     Generate user contact list with engagement metrics.
 
     Args:
-        activity_id: Optional activity ID to filter users by participation
-        start_date: datetime object for start of period (UTC, optional)
-        end_date: datetime object for end of period (UTC, optional)
-        exclude_opt_outs: Boolean to exclude users who opted out of emails
-        sort_by: Sort order - 'passports_desc', 'revenue_desc', 'last_activity', 'name_asc'
+        search_query: Search term to filter users by name or email
+        status_filter: 'active' to show only users with passports, '' for default
+        show_all: Boolean to show all users
 
     Returns:
         dict: User contact data with summary and user list
     """
-    from models import User, Passport, Activity, Signup
-    from sqlalchemy import func, desc, asc
+    from models import User, Passport, Activity
+    from sqlalchemy import func, desc, or_
     from datetime import datetime, timezone
-
-    # Default to all-time if no dates provided
-    if not start_date:
-        start_date = datetime(2000, 1, 1, tzinfo=timezone.utc)
-    if not end_date:
-        end_date = datetime.now(timezone.utc)
-
-    # Ensure dates are timezone-aware
-    if start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=timezone.utc)
-    if end_date.tzinfo is None:
-        end_date = end_date.replace(tzinfo=timezone.utc)
 
     # Build query aggregated by name + email (to avoid duplicates from multiple User records)
     query = db.session.query(
         User.name,
         User.email,
-        func.max(User.phone_number).label('phone_number'),  # Take most recent phone
-        func.max(User.email_opt_out).label('email_opt_out'),  # If ANY record opted out, show opted out
+        func.max(User.phone_number).label('phone_number'),
+        func.max(User.email_opt_out).label('email_opt_out'),
         func.count(Passport.id).label('passport_count'),
         func.coalesce(func.sum(Passport.sold_amt), 0).label('total_revenue'),
         func.max(Passport.created_dt).label('last_activity_date')
     ).outerjoin(Passport, User.id == Passport.user_id)
 
-    # Apply date filter on passports
-    query = query.filter(
-        db.or_(
-            Passport.created_dt.is_(None),
-            db.and_(
-                Passport.created_dt >= start_date,
-                Passport.created_dt <= end_date
-            )
-        )
-    )
-
-    # Apply activity filter if provided
-    if activity_id:
-        query = query.filter(
-            db.or_(
-                Passport.activity_id.is_(None),
-                Passport.activity_id == activity_id
-            )
-        )
-
-    # Exclude email opt-outs if requested
-    if exclude_opt_outs:
-        query = query.filter(User.email_opt_out == False)
-
     # Group by name and email (aggregate duplicates)
     query = query.group_by(User.name, User.email)
 
-    # Apply sorting
-    if sort_by == 'passports_desc':
-        query = query.order_by(desc('passport_count'), User.name)
-    elif sort_by == 'revenue_desc':
-        query = query.order_by(desc('total_revenue'), User.name)
-    elif sort_by == 'last_activity':
-        query = query.order_by(desc('last_activity_date'), User.name)
-    elif sort_by == 'name_asc':
-        query = query.order_by(User.name)
+    # Execute query to get all users
+    all_user_data = query.all()
 
-    # Execute query
-    user_data = query.all()
-
-    # Build user list with activity participation
+    # Apply filters in Python for flexibility
     users = []
     total_users = 0
     active_users = 0
     total_revenue = 0
 
-    for user in user_data:
+    for user in all_user_data:
+        # Apply status filter
+        if status_filter == "active" and not show_all:
+            # Only show users with passports
+            if user.passport_count == 0:
+                continue
+
+        # Apply search filter
+        if search_query:
+            search_lower = search_query.lower()
+            name_match = search_lower in (user.name or '').lower()
+            email_match = search_lower in (user.email or '').lower()
+            if not (name_match or email_match):
+                continue
+
         # Get all User IDs with this name/email combination
         user_ids = db.session.query(User.id).filter(
             User.name == user.name,
@@ -3708,18 +3673,8 @@ def get_user_contact_report(activity_id=None, start_date=None, end_date=None,
             Activity.name
         ).join(Passport, Activity.id == Passport.activity_id).filter(
             Passport.user_id.in_(user_ids)
-        )
+        ).distinct()
 
-        if start_date and end_date:
-            activities_query = activities_query.filter(
-                Passport.created_dt >= start_date,
-                Passport.created_dt <= end_date
-            )
-
-        if activity_id:
-            activities_query = activities_query.filter(Activity.id == activity_id)
-
-        activities_query = activities_query.distinct()
         user_activities = [a[0] for a in activities_query.all()]
 
         users.append({
@@ -3738,18 +3693,8 @@ def get_user_contact_report(activity_id=None, start_date=None, end_date=None,
             active_users += 1
         total_revenue += float(user.total_revenue)
 
-    # Get period label
-    if start_date.year == 2000:
-        period_label = "All Time"
-    else:
-        period_label = f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
-
-    # Get activity name if filtered
-    activity_name = "All Activities"
-    if activity_id:
-        activity = db.session.get(Activity, activity_id)
-        if activity:
-            activity_name = activity.name
+    # Sort by passport count descending
+    users.sort(key=lambda x: x['passport_count'], reverse=True)
 
     return {
         'users': users,
@@ -3757,11 +3702,7 @@ def get_user_contact_report(activity_id=None, start_date=None, end_date=None,
             'total_users': total_users,
             'active_users': active_users,
             'total_revenue': total_revenue,
-            'avg_passports': round(sum(u['passport_count'] for u in users) / total_users, 1) if total_users > 0 else 0,
-            'period_label': period_label,
-            'activity_name': activity_name,
-            'excluded_opt_outs': exclude_opt_outs,
-            'sort_by': sort_by
+            'avg_passports': round(sum(u['passport_count'] for u in users) / total_users, 1) if total_users > 0 else 0
         }
     }
 
@@ -3778,15 +3719,15 @@ def export_user_contacts_csv(user_data):
     """
     import csv
     from io import StringIO
+    from datetime import datetime, timezone
 
     output = StringIO()
     writer = csv.writer(output)
 
     # Write metadata header
     writer.writerow([f"# User Contact List - Exported: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"])
-    writer.writerow([f"# Period: {user_data['summary']['period_label']}"])
-    writer.writerow([f"# Activity: {user_data['summary']['activity_name']}"])
-    writer.writerow([f"# Excluded Opt-Outs: {user_data['summary']['excluded_opt_outs']}"])
+    writer.writerow([f"# Total Users: {user_data['summary']['total_users']}"])
+    writer.writerow([f"# Active Users: {user_data['summary']['active_users']}"])
     writer.writerow([])  # Blank line
 
     # Write column headers
