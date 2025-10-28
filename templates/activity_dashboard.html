@@ -1377,6 +1377,30 @@ div.dropdown-divider {
       </div>
       </div>
 
+      <!-- Approve Signup Modals -->
+      {% for signup in signups %}
+      {% if signup.status == 'pending' %}
+      <div class="modal modal-blur fade" id="approveSignupModal-{{ signup.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-status bg-primary"></div>
+            <div class="modal-body text-center py-4">
+              <i class="ti ti-check icon mb-2 text-primary" style="font-size: 2rem;"></i>
+              <h3>Approve & Create Passport</h3>
+              <div class="text-muted">Approve signup and create passport for {{ signup.user.name or 'this user' }}?</div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              <form method="GET" action="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}" class="w-100">
+                <button type="submit" class="btn btn-primary w-100">Yes, Approve & Create</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+
       <!-- Delete Signup Confirmation Modal -->
       <div class="modal modal-blur fade" id="signupDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
@@ -1432,17 +1456,20 @@ div.dropdown-divider {
         <div class="card-header">
           <div class="d-flex justify-content-center align-items-center w-100">
             <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-              <a href="#" onclick="filterSignups('all'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter', 'pending') == 'all' %}active{% endif %}" id="signup-filter-all">
-                <i class="ti ti-list"></i>All Signups <span class="filter-count">({{ all_signups|length }})</span>
-              </a>
               <a href="#" onclick="filterSignups('pending'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending">
-                <i class="ti ti-alert-circle"></i>Pending <span class="filter-count">({{ activity_pending_signups_count }})</span>
+                 class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending"
+                 style="{% if request.args.get('signup_filter') == 'pending' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                <i class="ti ti-alert-circle" style="font-size: 16px; margin-right: 4px;"></i>Pending <span style="opacity: 0.6; margin-left: 4px;">({{ activity_pending_signups_count }})</span>
               </a>
               <a href="#" onclick="filterSignups('approved'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved">
-                <i class="ti ti-thumb-up"></i>Approved <span class="filter-count">({{ all_signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
+                 class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved"
+                 style="{% if request.args.get('signup_filter') == 'approved' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                <i class="ti ti-check-circle" style="font-size: 16px; margin-right: 4px;"></i>Approved <span style="opacity: 0.6; margin-left: 4px;">({{ all_signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
+              </a>
+              <a href="#" onclick="filterSignups('all'); return false;"
+                 class="github-filter-btn {% if request.args.get('signup_filter', 'pending') == 'all' %}active{% endif %}" id="signup-filter-all"
+                 style="{% if request.args.get('signup_filter', 'pending') == 'all' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All <span style="opacity: 0.6; margin-left: 4px;">({{ all_signups|length }})</span>
               </a>
             </div>
           </div>
@@ -1465,11 +1492,21 @@ div.dropdown-divider {
             <tr data-paid="{{ 'true' if signup.paid else 'false' }}" data-status="{{ signup.status or 'pending' }}">
               <td style="vertical-align: middle;">
                 <div class="d-flex align-items-center">
-                  <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40" 
+                  <!-- Desktop: User Gravatar -->
+                  <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40"
                        class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
+                  <!-- Mobile: Activity Logo (square with rounded corners) -->
+                  {% if signup.activity and (signup.activity.image_filename or signup.activity.logo_filename) %}
+                    <img src="{{ url_for('static', filename='uploads/activity_images/' + (signup.activity.image_filename or signup.activity.logo_filename)) }}"
+                         class="rounded me-3 user-avatar d-md-none" alt="{{ signup.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
+                  {% else %}
+                    <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
+                      {{ signup.activity.name[0] if signup.activity and signup.activity.name else 'A' }}
+                    </div>
+                  {% endif %}
                   <div>
                     <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
-                    <div class="text-muted small">{{ signup.user.email or 'No email' }}</div>
+                    <div class="text-muted small d-none d-md-block">{{ signup.user.email or 'No email' }}</div>
                   </div>
                 </div>
               </td>
@@ -1526,26 +1563,13 @@ div.dropdown-divider {
                     <i class="ti ti-menu-2 d-md-none"></i>
                   </a>
                   <div class="dropdown-menu dropdown-menu-end">
-                    <a class="dropdown-item" href="{{ url_for('edit_signup', signup_id=signup.id) }}">
-                      <i class="ti ti-pencil me-2"></i>Edit Details
-                    </a>
-                    {% if not signup.paid %}
-                    <a class="dropdown-item text-success" href="{{ url_for('mark_signup_paid', signup_id=signup.id) }}" 
-                       onclick="return confirm('Mark this signup as paid?')">
-                      <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-                    </a>
-                    {% endif %}
                     {% if signup.status == 'pending' %}
-                    <a class="dropdown-item text-primary" href="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
-                       onclick="return confirm('Approve and create passport?')">
-                      <i class="ti ti-check me-2"></i>Approve & Create Pass
-                    </a>
+                    <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+                      <i class="ti ti-check me-2"></i>Approve & Create Passport
+                    </button>
                     {% endif %}
-                    <a class="dropdown-item" href="#">
-                      <i class="ti ti-mail me-2"></i>Send Reminder
-                    </a>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-danger" href="#" 
+                    <a class="dropdown-item text-danger" href="#"
                        onclick="confirmSignupDelete({{ signup.id }}, '{{ signup.user.email or signup.user.name or 'Unknown user' }}'); return false;">
                       <i class="ti ti-trash me-2"></i>Delete
                     </a>
