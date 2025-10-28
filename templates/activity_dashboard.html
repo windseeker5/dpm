@@ -667,10 +667,10 @@ div.dropdown-divider {
 
               <!-- Revenue Progress Bar - Simple thin bar only -->
               {% if activity.goal_revenue and activity.goal_revenue > 0 %}
-              {% set actual_revenue = kpi_data['revenue']['current']|float if kpi_data and kpi_data['revenue'] else 0 %}
+              {% set actual_revenue = total_paid_revenue|float if total_paid_revenue else 0 %}
               {% set target_revenue = activity.goal_revenue|float %}
               {% set progress_percentage = ((actual_revenue / target_revenue * 100) if target_revenue > 0 else 0)|round %}
-              <div class="revenue-progress-minimal">
+              <div class="revenue-progress-minimal" title="Revenue: ${{ '%.2f'|format(actual_revenue) }} collected / ${{ '%.2f'|format(target_revenue) }} goal ({{ progress_percentage }}%)">
                 <div class="progress progress-minimal">
                   <div class="progress-bar" role="progressbar" style="width: {{ [progress_percentage, 100]|min }}%"
                        aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>

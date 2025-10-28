@@ -1,93 +1,47 @@
 {% extends "base.html" %}
 {% block title %}Survey Templates{% endblock %}
 
-{% block head %}
+{% block content %}
+<!-- CSS Imports -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dropdown-fix.css') }}?v=4.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0">
+
 <style>
-/* NO hover effects on template cards */
-.filter-panel {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-/* Card Design - NO HOVER EFFECTS - matches Passports/Signups */
-.card {
-  background-color: #fff !important;
-}
-
-.table {
-  background-color: #fff !important;
-}
-
-/* Page structure */
-.page-wrapper {
-  min-height: 100vh;
-}
-
-.page-body {
-  padding: 2rem 0;
-}
-
-.dashboard-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-.page-title {
-  font-weight: 700;
-  color: #0f172a;
-  font-size: 2.25rem;
-}
-
-@media (max-width: 768px) {
-  .template-table {
-    display: none;
-  }
-  .template-cards {
-    display: block;
-  }
-  .filter-panel {
-    padding: 0.75rem;
-  }
-  .dashboard-container {
-    padding: 0 1rem;
-  }
-  .page-title {
-    font-size: 1.75rem;
-  }
-}
-@media (min-width: 769px) {
-  .template-table {
-    display: block;
-  }
-  .template-cards {
-    display: none;
-  }
+/* Fix dropdown-menu-end alignment with Popper.js - per DROPDOWN_ALIGNMENT_FIX.md */
+.page-header .dropdown-menu-end[data-popper-placement] {
+  right: 0 !important;
+  left: auto !important;
 }
 </style>
-{% endblock %}
 
-{% block content %}
 <div class="page-wrapper">
   <!-- Page Header -->
   <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title"><i class="ti ti-template text-blue me-2"></i>Survey Templates</h1>
-          <p class="text-muted mt-1">Create reusable survey templates to quickly deploy feedback forms</p>
+          <h2 class="mt-4 mb-3">
+            <i class="ti ti-template me-2" style="color: #206bc4;"></i>Survey Templates
+          </h2>
         </div>
-        <div class="col-auto">
-          <div class="btn-list">
-            <a href="{{ url_for('list_surveys') }}" class="btn btn-outline-secondary">
-              <i class="ti ti-arrow-left"></i> Back to Surveys
-            </a>
-            <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
-              <i class="ti ti-plus"></i> Create New Template
-            </a>
+        <div class="col-auto ms-auto d-print-none">
+          <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <!-- Desktop: Show text -->
+              <span class="d-none d-md-inline">Actions</span>
+              <!-- Mobile: Show hamburger icon only -->
+              <i class="ti ti-menu-2 d-md-none"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end">
+              <a class="dropdown-item" href="{{ url_for('list_surveys') }}">
+                <i class="ti ti-arrow-left me-2"></i>Back to Surveys
+              </a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{{ url_for('create_survey_template') }}">
+                <i class="ti ti-plus me-2"></i>Create Template
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -98,212 +52,149 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-  <!-- Search Panel -->
-  <div class="filter-panel">
-    <form method="GET" id="filterForm">
-      <div class="row g-3">
-        <!-- Search -->
-        <div class="col-md-6">
-          <div class="input-group">
-            <input type="text" name="q" class="form-control" placeholder="Search templates..." 
-                   value="{{ current_filters.q }}" id="searchInput">
-            <button type="submit" class="btn btn-outline-secondary">
-              <i class="ti ti-search"></i>
+      <!-- Enhanced Dynamic Search -->
+      <form method="GET" action="{{ url_for('list_survey_templates') }}" class="mb-4" id="dynamicSearchForm">
+        <div class="input-icon position-relative">
+          <span class="input-icon-addon">
+            <i class="ti ti-search fs-3"></i>
+          </span>
+          <input type="text"
+                 name="q"
+                 id="enhancedSearchInput"
+                 class="form-control form-control-lg shadow-sm"
+                 placeholder="Start typing to search"
+                 value="{{ current_filters.q or '' }}"
+                 style="padding-right: 100px; border-radius: 0.5rem;"
+                 autocomplete="off"
+                 data-bs-toggle="false">
+          <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
+            <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
+            <kbd id="searchKbdHint" class="text-muted d-none d-md-inline">Ctrl</kbd>
+            <kbd class="text-muted d-none d-md-inline">K</kbd>
+            <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
+              <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
             </button>
           </div>
         </div>
-        <div class="col-md-6">
-          {% if current_filters.q %}
-          <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-secondary">
-            <i class="ti ti-x"></i> Clear Search
-          </a>
-          {% endif %}
-        </div>
-      </div>
-    </form>
-  </div>
+      </form>
 
-  <!-- Desktop Table View -->
-  <div class="card template-table">
-    <div class="table-responsive">
-      <table class="table card-table table-hover table-vcenter">
-        <thead>
-          <tr>
-            <th>Template</th>
-            <th>Questions</th>
-            <th>Usage</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for template in templates %}
-          <tr class="template-row">
-            <td>
-              <div class="d-flex align-items-center">
-                <div class="avatar avatar-md me-3" style="background-color: {% if template.name == 'Post-Activity Feedback' %}#28a745{% else %}#0054a6{% endif %};">
-                  <i class="ti ti-template text-white"></i>
-                </div>
-                <div>
-                  <div class="d-flex align-items-center">
-                    <strong>{{ template.name }}</strong>
-                    {% if template.name == 'Post-Activity Feedback' %}
-                    <span class="badge bg-success-lt text-success ms-2">Recommended</span>
-                    {% endif %}
+      <!-- Main Table -->
+      <div id="survey-template-filters" class="scroll-anchor"></div>
+      <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+        <div class="card-header">
+          <div class="d-flex justify-content-center align-items-center w-100">
+            <!-- Filter Buttons -->
+            <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+              <a href="{{ url_for('list_survey_templates', usage_filter='used') }}"
+                 class="github-filter-btn {% if current_filters.usage_filter == 'used' and not current_filters.show_all %}active{% endif %}"
+                 style="{% if current_filters.usage_filter == 'used' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                <i class="ti ti-check" style="font-size: 16px; margin-right: 4px;"></i>Used <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.used_templates|default(0) }})</span>
+              </a>
+              <a href="{{ url_for('list_survey_templates', show_all='true') }}"
+                 class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
+                 style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_templates|default(0) }})</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Template Name</th>
+                <th class="d-none d-md-table-cell text-center">Questions</th>
+                <th class="d-none d-lg-table-cell text-center">Usage</th>
+                <th class="d-none d-md-table-cell">Created</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for template in templates %}
+              <tr>
+                <!-- Template Name: Always visible, NO avatar -->
+                <td style="vertical-align: middle;">
+                  <div class="fw-bold">{{ template.name }}</div>
+                </td>
+
+                <!-- Questions: Desktop only -->
+                <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
+                  <span style="color: #6c757d;">{{ template.question_count }}</span>
+                </td>
+
+                <!-- Usage: Large screens only -->
+                <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
+                  {% if template.usage_count > 0 %}
+                    <span class="badge bg-blue-lt text-blue-lt-fg">{{ template.usage_count }} surveys</span>
+                  {% else %}
+                    <span class="badge bg-gray-lt text-gray-lt-fg">Not used</span>
+                  {% endif %}
+                </td>
+
+                <!-- Created: Desktop only -->
+                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
+                  {% if template.created_dt %}
+                    <span class="text-muted small">{{ template.created_dt.strftime('%Y-%m-%d') }}</span>
+                  {% else %}
+                    <span class="text-muted small">-</span>
+                  {% endif %}
+                </td>
+
+                <!-- Actions: Always visible -->
+                <td class="text-center" style="vertical-align: middle;">
+                  <div class="dropdown d-inline-block">
+                    <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                      <!-- Desktop: Show text -->
+                      <span class="d-none d-md-inline">Actions</span>
+                      <!-- Mobile: Show icon -->
+                      <i class="ti ti-menu-2 d-md-none"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end">
+                      <a class="dropdown-item" href="{{ url_for('edit_survey_template', template_id=template.id) }}">
+                        <i class="ti ti-edit me-2"></i>Edit Template
+                      </a>
+                      <div class="dropdown-divider"></div>
+                      {% if template.usage_count == 0 %}
+                      <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}'); return false;">
+                        <i class="ti ti-trash me-2"></i>Delete Template
+                      </a>
+                      {% else %}
+                      <span class="dropdown-item-text text-muted">
+                        <i class="ti ti-info-circle me-2"></i>Cannot delete (in use)
+                      </span>
+                      {% endif %}
+                    </div>
                   </div>
-                  <br>
-                  {% if template.description %}
-                  <span class="text-muted small">{{ template.description|truncate(60) }}</span>
-                  {% else %}
-                  <span class="text-muted small">No description</span>
-                  {% endif %}
-                </div>
-              </div>
-            </td>
-            <td>
-              <strong>{{ template.question_count }}</strong> questions
-            </td>
-            <td>
-              {% if template.usage_count > 0 %}
-              <span class="badge bg-blue-lt text-blue">Used in {{ template.usage_count }} surveys</span>
+                </td>
+              </tr>
               {% else %}
-              <span class="badge bg-gray-lt text-gray">Not used yet</span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="small">
-                {{ template.created_dt.strftime('%Y-%m-%d') }}
-              </div>
-            </td>
-            <td>
-              <div class="dropdown">
-                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                  Actions
-                </a>
-                <div class="dropdown-menu">
-                  <a class="dropdown-item" href="{{ url_for('edit_survey_template', template_id=template.id) }}">
-                    <i class="ti ti-edit me-2"></i>Edit Template
-                  </a>
-                  <div class="dropdown-divider"></div>
-                  {% if template.usage_count == 0 %}
-                  <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}')">
-                    <i class="ti ti-trash me-2"></i>Delete Template
-                  </a>
-                  {% else %}
-                  <span class="dropdown-item-text text-muted">
-                    <i class="ti ti-info-circle me-2"></i>Cannot delete (in use)
-                  </span>
-                  {% endif %}
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="5" class="text-center py-5">
-              <div class="empty">
-                <div class="empty-img">
-                  <i class="ti ti-template" style="font-size: 4rem; color: #ccc;"></i>
-                </div>
-                <p class="empty-title">No survey templates found</p>
-                <p class="empty-subtitle text-muted">
-                  {% if current_filters.q %}
-                    Try adjusting your search or <a href="{{ url_for('list_survey_templates') }}">clear search</a>
-                  {% else %}
-                    Create your first survey template to reuse across activities
-                  {% endif %}
-                </p>
-                <div class="empty-action">
-                  <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
-                    <i class="ti ti-plus"></i> Create Template
-                  </a>
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Mobile Card View -->
-  <div class="template-cards">
-    {% for template in templates %}
-    <div class="card template-card mb-3">
-      <div class="card-body p-2 p-md-3">
-        <div class="row align-items-center">
-          <div class="col-auto">
-            <div class="avatar avatar-md" style="background-color: {% if template.name == 'Post-Activity Feedback' %}#28a745{% else %}#0054a6{% endif %};">
-              <i class="ti ti-template text-white"></i>
-            </div>
-          </div>
-          <div class="col">
-            <div class="d-flex align-items-center mb-1">
-              <h4 class="card-title mb-0">{{ template.name }}</h4>
-              {% if template.name == 'Post-Activity Feedback' %}
-              <span class="badge bg-success-lt text-success ms-2">Recommended</span>
-              {% endif %}
-            </div>
-            <div class="mb-2">
-              <span class="badge bg-blue-lt text-blue">{{ template.question_count }} questions</span>
-              {% if template.usage_count > 0 %}
-              <span class="badge bg-green-lt text-green">{{ template.usage_count }} surveys</span>
-              {% else %}
-              <span class="badge bg-gray-lt text-gray">Not used</span>
-              {% endif %}
-            </div>
-            {% if template.description %}
-            <div class="text-muted small mb-2">{{ template.description|truncate(50) }}</div>
-            {% endif %}
-            <div class="text-muted small">Created {{ template.created_dt.strftime('%Y-%m-%d') }}</div>
-          </div>
-          <div class="col-auto">
-            <div class="dropdown">
-              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <i class="ti ti-dots-vertical"></i>
-              </button>
-              <div class="dropdown-menu">
-                <a class="dropdown-item" href="{{ url_for('edit_survey_template', template_id=template.id) }}">
-                  <i class="ti ti-edit me-2"></i>Edit Template
-                </a>
-                <div class="dropdown-divider"></div>
-                {% if template.usage_count == 0 %}
-                <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}')">
-                  <i class="ti ti-trash me-2"></i>Delete Template
-                </a>
-                {% else %}
-                <span class="dropdown-item-text text-muted">
-                  <i class="ti ti-info-circle me-2"></i>Cannot delete (in use)
-                </span>
-                {% endif %}
-              </div>
-            </div>
-          </div>
+              <tr>
+                <td colspan="5" class="text-center py-5">
+                  <div class="empty">
+                    <div class="empty-img">
+                      <i class="ti ti-template" style="font-size: 4rem; color: #ccc;"></i>
+                    </div>
+                    <p class="empty-title">No survey templates found</p>
+                    <p class="empty-subtitle text-muted">
+                      {% if current_filters.q %}
+                        Try adjusting your search or <a href="{{ url_for('list_survey_templates') }}">clear search</a>
+                      {% else %}
+                        Create your first survey template to reuse across activities
+                      {% endif %}
+                    </p>
+                    <div class="empty-action">
+                      <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+                        <i class="ti ti-plus"></i> Create Template
+                      </a>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
-    {% else %}
-    <div class="empty py-5">
-      <div class="empty-img">
-        <i class="ti ti-template" style="font-size: 4rem; color: #ccc;"></i>
-      </div>
-      <p class="empty-title">No survey templates found</p>
-      <p class="empty-subtitle text-muted">
-        {% if current_filters.q %}
-          Try adjusting your search or <a href="{{ url_for('list_survey_templates') }}">clear search</a>
-        {% else %}
-          Create your first survey template to reuse across activities
-        {% endif %}
-      </p>
-      <div class="empty-action">
-        <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
-          <i class="ti ti-plus"></i> Create Template
-        </a>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
 
     </div>
   </div>
@@ -331,16 +222,41 @@
     </div>
   </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-// Search only on Enter key press or button click
-document.getElementById('searchInput').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    document.getElementById('filterForm').submit();
-  }
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize search component
+    if (window.SearchComponent) {
+        window.SearchComponent.init({
+            formId: 'dynamicSearchForm',
+            inputId: 'enhancedSearchInput',
+            preserveParams: ['usage_filter']
+        });
+    }
+
+    // Initialize filter component
+    if (window.FilterComponent) {
+        window.FilterComponent.init({
+            filterClass: 'github-filter-btn',
+            mode: 'server',
+            preserveScrollPosition: true,
+            enableSearchPreservation: true
+        });
+    }
+
+    // Validation for debugging
+    console.log('📋 Survey Templates page loaded');
+    console.log('🔧 SearchComponent available:', typeof window.SearchComponent !== 'undefined');
+    console.log('🔧 FilterComponent available:', typeof window.FilterComponent !== 'undefined');
+    console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
+    console.log('🔍 Dropdown toggles found:', document.querySelectorAll('[data-bs-toggle="dropdown"]').length);
+
+    // Debug: Check if Bootstrap is properly loaded
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded! Dropdown functionality may not work.');
+    } else {
+        console.log('Bootstrap is loaded. Dropdown functionality should work.');
+    }
 });
 
 // Delete confirmation
@@ -358,4 +274,37 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
+
+<style>
+/* Card Design - NO HOVER EFFECTS - matches Passports/Signups */
+.card {
+  background-color: #fff !important;
+}
+
+.table {
+  background-color: #fff !important;
+}
+
+/* Page structure */
+.page-wrapper {
+  min-height: 100vh;
+}
+
+.page-body {
+  padding: 2rem 0;
+}
+
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 0 1rem;
+  }
+}
+</style>
+
 {% endblock %}
