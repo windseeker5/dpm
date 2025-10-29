@@ -18,16 +18,25 @@
     --status-offline: #6b7280;
 }
 
-/* Main container */
+/* Main container - properly centered */
 .chat-container {
-    max-width: 900px;
-    margin: 0 auto;
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
     min-height: calc(100vh - 120px);
     display: flex;
     flex-direction: column;
     background: var(--chat-bg);
     position: relative;
-    padding: 2rem;
+    padding: 0;
+}
+
+/* Inner wrapper for proper centering aligned with header */
+.chat-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 2rem 1.5rem;
 }
 
 /* Empty state - centered large search box */
@@ -54,12 +63,9 @@
 }
 
 .welcome-title {
-    font-size: 3.5rem;
+    font-size: 2.5rem;
     font-weight: 600;
-    background: linear-gradient(135deg, #2d3748 0%, #4a5568 40%, #718096 70%, #fd7e14 90%, #fd7e14 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #1a1a1a;
     margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
@@ -76,18 +82,19 @@
 /* Large search box for initial state */
 .search-box-large {
     width: 100%;
-    background: var(--chat-surface);
-    border: 1px solid #e8eaed;
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
     border-radius: 12px;
     padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
     min-height: 80px;
 }
 
 .search-box-large:focus-within {
-    border-color: #e8eaed;
-    box-shadow: none;
+    border-color: #206bc4;
+    box-shadow: 0 0 0 4px rgba(32, 107, 196, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
 }
 
 .search-box-inner {
@@ -192,11 +199,15 @@
     50% { opacity: 0.5; }
 }
 
-/* Sparkle icon animation */
+/* Sparkle icon - blue to pink gradient, regular weight */
 .sparkle-icon {
-    color: #FFFF00;
     font-size: 2.5rem;
-    animation: sparkle 2s ease-in-out infinite;
+    font-weight: 400;
+    background: linear-gradient(135deg, #206bc4 0%, #e685b5 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: none;
 }
 
 @keyframes sparkle {
@@ -231,28 +242,35 @@
 /* Send button */
 .send-button-large {
     padding: 0.5rem;
-    background: transparent;
-    color: #6b7280;
+    background: linear-gradient(135deg, #206bc4 0%, #1a5698 100%);
+    color: #ffffff;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 1.2rem;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    min-width: 44px;
+    min-height: 44px;
+    box-shadow: 0 2px 4px rgba(32, 107, 196, 0.3);
 }
 
 .send-button-large:hover:not(:disabled) {
-    background: #f1f3f4;
-    color: #1a1a1a;
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(32, 107, 196, 0.4);
+}
+
+.send-button-large:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .send-button-large:disabled {
-    opacity: 0.3;
+    opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Example questions */
@@ -265,22 +283,30 @@
 }
 
 .example-question {
-    padding: 0.625rem 1rem;
-    background: var(--chat-surface);
-    border: 1px solid var(--chat-border);
-    border-radius: 8px; /* Reduced from 20px for less rounded look */
-    color: var(--chat-text);
-    font-size: 0.875rem;
+    padding: 0.75rem 1.25rem;
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .example-question:hover {
-    background: var(--chat-bg);
-    border-color: var(--chat-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: #f8f9fa;
+    border-color: #206bc4;
+    color: #206bc4;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.example-question:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* Conversation state */
@@ -393,11 +419,14 @@
     30% { transform: scale(1.2); opacity: 1; }
 }
 
-/* Compact input area for conversation */
+/* Compact input area for conversation - Modern ChatGPT/Claude style */
 .chat-input-compact {
     border-top: 1px solid var(--chat-border);
-    background: var(--chat-surface);
-    padding: 1rem;
+    background: #ffffff;
+    padding: 1.5rem 1rem;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
 }
 
 .input-container-compact {
@@ -406,99 +435,153 @@
     display: flex;
     gap: 0.75rem;
     align-items: flex-end;
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: all 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.input-container-compact:focus-within {
+    border-color: #206bc4;
+    box-shadow: 0 0 0 4px rgba(32, 107, 196, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
 }
 
 .message-input-compact {
     flex: 1;
-    border: 1px solid var(--chat-border);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
+    border: none;
+    padding: 0;
     font-size: 1rem;
     line-height: 1.5;
     resize: none;
     outline: none;
-    min-height: 44px;
+    min-height: 24px;
     max-height: 120px;
-    background: var(--input-bg);
+    background: transparent;
     color: var(--chat-text);
-    transition: border-color 0.2s ease;
 }
 
 .message-input-compact:focus {
-    border-color: #e8eaed;
     outline: none;
     box-shadow: none;
 }
 
 .message-input-compact::placeholder {
-    color: var(--chat-text-secondary);
+    color: #9ca3af;
 }
 
 .send-button-compact {
     padding: 0.5rem;
-    background: transparent;
-    color: #6b7280;
+    background: linear-gradient(135deg, #206bc4 0%, #1a5698 100%);
+    color: #ffffff;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 1.2rem;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    min-width: 44px;
+    min-height: 44px;
+    box-shadow: 0 2px 4px rgba(32, 107, 196, 0.3);
 }
 
 .send-button-compact:hover:not(:disabled) {
-    background: #f1f3f4;
-    color: #1a1a1a;
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(32, 107, 196, 0.4);
+}
+
+.send-button-compact:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .send-button-compact:disabled {
-    opacity: 0.3;
+    opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
     .chat-container {
-        padding: 1rem;
+        padding: 0.75rem;
     }
-    
+
     .empty-state {
-        padding: 1rem;
+        padding: 0.5rem;
     }
-    
+
+    .welcome-message {
+        margin-bottom: 2rem;
+    }
+
     .welcome-title {
-        font-size: 2.5rem;
+        font-size: 1.75rem;
+        flex-direction: column;
+        gap: 0.5rem;
     }
-    
+
     .sparkle-icon {
         font-size: 2rem;
+        display: block;
+        width: 100%;
+        text-align: center;
     }
-    
+
+    .welcome-subtitle {
+        font-size: 0.9rem;
+    }
+
+    /* Mobile-friendly example buttons */
+    .example-questions {
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .example-question {
+        padding: 0.65rem 1rem;
+        font-size: 0.85rem;
+        flex: 1 1 100%; /* Full width on mobile */
+    }
+
     .message {
-        max-width: 85%;
+        max-width: 90%;
     }
-    
+
     .message-content {
         padding: 0.75rem 1rem;
         font-size: 0.9375rem;
     }
-    
+
     .chat-input-compact {
         padding: 0.75rem;
     }
-    
+
+    /* Larger touch targets for mobile */
+    .send-button-compact,
+    .send-button-large {
+        min-width: 48px;
+        min-height: 48px;
+    }
+
     .send-button-compact span,
     .send-button-large span {
         display: none;
     }
-    
+
     .model-indicator {
         padding: 0.375rem 0.625rem;
         font-size: 0.8125rem;
+    }
+
+    /* Prevent iOS zoom on input focus */
+    .message-input-large,
+    .message-input-compact {
+        font-size: 16px;
     }
 }
 
@@ -603,6 +686,19 @@
 
                     <!-- Compact input area (now INSIDE the white card) -->
                     <div class="chat-input-compact">
+                        <!-- FAQ buttons above input -->
+                        <div class="example-questions" style="margin-bottom: 1rem; margin-top: 0;">
+                            <div class="example-question" onclick="sendExample('Show me this month\'s revenue breakdown')">
+                                Show me this month's revenue breakdown
+                            </div>
+                            <div class="example-question" onclick="sendExample('What are my top performing activities?')">
+                                What are my top performing activities?
+                            </div>
+                            <div class="example-question" onclick="sendExample('How many new users signed up this week?')">
+                                How many new users signed up this week?
+                            </div>
+                        </div>
+
                         <form class="input-container-compact" id="chatForm" onsubmit="sendMessage(event, false)">
                             <textarea
                                 class="message-input-compact"
@@ -809,13 +905,10 @@ function addMessage(type, content, responseData = null) {
     answerP.style.marginBottom = responseData && responseData.rows ? '1rem' : '0';
     contentDiv.appendChild(answerP);
 
-    // If this is a data query response with results, show SQL and table
+    // If this is a data query response with results, show table (SQL hidden - only for debugging in terminal)
     if (responseData && responseData.rows && responseData.rows.length > 0) {
-        // Show SQL query
-        if (responseData.sql) {
-            const sqlDiv = renderSQL(responseData.sql);
-            contentDiv.appendChild(sqlDiv);
-        }
+        // SQL query hidden from users - they don't need to see it
+        // Developers can see SQL in Flask terminal for debugging
 
         // Show data table
         const tableDiv = renderDataTable(responseData.columns, responseData.rows);
