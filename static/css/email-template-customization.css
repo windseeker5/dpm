@@ -1864,3 +1864,171 @@ textarea.form-control {
     border-bottom: 1px solid #000;
   }
 }
+
+/* ==== EMAIL TEMPLATES PAGE HEADER IMPROVEMENTS ==== */
+
+/* Page header mobile-first styling */
+.page-header .page-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.page-header .text-muted {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 767px) {
+  .page-header .page-title {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .page-header .text-muted {
+    font-size: 0.875rem;
+    line-height: 1.3;
+  }
+
+  .page-header .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.875rem;
+  }
+
+  .page-header .btn i {
+    font-size: 0.875rem;
+  }
+}
+
+/* ==== SINGLE COLUMN MODAL FORM LAYOUT ==== */
+
+.template-form-single-column {
+  max-width: 100%;
+}
+
+.template-form-single-column .mb-3 {
+  margin-bottom: 1.5rem;
+}
+
+.template-form-single-column .form-control,
+.template-form-single-column .tox-tinymce {
+  width: 100%;
+}
+
+/* More spacious rich text editors in modal */
+.template-form-single-column .tox-tinymce {
+  min-height: 250px !important;
+}
+
+.template-form-single-column .template-textarea {
+  min-height: 200px;
+}
+
+/* Hero image preview in modal - larger */
+.template-form-single-column .hero-image-section {
+  padding: 1.5rem;
+  background-color: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.template-form-single-column .hero-preview-img {
+  width: 200px;
+  height: 125px;
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+/* ==== MODAL MOBILE OPTIMIZATION ==== */
+
+@media (max-width: 767px) {
+  /* Full-screen modal on mobile */
+  #customizeModal .modal-dialog {
+    margin: 0;
+    max-width: 100vw !important;
+    height: 100vh;
+  }
+
+  #customizeModal .modal-content {
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  #customizeModal .modal-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  #customizeModal .modal-title {
+    font-size: 1rem;
+  }
+
+  #customizeModal .modal-body {
+    padding: 1rem;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+  }
+
+  #customizeModal .modal-footer {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #customizeModal .modal-footer .btn-secondary {
+    order: 2;
+    width: 100%;
+  }
+
+  #customizeModal .modal-footer .d-flex {
+    order: 1;
+    width: 100%;
+  }
+
+  #customizeModal .modal-footer .btn {
+    flex: 1;
+    min-width: auto;
+  }
+
+  #customizeModal .modal-footer .btn-group {
+    flex: 1;
+  }
+
+  #customizeModal .modal-footer .btn-group .btn {
+    width: 100%;
+  }
+
+  /* Simplify form elements on mobile */
+  .template-form-single-column .hero-image-section .d-flex {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .template-form-single-column .hero-upload-controls {
+    width: 100%;
+    text-align: center;
+  }
+
+  .template-form-single-column .hero-upload-btn {
+    width: 100%;
+  }
+
+  .template-form-single-column .tox-tinymce {
+    min-height: 200px !important;
+  }
+}
+
+/* ==== MODAL TABLET OPTIMIZATION ==== */
+
+@media (min-width: 768px) and (max-width: 991px) {
+  #customizeModal .modal-dialog {
+    max-width: 90vw;
+  }
+
+  #customizeModal .modal-footer .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+}

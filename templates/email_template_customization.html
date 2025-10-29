@@ -13,22 +13,19 @@
   <!-- Page Header -->
   <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
-      <div class="row g-2 align-items-center">
+      <div class="row align-items-center">
         <div class="col">
-          <h1 class="page-title">
-            <i class="ti ti-mail text-blue me-2"></i>Email Templates for 
-            <img src="{{ url_for('static', filename='uploads/activity_images/' ~ (activity.image_filename or 'unsplash_0b73855c.jpg')) }}" 
-                 alt="{{ activity.name }}" 
-                 class="activity-thumbnail-inline"> 
-            <span class="activity-name-highlight">{{ activity.name }}</span>
-          </h1>
+          <h2 class="page-title mb-1" style="font-size: 1.75rem; font-weight: 600;">
+            <i class="ti ti-mail text-blue me-2"></i>Email Templates
+          </h2>
+          <p class="text-muted mb-0" style="font-size: 0.95rem;">{{ activity.name }}</p>
         </div>
-        <div class="col-auto ms-auto d-print-none">
-          <div class="btn-list">
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-outline-primary shadow-sm">
-              <i class="ti ti-arrow-left me-2"></i> Back to Activity
-            </a>
-          </div>
+        <div class="col-auto">
+          <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="btn btn-outline-primary">
+            <i class="ti ti-arrow-left me-2 d-none d-md-inline"></i>
+            <span class="d-none d-md-inline">Back to Activity</span>
+            <span class="d-md-none">Back</span>
+          </a>
         </div>
       </div>
     </div>
@@ -276,38 +273,36 @@
       </div>
       
       <!-- Modal Body -->
-      <div class="modal-body" style="padding: 2rem 3rem;">
-        <div id="customizeFormContent">
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div id="customizeFormContent" class="template-form-single-column">
           <!-- Form content will be loaded here dynamically -->
         </div>
       </div>
       
       <!-- Modal Footer -->
-      <div class="modal-footer">
-        <div class="d-flex w-100 justify-content-between">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            <i class="ti ti-x me-2"></i>
-            Cancel
+      <div class="modal-footer" style="justify-content: space-between; padding: 1rem 1.5rem;">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="ti ti-x me-2"></i>Cancel
+        </button>
+        <div class="d-flex gap-2 flex-wrap">
+          <button type="button" class="btn btn-primary" id="previewInModal">
+            <i class="ti ti-eye me-2"></i>
+            <span class="d-none d-sm-inline">Preview</span>
           </button>
-          <div>
-            <button type="button" class="btn btn-success me-2" id="saveTemplateChanges">
-              <i class="ti ti-device-floppy me-2"></i>
-              Save Changes
+          <button type="button" class="btn btn-success" id="saveTemplateChanges">
+            <i class="ti ti-device-floppy me-2"></i>
+            <span class="d-none d-sm-inline">Save</span>
+          </button>
+          <div class="btn-group">
+            <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="ti ti-send me-2 d-none d-sm-inline"></i>
+              <span class="d-none d-sm-inline">Send Test</span>
+              <i class="ti ti-send d-sm-none"></i>
             </button>
-            <button type="button" class="btn btn-outline-primary me-2" id="previewInModal">
-              <i class="ti ti-eye me-2"></i>
-              Preview Changes
-            </button>
-            <div class="btn-group">
-              <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="ti ti-send me-2"></i>
-                Send Test Email
-              </button>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" data-email="kdresdell@gmail.com">kdresdell@gmail.com</a></li>
-                <li><a class="dropdown-item" href="#" data-email="jf@jfgoulet.com">jf@jfgoulet.com</a></li>
-              </ul>
-            </div>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#" data-email="kdresdell@gmail.com">kdresdell@gmail.com</a></li>
+              <li><a class="dropdown-item" href="#" data-email="jf@jfgoulet.com">jf@jfgoulet.com</a></li>
+            </ul>
           </div>
         </div>
       </div>
@@ -484,7 +479,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             height: 200,
                             menubar: false,
                             plugins: 'lists link',
-                            toolbar: 'bold italic | bullist numlist | link'
+                            toolbar: 'bold italic | bullist numlist | link',
+                            license_key: 'gpl'
                         });
                     }
                 }, 100);
