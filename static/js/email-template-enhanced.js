@@ -25,15 +25,15 @@
                 selector: selector,
                 height: 250,
                 menubar: false,
-                plugins: 'lists link autoresize paste',
+                plugins: 'lists link autoresize',
                 toolbar: 'bold italic | bullist numlist | link | removeformat',
                 autoresize_bottom_margin: 20,
-                paste_as_text: true,
+                license_key: 'gpl',
                 setup: function(editor) {
                     editor.on('init', function() {
                         console.log('✅ TinyMCE initialized for:', editor.id);
                     });
-                    
+
                     editor.on('change', function() {
                         // Auto-save indicator could go here
                     });
