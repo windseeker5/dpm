@@ -6,6 +6,82 @@ import sys
 import time
 import traceback
 from datetime import datetime
+from io import BytesIO
+from PIL import Image, ImageChops
+
+
+def process_hero_image(image_path: str, padding: int = 0):
+    """
+    Process hero images by removing white background (RGB 255,255,255),
+    cropping to actual content, and optionally adding padding.
+
+    Args:
+        image_path: Path to the image file
+        padding: Pixels of padding to add around cropped image (default: 0)
+
+    Returns:
+        PIL Image object with processed image
+    """
+    try:
+        # Open image
+        img = Image.open(image_path)
+
+        # Convert to RGB if needed (in case it's RGBA or other mode)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # Convert to numpy array for easier processing
+        import numpy as np
+        img_array = np.array(img)
+
+        # Define "white" as pixels where R, G, B are all > 250 (nearly white)
+        # This handles slight variations in white background
+        white_threshold = 250
+        is_white = (img_array[:, :, 0] > white_threshold) & \
+                   (img_array[:, :, 1] > white_threshold) & \
+                   (img_array[:, :, 2] > white_threshold)
+
+        # Find rows and columns that contain non-white pixels
+        rows_with_content = np.where(~is_white.all(axis=1))[0]
+        cols_with_content = np.where(~is_white.all(axis=0))[0]
+
+        if len(rows_with_content) > 0 and len(cols_with_content) > 0:
+            # Get bounding box of non-white content
+            top = rows_with_content[0]
+            bottom = rows_with_content[-1] + 1
+            left = cols_with_content[0]
+            right = cols_with_content[-1] + 1
+
+            # Crop to content
+            img_cropped = img.crop((left, top, right, bottom))
+
+            print(f"   📐 Cropped from {img.size} to {img_cropped.size} (removed white background)")
+
+            if padding > 0:
+                # Add padding if requested
+                new_width = img_cropped.width + (padding * 2)
+                new_height = img_cropped.height + (padding * 2)
+
+                # Create new image with padding (white background)
+                img_padded = Image.new('RGB', (new_width, new_height), (255, 255, 255))
+                img_padded.paste(img_cropped, (padding, padding))
+
+                print(f"   ➕ Added {padding}px padding → final size: {img_padded.size}")
+                return img_padded
+            else:
+                return img_cropped
+        else:
+            # If no non-white content found, return original
+            print(f"   ⚠️  No non-white content found, returning original")
+            return img
+
+    except Exception as e:
+        print(f"⚠️  Warning: Could not process image {image_path}: {e}")
+        print(f"⚠️  Returning original image without preprocessing")
+        import traceback
+        traceback.print_exc()
+        # Return original image if processing fails
+        return Image.open(image_path)
 
 
 def compile_email_template_to_folder(template_name: str):
@@ -68,19 +144,39 @@ def compile_email_template_to_folder(template_name: str):
         
         for match in matches:
             asset_path = os.path.join(source_dir, os.path.basename(match))
-            
+
             if os.path.exists(asset_path):
                 cid = os.path.splitext(os.path.basename(asset_path))[0]
                 print(f"📎 Embedding image: {asset_path} as cid:{cid}")
-                
+
                 try:
-                    with open(asset_path, "rb") as img_file:
-                        img_bytes = img_file.read()
+                    # Check if this is a hero image (should be preprocessed)
+                    is_hero_image = any(hero_name in os.path.basename(asset_path).lower()
+                                      for hero_name in ['hero', 'good-news', 'currency-dollar',
+                                                       'hand-rock', 'thumb-down', 'sondage'])
+
+                    if is_hero_image:
+                        print(f"🎨 Preprocessing hero image (auto-crop, NO padding)...")
+                        # Process the hero image (crop only, NO padding)
+                        img_processed = process_hero_image(asset_path, padding=0)
+
+                        # Convert to bytes
+                        img_buffer = BytesIO()
+                        img_processed.save(img_buffer, format='PNG', optimize=True)
+                        img_bytes = img_buffer.getvalue()
                         img_base64 = base64.b64encode(img_bytes).decode("utf-8")
                         cid_map[cid] = img_base64
-                    
-                    print(f"✅ Successfully embedded {len(img_bytes)} bytes for {cid}")
-                    
+
+                        print(f"✅ Successfully preprocessed and embedded {len(img_bytes)} bytes for {cid}")
+                    else:
+                        # Non-hero images (QR codes, logos, etc.) - no preprocessing
+                        with open(asset_path, "rb") as img_file:
+                            img_bytes = img_file.read()
+                            img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+                            cid_map[cid] = img_base64
+
+                        print(f"✅ Successfully embedded {len(img_bytes)} bytes for {cid}")
+
                     # Replace img src with cid:...
                     html = html.replace(match, f"cid:{cid}")
                 except Exception as e:
