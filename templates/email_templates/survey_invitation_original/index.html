@@ -66,14 +66,15 @@
         padding: 0 !important;
       }
     }
+  </style>
 
-    /* Outlook specific fixes */
-    <!--[if mso]>
+  <!--[if mso]>
+  <style type="text/css">
     .main-table {
       width: 600px !important;
     }
-    <![endif]-->
   </style>
+  <![endif]-->
 </head>
 <body style="margin:0; padding:0; background-color:#f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #4b5563; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f6fa; min-width: 100%;">
@@ -83,10 +84,10 @@
         <!-- Outer Card Container - IDENTICAL to newPass -->
         <table class="main-table" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius: 8px; overflow:hidden; margin: 40px auto; max-width: 600px;">
 
-          <!-- Hero Image Section - IDENTICAL to newPass -->
+          <!-- Hero Image Section - Uses cid:sondage (centered, medium) -->
           <tr>
-            <td class="hero-container" align="center" style="padding: 0; line-height: 0;">
-              <img class="hero-image" src="cid:hero_survey_invitation" alt="Invitation sondage" width="600" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; outline: none; text-decoration: none;">
+            <td class="hero-container" align="center" style="padding: 40px 0 20px;">
+              <img class="hero-image" src="cid:sondage" alt="Invitation sondage" width="200" style="display: block; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
             </td>
           </tr>
 
@@ -114,7 +115,7 @@
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="center">
-                    <a href="{{ survey_url }}" style="display: inline-block; background: #3b82f6; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 500; font-size: 15px; text-align: center; min-width: 180px;">
+                    <a href="{{ survey_url }}" style="display: inline-block; background: #22c55e; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 500; font-size: 15px; text-align: center; min-width: 180px;">
                       Répondre au sondage
                     </a>
                   </td>

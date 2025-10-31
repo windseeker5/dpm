@@ -154,6 +154,13 @@ app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads', 'activity_images
 # ✅ Initialize database
 db.init_app(app)
 
+# 🔒 Enable foreign key constraints in SQLite
+@app.before_request
+def enable_foreign_keys():
+    """Enable foreign key constraints for SQLite on every request"""
+    if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+        db.session.execute(text('PRAGMA foreign_keys = ON'))
+
 # 📁 Register API blueprints
 app.register_blueprint(backup_api)
 app.register_blueprint(geocode_api)
@@ -1450,7 +1457,12 @@ def create_activity():
         # Get default email templates from central configuration
         from utils_email_defaults import get_default_email_templates
         default_email_templates = get_default_email_templates()
-        
+
+        # Get admin ID from email (session stores email, but FK expects admin.id)
+        admin_email = session.get("admin")
+        admin = Admin.query.filter_by(email=admin_email).first()
+        admin_id = admin.id if admin else None
+
         new_activity = Activity(
             name=name,
             type=activity_type,
@@ -1458,13 +1470,14 @@ def create_activity():
             start_date=start_date,
             end_date=end_date,
             status=status,
-            created_by=session.get("admin"),
+            created_by=admin_id,
             image_filename=image_filename,
             email_templates=default_email_templates,
             location_address_raw=location_address_raw if location_address_raw else None,
             location_address_formatted=location_address_formatted if location_address_formatted else None,
-            location_coordinates=location_coordinates if location_coordinates else None,
+            location_coordinates=location_coordinates if location_address_formatted else None,
             goal_revenue=goal_revenue,
+            organization_id=None,  # Explicitly set to None for nullable foreign key
         )
 
         db.session.add(new_activity)
@@ -4103,12 +4116,13 @@ def passports_bulk_action():
     elif action == "delete":
         count = len(passports)
         # Collect passport details before deletion
+        # Note: Associated redemptions will be auto-deleted via CASCADE DELETE
         passport_info = []
         for passport in passports:
             user_name = passport.user.name if passport.user else "Unknown User"
             activity_name = passport.activity.name if passport.activity else "Unknown Activity"
             passport_info.append(f"{user_name} - {activity_name}")
-            db.session.delete(passport)
+            db.session.delete(passport)  # CASCADE will delete redemptions
 
         db.session.commit()
 
@@ -4631,6 +4645,12 @@ def delete_activity(activity_id):
     activity_type = activity.type if activity.type else "Unknown Type"
 
     # Delete related records first (in order to avoid FK constraints)
+    # Note: Redemptions will be auto-deleted via CASCADE when passports are deleted
+
+    # Delete redemptions first (explicit cleanup before CASCADE)
+    passport_ids = [p.id for p in Passport.query.filter_by(activity_id=activity_id).all()]
+    if passport_ids:
+        Redemption.query.filter(Redemption.passport_id.in_(passport_ids)).delete(synchronize_session=False)
 
     PassportType.query.filter_by(activity_id=activity_id).delete()
     Expense.query.filter_by(activity_id=activity_id).delete()
@@ -7902,6 +7922,8 @@ def save_email_templates(activity_id):
 
         # Return appropriate response based on request type
         if is_individual_save:
+            # Flash message for consistent UX
+            flash('Email template saved successfully!', 'success')
             return jsonify({
                 'success': True,
                 'message': 'Template saved successfully',
@@ -8020,7 +8042,10 @@ def reset_email_template(activity_id):
         flag_modified(activity, 'email_templates')
         
         db.session.commit()
-        
+
+        # Flash message for consistent UX
+        flash('Template reset to defaults successfully!', 'success')
+
         return jsonify({
             'success': True,
             'message': f'Template "{template_type}" has been reset to default values'

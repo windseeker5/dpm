@@ -210,12 +210,36 @@ If you want to modify the email layout, design, or structure:
 
 After making any changes to **master templates**, you MUST compile them.
 
+**⚠️ IMPORTANT: Choose the Right Mode!**
+
+The compilation script has TWO modes:
+
+#### Development Mode (Default)
+Use when testing/developing templates WITHOUT affecting production defaults:
+
+```bash
+# Updates _compiled only, preserves _original
+python compileEmailTemplate.py newPass
+```
+
+#### Production Deployment Mode (NEW!)
+**Use when deploying improved templates to production/customers:**
+
+```bash
+# Updates BOTH _compiled AND _original (pristine defaults)
+python compileEmailTemplate.py newPass --update-original
+```
+
+**When to use each mode:**
+- **Development:** Testing changes, iterating on design, local development
+- **Production:** Deploying to customers, updating pristine defaults, when you want "Reset" to show new templates
+
 **Run the compilation script:**
 
 ```bash
 cd /home/kdresdell/Documents/DEV/minipass_env/app/templates/email_templates/
 
-# Compile a single template
+# DEVELOPMENT MODE: Testing only (preserves original)
 python compileEmailTemplate.py signup
 python compileEmailTemplate.py newPass
 python compileEmailTemplate.py paymentReceived
@@ -223,13 +247,18 @@ python compileEmailTemplate.py redeemPass
 python compileEmailTemplate.py latePayment
 python compileEmailTemplate.py survey_invitation
 
-# Or compile all templates at once (recommended)
-python compileEmailTemplate.py signup && \
-python compileEmailTemplate.py newPass && \
-python compileEmailTemplate.py paymentReceived && \
-python compileEmailTemplate.py redeemPass && \
-python compileEmailTemplate.py latePayment && \
-python compileEmailTemplate.py survey_invitation
+# PRODUCTION MODE: Deploy to customers (updates pristine originals)
+python compileEmailTemplate.py signup --update-original
+python compileEmailTemplate.py newPass --update-original
+python compileEmailTemplate.py paymentReceived --update-original
+python compileEmailTemplate.py redeemPass --update-original
+python compileEmailTemplate.py latePayment --update-original
+python compileEmailTemplate.py survey_invitation --update-original
+
+# Compile all templates at once (PRODUCTION)
+for template in signup newPass paymentReceived redeemPass latePayment survey_invitation; do
+    python compileEmailTemplate.py "$template" --update-original
+done
 ```
 
 **What the compilation script does:**
@@ -239,12 +268,13 @@ python compileEmailTemplate.py survey_invitation
 4. Replaces image paths with **CID references** (e.g., `cid:hero_new_pass`)
 5. Writes compiled HTML to `templateName_compiled/index.html`
 6. Writes image data to `templateName_compiled/inline_images.json`
-7. Creates `templateName_original/` backup (first time only)
+7. **NEW:** If `--update-original` flag used, ALSO updates `templateName_original/` (pristine defaults)
 
-**Output example:**
+**Output example (Development Mode):**
 ```
-🚀 Email Template Compiler v2.0 - Starting compilation...
+🚀 Email Template Compiler v3.0 - Starting compilation...
 📧 Starting compilation of 'newPass'
+🛠️  MODE: Development (compiled only, original preserved)
 📂 Source path: /path/to/newPass
 📂 Target path: /path/to/newPass_compiled
 🖼️  Processing 4 images
@@ -255,6 +285,25 @@ python compileEmailTemplate.py survey_invitation
 💾 Writing images JSON to: /path/to/newPass_compiled/inline_images.json
 ✅ Verified JSON written: 245632 bytes
 🎉 SUCCESS: Compiled 'newPass' → 'newPass_compiled' with 4 embedded images
+ℹ️  Skipping original update (use --update-original to deploy new pristine defaults)
+```
+
+**Output example (Production Mode with --update-original):**
+```
+🚀 Email Template Compiler v3.0 - Starting compilation...
+📧 Starting compilation of 'newPass'
+🔄 MODE: Production Deployment (updating pristine original)
+⚠️  WARNING: Will update pristine original - customers will see this when resetting!
+📂 Source path: /path/to/newPass
+📂 Target path: /path/to/newPass_compiled
+📂 Original path: /path/to/newPass_original
+🎨 Preprocessing hero image (auto-crop, NO padding)...
+   📐 Cropped from (1024, 1024) to (846, 767) (removed white background)
+✅ Successfully preprocessed and embedded 483062 bytes for hero_new_pass
+💾 Updating original (pristine) files...
+✅ Updated original (pristine) files - customers will see this when resetting
+🎉 SUCCESS: Compiled 'newPass' → 'newPass_compiled' AND updated 'newPass_original' (pristine)
+✅ Pristine original updated - deploy to production!
 ```
 
 ---
