@@ -75,7 +75,7 @@ def get_template_default_hero(template_type):
         'paymentReceived': 'paymentReceived_original',
         'latePayment': 'latePayment_original',
         'signup': 'signup_original',
-        'waitlist': 'waitlist_original',
+        'redeemPass': 'redeemPass_original',
         'survey_invitation': 'survey_invitation_original'
     }
     
@@ -95,13 +95,13 @@ def get_template_default_hero(template_type):
         with open(json_path, 'r') as f:
             compiled_images = json.load(f)
         
-        # Map template types to their hero image keys
+        # Map template types to their hero image keys (as they actually appear in inline_images.json)
         hero_key_map = {
             'newPass': 'hero_new_pass',
-            'paymentReceived': 'hero_payment_received',
-            'latePayment': 'hero_late_payment',
-            'signup': 'hero_signup',
-            'waitlist': 'hero_waitlist',
+            'paymentReceived': 'currency-dollar',
+            'latePayment': 'thumb-down',
+            'signup': 'good-news',
+            'redeemPass': 'hand-rock',
             'survey_invitation': 'sondage'
         }
         
@@ -125,20 +125,20 @@ def get_activity_hero_image(activity, template_type):
     """
     Hero image selection with CORRECT priority order:
     1. Custom uploaded hero (highest priority)
-    2. Original template default (proper default) 
-    3. Activity image (last resort only)
-    
+    2. Original template default (proper default)
+    3. Activity image (ONLY if template has active customizations - NOT after reset)
+
     Returns: tuple (image_data, is_custom, is_template_default)
     """
     import os
-    
+
     print(f"🔍 get_activity_hero_image: activity={activity.id if activity else None}, template_type={template_type}")
-    
+
     # Priority 1: Check for custom uploaded hero FIRST
     if activity:
         custom_hero_path = f"static/uploads/{activity.id}_{template_type}_hero.png"
         print(f"🔍 Checking for custom hero at: {custom_hero_path}")
-        
+
         if os.path.exists(custom_hero_path):
             try:
                 with open(custom_hero_path, "rb") as f:
@@ -149,27 +149,41 @@ def get_activity_hero_image(activity, template_type):
                 print(f"❌ Error reading custom hero file {custom_hero_path}: {e}")
         else:
             print(f"ℹ️ No custom hero found at {custom_hero_path}")
-    
+
     # Priority 2: Load original template default (pristine version)
     template_hero_data = get_template_default_hero(template_type)
     if template_hero_data:
         print(f"📦 Using original template default hero for {template_type}")
         return template_hero_data, False, True  # is_template_default=True
-    
-    # Priority 3: Fall back to activity image only if no template exists (last resort)
+
+    # Priority 3: Fall back to activity image ONLY if template has active customizations
+    # (NOT after reset - this prevents showing activity image when user clicked "reset to default")
     if activity and activity.image_filename:
-        # Try both locations: main uploads and activity_images subdirectory
-        activity_image_paths = [
-            f"static/uploads/{activity.image_filename}",
-            f"static/uploads/activity_images/{activity.image_filename}"
-        ]
-        
-        for activity_image_path in activity_image_paths:
-            if os.path.exists(activity_image_path):
-                with open(activity_image_path, "rb") as f:
-                    print(f"⚠️ Using activity image as fallback hero for {template_type}: {activity.image_filename}")
-                    return f.read(), False, False  # is_template_default=False
-    
+        # Check if this template has any customizations in the database
+        has_customizations = False
+        if activity.email_templates and template_type in activity.email_templates:
+            template_data = activity.email_templates[template_type]
+            # Check if there are any actual custom values (not just empty dict)
+            customizable_fields = ['subject', 'title', 'intro_text', 'conclusion_text', 'hero_image', 'activity_logo']
+            has_customizations = any(field in template_data and template_data[field] for field in customizable_fields)
+
+        # Only use activity image if template was customized (user intentionally didn't upload hero)
+        # Do NOT use activity image if template was reset or never customized
+        if has_customizations:
+            # Try both locations: main uploads and activity_images subdirectory
+            activity_image_paths = [
+                f"static/uploads/{activity.image_filename}",
+                f"static/uploads/activity_images/{activity.image_filename}"
+            ]
+
+            for activity_image_path in activity_image_paths:
+                if os.path.exists(activity_image_path):
+                    with open(activity_image_path, "rb") as f:
+                        print(f"⚠️ Using activity image as fallback hero for customized template {template_type}: {activity.image_filename}")
+                        return f.read(), False, False  # is_template_default=False
+        else:
+            print(f"ℹ️ Template {template_type} has no customizations, skipping activity image fallback")
+
     # No hero image found
     print(f"❌ No hero image found for {template_type}")
     return None, False, False
@@ -2646,37 +2660,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         from models import PassportType
         passport_type = db.session.get(PassportType, signup.passport_type_id)
 
-    # Check if activity has custom signup template
-    has_custom_template = (activity.email_templates and 
-                          'signup' in activity.email_templates and 
-                          activity.email_templates['signup'])
-    
-    # If no custom template (reset/default state), use regular email path
-    if not has_custom_template:
-        # Use the standard send_email function with compiled template
-        send_email_async(
-            app=app,
-            user=signup.user,
-            activity=activity,
-            subject="Confirmation d'inscription",
-            to_email=signup.user.email,
-            template_name="signup_compiled/index.html",
-            context={
-                "user_name": signup.user.name,
-                "user_email": signup.user.email,
-                "phone_number": signup.user.phone_number,
-                "activity_name": activity.name,
-                "activity_price": f"${passport_type.price_per_user:.2f}" if passport_type else "$0.00",
-                "sessions_included": passport_type.sessions_included if passport_type else 1,
-                "payment_instructions": passport_type.payment_instructions if passport_type else "",
-                "title": "Votre Inscription est Confirmée",
-                "intro_text": "Merci de vous être inscrit!",
-                "conclusion_text": "Nous vous contacterons bientôt.",
-                "logo_url": "/static/uploads/logo.png",
-            },
-            timestamp_override=timestamp
-        )
-        return
+    # Always send signup email with custom templates
     
     # Build base context for custom templates
     base_context = {
@@ -2694,9 +2678,9 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     conclusion_raw = email_context.get('conclusion_text', '')
     theme = "signup_compiled/index.html"
 
-    # Render intro and conclusion manually
-    intro = render_template_string(intro_raw, user_name=signup.user.name, activity_name=activity.name)
-    conclusion = render_template_string(conclusion_raw, user_name=signup.user.name, activity_name=activity.name)
+    # Render intro and conclusion manually with full context
+    intro = render_template_string(intro_raw, user_name=signup.user.name, activity_name=activity.name, activity=activity)
+    conclusion = render_template_string(conclusion_raw, user_name=signup.user.name, activity_name=activity.name, activity=activity)
 
     # Build context
     context = {

@@ -84,12 +84,24 @@ def process_hero_image(image_path: str, padding: int = 0):
         return Image.open(image_path)
 
 
-def compile_email_template_to_folder(template_name: str):
-    """Compile email template with comprehensive logging and error handling"""
+def compile_email_template_to_folder(template_name: str, update_original: bool = False):
+    """
+    Compile email template with comprehensive logging and error handling
+
+    Args:
+        template_name: Name of the template to compile (e.g., 'newPass', 'signup')
+        update_original: If True, updates the pristine original folder (for production deployment)
+                        If False, only updates compiled folder (for development/testing)
+    """
     try:
         print(f"📧 Starting compilation of '{template_name}'")
+        if update_original:
+            print(f"🔄 MODE: Production Deployment (updating pristine original)")
+        else:
+            print(f"🛠️  MODE: Development (compiled only, original preserved)")
+
         start_time = time.time()
-        
+
         source_dir = os.path.abspath(template_name)
         target_dir = os.path.abspath(f"{template_name}_compiled")
         original_dir = os.path.abspath(f"{template_name}_original")
@@ -256,30 +268,61 @@ def compile_email_template_to_folder(template_name: str):
             print(f"❌ ERROR: Failed to write images JSON file {inline_images_path}: {e}")
             raise
 
-        # Write to original version only if it doesn't exist (preserve pristine state)
-        if not original_exists:
-            print(f"💾 Creating original backup files...")
-            
+        # UPDATED LOGIC: Write to original based on update_original flag
+        if update_original:
+            # Production deployment mode: ALWAYS update original (pristine defaults)
+            print(f"💾 Updating original (pristine) files...")
+
+            try:
+                # Ensure we can write to the files
+                if os.path.exists(original_html_path):
+                    os.chmod(original_html_path, 0o666)
+                if os.path.exists(original_images_path):
+                    os.chmod(original_images_path, 0o666)
+
+                with open(original_html_path, "w", encoding="utf-8") as f:
+                    f.write(html)
+                    f.flush()
+                    os.fsync(f.fileno())
+
+                with open(original_images_path, "w", encoding="utf-8") as f:
+                    json.dump(cid_map, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+
+                print(f"✅ Updated original (pristine) files - customers will see this when resetting")
+            except Exception as e:
+                print(f"❌ ERROR: Failed to update original files: {e}")
+                raise
+        elif not original_exists:
+            # Development mode: Only create original if doesn't exist (first time)
+            print(f"💾 Creating original backup files (first time)...")
+
             try:
                 with open(original_html_path, "w", encoding="utf-8") as f:
                     f.write(html)
                     f.flush()
                     os.fsync(f.fileno())
-                
+
                 with open(original_images_path, "w", encoding="utf-8") as f:
                     json.dump(cid_map, f, indent=2)
                     f.flush()
                     os.fsync(f.fileno())
-                
+
                 print(f"✅ Created original backup files")
             except Exception as e:
                 print(f"❌ ERROR: Failed to create original backup files: {e}")
                 raise
-        
+        else:
+            # Development mode: Original exists, skip updating
+            print(f"ℹ️  Skipping original update (use --update-original to deploy new pristine defaults)")
+
         # Final success message with timing
         elapsed_time = time.time() - start_time
-        
-        if not original_exists:
+
+        if update_original:
+            print(f"🎉 SUCCESS: Compiled '{template_name}' → '{template_name}_compiled' AND updated '{template_name}_original' (pristine) with {len(cid_map)} embedded image(s) in {elapsed_time:.2f}s")
+        elif not original_exists:
             print(f"🎉 SUCCESS: Compiled '{template_name}' → '{template_name}_compiled' and created '{template_name}_original' with {len(cid_map)} embedded image(s) in {elapsed_time:.2f}s")
         else:
             print(f"🎉 SUCCESS: Compiled '{template_name}' → '{template_name}_compiled' with {len(cid_map)} embedded image(s) in {elapsed_time:.2f}s (Original preserved)")
@@ -312,21 +355,37 @@ def main():
     """Main function with improved argument handling and error reporting"""
     if len(sys.argv) < 2:
         print("❌ ERROR: Template name required")
-        print("💡 Usage: python compileEmailTemplate.py <template_name>")
-        print("💡 Available templates: signup, newPass, paymentReceived, latePayment, redeemPass, email_survey_invitation")
+        print("💡 Usage: python compileEmailTemplate.py <template_name> [--update-original]")
+        print("💡 Available templates: signup, newPass, paymentReceived, latePayment, redeemPass, survey_invitation")
+        print("")
+        print("📋 Modes:")
+        print("   Development (default):   Updates _compiled only, preserves _original")
+        print("   Production:              python compileEmailTemplate.py <name> --update-original")
+        print("                            Updates BOTH _compiled AND _original (pristine defaults)")
+        print("")
+        print("🎯 Use --update-original when:")
+        print("   - Deploying improved templates to production")
+        print("   - You want customers to see new design when they click Reset")
+        print("   - Updating the pristine defaults for all activities")
         sys.exit(1)
-    
+
     folder = sys.argv[1]
-    print(f"🚀 Email Template Compiler v2.0 - Starting compilation...")
+    update_original = '--update-original' in sys.argv or '--update-pristine' in sys.argv
+
+    print(f"🚀 Email Template Compiler v3.0 - Starting compilation...")
     print(f"📅 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"📁 Template: {folder}")
+    if update_original:
+        print(f"⚠️  WARNING: Will update pristine original - customers will see this when resetting!")
     print("─" * 60)
-    
-    success = compile_email_template_to_folder(folder)
-    
+
+    success = compile_email_template_to_folder(folder, update_original=update_original)
+
     print("─" * 60)
     if success:
         print(f"🎯 COMPILATION COMPLETED SUCCESSFULLY for '{folder}'")
+        if update_original:
+            print(f"✅ Pristine original updated - deploy to production!")
         sys.exit(0)
     else:
         print(f"💥 COMPILATION FAILED for '{folder}'")

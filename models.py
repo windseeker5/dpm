@@ -218,7 +218,7 @@ class Passport(db.Model):
 
 class Redemption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=False)  # 🟢 FIXED
+    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="CASCADE"), nullable=False)
     date_used = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     redeemed_by = db.Column(db.String(100), nullable=True)
 
