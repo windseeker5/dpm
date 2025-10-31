@@ -1184,8 +1184,41 @@ def send_unpaid_reminders(app, force_send=False):
                 print(f"❌ Failed to send email to {p.user.name if p.user else '-'}: {e}")
                 # No database log if email failed - will retry next time
 
+def cleanup_duplicate_payment_logs_auto():
+    """
+    Auto-cleanup duplicate NO_MATCH payment logs.
+    Called automatically by payment bot every 30 minutes.
+    Keeps only the latest entry for each unique payment.
+    """
+    try:
+        from models import EbankPayment, db
 
+        # Find all NO_MATCH entries that are NOT the latest for each unique payment
+        duplicates_query = db.session.query(EbankPayment).filter(
+            EbankPayment.result == "NO_MATCH",
+            EbankPayment.id.notin_(
+                db.session.query(db.func.max(EbankPayment.id))
+                .filter(EbankPayment.result == "NO_MATCH")
+                .group_by(
+                    EbankPayment.bank_info_name,
+                    EbankPayment.bank_info_amt,
+                    EbankPayment.from_email
+                )
+            )
+        )
 
+        duplicate_count = duplicates_query.count()
+
+        if duplicate_count > 0:
+            duplicates_query.delete(synchronize_session=False)
+            db.session.commit()
+            print(f"🧹 Auto-cleaned {duplicate_count} duplicate payment logs")
+        else:
+            print(f"✓ Auto-cleanup: No duplicates found (logs are clean)")
+
+    except Exception as e:
+        print(f"⚠️ Auto-cleanup error: {e}")
+        db.session.rollback()
 
 
 def match_gmail_payments_to_passes():

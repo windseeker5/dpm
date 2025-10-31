@@ -292,7 +292,10 @@ def init_scheduler(app):
                     def run_payment_bot():
                         with app.app_context():
                             match_gmail_payments_to_passes()
-                    
+                            # Auto-cleanup duplicates after processing
+                            from utils import cleanup_duplicate_payment_logs_auto
+                            cleanup_duplicate_payment_logs_auto()
+
                     scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
                 else:
                     print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
@@ -1957,18 +1960,21 @@ def api_payment_bot_check_emails():
         print("❌ Unauthorized - no admin in session")
         return jsonify({"error": "Unauthorized"}), 401
     
-    from utils import match_gmail_payments_to_passes, get_setting, log_admin_action
-    
+    from utils import match_gmail_payments_to_passes, get_setting, log_admin_action, cleanup_duplicate_payment_logs_auto
+
     # Check if payment bot is enabled
     if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") != "True":
         return jsonify({"error": "Payment bot is not enabled in settings"}), 400
-    
+
     try:
         # Log the action first
         log_admin_action(f"Manual payment bot check triggered by {session.get('admin', 'Unknown')}")
-        
+
         # Run the email checking function
         result = match_gmail_payments_to_passes()
+
+        # Auto-cleanup duplicates after processing (same as scheduled job)
+        cleanup_duplicate_payment_logs_auto()
         
         # Return success with any matched payments info
         if result and isinstance(result, dict):
