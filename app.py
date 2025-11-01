@@ -2696,8 +2696,9 @@ def unified_settings():
         except Exception as e:
             print(f"❌ Payment bot test error: {e}")
             flash(f"❌ Payment bot test failed: {str(e)}", "error")
-        
-        return redirect(url_for("unified_settings"))
+
+        # Redirect back to payment_bot_matches page
+        return redirect(url_for("payment_bot_matches"))
     
     # Check if this is a GET request with test_late_payment parameter
     if request.args.get("test_late_payment") == "1":
@@ -2713,8 +2714,9 @@ def unified_settings():
         except Exception as e:
             print(f"❌ Late payment reminder test error: {e}")
             flash(f"❌ Late payment reminder test failed: {str(e)}", "error")
-        
-        return redirect(url_for("unified_settings"))
+
+        # Redirect back to payment_bot_matches if that's where they came from
+        return redirect(url_for("payment_bot_matches"))
     
     if request.method == "POST":
         # Check if this is a manual payment bot trigger
@@ -3993,11 +3995,17 @@ def payment_bot_matches():
     ).subquery()
 
     # Base query with deduplication
+    # Sort by email_received_date if available, fallback to timestamp
     query = db.session.query(EbankPayment).filter(
         EbankPayment.id.in_(
             db.session.query(latest_payment_ids.c.max_id)
         )
-    ).order_by(EbankPayment.timestamp.desc())
+    ).order_by(
+        db.case(
+            (EbankPayment.email_received_date.isnot(None), EbankPayment.email_received_date),
+            else_=EbankPayment.timestamp
+        ).desc()
+    )
 
     # Apply status filter (skip if show_all is true)
     if show_all_param != "true":
@@ -7684,6 +7692,132 @@ def test_payment_bot_now():
         error_msg = f"❌ Payment bot failed: {str(e)}"
         print(error_msg)
         return f"<h1>{error_msg}</h1><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
+
+
+@app.route("/update-payment-notes")
+def update_payment_notes():
+    """Update existing NO_MATCH payment records with detailed, accurate notes"""
+    if "admin" not in session:
+        return "❌ Must be logged in as admin", 401
+
+    try:
+        print("🔧 Starting retroactive payment notes update...")
+        import unicodedata
+        from rapidfuzz import fuzz
+
+        def normalize_name(text):
+            """Remove accents and normalize text for better matching"""
+            normalized = unicodedata.normalize('NFD', text)
+            without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+            return without_accents.lower().strip()
+
+        # Get all NO_MATCH payments
+        no_match_payments = EbankPayment.query.filter_by(result='NO_MATCH').all()
+        updated_count = 0
+        threshold = 85
+
+        for payment in no_match_payments:
+            name = payment.bank_info_name
+            amt = payment.bank_info_amt
+            email_received_date = payment.email_received_date
+            payment_amount = float(amt)
+
+            # Get all unpaid passports with this amount
+            all_unpaid = Passport.query.filter_by(paid=False).all()
+            unpaid_passports = [p for p in all_unpaid if float(p.sold_amt) == payment_amount]
+
+            new_note = None
+
+            # ALWAYS check for PAID passports FIRST (regardless of unpaid passport existence)
+            all_paid = Passport.query.filter_by(paid=True).all()
+            paid_passports_same_amount = [p for p in all_paid if float(p.sold_amt) == payment_amount]
+
+            normalized_payment_name = normalize_name(name)
+
+            matching_paid_passport = None
+            for p in paid_passports_same_amount:
+                if not p.user:
+                    continue
+                normalized_passport_name = normalize_name(p.user.name)
+                score = fuzz.ratio(normalized_payment_name, normalized_passport_name)
+                if score >= 95:
+                    matching_paid_passport = p
+                    break
+
+            if matching_paid_passport:
+                # Found matching PAID passport
+                paid_by = matching_paid_passport.marked_paid_by or "unknown admin"
+                paid_date_str = matching_paid_passport.paid_date.strftime("%Y-%m-%d %H:%M") if matching_paid_passport.paid_date else "unknown date"
+
+                time_diff_info = ""
+                if matching_paid_passport.paid_date and email_received_date:
+                    # Ensure both datetimes are timezone-aware for comparison
+                    from datetime import timezone as tz
+                    paid_dt = matching_paid_passport.paid_date if matching_paid_passport.paid_date.tzinfo else matching_paid_passport.paid_date.replace(tzinfo=tz.utc)
+                    email_dt = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=tz.utc)
+
+                    diff_seconds = (email_dt - paid_dt).total_seconds()
+                    if diff_seconds > 0:
+                        diff_minutes = int(diff_seconds / 60)
+                        time_diff_info = f" ({diff_minutes} min after passport marked paid)"
+                    else:
+                        diff_minutes = int(abs(diff_seconds) / 60)
+                        time_diff_info = f" ({diff_minutes} min before email received)"
+
+                new_note = f"MATCH FOUND: {matching_paid_passport.user.name} (${payment_amount:.2f}, Passport #{matching_paid_passport.id}) - Already marked PAID by {paid_by} on {paid_date_str}{time_diff_info}"
+            elif not unpaid_passports:
+                # No unpaid passports at this amount
+                available_amounts = list(set(float(p.sold_amt) for p in all_unpaid))
+                available_amounts.sort()
+                amounts_summary = ", ".join([f"${a:.2f}({sum(1 for p in all_unpaid if float(p.sold_amt) == a)})" for a in available_amounts[:5]])
+                new_note = f"No unpaid passports for ${payment_amount:.2f}. Payment may have arrived before passport creation. Available unpaid amounts: {amounts_summary}"
+            else:
+                # There ARE unpaid passports - check name matching
+                normalized_payment_name = normalize_name(name)
+
+                all_candidates = []
+                for p in unpaid_passports:
+                    if not p.user:
+                        continue
+                    score = fuzz.ratio(normalized_payment_name, normalize_name(p.user.name))
+                    if score >= 50:
+                        all_candidates.append((p.user.name, score))
+
+                all_candidates.sort(key=lambda x: x[1], reverse=True)
+                top_candidates = all_candidates[:3]
+
+                note_parts = [f"No match found for '{name}' (${amt})."]
+                note_parts.append(f"Found {len(unpaid_passports)} unpaid passport(s) for ${amt}, but")
+
+                if top_candidates:
+                    candidate_strs = [f"{cname} ({score:.0f}%)" for cname, score in top_candidates]
+                    note_parts.append(f"all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
+                else:
+                    note_parts.append(f"no names above 50% similarity.")
+                    if unpaid_passports:
+                        example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
+                        if example_names:
+                            note_parts.append(f"Available names: {', '.join(example_names[:3])}")
+
+                new_note = " ".join(note_parts)
+
+            # Update the record if note changed
+            if new_note and new_note != payment.note:
+                payment.note = new_note
+                updated_count += 1
+
+        db.session.commit()
+
+        message = f"✅ Updated {updated_count} out of {len(no_match_payments)} NO_MATCH payment records with detailed notes!"
+        print(message)
+        return f"<h1>{message}</h1><p><strong>Refresh your payment matches page to see the new detailed reasons.</strong></p><p><a href='/payment-bot-matches'>→ View Payment Matches</a></p>"
+
+    except Exception as e:
+        error_msg = f"❌ Update failed: {str(e)}"
+        print(error_msg)
+        import traceback
+        traceback.print_exc()
+        return f"<h1>{error_msg}</h1><p><a href='/payment-bot-matches'>← Back</a></p>"
 
 
 # ================================

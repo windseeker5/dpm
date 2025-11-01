@@ -418,6 +418,42 @@ def task6_verify_schema(cursor):
     return all_good
 
 # ============================================================================
+# TASK 7: Add email_received_date to ebank_payment table
+# ============================================================================
+def task7_add_email_received_date(cursor):
+    """Add email_received_date column to ebank_payment table"""
+    log("📅", "TASK 7: Adding email_received_date to ebank_payment table", Colors.BLUE)
+
+    # Check if ebank_payment table exists
+    if not check_table_exists(cursor, 'ebank_payment'):
+        log("⏭️ ", "  ebank_payment table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    # Check if column already exists
+    if check_column_exists(cursor, 'ebank_payment', 'email_received_date'):
+        log("⏭️ ", "  Column 'email_received_date' already exists", Colors.YELLOW)
+        return True
+
+    try:
+        # Add the new column
+        cursor.execute("ALTER TABLE ebank_payment ADD COLUMN email_received_date DATETIME")
+        log("✅", "  Added column 'email_received_date' to ebank_payment", Colors.GREEN)
+
+        # Check how many existing records don't have this date
+        cursor.execute("SELECT COUNT(*) FROM ebank_payment WHERE email_received_date IS NULL")
+        null_count = cursor.fetchone()[0]
+
+        if null_count > 0:
+            log("ℹ️ ", f"  {null_count} existing payment(s) will have NULL email_received_date (bot run date only)", Colors.BLUE)
+            log("ℹ️ ", "  Future payments will have actual email received dates", Colors.BLUE)
+
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to add email_received_date column: {e}", Colors.RED)
+        raise
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -444,6 +480,7 @@ def main():
         ("Survey Templates", task4_add_french_survey),
         ("Email Templates", task5_fix_email_templates),
         ("Verification", task6_verify_schema),
+        ("Payment Email Dates", task7_add_email_received_date),
     ]
 
     completed = 0
