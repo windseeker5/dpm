@@ -232,7 +232,7 @@ class Setting(db.Model):
 
 class EbankPayment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))  # ✅ UTC-aware
+    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))  # ✅ UTC-aware (when bot processed)
     from_email = db.Column(db.String(150))
     subject = db.Column(db.Text)
     bank_info_name = db.Column(db.String(100))
@@ -244,6 +244,7 @@ class EbankPayment(db.Model):
     result = db.Column(db.String(50))
     mark_as_paid = db.Column(db.Boolean, default=False)
     note = db.Column(db.Text, nullable=True)
+    email_received_date = db.Column(db.DateTime, nullable=True)  # When payment email was actually received
 
 
 

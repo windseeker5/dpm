@@ -615,7 +615,17 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
                     email = fallback_admin_email or "admin panel"
                     history["paid_by"] = email.split("@")[0] if "@" in email else email
             else:
-                history["paid_by"] = fallback_admin_email or "admin"
+                # For Passport model, check marked_paid_by field first
+                marked_by = getattr(hockey_pass, "marked_paid_by", None)
+                if marked_by:
+                    # Use actual marked_paid_by from database
+                    history["paid_by"] = marked_by
+                elif fallback_admin_email:
+                    # Fallback to session admin if available
+                    history["paid_by"] = fallback_admin_email
+                else:
+                    # Last resort: indicate no audit trail
+                    history["paid_by"] = "system (no audit trail)"
 
 
 
@@ -689,6 +699,22 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
             if isinstance(subject, bytes):
                 subject = subject.decode()
 
+            # 📅 Extract email received date
+            email_date_str = msg.get("Date")
+            email_received_date = None
+            if email_date_str:
+                try:
+                    # Parse email date to datetime object
+                    email_received_date = parsedate_to_datetime(email_date_str)
+                    # Convert to UTC if needed
+                    if email_received_date.tzinfo is None:
+                        email_received_date = email_received_date.replace(tzinfo=timezone.utc)
+                    else:
+                        email_received_date = email_received_date.astimezone(timezone.utc)
+                except Exception as e:
+                    print(f"⚠️ Could not parse email date '{email_date_str}': {e}")
+                    email_received_date = None
+
             # 🛡️ Validate subject and sender
             if not subject.lower().startswith(subject_keyword.lower()):
                 continue
@@ -744,7 +770,8 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                 "bank_info_amt": amount,
                 "subject": subject,
                 "from_email": from_email,
-                "uid": uid
+                "uid": uid,
+                "email_received_date": email_received_date
             })
 
     except Exception as e:
@@ -1278,6 +1305,7 @@ def match_gmail_payments_to_passes():
             from_email = match.get("from_email")
             uid = match.get("uid")
             subject = match["subject"]
+            email_received_date = match.get("email_received_date")  # Extract email received date
             
             # IMPROVED: Check if we already processed this payment (with time window to prevent duplicates)
             # Check for duplicates within last 48 hours to handle re-sent notifications
@@ -1320,40 +1348,52 @@ def match_gmail_payments_to_passes():
             all_unpaid = Passport.query.filter_by(paid=False).all()
             unpaid_passports = [p for p in all_unpaid if float(p.sold_amt) == payment_amount]
 
-            if not unpaid_passports:
-                print(f"❌ NO UNPAID PASSPORTS FOUND for ${payment_amount:.2f}")
+            # ALWAYS check for PAID passports FIRST (even if unpaid passports exist)
+            # Normalize payment name for comparison
+            def normalize_for_comparison(text):
+                normalized = unicodedata.normalize('NFD', text)
+                without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+                return without_accents.lower().strip()
 
-                # Check if a PAID passport exists with matching amount and similar name
-                all_paid = Passport.query.filter_by(paid=True).all()
-                paid_passports_same_amount = [p for p in all_paid if float(p.sold_amt) == payment_amount]
+            payment_name_normalized = normalize_for_comparison(name)
 
-                # Normalize payment name for comparison
-                def normalize_for_comparison(text):
-                    normalized = unicodedata.normalize('NFD', text)
-                    without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
-                    return without_accents.lower().strip()
+            # Check if a PAID passport exists with matching amount and name
+            all_paid = Passport.query.filter_by(paid=True).all()
+            paid_passports_same_amount = [p for p in all_paid if float(p.sold_amt) == payment_amount]
 
-                payment_name_normalized = normalize_for_comparison(name)
+            matching_paid_passport = None
+            for p in paid_passports_same_amount:
+                if not p.user:
+                    continue
+                passport_name_normalized = normalize_for_comparison(p.user.name)
+                if payment_name_normalized == passport_name_normalized:
+                    matching_paid_passport = p
+                    break
 
-                # Check if any paid passport has matching name
-                matching_paid_passport = None
-                for p in paid_passports_same_amount:
-                    passport_name_normalized = normalize_for_comparison(p.user.name)
-                    if payment_name_normalized == passport_name_normalized:
-                        matching_paid_passport = p
-                        break
+            # If found a matching PAID passport, create detailed note
+            if matching_paid_passport:
+                # Found a matching PAID passport - provide detailed info
+                paid_by = matching_paid_passport.marked_paid_by or "unknown admin"
+                paid_date_str = matching_paid_passport.paid_date.strftime("%Y-%m-%d %H:%M") if matching_paid_passport.paid_date else "unknown date"
 
-                # Determine appropriate note
-                if matching_paid_passport:
-                    note_text = f"Passport already marked as PAID (manually by admin) - {matching_paid_passport.user.name} ${payment_amount:.2f}"
-                    print(f"   ⚠️ Found PAID passport: {matching_paid_passport.user.name}")
-                else:
-                    note_text = f"No unpaid passports for ${payment_amount:.2f} - payment may have arrived before passport creation"
-                    print(f"   Payment may have arrived before passport creation")
-                    # Debug: Show available amounts for troubleshooting
-                    available_amounts = list(set(float(p.sold_amt) for p in all_unpaid))
-                    available_amounts.sort()
-                    print(f"   Available unpaid amounts: {[f'${a:.2f}' for a in available_amounts[:10]]}")
+                # Calculate time difference if both dates available
+                time_diff_info = ""
+                if matching_paid_passport.paid_date and email_received_date:
+                    # Ensure both datetimes are timezone-aware for comparison
+                    from datetime import timezone as tz
+                    paid_dt = matching_paid_passport.paid_date if matching_paid_passport.paid_date.tzinfo else matching_paid_passport.paid_date.replace(tzinfo=tz.utc)
+                    email_dt = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=tz.utc)
+
+                    diff_seconds = (email_dt - paid_dt).total_seconds()
+                    if diff_seconds > 0:
+                        diff_minutes = int(diff_seconds / 60)
+                        time_diff_info = f" ({diff_minutes} min after passport marked paid)"
+                    else:
+                        diff_minutes = int(abs(diff_seconds) / 60)
+                        time_diff_info = f" ({diff_minutes} min before email received)"
+
+                note_text = f"MATCH FOUND: {matching_paid_passport.user.name} (${payment_amount:.2f}, Passport #{matching_paid_passport.id}) - Already marked PAID by {paid_by} on {paid_date_str}{time_diff_info}"
+                print(f"   ⚠️ Found PAID passport: {matching_paid_passport.user.name} (marked by {paid_by})")
 
                 if update_existing_record and existing_payment:
                     # Update existing record instead of creating new one
@@ -1361,6 +1401,8 @@ def match_gmail_payments_to_passes():
                     existing_payment.name_score = 0
                     existing_payment.note = note_text
                     existing_payment.timestamp = datetime.now(timezone.utc)
+                    if email_received_date:
+                        existing_payment.email_received_date = email_received_date
                     print(f"   📝 Updated existing NO_MATCH record")
                 else:
                     # Create new record
@@ -1372,7 +1414,8 @@ def match_gmail_payments_to_passes():
                         name_score=0,
                         result="NO_MATCH",
                         mark_as_paid=False,
-                        note=note_text
+                        note=note_text,
+                        email_received_date=email_received_date
                     ))
                 continue  # Skip to next payment
 
@@ -1479,39 +1522,144 @@ def match_gmail_payments_to_passes():
                             print(f"      - {user_name}: {score}%")
                 
             if best_passport:
-                now_utc = datetime.now(timezone.utc)
-                best_passport.paid = True
-                best_passport.paid_date = now_utc
-                db.session.add(best_passport)
+                try:
+                    now_utc = datetime.now(timezone.utc)
 
-                if update_existing_record and existing_payment:
-                    # Update existing record instead of creating new one
-                    existing_payment.matched_pass_id = best_passport.id
-                    existing_payment.matched_name = best_passport.user.name
-                    existing_payment.matched_amt = best_passport.sold_amt
-                    existing_payment.name_score = best_score
-                    existing_payment.result = "MATCHED"
-                    existing_payment.mark_as_paid = True
-                    existing_payment.note = "Matched by Gmail Bot (retry successful)."
-                    existing_payment.timestamp = datetime.now(timezone.utc)
-                    print(f"   📝 Updated existing record to MATCHED")
-                else:
-                    # Create new record
-                    db.session.add(EbankPayment(
-                        from_email=from_email,
-                        subject=subject,
-                        bank_info_name=name,
-                        bank_info_amt=amt,
-                        matched_pass_id=best_passport.id,
-                        matched_name=best_passport.user.name,
-                        matched_amt=best_passport.sold_amt,
-                        name_score=best_score,
-                        result="MATCHED",
-                        mark_as_paid=True,
-                        note="Matched by Gmail Bot."
-                    ))
+                    print(f"\n{'='*80}")
+                    print(f"🎯 MATCH FOUND - STARTING PAYMENT PROCESSING")
+                    print(f"   Passport ID: {best_passport.id}")
+                    print(f"   Pass Code: {best_passport.pass_code}")
+                    print(f"   User: {best_passport.user.name if best_passport.user else 'NO USER'}")
+                    print(f"   Amount: ${best_passport.sold_amt}")
+                    print(f"{'='*80}\n")
 
-                db.session.commit()
+                    # CRITICAL FIX: Move email BEFORE database commit (transaction safety)
+                    # If email move fails, we skip the payment processing to prevent reprocessing
+                    email_moved = False
+                    if uid:
+                        print(f"📧 STEP 1: Moving email to processed folder BEFORE DB commit")
+                        try:
+                            # Check if the processed folder exists, create if needed
+                            folder_exists = False
+                            result, folder_list = mail.list()
+                            if result == 'OK':
+                                for folder_info in folder_list:
+                                    if folder_info:
+                                        folder_str = folder_info.decode() if isinstance(folder_info, bytes) else folder_info
+                                        if processed_folder in folder_str:
+                                            folder_exists = True
+                                            break
+
+                            # Create folder if it doesn't exist
+                            if not folder_exists:
+                                print(f"📁 Creating folder: {processed_folder}")
+                                try:
+                                    mail.create(processed_folder)
+                                except Exception as create_error:
+                                    print(f"⚠️ Could not create folder {processed_folder}: {create_error}")
+
+                            # Try to copy the email to the processed folder
+                            copy_result = mail.uid("COPY", uid, processed_folder)
+                            if copy_result[0] == 'OK':
+                                # Only mark as deleted if copy was successful
+                                mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                                email_moved = True
+                                print(f"✅ Email moved to {processed_folder} folder")
+                            else:
+                                print(f"❌ Could not copy email to {processed_folder}: {copy_result}")
+                                print(f"⚠️ SKIPPING payment processing - will retry on next run")
+                        except Exception as e:
+                            print(f"❌ Error moving email to processed folder: {e}")
+                            print(f"⚠️ SKIPPING payment processing - will retry on next run")
+                    else:
+                        # No uid means this is a test/manual run, proceed without email move
+                        email_moved = True
+                        print(f"ℹ️ No email UID - proceeding without email move (test mode)")
+
+                    # Only proceed with payment processing if email was moved (or no uid)
+                    if not email_moved:
+                        print(f"🔄 Payment skipped due to email move failure - will retry on next run")
+                        continue
+
+                    print(f"💾 STEP 2: Processing payment in database")
+                    best_passport.paid = True
+                    best_passport.paid_date = now_utc
+                    best_passport.marked_paid_by = "gmail-bot@system"
+
+                    print(f"🔍 PRE-COMMIT STATE:")
+                    print(f"   passport.paid = {best_passport.paid}")
+                    print(f"   passport.paid_date = {best_passport.paid_date}")
+                    print(f"   passport.marked_paid_by = {repr(best_passport.marked_paid_by)}")
+
+                    db.session.add(best_passport)
+
+                    if update_existing_record and existing_payment:
+                        # Update existing record instead of creating new one
+                        existing_payment.matched_pass_id = best_passport.id
+                        existing_payment.matched_name = best_passport.user.name
+                        existing_payment.matched_amt = best_passport.sold_amt
+                        existing_payment.name_score = best_score
+                        existing_payment.result = "MATCHED"
+                        existing_payment.mark_as_paid = True
+                        existing_payment.note = "Matched by Gmail Bot (retry successful)."
+                        existing_payment.timestamp = datetime.now(timezone.utc)
+                        if email_received_date:
+                            existing_payment.email_received_date = email_received_date
+                        print(f"   📝 Updated existing EbankPayment record to MATCHED")
+                    else:
+                        # Create new record
+                        print(f"   📝 Creating new EbankPayment MATCHED record")
+                        db.session.add(EbankPayment(
+                            from_email=from_email,
+                            subject=subject,
+                            bank_info_name=name,
+                            bank_info_amt=amt,
+                            matched_pass_id=best_passport.id,
+                            matched_name=best_passport.user.name,
+                            matched_amt=best_passport.sold_amt,
+                            name_score=best_score,
+                            result="MATCHED",
+                            mark_as_paid=True,
+                            note="Matched by Gmail Bot.",
+                            email_received_date=email_received_date
+                        ))
+
+                    print(f"🔍 PRE-FLUSH")
+                    db.session.flush()  # Explicitly flush changes to session
+                    print(f"✅ FLUSHED - changes written to session")
+
+                    print(f"🔍 PRE-COMMIT")
+                    db.session.commit()
+                    print(f"✅ COMMITTED to database")
+
+                    # Verify what actually persisted
+                    db.session.expire(best_passport)
+                    db.session.refresh(best_passport)
+                    print(f"🔍 POST-COMMIT VERIFICATION (refreshed from DB):")
+                    print(f"   passport.marked_paid_by = {repr(best_passport.marked_paid_by)}")
+
+                    if best_passport.marked_paid_by != "gmail-bot@system":
+                        print(f"❌ BUG DETECTED: marked_paid_by didn't persist!")
+                        print(f"   Expected: 'gmail-bot@system'")
+                        print(f"   Got: {repr(best_passport.marked_paid_by)}")
+                    else:
+                        print(f"✅ marked_paid_by persisted correctly")
+
+                except Exception as e:
+                    print(f"\n{'='*80}")
+                    print(f"❌ EXCEPTION during payment processing for {name} (${amt})")
+                    print(f"   Error: {e}")
+                    print(f"{'='*80}")
+                    import traceback
+                    traceback.print_exc()
+                    print(f"{'='*80}\n")
+
+                    # Rollback the transaction
+                    db.session.rollback()
+                    print(f"🔄 Transaction rolled back")
+
+                    # Continue to next payment
+                    continue
 
                 notify_pass_event(
                     app=current_app._get_current_object(),
@@ -1529,46 +1677,10 @@ def match_gmail_payments_to_passes():
                 except Exception as e:
                     print(f"⚠️ Failed to emit payment notification: {e}")
 
-                if uid:
-                    # Check if the processed folder exists, create if needed
-                    try:
-                        # List all folders to check if our processed folder exists
-                        folder_exists = False
-                        result, folder_list = mail.list()
-                        if result == 'OK':
-                            for folder_info in folder_list:
-                                if folder_info:
-                                    # Parse folder name from IMAP list response
-                                    folder_str = folder_info.decode() if isinstance(folder_info, bytes) else folder_info
-                                    # Check if our folder name appears in the response
-                                    if processed_folder in folder_str:
-                                        folder_exists = True
-                                        break
-                        
-                        # Create folder if it doesn't exist
-                        if not folder_exists:
-                            print(f"📁 Creating folder: {processed_folder}")
-                            try:
-                                mail.create(processed_folder)
-                            except Exception as create_error:
-                                # Some servers don't allow folder creation or folder already exists
-                                print(f"⚠️ Could not create folder {processed_folder}: {create_error}")
-                        
-                        # Try to copy the email to the processed folder
-                        copy_result = mail.uid("COPY", uid, processed_folder)
-                        if copy_result[0] == 'OK':
-                            # Only mark as deleted if copy was successful
-                            mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
-                            print(f"✅ Email moved to {processed_folder} folder")
-                        else:
-                            print(f"⚠️ Could not copy email to {processed_folder}: {copy_result}")
-                            # Don't delete if we couldn't copy
-                            
-                    except Exception as e:
-                        print(f"⚠️ Error moving email to processed folder: {e}")
-                        # Don't delete the email if we couldn't move it
+                # Email was already moved BEFORE DB commit (see STEP 1 above)
+                # This ensures transaction safety - if email move fails, payment isn't processed
             else:
-                # Improved: Calculate closest candidates for admin visibility
+                # NO MATCH FOUND - Create detailed diagnostic note
                 all_candidates = []
                 for p in unpaid_passports:
                     if not p.user:
@@ -1581,14 +1693,24 @@ def match_gmail_payments_to_passes():
                 all_candidates.sort(key=lambda x: x[1], reverse=True)
                 top_candidates = all_candidates[:3]
 
-                # Format candidates for note with more detail
-                note_parts = [f"No names above {threshold}% threshold for ${amt}."]
+                # Build detailed note explaining why no match
+                note_parts = [f"No match found for '{name}' (${amt})."]
+
+                # Show how many unpaid passports exist for this amount
+                note_parts.append(f"Found {len(unpaid_passports)} unpaid passport(s) for ${amt}, but")
 
                 if top_candidates:
-                    candidate_strs = [f"{name} ({score:.0f}%)" for name, score in top_candidates]
-                    note_parts.append(f"Closest matches: {', '.join(candidate_strs)}")
+                    # Show the closest name matches and their scores
+                    candidate_strs = [f"{cname} ({score:.0f}%)" for cname, score in top_candidates]
+                    note_parts.append(f"all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
                 else:
-                    note_parts.append("No similar names found.")
+                    # No similar names at all
+                    note_parts.append(f"no names above 50% similarity.")
+                    # Show a few example names for context
+                    if unpaid_passports:
+                        example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
+                        if example_names:
+                            note_parts.append(f"Available names: {', '.join(example_names[:3])}")
 
                 note_text = " ".join(note_parts)
                 
@@ -1599,6 +1721,8 @@ def match_gmail_payments_to_passes():
                     existing_payment.mark_as_paid = False
                     existing_payment.note = note_text
                     existing_payment.timestamp = datetime.now(timezone.utc)
+                    if email_received_date:
+                        existing_payment.email_received_date = email_received_date
                     print(f"   📝 Updated existing NO_MATCH record")
                 else:
                     # Create new record
@@ -1610,7 +1734,8 @@ def match_gmail_payments_to_passes():
                         name_score=0,
                         result="NO_MATCH",
                         mark_as_paid=False,
-                        note=note_text
+                        note=note_text,
+                        email_received_date=email_received_date
                     ))
 
         db.session.commit()
@@ -1802,6 +1927,8 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
         copy_result = mail.uid("COPY", uid_to_move, manually_processed_folder)
         if copy_result[0] == 'OK':
             mail.uid("STORE", uid_to_move, "+FLAGS", "(\\Deleted)")
+            # CRITICAL: Must call expunge() to actually delete from inbox
+            # Some IMAP servers require this to commit the deletion
             mail.expunge()
 
             # Update the most recent NO_MATCH entry for this payment

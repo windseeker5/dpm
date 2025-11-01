@@ -12,9 +12,14 @@
     <div class="dashboard-container">
 
       <!-- Page Title -->
-      <h2 class="mt-4 mb-3">
-        <i class="ti ti-mail-dollar me-2" style="color: #e03131;"></i>Payment Matches
-      </h2>
+      <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+        <h2 class="mb-0">
+          <i class="ti ti-mail-dollar me-2" style="color: #e03131;"></i>Payment Matches
+        </h2>
+        <a href="/admin/unified-settings?test_payment_bot=1" class="btn btn-primary">
+          <i class="ti ti-refresh me-2"></i>Run Bot Now
+        </a>
+      </div>
 
       <!-- Enhanced Dynamic Search -->
       <form method="GET" action="{{ url_for('payment_bot_matches') }}" class="mb-4" id="dynamicSearchForm">
@@ -71,7 +76,7 @@
           <thead>
             <tr>
               <th style="padding-left: 1.5rem;">Payment Sender</th>
-              <th class="d-none d-md-table-cell">Date/Time</th>
+              <th class="d-none d-md-table-cell">Payment Date</th>
               <th class="d-md-none text-center">Status</th>
               <th class="d-none d-md-table-cell text-center">Amount</th>
               <th class="d-none d-md-table-cell text-center">Status</th>
@@ -91,12 +96,13 @@
                 </div>
               </td>
 
-              <!-- Date/Time: Desktop only -->
+              <!-- Payment Date: Desktop only -->
               <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-                {% if payment.timestamp %}
+                {% set display_date = payment.email_received_date or payment.timestamp %}
+                {% if display_date %}
                   <div style="line-height: 1.4;">
-                    <div>{{ payment.timestamp.strftime('%Y-%m-%d') }}</div>
-                    <div class="text-muted" style="font-size: 0.875rem;">{{ payment.timestamp.strftime('%H:%M:%S') }}</div>
+                    <div>{{ display_date.strftime('%Y-%m-%d') }}</div>
+                    <div class="text-muted" style="font-size: 0.875rem;">{{ display_date.strftime('%H:%M:%S') }}</div>
                   </div>
                 {% else %}
                   <span class="text-muted">-</span>
