@@ -1973,6 +1973,8 @@ async function updateKPICard(period, kpiType, cardElement) {
       trendElement = cardElement.querySelector('#active-passports-trend');
     } else if (kpiType === 'passports_created') {
       trendElement = cardElement.querySelector('#passports-created-trend');
+    } else if (kpiType === 'passports_redeemed') {
+      trendElement = cardElement.querySelector('#passports-redeemed-trend');
     } else if (kpiType === 'pending_signups') {
       trendElement = cardElement.querySelector('#pending-signups-trend');
     }
@@ -2021,6 +2023,8 @@ async function updateKPICard(period, kpiType, cardElement) {
       mobilePeriodElement = document.querySelector('#mobile-active-period');
     } else if (kpiType === 'passports_created') {
       mobilePeriodElement = document.querySelector('#mobile-created-period');
+    } else if (kpiType === 'passports_redeemed') {
+      mobilePeriodElement = document.querySelector('#mobile-redeemed-period');
     } else if (kpiType === 'pending_signups') {
       mobilePeriodElement = document.querySelector('#mobile-pending-period');
     }
@@ -2165,10 +2169,11 @@ function initializeApexCharts() {
   }
   
   // Ensure charts render even with empty/null data
-  ['revenue', 'active_users', 'passports_created', 'unpaid_passports'].forEach(key => {
-    const chartId = key === 'revenue' ? '#revenue-chart' : 
+  ['revenue', 'active_users', 'passports_created', 'passports_redeemed', 'unpaid_passports'].forEach(key => {
+    const chartId = key === 'revenue' ? '#revenue-chart' :
                     key === 'active_users' ? '#active-passports-chart' :
-                    key === 'passports_created' ? '#passports-created-chart' : '#pending-signups-chart';
+                    key === 'passports_created' ? '#passports-created-chart' :
+                    key === 'passports_redeemed' ? '#passports-redeemed-chart' : '#pending-signups-chart';
     const el = document.querySelector(chartId);
     console.log(`Chart ${key}: element=${el ? 'found' : 'missing'}, data=${kpiData[key] ? 'exists' : 'null'}`);
     
