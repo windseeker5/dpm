@@ -1743,10 +1743,16 @@ def match_gmail_payments_to_passes():
         mail.logout()
 
 
-def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
+def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email, custom_note=None):
     """
     Manually move a payment email to the manually_processed folder.
     Used when email wasn't automatically moved due to a glitch.
+
+    Args:
+        bank_info_name: Name from payment email
+        bank_info_amt: Amount from payment email
+        from_email: Email sender
+        custom_note: Optional custom note to replace default reason
 
     Returns: (success: bool, message: str)
     """
@@ -1804,7 +1810,28 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
         if status != "OK" or not data[0]:
             mail.logout()
             print(f"❌ SEARCH DEBUG: No emails found from {from_email}")
-            return False, "No payment emails found in inbox"
+
+            # Email not in inbox - likely already archived
+            # Update database to MANUAL_PROCESSED so button disappears
+            recent_payment = EbankPayment.query.filter(
+                EbankPayment.bank_info_name == bank_info_name,
+                EbankPayment.bank_info_amt == float(bank_info_amt),
+                EbankPayment.from_email == from_email,
+                EbankPayment.result == "NO_MATCH"
+            ).order_by(EbankPayment.timestamp.desc()).first()
+
+            if recent_payment:
+                recent_payment.result = "MANUAL_PROCESSED"
+                # Use custom note if provided, otherwise use default
+                if custom_note:
+                    recent_payment.note = custom_note
+                else:
+                    recent_payment.note = (recent_payment.note or "") + " [Email not found in inbox - already archived or deleted]"
+                db.session.commit()
+                # Return success with helpful message
+                return True, "Email already archived (not found in inbox). Record updated."
+            else:
+                return False, "Payment record not found in database"
 
         print(f"📧 SEARCH DEBUG: Found {len(data[0].split())} emails from {from_email}")
 
@@ -1899,11 +1926,15 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
             if recent_payment:
                 print(f"🔍 DEBUG: Updating payment ID {recent_payment.id} to MANUAL_PROCESSED")
                 recent_payment.result = "MANUAL_PROCESSED"
-                recent_payment.note = (recent_payment.note or "") + " [Email not found in inbox - already archived or deleted]"
+                # Use custom note if provided, otherwise use default
+                if custom_note:
+                    recent_payment.note = custom_note
+                else:
+                    recent_payment.note = (recent_payment.note or "") + " [Email not found in inbox - already archived or deleted]"
                 db.session.commit()
                 print(f"✅ DEBUG: Database committed successfully")
                 # Return success so page refreshes and button disappears
-                return True, "Email not found in inbox (already archived). Database updated."
+                return True, "Email already archived (specific payment not found in inbox). Record updated."
             else:
                 print(f"⚠️ DEBUG: Payment record not found in database")
                 return False, "Payment record not found in database"
@@ -1942,7 +1973,11 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email):
             if recent_payment:
                 # Change status to MANUAL_PROCESSED so it no longer shows Archive button
                 recent_payment.result = "MANUAL_PROCESSED"
-                recent_payment.note = (recent_payment.note or "") + f" [Email manually archived to {manually_processed_folder} folder]"
+                # Use custom note if provided, otherwise append default note
+                if custom_note:
+                    recent_payment.note = custom_note
+                else:
+                    recent_payment.note = (recent_payment.note or "") + f" [Email manually archived to {manually_processed_folder} folder]"
                 db.session.commit()
 
             mail.logout()

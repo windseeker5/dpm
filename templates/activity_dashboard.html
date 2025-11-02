@@ -1865,6 +1865,7 @@ function determineKPIType(cardElement) {
   const cardText = cardElement.textContent.toLowerCase();
   if (cardText.includes('revenue')) return 'revenue';
   if (cardText.includes('active passports') || cardText.includes('active users')) return 'active_passports';
+  if (cardText.includes('passports redeemed')) return 'passports_redeemed';
   if (cardText.includes('passports created')) return 'passports_created';
   if (cardText.includes('unpaid passports') || cardText.includes('pending sign ups')) return 'pending_signups';
   return 'revenue'; // fallback
@@ -1903,7 +1904,8 @@ async function updateKPICard(period, kpiType, cardElement) {
     const apiKeyMapping = {
       'revenue': 'revenue',
       'active_passports': 'active_users',
-      'passports_created': 'passports_created', 
+      'passports_created': 'passports_created',
+      'passports_redeemed': 'passports_redeemed',
       'pending_signups': 'unpaid_passports'
     };
     
@@ -1922,6 +1924,8 @@ async function updateKPICard(period, kpiType, cardElement) {
       valueElement = cardElement.querySelector('#active-passports-value');
     } else if (kpiType === 'passports_created') {
       valueElement = cardElement.querySelector('#passports-created-value');
+    } else if (kpiType === 'passports_redeemed') {
+      valueElement = cardElement.querySelector('#passports-redeemed-value');
     } else if (kpiType === 'pending_signups') {
       valueElement = cardElement.querySelector('#pending-signups-value');
     }
@@ -1944,6 +1948,8 @@ async function updateKPICard(period, kpiType, cardElement) {
       mobileValueElement = document.querySelector('#mobile-active-value');
     } else if (kpiType === 'passports_created') {
       mobileValueElement = document.querySelector('#mobile-created-value');
+    } else if (kpiType === 'passports_redeemed') {
+      mobileValueElement = document.querySelector('#mobile-redeemed-value');
     } else if (kpiType === 'pending_signups') {
       mobileValueElement = document.querySelector('#mobile-pending-value');
     }
