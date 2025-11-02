@@ -237,7 +237,7 @@ class EbankPayment(db.Model):
     subject = db.Column(db.Text)
     bank_info_name = db.Column(db.String(100))
     bank_info_amt = db.Column(db.Float)
-    matched_pass_id = db.Column(db.Integer, db.ForeignKey("pass.id"), nullable=True)
+    matched_pass_id = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=True)  # ✅ Fixed to reference passport table
     matched_name = db.Column(db.String(100))
     matched_amt = db.Column(db.Float)
     name_score = db.Column(db.Integer)
