@@ -46,34 +46,6 @@ class AdminActionLog(db.Model):
 
 
 
-# This should be deleted ....
-class Pass(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    pass_code = db.Column(db.String(16), unique=True, nullable=False)
-    user_name = db.Column(db.String(100), nullable=False)
-    user_email = db.Column(db.String(100), nullable=False)
-    sold_amt = db.Column(db.Float, default=50)
-    games_remaining = db.Column(db.Integer, default=4)
-    phone_number = db.Column(db.String(20), nullable=True)
-    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
-    # pass_created_dt = db.Column(db.DateTime, default=datetime.now(timezone.utc))  # ✅ UTC-aware
-
-    pass_created_dt = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc)  # ✅ FIXED!
-    )
-
-    paid_ind = db.Column(db.Boolean, default=False)
-    paid_date = db.Column(db.DateTime, nullable=True)  # ✅ manually set with UTC
-    activity = db.Column(db.String(100), nullable=True)
-    notes = db.Column(db.Text, nullable=True)
-
-    # in models.py (Pass model)
-    marked_paid_by = db.Column(db.String(120), nullable=True)
-
- 
-
-
 
 # ✅ Generalized SaaS models (non-conflicting with current Pass logic)
 
@@ -250,7 +222,7 @@ class EbankPayment(db.Model):
 
 class ReminderLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    pass_id = db.Column(db.Integer, db.ForeignKey("pass.id"), nullable=False)
+    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=False)  # ✅ Fixed to reference passport table
     reminder_sent_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 class EmailLog(db.Model):

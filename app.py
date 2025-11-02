@@ -46,7 +46,7 @@ from sqlalchemy import extract, func, case, desc, text
 from werkzeug.utils import secure_filename
 
 # 🧠 Models
-from models import db, Admin, Pass, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
+from models import db, Admin, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
 from models import Activity, User, Signup, Passport, PassportType, AdminActionLog, Organization
 from models import SurveyTemplate, Survey, SurveyResponse
 from models import ChatConversation, ChatMessage, QueryLog, ChatUsage
@@ -435,7 +435,7 @@ def retry_failed_emails():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from models import EmailLog, Pass
+    from models import EmailLog, Passport
     from utils import send_email_async
     from datetime import datetime
 
@@ -448,9 +448,9 @@ def retry_failed_emails():
     testing_mode = False
 
     for log in failed_logs:
-        pass_obj = Pass.query.filter_by(pass_code=log.pass_code).first()
-        if not pass_obj:
-            continue  # Skip if no matching pass
+        passport_obj = Passport.query.filter_by(pass_code=log.pass_code).first()
+        if not passport_obj:
+            continue  # Skip if no matching passport
 
         try:
             context = json.loads(log.context_json)
@@ -7200,9 +7200,9 @@ def send_survey_invitations(survey_id):
 
     from sqlalchemy.orm import joinedload
     print(f"📥 Loading survey with eager loading...")
-    survey = Survey.query.options(
+    survey = db.session.get(Survey, survey_id, options=[
         joinedload(Survey.activity).joinedload(Activity.organization)
-    ).get(survey_id)
+    ])
 
     if not survey:
         print(f"❌ Survey {survey_id} not found!")
@@ -7303,6 +7303,7 @@ def send_survey_invitations(survey_id):
                 # Build base context
                 base_context = {
                     'user_name': passport.user.name or 'Participant',
+                    'activity': survey.activity,  # Add activity object for Jinja2 template rendering
                     'activity_name': survey.activity.name,
                     'survey_name': survey.name,
                     'survey_url': survey_url,
@@ -7331,6 +7332,8 @@ def send_survey_invitations(survey_id):
                     'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                    'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
+                    'privacy_url': "https://minipass.me/privacy",
                     # Survey email template variables - must match template exactly
                     'title': email_context.get('title', 'We\'d Love Your Feedback!'),
                     'intro_text': email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>'),
@@ -7392,6 +7395,7 @@ def send_survey_invitations(survey_id):
                 # Build base context
                 base_context = {
                     'user_name': passport.user.name or 'Participant',
+                    'activity': survey.activity,  # Add activity object for Jinja2 template rendering
                     'activity_name': survey.activity.name,
                     'survey_name': survey.name,
                     'survey_url': survey_url,
@@ -7420,6 +7424,8 @@ def send_survey_invitations(survey_id):
                     'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                    'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
+                    'privacy_url': "https://minipass.me/privacy",
                     # Survey email template variables - must match template exactly
                     'title': email_context.get('title', 'We\'d Love Your Feedback!'),
                     'intro_text': email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>'),
