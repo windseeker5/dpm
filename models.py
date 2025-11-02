@@ -222,7 +222,7 @@ class EbankPayment(db.Model):
 
 class ReminderLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=False)  # ✅ Fixed to reference passport table
+    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="CASCADE"), nullable=False)  # ✅ Fixed to reference passport table
     reminder_sent_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 class EmailLog(db.Model):
