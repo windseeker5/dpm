@@ -45,12 +45,12 @@
         "cta_url": "https://minipass.me/my-passes"
     },
     "survey_invitation": {
-        "subject": "Votre avis nous intéresse",
-        "title": "Votre avis nous intéresse",
-        "intro_text": "<p>Bonjour,</p>\n<p>Vous avez récemment participé à <strong>{{ activity_name }}</strong> et nous aimerions connaître votre avis !</p>\n<p>Quelques minutes suffisent pour répondre à notre sondage. Vos commentaires nous aident à améliorer nos services.</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}",
-        "conclusion_text": "<p>Merci d'avance pour votre temps et vos précieux commentaires. Votre opinion compte beaucoup pour nous.</p>\n<p>Vos réponses nous permettent d'améliorer continuellement la qualité de nos activités et de mieux répondre à vos attentes.</p>\n<p>Cordialement,<br>\n<em><strong>L'équipe</strong></em></p>",
+        "subject": "Votre participation à {{ activity_name }}",
+        "title": "Complétez votre expérience",
+        "intro_text": "<p>Bonjour,</p>\n<p>Vous avez récemment participé à <strong>{{ activity_name }}</strong>. Pour compléter votre dossier de participation, nous vous invitons à remplir un court formulaire.</p>\n<p>Cela prend seulement quelques minutes et nous aide à maintenir la qualité de nos activités.</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}",
+        "conclusion_text": "<p>Merci de compléter cette dernière étape. Votre participation nous permet de continuer à améliorer nos services.</p>\n<p>Si vous avez des questions, n'hésitez pas à nous contacter directement.</p>\n<p>Cordialement,<br>\n<em><strong>L'équipe</strong></em></p>",
         "custom_message": "",
-        "cta_text": "Répondre au sondage",
+        "cta_text": "Compléter le formulaire",
         "cta_url": "{survey_url}"
     }
 }

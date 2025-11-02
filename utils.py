@@ -9,7 +9,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
-# from models import Setting, db, Pass, Redemption, Admin, EbankPayment, ReminderLog
 from models import Setting, db, Passport, Redemption, Admin, EbankPayment, ReminderLog, Organization
 
 
@@ -539,35 +538,22 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
     Accepts fallback_admin_email for use in background tasks (outside of request context).
     """
     with current_app.app_context():
-        from models import Admin, EbankPayment, Redemption, Pass, Passport
+        from models import Admin, EbankPayment, Redemption, Passport
         DATETIME_FORMAT = "%Y-%m-%d %H:%M"
 
-        # 🔍 Try both models
-        hockey_pass = Pass.query.filter_by(pass_code=pass_code).first()
-        passport_mode = False
-        if not hockey_pass:
-            hockey_pass = Passport.query.filter_by(pass_code=pass_code).first()
-            passport_mode = True
+        # 🔍 Get passport
+        passport = Passport.query.filter_by(pass_code=pass_code).first()
 
-        if not hockey_pass:
+        if not passport:
             return {"error": "Pass not found."}
 
-        # 🔁 Fetch redemptions if using Pass
-        redemptions = []
-        if not passport_mode:
-            redemptions = (
-                Redemption.query
-                .filter_by(pass_id=hockey_pass.id)
-                .order_by(Redemption.date_used.asc())
-                .all()
-            )
-        else:
-            redemptions = (
-                Redemption.query
-                .filter_by(passport_id=hockey_pass.id)
-                .order_by(Redemption.date_used.asc())
-                .all()
-            )
+        # 🔁 Fetch redemptions
+        redemptions = (
+            Redemption.query
+            .filter_by(passport_id=passport.id)
+            .order_by(Redemption.date_used.asc())
+            .all()
+        )
 
 
 
@@ -582,50 +568,33 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
         }
 
         # 📅 Created
-        created_dt = getattr(hockey_pass, "pass_created_dt", None) or getattr(hockey_pass, "created_dt", None)
+        created_dt = passport.created_dt
         if created_dt:
             history["created"] = utc_to_local(created_dt).strftime(DATETIME_FORMAT)
 
         # 👤 Created by
-        created_by = getattr(hockey_pass, "created_by", None)
-        if created_by:
-            admin = db.session.get(Admin, created_by)
+        if passport.created_by:
+            admin = db.session.get(Admin, passport.created_by)
             history["created_by"] = admin.email if admin else "-"
 
-
         # 💵 Payment info
-        paid = getattr(hockey_pass, "paid_ind", None) if not passport_mode else getattr(hockey_pass, "paid", False)
-        paid_date = getattr(hockey_pass, "paid_date", None)  # ✅ Always get paid_date
+        paid = passport.paid
+        paid_date = passport.paid_date
 
         if paid and paid_date:
             paid_dt = utc_to_local(paid_date)
             history["paid"] = paid_dt.strftime(DATETIME_FORMAT)
 
-            if not passport_mode:
-                ebank = (
-                    EbankPayment.query
-                    .filter_by(matched_pass_id=hockey_pass.id, mark_as_paid=True)
-                    .order_by(EbankPayment.timestamp.desc())
-                    .first()
-                )
-
-                if ebank:
-                    history["paid_by"] = ebank.from_email
-                else:
-                    email = fallback_admin_email or "admin panel"
-                    history["paid_by"] = email.split("@")[0] if "@" in email else email
+            # Check marked_paid_by field first
+            if passport.marked_paid_by:
+                # Use actual marked_paid_by from database
+                history["paid_by"] = passport.marked_paid_by
+            elif fallback_admin_email:
+                # Fallback to session admin if available
+                history["paid_by"] = fallback_admin_email
             else:
-                # For Passport model, check marked_paid_by field first
-                marked_by = getattr(hockey_pass, "marked_paid_by", None)
-                if marked_by:
-                    # Use actual marked_paid_by from database
-                    history["paid_by"] = marked_by
-                elif fallback_admin_email:
-                    # Fallback to session admin if available
-                    history["paid_by"] = fallback_admin_email
-                else:
-                    # Last resort: indicate no audit trail
-                    history["paid_by"] = "system (no audit trail)"
+                # Last resort: indicate no audit trail
+                history["paid_by"] = "system (no audit trail)"
 
 
 
@@ -639,9 +608,8 @@ def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
                 "by": r.redeemed_by or "-"
             })
 
-        # ❌ Expired if no games remaining
-        games_remaining = getattr(hockey_pass, "games_remaining", None) or getattr(hockey_pass, "uses_remaining", None)
-        if games_remaining == 0 and redemptions:
+        # ❌ Expired if no uses remaining
+        if passport.uses_remaining == 0 and redemptions:
             history["expired"] = utc_to_local(redemptions[-1].date_used).strftime(DATETIME_FORMAT)
 
         return history
@@ -3400,7 +3368,7 @@ def get_email_context(activity, template_type, base_context=None):
     Returns:
         Dictionary with merged email context
     """
-    # Default email template values
+    # Default email template values (hardcoded fallback)
     defaults = {
         'subject': 'Minipass Notification',
         'title': 'Welcome to Minipass',
@@ -3411,7 +3379,18 @@ def get_email_context(activity, template_type, base_context=None):
         'cta_url': None,
         'custom_message': None
     }
-    
+
+    # Load template-specific defaults from email_defaults.json
+    from utils_email_defaults import get_default_email_templates
+    try:
+        all_defaults = get_default_email_templates()
+        template_defaults = all_defaults.get(template_type, {})
+        # Override hardcoded defaults with values from email_defaults.json
+        defaults.update(template_defaults)
+    except Exception as e:
+        print(f"Warning: Could not load email defaults from file: {e}")
+        # Continue with hardcoded defaults
+
     # Start with base context if provided
     context = base_context.copy() if base_context else {}
     
@@ -3440,15 +3419,15 @@ def get_email_context(activity, template_type, base_context=None):
     # Restore protected blocks to ensure they're never overridden
     context.update(protected_blocks)
 
-    # Render Jinja2 variables in intro_text and conclusion_text
+    # Render Jinja2 variables in all text fields
     # (e.g., {{ activity_name }}, {{ question_count }})
     from jinja2 import Template
-    for field in ['intro_text', 'conclusion_text']:
+    for field in ['subject', 'title', 'intro_text', 'conclusion_text']:
         if field in context and context[field]:
             try:
-                # Check if the field contains Jinja2 variables
-                if '{{' in context[field] and '}}' in context[field]:
-                    print(f"🔧 JINJA2 RENDERING: Found variables in {field}")
+                # Check if the field contains Jinja2 syntax (variables or control structures)
+                if ('{{' in context[field] and '}}' in context[field]) or ('{%' in context[field] and '%}' in context[field]):
+                    print(f"🔧 JINJA2 RENDERING: Found template syntax in {field}")
                     print(f"🔧 Before: {context[field][:100]}")
                     # Render as Jinja2 template with current context
                     template = Template(context[field])
