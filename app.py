@@ -2024,6 +2024,7 @@ def api_move_payment_email():
     bank_info_name = data.get("bank_info_name")
     bank_info_amt = data.get("bank_info_amt")
     from_email = data.get("from_email")
+    custom_note = data.get("custom_note")  # Optional custom note from user
 
     if not all([bank_info_name, bank_info_amt, from_email]):
         return jsonify({"error": "Missing required fields: bank_info_name, bank_info_amt, from_email"}), 400
@@ -2035,8 +2036,9 @@ def api_move_payment_email():
         print(f"   Name: {bank_info_name}")
         print(f"   Amount: {bank_info_amt}")
         print(f"   Email: {from_email}")
+        print(f"   Custom Note: {custom_note if custom_note else 'None'}")
 
-        success, message = move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email)
+        success, message = move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email, custom_note)
 
         print(f"🔧 API DEBUG: Function returned - Success: {success}, Message: {message}")
 

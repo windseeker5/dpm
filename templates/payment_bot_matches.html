@@ -276,8 +276,13 @@
           <path d="M10 12l4 0"/>
         </svg>
         <h3>Archive Payment Email?</h3>
-        <div class="text-secondary">
+        <div class="text-secondary mb-3">
           Move email for <strong id="archiveName"></strong> ($<strong id="archiveAmount"></strong>) to ManualProcessed folder?
+        </div>
+        <div class="text-start">
+          <label class="form-label">Reason (optional - replace default reason):</label>
+          <textarea class="form-control" id="archiveNote" rows="3" placeholder="e.g., Passport created under different name, payment verified manually"></textarea>
+          <small class="text-muted">Leave empty to keep default reason</small>
         </div>
       </div>
       <div class="modal-footer">
@@ -340,6 +345,9 @@ function archivePaymentEmail(name, amount, email) {
   document.getElementById('archiveName').textContent = name;
   document.getElementById('archiveAmount').textContent = amount.toFixed(2);
 
+  // Clear the custom note textarea
+  document.getElementById('archiveNote').value = '';
+
   const modal = new bootstrap.Modal(document.getElementById('archivePaymentModal'));
   modal.show();
 }
@@ -354,6 +362,9 @@ document.getElementById('confirmArchiveBtn').addEventListener('click', async fun
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Archiving...';
 
   try {
+    // Get custom note from textarea
+    const customNote = document.getElementById('archiveNote').value.trim();
+
     const response = await fetch('/api/move-payment-email', {
       method: 'POST',
       headers: {
@@ -363,7 +374,8 @@ document.getElementById('confirmArchiveBtn').addEventListener('click', async fun
       body: JSON.stringify({
         bank_info_name: currentArchiveData.name,
         bank_info_amt: currentArchiveData.amount,
-        from_email: currentArchiveData.email
+        from_email: currentArchiveData.email,
+        custom_note: customNote || null
       })
     });
 
