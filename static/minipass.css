@@ -1949,7 +1949,14 @@ html, body {
     margin-left: 0;
     overflow: hidden;
     position: relative;
-    /* z-index: 1; - Removed: was interfering with Bootstrap modals on mobile */
+    z-index: 1; /* Lower than sidebar (1040) to prevent content bleed-through */
+  }
+
+  /* Ensure page wrapper and page body stay behind sidebar */
+  .page-wrapper,
+  .page-body {
+    position: relative;
+    z-index: 1;
   }
   
   /* Option B: Mobile header with organization name and user avatar */

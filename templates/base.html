@@ -682,10 +682,10 @@
         <i class="ti ti-ticket"></i>
         <span>Passports</span>
       </a>
-      <a href="{{ url_for('list_signups') }}"
-         class="mobile-nav-item {{ 'active' if request.endpoint == 'list_signups' }}">
-        <i class="ti ti-user-check"></i>
-        <span>Signups</span>
+      <a href="{{ url_for('payment_bot_matches') }}"
+         class="mobile-nav-item {{ 'active' if request.endpoint == 'payment_bot_matches' }}">
+        <i class="ti ti-mail-dollar"></i>
+        <span>Payments</span>
       </a>
     </nav>
     {% endif %}
