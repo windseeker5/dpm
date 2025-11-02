@@ -1146,7 +1146,7 @@ def send_unpaid_reminders(app, force_send=False):
         ).all()
 
         for p in unpaid_passports:
-            recent_reminder = ReminderLog.query.filter_by(pass_id=p.id)\
+            recent_reminder = ReminderLog.query.filter_by(passport_id=p.id)\
                 .order_by(ReminderLog.reminder_sent_at.desc())\
                 .first()
 
@@ -1169,7 +1169,7 @@ def send_unpaid_reminders(app, force_send=False):
                 
                 # ✅ Only log to database AFTER email succeeds
                 db.session.add(ReminderLog(
-                    pass_id=p.id,
+                    passport_id=p.id,
                     reminder_sent_at=datetime.now()
                 ))
                 db.session.commit()
@@ -2081,7 +2081,7 @@ def get_all_activity_logs():
         # 🟣 Reminders
         for r in ReminderLog.query.all():
             from models import Passport
-            passport = db.session.get(Passport, r.pass_id)
+            passport = db.session.get(Passport, r.passport_id)
 
             user_name = passport.user.name if passport and passport.user else "-"
             activity_name = passport.activity.name if passport and passport.activity else "-"
@@ -2294,7 +2294,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         org = activity.organization
         print(f"📧 Using organization from activity: {org.name}")
     # Priority 2: Get from context
-    elif context and 'organization_id' in context:
+    elif context and 'organization_id' in context and context['organization_id'] is not None:
         org = db.session.get(Organization, context['organization_id'])
         print(f"📧 Using organization from context: {org.name if org else 'None'}")
     # Priority 3: Try session (for non-activity emails)

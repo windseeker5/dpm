@@ -454,6 +454,73 @@ def task7_add_email_received_date(cursor):
         raise
 
 # ============================================================================
+# TASK 8: Fix ReminderLog CASCADE DELETE
+# ============================================================================
+def task8_fix_reminderlog_cascade(cursor):
+    """Add CASCADE DELETE to reminder_log.passport_id foreign key"""
+    log("🔗", "TASK 8: Fixing reminder_log CASCADE DELETE", Colors.BLUE)
+
+    # Check if reminder_log table exists
+    if not check_table_exists(cursor, 'reminder_log'):
+        log("⏭️ ", "  reminder_log table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    # Check current foreign key constraint
+    cursor.execute("PRAGMA foreign_key_list(reminder_log)")
+    fk_info = cursor.fetchall()
+
+    if fk_info:
+        # Check if already has CASCADE
+        for fk in fk_info:
+            if 'CASCADE' in str(fk):
+                log("⏭️ ", "  CASCADE DELETE already configured", Colors.YELLOW)
+                return True
+
+    log("🔄", "  Recreating reminder_log table with CASCADE DELETE")
+
+    try:
+        # Disable foreign keys temporarily
+        cursor.execute("PRAGMA foreign_keys = OFF")
+
+        # Create new table with CASCADE
+        cursor.execute("""
+            CREATE TABLE reminder_log_new (
+                id INTEGER NOT NULL,
+                passport_id INTEGER NOT NULL,
+                reminder_sent_at DATETIME,
+                PRIMARY KEY (id),
+                FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE CASCADE
+            )
+        """)
+
+        # Copy data
+        cursor.execute("""
+            INSERT INTO reminder_log_new (id, passport_id, reminder_sent_at)
+            SELECT id, passport_id, reminder_sent_at
+            FROM reminder_log
+        """)
+
+        rows_copied = cursor.rowcount
+
+        # Drop old table
+        cursor.execute("DROP TABLE reminder_log")
+
+        # Rename new table
+        cursor.execute("ALTER TABLE reminder_log_new RENAME TO reminder_log")
+
+        # Re-enable foreign keys
+        cursor.execute("PRAGMA foreign_keys = ON")
+
+        log("✅", f"  reminder_log table recreated with CASCADE DELETE ({rows_copied} rows preserved)", Colors.GREEN)
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to fix reminder_log CASCADE: {e}", Colors.RED)
+        # Try to re-enable foreign keys
+        cursor.execute("PRAGMA foreign_keys = ON")
+        raise
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -481,6 +548,7 @@ def main():
         ("Email Templates", task5_fix_email_templates),
         ("Verification", task6_verify_schema),
         ("Payment Email Dates", task7_add_email_received_date),
+        ("ReminderLog CASCADE", task8_fix_reminderlog_cascade),
     ]
 
     completed = 0
