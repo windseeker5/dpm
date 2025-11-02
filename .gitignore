@@ -19,6 +19,8 @@ venv/
 # MacOS
 .DS_Store
 
+flask.log
+
 
 # SQLite database
 *.db

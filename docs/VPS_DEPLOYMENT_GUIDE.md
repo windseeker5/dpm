@@ -6,6 +6,16 @@
 
 ---
 
+## 🔑 First Time? Set Up .env File
+
+**If you haven't set up the .env file yet** (contains Google Maps, Groq, Unsplash API keys):
+
+👉 **Follow this guide first:** [ENV_SETUP.md](ENV_SETUP.md) (3 simple steps, 5 minutes)
+
+After that's done once, come back here for regular deployments.
+
+---
+
 ## Quick Reference
 
 **Deployment Time:** ~5-7 minutes

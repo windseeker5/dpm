@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Main Minipass application
+  # This is a template for ONE customer container
+  # For multiple customers, duplicate this service with different names/ports
+  minipass-app:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: minipass-customer-1
+
+    # Environment variables loaded from .env file on the host
+    # The .env file is NOT copied into the Docker image (see .dockerignore)
+    # It's read from the host at runtime
+    env_file:
+      - .env
+
+    # Port mapping: host:container
+    # Change 8889 to different ports for multiple customers
+    ports:
+      - "8889:8889"
+
+    # Persistent data storage
+    volumes:
+      # Database persistence
+      - ./instance:/app/instance
+      # User uploads (logos, images)
+      - ./static/uploads:/app/static/uploads
+      # Backup storage
+      - ./static/backups:/app/static/backups
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Health check to ensure app is running
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8889/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Resource limits (adjust based on your VPS capacity)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# ============================================
+# MULTI-CUSTOMER DEPLOYMENT EXAMPLE
+# ============================================
+# To run multiple customer containers, add more services:
+#
+#   minipass-customer-2:
+#     build:
+#       context: .
+#       dockerfile: dockerfile
+#     container_name: minipass-customer-2
+#     env_file:
+#       - .env.customer2  # Each customer can have their own API keys
+#     ports:
+#       - "8890:8889"     # Different host port
+#     volumes:
+#       - ./instance-customer2:/app/instance
+#       - ./static/uploads-customer2:/app/static/uploads
+#       - ./static/backups-customer2:/app/static/backups
+#     restart: unless-stopped
+#
+# Then use: docker-compose up -d minipass-customer-1 minipass-customer-2
+
+# ============================================
+# USAGE
+# ============================================
+# Start all containers:     docker-compose up -d
+# Start specific container:  docker-compose up -d minipass-app
+# Stop all containers:       docker-compose down
+# View logs:                 docker-compose logs -f minipass-app
+# Restart after changes:     docker-compose restart minipass-app
+# Rebuild after code change: docker-compose up -d --build
