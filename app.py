@@ -14,6 +14,8 @@ import subprocess
 import logging
 import traceback
 import shutil
+import time
+import requests
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
@@ -86,11 +88,6 @@ from collections import defaultdict
 
 # ✅ Old chatbot imports removed - using new chatbot_v2 blueprint instead
 
-
-# ✅ Pass the full datetime object
-from utils import send_email, generate_qr_code_image, get_pass_history_data, get_setting
-from flask import render_template, render_template_string, url_for
-
 # ==========================================
 # HARDCODED DEFAULTS FOR REMOVED UI FIELDS
 # ==========================================
@@ -103,33 +100,6 @@ REMOVED_FIELD_DEFAULTS = {
     'email_footer_text': '',
     'activity_tags': []
 }
-
-import requests
-from flask import send_from_directory
-
-
-from flask import render_template, request, redirect, url_for, session, flash
-from datetime import datetime
-from models import Signup, Activity, User, db
-
-
-from models import Admin, Activity, Passport, User, db
-from utils import get_setting, notify_pass_event
-
-from models import Passport, User, AdminActionLog, Activity
-import time
-
-
-
-from flask import render_template, request, redirect, url_for, flash
-from models import db, Activity, Income
-from datetime import datetime
-
-
-from models import Expense
-import os
-import uuid
-from datetime import datetime as dt
 
 
 
