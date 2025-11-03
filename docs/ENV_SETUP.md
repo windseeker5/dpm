@@ -2,6 +2,8 @@
 
 **Do this ONCE. All containers will automatically have your API keys.**
 
+**📘 Note:** This is a ONE-TIME setup. For regular deployments, use [QUICK_DEPLOY_LHGI.md](QUICK_DEPLOY_LHGI.md) or [VPS_DEPLOYMENT_GUIDE.md](VPS_DEPLOYMENT_GUIDE.md).
+
 ---
 
 ## Step 1: Copy .env to VPS

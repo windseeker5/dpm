@@ -4,6 +4,18 @@
 
 ---
 
+## 🚨 WHICH GUIDE SHOULD I USE?
+
+**Choose the right guide for your situation:**
+
+- **📘 First-time VPS setup?** → You're in the right place! Continue below.
+- **🔄 Updating existing production container (LHGI, etc.)?** → Use [VPS_DEPLOYMENT_GUIDE.md](VPS_DEPLOYMENT_GUIDE.md)
+- **🔑 Setting up API keys (.env file)?** → Use [ENV_SETUP.md](ENV_SETUP.md)
+
+**This document (DEPLOYMENT.md):** Generic first-time setup guide for any new VPS server. Use this when setting up a brand new customer container from scratch.
+
+---
+
 ## Table of Contents
 1. [First-Time Setup (Do Once)](#first-time-setup)
 2. [How to Deploy](#how-to-deploy)

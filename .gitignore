@@ -20,7 +20,8 @@ venv/
 .DS_Store
 
 flask.log
-
+playwright-mcp-config.json
+playwright-wrapper.sh
 
 # SQLite database
 *.db

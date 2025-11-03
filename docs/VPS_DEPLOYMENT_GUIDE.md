@@ -18,6 +18,8 @@ After that's done once, come back here for regular deployments.
 
 ## Quick Reference
 
+**📋 TL;DR:** See [QUICK_DEPLOY_LHGI.md](QUICK_DEPLOY_LHGI.md) for a 5-step cheat sheet
+
 **Deployment Time:** ~5-7 minutes
 **Downtime:** ~30 seconds (container restart)
 **Safety:** Automatic database backup + rollback on failure + safe database migrations
