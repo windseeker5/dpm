@@ -677,9 +677,45 @@ See `templates/passports.html` (lines 100-111) and `templates/signups.html` (lin
 ```
 
 ### What Each File Does
-- **dropdown-fix.css:** Fixes z-index issues with Bootstrap dropdowns in tables
+- **dropdown-fix.css:** Fixes z-index issues and mobile dropdown auto-flip for Bootstrap dropdowns in tables
 - **search-component.css:** Pink glow, loading animations, search styling
 - **filter-component.css:** GitHub-style filter buttons, active states
+
+### Mobile Dropdown Auto-Flip Behavior
+
+**CRITICAL FIX:** The `dropdown-fix.css` file automatically handles dropdown positioning on mobile devices.
+
+**How It Works:**
+- Bootstrap's Popper.js automatically detects when a dropdown would be cut off by the mobile navigation bar
+- Popper.js adds `data-popper-placement="top-end"` attribute and positions the dropdown upward
+- Our CSS allows Popper.js to control positioning by NOT forcing `top: 100%` on dropdowns with Popper positioning
+
+**No JavaScript Required:**
+- Previously required custom JavaScript to add `dropup` class
+- Now handled automatically by Bootstrap's built-in Popper.js
+- Works on **all pages** with Action dropdowns in tables (passports, signups, activity dashboard, payment matches, etc.)
+
+**Technical Details:**
+The CSS uses `:not([data-popper-placement])` selectors to only apply default positioning to non-Popper dropdowns:
+```css
+/* Only force downward positioning for dropdowns WITHOUT Popper.js */
+.dropdown-menu:not([data-popper-placement]) {
+    top: 100%;
+    left: 0;
+}
+
+/* Dropdowns WITH Popper.js get automatic smart positioning */
+.dropdown-menu[data-popper-placement] {
+    /* Let Popper.js handle all positioning */
+}
+```
+
+**This fix applies globally to:**
+- Passports page table Action buttons
+- Signups page table Action buttons
+- Activity dashboard passport table Action buttons
+- Payment matches table Action buttons
+- Any other table with dropdown Action buttons
 
 ### Mobile Z-Index Fix
 If you experience mobile menu layering issues, ensure this CSS is in `static/minipass.css`:
