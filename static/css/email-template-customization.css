@@ -1637,7 +1637,7 @@ textarea.form-control {
 /* Modal Footer Improvements */
 #customizeModal .modal-footer {
   border-top: 1px solid var(--border-color);
-  background-color: #f8fafc;
+  background-color: #f8f9fa !important; /* CRITICAL: Must be light gray (#f8f9fa), not #f8fafc */
   padding: 1rem 1.5rem;
 }
 

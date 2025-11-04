@@ -662,6 +662,169 @@ See `templates/passports.html` (lines 100-111) and `templates/signups.html` (lin
 
 ---
 
+## Modal Component
+
+### Desktop Modal Design Standard
+
+**CRITICAL:** Use Tabler.io's DEFAULT modal styling. Do NOT add custom CSS that overrides Tabler's beautiful defaults.
+
+**Tabler.io Default Modal Styling:**
+- **Modal Status Bar:** 2px colored bar at top (`.modal-status`)
+- **Modal Body:** Pure white background (`#ffffff`)
+- **Modal Footer:** Light gray background (`#f6f8fb` via CSS variable `--tblr-bg-surface-tertiary`)
+- **Backdrop:** Semi-transparent with blur effect
+
+### Visual Specifications (Tabler.io Defaults)
+
+| Element | Styling |
+|---------|---------|
+| **Backdrop** | `rgba(0, 0, 0, 0.5)` with `backdrop-filter: blur(4px)` |
+| **Modal Status** | 2px colored bar at top, uses `--tblr-secondary` or status colors |
+| **Modal Body** | Pure white `#ffffff` background (Tabler default) |
+| **Modal Footer** | Light gray `#f6f8fb` background (Tabler's `--tblr-bg-surface-tertiary`) |
+| **Border Radius** | `8px` on modal-content container |
+
+### HTML Structure
+
+```html
+<div class="modal fade" id="exampleModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <!-- Status bar (colored top stripe) - ALWAYS INCLUDE -->
+      <div class="modal-status bg-danger"></div>
+
+      <!-- Main content area - WHITE BACKGROUND (Tabler default) -->
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-check icon mb-2 text-primary" style="font-size: 2rem;"></i>
+        <h3>Modal Title</h3>
+        <div class="text-muted">Modal description text goes here</div>
+      </div>
+
+      <!-- Footer area - LIGHT GRAY BACKGROUND (Tabler default) -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary w-100">Confirm Action</button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### CSS Requirements
+
+**DO NOT add custom modal CSS.** Tabler.io handles everything perfectly by default.
+
+**Only exception - maintain this in `base.html` if needed for modal functionality:**
+```css
+.modal-content {
+  pointer-events: auto !important; /* Ensure modal content is clickable */
+}
+```
+
+### Critical Rules
+
+**DO:**
+- ✅ Use Tabler.io's default modal styling (no custom CSS)
+- ✅ Always include `.modal-status` bar at top of modal
+- ✅ Use `modal-sm` class for confirmation modals
+- ✅ Use `modal-dialog-centered` for better UX
+- ✅ Let Tabler's CSS variables handle backgrounds
+
+**DON'T:**
+- ❌ NEVER add custom background colors to `.modal-body` or `.modal-footer`
+- ❌ NEVER use `!important` to force white backgrounds on modal elements
+- ❌ NEVER override Tabler's CSS variables for modals
+- ❌ NEVER add inline styles or custom CSS to modal elements
+
+### Common Modal Types
+
+#### Confirmation Modal (Example: Redeem Session)
+- Small size (`modal-sm`)
+- Centered vertically
+- Status bar with danger color (`.modal-status.bg-danger`)
+- Icon at top
+- Title (H3)
+- Description text (muted)
+- Two action buttons (Cancel + Confirm)
+
+#### Form Modal
+- Regular or large size (`modal-lg`)
+- White body for form fields (Tabler default)
+- Light gray footer for form actions (Tabler default)
+- Validation feedback in body
+
+#### Info/Alert Modal
+- Small to regular size
+- Status indicator stripe at top (`.modal-status.bg-primary` or `.bg-success`)
+- Centered content
+- Single action button
+
+### Mobile Behavior
+
+Modals on mobile (<768px) maintain the SAME Tabler defaults as desktop:
+- White modal body
+- Light gray modal footer
+- Visible status bar
+- Backdrop blur effect
+
+**Testing Checklist:**
+- [ ] Modal status bar visible (2px colored bar at top)
+- [ ] Modal-body is white on desktop (1920x1080)
+- [ ] Modal-body is white on mobile (375x667)
+- [ ] Modal-footer is light gray (#f6f8fb) on both views
+- [ ] Backdrop has blur effect on both views
+- [ ] No custom CSS overriding Tabler defaults
+
+---
+
+## ⚠️ CRITICAL WARNING: Do Not Override Tabler Modal Defaults
+
+### The Correct Approach: Use Tabler Defaults
+
+Tabler.io provides beautiful modal styling out of the box:
+- **Modal Body:** White background (Tabler default)
+- **Modal Footer:** Light gray `#f6f8fb` (Tabler's `--tblr-bg-surface-tertiary`)
+- **Modal Status:** 2px colored bar at top
+
+**DO NOT add custom CSS like this:**
+
+```css
+/* ❌ WRONG - Do NOT add this */
+.modal-body {
+  background-color: #ffffff !important;
+}
+
+.modal-footer {
+  background-color: #ffffff !important;
+}
+
+.modal-content,
+.modal-dialog .modal-content {
+  --tblr-bg-surface: #ffffff !important;
+  background-color: #ffffff !important;
+}
+```
+
+**WHY THIS IS WRONG:**
+- Overrides Tabler's beautiful default light gray footer
+- Removes the visual distinction between modal body and footer
+- Makes the modal status bar invisible or barely visible
+- Breaks Tabler's carefully designed modal appearance
+
+### What Happened (Historical Context)
+
+In `base.html` (lines 55-84), there was a "CRITICAL FIX" that forced ALL modal elements to white backgrounds with `!important`. This completely overrode Tabler.io's defaults and made modals look wrong.
+
+**The fix:** Remove all that custom CSS and let Tabler handle everything.
+
+**WHY THIS MATTERS:**
+- Tabler.io's defaults are beautiful and well-tested
+- Custom overrides break the design system
+- The status bar becomes invisible when everything is white
+- The footer loses its visual distinction when forced to white
+
+---
+
 ## CSS Files to Include
 
 ### Required CSS Files (In Order)
