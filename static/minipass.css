@@ -1024,7 +1024,7 @@ html {
   justify-content: space-around;
   align-items: center;
   padding: 0.5rem 0;
-  z-index: 1050;
+  z-index: 1040; /* Below modals (Tabler defaults: backdrop 1050, modal 1055) */
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
@@ -1949,7 +1949,7 @@ html, body {
     margin-left: 0;
     overflow: hidden;
     position: relative;
-    z-index: 1; /* Lower than sidebar (1040) to prevent content bleed-through */
+    /* z-index removed to prevent stacking context that traps modals below backdrop */
     padding-bottom: 80px; /* Space for fixed mobile bottom navigation to prevent dropdown overlap */
   }
 
@@ -1957,7 +1957,7 @@ html, body {
   .page-wrapper,
   .page-body {
     position: relative;
-    z-index: 1;
+    /* z-index removed to prevent stacking context that traps modals below backdrop */
   }
   
   /* Option B: Mobile header with organization name and user avatar */
