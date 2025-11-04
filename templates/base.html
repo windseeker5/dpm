@@ -37,6 +37,67 @@
   
   <!-- Enhanced Flash Alert Overlay Styles -->
   <style>
+    /* Fix modal z-index globally - backdrop must be below modal content */
+    /* Mobile nav has z-index: 1050, so modals must be higher */
+    .modal-backdrop {
+      z-index: 1040 !important;
+      pointer-events: none !important; /* Allow clicks through backdrop to modal */
+    }
+    .modal {
+      z-index: 1060 !important;
+      pointer-events: none !important; /* Don't block clicks on the modal container itself */
+    }
+    .modal-dialog {
+      z-index: 1061 !important;
+      position: relative !important;
+      pointer-events: auto !important; /* Re-enable clicks on modal dialog */
+    }
+    .modal-content {
+      pointer-events: auto !important; /* Ensure modal content is clickable */
+      background-color: #ffffff !important; /* Ensure white background on all viewports */
+    }
+
+    /* CRITICAL FIX: Force white backgrounds on ALL modal elements */
+    /* This overrides email-template-customization.css and any CSS variables */
+    .modal-content,
+    .modal-dialog .modal-content,
+    .modal-body,
+    .modal-header,
+    .modal-footer,
+    .modal .modal-content,
+    .modal .modal-body,
+    .modal .modal-header {
+      --tblr-bg-surface: #ffffff !important;
+      --tblr-modal-bg: #ffffff !important;
+      --light-bg: #ffffff !important;
+      background-color: #ffffff !important;
+      background: #ffffff !important;
+      background-image: none !important;
+      opacity: 1 !important;
+    }
+
+    /* CRITICAL: Reduce backdrop opacity on mobile so white modals are clearly visible */
+    @media (max-width: 768px) {
+      .modal-backdrop {
+        opacity: 0.3 !important;
+        background-color: rgba(0, 0, 0, 0.3) !important;
+      }
+
+      .modal-content,
+      .modal-body,
+      .modal-header,
+      .modal-footer {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        opacity: 1 !important;
+      }
+    }
+
+    /* Hide mobile navigation when modal is open to prevent click blocking */
+    body.modal-open .minipass-mobile-nav {
+      display: none !important;
+    }
+
     /* Modern notification system with enhanced design */
     .flash-alert-overlay {
       position: fixed;

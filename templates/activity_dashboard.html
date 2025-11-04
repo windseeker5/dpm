@@ -7,6 +7,14 @@
 <style>
 /* Component styles loaded via base.html */
 
+/* MOBILE FIX: Disable backdrop-filter blur on mobile to prevent gray modal appearance */
+@media (max-width: 768px) {
+  .modal-blur {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
 /* Fix dropdown z-index issues in tables */
 .table-responsive {
   overflow: visible !important;
@@ -72,14 +80,6 @@ div.dropdown-divider {
 .table-responsive .card,
 .card:has(.dropdown-menu) {
   overflow: visible !important;
-}
-
-/* Fix modal z-index */
-.modal-backdrop {
-  z-index: 10000 !important;
-}
-.modal {
-  z-index: 10001 !important;
 }
 
 /* Fix card footer background to white per style guide */
