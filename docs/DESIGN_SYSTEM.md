@@ -774,6 +774,130 @@ Modals on mobile (<768px) maintain the SAME Tabler defaults as desktop:
 - [ ] Modal-footer is light gray (#f6f8fb) on both views
 - [ ] Backdrop has blur effect on both views
 - [ ] No custom CSS overriding Tabler defaults
+- [ ] Buttons are clickable on both mobile and desktop
+
+---
+
+## 🚨 CRITICAL: Mobile Modal Z-Index Fix
+
+### The Problem (Discovered November 2025)
+
+**Symptoms on Mobile (<768px):**
+- Modal appears gray/washed out instead of white
+- Modal buttons are not clickable
+- Backdrop appears ON TOP of modal instead of behind it
+- Playwright error: "modal-backdrop intercepts pointer events"
+
+**Desktop (≥992px) Works Fine:**
+- Modal displays with white background
+- Buttons are clickable
+- Backdrop properly behind modal
+
+### Root Cause
+
+**The issue ONLY exists on mobile** because of mobile-specific CSS in `static/minipass.css`:
+
+```css
+@media (max-width: 991px) {
+  .minipass-main {
+    z-index: 1;  /* ← THIS BREAKS MODALS */
+  }
+
+  .page-wrapper,
+  .page-body {
+    z-index: 1;  /* ← THIS BREAKS MODALS */
+  }
+}
+```
+
+**Why This Breaks Modals:**
+
+1. Bootstrap 5 / Tabler.io modal z-index stack:
+   - Modal backdrop: `z-index: 1050` (root stacking context)
+   - Modal: `z-index: 1055` (root stacking context)
+
+2. When parent containers have `z-index: 1` + `position: relative`, they create NEW stacking contexts
+
+3. Modals are embedded in page content (inside `.minipass-main` → `.page-wrapper` → `.page-body`)
+
+4. Even though modal has `z-index: 1055`, it's trapped inside containers with `z-index: 1`
+
+5. Result: Backdrop (z-index 1050 in root) appears ABOVE modal containers (z-index 1 in root)
+
+### Why Desktop Worked
+
+Desktop CSS (≥992px) does NOT have `z-index: 1` on these containers, so modals work perfectly.
+
+**The bug was mobile-specific** because someone added `z-index: 1` only in the mobile media query.
+
+### The Fix
+
+**File: `static/minipass.css` (lines 1945-1961)**
+
+**REMOVE** the `z-index: 1` declarations from mobile CSS:
+
+```css
+@media (max-width: 991px) {
+  .minipass-main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    margin-left: 0;
+    overflow: hidden;
+    position: relative;
+    /* z-index: 1 ← REMOVED - was breaking modals */
+    padding-bottom: 80px;
+  }
+
+  .page-wrapper,
+  .page-body {
+    position: relative;
+    /* z-index: 1 ← REMOVED - was breaking modals */
+  }
+}
+```
+
+### Why This Works
+
+By removing `z-index: 1` from parent containers:
+- Parent containers no longer create stacking contexts
+- Modal and backdrop both exist in root stacking context
+- Bootstrap's default z-index values work correctly:
+  - Backdrop: z-index 1050
+  - Modal: z-index 1055
+- Modal appears ABOVE backdrop as intended
+
+### Testing After Fix
+
+**Mobile (375x667):**
+- ✅ Modal displays with white background
+- ✅ Dark blurred backdrop BEHIND modal
+- ✅ Buttons are fully clickable
+- ✅ No gray/washed out appearance
+
+**Desktop (1920x1080):**
+- ✅ Modal continues to work (no regression)
+- ✅ White background maintained
+- ✅ Buttons clickable
+
+### Important Notes
+
+1. **Desktop and mobile MUST use the same z-index rules** - Do NOT add mobile-specific z-index to page containers
+
+2. **Tabler.io defaults are sufficient** - No custom z-index needed on containers
+
+3. **The original `z-index: 1` was added** to keep content below sidebar (z-index 1040), but it broke modals (z-index 1050-1055)
+
+4. **If you see modal issues on mobile**, check for z-index on parent containers in mobile media queries
+
+### Verification Checklist
+
+After any modal-related changes, verify:
+- [ ] No `z-index` declarations on `.minipass-main` in mobile CSS
+- [ ] No `z-index` declarations on `.page-wrapper` or `.page-body` in mobile CSS
+- [ ] Test modal on mobile (375px): white background, clickable buttons
+- [ ] Test modal on desktop (1920px): no regressions
+- [ ] No `!important` declarations in modal CSS (use Tabler defaults)
 
 ---
 

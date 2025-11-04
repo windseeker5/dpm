@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -37,30 +37,6 @@
   
   <!-- Enhanced Flash Alert Overlay Styles -->
   <style>
-    /* Fix modal z-index globally - backdrop must be below modal content */
-    /* Mobile nav has z-index: 1050, so modals must be higher */
-    .modal-backdrop {
-      z-index: 1040 !important;
-      pointer-events: none !important; /* Allow clicks through backdrop to modal */
-    }
-    .modal {
-      z-index: 1060 !important;
-      pointer-events: none !important; /* Don't block clicks on the modal container itself */
-    }
-    .modal-dialog {
-      z-index: 1061 !important;
-      position: relative !important;
-      pointer-events: auto !important; /* Re-enable clicks on modal dialog */
-    }
-    .modal-content {
-      pointer-events: auto !important; /* Ensure modal content is clickable */
-    }
-
-    /* Hide mobile navigation when modal is open to prevent click blocking */
-    body.modal-open .minipass-mobile-nav {
-      display: none !important;
-    }
-
     /* Modern notification system with enhanced design */
     .flash-alert-overlay {
       position: fixed;
@@ -714,6 +690,9 @@
     </nav>
     {% endif %}
   </div>
+
+  <!-- Modal Container (outside .minipass-app for proper z-index stacking) -->
+  {% block modals %}{% endblock %}
 
   <!-- TinyMCE Editor -->
   <script src="{{ url_for('static', filename='tinymce/tinymce.min.js') }}"></script>
