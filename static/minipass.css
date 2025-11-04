@@ -1950,6 +1950,7 @@ html, body {
     overflow: hidden;
     position: relative;
     z-index: 1; /* Lower than sidebar (1040) to prevent content bleed-through */
+    padding-bottom: 80px; /* Space for fixed mobile bottom navigation to prevent dropdown overlap */
   }
 
   /* Ensure page wrapper and page body stay behind sidebar */
