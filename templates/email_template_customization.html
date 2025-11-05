@@ -287,23 +287,12 @@
         <div class="d-flex gap-2 flex-wrap">
           <button type="button" class="btn btn-primary" id="previewInModal">
             <i class="ti ti-eye me-2"></i>
-            <span class="d-none d-sm-inline">Preview</span>
+            Preview
           </button>
           <button type="button" class="btn btn-success" id="saveTemplateChanges">
             <i class="ti ti-device-floppy me-2"></i>
-            <span class="d-none d-sm-inline">Save</span>
+            Save
           </button>
-          <div class="btn-group">
-            <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="ti ti-send me-2 d-none d-sm-inline"></i>
-              <span class="d-none d-sm-inline">Send Test</span>
-              <i class="ti ti-send d-sm-none"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="#" data-email="kdresdell@gmail.com">kdresdell@gmail.com</a></li>
-              <li><a class="dropdown-item" href="#" data-email="jf@jfgoulet.com">jf@jfgoulet.com</a></li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
@@ -748,71 +737,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
-    
-    // Handle Test Email dropdown clicks
-    document.addEventListener('click', function(e) {
-        if (e.target.matches('a[data-email]')) {
-            e.preventDefault();
-            
-            console.log('Test email clicked for:', e.target.dataset.email);
-            
-            // Get current template type from modal
-            const activeSection = document.querySelector('.template-form-section[data-template]');
-            if (!activeSection) {
-                alert('No active template found');
-                return;
-            }
-            
-            const templateType = activeSection.dataset.template;
-            const testEmail = e.target.dataset.email;
-            
-            // Create FormData with current form values (including uploaded files)
-            const formData = new FormData();
-            formData.append('template_type', templateType);
-            formData.append('test_email', testEmail);
-            formData.append('csrf_token', '{{ csrf_token() }}');
-            
-            // Get form values from modal
-            const subjectInput = document.querySelector(`#modal_${templateType}_subject`);
-            const titleInput = document.querySelector(`#modal_${templateType}_title`);
-            const heroImageInput = document.querySelector(`#modal_${templateType}_hero_image`);
-            const ownerLogoInput = document.querySelector(`#modal_${templateType}_owner_logo`);
-            
-            if (subjectInput) formData.append(`${templateType}_subject`, subjectInput.value);
-            if (titleInput) formData.append(`${templateType}_title`, titleInput.value);
-            if (heroImageInput && heroImageInput.files.length > 0) {
-                formData.append(`${templateType}_hero_image`, heroImageInput.files[0]);
-            }
-            if (ownerLogoInput && ownerLogoInput.files.length > 0) {
-                formData.append(`${templateType}_owner_logo`, ownerLogoInput.files[0]);
-            }
-            
-            // Get TinyMCE content for intro and conclusion text
-            const introEditor = tinymce.get(`modal_${templateType}_intro_text`);
-            const conclusionEditor = tinymce.get(`modal_${templateType}_conclusion_text`);
-            
-            if (introEditor) formData.append(`${templateType}_intro_text`, introEditor.getContent());
-            if (conclusionEditor) formData.append(`${templateType}_conclusion_text`, conclusionEditor.getContent());
-            
-            // Send test email
-            fetch('/activity/{{ activity.id }}/email-test', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Test email sent successfully to ${testEmail}!`);
-                } else {
-                    alert('Error sending test email: ' + (data.message || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Test email error:', error);
-                alert('Error sending test email: ' + error.message);
-            });
-        }
-    });
 });
 </script>
 
@@ -970,26 +894,49 @@ document.addEventListener('DOMContentLoaded', function() {
   .modal-xl {
     max-width: 95%;
   }
-  
+
   .preview-container {
     padding: 1rem;
   }
-  
+
   .iframe-wrapper {
     width: 100% !important;
   }
-  
+
   .modal-header .btn-group {
     display: none;
   }
-  
+
   .modal-footer .btn-group {
     flex-wrap: wrap;
   }
-  
+
   .modal-footer .btn-group .btn {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
+  }
+
+  /* Improve modal header spacing on mobile */
+  .modal-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .modal-header .modal-title {
+    font-size: 0.9rem;
+    line-height: 1.3;
+    max-width: calc(100% - 40px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .modal-header .modal-title i {
+    font-size: 1rem;
+  }
+
+  .modal-header .btn-close {
+    padding: 0.5rem;
+    margin: -0.5rem -0.5rem -0.5rem auto;
   }
 }
 

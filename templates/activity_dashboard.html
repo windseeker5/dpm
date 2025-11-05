@@ -569,7 +569,7 @@ div.dropdown-divider {
   }
   
   .mobile-kpi-card {
-    flex: 0 0 calc(100vw - 2rem);
+    flex: 0 0 85%;
     scroll-snap-align: start;
   }
   
@@ -961,10 +961,10 @@ div.dropdown-divider {
         <div class="mobile-kpi-scroll">
           <!-- Revenue Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">REVENUE</div>
-                <div class="h1 mb-3" id="mobile-revenue-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">REVENUE</div>
+                <div class="h1 mb-2" id="mobile-revenue-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
                   {% if kpi_data and kpi_data['revenue'] %}
                     ${{ "{:,.0f}".format(kpi_data['revenue']['current']) }}
                   {% else %}
@@ -972,7 +972,7 @@ div.dropdown-divider {
                   {% endif %}
                 </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i><span id="mobile-revenue-period">Last 7 days</span>
+                  <i class="ti ti-timeline me-1"></i>Last 7 days
                 </div>
               </div>
             </div>
@@ -980,10 +980,10 @@ div.dropdown-divider {
           
           <!-- Active Passports Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">ACTIVE PASSPORTS</div>
-                <div class="h1 mb-3" id="mobile-active-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">ACTIVE PASSPORTS</div>
+                <div class="h1 mb-2" id="mobile-active-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
                   {% if kpi_data and kpi_data['active_users'] %}
                     {{ "{:,.0f}".format(kpi_data['active_users']['current']) }}
                   {% else %}
@@ -991,7 +991,7 @@ div.dropdown-divider {
                   {% endif %}
                 </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i><span id="mobile-active-period">Last 7 days</span>
+                  <i class="ti ti-timeline me-1"></i>Last 7 days
                 </div>
               </div>
             </div>
@@ -999,10 +999,10 @@ div.dropdown-divider {
           
           <!-- Passports Redeemed Card (Replaces Passports Created) -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">PASSPORTS REDEEMED</div>
-                <div class="h1 mb-3" id="mobile-redeemed-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">PASSPORTS REDEEMED</div>
+                <div class="h1 mb-2" id="mobile-redeemed-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
                   {% if kpi_data and kpi_data['passports_redeemed'] %}
                     {{ "{:,.0f}".format(kpi_data['passports_redeemed']['current']) }}
                   {% else %}
@@ -1010,7 +1010,7 @@ div.dropdown-divider {
                   {% endif %}
                 </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i><span id="mobile-redeemed-period">Last 7 days</span>
+                  <i class="ti ti-timeline me-1"></i>Last 7 days
                 </div>
               </div>
             </div>
@@ -1018,10 +1018,10 @@ div.dropdown-divider {
 
           <!-- Unpaid Passports Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 160px;">
-              <div class="card-body text-center">
-                <div class="text-muted small text-uppercase mb-3">UNPAID PASSPORTS</div>
-                <div class="h1 mb-3" id="mobile-pending-value" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">UNPAID PASSPORTS</div>
+                <div class="h1 mb-2" id="mobile-pending-value" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">
                   {% if kpi_data and kpi_data['unpaid_passports'] %}
                     {{ "{:,.0f}".format(kpi_data['unpaid_passports']['current']) }}
                   {% else %}
@@ -1029,7 +1029,7 @@ div.dropdown-divider {
                   {% endif %}
                 </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i><span id="mobile-pending-period">Last 7 days</span>
+                  <i class="ti ti-timeline me-1"></i>Last 7 days
                 </div>
               </div>
             </div>
