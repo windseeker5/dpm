@@ -2306,12 +2306,25 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     if org:
         # Use organization's actual domain
         base_url = f"https://{org.domain}.minipass.me" if org.domain else "https://minipass.me"
-        context['organization_name'] = org.name
+        # Only set organization_name if not already set (from get_email_context)
+        if 'organization_name' not in context:
+            context['organization_name'] = org.name
+        # Add payment email from organization if not already set
+        if 'payment_email' not in context and org.mail_username:
+            context['payment_email'] = org.mail_username
     else:
         # Fallback for system emails without organization context
         base_url = "https://lhgi.minipass.me"
-        context['organization_name'] = "Foundation LHGI"
-    
+        # Only set fallback if not already set
+        if 'organization_name' not in context:
+            context['organization_name'] = "Fondation LHGI"
+
+    # Fallback payment email from settings if not set from organization
+    if 'payment_email' not in context:
+        payment_email_setting = get_setting("PAYMENT_EMAIL_ADDRESS")
+        if payment_email_setting:
+            context['payment_email'] = payment_email_setting
+
     # Use ORG_ADDRESS setting for address (consistent with survey code)
     context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
     
@@ -2327,6 +2340,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     print(f"📧 SEND_EMAIL DEBUG - Template: {template_name}")
     print(f"  support_email: {context.get('support_email', 'MISSING!')}")
     print(f"  organization_name: {context.get('organization_name', 'MISSING!')}")
+    print(f"  payment_email: {context.get('payment_email', 'NOT SET')}")
     print(f"  unsubscribe_url: {context.get('unsubscribe_url', 'MISSING!')}")
     print(f"  privacy_url: {context.get('privacy_url', 'MISSING!')}")
     print(f"  activity provided: {activity is not None}")
@@ -2951,25 +2965,28 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
             'pass_redeemed': 'redeemPass_compiled/index.html'
         }
         template_name = template_mapping.get(event_type, 'newPass_compiled/index.html')
-        
+
+        # Build base context with pass data
+        base_context = {
+            "pass_data": pass_data,
+            "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data),
+            "history_html": render_template("email_blocks/history_table_inline.html", history=get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)),
+            "activity_name": activity.name if activity else "",
+            "qr_code": generate_qr_code_image(pass_data.pass_code).read(),
+        }
+
+        # Use get_email_context to load defaults from email_defaults.json and add variables
+        context = get_email_context(activity, template_type, base_context)
+
         # Use the standard send_email function with compiled template
         send_email_async(
             app=app,
             user=pass_data.user,
             activity=activity,
-            subject=f"[{activity.organization.name if activity and activity.organization else 'Foundation LHGI'}] {event_type.title()} Notification",
+            subject=context.get('subject', 'Notification'),
             to_email=pass_data.user.email,
             template_name=template_name,
-            context={
-                "pass_data": pass_data,
-                "title": f"{event_type.title()} Confirmation",
-                "intro_text": "Your pass has been updated.",
-                "conclusion_text": f"Thank you for using {activity.organization.name if activity and activity.organization else 'Foundation LHGI'}!",
-                "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data),
-                "history_html": render_template("email_blocks/history_table_inline.html", history=get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)),
-                "activity_name": activity.name if activity else "",
-                "qr_code": generate_qr_code_image(pass_data.pass_code).read(),
-            },
+            context=context,
             timestamp_override=timestamp,
             inline_images={"qr_code": generate_qr_code_image(pass_data.pass_code).read()}
         )
@@ -3412,6 +3429,35 @@ def get_email_context(activity, template_type, base_context=None):
 
     # Restore protected blocks to ensure they're never overridden
     context.update(protected_blocks)
+
+    # Add organization_name and payment_email BEFORE Jinja2 rendering
+    if 'organization_name' not in context:
+        if activity and hasattr(activity, 'organization') and activity.organization:
+            context['organization_name'] = activity.organization.name
+            print(f"✅ Set organization_name from activity.organization: {activity.organization.name}")
+        else:
+            # Fallback to default
+            context['organization_name'] = "Fondation LHGI"
+            print(f"✅ Set organization_name to default: Fondation LHGI")
+
+    if 'payment_email' not in context:
+        print(f"🔍 Checking for payment_email...")
+        # Try to get from activity's organization
+        if activity and hasattr(activity, 'organization') and activity.organization and activity.organization.mail_username:
+            context['payment_email'] = activity.organization.mail_username
+            print(f"✅ Set payment_email from organization: {activity.organization.mail_username}")
+        else:
+            # Fallback to system setting
+            print(f"⚠️ No organization.mail_username found, checking settings...")
+            payment_email_setting = get_setting("PAYMENT_EMAIL_ADDRESS")
+            print(f"🔍 get_setting('PAYMENT_EMAIL_ADDRESS') returned: {repr(payment_email_setting)}")
+            if payment_email_setting:
+                context['payment_email'] = payment_email_setting
+                print(f"✅ Set payment_email from settings: {payment_email_setting}")
+            else:
+                print(f"❌ No payment_email found in settings! Value was: {repr(payment_email_setting)}")
+    else:
+        print(f"ℹ️ payment_email already in context: {context['payment_email']}")
 
     # Render Jinja2 variables in all text fields
     # (e.g., {{ activity_name }}, {{ question_count }})
