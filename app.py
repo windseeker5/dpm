@@ -2784,34 +2784,21 @@ def unified_settings():
             
             # Step 5: Save all changes
             db.session.commit()
-            
+
             # Log the action
             from utils import log_admin_action
             log_admin_action(f"Unified Settings Updated by {session.get('admin', 'Unknown')}")
-            
-            # Check if this is an AJAX request
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                # Return JSON response for AJAX requests
-                response_data = {"success": True, "message": "All settings saved successfully!"}
-                if logo_filename:
-                    response_data["logo_url"] = url_for('static', filename=f'uploads/{logo_filename}')
-                return jsonify(response_data)
-            else:
-                # Traditional form submission - use flash and redirect
-                flash("✅ All settings saved successfully!", "success")
-                return redirect(url_for("unified_settings"))
-            
+
+            # Always use standard flash messages and redirect
+            flash("✅ All settings saved successfully!", "success")
+            return redirect(url_for("unified_settings"))
+
         except Exception as e:
             db.session.rollback()
-            
-            # Check if this is an AJAX request
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                # Return JSON error response for AJAX requests
-                return jsonify({"success": False, "error": f"Error saving settings: {str(e)}"}), 400
-            else:
-                # Traditional form submission - use flash and redirect
-                flash(f"❌ Error saving settings: {str(e)}", "error")
-                return redirect(url_for("unified_settings"))
+
+            # Always use standard flash messages and redirect
+            flash(f"❌ Error saving settings: {str(e)}", "error")
+            return redirect(url_for("unified_settings"))
     
     # GET request - load all settings
     settings = {s.key: s.value for s in Setting.query.all()}
