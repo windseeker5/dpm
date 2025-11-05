@@ -1990,6 +1990,18 @@ def get_all_activity_logs():
                 log_type = "Signup Cancelled"  # ✅ NEW detection for cancelled
             elif "activity created" in action_text:
                 log_type = "Activity Created"
+            elif "added income" in action_text:
+                log_type = "Income Added"
+            elif "updated income" in action_text:
+                log_type = "Income Updated"
+            elif "deleted income" in action_text:
+                log_type = "Income Deleted"
+            elif "added expense" in action_text:
+                log_type = "Expense Added"
+            elif "updated expense" in action_text:
+                log_type = "Expense Updated"
+            elif "deleted expense" in action_text:
+                log_type = "Expense Deleted"
             else:
                 log_type = "Admin Action"
 
