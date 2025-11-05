@@ -48,7 +48,7 @@ from sqlalchemy import extract, func, case, desc, text
 from werkzeug.utils import secure_filename
 
 # 🧠 Models
-from models import db, Admin, Redemption, Setting, EbankPayment, ReminderLog, EmailLog
+from models import db, Admin, Redemption, Setting, EbankPayment, ReminderLog, EmailLog, Income, Expense
 from models import Activity, User, Signup, Passport, PassportType, AdminActionLog, Organization
 from models import SurveyTemplate, Survey, SurveyResponse
 from models import ChatConversation, ChatMessage, QueryLog, ChatUsage
@@ -4248,6 +4248,8 @@ def activity_income(activity_id, income_id=None):
     ]
 
     if request.method == "POST":
+        is_update = income is not None
+
         if income:
             # Update existing income
             income.category = request.form.get("category")
@@ -4291,6 +4293,14 @@ def activity_income(activity_id, income_id=None):
             path = os.path.join(receipts_dir, filename)
             receipt_file.save(path)
             income.receipt_filename = filename
+
+        # Log the income operation
+        action_type = "Updated" if is_update else "Added"
+        log_action = f"{action_type} Income: ${income.amount:.2f} - {income.category} for Activity '{activity.name}'"
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin"),
+            action=log_action
+        ))
 
         db.session.commit()
         flash("✅ Income saved successfully!", "success")
@@ -4356,6 +4366,8 @@ def activity_expenses(activity_id, expense_id=None):
     ]
 
     if request.method == "POST":
+        is_update = expense is not None
+
         if expense:
             # Update
             expense.category = request.form.get("category")
@@ -4399,6 +4411,14 @@ def activity_expenses(activity_id, expense_id=None):
             path = os.path.join(receipts_dir, filename)
             receipt_file.save(path)
             expense.receipt_filename = filename
+
+        # Log the expense operation
+        action_type = "Updated" if is_update else "Added"
+        log_action = f"{action_type} Expense: ${expense.amount:.2f} - {expense.category} for Activity '{activity.name}'"
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin"),
+            action=log_action
+        ))
 
         db.session.commit()
         flash("✅ Expense saved successfully!", "success")
@@ -4462,6 +4482,15 @@ def activity_expenses(activity_id, expense_id=None):
 def delete_income(income_id):
     income = Income.query.get_or_404(income_id)
     activity_id = income.activity_id
+    activity = Activity.query.get(activity_id)
+
+    # Log the deletion before deleting
+    log_action = f"Deleted Income: ${income.amount:.2f} - {income.category} for Activity '{activity.name if activity else 'Unknown'}'"
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin"),
+        action=log_action
+    ))
+
     db.session.delete(income)
     db.session.commit()
     flash("Income deleted.", "success")
@@ -4487,6 +4516,15 @@ def delete_income(income_id):
 def delete_expense(expense_id):
     expense = Expense.query.get_or_404(expense_id)
     activity_id = expense.activity_id
+    activity = Activity.query.get(activity_id)
+
+    # Log the deletion before deleting
+    log_action = f"Deleted Expense: ${expense.amount:.2f} - {expense.category} for Activity '{activity.name if activity else 'Unknown'}'"
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin"),
+        action=log_action
+    ))
+
     db.session.delete(expense)
     db.session.commit()
     flash("Expense deleted.", "success")
