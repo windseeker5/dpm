@@ -295,7 +295,10 @@
                 }
             }
             
-            // Enhanced preview button
+            // Enhanced preview button - DISABLED to prevent duplicate event firing
+            // The inline script in email_template_customization.html handles preview
+            // Keeping this commented out to avoid double tab opening bug
+            /*
             if (e.target.id === 'previewInModal') {
                 e.preventDefault();
                 const activeSection = document.querySelector('.template-form-section[data-template]');
@@ -304,6 +307,7 @@
                     previewTemplateEnhanced(templateType);
                 }
             }
+            */
         });
         
         // Enhanced image preview
