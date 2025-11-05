@@ -1362,6 +1362,193 @@ function filterPassports(filterType) {
 
 ---
 
+## Flash Messages Component
+
+### Overview
+
+Flash messages are the **ONLY** way to display success, error, warning, and info messages to users across the entire application. They provide consistent feedback for user actions.
+
+### Visual Features
+- Centered overlay at the top of the page
+- Semi-transparent dark backdrop
+- Icon indicating message type (success, error, warning, info)
+- Title and message text
+- Animated progress bar at bottom
+- Auto-dismissible after 5 seconds
+- Manual dismiss button (X)
+
+### Message Categories
+
+| Category | Color | Icon | Use Case |
+|----------|-------|------|----------|
+| **success** | Green | `ti-check-circle` | Successful operations (save, delete, create) |
+| **error** | Red | `ti-alert-circle` | Failed operations, validation errors |
+| **warning** | Yellow | `ti-alert-triangle` | Caution messages, confirmations needed |
+| **info** | Blue | `ti-info-circle` | Informational messages |
+
+### Backend Usage (Python/Flask)
+
+**ALWAYS use Flask's `flash()` function:**
+
+```python
+from flask import flash, redirect, url_for
+
+# Success message
+flash("✅ All settings saved successfully!", "success")
+
+# Error message
+flash("❌ Error saving settings: Invalid email format", "error")
+
+# Warning message
+flash("⚠️ This action cannot be undone", "warning")
+
+# Info message
+flash("ℹ️ Your changes have been queued for processing", "info")
+
+# Always redirect after flash
+return redirect(url_for("your_route_name"))
+```
+
+### Frontend Implementation
+
+Flash messages are automatically rendered by `base.html` (lines 355-395). **No custom JavaScript or HTML is needed in individual templates.**
+
+The base template structure:
+```html
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-alert-overlay" id="flashAlertOverlay">
+      <div class="flash-alert-container">
+        {% for category, message in messages %}
+          <div class="flash-alert alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'warning' if category == 'warning' else 'info' }} alert-dismissible">
+            <div class="d-flex">
+              <div class="alert-icon-container">
+                {% if category == 'success' %}
+                  <i class="ti ti-check-circle alert-icon"></i>
+                {% elif category == 'error' %}
+                  <i class="ti ti-alert-circle alert-icon"></i>
+                {% elif category == 'warning' %}
+                  <i class="ti ti-alert-triangle alert-icon"></i>
+                {% else %}
+                  <i class="ti ti-info-circle alert-icon"></i>
+                {% endif %}
+              </div>
+              <div class="flex-fill">
+                <div class="alert-title">{{ category|title }}</div>
+                <div class="alert-message">{{ message }}</div>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div class="flash-alert-progress"></div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% endwith %}
+```
+
+### CSS Styling
+
+Flash message styles are defined in `base.html` (lines 139-150). **Do not override these styles.**
+
+Key CSS variables:
+- Success: Uses Bootstrap's `alert-success` class
+- Error: Uses Bootstrap's `alert-danger` class
+- Warning: Uses Bootstrap's `alert-warning` class
+- Info: Uses Bootstrap's `alert-info` class
+
+### Critical Rules
+
+**DO:**
+- ✅ Always use `flash()` function in backend routes
+- ✅ Always redirect after calling `flash()`
+- ✅ Use emojis for visual emphasis (✅, ❌, ⚠️, ℹ️)
+- ✅ Keep messages concise (1-2 sentences max)
+- ✅ Use appropriate category (success, error, warning, info)
+
+**DON'T:**
+- ❌ NEVER create custom toast notifications
+- ❌ NEVER use JavaScript to show success/error messages
+- ❌ NEVER use AJAX without proper flash message handling
+- ❌ NEVER use alert(), confirm(), or browser dialogs
+- ❌ NEVER return JSON responses with custom notification systems
+
+### Common Mistake: AJAX with Custom Toasts
+
+**WRONG - Custom Toast Notifications:**
+```javascript
+// ❌ DON'T DO THIS
+fetch('/save-settings', {
+    method: 'POST',
+    body: formData
+})
+.then(response => response.json())
+.then(data => {
+    showToast('success', data.message);  // WRONG!
+});
+```
+
+**CORRECT - Standard Flask Flash:**
+```python
+# ✅ DO THIS
+@app.route("/save-settings", methods=["POST"])
+def save_settings():
+    try:
+        # Save logic here
+        db.session.commit()
+        flash("✅ Settings saved successfully!", "success")
+        return redirect(url_for("settings"))
+    except Exception as e:
+        flash(f"❌ Error: {str(e)}", "error")
+        return redirect(url_for("settings"))
+```
+
+### Example: Settings Page Fix (November 2025)
+
+**Problem:** Settings page used AJAX with custom Bootstrap toast notifications in the top-right corner, requiring double-click to save.
+
+**Solution:** Removed AJAX, simplified to standard Flask form submission with flash messages.
+
+**Before:**
+```javascript
+// Custom toast notification (WRONG)
+function showToast(type, message) {
+    const toast = document.createElement('div');
+    toast.className = `toast bg-${type}`;
+    // ... custom toast creation code
+}
+```
+
+**After:**
+```python
+# Standard Flash message (CORRECT)
+@app.route("/admin/unified-settings", methods=["POST"])
+def unified_settings():
+    # ... save logic
+    flash("✅ All settings saved successfully!", "success")
+    return redirect(url_for("unified_settings"))
+```
+
+**Result:**
+- Single-click save works
+- Consistent flash message across entire app
+- Simpler, more maintainable code
+
+### Testing Checklist
+
+When implementing flash messages, verify:
+- [ ] Message appears centered at top of page
+- [ ] Correct icon and color for category
+- [ ] Title shows category name (Success, Error, etc.)
+- [ ] Message text is clear and concise
+- [ ] Progress bar animates over 5 seconds
+- [ ] Auto-dismisses after 5 seconds
+- [ ] Manual dismiss button (X) works
+- [ ] Works on mobile and desktop
+
+---
+
 ## Mobile Responsiveness Rules
 
 ### Breakpoints

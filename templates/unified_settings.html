@@ -210,7 +210,7 @@
 
 {% block scripts %}
 <!-- Unified Settings JavaScript -->
-<script src="{{ url_for('static', filename='js/unified-settings.js') }}?v=2.2"></script>
+<script src="{{ url_for('static', filename='js/unified-settings.js') }}?v=3.0"></script>
 <script>
 // Add chevron rotation for Advanced Server Settings
 document.addEventListener('DOMContentLoaded', function() {
@@ -222,16 +222,12 @@ document.addEventListener('DOMContentLoaded', function() {
             chevronIcon.style.transform = 'rotate(180deg)';
             chevronIcon.style.transition = 'transform 0.3s ease';
         });
-        
+
         collapseElement.addEventListener('hide.bs.collapse', function () {
             chevronIcon.style.transform = 'rotate(0deg)';
             chevronIcon.style.transition = 'transform 0.3s ease';
         });
     }
-    
-    // Initialize payment bot test functionality
-    console.log('Initializing payment bot test...');
-    initializePaymentBotTest();
 });
 </script>
 {% endblock %}
