@@ -2,31 +2,21 @@
 {% block title %}Passport Details{% endblock %}
 
 {% block content %}
-<div class="container-xl mt-4">
+<div class="container-xl mt-4 px-3">
   <div class="row justify-content-center">
 
-    <!-- ✅ QR Code Card -->
-    <div class="col-md-10 col-lg-8 mx-auto mb-4">
-      <div class="card shadow-md rounded bg-white text-center p-3">
-        <img src="data:image/png;base64,{{ qr_data }}"
-             alt="QR Code"
-             class="img-fluid rounded bg-white"
-             style="max-width: 100%; height: auto;" />
-      </div>
-    </div>
-
     <!-- ✅ Owner Info -->
-    <div class="col-md-10 col-lg-8 mx-auto">
+    <div class="col-11 col-md-10 col-lg-8 mx-auto">
       <div class="card shadow-md mb-4 bg-white">
 
         <!-- 🔲 Header -->
-        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div class="d-flex align-items-center">
-            <span class="avatar me-3 d-none d-md-inline-block"
-                  style="background-image: url('https://www.gravatar.com/avatar/{{ hockey_pass.user.email|lower|trim|encode_md5 }}?s=64&d=mp')">
+        <div class="card-header d-flex justify-content-between align-items-start gap-2">
+          <div class="d-flex align-items-start flex-grow-1" style="min-width: 0;">
+            <span class="avatar me-3 flex-shrink-0"
+                  style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + (hockey_pass.activity.image_filename or hockey_pass.activity.logo_filename)) if hockey_pass.activity and (hockey_pass.activity.image_filename or hockey_pass.activity.logo_filename) else url_for('static', filename='default_activity.jpg') }}')">
             </span>
 
-            <h3 class="card-title mb-0 d-flex align-items-center">
+            <h3 class="card-title mb-0">
               {{ hockey_pass.activity.name if hockey_pass.activity else '-' }}
               {% if hockey_pass.paid %}
                 <span class="badge bg-green-lt ms-2 d-none d-md-inline-block">Paid</span>
@@ -37,7 +27,7 @@
           </div>
 
           <!-- 3-dot Menu -->
-          <div class="dropdown">
+          <div class="dropdown flex-shrink-0">
             <a href="#" class="btn btn-icon fs-4 p-1" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="ti ti-dots-vertical"></i>
             </a>
@@ -69,10 +59,14 @@
         <div class="card-body">
           <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-3">
             <div class="text-center order-1 order-md-2">
-              <img src="{{ url_for('static', filename='uploads/logo.png') }}"
-                   style="width: 80px;" class="mb-2 d-md-none" />
-              <img src="{{ url_for('static', filename='uploads/logo.png') }}"
-                   style="width: 100px;" class="mb-2 d-none d-md-inline-block" />
+              <img src="data:image/png;base64,{{ qr_data }}"
+                   alt="QR Code"
+                   class="rounded bg-white d-md-none"
+                   style="width: 120px; height: 120px;" />
+              <img src="data:image/png;base64,{{ qr_data }}"
+                   alt="QR Code"
+                   class="rounded bg-white d-none d-md-inline-block"
+                   style="width: 160px; height: 160px;" />
             </div>
 
             <div class="flex-grow-1 text-center text-md-start order-2 order-md-1">
@@ -93,7 +87,7 @@
 
     {% if history %}
     <!-- ✅ Historique Table -->
-    <div class="col-md-10 col-lg-8 mx-auto">
+    <div class="col-11 col-md-10 col-lg-8 mx-auto">
       <div class="card shadow-md mb-4 bg-white">
         <div class="card-header">
           <h3 class="card-title">Historique</h3>
