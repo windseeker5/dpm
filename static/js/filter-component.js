@@ -66,30 +66,29 @@ window.FilterComponent = (function() {
     }
 
     function handleServerFilter(event, filterBtn) {
-        // CRITICAL: Prevent anchor jumping by removing hash from URL
+        // CRITICAL: Prevent default navigation so we can build correct URL with search preserved
+        event.preventDefault();
+
+        // Get original href and parse it
         const originalHref = filterBtn.href;
         const url = new URL(originalHref);
-        
+
         // Remove the hash to prevent automatic scrolling to anchor
         const cleanUrl = url.origin + url.pathname + url.search;
-        
+        let finalUrl = cleanUrl;
+
         // For server-side filtering, preserve search query when switching filters
-        if (config.enableSearchPreservation && searchComponent) {
+        if (config.enableSearchPreservation) {
             const searchInput = document.getElementById('enhancedSearchInput');
             if (searchInput) {
                 const currentQuery = searchInput.value.trim();
-                if (currentQuery && currentQuery.length >= 3) {
+                if (currentQuery && currentQuery.length >= 1) {
                     const newUrl = new URL(cleanUrl);
                     newUrl.searchParams.set('q', currentQuery);
-                    filterBtn.href = newUrl.toString();
-                } else {
-                    filterBtn.href = cleanUrl;
+                    finalUrl = newUrl.toString();
+                    console.log('FilterComponent: Preserving search query:', currentQuery, 'in filter URL');
                 }
-            } else {
-                filterBtn.href = cleanUrl;
             }
-        } else {
-            filterBtn.href = cleanUrl;
         }
 
         // Store scroll position with additional context for better restoration
@@ -97,24 +96,28 @@ window.FilterComponent = (function() {
             const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
             const timestamp = Date.now();
             const buttonId = filterBtn.id || 'unknown';
-            
+
             // Store scroll data with metadata
             const scrollData = {
                 position: scrollY,
                 timestamp: timestamp,
                 url: window.location.href,
                 buttonId: buttonId,
-                targetUrl: filterBtn.href
+                targetUrl: finalUrl
             };
-            
+
             sessionStorage.setItem('filterScrollPosition', scrollY.toString());
             sessionStorage.setItem('filterScrollData', JSON.stringify(scrollData));
-            
-            console.log('FilterComponent: Stored scroll position', scrollY, 'for button', buttonId, 'navigating to', filterBtn.href);
+
+            console.log('FilterComponent: Stored scroll position', scrollY, 'for button', buttonId, 'navigating to', finalUrl);
         }
-        
-        // Allow default navigation to proceed
-        return true;
+
+        // Navigate to the final URL with search preserved
+        console.log('FilterComponent: Navigating to:', finalUrl);
+        window.location.href = finalUrl;
+
+        // Return false to ensure no default navigation
+        return false;
     }
 
     function handleAjaxFilter(event, filterBtn) {

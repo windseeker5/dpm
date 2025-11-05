@@ -1316,77 +1316,6 @@ def match_gmail_payments_to_passes():
             all_unpaid = Passport.query.filter_by(paid=False).all()
             unpaid_passports = [p for p in all_unpaid if float(p.sold_amt) == payment_amount]
 
-            # ALWAYS check for PAID passports FIRST (even if unpaid passports exist)
-            # Normalize payment name for comparison
-            def normalize_for_comparison(text):
-                normalized = unicodedata.normalize('NFD', text)
-                without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
-                return without_accents.lower().strip()
-
-            payment_name_normalized = normalize_for_comparison(name)
-
-            # Check if a PAID passport exists with matching amount and name
-            all_paid = Passport.query.filter_by(paid=True).all()
-            paid_passports_same_amount = [p for p in all_paid if float(p.sold_amt) == payment_amount]
-
-            matching_paid_passport = None
-            for p in paid_passports_same_amount:
-                if not p.user:
-                    continue
-                passport_name_normalized = normalize_for_comparison(p.user.name)
-                if payment_name_normalized == passport_name_normalized:
-                    matching_paid_passport = p
-                    break
-
-            # If found a matching PAID passport, create detailed note
-            if matching_paid_passport:
-                # Found a matching PAID passport - provide detailed info
-                paid_by = matching_paid_passport.marked_paid_by or "unknown admin"
-                paid_date_str = matching_paid_passport.paid_date.strftime("%Y-%m-%d %H:%M") if matching_paid_passport.paid_date else "unknown date"
-
-                # Calculate time difference if both dates available
-                time_diff_info = ""
-                if matching_paid_passport.paid_date and email_received_date:
-                    # Ensure both datetimes are timezone-aware for comparison
-                    from datetime import timezone as tz
-                    paid_dt = matching_paid_passport.paid_date if matching_paid_passport.paid_date.tzinfo else matching_paid_passport.paid_date.replace(tzinfo=tz.utc)
-                    email_dt = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=tz.utc)
-
-                    diff_seconds = (email_dt - paid_dt).total_seconds()
-                    if diff_seconds > 0:
-                        diff_minutes = int(diff_seconds / 60)
-                        time_diff_info = f" ({diff_minutes} min after passport marked paid)"
-                    else:
-                        diff_minutes = int(abs(diff_seconds) / 60)
-                        time_diff_info = f" ({diff_minutes} min before email received)"
-
-                note_text = f"MATCH FOUND: {matching_paid_passport.user.name} (${payment_amount:.2f}, Passport #{matching_paid_passport.id}) - Already marked PAID by {paid_by} on {paid_date_str}{time_diff_info}"
-                print(f"   ⚠️ Found PAID passport: {matching_paid_passport.user.name} (marked by {paid_by})")
-
-                if update_existing_record and existing_payment:
-                    # Update existing record instead of creating new one
-                    existing_payment.result = "NO_MATCH"
-                    existing_payment.name_score = 0
-                    existing_payment.note = note_text
-                    existing_payment.timestamp = datetime.now(timezone.utc)
-                    if email_received_date:
-                        existing_payment.email_received_date = email_received_date
-                    print(f"   📝 Updated existing NO_MATCH record")
-                else:
-                    # Create new record
-                    db.session.add(EbankPayment(
-                        from_email=from_email,
-                        subject=subject,
-                        bank_info_name=name,
-                        bank_info_amt=amt,
-                        name_score=0,
-                        result="NO_MATCH",
-                        mark_as_paid=False,
-                        note=note_text,
-                        email_received_date=email_received_date
-                    ))
-                continue  # Skip to next payment
-
             print(f"🔍 Found {len(unpaid_passports)} unpaid passports for ${payment_amount:.2f}")
             print("="*80)
 
@@ -1648,39 +1577,92 @@ def match_gmail_payments_to_passes():
                 # Email was already moved BEFORE DB commit (see STEP 1 above)
                 # This ensures transaction safety - if email move fails, payment isn't processed
             else:
-                # NO MATCH FOUND - Create detailed diagnostic note
-                all_candidates = []
-                for p in unpaid_passports:
+                # NO MATCH FOUND in unpaid passports - Check if this is a duplicate payment for an already-paid passport
+                print(f"\n❌ NO MATCH FOUND in unpaid passports")
+
+                # Normalize payment name for comparison
+                def normalize_for_comparison(text):
+                    normalized = unicodedata.normalize('NFD', text)
+                    without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+                    return without_accents.lower().strip()
+
+                payment_name_normalized = normalize_for_comparison(name)
+
+                # Check if a PAID passport exists with matching amount and name (exact match only)
+                all_paid = Passport.query.filter_by(paid=True).all()
+                paid_passports_same_amount = [p for p in all_paid if float(p.sold_amt) == payment_amount]
+
+                matching_paid_passport = None
+                for p in paid_passports_same_amount:
                     if not p.user:
                         continue
-                    score = fuzz.ratio(normalize_name(name), normalize_name(p.user.name))
-                    if score >= 50:  # Only show candidates above 50% to avoid noise
-                        all_candidates.append((p.user.name, score))
+                    passport_name_normalized = normalize_for_comparison(p.user.name)
+                    # Use strict matching (95%+) to avoid false positives
+                    score = fuzz.ratio(payment_name_normalized, passport_name_normalized)
+                    if score >= 95:
+                        matching_paid_passport = p
+                        print(f"   ⚠️ Found PAID passport: {p.user.name} (Score: {score}%, Passport #{p.id})")
+                        break
 
-                # Sort by score and take top 3
-                all_candidates.sort(key=lambda x: x[1], reverse=True)
-                top_candidates = all_candidates[:3]
+                # If found a matching PAID passport, this is likely a duplicate payment
+                if matching_paid_passport:
+                    # Found a matching PAID passport - provide detailed info
+                    paid_by = matching_paid_passport.marked_paid_by or "unknown admin"
+                    paid_date_str = matching_paid_passport.paid_date.strftime("%Y-%m-%d %H:%M") if matching_paid_passport.paid_date else "unknown date"
 
-                # Build detailed note explaining why no match
-                note_parts = [f"No match found for '{name}' (${amt})."]
+                    # Calculate time difference if both dates available
+                    time_diff_info = ""
+                    if matching_paid_passport.paid_date and email_received_date:
+                        # Ensure both datetimes are timezone-aware for comparison
+                        from datetime import timezone as tz
+                        paid_dt = matching_paid_passport.paid_date if matching_paid_passport.paid_date.tzinfo else matching_paid_passport.paid_date.replace(tzinfo=tz.utc)
+                        email_dt = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=tz.utc)
 
-                # Show how many unpaid passports exist for this amount
-                note_parts.append(f"Found {len(unpaid_passports)} unpaid passport(s) for ${amt}, but")
+                        diff_seconds = (email_dt - paid_dt).total_seconds()
+                        if diff_seconds > 0:
+                            diff_minutes = int(diff_seconds / 60)
+                            time_diff_info = f" ({diff_minutes} min after passport marked paid)"
+                        else:
+                            diff_minutes = int(abs(diff_seconds) / 60)
+                            time_diff_info = f" ({diff_minutes} min before email received)"
 
-                if top_candidates:
-                    # Show the closest name matches and their scores
-                    candidate_strs = [f"{cname} ({score:.0f}%)" for cname, score in top_candidates]
-                    note_parts.append(f"all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
+                    note_text = f"MATCH FOUND: {matching_paid_passport.user.name} (${payment_amount:.2f}, Passport #{matching_paid_passport.id}) - Already marked PAID by {paid_by} on {paid_date_str}{time_diff_info}"
+                    print(f"   💡 Likely duplicate payment - passport already paid")
                 else:
-                    # No similar names at all
-                    note_parts.append(f"no names above 50% similarity.")
-                    # Show a few example names for context
-                    if unpaid_passports:
-                        example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
-                        if example_names:
-                            note_parts.append(f"Available names: {', '.join(example_names[:3])}")
+                    # Truly no match - create detailed diagnostic note
+                    print(f"   💡 No paid passport match either - creating detailed NO_MATCH note")
+                    all_candidates = []
+                    for p in unpaid_passports:
+                        if not p.user:
+                            continue
+                        score = fuzz.ratio(normalize_name(name), normalize_name(p.user.name))
+                        if score >= 50:  # Only show candidates above 50% to avoid noise
+                            all_candidates.append((p.user.name, score))
 
-                note_text = " ".join(note_parts)
+                    # Sort by score and take top 3
+                    all_candidates.sort(key=lambda x: x[1], reverse=True)
+                    top_candidates = all_candidates[:3]
+
+                    # Build detailed note explaining why no match
+                    note_parts = [f"No match found for '{name}' (${amt})."]
+
+                    # Show how many unpaid passports exist for this amount
+                    note_parts.append(f"Found {len(unpaid_passports)} unpaid passport(s) for ${amt}, but")
+
+                    if top_candidates:
+                        # Show the closest name matches and their scores
+                        candidate_strs = [f"{cname} ({score:.0f}%)" for cname, score in top_candidates]
+                        note_parts.append(f"all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
+                    else:
+                        # No similar names at all
+                        note_parts.append(f"no names above 50% similarity.")
+                        # Show a few example names for context
+                        if unpaid_passports:
+                            example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
+                            if example_names:
+                                note_parts.append(f"Available names: {', '.join(example_names[:3])}")
+
+                    note_text = " ".join(note_parts)
                 
                 if update_existing_record and existing_payment:
                     # Update existing record instead of creating new one

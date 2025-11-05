@@ -482,6 +482,231 @@ This CSS file contains the SearchComponent global object and all related styles.
 
 ---
 
+## 🚨 CRITICAL: Search + Filter Integration
+
+**IMPORTANT:** This section documents the CORRECT way to implement search combined with filters. The Activity Dashboard bug (November 2025) was caused by not following this pattern.
+
+### The Correct Pattern: Server-Side Filtering ONLY
+
+**✅ DO THIS:**
+- Filter buttons are `<a href="{{ url_for(...) }}">` links (server-side navigation)
+- Search form submits to server (GET request)
+- SearchComponent preserves filter params when searching
+- FilterComponent uses `mode: 'server'`
+- Backend calculates statistics from ALL records
+- Backend provides default filter
+
+**❌ NEVER DO THIS:**
+- Filter buttons with `onclick="filterFunction()"` (AJAX)
+- Hybrid AJAX + server-side approaches
+- Client-side filtering with JavaScript
+- Calculating filter counts from filtered page results
+
+### Why Server-Side Only?
+
+**The Bug We Fixed (November 2025):**
+Activity Dashboard used hybrid AJAX filtering:
+- Search form → server-side (form submit)
+- Filter buttons → client-side (JavaScript onclick)
+- Result: Search didn't preserve filter state
+- User searched "cay" → saw 3 results instead of 1
+
+**After Fix:**
+- Both search and filters → server-side
+- Search preserves filter in URL params
+- Filters show correct counts
+- Results are always accurate
+
+### Complete Implementation Guide
+
+#### Step 1: Backend Route Setup
+
+```python
+@app.route('/your-page')
+def your_list_page():
+    # 1. Get filter and search parameters
+    filter_param = request.args.get('filter', '')
+    show_all_param = request.args.get('show_all', '')
+    q = request.args.get('q', '').strip()
+
+    # 2. Default to 'active' filter if no filter specified (unless showing all)
+    if not filter_param and show_all_param != "true":
+        filter_param = "active"
+
+    # 3. Query ALL records first (for statistics)
+    all_items = YourModel.query.all()
+
+    # 4. Build filtered query
+    query = YourModel.query
+
+    # 5. Apply filter
+    if filter_param == 'active':
+        query = query.filter(
+            db.or_(
+                YourModel.uses_remaining > 0,
+                YourModel.paid == False
+            )
+        )
+    elif filter_param == 'unpaid':
+        query = query.filter_by(paid=False)
+    elif filter_param == 'paid':
+        query = query.filter_by(paid=True)
+    # else: show_all == "true" - no filter
+
+    # 6. Apply search
+    if q:
+        from models import User
+        query = query.join(User).filter(
+            db.or_(
+                User.name.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%"),
+                YourModel.code.ilike(f"%{q}%")
+            )
+        )
+
+    # 7. Get filtered results
+    filtered_items = query.order_by(YourModel.created_dt.desc()).all()
+
+    # 8. Calculate statistics from ALL items (NOT filtered)
+    total_count = len(all_items)
+    active_count = len([i for i in all_items if i.uses_remaining > 0 or not i.paid])
+    unpaid_count = len([i for i in all_items if not i.paid])
+
+    statistics = {
+        'total_items': total_count,
+        'active_items': active_count,
+        'unpaid_items': unpaid_count,
+    }
+
+    # 9. Determine show_all state
+    show_all = show_all_param == "true"
+
+    # 10. Pass to template
+    return render_template("your_page.html",
+                         items=filtered_items,
+                         statistics=statistics,
+                         current_filters={
+                             'q': q,
+                             'filter': filter_param,
+                             'show_all': show_all
+                         })
+```
+
+#### Step 2: Frontend Filter Buttons
+
+**CRITICAL:** Use EXACT HTML from Passports page - do NOT simplify!
+
+```html
+<div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+  <!-- Active Filter -->
+  <a href="{{ url_for('your_list_page', filter='active') }}"
+     class="github-filter-btn {% if current_filters.filter == 'active' and not current_filters.show_all %}active{% endif %}"
+     style="{% if current_filters.filter == 'active' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+    <i class="ti ti-activity" style="font-size: 16px; margin-right: 4px;"></i>Active <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.active_items|default(0) }})</span>
+  </a>
+
+  <!-- Unpaid Filter -->
+  <a href="{{ url_for('your_list_page', filter='unpaid') }}"
+     class="github-filter-btn {% if current_filters.filter == 'unpaid' %}active{% endif %}"
+     style="{% if current_filters.filter == 'unpaid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+    <i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"></i>Unpaid <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.unpaid_items|default(0) }})</span>
+  </a>
+
+  <!-- All Filter -->
+  <a href="{{ url_for('your_list_page', show_all='true') }}"
+     class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
+     style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+    <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_items|default(0) }})</span>
+  </a>
+</div>
+```
+
+#### Step 3: JavaScript Initialization
+
+```javascript
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize search component with filter preservation
+    if (window.SearchComponent) {
+        window.SearchComponent.init({
+            formId: 'dynamicSearchForm',
+            inputId: 'enhancedSearchInput',
+            preserveParams: ['filter']  // ← Preserves filter when searching
+        });
+    }
+
+    // Initialize filter component for server-side filtering
+    if (window.FilterComponent) {
+        window.FilterComponent.init({
+            filterClass: 'github-filter-btn',
+            mode: 'server',  // ← CRITICAL: Must be 'server'
+            preserveScrollPosition: true,
+            enableSearchPreservation: true  // ← Known limitation: doesn't work yet
+        });
+    }
+});
+```
+
+### Known Limitations
+
+1. **Search Preservation**: Search query is cleared when clicking filter buttons
+   - **Workaround**: User must retype search after changing filter
+   - **Future Enhancement**: Will be fixed in future update
+   - **Impact**: Minor UX inconvenience, doesn't affect functionality
+
+### Troubleshooting: Wrong Search Results
+
+**Symptom:**
+User searches "cay" and sees 3 results when only 1 active passport exists.
+
+**Root Cause:**
+One of these issues:
+1. Filter buttons using `onclick` instead of `href`
+2. Backend defaulting to wrong filter ('all' instead of 'active')
+3. Backend filter logic is incorrect
+4. Filter counts calculated from filtered results instead of ALL records
+
+**How to Fix:**
+1. Check filter buttons: Must be `<a href="{{ url_for(...) }}">` NOT `onclick`
+2. Check backend default: Must default to 'active' not 'all'
+3. Check filter logic: Active should be `(uses_remaining > 0 OR paid == False)`
+4. Check statistics: Must calculate from `all_items` not `filtered_items`
+
+**Example of Wrong Implementation:**
+```python
+# ❌ WRONG - defaults to 'all' and applies filter
+filter_param = request.args.get('filter', 'all')
+if filter_param == 'all':
+    query = query.filter(db.or_(...))  # This is NOT showing all!
+```
+
+**Correct Implementation:**
+```python
+# ✅ CORRECT - defaults to 'active', 'all' shows truly all
+filter_param = request.args.get('filter', '')
+show_all = request.args.get('show_all', '')
+if not filter_param and show_all != "true":
+    filter_param = "active"
+
+if filter_param == 'active':
+    query = query.filter(db.or_(...))
+# No else clause - when show_all='true', no filter applied
+```
+
+### Testing Checklist
+
+After implementing search + filters, verify:
+- [ ] Load page → "Active" filter is selected by default
+- [ ] Search "cay" → Shows correct number of active results
+- [ ] Click "Unpaid" → URL changes to `?filter=unpaid`
+- [ ] Results update to show only unpaid items
+- [ ] Filter counts remain static (don't change based on search)
+- [ ] Click "All" → URL changes to `?show_all=true`
+- [ ] Shows all records
+- [ ] Browser back button works correctly
+- [ ] No JavaScript errors in console
+
+---
+
 ## Table Component
 
 ### Desktop vs Mobile Behavior
