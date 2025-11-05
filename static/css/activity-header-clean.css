@@ -7,7 +7,7 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   background: #ffffff;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
@@ -128,7 +128,6 @@
 .stat-dropdown {
   position: relative;
   cursor: pointer;
-  z-index: 10000; /* Ensure parent has high z-index for proper stacking */
 }
 
 .stat-dropdown:hover {
@@ -145,7 +144,7 @@
   padding: 4px 0;
   min-width: 200px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  z-index: 99999;
+  z-index: 1000;
 }
 
 .stat-dropdown-link {
