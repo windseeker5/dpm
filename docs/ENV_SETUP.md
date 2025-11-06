@@ -81,7 +81,9 @@ You should see your API keys.
 
 ## Future Containers
 
-When you add a new customer container (e.g., `customer2`), just add the same 2 lines:
+### For LHGI-style containers (same directory level)
+
+When you add a new customer container at the same level as LHGI (e.g., `customer2`), just add the same 2 lines:
 
 ```yaml
   customer2:
@@ -90,9 +92,42 @@ When you add a new customer container (e.g., `customer2`), just add the same 2 l
     container_name: customer2
     restart: always
     env_file:              # ← SAME 2 LINES
-      - .env               # ← SAME FILE
+      - .env               # ← SAME FILE (same directory)
     environment:
       - FLASK_ENV=prod
+```
+
+### For auto-deployed customers (deployed/{customer}/ directory)
+
+For customers deployed via Flask controller in `/deployed/{customer}/` directory (like HEQ), use a **relative path going up 2 levels**:
+
+**Location:** `/home/kdresdell/minipass_env/deployed/heq/docker-compose.yml`
+
+```yaml
+  heq:
+    build:
+      context: ./app
+    container_name: minipass_heq
+    restart: always
+    env_file:
+      - ../../.env         # ← Goes up 2 levels to /home/kdresdell/minipass_env/.env
+    environment:
+      - FLASK_ENV=prod
+    ports:
+      - "8890:5000"
+```
+
+**Why `../../.env`?**
+- Current location: `/deployed/heq/`
+- First `../` goes to: `/deployed/`
+- Second `../` goes to: `/home/kdresdell/minipass_env/`
+- Result: `/home/kdresdell/minipass_env/.env` ✅
+
+**After editing:**
+```bash
+cd /home/kdresdell/minipass_env/deployed/heq
+docker-compose down
+docker-compose up -d  # No rebuild needed!
 ```
 
 **ALL containers share the SAME .env file.** Simple!
