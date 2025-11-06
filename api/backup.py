@@ -6,12 +6,17 @@ import tempfile
 import shutil
 import json
 import sqlite3
+import glob
+import logging
 from zipfile import ZipFile
 from pathlib import Path
 
 from models import db, Setting, Admin, AdminActionLog
 from decorators import admin_required, rate_limit
 from utils import get_setting
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 backup_api = Blueprint('backup_api', __name__, url_prefix='/api/v1/backup')
 
@@ -184,17 +189,38 @@ def delete_backup(filename):
         # Validate filename
         if not filename.endswith('.zip') or '/' in filename or '\\' in filename:
             return jsonify({'success': False, 'error': 'Invalid filename'}), 400
-        
+
         backup_path = os.path.join('static', 'backups', filename)
         if not os.path.exists(backup_path):
             return jsonify({'success': False, 'error': 'Backup not found'}), 404
-        
+
         os.remove(backup_path)
         log_backup_action(f"Deleted backup: {filename}")
-        
+
         return jsonify({'success': True, 'message': f'Backup {filename} deleted'})
-        
+
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@backup_api.route('/cleanup-now', methods=['POST'])
+@admin_required
+@rate_limit(max_requests=10, window=300)
+def manual_cleanup():
+    """Manually trigger cleanup of old backups (for testing/debugging)"""
+    try:
+        logger.info("[MANUAL CLEANUP] Manual cleanup endpoint called")
+
+        # Run both cleanup functions
+        cleanup_old_restore_points(keep_count=3)
+        cleanup_old_safety_backups(keep_count=3)
+
+        return jsonify({
+            'success': True,
+            'message': 'Cleanup completed. Check logs for details.'
+        })
+
+    except Exception as e:
+        logger.error(f"[MANUAL CLEANUP] Error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ============================================================================
@@ -206,60 +232,80 @@ def delete_backup(filename):
 @rate_limit(max_requests=2, window=600)  # 2 restores per 10 minutes
 def restore_backup():
     """Restore from a backup file"""
+    logger.info("[RESTORE] ========== RESTORE BACKUP FUNCTION CALLED ==========")
+
+    restore_successful = False
     try:
         filename = request.json.get('filename')
         restore_type = request.json.get('type', 'full')  # 'full', 'settings', 'data'
         confirm = request.json.get('confirm', False)
-        
+
+        logger.info(f"[RESTORE] Filename: {filename}, Type: {restore_type}, Confirm: {confirm}")
+
         if not confirm:
             return jsonify({
                 'success': False,
                 'error': 'Restore confirmation required'
             }), 400
-        
+
         if not filename:
             return jsonify({'success': False, 'error': 'Filename required'}), 400
-        
+
         backup_path = os.path.join('static', 'backups', filename)
         if not os.path.exists(backup_path):
             return jsonify({'success': False, 'error': 'Backup not found'}), 404
-        
+
         # Create restore point before restoring
         create_restore_point()
-        
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # Extract backup
             with ZipFile(backup_path, 'r') as zipf:
                 zipf.extractall(temp_dir)
-            
+
             # Read metadata
             metadata_file = os.path.join(temp_dir, 'backup_metadata.json')
             metadata = {}
             if os.path.exists(metadata_file):
                 with open(metadata_file, 'r') as f:
                     metadata = json.load(f)
-            
+
             # Restore based on type
             if restore_type in ['full', 'settings']:
                 restore_settings(temp_dir)
-            
+
             if restore_type in ['full', 'data']:
                 restore_database(temp_dir)
                 restore_uploads(temp_dir)
-            
+
             if restore_type == 'full':
                 restore_templates(temp_dir)
-        
+
+        logger.info("[RESTORE] Restore operations completed successfully")
+        restore_successful = True
+
         log_backup_action(f"Restored from backup: {filename} (type: {restore_type})")
-        
+
         return jsonify({
             'success': True,
             'message': f'Successfully restored {restore_type} backup',
             'metadata': metadata
         })
-        
+
     except Exception as e:
+        logger.error(f"[RESTORE] Error during restore: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
+
+    finally:
+        # ALWAYS cleanup old backups, even if restore failed
+        # This runs after successful restore or after exception
+        if restore_successful:
+            logger.info("[RESTORE] Running cleanup in finally block...")
+            try:
+                cleanup_old_safety_backups(keep_count=3)
+                logger.info("[RESTORE] Cleanup completed successfully")
+            except Exception as cleanup_error:
+                logger.error(f"[RESTORE] Cleanup failed: {cleanup_error}", exc_info=True)
 
 @backup_api.route('/validate/<filename>', methods=['GET'])
 @admin_required
@@ -429,6 +475,107 @@ def restore_templates(temp_dir):
     # Restore templates
     shutil.copytree(template_backup_dir, template_dir)
 
+def cleanup_old_restore_points(keep_count=3):
+    """
+    Delete old restore point ZIP files, keeping only the most recent ones.
+
+    Args:
+        keep_count (int): Number of most recent restore points to keep
+    """
+    logger.info(f"[CLEANUP] Starting cleanup_old_restore_points(keep_count={keep_count})")
+
+    backup_dir = os.path.join('static', 'backups')
+    if not os.path.exists(backup_dir):
+        logger.warning(f"[CLEANUP] Backup directory does not exist: {backup_dir}")
+        return
+
+    # Get all restore point ZIP files with timestamp pattern
+    pattern = os.path.join(backup_dir, 'restore_point_*.zip')
+    restore_files = glob.glob(pattern)
+
+    logger.info(f"[CLEANUP] Found {len(restore_files)} restore point files matching pattern: {pattern}")
+    logger.debug(f"[CLEANUP] Restore files: {restore_files}")
+
+    # Sort by modification time (newest first)
+    restore_files.sort(key=os.path.getmtime, reverse=True)
+
+    files_to_delete = restore_files[keep_count:]
+    logger.info(f"[CLEANUP] Will keep {min(len(restore_files), keep_count)} files, deleting {len(files_to_delete)} old files")
+
+    # Delete old files beyond keep_count
+    for old_file in files_to_delete:
+        try:
+            os.remove(old_file)
+            logger.info(f"[CLEANUP] ✓ Deleted old restore point: {old_file}")
+        except Exception as e:
+            logger.error(f"[CLEANUP] ✗ Error deleting {old_file}: {e}")
+
+def cleanup_old_safety_backups(keep_count=3):
+    """
+    Delete old safety backups created before restore operations.
+    Cleans up:
+    - instance/*.backup_* (database backups)
+    - static/uploads_backup_*/ (upload folder backups)
+    - templates/email_templates_backup_*/ (template folder backups)
+
+    Args:
+        keep_count (int): Number of most recent backups to keep for each type
+    """
+    logger.info(f"[CLEANUP] Starting cleanup_old_safety_backups(keep_count={keep_count})")
+
+    # Cleanup database backups
+    db_backup_pattern = 'instance/*.backup_*'
+    db_backups = glob.glob(db_backup_pattern)
+    logger.info(f"[CLEANUP] Database backups: Found {len(db_backups)} files matching '{db_backup_pattern}'")
+    logger.debug(f"[CLEANUP] Database backup files: {db_backups}")
+
+    db_backups.sort(key=os.path.getmtime, reverse=True)
+    db_to_delete = db_backups[keep_count:]
+    logger.info(f"[CLEANUP] Database backups: Keeping {min(len(db_backups), keep_count)}, deleting {len(db_to_delete)}")
+
+    for old_backup in db_to_delete:
+        try:
+            os.remove(old_backup)
+            logger.info(f"[CLEANUP] ✓ Deleted old database backup: {old_backup}")
+        except Exception as e:
+            logger.error(f"[CLEANUP] ✗ Error deleting {old_backup}: {e}")
+
+    # Cleanup uploads backups
+    uploads_backup_pattern = 'static/uploads_backup_*'
+    uploads_backups = glob.glob(uploads_backup_pattern)
+    logger.info(f"[CLEANUP] Upload backups: Found {len(uploads_backups)} folders matching '{uploads_backup_pattern}'")
+    logger.debug(f"[CLEANUP] Upload backup folders: {uploads_backups}")
+
+    uploads_backups.sort(key=os.path.getmtime, reverse=True)
+    uploads_to_delete = uploads_backups[keep_count:]
+    logger.info(f"[CLEANUP] Upload backups: Keeping {min(len(uploads_backups), keep_count)}, deleting {len(uploads_to_delete)}")
+
+    for old_backup in uploads_to_delete:
+        try:
+            shutil.rmtree(old_backup)
+            logger.info(f"[CLEANUP] ✓ Deleted old uploads backup: {old_backup}")
+        except Exception as e:
+            logger.error(f"[CLEANUP] ✗ Error deleting {old_backup}: {e}")
+
+    # Cleanup template backups
+    templates_backup_pattern = 'templates/email_templates_backup_*'
+    template_backups = glob.glob(templates_backup_pattern)
+    logger.info(f"[CLEANUP] Template backups: Found {len(template_backups)} folders matching '{templates_backup_pattern}'")
+    logger.debug(f"[CLEANUP] Template backup folders: {template_backups}")
+
+    template_backups.sort(key=os.path.getmtime, reverse=True)
+    templates_to_delete = template_backups[keep_count:]
+    logger.info(f"[CLEANUP] Template backups: Keeping {min(len(template_backups), keep_count)}, deleting {len(templates_to_delete)}")
+
+    for old_backup in templates_to_delete:
+        try:
+            shutil.rmtree(old_backup)
+            logger.info(f"[CLEANUP] ✓ Deleted old template backup: {old_backup}")
+        except Exception as e:
+            logger.error(f"[CLEANUP] ✗ Error deleting {old_backup}: {e}")
+
+    logger.info(f"[CLEANUP] Finished cleanup_old_safety_backups()")
+
 def create_restore_point():
     """Create an automatic restore point before major operations"""
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -470,7 +617,10 @@ def create_restore_point():
             # Move to backup directory
             final_path = os.path.join(backup_dir, restore_point_name)
             shutil.move(backup_path, final_path)
-        
+
+        # Cleanup old restore points after successful creation
+        cleanup_old_restore_points(keep_count=3)
+
         return restore_point_name
     except Exception as e:
         print(f"Failed to create restore point: {e}")

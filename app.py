@@ -3035,29 +3035,32 @@ def upload_and_restore_backup():
         file.save(temp_backup_path)
         
         # Import restore functions directly
-        from api.backup import restore_database, restore_uploads, restore_templates, create_restore_point
+        from api.backup import restore_database, restore_uploads, restore_templates, create_restore_point, cleanup_old_safety_backups
         from zipfile import ZipFile
-        
+
         try:
             # Create restore point before restoration
             create_restore_point()
-            
+
             # Extract and restore from the uploaded backup
             with tempfile.TemporaryDirectory() as temp_extract_dir:
                 with ZipFile(temp_backup_path, 'r') as zipf:
                     zipf.extractall(temp_extract_dir)
-                
+
                 # Restore database, uploads, and templates
                 restore_database(temp_extract_dir)
                 restore_uploads(temp_extract_dir)
                 restore_templates(temp_extract_dir)
-            
+
+            # CLEANUP OLD BACKUPS - Keep only 3 most recent
+            cleanup_old_safety_backups(keep_count=3)
+
             # Clean up the temporary uploaded file
             try:
                 os.remove(temp_backup_path)
             except:
                 pass
-            
+
             flash(f"✅ Successfully restored from uploaded backup: {filename}", "success")
             
         except Exception as restore_error:
