@@ -521,6 +521,418 @@ def task8_fix_reminderlog_cascade(cursor):
         raise
 
 # ============================================================================
+# TASK 9: Fix Passport Deletion FK Constraints (SET NULL)
+# ============================================================================
+def task9_fix_passport_deletion_fks(cursor):
+    """Add ON DELETE SET NULL to passport_id foreign keys in signup, ebank_payment, and survey_response"""
+    log("🔗", "TASK 9: Fixing passport deletion FK constraints (SET NULL)", Colors.BLUE)
+
+    tables_to_fix = [
+        {
+            'name': 'signup',
+            'fk_column': 'passport_id',
+            'columns': 'id, user_id, activity_id, subject, description, form_url, form_data, signed_up_at, paid, paid_at, passport_id, status, passport_type_id',
+            'schema': """
+                CREATE TABLE signup_new (
+                    id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    activity_id INTEGER NOT NULL,
+                    subject VARCHAR(200),
+                    description TEXT,
+                    form_url VARCHAR(500),
+                    form_data TEXT,
+                    signed_up_at DATETIME,
+                    paid BOOLEAN,
+                    paid_at DATETIME,
+                    passport_id INTEGER,
+                    status VARCHAR(50),
+                    passport_type_id INTEGER,
+                    PRIMARY KEY (id),
+                    FOREIGN KEY(activity_id) REFERENCES activity (id),
+                    FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE SET NULL,
+                    FOREIGN KEY(user_id) REFERENCES user (id),
+                    FOREIGN KEY(passport_type_id) REFERENCES passport_type (id)
+                )
+            """,
+            'indexes': [
+                "CREATE INDEX ix_signup_status ON signup (status)"
+            ]
+        },
+        {
+            'name': 'ebank_payment',
+            'fk_column': 'matched_pass_id',
+            'columns': 'id, timestamp, from_email, subject, bank_info_name, bank_info_amt, matched_pass_id, matched_name, matched_amt, name_score, result, mark_as_paid, note, email_received_date',
+            'schema': """
+                CREATE TABLE ebank_payment_new (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    timestamp DATETIME,
+                    from_email VARCHAR(150),
+                    subject TEXT,
+                    bank_info_name VARCHAR(100),
+                    bank_info_amt FLOAT,
+                    matched_pass_id INTEGER,
+                    matched_name VARCHAR(100),
+                    matched_amt FLOAT,
+                    name_score INTEGER,
+                    result VARCHAR(50),
+                    mark_as_paid BOOLEAN,
+                    note TEXT,
+                    email_received_date DATETIME,
+                    FOREIGN KEY(matched_pass_id) REFERENCES passport (id) ON DELETE SET NULL
+                )
+            """,
+            'indexes': []
+        },
+        {
+            'name': 'survey_response',
+            'fk_column': 'passport_id',
+            'columns': 'id, survey_id, user_id, passport_id, response_token, responses, completed, completed_dt, started_dt, invited_dt, created_dt, ip_address, user_agent',
+            'schema': """
+                CREATE TABLE survey_response_new (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    survey_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    passport_id INTEGER,
+                    response_token VARCHAR(32) NOT NULL UNIQUE,
+                    responses TEXT,
+                    completed BOOLEAN,
+                    completed_dt DATETIME,
+                    started_dt DATETIME,
+                    invited_dt DATETIME,
+                    created_dt DATETIME,
+                    ip_address VARCHAR(45),
+                    user_agent TEXT,
+                    FOREIGN KEY(survey_id) REFERENCES survey (id),
+                    FOREIGN KEY(user_id) REFERENCES user (id),
+                    FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE SET NULL
+                )
+            """,
+            'indexes': [
+                "CREATE INDEX ix_survey_response_token ON survey_response (response_token)",
+                "CREATE INDEX ix_survey_response_survey ON survey_response (survey_id)"
+            ]
+        }
+    ]
+
+    total_fixed = 0
+    total_skipped = 0
+
+    for table_config in tables_to_fix:
+        table_name = table_config['name']
+        fk_column = table_config['fk_column']
+
+        # Check if table exists
+        if not check_table_exists(cursor, table_name):
+            log("⏭️ ", f"  Table '{table_name}' doesn't exist, skipping", Colors.YELLOW)
+            total_skipped += 1
+            continue
+
+        # Check current foreign key constraint
+        cursor.execute(f"PRAGMA foreign_key_list({table_name})")
+        fk_info = cursor.fetchall()
+
+        # Check if already has ON DELETE SET NULL for passport_id
+        already_fixed = False
+        for fk in fk_info:
+            # fk format: (id, seq, table, from, to, on_update, on_delete, match)
+            if len(fk) >= 7 and fk[3] == fk_column and 'SET NULL' in str(fk[6]):
+                already_fixed = True
+                break
+
+        if already_fixed:
+            log("⏭️ ", f"  {table_name}.{fk_column}: ON DELETE SET NULL already configured", Colors.YELLOW)
+            total_skipped += 1
+            continue
+
+        log("🔄", f"  Recreating {table_name} table with ON DELETE SET NULL")
+
+        try:
+            # Disable foreign keys temporarily
+            cursor.execute("PRAGMA foreign_keys = OFF")
+
+            # Create new table with ON DELETE SET NULL
+            cursor.execute(table_config['schema'])
+
+            # Copy data with explicit column names to preserve order
+            columns = table_config['columns']
+            cursor.execute(f"INSERT INTO {table_name}_new ({columns}) SELECT {columns} FROM {table_name}")
+            rows_copied = cursor.rowcount
+
+            # Drop old table
+            cursor.execute(f"DROP TABLE {table_name}")
+
+            # Rename new table
+            cursor.execute(f"ALTER TABLE {table_name}_new RENAME TO {table_name}")
+
+            # Recreate indexes
+            for index_sql in table_config['indexes']:
+                cursor.execute(index_sql)
+
+            # Re-enable foreign keys
+            cursor.execute("PRAGMA foreign_keys = ON")
+
+            log("✅", f"  {table_name} recreated with ON DELETE SET NULL ({rows_copied} rows preserved)", Colors.GREEN)
+            total_fixed += 1
+
+        except sqlite3.OperationalError as e:
+            log("❌", f"  Failed to fix {table_name}: {e}", Colors.RED)
+            # Try to re-enable foreign keys
+            cursor.execute("PRAGMA foreign_keys = ON")
+            raise
+
+    log("📊", f"  Summary: {total_fixed} table(s) fixed, {total_skipped} already configured")
+    return True
+
+
+def task10_fix_passport_type_deletion_fks(cursor):
+    """Add ON DELETE SET NULL to passport_type_id foreign keys in signup, passport, and survey"""
+    log("🔗", "TASK 10: Fixing passport_type deletion FK constraints (SET NULL)", Colors.BLUE)
+
+    tables_to_fix = [
+        {
+            'name': 'signup',
+            'fk_column': 'passport_type_id',
+            'columns': 'id, user_id, activity_id, subject, description, form_url, form_data, signed_up_at, paid, paid_at, passport_id, status, passport_type_id',
+            'schema': """
+                CREATE TABLE signup_new (
+                    id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    activity_id INTEGER NOT NULL,
+                    subject VARCHAR(200),
+                    description TEXT,
+                    form_url VARCHAR(500),
+                    form_data TEXT,
+                    signed_up_at DATETIME,
+                    paid BOOLEAN,
+                    paid_at DATETIME,
+                    passport_id INTEGER,
+                    status VARCHAR(50),
+                    passport_type_id INTEGER,
+                    PRIMARY KEY (id),
+                    FOREIGN KEY(activity_id) REFERENCES activity (id),
+                    FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE SET NULL,
+                    FOREIGN KEY(user_id) REFERENCES user (id),
+                    FOREIGN KEY(passport_type_id) REFERENCES passport_type (id) ON DELETE SET NULL
+                )
+            """,
+            'indexes': [
+                "CREATE INDEX ix_signup_status ON signup (status)"
+            ]
+        },
+        {
+            'name': 'passport',
+            'fk_column': 'passport_type_id',
+            'columns': 'id, pass_code, user_id, activity_id, sold_amt, uses_remaining, created_by, created_dt, paid, paid_date, marked_paid_by, notes, passport_type_id, passport_type_name',
+            'schema': """
+                CREATE TABLE passport_new (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    pass_code VARCHAR(16) UNIQUE NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    activity_id INTEGER NOT NULL,
+                    sold_amt FLOAT,
+                    uses_remaining INTEGER,
+                    created_by INTEGER,
+                    created_dt DATETIME,
+                    paid BOOLEAN,
+                    paid_date DATETIME,
+                    marked_paid_by VARCHAR(120),
+                    notes TEXT,
+                    passport_type_id INTEGER,
+                    passport_type_name VARCHAR(100),
+                    FOREIGN KEY(user_id) REFERENCES user (id),
+                    FOREIGN KEY(activity_id) REFERENCES activity (id),
+                    FOREIGN KEY(passport_type_id) REFERENCES passport_type (id) ON DELETE SET NULL,
+                    FOREIGN KEY(created_by) REFERENCES admin (id)
+                )
+            """,
+            'indexes': [
+                "CREATE INDEX ix_passport_pass_code ON passport (pass_code)"
+            ]
+        },
+        {
+            'name': 'survey',
+            'fk_column': 'passport_type_id',
+            'columns': 'id, activity_id, template_id, passport_type_id, name, description, survey_token, created_by, created_dt, status, email_sent, email_sent_dt',
+            'schema': """
+                CREATE TABLE survey_new (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    activity_id INTEGER NOT NULL,
+                    template_id INTEGER NOT NULL,
+                    passport_type_id INTEGER,
+                    name VARCHAR(150) NOT NULL,
+                    description TEXT,
+                    survey_token VARCHAR(32) UNIQUE NOT NULL,
+                    created_by INTEGER,
+                    created_dt DATETIME,
+                    status VARCHAR(50),
+                    email_sent BOOLEAN,
+                    email_sent_dt DATETIME,
+                    FOREIGN KEY(activity_id) REFERENCES activity (id),
+                    FOREIGN KEY(template_id) REFERENCES survey_template (id),
+                    FOREIGN KEY(passport_type_id) REFERENCES passport_type (id) ON DELETE SET NULL,
+                    FOREIGN KEY(created_by) REFERENCES admin (id)
+                )
+            """,
+            'indexes': [
+                "CREATE INDEX ix_survey_token ON survey (survey_token)"
+            ]
+        }
+    ]
+
+    total_fixed = 0
+    total_skipped = 0
+
+    for table_config in tables_to_fix:
+        table_name = table_config['name']
+        fk_column = table_config['fk_column']
+
+        # Check if table exists
+        if not check_table_exists(cursor, table_name):
+            log("⏭️ ", f"  Table '{table_name}' doesn't exist, skipping", Colors.YELLOW)
+            total_skipped += 1
+            continue
+
+        # Check current foreign key constraint
+        cursor.execute(f"PRAGMA foreign_key_list({table_name})")
+        fk_info = cursor.fetchall()
+
+        # Check if already has ON DELETE SET NULL for passport_type_id
+        already_fixed = False
+        for fk in fk_info:
+            # fk format: (id, seq, table, from, to, on_update, on_delete, match)
+            if len(fk) >= 7 and fk[3] == fk_column and 'SET NULL' in str(fk[6]):
+                already_fixed = True
+                break
+
+        if already_fixed:
+            log("⏭️ ", f"  {table_name}.{fk_column}: ON DELETE SET NULL already configured", Colors.YELLOW)
+            total_skipped += 1
+            continue
+
+        log("🔄", f"  Recreating {table_name} table with ON DELETE SET NULL")
+
+        try:
+            # Disable foreign keys temporarily
+            cursor.execute("PRAGMA foreign_keys = OFF")
+
+            # Create new table with ON DELETE SET NULL
+            cursor.execute(table_config['schema'])
+
+            # Copy data with explicit column names to preserve order
+            columns = table_config['columns']
+            cursor.execute(f"INSERT INTO {table_name}_new ({columns}) SELECT {columns} FROM {table_name}")
+            rows_copied = cursor.rowcount
+
+            # Drop old table
+            cursor.execute(f"DROP TABLE {table_name}")
+
+            # Rename new table
+            cursor.execute(f"ALTER TABLE {table_name}_new RENAME TO {table_name}")
+
+            # Recreate indexes
+            for index_sql in table_config['indexes']:
+                cursor.execute(index_sql)
+
+            # Re-enable foreign keys
+            cursor.execute("PRAGMA foreign_keys = ON")
+
+            log("✅", f"  {table_name} recreated with ON DELETE SET NULL ({rows_copied} rows preserved)", Colors.GREEN)
+            total_fixed += 1
+
+        except sqlite3.OperationalError as e:
+            log("❌", f"  Failed to fix {table_name}: {e}", Colors.RED)
+            # Try to re-enable foreign keys
+            cursor.execute("PRAGMA foreign_keys = ON")
+            raise
+
+    log("📊", f"  Summary: {total_fixed} table(s) fixed, {total_skipped} already configured")
+    return True
+
+
+def task11_fix_survey_deletion_fk(cursor):
+    """Add ON DELETE CASCADE to survey_response.survey_id foreign key"""
+    log("🔗", "TASK 11: Fixing survey deletion FK constraint (CASCADE)", Colors.BLUE)
+
+    table_name = 'survey_response'
+    fk_column = 'survey_id'
+
+    # Check if table exists
+    if not check_table_exists(cursor, table_name):
+        log("⏭️ ", f"  Table '{table_name}' doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    # Check current foreign key constraint
+    cursor.execute(f"PRAGMA foreign_key_list({table_name})")
+    fk_info = cursor.fetchall()
+
+    # Check if already has ON DELETE CASCADE for survey_id
+    already_fixed = False
+    for fk in fk_info:
+        # fk format: (id, seq, table, from, to, on_update, on_delete, match)
+        if len(fk) >= 7 and fk[3] == fk_column and 'CASCADE' in str(fk[6]):
+            already_fixed = True
+            break
+
+    if already_fixed:
+        log("⏭️ ", f"  {table_name}.{fk_column}: ON DELETE CASCADE already configured", Colors.YELLOW)
+        return True
+
+    log("🔄", f"  Recreating {table_name} table with ON DELETE CASCADE for {fk_column}")
+
+    try:
+        # Disable foreign keys temporarily
+        cursor.execute("PRAGMA foreign_keys = OFF")
+
+        # Create new table with ON DELETE CASCADE
+        cursor.execute("""
+            CREATE TABLE survey_response_new (
+                id INTEGER NOT NULL PRIMARY KEY,
+                survey_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                passport_id INTEGER,
+                response_token VARCHAR(32) NOT NULL UNIQUE,
+                responses TEXT,
+                completed BOOLEAN,
+                completed_dt DATETIME,
+                started_dt DATETIME,
+                invited_dt DATETIME,
+                created_dt DATETIME,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                FOREIGN KEY(survey_id) REFERENCES survey (id) ON DELETE CASCADE,
+                FOREIGN KEY(user_id) REFERENCES user (id),
+                FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE SET NULL
+            )
+        """)
+
+        # Copy data with explicit column names to preserve order
+        columns = 'id, survey_id, user_id, passport_id, response_token, responses, completed, completed_dt, started_dt, invited_dt, created_dt, ip_address, user_agent'
+        cursor.execute(f"INSERT INTO survey_response_new ({columns}) SELECT {columns} FROM survey_response")
+        rows_copied = cursor.rowcount
+
+        # Drop old table
+        cursor.execute(f"DROP TABLE survey_response")
+
+        # Rename new table
+        cursor.execute(f"ALTER TABLE survey_response_new RENAME TO survey_response")
+
+        # Recreate indexes
+        cursor.execute("CREATE INDEX ix_survey_response_token ON survey_response (response_token)")
+        cursor.execute("CREATE INDEX ix_survey_response_survey ON survey_response (survey_id)")
+
+        # Re-enable foreign keys
+        cursor.execute("PRAGMA foreign_keys = ON")
+
+        log("✅", f"  survey_response recreated with ON DELETE CASCADE ({rows_copied} rows preserved)", Colors.GREEN)
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to fix survey_response: {e}", Colors.RED)
+        # Try to re-enable foreign keys
+        cursor.execute("PRAGMA foreign_keys = ON")
+        raise
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -549,6 +961,9 @@ def main():
         ("Verification", task6_verify_schema),
         ("Payment Email Dates", task7_add_email_received_date),
         ("ReminderLog CASCADE", task8_fix_reminderlog_cascade),
+        ("Passport Deletion FKs", task9_fix_passport_deletion_fks),
+        ("PassportType Deletion FKs", task10_fix_passport_type_deletion_fks),
+        ("Survey Deletion FK", task11_fix_survey_deletion_fk),
     ]
 
     completed = 0
