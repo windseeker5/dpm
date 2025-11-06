@@ -457,7 +457,7 @@ def task7_add_email_received_date(cursor):
 # TASK 8: Fix ReminderLog CASCADE DELETE
 # ============================================================================
 def task8_fix_reminderlog_cascade(cursor):
-    """Add CASCADE DELETE to reminder_log.passport_id foreign key"""
+    """Migrate reminder_log from old pass_id to passport_id with CASCADE DELETE"""
     log("🔗", "TASK 8: Fixing reminder_log CASCADE DELETE", Colors.BLUE)
 
     # Check if reminder_log table exists
@@ -465,40 +465,64 @@ def task8_fix_reminderlog_cascade(cursor):
         log("⏭️ ", "  reminder_log table doesn't exist, skipping", Colors.YELLOW)
         return True
 
+    # Get current table schema to check what columns exist
+    cursor.execute("PRAGMA table_info(reminder_log)")
+    columns_info = cursor.fetchall()
+    column_names = [col[1] for col in columns_info]
+
+    # Check if we have old pass_id or new passport_id
+    has_pass_id = 'pass_id' in column_names
+    has_passport_id = 'passport_id' in column_names
+
+    if not has_pass_id and not has_passport_id:
+        log("⏭️ ", "  reminder_log table has neither pass_id nor passport_id, skipping", Colors.YELLOW)
+        return True
+
     # Check current foreign key constraint
     cursor.execute("PRAGMA foreign_key_list(reminder_log)")
     fk_info = cursor.fetchall()
 
-    if fk_info:
-        # Check if already has CASCADE
+    # If already has passport_id with CASCADE, we're done
+    if has_passport_id and fk_info:
         for fk in fk_info:
-            if 'CASCADE' in str(fk):
-                log("⏭️ ", "  CASCADE DELETE already configured", Colors.YELLOW)
+            # fk format: (id, seq, table, from, to, on_update, on_delete, match)
+            if len(fk) >= 7 and fk[2] == 'passport' and 'CASCADE' in str(fk[6]):
+                log("⏭️ ", "  CASCADE DELETE already configured with passport_id", Colors.YELLOW)
                 return True
 
-    log("🔄", "  Recreating reminder_log table with CASCADE DELETE")
+    # Need to migrate from pass_id to passport_id or fix CASCADE
+    if has_pass_id:
+        log("🔄", "  Migrating from old 'pass_id' to 'passport_id' with CASCADE DELETE")
+    else:
+        log("🔄", "  Recreating reminder_log table with CASCADE DELETE")
 
     try:
         # Disable foreign keys temporarily
         cursor.execute("PRAGMA foreign_keys = OFF")
 
-        # Create new table with CASCADE
-        cursor.execute("""
-            CREATE TABLE reminder_log_new (
-                id INTEGER NOT NULL,
-                passport_id INTEGER NOT NULL,
-                reminder_sent_at DATETIME,
-                PRIMARY KEY (id),
-                FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE CASCADE
-            )
-        """)
+        # Create new table with passport_id and CASCADE (matching Flask migration format)
+        cursor.execute("""CREATE TABLE IF NOT EXISTS "reminder_log_new" (
+    id INTEGER NOT NULL PRIMARY KEY,
+    passport_id INTEGER NOT NULL,
+    reminder_sent_at DATETIME,
+    FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE CASCADE
+)""")
 
-        # Copy data
-        cursor.execute("""
-            INSERT INTO reminder_log_new (id, passport_id, reminder_sent_at)
-            SELECT id, passport_id, reminder_sent_at
-            FROM reminder_log
-        """)
+        # Copy data - handle both old pass_id and new passport_id column names
+        if has_pass_id:
+            # Migrate from old pass_id to new passport_id
+            cursor.execute("""
+                INSERT INTO reminder_log_new (id, passport_id, reminder_sent_at)
+                SELECT id, pass_id, reminder_sent_at
+                FROM reminder_log
+            """)
+        else:
+            # Already has passport_id, just copy
+            cursor.execute("""
+                INSERT INTO reminder_log_new (id, passport_id, reminder_sent_at)
+                SELECT id, passport_id, reminder_sent_at
+                FROM reminder_log
+            """)
 
         rows_copied = cursor.rowcount
 
@@ -511,7 +535,10 @@ def task8_fix_reminderlog_cascade(cursor):
         # Re-enable foreign keys
         cursor.execute("PRAGMA foreign_keys = ON")
 
-        log("✅", f"  reminder_log table recreated with CASCADE DELETE ({rows_copied} rows preserved)", Colors.GREEN)
+        if has_pass_id:
+            log("✅", f"  reminder_log migrated: pass_id → passport_id with CASCADE DELETE ({rows_copied} rows preserved)", Colors.GREEN)
+        else:
+            log("✅", f"  reminder_log recreated with CASCADE DELETE ({rows_copied} rows preserved)", Colors.GREEN)
         return True
 
     except sqlite3.OperationalError as e:
@@ -849,9 +876,36 @@ def task10_fix_passport_type_deletion_fks(cursor):
     return True
 
 
-def task11_fix_survey_deletion_fk(cursor):
+def task11_drop_old_pass_table(cursor):
+    """Drop obsolete 'pass' table if it exists (replaced by 'passport')"""
+    log("🗑️ ", "TASK 11: Removing obsolete 'pass' table", Colors.BLUE)
+
+    # Check if old pass table exists
+    if not check_table_exists(cursor, 'pass'):
+        log("⏭️ ", "  Old 'pass' table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    # Check if it's empty (safety check)
+    cursor.execute("SELECT COUNT(*) FROM pass")
+    count = cursor.fetchone()[0]
+
+    if count > 0:
+        log("⚠️ ", f"  WARNING: 'pass' table has {count} records - manual review needed", Colors.YELLOW)
+        log("💡", "  Keeping table for safety - please manually review and migrate data", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("DROP TABLE pass")
+        log("✅", "  Obsolete 'pass' table removed (was empty)", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to drop 'pass' table: {e}", Colors.RED)
+        raise
+
+
+def task12_fix_survey_deletion_fk(cursor):
     """Add ON DELETE CASCADE to survey_response.survey_id foreign key"""
-    log("🔗", "TASK 11: Fixing survey deletion FK constraint (CASCADE)", Colors.BLUE)
+    log("🔗", "TASK 12: Fixing survey deletion FK constraint (CASCADE)", Colors.BLUE)
 
     table_name = 'survey_response'
     fk_column = 'survey_id'
@@ -963,7 +1017,8 @@ def main():
         ("ReminderLog CASCADE", task8_fix_reminderlog_cascade),
         ("Passport Deletion FKs", task9_fix_passport_deletion_fks),
         ("PassportType Deletion FKs", task10_fix_passport_type_deletion_fks),
-        ("Survey Deletion FK", task11_fix_survey_deletion_fk),
+        ("Drop Old Pass Table", task11_drop_old_pass_table),
+        ("Survey Deletion FK", task12_fix_survey_deletion_fk),
     ]
 
     completed = 0
