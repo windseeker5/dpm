@@ -1,9 +1,67 @@
-# dpm_app/.dockerignore
+# Minipass App - Docker Build Exclusions
+# Only production code should be included in Docker images
+
+# Python bytecode and virtual environment
 venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.DS_Store
-#.env
+*.py[cod]
+
+# Development environment files
+.env
+.env.*
+*.env
+
+# Database files (mounted as volumes)
 instance/
+*.db
+
+# Development documentation (228KB savings)
+docs/
+CLAUDE.md
+README.md
+*.md
+
+# Development and testing
+test/
+components/
+plans/
+playwrights/
+
+# Claude Code configuration
+.claude/
+playwright-mcp-config.json
+playwright-wrapper.sh
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Backup and temporary files
+*.backup
+*.backup_*
+*.tmp
+*.log
+flask.log
+
+# Static backup directories
+static/backups/
+static/uploads_backup_*/
+templates/email_templates_backup_*/
+
+# SQL exports
+SQL/
+
+# Playwright testing
+.playwright-mcp/
