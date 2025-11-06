@@ -29,6 +29,9 @@ instance/*.db
 
 # Backup files and directories
 static/backups/*.zip
+static/backups/database/
+static/backups/instance/
+static/backups/*.db
 instance/*.backup_*
 static/uploads_backup_*/
 templates/email_templates_backup_*/
