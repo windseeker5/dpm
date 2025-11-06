@@ -2210,10 +2210,10 @@ def render_and_send_email(
 
     # 🧠 Fallback for non-compiled (classic templates)
     if not final_html:
-        logo_path = os.path.join("static", "uploads", "logo.png")
+        logo_path = os.path.join("static", "minipass_logo.png")
         if os.path.exists(logo_path):
             inline_images["logo_image"] = open(logo_path, "rb").read()
-            context["logo_url"] = url_for("static", filename="uploads/logo.png")
+            context["logo_url"] = url_for("static", filename="minipass_logo.png")
 
     # 🛡️ Finally SEND
 
@@ -2865,7 +2865,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         "title": title,
         "intro_text": intro,
         "conclusion_text": conclusion,
-        "logo_url": "/static/uploads/logo.png",
+        "logo_url": "/static/minipass_logo.png",
     }
     
     # Add organization variables for footer
@@ -3046,7 +3046,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data),
         "history_html": render_template("email_blocks/history_table_inline.html", history=history),
         "email_info": "",
-        "logo_url": "/static/uploads/logo.png",
+        "logo_url": "/static/minipass_logo.png",
         "special_message": "",
         "activity_name": activity.name if activity else "",
         "unsubscribe_url": "",  # Will be filled by send_email with subdomain
@@ -3124,7 +3124,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
             print(f"Using organization logo: {org_logo_filename}")
         else:
             # Final fallback to default logo
-            logo_data = open("static/uploads/logo.png", "rb").read()
+            logo_data = open("static/minipass_logo.png", "rb").read()
             inline_images['logo'] = logo_data
             print("Using default Minipass logo")
 
