@@ -8974,7 +8974,7 @@ def test_email_template(activity_id):
             logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
         if not logo_path or not os.path.exists(logo_path):
             # Try default logo
-            logo_path = 'static/uploads/logo.png'
+            logo_path = 'static/minipass_logo.png'
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 inline_images['logo'] = f.read()
@@ -9036,7 +9036,7 @@ def get_activity_logo_url(activity):
     """Get logo URL for activity with fallback to default logo"""
     if activity and activity.logo_filename:
         return url_for('static', filename=f'uploads/logos/{activity.logo_filename}')
-    return url_for('static', filename='uploads/logo.png')
+    return url_for('static', filename='minipass_logo.png')
 
 
 @app.route('/activity/<int:activity_id>/upload-logo', methods=['POST'])
@@ -9138,7 +9138,7 @@ def delete_activity_logo(activity_id):
             db.session.commit()
         
         # Return default logo URL
-        default_logo_url = url_for('static', filename='uploads/logo.png')
+        default_logo_url = url_for('static', filename='minipass_logo.png')
         
         return jsonify({
             "success": True, 
