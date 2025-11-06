@@ -3379,6 +3379,15 @@ def edit_passport(passport_id):
             passport.passport_type_name = None
 
         db.session.commit()
+
+        # Log admin action for audit trail
+        from models import AdminActionLog
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Passport for {passport.user.name if passport.user else 'Unknown'} ({passport.pass_code}) edited by {session.get('admin', 'unknown')}"
+        ))
+        db.session.commit()
+
         flash("Passport updated successfully.", "success")
         return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 

@@ -154,7 +154,7 @@ class Signup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
-    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id"), nullable=True)  # Added for passport type tracking
+    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id", ondelete="SET NULL"), nullable=True)  # Added for passport type tracking
     subject = db.Column(db.String(200))
     description = db.Column(db.Text)
     form_url = db.Column(db.String(500))
@@ -162,7 +162,7 @@ class Signup(db.Model):
     signed_up_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     paid = db.Column(db.Boolean, default=False)
     paid_at = db.Column(db.DateTime)
-    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"))
+    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"))
     status = db.Column(db.String(50), default="pending")
 
 
@@ -171,7 +171,7 @@ class Passport(db.Model):
     pass_code = db.Column(db.String(16), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
-    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id"), nullable=True)  # New field
+    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id", ondelete="SET NULL"), nullable=True)  # New field
     passport_type_name = db.Column(db.String(100), nullable=True)  # Preserved type name for historical display
     sold_amt = db.Column(db.Float, default=0.0)
     uses_remaining = db.Column(db.Integer, default=0)
@@ -209,7 +209,7 @@ class EbankPayment(db.Model):
     subject = db.Column(db.Text)
     bank_info_name = db.Column(db.String(100))
     bank_info_amt = db.Column(db.Float)
-    matched_pass_id = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=True)  # ✅ Fixed to reference passport table
+    matched_pass_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"), nullable=True)  # ✅ Fixed to reference passport table
     matched_name = db.Column(db.String(100))
     matched_amt = db.Column(db.Float)
     name_score = db.Column(db.Integer)
@@ -262,7 +262,7 @@ class Survey(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
     template_id = db.Column(db.Integer, db.ForeignKey("survey_template.id"), nullable=False)
-    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id"), nullable=True)
+    passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id", ondelete="SET NULL"), nullable=True)
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text)
     survey_token = db.Column(db.String(32), unique=True, nullable=False)  # For URL generation
@@ -280,9 +280,9 @@ class Survey(db.Model):
 
 class SurveyResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    survey_id = db.Column(db.Integer, db.ForeignKey("survey.id"), nullable=False)
+    survey_id = db.Column(db.Integer, db.ForeignKey("survey.id", ondelete="CASCADE"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=True)
+    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"), nullable=True)
     response_token = db.Column(db.String(32), unique=True, nullable=False)
     responses = db.Column(db.Text)  # JSON string containing all answers
     completed = db.Column(db.Boolean, default=False)
