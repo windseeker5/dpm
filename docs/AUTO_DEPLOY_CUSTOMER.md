@@ -11,13 +11,13 @@ This guide assumes you have already:
 - Imported and tested the database locally at `/home/kdresdell/Documents/DEV/minipass_env/app/instance/minipass.db`
 - Run database upgrades locally and verified everything works
 - Tested the application with the customer's data on `localhost:5000`
-- Verified the upload folder is in sync at `/home/kdresdell/Documents/DEV/minipass_env/app/static/upload/`
+- Verified the upload folder is in sync at `/home/kdresdell/Documents/DEV/minipass_env/app/static/uploads/`
 
 **If you haven't done local testing yet, STOP and do that first!**
 
 ---
 
-## 🚀 Git-Based Customer Deployment (7 Steps)
+## 🚀 Git-Based Customer Deployment (8 Steps)
 
 ### 1️⃣ Connect to VPS & Navigate to Customer
 ```bash
@@ -84,11 +84,11 @@ scp -P 2222 /home/kdresdell/Documents/DEV/minipass_env/app/instance/minipass.db 
 ```bash
 # Still on LOCAL machine:
 # SCP upload folder from local dev to VPS (complete replacement)
-scp -P 2222 -r /home/kdresdell/Documents/DEV/minipass_env/app/static/upload \
+scp -P 2222 -r /home/kdresdell/Documents/DEV/minipass_env/app/static/uploads \
     kdresdell@minipass.me:/home/kdresdell/minipass_env/deployed/{CUSTOMER_NAME}/app/static/
 
 # Example for HEQ:
-scp -P 2222 -r /home/kdresdell/Documents/DEV/minipass_env/app/static/upload \
+scp -P 2222 -r /home/kdresdell/Documents/DEV/minipass_env/app/static/uploads \
     kdresdell@minipass.me:/home/kdresdell/minipass_env/deployed/heq/app/static/
 ```
 
@@ -96,7 +96,57 @@ scp -P 2222 -r /home/kdresdell/Documents/DEV/minipass_env/app/static/upload \
 
 **Now return to your VPS SSH session**
 
-### 7️⃣ Rebuild and Start Container
+### 7️⃣ Configure API Keys (.env file)
+
+```bash
+# Back on VPS in the customer directory
+# Edit docker-compose.yml to add .env file reference
+nano docker-compose.yml
+```
+
+**Add the `env_file` section** right after the `build:` section and BEFORE `volumes:`:
+
+```yaml
+services:
+  flask-app:
+    container_name: minipass_heq
+    build:
+      context: ./app
+    env_file:              # ← ADD THESE 2 LINES
+      - ../../.env         # ← Points to /home/kdresdell/minipass_env/.env
+    volumes:
+      - ./app:/app
+      - ./app/instance:/app/instance
+    environment:           # ← KEEP all existing environment variables
+      - FLASK_ENV=dev
+      - ADMIN_EMAIL=hockeyestduquebec@gmail.com
+      - ADMIN_PASSWORD=kbL4oGPLphOJi2R6
+      - ORG_NAME=Hockey Est du Quebec
+      - VIRTUAL_HOST=heq.minipass.me
+      - VIRTUAL_PORT=8889
+      - LETSENCRYPT_HOST=heq.minipass.me
+      - LETSENCRYPT_EMAIL=kdresdell@gmail.com
+    restart: unless-stopped
+    networks:
+      - proxy
+```
+
+**Why both `env_file` and `environment`?**
+- `env_file`: Loads API keys from shared .env file (Google Maps, Groq, Unsplash, Google AI)
+- `environment`: Customer-specific configuration (email, password, org name, domain)
+- Docker merges both - you get API keys AND customer config!
+
+**Why `../../.env`?**
+- Current location: `/deployed/heq/`
+- Goes up 2 levels to: `/home/kdresdell/minipass_env/.env`
+
+**Save and exit** (Ctrl+O, Enter, Ctrl+X)
+
+**Expected Output:**
+- docker-compose.yml updated with env_file reference
+- Container will now have access to all API keys
+
+### 8️⃣ Rebuild and Start Container
 ```bash
 # Back on VPS in the customer directory
 # Rebuild with new code (no cache to ensure fresh build)
@@ -193,7 +243,7 @@ ssh kdresdell@minipass.me -p 2222 "ls -la /home/kdresdell/minipass_env/deployed/
 │   │   ├── minipass.db                        # Customer's database (transferred from local)
 │   │   └── minipass_backup_YYYYMMDD_*.db      # Timestamped backups
 │   ├── static/
-│   │   └── upload/        # Customer uploads (transferred from local)
+│   │   └── uploads/       # Customer uploads (transferred from local)
 │   ├── dockerfile         # Customer's Dockerfile
 │   └── [rest of app files from Git]
 ```
@@ -229,7 +279,7 @@ ssh kdresdell@minipass.me -p 2222 "ls -la /home/kdresdell/minipass_env/deployed/
 - ✅ Database upgraded and tested locally first
 - ✅ SCP transfers verified database to VPS
 - ✅ Upload folder synchronized from local dev
-- ✅ Git never touches instance/ or static/upload/ (in .gitignore)
+- ✅ Git never touches instance/ or static/uploads/ (in .gitignore)
 
 ### Container Management
 - ⚠️ MUST test database locally before deploying
@@ -286,7 +336,7 @@ flask db stamp head
 curl http://localhost:5000/
 
 # Check upload folder exists
-ls -la static/upload/
+ls -la static/uploads/
 ```
 
 ---
