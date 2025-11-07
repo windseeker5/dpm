@@ -3436,9 +3436,9 @@ def get_email_context(activity, template_type, base_context=None):
             context['organization_name'] = activity.organization.name
             print(f"✅ Set organization_name from activity.organization: {activity.organization.name}")
         else:
-            # Fallback to default
-            context['organization_name'] = "Fondation LHGI"
-            print(f"✅ Set organization_name to default: Fondation LHGI")
+            # Fallback to Settings table (for single-tenant containers)
+            context['organization_name'] = get_setting('ORG_NAME', 'Minipass')
+            print(f"✅ Set organization_name from settings: {context['organization_name']}")
 
     if 'payment_email' not in context:
         print(f"🔍 Checking for payment_email...")
@@ -3447,10 +3447,11 @@ def get_email_context(activity, template_type, base_context=None):
             context['payment_email'] = activity.organization.mail_username
             print(f"✅ Set payment_email from organization: {activity.organization.mail_username}")
         else:
-            # Fallback to system setting
+            # Fallback to Settings table (for single-tenant containers)
+            # Try MAIL_USERNAME first (primary email setting), then PAYMENT_EMAIL_ADDRESS
             print(f"⚠️ No organization.mail_username found, checking settings...")
-            payment_email_setting = get_setting("PAYMENT_EMAIL_ADDRESS")
-            print(f"🔍 get_setting('PAYMENT_EMAIL_ADDRESS') returned: {repr(payment_email_setting)}")
+            payment_email_setting = get_setting("MAIL_USERNAME") or get_setting("PAYMENT_EMAIL_ADDRESS")
+            print(f"🔍 get_setting('MAIL_USERNAME' or 'PAYMENT_EMAIL_ADDRESS') returned: {repr(payment_email_setting)}")
             if payment_email_setting:
                 context['payment_email'] = payment_email_setting
                 print(f"✅ Set payment_email from settings: {payment_email_setting}")
