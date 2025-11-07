@@ -8506,6 +8506,7 @@ def email_preview_live(activity_id):
         'user_name': 'John Doe',
         'user_email': 'john.doe@example.com',
         'activity_name': activity.name,
+        'activity': activity,  # Full activity object for templates that need it (e.g., activity.location_address_formatted)
         'pass_code': 'SAMPLE123',
         'amount': '$50.00',
         'question_count': 8,  # For survey_invitation template
@@ -8519,7 +8520,8 @@ def email_preview_live(activity_id):
             def __init__(self):
                 self.activity = type('obj', (object,), {
                     'name': activity.name,
-                    'id': activity.id
+                    'id': activity.id,
+                    'location_address_formatted': activity.location_address_formatted  # For templates that show location
                 })()
                 self.user = type('obj', (object,), {
                     'name': 'John Doe',
@@ -8536,15 +8538,19 @@ def email_preview_live(activity_id):
                 self.pass_code = 'SAMPLE123'
                 self.remaining_activities = 5
                 self.uses_remaining = 5
-        
+
         pass_data = PassData()
-        
+
+        # CRITICAL: Add pass_data to base_context so templates can access it
+        base_context['pass_data'] = pass_data
+        print(f"✅ PREVIEW: Added pass_data to context for {template_type}")
+
         # Render email blocks
         base_context['owner_html'] = render_template(
-            "email_blocks/owner_card_inline.html", 
+            "email_blocks/owner_card_inline.html",
             pass_data=pass_data
         )
-        
+
         # Add history for ALL templates that need it
         history = [
             {'date': '2025-01-09', 'action': 'Pass Created'},
@@ -8552,9 +8558,9 @@ def email_preview_live(activity_id):
         ]
         if template_type == 'redeemPass':
             history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
-        
+
         base_context['history_html'] = render_template(
-            "email_blocks/history_table_inline.html", 
+            "email_blocks/history_table_inline.html",
             history=history
         )
     
