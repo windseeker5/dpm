@@ -4,6 +4,7 @@ import base64
 import io
 import socket
 import traceback
+from functools import lru_cache
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -54,9 +55,12 @@ import bleach
 from urllib.parse import urlparse
 
 
+@lru_cache(maxsize=20)
 def get_template_default_hero(template_type):
     """
     Load the default hero image from compiled template's inline_images.json
+
+    Note: Cached with @lru_cache for performance (avoids repeated JSON reads + base64 decoding)
     
     Args:
         template_type: Type of template (newPass, paymentReceived, etc.)
