@@ -7928,10 +7928,14 @@ def email_template_customization(activity_id):
             **{k: v for k, v in template_current.items() if k not in ['subject', 'title', 'intro_text', 'conclusion_text']}
         }
     
-    return render_template("email_template_customization.html", 
+    # Get organization logo filename for fallback
+    org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+
+    return render_template("email_template_customization.html",
                          activity=activity,
                          template_types=template_types,
-                         current_templates=templates_with_defaults)
+                         current_templates=templates_with_defaults,
+                         org_logo_filename=org_logo_filename)
 
 
 # Removed obsolete thumbnail generation route - now using Tabler placeholders instead
