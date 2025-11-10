@@ -1498,16 +1498,47 @@
     function deletePassportType() {
       if (!currentDeletingId) return;
 
-      const row = document.querySelector(`[data-id="${currentDeletingId}"]`);
-      if (row) {
-        row.remove();
+      // Check if this is a new unsaved passport type
+      if (currentDeletingId.toString().startsWith('new_')) {
+        // It's a new passport type - just remove from UI
+        const row = document.querySelector(`[data-id="${currentDeletingId}"]`);
+        if (row) {
+          row.remove();
+        }
+        passportTypes = passportTypes.filter(pt => pt.id != currentDeletingId);
+        updateVisibility();
+        deletePassportTypeModal.hide();
+        currentDeletingId = null;
+        return;
       }
 
-      passportTypes = passportTypes.filter(pt => pt.id != currentDeletingId);
-      updateVisibility();
+      // It's an existing passport type - call API to archive it
+      const deleteButton = document.querySelector('#confirmDeletePassportType');
+      const originalText = deleteButton.innerHTML;
+      deleteButton.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm me-2"></i>Deleting...';
+      deleteButton.disabled = true;
 
-      deletePassportTypeModal.hide();
-      currentDeletingId = null;
+      fetch(`/api/passport-type-archive/${currentDeletingId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Redirect with success parameter
+          window.location.href = window.location.pathname + '?deleted=' + encodeURIComponent(data.passport_type_name);
+        } else {
+          // Redirect with error parameter
+          window.location.href = window.location.pathname + '?error=' + encodeURIComponent(data.error || 'Unknown error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        // Redirect with error parameter
+        window.location.href = window.location.pathname + '?error=Connection error';
+      });
     }
     
     function getPassportTypeFromRow(id) {

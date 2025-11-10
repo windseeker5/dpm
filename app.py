@@ -221,6 +221,109 @@ with app.app_context():
 
 
 
+# ================================
+# 💰 SUBSCRIPTION TIER MANAGEMENT
+# ================================
+
+def get_subscription_tier():
+    """Get current subscription tier from environment variable.
+    Returns: 1 (Starter), 2 (Professional), or 3 (Enterprise)
+    """
+    return int(os.getenv('MINIPASS_TIER', '1'))
+
+def get_activity_limit():
+    """Get maximum active activities allowed for current subscription tier."""
+    tier_limits = {
+        1: 1,    # Starter: $10/month
+        2: 15,   # Professional: $25/month
+        3: 100   # Enterprise: $60/month
+    }
+    return tier_limits.get(get_subscription_tier(), 1)
+
+def get_tier_info():
+    """Get complete tier information for current subscription."""
+    tier = get_subscription_tier()
+    tier_data = {
+        1: {"name": "Starter", "price": "$10/month", "activities": 1},
+        2: {"name": "Professional", "price": "$25/month", "activities": 15},
+        3: {"name": "Enterprise", "price": "$60/month", "activities": 100}
+    }
+    return tier_data.get(tier, tier_data[1])
+
+def count_active_activities():
+    """Count currently active (non-archived) activities."""
+    return Activity.query.filter_by(status='active').count()
+
+def check_activity_limit(exclude_activity_id=None):
+    """Check if user can create/activate more activities.
+
+    Args:
+        exclude_activity_id: Optional activity ID to exclude from count (for edit scenarios)
+
+    Returns: (bool, error_message or None)
+    """
+    # Count active activities, excluding the one being edited if specified
+    if exclude_activity_id:
+        current = Activity.query.filter(
+            Activity.status == 'active',
+            Activity.id != exclude_activity_id
+        ).count()
+    else:
+        current = count_active_activities()
+
+    limit = get_activity_limit()
+    tier = get_subscription_tier()
+
+    if current >= limit:
+        tier_info = get_tier_info()
+
+        # Build error message
+        msg = f"You've reached your {tier_info['name']} plan limit of {limit} active "
+        msg += f"{'activity' if limit == 1 else 'activities'}. "
+
+        # Suggest upgrade if not on highest tier
+        if tier < 3:
+            next_tier_data = {
+                2: {"name": "Professional", "price": "$25/month", "activities": 15},
+                3: {"name": "Enterprise", "price": "$60/month", "activities": 100}
+            }
+            next_tier = next_tier_data[tier + 1]
+            msg += f"Upgrade to {next_tier['name']} ({next_tier['price']}) "
+            msg += f"for {next_tier['activities']} active activities! "
+            msg += 'Contact support to upgrade your plan.'
+
+        return False, msg
+
+    return True, None
+
+def get_activity_usage_display():
+    """Get formatted activity usage for display in UI.
+    Returns: dict with usage info
+    """
+    current = count_active_activities()
+    limit = get_activity_limit()
+    return {
+        'current': current,
+        'limit': limit,
+        'tier_info': get_tier_info(),
+        'percentage': int((current / limit) * 100) if limit > 0 else 0
+    }
+
+def is_over_activity_limit():
+    """Check if user has MORE active activities than their tier allows.
+    Returns: (bool, excess_count, message)
+    """
+    current = count_active_activities()
+    limit = get_activity_limit()
+
+    if current > limit:
+        excess = current - limit
+        tier_info = get_tier_info()
+        msg = f"You have {current} active {'activities' if current > 1 else 'activity'} but your {tier_info['name']} plan allows {limit}. "
+        msg += f"Please archive {excess} {'activities' if excess > 1 else 'activity'} to continue or upgrade your plan."
+        return True, excess, msg
+
+    return False, 0, None
 
 
 ##
@@ -346,6 +449,14 @@ def inject_globals_and_csrf():
         unmatched_payment_count = 0
         current_admin = None
 
+    # Get subscription tier info for templates
+    subscription_info = None
+    if "admin" in session:
+        try:
+            subscription_info = get_activity_usage_display()
+        except Exception:
+            subscription_info = None
+
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
@@ -354,7 +465,8 @@ def inject_globals_and_csrf():
         'pending_signups_count': pending_signups_count,
         'active_passport_count': active_passport_count,
         'unmatched_payment_count': unmatched_payment_count,
-        'current_admin': current_admin  # Add current admin for template personalization
+        'current_admin': current_admin,  # Add current admin for template personalization
+        'subscription': subscription_info  # Subscription tier info
     }
 
 
@@ -665,13 +777,18 @@ def dashboard():
     if "admin" not in session:
         return redirect(url_for("login"))
 
+    # CHECK IF USER IS OVER THEIR TIER LIMIT
+    is_over, excess, message = is_over_activity_limit()
+    if is_over:
+        return redirect(url_for("tier_limit_exceeded"))
+
     from utils import get_kpi_data, get_all_activity_logs
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
     from datetime import datetime
     from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card, render_passports_redeemed_card
     import re
-    
+
     # Detect mobile user agent
     user_agent = request.headers.get('User-Agent', '').lower()
     is_mobile = bool(re.search(r'mobile|android|iphone|ipad', user_agent)) or request.args.get('mobile') == '1'
@@ -1384,6 +1501,31 @@ def create_activity():
         return redirect(url_for("login"))
 
     if request.method == "POST":
+        # CHECK TIER LIMIT BEFORE CREATING NEW ACTIVITY
+        can_create, error_msg = check_activity_limit()
+        if not can_create:
+            from markupsafe import Markup
+            tier_info = get_tier_info()
+            tier = get_subscription_tier()
+
+            # Build flash message with archive option and upgrade link
+            flash_msg = f"You've reached your {tier_info['name']} plan limit of {tier_info['activities']} active "
+            flash_msg += f"{'activity' if tier_info['activities'] == 1 else 'activities'}. "
+            flash_msg += '<a href="/activities" class="alert-link">Archive a current activity</a> to create a new one'
+
+            # Add upgrade option if not on highest tier
+            if tier < 3:
+                flash_msg += ' or <a href="/current-plan" class="alert-link">Upgrade to '
+                next_tier_data = {
+                    2: {"name": "Professional", "price": "$25/month"},
+                    3: {"name": "Enterprise", "price": "$60/month"}
+                }
+                next_tier = next_tier_data[tier + 1]
+                flash_msg += f'{next_tier["name"]}</a>'
+
+            flash(Markup(flash_msg), 'tier_limit')
+            return redirect(url_for("list_activities"))
+
         from models import Activity, PassportType, AdminActionLog, db
         import os
         import uuid
@@ -1534,7 +1676,30 @@ def create_activity():
         flash(f"✅ Activity created successfully with {len(passport_types_data)} passport types!", "success")
         return redirect(url_for("edit_activity", activity_id=new_activity.id))
 
-    # ✅ GET request
+    # ✅ GET request - check tier limit BEFORE showing form
+    can_create, error_msg = check_activity_limit()
+    if not can_create:
+        from markupsafe import Markup
+        tier_info = get_tier_info()
+        tier = get_subscription_tier()
+
+        flash_msg = f"You've reached your {tier_info['name']} plan limit of {tier_info['activities']} active "
+        flash_msg += f"{'activity' if tier_info['activities'] == 1 else 'activities'}. "
+        flash_msg += '<a href="/activities" class="alert-link">Archive a current activity</a> to create a new one'
+
+        if tier < 3:
+            flash_msg += ' or <a href="/current-plan" class="alert-link">Upgrade to '
+            next_tier_data = {
+                2: {"name": "Professional", "price": "$25/month"},
+                3: {"name": "Enterprise", "price": "$60/month"}
+            }
+            next_tier = next_tier_data[tier + 1]
+            flash_msg += f'{next_tier["name"]}</a>'
+
+        flash(Markup(flash_msg), 'tier_limit')
+        return redirect(url_for("list_activities"))
+
+    # If within limit, show the form
     return render_template("activity_form.html", activity=None)
 
 
@@ -1549,14 +1714,33 @@ def edit_activity(activity_id):
         flash("❌ Activity not found.", "error")
         return redirect(url_for("dashboard"))
 
+    # Check for deletion success/error messages from query parameters
+    deleted_name = request.args.get('deleted')
+    error_msg = request.args.get('error')
+    if deleted_name:
+        flash(f"✅ Passport type '{deleted_name}' has been deleted successfully!", "success")
+    elif error_msg:
+        flash(f"❌ Error deleting passport type: {error_msg}", "error")
+
     if request.method == "POST":
         import os
         import uuid
 
+        # Capture old status before updating
+        old_status = activity.status
+        new_status = request.form.get("status", "active")
+
+        # CHECK TIER LIMIT when changing status to 'active'
+        if old_status != 'active' and new_status == 'active':
+            can_activate, error_msg = check_activity_limit(exclude_activity_id=activity.id)
+            if not can_activate:
+                flash(error_msg, 'warning')
+                return redirect(url_for("edit_activity", activity_id=activity.id))
+
         activity.name = request.form.get("name", "").strip()
         activity.type = request.form.get("type", "").strip()
         activity.description = request.form.get("description", "").strip()
-        activity.status = request.form.get("status", "active")
+        activity.status = new_status
 
         # 📍 Update location fields (optional)
         activity.location_address_raw = request.form.get("location_address_raw", "").strip() or None
@@ -1697,9 +1881,9 @@ def edit_activity(activity_id):
         "net_income": net_income
     }
 
-    # Get passport types for this activity
-    passport_types_objects = PassportType.query.filter_by(activity_id=activity.id).all()
-    
+    # Get passport types for this activity (only active ones)
+    passport_types_objects = PassportType.query.filter_by(activity_id=activity.id, status='active').all()
+
     # Convert to dictionaries for JSON serialization
     passport_types = []
     for pt in passport_types_objects:
@@ -2813,6 +2997,68 @@ def save_unified_settings():
     return unified_settings()
 
 
+@app.route("/current-plan")
+def current_plan():
+    """Display current subscription tier and usage."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    # Get tier information
+    tier = get_subscription_tier()
+    tier_info = get_tier_info()
+    usage_info = get_activity_usage_display()
+
+    # Determine available upgrade options
+    upgrade_options = []
+    if tier == 1:
+        upgrade_options = [
+            {
+                'name': 'Professional',
+                'price': '$25/month',
+                'activities': 15,
+                'features': [
+                    '15 active activities',
+                    'All Starter features',
+                    'Priority email support',
+                    'Custom email templates'
+                ]
+            },
+            {
+                'name': 'Enterprise',
+                'price': '$60/month',
+                'activities': 100,
+                'features': [
+                    '100 active activities',
+                    'All Professional features',
+                    'Dedicated support',
+                    'Custom integrations'
+                ]
+            }
+        ]
+    elif tier == 2:
+        upgrade_options = [
+            {
+                'name': 'Enterprise',
+                'price': '$60/month',
+                'activities': 100,
+                'features': [
+                    '100 active activities',
+                    'All Professional features',
+                    'Dedicated support',
+                    'Custom integrations'
+                ]
+            }
+        ]
+
+    return render_template(
+        "current_plan.html",
+        tier=tier,
+        tier_info=tier_info,
+        usage_info=usage_info,
+        upgrade_options=upgrade_options
+    )
+
+
 @app.route("/erase-app-data", methods=["POST"])
 def erase_app_data():
     if "admin" not in session:
@@ -3441,10 +3687,71 @@ def activity_log():
 
 
 
+@app.route("/tier-limit-exceeded")
+def tier_limit_exceeded():
+    """Blocking page when user has exceeded their activity limit."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Activity
+
+    # Check if they're actually over the limit
+    is_over, excess, message = is_over_activity_limit()
+
+    # If they're not over limit anymore, redirect to dashboard
+    if not is_over:
+        flash('You are now within your tier limit. Welcome back!', 'success')
+        return redirect(url_for("dashboard"))
+
+    # Get all active activities so user can choose which to archive
+    active_activities = Activity.query.filter_by(status='active').all()
+
+    tier_info = get_tier_info()
+    current_count = count_active_activities()
+
+    return render_template(
+        "tier_limit_exceeded.html",
+        message=message,
+        excess=excess,
+        active_activities=active_activities,
+        tier_info=tier_info,
+        current_count=current_count
+    )
+
+
+@app.route("/archive-activity-from-limit/<int:activity_id>", methods=["POST"])
+def archive_activity_from_limit(activity_id):
+    """Archive activity from tier limit exceeded page and redirect back to check limit."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import Activity, db
+
+    activity = db.session.get(Activity, activity_id)
+
+    if not activity:
+        flash("Activity not found.", "error")
+        return redirect(url_for("tier_limit_exceeded"))
+
+    # Archive the activity
+    activity.status = 'inactive'
+    db.session.commit()
+
+    flash(f'Activity "{activity.name}" has been archived.', 'success')
+
+    # Redirect back to tier_limit_exceeded which will auto-redirect to dashboard if now within limit
+    return redirect(url_for("tier_limit_exceeded"))
+
+
 @app.route("/activities")
 def list_activities():
     if "admin" not in session:
         return redirect(url_for("login"))
+
+    # CHECK IF USER IS OVER THEIR TIER LIMIT
+    is_over, excess, message = is_over_activity_limit()
+    if is_over:
+        return redirect(url_for("tier_limit_exceeded"))
 
     # Get filter parameters
     q = request.args.get("q", "").strip()
@@ -6123,6 +6430,7 @@ def check_passport_type_dependencies(passport_type_id):
 
 
 @app.route("/api/passport-type-archive/<int:passport_type_id>", methods=["POST"])
+@csrf.exempt
 def archive_passport_type(passport_type_id):
     """Archive a passport type instead of deleting it"""
     try:
@@ -6140,19 +6448,17 @@ def archive_passport_type(passport_type_id):
                 passport.passport_type_name = passport_type.name
         
         db.session.commit()
-        
+
         # Log the action
         from utils import log_admin_action
-        log_admin_action(
-            admin_email=session.get("admin", "system"),
-            action=f"Archived passport type: {passport_type.name} (ID: {passport_type_id})"
-        )
-        
+        log_admin_action(f"Archived passport type: {passport_type.name} (ID: {passport_type_id})")
+
         return jsonify({
             "success": True,
-            "message": f"Passport type '{passport_type.name}' has been archived successfully."
+            "message": f"Passport type '{passport_type.name}' has been deleted successfully.",
+            "passport_type_name": passport_type.name
         })
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({
@@ -9331,4 +9637,4 @@ def privacy():
 if __name__ == "__main__":
     port = 5000
     print(f"🚀 Running on port {port}")
-    app.run(debug=True, port=port)
+    app.run(host='0.0.0.0', debug=True, port=port)

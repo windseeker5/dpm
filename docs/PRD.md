@@ -1,8 +1,8 @@
 # Minipass Product Requirements Document (PRD)
-**Version:** 1.1
-**Date:** August 28, 2025 | **Updated:** October 20, 2025
+**Version:** 1.2
+**Date:** August 28, 2025 | **Updated:** November 7, 2025
 **Product Owner:** Ken Dresdell
-**Target Launch:** September 2025 | **Status:** In Production with Pilot Customers
+**Target Launch:** November 15, 2025 | **Status:** Production Launch Ready - 2 Live Customers
 
 ---
 
@@ -14,11 +14,12 @@
 To simplify organizational operations and optimize revenue through an automated, secure, and user-friendly digital platform that manages the complete activity lifecycle.
 
 ### Success Metrics
-- **Launch Goal:** 10 pilot customers within first month ✅ **IN PROGRESS**
+- **Launch Goal:** 2 production customers live ✅ **ACHIEVED** (LHGI charity foundation + hockey coach)
+- **Official Launch:** November 15, 2025 (automated Stripe provisioning active)
 - **User Adoption:** 80% digital pass redemption rate
-- **Financial Impact:** 25% reduction in administrative overhead for customers
-- **User Satisfaction:** 4.5+ star rating from end users
-- **Production Validation:** Successfully deployed for customers managing $300K+ annual revenue
+- **Financial Impact:** Customers report significant time savings and revenue improvements
+- **User Satisfaction:** Production customers praise ease of use, email customization, and financial reporting
+- **Production Validation:** ✅ Successfully managing real-world operations with automated provisioning ready
 
 ---
 
@@ -174,26 +175,90 @@ Minipass provides a unified digital platform serving both markets:
 - **Real-time Updates:** Automatic emails sent for every status change (payment received, passport issued, redemption, etc.)
 - **Transaction History:** Complete transaction table in every email showing:
   - Purchase date and details
-  - Payment confirmation date  
+  - Payment confirmation date
   - Redemption history with dates
   - Remaining sessions/credits
 - **QR Code Integration:** Every communication includes participant's current passport with QR code
 - **Activity Details:** Clear information about the specific activity, dates, and requirements
 
-#### D. Payment Integration ⭐ CRITICAL
+#### D-1. **PROFESSIONAL EMAIL COMMUNICATION SYSTEM** ⭐ NEW FEATURE ✅ IMPLEMENTED (All Tiers)
+- **6 Customizable Email Templates:** Complete email communication suite for every customer touchpoint
+  - **newPass** - Digital pass creation/purchase confirmation with welcome message
+  - **paymentReceived** - Payment processing confirmation with transaction details
+  - **latePayment** - Payment reminder for unpaid signups with clear call-to-action
+  - **signup** - Registration confirmation with activity details
+  - **redeemPass** - Pass redemption notification with remaining balance
+  - **survey_invitation** - Survey request emails with one-click participation
+- **Per-Activity Customization:** Each activity can have unique branded email templates
+  - Customize subject lines, titles, intro text, body content, conclusions
+  - HTML-supported content with security sanitization
+  - Custom call-to-action text and URLs (for newPass and survey templates)
+- **Visual Branding:** Professional brand customization capabilities
+  - **Hero Image Upload:** Custom header images per template type (PNG, auto-resized)
+  - **Activity Logo Integration:** Unique logo per activity for owner card
+  - **Historical Preservation:** Logos preserved across updates
+- **Advanced Features:**
+  - **Live Preview:** Real-time template preview with actual activity context
+  - **Test Email Sending:** Send test emails before deployment
+  - **Reset to Defaults:** One-click reset for individual templates
+  - **Mobile-Responsive:** All templates optimized for desktop and mobile
+- **Available in ALL Tiers:** Email customization included from $10/month Starter plan
+- **Integration:** Seamlessly integrates organization email, name, and payment inbox details
+
+#### E. Payment Integration ⭐ CRITICAL
 - **Payment Processing:** Credit card and digital wallet support (secondary to email payments)
 - **Payment Tracking:** Transaction history and status
 - **Refund Management:** Automated refund processing
 - **Payment Reporting:** Revenue summaries by activity
 
-#### E. **USER CONTACTS EXPORT** ⭐ NEW FEATURE ✅ IMPLEMENTED
-- **User Contact Report:** Comprehensive user list with engagement metrics for marketing/CRM
-- **CSV Export:** Export user contact data compatible with marketing tools and spreadsheets
-- **Advanced Filtering:** Filter by period, activity, sort by engagement (passports, revenue, activity date)
-- **Email Opt-Out Management:** Exclude users who opted out of marketing communications
-- **Engagement Metrics:** Total users, active users, total revenue, average passports per user
-- **Detailed User Data:** Name, email, phone, passport count, revenue, activities participated, last activity date
-- **Mobile-Responsive:** Full functionality on mobile and desktop
+#### E-1. **PAYMENT INBOX & MANAGEMENT DASHBOARD** ⭐ NEW FEATURE ✅ IMPLEMENTED (All Tiers)
+- **Payment Inbox:** Centralized dashboard for all incoming e-transfer payment emails
+  - Real-time tracking of matched and unmatched payments
+  - Status indicators: MATCHED, NO_MATCH, MANUAL_PROCESSED
+  - Payment deduplication system (eliminates duplicate emails)
+- **Intelligent Matching:** View payment matching results
+  - Sender name, email, amount, and payment date
+  - Matched passport ID and match reasoning
+  - Complete audit trail for all transactions
+- **Search & Filter:**
+  - Filter by status (No Match, Matched, All)
+  - Search by sender name or amount
+  - Pagination support (50 items per page)
+- **Payment Actions:**
+  - Archive unmatched payments for clean inbox
+  - View full payment details and history
+  - Manual processing workflow for edge cases
+- **User Interface:**
+  - GitHub-style filter buttons for status
+  - Responsive table design for desktop and mobile
+  - Clear visual indicators for action items
+- **Available in ALL Tiers:** Payment inbox management from $10/month Starter plan
+
+#### F. **USER CONTACTS EXPORT** ⭐ NEW FEATURE ✅ IMPLEMENTED (All Tiers)
+- **User Contact Directory:** Comprehensive user list with engagement metrics for marketing/CRM
+  - Full contact information: Name, email, phone
+  - Engagement data: Passport count, revenue generated, activities participated
+  - Last activity date for recency tracking
+  - Email opt-out status with clear badges (Yes/No)
+- **Search & Filter:**
+  - **Dynamic Search:** Real-time search by name, email, or phone
+  - **Keyboard Shortcut:** Ctrl+K for quick search access
+  - **GitHub-Style Filters:** Active users vs All users toggle
+  - **Search Preservation:** Filter state maintained across searches
+- **CSV Export for Marketing/CRM:**
+  - Export filtered user list with all metadata
+  - Format: `user_contacts_{filter}_{date}.csv`
+  - Compatible with major CRM tools and marketing platforms
+  - Preserves search filters in export filename
+- **User Interface:**
+  - **Responsive Table Design:**
+    - Desktop: Full detail columns (email, phone, activities)
+    - Tablet: Simplified view with key metrics
+    - Mobile: Compact inline view with name + revenue
+  - **Gravatar Integration:** User avatars for visual identification
+  - **Status Badges:** Color-coded opt-out indicators
+- **Summary Metrics:** Total users, active users, total revenue overview
+- **Available in ALL Tiers:** User contact export from $10/month Starter plan
 
 #### F. **KPI Dashboard** ⭐ CRITICAL
 - **Activity Overview Cards:** Clear KPI cards for each activity showing:
@@ -206,46 +271,138 @@ Minipass provides a unified digital platform serving both markets:
 - **Real-time Updates:** Dashboard updates automatically as payments are matched
 - **Financial Summaries:** Revenue summaries by date range
 
-#### G. **ENHANCED FINANCIAL REPORTING** ⭐ UPGRADED ✅ IMPLEMENTED
-- **Comprehensive Income/Expense Tracking:** Integrated view of passport sales, other income, and expenses
-- **Activity-Level Breakdown:** Expandable transactions grouped by activity showing detailed financials
-- **Summary KPIs:** Total Revenue, Total Expenses, Net Income cards with visual clarity
-- **CSV Export for Accounting:** Universal CSV format compatible with QuickBooks, Xero, Sage, Wave, FreshBooks
+#### G. **COMPREHENSIVE FINANCIAL MANAGEMENT SUITE** ⭐ UPGRADED ✅ IMPLEMENTED (All Tiers)
+- **Complete Income & Expense Tracking:** Unified financial dashboard for all business transactions
+  - **Passport Sales:** Automatic tracking from registration system
+  - **Other Income:** Add custom income entries (sponsorship, donations, vendor fees, merchandise, services)
+  - **Expense Management:** Full expense tracking with receipt uploads
+- **Activity-Level Financial Breakdown:**
+  - Expandable accordion view grouped by activity
+  - Detailed transaction listing with dates, categories, amounts
+  - Individual activity profit/loss calculations
+- **Summary KPIs:** High-level financial performance metrics
+  - **Total Revenue:** All income sources aggregated
+  - **Total Expenses:** Complete expense tracking
+  - **Net Income:** Real-time profitability calculation
+  - **Mobile Carousel:** KPI cards with dot navigation on mobile
+- **Receipt & Document Management:**
+  - Upload receipts for income and expenses (PDF, JPG, PNG)
+  - View/preview receipts directly in modal (images and PDFs)
+  - Download option for all receipts
+  - Receipt storage tied to transactions
+- **Transaction Management:**
+  - **Add/Edit Income:** Date, category, amount, notes with receipt upload
+  - **Add/Edit Expenses:** Date, category, amount, description with receipt upload
+  - **Delete Transactions:** Confirmation modal for safety
+  - **Category System:**
+    - Income: Ticket Sales, Sponsorship, Donations, Vendor Fees, Service Income, Merchandise, Other
+    - Expenses: COGS, Staff, Venue, Equipment Rental, Insurance, Marketing, Travel, Supplies, Other
+- **CSV Export for Accounting:**
+  - Universal CSV format compatible with QuickBooks, Xero, Sage, Wave, FreshBooks
+  - Format: `financial_report_{period}.csv`
+  - All transactions with activity breakdown
 - **Period Filtering:** Month, Quarter, Year, Custom Date Range, All-Time reporting
-- **Receipt Management:** Upload and view receipts/documents (PDF, images) with modal display
-- **Transaction Details:** Each transaction shows date, type, category, description, amount, receipt
-- **Mobile-Responsive:** Full desktop functionality, simplified mobile view with guidance message
-- **Production Validated:** Successfully deployed for $300K+ annual revenue customer
+- **User Interface:**
+  - **Desktop:** Sliding drawer from right side for transaction entry
+  - **Mobile:** Bottom modal for touch-friendly data entry
+  - **Responsive Design:** Full functionality across all devices
+  - **Real-time Updates:** Cursor tracking with spinner during save
+- **Available in ALL Tiers:** Complete financial management from $10/month Starter plan
+- **Production Validated:** Successfully deployed for customers managing significant annual revenue
 
-#### H. **AUTOMATED SURVEY SYSTEM** ⭐ HIGH PRIORITY
-- **Pre-Built Survey Templates:** Ready-made survey templates for different activity types (sports, fitness, lessons, loyalty programs)
-- **3-Click Deployment:** Activity managers can send surveys with just 3 clicks - no complex setup required
-- **Smart Timing:** Send surveys after activity completion or after specific time periods
-- **Participant-Friendly:** Ultra-simple surveys designed for quick completion (few clicks, few seconds)
-- **Activity-Specific Targeting:** Send surveys to specific activities or all activities at once
-- **Basic Questions:** Pre-configured essential questions: pricing feedback, scheduling preferences, location satisfaction, overall experience
-- **Response Collection:** All responses automatically collected and displayed in easy-to-read format
+#### H. **AUTOMATED SURVEY SYSTEM** ⭐ HIGH PRIORITY ✅ FULLY IMPLEMENTED (Professional & Enterprise Tiers)
+- **Survey Template Library:** Reusable survey templates for repeatable feedback collection
+  - **Pre-Built Templates:**
+    - "Post-Activity Feedback" (English)
+    - "Sondage d'Activité - Simple" (French)
+  - **Custom Template Creation:** Build reusable question sets for any activity type
+  - **Template Management:** Create, edit, delete, and organize templates
+- **True 3-Click Survey Deployment:**
+  1. Select survey template from library
+  2. Customize name/description for specific activity
+  3. Send invitations to participants
+- **Survey Lifecycle Management:**
+  - **Create Survey:** Deploy survey from template for specific activity
+  - **Target Audience:** Select passport type or send to all participants
+  - **Send Invitations:** Automated email invitations via email template system
+  - **Close Survey:** End response collection when complete
+  - **Reopen Survey:** Allow additional responses if needed
+  - **Export Results:** CSV export for analysis
+  - **Delete Survey:** Clean up completed surveys
+- **Response Tracking & Analytics:**
+  - Individual response tokens for anonymous tracking
+  - Completion status (completed/pending)
+  - Response timestamps (invited, started, completed)
+  - IP address and user agent capture for authenticity
+  - Results dashboard with aggregated statistics
+- **Question Types:** Flexible JSON-based question format for various response types
+- **CSV Export:** Export all survey responses with complete data
+  - Format: `survey_{survey_name}_{date}.csv`
+- **Participant Experience:**
+  - Ultra-simple survey forms designed for quick completion
+  - Mobile-responsive design for on-the-go responses
+  - One-click participation from email invitation
 - **Actionable Insights:** Help activity managers improve pricing, scheduling, location, and service quality
+- **Available in Professional & Enterprise Tiers:** Advanced feedback collection for growing businesses
 
-#### I. **AI DATA CHATBOT** ⭐ HIGH PRIORITY ✅ IMPLEMENTED (Professional & Enterprise Tiers)
-- **Natural Language Queries:** Ask questions about activity data in plain English
-- **Dual-Provider AI System:** Google Gemini (primary) with Groq automatic fallback for reliability
-  - **Google Gemini 2.0 Flash Exp:** 1,500 requests/day, 15 requests/min, 1M tokens/min (Free Tier)
-  - **Groq Llama 3.3 70B:** 14,400 requests/day, 30 requests/min automatic fallback (Free Tier)
+#### I. **AI ANALYTICS CHATBOT** ⭐ HIGH PRIORITY ✅ PRODUCTION READY (Professional & Enterprise Tiers)
+- **Natural Language Business Intelligence:** Ask questions about activity data in plain English
+  - Conversational interface for non-technical users
+  - No SQL knowledge required - just ask naturally
+  - Instant insights from your business data
+- **Multi-Provider AI System:** Three AI providers with automatic failover
+  - **Google Gemini 2.0 Flash Exp:** Primary provider (1,500 RPD, 15 RPM, 1M TPM - Free Tier)
+  - **Groq Llama 3.3 70B:** Automatic fallback (14,400 RPD, 30 RPM - Free Tier)
+  - **Ollama:** Local open-source option for on-premise deployment
   - **Combined Capacity:** ~15,900 requests/day with automatic failover
-- **Intelligent Data Analysis:** LLM processes SQLite database to provide accurate answers
-- **Natural Language to SQL:** Automatic SQL generation from conversational questions
-- **Formatted Responses:** Beautiful tables and summaries for easy understanding
-- **Business Intelligence:** Answer questions like:
+  - **Provider Selection:** Users can choose preferred AI provider via dropdown
+- **Intelligent Query Processing:**
+  - **Natural Language to SQL:** Automatic database query generation
+  - **Intent Detection:** Recognizes query types (aggregation, list, comparison, visualization)
+  - **Entity Extraction:** Identifies dates, activities, numbers, emails from questions
+  - **Query Optimization:** Efficient SQL generation for fast responses
+- **Data Analysis Capabilities:**
+  - User data queries (names, emails, registration dates)
+  - Activity performance metrics (revenue, attendance, trends)
+  - Financial analytics (revenue by month, expenses, profitability)
+  - Signup and passport data (paid vs unpaid, active passes, redemptions)
+  - Survey response analysis (feedback trends, satisfaction scores)
+- **Business Intelligence Examples:**
   - "Give me the list of people who haven't paid for Monday RK activity"
   - "Show me the substitute users who came the most to Monday RK activity"
   - "What's my best performing activity this month?"
   - "Which customers have the most credits remaining?"
   - "Show me revenue by month"
-- **Query Logging:** Complete audit trail with token usage, cost tracking, and performance metrics
-- **Cost Management:** Budget tracking system (Daily/Monthly limits configurable)
-- **Data Privacy:** All queries processed securely, no data stored externally
-- **Production Tested:** Successfully deployed and validated with pilot customers
+  - "Who has the highest participation rate?"
+- **User Interface:**
+  - **Claude.ai-inspired design:** Light theme with professional aesthetics
+  - **Large search box:** Prominent input for empty state
+  - **Model selection:** Choose AI provider directly in search interface
+  - **Example questions:** Interactive guidance for new users
+  - **Message history:** Timestamped conversation with SQL transparency
+  - **Chart rendering:** Data visualization for trends and comparisons
+  - **Sparkle icon:** Blue-to-pink gradient branding
+  - **Status LED:** Real-time API connectivity indicator
+- **Transparency & Tracking:**
+  - **SQL Display:** View generated queries for learning and verification
+  - **Token Usage Monitoring:** Track API token consumption per query
+  - **Cost Tracking:** Per-query cost calculations
+  - **Response Time:** Performance metrics displayed
+  - **Query Logging:** Complete audit trail with execution history
+- **Budget & Cost Management:**
+  - Daily/monthly cost limits (configurable)
+  - Usage tracking dashboard
+  - Cost-free implementation using free tiers
+  - Zero ongoing AI costs for typical usage
+- **Data Privacy & Security:**
+  - All queries processed securely
+  - No data stored externally
+  - Admin session validation
+  - Question length limits (max 2000 chars)
+  - SQL injection prevention
+  - Response sanitization
+- **Production Validated:** Successfully deployed with live customers for real business intelligence
+- **Available in Professional & Enterprise Tiers:** Advanced analytics for data-driven decision making
 
 #### J. **COMPLETE DATA OWNERSHIP** ⭐ HIGH PRIORITY ✅ IMPLEMENTED (All Tiers)
 - **SQLite Database Export:** Users can download their complete database at any time
@@ -365,6 +522,45 @@ As a customer/participant, I want to:
 - **File Storage:** Local filesystem storage (avoid S3 costs/complexity in MVP)
 - **AI Integration:** External LLM API for natural language data queries (Professional/Enterprise tiers)
 - **Data Portability:** SQLite database export functionality for complete data ownership
+- **Multi-tenant Model:** Organization-based architecture with per-tenant configuration
+  - Organization model for customer isolation
+  - Per-organization email configuration (SMTP, branding)
+  - Automatic failover for organization email
+  - One Docker container per customer organization
+
+### 6.3.1 **Automated Customer Provisioning** ✅ IMPLEMENTED
+- **Stripe Webhook Integration:** Automatic container deployment on subscription payment
+  - Listen for Stripe `checkout.session.completed` and `customer.subscription.created` events
+  - Validate webhook signatures for security
+  - Extract customer information (email, organization name, plan tier)
+- **Container Orchestration:**
+  - Automatic Docker container creation for new customers
+  - Subdomain assignment (e.g., `customer.minipass.me`)
+  - Initial database setup with migrations
+  - Organization configuration (email settings, branding defaults)
+- **Onboarding Flow:**
+  1. Customer selects plan on marketing website
+  2. Completes Stripe checkout (organization name, subdomain, email)
+  3. Payment processed and webhook triggered
+  4. System automatically provisions Docker container
+  5. Database initialized with admin account
+  6. Welcome email sent with:
+     - Subdomain URL (e.g., `https://lhgi.minipass.me`)
+     - Initial login credentials
+     - Getting started video link (2-3 minutes)
+     - Direct link to first activity setup
+- **Infrastructure Automation:**
+  - Nginx reverse proxy configuration update
+  - SSL certificate provisioning via Let's Encrypt
+  - Container health monitoring setup
+  - Automatic backup schedule initialization
+- **Validation & Error Handling:**
+  - Subdomain availability check
+  - Email format validation
+  - Duplicate customer detection
+  - Rollback mechanism for failed provisioning
+  - Admin notification for manual intervention when needed
+- **Zero Manual Intervention:** Complete hands-off customer onboarding from payment to ready-to-use system
 
 ### 6.4 Performance Requirements
 - **Container Startup:** < 10 seconds cold start
@@ -437,6 +633,53 @@ As a customer/participant, I want to:
 - **Time Savings:** Average 5+ hours saved per week on payment reconciliation, participant communication, and feedback collection
 - **Production Scale:** ✅ **VALIDATED** - Successfully managing customers with $300K+ annual revenue
 
+### Production Customer Validation
+**Status:** 2 live production customers successfully deployed and operating
+
+#### Customer 1: LHGI (Ligue hockey Gagnon Image)
+- **Industry:** Charity Foundation & Hockey League Organization
+- **Use Case:** Multi-activity management (hockey games, charity events, fundraising activities)
+- **Key Metrics:**
+  - Managing multiple activities with diverse participant groups
+  - Significant user/participant base across various programs
+  - Revenue management for charity fundraising operations
+- **Feature Adoption:**
+  - Email customization for professional branded communications
+  - Financial reporting for charity transparency and accounting
+  - Payment inbox for streamlined donation and registration processing
+  - User contact management for donor and participant outreach
+- **Customer Feedback:**
+  - Reports significant time savings on administrative tasks
+  - Improved revenue tracking and financial transparency
+  - Praised ease of use and intuitive interface
+  - Values professional email templates for charity communications
+
+#### Customer 2: Hockey Coach (Personal Training & Coaching)
+- **Industry:** Individual Sports Coaching & Training
+- **Use Case:** Private coaching sessions and group training programs
+- **Key Metrics:**
+  - Managing training programs with individual students
+  - Revenue management for coaching services
+  - Multiple training activities (different skill levels, age groups)
+- **Feature Adoption:**
+  - Digital pass management for session tracking
+  - Payment matching for automated client billing
+  - Financial reporting for business management
+  - Email templates for professional client communication
+- **Customer Feedback:**
+  - Reports improved revenue tracking and client management
+  - Time savings on payment reconciliation and client communication
+  - Ease of use allows focus on coaching rather than administration
+  - Values mobile-friendly interface for on-the-go management
+
+#### Key Learnings from Production Deployment
+- **Email Customization:** Both customers heavily customize email templates for brand consistency
+- **Financial Reporting:** Critical feature for both non-profit and small business use cases
+- **Time Savings:** Customers report significant reduction in administrative overhead
+- **Ease of Use:** Non-technical users successfully manage all features without training
+- **Mobile Usage:** Both customers frequently access platform from mobile devices
+- **Payment Automation:** E-transfer matching eliminates manual reconciliation work
+
 ### Technical Metrics
 - **Container Memory Usage:** < 400MB RAM average, < 512MB peak
 - **Container Startup Time:** < 10 seconds cold start
@@ -449,64 +692,97 @@ As a customer/participant, I want to:
 
 ## 8. Launch Timeline
 
-### Week 1-2: MVP Development
-- [ ] Core registration system
-- [ ] Basic digital pass creation
-- [ ] Payment integration (Stripe)
-- [ ] Email notifications
-- [ ] QR code generation
+### Development Phase (Completed ✅)
+- [x] Core registration system
+- [x] Digital pass creation and management
+- [x] Payment integration (Stripe)
+- [x] Email notification system (6 customizable templates)
+- [x] QR code generation and redemption
+- [x] Financial reporting suite with receipt management
+- [x] User contact export for CRM/marketing
+- [x] Payment inbox and management dashboard
+- [x] AI analytics chatbot (multi-provider system)
+- [x] Survey template system with 3-click deployment
+- [x] Complete data ownership (backup & restore)
 
-### Week 3: Testing & Refinement
-- [ ] User acceptance testing with 2-3 pilot customers
-- [ ] Bug fixes and performance optimization
-- [ ] Mobile responsiveness testing
-- [ ] Security audit
+### Testing & Refinement Phase (Completed ✅)
+- [x] Production deployment with 2 live customers
+- [x] LHGI (charity foundation) - successfully operating
+- [x] Hockey coach - successfully managing training programs
+- [x] Bug fixes and performance optimization based on real usage
+- [x] Mobile responsiveness validated across devices
+- [x] Security validation in production environment
 
-### Week 4: Launch Preparation
-- [ ] Production deployment setup
-- [ ] Documentation completion
-- [ ] Customer onboarding materials
-- [ ] Marketing website updates
+### Production Launch Preparation (In Progress)
+- [x] Multi-tenant Docker deployment infrastructure
+- [x] Automated customer provisioning via Stripe webhooks
+- [x] Customer onboarding workflow and documentation
+- [ ] Marketing website final updates
+- [ ] Launch day monitoring and support preparation
+- [ ] Customer acquisition campaigns ready
 
-### Launch Month: Market Entry
-- [ ] Soft launch with pilot customers
-- [ ] Gather user feedback
-- [ ] Iterate based on feedback
-- [ ] Begin broader customer acquisition
+### **Official Launch: November 15, 2025** 🚀
+- **Status:** Production-Ready with 2 Live Customers
+- **Automated Provisioning:** Stripe integration active for instant customer onboarding
+- **Infrastructure:** Scalable VPS with container orchestration ready
+- **Support:** Documentation, video tutorials, and support channels prepared
+- **Go-to-Market:** Marketing materials and acquisition strategy finalized
+
+### Post-Launch Strategy
+- **Week 1-2:** Monitor system performance and customer onboarding flow
+- **Month 1:** Target 10 new customers through marketing campaigns
+- **Month 2-3:** Gather feedback, iterate on features, optimize conversion
+- **Ongoing:** Scale infrastructure based on customer growth (every 10 new customers)
 
 ---
 
 ## 9. Pricing Strategy
 
 ### Activity-Based Tiered Model
-**Starter:** $10/month
-- 1 active activity
-- Unlimited passports per activity
-- Basic digital pass management
-- Email notifications
-- Basic reporting
-- Email support
 
-**Professional:** $35/month  
-- Up to 10 active activities
-- Unlimited passports per activity
-- Advanced pass customization
-- Automated surveys
-- **AI Data Chatbot** - Ask questions about your data in natural language
-- Enhanced reporting & analytics
-- Priority support
-- Custom branding
+**Starter:** $10/month
+- **Activity Limit:** 1 active activity
+- **Passports:** Unlimited passports per activity
+- **Core Features:** (All Included ✅)
+  - Digital pass management with QR codes
+  - Automatic payment matching (e-transfer)
+  - Payment inbox & management dashboard
+  - **6 Customizable Email Templates** (newPass, paymentReceived, latePayment, signup, redeemPass, survey_invitation)
+  - **Email customization** per activity (hero images, logos, branding)
+  - **Complete financial management suite** (income, expenses, receipts, CSV export)
+  - **User contact export** for CRM/marketing
+  - Automated participant communication
+  - KPI dashboard with activity metrics
+  - Complete data ownership (backup & restore)
+  - Registration forms and capacity management
+- **Support:** Email support
+- **Best For:** Individual coaches, single-activity organizers, small loyalty programs
+
+**Professional:** $35/month
+- **Activity Limit:** Up to 10 active activities
+- **Passports:** Unlimited passports per activity
+- **All Starter Features Plus:**
+  - **Automated survey system** (template library, 3-click deployment, CSV export)
+  - **AI Analytics Chatbot** (Gemini + Groq + Ollama, natural language queries)
+  - Enhanced reporting & analytics
+  - Priority support
+  - Custom branding options
+- **Support:** Priority email + chat support
+- **Best For:** Multi-activity managers, growing sports leagues, expanding coaching businesses
 
 **Enterprise:** $50/month
-- Up to 100 active activities
-- Unlimited passports per activity
-- Full feature access
-- **AI Data Chatbot** - Ask questions about your data in natural language
-- Advanced financial reporting
-- Receipt uploads & expense tracking
-- Dedicated support
-- API access (future)
-- White-label options (future)
+- **Activity Limit:** Up to 100 active activities
+- **Passports:** Unlimited passports per activity
+- **All Professional Features Plus:**
+  - Full feature access with no limitations
+  - **AI Analytics Chatbot** with higher usage limits
+  - Advanced financial forecasting (planned)
+  - Multi-currency support (planned)
+  - Dedicated account manager
+  - API access (planned)
+  - White-label options (planned)
+- **Support:** Dedicated support with priority response
+- **Best For:** Large organizations, multi-location businesses, enterprise deployments
 
 ### Pricing Philosophy
 - **Activity-Focused:** Customers pay based on the number of activities they manage, not passport volume
@@ -545,12 +821,18 @@ As a customer/participant, I want to:
 - **Single Unified Platform:** Serves both activity management and loyalty programs without mode switching
 - **Lightweight Architecture:** Fast, efficient containers vs. heavy enterprise platforms
 
-### 10.3 **Professional Participant Experience**
+### 10.3 **Professional Communication Suite - Enterprise Quality at SMB Pricing** ✅ IMPLEMENTED
+- **6 Customizable Email Templates:** Complete lifecycle communication (newPass, paymentReceived, latePayment, signup, redeemPass, survey_invitation)
+  - Available in $10/month Starter plan (competitors charge $99+/month for email customization)
+  - Per-activity customization with hero images and logos
+  - Live preview and test email functionality
 - **Automated Communication:** Beautiful, professional emails sent automatically for every transaction and status change
 - **Complete Transaction History:** Every email includes full transaction table showing purchase, payment, and redemption history
-- **QR Code Integration:** Participants always have access to their current passport and QR code
+- **Visual Branding:** Hero image upload, activity logos, custom CTAs - typically only in enterprise plans
+- **QR Code Integration:** Participants always have access to their current passport with QR code
 - **Trust Building:** Professional communication reduces support requests and builds customer confidence
 - **Transparency:** Participants always know exactly what they've purchased, paid for, and used
+- **Competitive Edge:** Most competitors offer generic templates or charge extra for customization; Minipass includes full customization at all tiers
 
 ### 10.5 **Effortless Customer Feedback**
 - **Pre-Built Survey Templates:** Small activity managers get professional survey tools they would never build themselves
@@ -582,20 +864,59 @@ As a customer/participant, I want to:
 - **Trust Building:** Data portability demonstrates confidence in product value
 - **Competitive Differentiation:** While most SaaS platforms trap user data, Minipass liberates it
 
-### 10.9 **Professional Financial & Contact Management** ✅ NEW ADVANTAGE
-- **Universal Accounting Integration:** CSV export format works with QuickBooks, Xero, Sage, Wave, FreshBooks
-- **Comprehensive Financial Tracking:** Income + Expenses + Receipts in one unified report
-- **Activity-Level Financial Breakdown:** Detailed transaction visibility by activity
-- **Marketing/CRM Export:** User contact list with engagement metrics for marketing campaigns
-- **Production-Scale Validated:** Successfully managing $300K+ annual revenue customers
+### 10.9 **Complete Financial Management Suite at Every Tier** ✅ NEW ADVANTAGE
+- **All-in-One Financial System:** Available in $10/month Starter plan (competitors charge $50-99/month)
+  - Income tracking (passport sales + custom income entries)
+  - Expense management with categorization
+  - Receipt/document uploads (PDF, images)
+  - CSV export for accounting software
+- **Universal Accounting Integration:** Works with QuickBooks, Xero, Sage, Wave, FreshBooks
+- **Activity-Level Financial Breakdown:** Detailed transaction visibility and profit/loss per activity
+- **Mobile-Optimized:** Desktop drawer + mobile modal for on-the-go financial management
+- **Marketing/CRM Export:** User contact list with engagement metrics (email, phone, passport count, revenue)
+- **Production-Scale Validated:** Successfully managing significant annual revenue customers
 - **Time Savings:** Eliminates manual data entry for accounting and marketing
+- **Competitive Edge:** Most activity management platforms lack comprehensive financial tools or charge separately
 
-### 10.10 **Market Position**
+### 10.10 **Payment Intelligence Dashboard** ✅ NEW ADVANTAGE
+- **Payment Inbox:** Centralized view of all incoming e-transfer emails
+- **Smart Deduplication:** Automatically eliminates duplicate payment emails
+- **Status Tracking:** MATCHED, NO_MATCH, MANUAL_PROCESSED with clear visual indicators
+- **Search & Filter:** Find payments instantly by name, amount, or status
+- **Action Items:** Focus on unmatched payments that need attention
+- **Audit Trail:** Complete payment history with match reasoning
+- **Competitive Edge:** No other platform offers this level of payment inbox intelligence for e-transfers
+
+### 10.11 **Instant Customer Onboarding with Zero Friction** ✅ NEW ADVANTAGE
+- **Stripe Automated Provisioning:** Customer goes from payment to ready-to-use system in minutes
+  - Choose plan → Pay → Automatic container deployment → Welcome email → Start using
+  - No manual setup, no waiting for sales calls, no configuration complexity
+- **Subdomain Provisioning:** Each customer gets their own branded subdomain (e.g., `lhgi.minipass.me`)
+- **SSL Certificates:** Automatic Let's Encrypt SSL for secure connections
+- **Database Initialization:** Pre-configured with migrations and admin account
+- **Welcome Experience:** Beautiful onboarding email with video tutorial and direct links
+- **Competitive Edge:** Most SaaS platforms require manual setup or sales demos; Minipass is instant
+
+### 10.12 **Market Position & Competitive Landscape**
 - **Underserved Market:** Focuses on small activity managers ignored by enterprise solutions
-- **Perfect Price Point:** $10 starter removes barriers vs. $99+ enterprise solutions
-- **Canadian Payment Methods:** Built specifically for Interac e-Transfer workflows
-- **Complete Automation:** While competitors require manual work, Minipass automates payment matching, participant communication, and feedback collection
-- **Enterprise Features at SMB Pricing:** AI analytics, financial reporting, and data export typically only in $99+/mo solutions
+- **Disruptive Pricing:** $10 starter includes features competitors charge $50-99/month for
+  - Email customization (6 templates with branding): Free at all tiers vs. $30-50/month add-on
+  - Financial management suite: Included vs. $20-40/month add-on
+  - Payment inbox: Included vs. manual reconciliation or separate tool
+  - User contact export: Included vs. locked behind enterprise plans
+- **Canadian Payment Methods:** Built specifically for Interac e-Transfer workflows (dominant in Canadian small business)
+- **Complete Automation:** While competitors require manual work, Minipass automates:
+  - Payment matching and reconciliation
+  - Participant communication (6 email types)
+  - Financial data export for accounting
+  - Customer onboarding and provisioning
+  - Survey deployment and collection
+- **Enterprise Features at SMB Pricing:** Features typically only in $99+/mo solutions:
+  - AI analytics chatbot (Professional $35/month)
+  - Complete financial management (Starter $10/month)
+  - Email customization (Starter $10/month)
+  - Automated provisioning (all tiers)
+- **Production Proven:** 2 live customers successfully operating, ready for scale
 
 ---
 
@@ -778,6 +1099,146 @@ As a customer/participant, I want to:
 ---
 
 ## Document Version History
+
+### Version 1.2 - November 7, 2025
+**Major Update: Production Launch Ready - Complete Feature Suite & Live Customers**
+
+This update reflects the transition from pilot deployment to production launch readiness, with 2 live customers successfully operating and comprehensive feature enhancements across the platform.
+
+#### 🚀 **Production Status & Launch Preparation**
+- **Official Launch Date:** November 15, 2025
+- **Live Customers:** 2 production customers (LHGI charity foundation + hockey coach)
+- **Automated Provisioning:** Stripe webhook integration for instant customer onboarding
+- **Infrastructure:** Multi-tenant Docker deployment with automated SSL and subdomain provisioning
+- **Status:** Production-ready, validated with real-world operations
+
+#### ✅ **New Features Implemented (All Tiers Unless Noted)**
+
+1. **Professional Email Communication System** (All Tiers)
+   - 6 customizable email templates (newPass, paymentReceived, latePayment, signup, redeemPass, survey_invitation)
+   - Per-activity customization (subject, title, body, intro, conclusion, CTA)
+   - Hero image upload and activity logo integration
+   - Live preview and test email functionality
+   - HTML-supported content with security sanitization
+   - Reset to defaults capability
+   - **Available from $10/month Starter plan** (competitors charge $30-50/month extra)
+
+2. **Payment Inbox & Management Dashboard** (All Tiers)
+   - Centralized payment inbox for e-transfer emails
+   - Matched/unmatched payment tracking with status indicators
+   - Smart deduplication system
+   - Search and filter by sender, amount, status
+   - Archive workflow for clean inbox management
+   - Payment audit trail with match reasoning
+   - Pagination support (50 items/page)
+
+3. **Complete Financial Management Suite** (All Tiers)
+   - Unified income/expense tracking dashboard
+   - Receipt/document uploads (PDF, JPG, PNG) with modal viewing
+   - Category system (7 income types, 9 expense types)
+   - Activity-level financial breakdown with accordion view
+   - CSV export for QuickBooks, Xero, Sage, Wave, FreshBooks
+   - Period filtering (Month, Quarter, Year, Custom, All-Time)
+   - Mobile-responsive (desktop drawer + mobile modal)
+   - Real-time KPI cards (Total Revenue, Total Expenses, Net Income)
+
+4. **User Contact Management & Export** (All Tiers)
+   - Comprehensive user directory with engagement metrics
+   - Dynamic search with Ctrl+K keyboard shortcut
+   - GitHub-style filter buttons (Active vs All users)
+   - Gravatar integration for user avatars
+   - Email opt-out status tracking
+   - CSV export for CRM/marketing tools
+   - Responsive design (desktop/tablet/mobile optimized)
+   - Engagement data: passport count, revenue, activities, last activity date
+
+5. **Enhanced Survey System** (Professional & Enterprise)
+   - Survey template library (reusable question sets)
+   - Pre-built templates (English & French)
+   - True 3-click deployment workflow
+   - Survey lifecycle management (create, send, close, reopen, delete)
+   - Response tracking with tokens and timestamps
+   - Results dashboard with aggregated statistics
+   - CSV export of survey responses
+   - Target audience selection (passport type or all participants)
+
+6. **AI Analytics Chatbot Enhancements** (Professional & Enterprise)
+   - Multi-provider system: Google Gemini + Groq + Ollama
+   - Provider selection dropdown in UI
+   - Claude.ai-inspired interface design
+   - Interactive example questions for guidance
+   - SQL display for transparency
+   - Chart rendering for data visualization
+   - Status LED for API connectivity
+   - Intent detection (aggregation, list, comparison, visualization)
+   - Entity extraction (dates, activities, numbers, emails)
+   - Token usage and cost tracking
+   - Query logging with complete audit trail
+
+7. **Automated Customer Provisioning**
+   - Stripe webhook integration for subscription payments
+   - Automatic Docker container deployment
+   - Subdomain provisioning (e.g., `customer.minipass.me`)
+   - SSL certificate automation via Let's Encrypt
+   - Database initialization with migrations
+   - Welcome email with credentials and video tutorial
+   - Zero manual intervention onboarding
+
+#### 📊 **Production Customer Validation**
+
+**Customer 1: LHGI (Ligue hockey Gagnon Image)**
+- Charity foundation and hockey league organization
+- Managing multiple activities with diverse participant groups
+- Heavy adoption of email customization and financial reporting
+- Reports significant time savings and improved transparency
+
+**Customer 2: Hockey Coach (Personal Training)**
+- Individual sports coaching and training programs
+- Managing training sessions with different skill levels
+- Values mobile-friendly interface and payment automation
+- Reports improved client management and revenue tracking
+
+**Key Learnings:**
+- Email customization critical for brand consistency
+- Financial reporting essential for both non-profit and small business
+- Customers report significant administrative time savings
+- Non-technical users successfully manage all features without training
+- Mobile usage is frequent and important
+
+#### 🎯 **Pricing & Feature Distribution Updates**
+- **Clarified Tier Structure:** All core features (email customization, financial suite, payment inbox, user export) available in $10/month Starter
+- **Professional & Enterprise:** Survey system and AI chatbot reserved for higher tiers
+- **Disruptive Pricing:** Features typically costing $50-99/month in competitors available at $10/month
+
+#### 🏆 **Competitive Advantages Added**
+- **Professional Communication Suite:** 6 customizable emails at all tiers vs $30-50/month add-on from competitors
+- **Complete Financial Suite:** All-in-one financial management from $10/month
+- **Payment Intelligence Dashboard:** Unique e-transfer inbox management
+- **Instant Customer Onboarding:** Stripe auto-provisioning vs manual setup/sales demos
+- **Market Position:** Enterprise features at SMB pricing ($10-50 vs $99+/month)
+
+#### 🔧 **Technical Architecture Enhancements**
+- Multi-tenant organization model with per-tenant configuration
+- Enhanced database models: Organization, Expense, ChatConversation, ChatMessage
+- Receipt storage system with file uploads
+- Email template compilation and rendering system
+- Provider manager for AI with health monitoring
+- Webhook handling for Stripe events
+
+#### 📈 **Success Metrics Updates**
+- Launch goal achieved: 2 production customers live
+- Production validation: Managing real-world revenue and operations
+- Feature adoption: Email customization heavily used by all customers
+- Time savings: Significant reduction in administrative overhead reported
+- Customer feedback: Ease of use and professional communication praised
+
+#### 📅 **Launch Timeline Updated**
+- Development phase: Completed ✅
+- Testing & refinement: Completed with 2 live customers ✅
+- Production launch preparation: In progress
+- **Official launch: November 15, 2025** 🚀
+
+---
 
 ### Version 1.1 - October 20, 2025
 **Major Update: Production Deployment & Feature Implementation**

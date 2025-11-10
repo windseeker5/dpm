@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Current Plan | Minipass{% endblock %}
+{% block content %}
+
+<div class="page-wrapper">
+  <!-- Page Header -->
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="d-flex align-items-center justify-content-between w-100">
+        <div class="d-flex align-items-center">
+          <h1 class="page-title mb-0">
+            <i class="ti ti-credit-card fs-1 text-muted me-2"></i>Current Plan
+          </h1>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="dashboard-container">
+
+      <!-- Current Plan Card -->
+      <div class="card bg-white mb-3">
+        <div class="card-header">
+          <h2 class="card-title mb-0">Your Subscription</h2>
+        </div>
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <div class="text-muted small mb-1">CURRENT PLAN</div>
+                <div class="h2 mb-1">{{ tier_info.name }} ({{ tier_info.activities }} {{ 'Activity' if tier_info.activities == 1 else 'Activities' }})</div>
+                <div class="text-muted">{{ tier_info.price }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <div class="text-muted small mb-1">ACTIVITY USAGE</div>
+                <div class="h3 mb-2">
+                  {{ usage_info.current }}<span class="text-muted"> / {{ usage_info.limit }}</span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div class="progress-bar {% if usage_info.percentage >= 100 %}bg-danger{% elif usage_info.percentage >= 80 %}bg-warning{% else %}bg-primary{% endif %}"
+                       role="progressbar"
+                       style="width: {{ usage_info.percentage }}%;"
+                       aria-valuenow="{{ usage_info.percentage }}"
+                       aria-valuemin="0"
+                       aria-valuemax="100">
+                  </div>
+                </div>
+                <div class="small text-muted mt-1">
+                  {% if usage_info.percentage >= 100 %}
+                    <i class="ti ti-alert-triangle text-danger me-1"></i>Limit reached
+                  {% elif usage_info.percentage >= 80 %}
+                    <i class="ti ti-alert-circle text-warning me-1"></i>{{ usage_info.limit - usage_info.current }} activities remaining
+                  {% else %}
+                    <i class="ti ti-check text-success me-1"></i>{{ usage_info.limit - usage_info.current }} activities remaining
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upgrade Options (if not on highest tier) -->
+      {% if upgrade_options %}
+      <div class="row">
+        {% for option in upgrade_options %}
+        <div class="col-md-6 mb-3">
+          <div class="card bg-white">
+            <div class="card-header">
+              <h3 class="card-title mb-0">{{ option.name }}</h3>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <div class="h2 text-primary mb-0">{{ option.price }}</div>
+                <div class="text-muted small">Billed annually</div>
+              </div>
+              <ul class="list-unstyled mb-3">
+                {% for feature in option.features %}
+                <li class="mb-2">
+                  <i class="ti ti-check text-success me-2"></i>{{ feature }}
+                </li>
+                {% endfor %}
+              </ul>
+              <a href="mailto:support@minipass.me?subject=Upgrade Request - {{ tier_info.name }} to {{ option.name }}"
+                 class="btn btn-primary w-100">
+                <i class="ti ti-rocket me-2"></i>Upgrade to {{ option.name }}
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <!-- Already on highest tier -->
+      <div class="card bg-white mb-3">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="me-3">
+              <i class="ti ti-trophy text-warning" style="font-size: 3rem;"></i>
+            </div>
+            <div>
+              <h3 class="mb-1">You're on our highest tier!</h3>
+              <p class="text-muted mb-0">You have access to all Minipass features and 100 active activities.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block head %}
+<style>
+/* Dashboard container alignment */
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Standard card styling */
+.card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 0.5rem !important;
+}
+</style>
+{% endblock %}

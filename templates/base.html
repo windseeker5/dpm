@@ -15,7 +15,10 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-  
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
   <!-- Font Preconnects -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -165,7 +168,34 @@
     .flash-alert.alert-warning::before {
       background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
     }
-    
+
+    /* Tier limit warning - clean yellow with dark text */
+    .flash-alert.alert-tier-limit {
+      background: #fef3c7;
+      color: #1f2937;
+      border: 1px solid #fcd34d;
+    }
+
+    .flash-alert.alert-tier-limit .alert-title {
+      color: #92400e;
+      font-weight: 600;
+    }
+
+    .flash-alert.alert-tier-limit .alert-link {
+      color: #1e40af;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    .flash-alert.alert-tier-limit .alert-link:hover {
+      color: #1e3a8a;
+      text-decoration: underline;
+    }
+
+    .flash-alert.alert-tier-limit::before {
+      background: linear-gradient(90deg, rgba(252, 211, 77, 0.3), transparent);
+    }
+
     .flash-alert.alert-info {
       background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%);
       color: white;
@@ -357,8 +387,9 @@
       <div class="flash-alert-overlay" id="flashAlertOverlay">
         <div class="flash-alert-container">
           {% for category, message in messages %}
-            <div class="flash-alert alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'warning' if category == 'warning' else 'info' }} alert-dismissible" role="alert" aria-live="polite" aria-atomic="true">
+            <div class="flash-alert alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'warning' if category == 'warning' else 'tier-limit' if category == 'tier_limit' else 'info' }} alert-dismissible" role="alert" aria-live="polite" aria-atomic="true">
               <div class="d-flex">
+                {% if category != 'tier_limit' %}
                 <div class="alert-icon-container">
                   {% if category == 'success' %}
                     <i class="ti ti-check-circle alert-icon"></i>
@@ -370,13 +401,14 @@
                     <i class="ti ti-info-circle alert-icon"></i>
                   {% endif %}
                 </div>
+                {% endif %}
                 <div class="flex-fill">
                   <div class="alert-title">
                     {% if category == 'success' %}
                       Success
                     {% elif category == 'error' %}
                       Error
-                    {% elif category == 'warning' %}
+                    {% elif category == 'warning' or category == 'tier_limit' %}
                       Warning
                     {% else %}
                       Information
@@ -384,7 +416,9 @@
                   </div>
                   <div class="alert-message">{{ message }}</div>
                 </div>
+                {% if category != 'tier_limit' %}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close notification"></button>
+                {% endif %}
               </div>
               <div class="flash-alert-progress"></div>
             </div>
@@ -595,19 +629,19 @@
         <div class="nav-section">
           <ul class="nav-list">
             <li class="nav-item nav-item-expandable">
-              <a href="#" 
-                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] }}"
-                 data-bs-toggle="collapse" 
+              <a href="#"
+                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] }}"
+                 data-bs-toggle="collapse"
                  data-bs-target="#settings-submenu"
-                 aria-expanded="{{ 'true' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] else 'false' }}">
+                 aria-expanded="{{ 'true' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] else 'false' }}">
                 <i class="nav-icon ti ti-settings"></i>
                 <span class="nav-text">Settings</span>
                 <i class="nav-chevron ti ti-chevron-right"></i>
-                {% if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] %}
+                {% if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] %}
                 <span class="nav-indicator"></span>
                 {% endif %}
               </a>
-              <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings'] }}" id="settings-submenu">
+              <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] }}" id="settings-submenu">
                 <ul class="nav-list">
                   <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="admins">
@@ -634,6 +668,15 @@
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="backup">
                       <i class="nav-icon ti ti-archive"></i>
                       <span class="nav-text">Backup & Restore</span>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{{ url_for('current_plan') }}" class="nav-link {{ 'active' if request.endpoint == 'current_plan' }}">
+                      <i class="nav-icon ti ti-credit-card"></i>
+                      <span class="nav-text">Current Plan</span>
+                      {% if request.endpoint == 'current_plan' %}
+                      <span class="nav-indicator"></span>
+                      {% endif %}
                     </a>
                   </li>
                 </ul>
@@ -887,6 +930,38 @@
   <!-- Reusable Components -->
   <script src="{{ url_for('static', filename='js/search-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/filter-component.js') }}?v=1.0"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    // Register service worker for PWA functionality
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/service-worker.js')
+          .then((registration) => {
+            console.log('✅ Minipass PWA: Service Worker registered successfully', registration.scope);
+
+            // Check for updates periodically
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              console.log('🔄 Minipass PWA: Update found, installing new version...');
+
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('✨ Minipass PWA: New version available! Refresh to update.');
+                  // Optional: Show user notification about update
+                  // You can add a notification banner here if desired
+                }
+              });
+            });
+          })
+          .catch((error) => {
+            console.log('❌ Minipass PWA: Service Worker registration failed:', error);
+          });
+      });
+    } else {
+      console.log('ℹ️ Minipass PWA: Service Workers not supported in this browser');
+    }
+  </script>
 
   {% block scripts %}{% endblock %}
 </body>

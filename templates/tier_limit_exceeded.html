@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Tier Limit Exceeded{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <!-- Page Body -->
+  <div class="page-body">
+    <div class="container-xl d-flex flex-column justify-content-center" style="min-height: 70vh;">
+      <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+
+          <!-- Warning Alert Card -->
+          <div class="card border-danger mb-4">
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-3">
+                <div class="me-3">
+                  <i class="ti ti-alert-triangle text-danger" style="font-size: 3rem;"></i>
+                </div>
+                <div>
+                  <h2 class="card-title text-danger mb-1">Activity Limit Exceeded</h2>
+                  <p class="text-muted mb-0">{{ message }}</p>
+                </div>
+              </div>
+
+              <div class="alert alert-warning border-warning mb-0">
+                <div class="d-flex">
+                  <div class="me-2">
+                    <i class="ti ti-info-circle"></i>
+                  </div>
+                  <div>
+                    <h4 class="alert-title">Action Required</h4>
+                    <p class="mb-2">You currently have <strong>{{ current_count }}</strong> active {{ 'activities' if current_count > 1 else 'activity' }}, but your <strong>{{ tier_info.name }}</strong> plan allows <strong>{{ tier_info.activities }}</strong>.</p>
+                    <p class="mb-0">Please archive <strong>{{ excess }}</strong> {{ 'activities' if excess > 1 else 'activity' }} below to continue using Minipass, or upgrade your plan.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Activities Table -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Your Active Activities</h3>
+              <div class="card-subtitle">Select {{ excess }} {{ 'activities' if excess > 1 else 'activity' }} to archive</div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-vcenter card-table">
+                <thead>
+                  <tr>
+                    <th>Activity Name</th>
+                    <th>Status</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th class="w-1">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for activity in active_activities %}
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        {% if activity.image_filename %}
+                        <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+                             alt="{{ activity.name }}"
+                             class="avatar avatar-sm me-2"
+                             style="object-fit: cover;">
+                        {% else %}
+                        <div class="avatar avatar-sm bg-primary-lt me-2">
+                          <i class="ti ti-activity"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                          <div class="font-weight-medium">{{ activity.name }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge bg-success">Active</span>
+                    </td>
+                    <td>{{ activity.start_date.strftime('%b %d, %Y') if activity.start_date else 'N/A' }}</td>
+                    <td>{{ activity.end_date.strftime('%b %d, %Y') if activity.end_date else 'N/A' }}</td>
+                    <td>
+                      <form method="POST" action="{{ url_for('archive_activity_from_limit', activity_id=activity.id) }}" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-warning">
+                          <i class="ti ti-archive me-1"></i> Archive
+                        </button>
+                      </form>
+                      <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}"
+                         class="btn btn-sm btn-ghost-primary ms-1" target="_blank">
+                        <i class="ti ti-eye me-1"></i> View
+                      </a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Upgrade Option -->
+          <div class="card bg-blue-lt mt-4">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <h3 class="mb-1">Prefer to Upgrade Instead?</h3>
+                  <p class="text-muted mb-0">Get more active activities and unlock additional features with a higher tier plan.</p>
+                </div>
+                <div>
+                  <a href="mailto:support@minipass.me?subject=Upgrade%20Request" class="btn btn-primary">
+                    <i class="ti ti-rocket me-2"></i> Contact Support
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
