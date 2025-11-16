@@ -547,6 +547,7 @@
                 {% endif %}
               </a>
             </li>
+            {% if subscription and subscription.tier_info.activities > 1 %}
             <li class="nav-item">
               <a href="{{ url_for('list_surveys') }}"
                  class="nav-link {{ 'active' if request.endpoint == 'list_surveys' }}">
@@ -557,6 +558,7 @@
                 {% endif %}
               </a>
             </li>
+            {% endif %}
           </ul>
         </div>
 
@@ -608,6 +610,7 @@
                       {% endif %}
                     </a>
                   </li>
+                  {% if subscription and subscription.tier_info.activities > 1 %}
                   <li class="nav-item">
                     <a href="/chatbot/"
                        class="nav-link {{ 'active' if 'chatbot' in request.endpoint }}">
@@ -619,6 +622,7 @@
                       {% endif %}
                     </a>
                   </li>
+                  {% endif %}
                 </ul>
               </div>
             </li>
