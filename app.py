@@ -9560,6 +9560,70 @@ def unsubscribe():
             return "An error occurred. Please try again later.", 500
 
 
+@app.route('/admin/subscription', methods=['GET', 'POST'])
+def admin_subscription():
+    """Subscription management page for admin"""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    # Load subscription info from file
+    subscription_file = os.path.join('instance', 'subscription.json')
+    subscription_info = None
+    error_message = None
+    success_message = None
+
+    try:
+        if os.path.exists(subscription_file):
+            with open(subscription_file, 'r') as f:
+                subscription_info = json.load(f)
+        else:
+            error_message = "Subscription information not found. This may be a legacy deployment."
+    except Exception as e:
+        error_message = f"Error loading subscription info: {str(e)}"
+
+    # Handle POST request (cancellation)
+    if request.method == 'POST' and subscription_info:
+        action = request.form.get('action')
+
+        if action == 'cancel':
+            try:
+                stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+                subscription_id = subscription_info.get('stripe_subscription_id')
+
+                if not subscription_id:
+                    flash("Subscription ID not found. Unable to cancel.", "error")
+                    return redirect(url_for('admin_subscription'))
+
+                # Cancel subscription at period end
+                updated_subscription = stripe.Subscription.modify(
+                    subscription_id,
+                    cancel_at_period_end=True
+                )
+
+                # Update the JSON file to reflect cancellation
+                subscription_info['cancel_at_period_end'] = True
+                subscription_info['cancelled_at'] = datetime.now().isoformat()
+
+                with open(subscription_file, 'w') as f:
+                    json.dump(subscription_info, f, indent=2)
+
+                flash("Subscription cancelled successfully. Access will continue until the end of your billing period.", "success")
+                return redirect(url_for('admin_subscription'))
+
+            except stripe.error.StripeError as e:
+                flash(f"Stripe error: {str(e)}", "error")
+                return redirect(url_for('admin_subscription'))
+            except Exception as e:
+                flash(f"Error cancelling subscription: {str(e)}", "error")
+                return redirect(url_for('admin_subscription'))
+
+    # Render subscription management page
+    return render_template('admin/subscription.html',
+                         subscription_info=subscription_info,
+                         error_message=error_message,
+                         success_message=success_message)
+
+
 @app.route('/privacy', methods=['GET'])
 def privacy():
     """Privacy Policy page"""
