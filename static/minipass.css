@@ -2207,10 +2207,10 @@ html, body {
 }
 
 .header-logo-white {
-  height: 17px; /* Reduced by 15% from 20px (20 × 0.85 = 17px) */
+  height: 18px; /* Adjusted for new colorful logo design */
   width: auto;
   object-fit: contain;
-  /* No filter - use logo as-is (already white) */
+  /* No filter - use logo as-is (colorful design) */
 }
 
 /* CENTER: Organization Name (flexible width) */

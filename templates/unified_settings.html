@@ -64,13 +64,13 @@
             
             <div class="mb-3">
               <label class="form-label">Default Sender Email</label>
-              <input type="email" class="form-control" name="mail_default_sender" value="{{ settings.MAIL_DEFAULT_SENDER or '' }}" required>
+              <input type="email" class="form-control" name="mail_default_sender" value="{{ settings.get('MAIL_DEFAULT_SENDER', '') }}" required>
               <div class="form-text">The email address used as sender for all outgoing emails</div>
             </div>
 
             <div class="mb-3">
               <label class="form-label">Sender Name</label>
-              <input type="text" class="form-control" name="mail_sender_name" value="{{ settings.MAIL_SENDER_NAME or '' }}" placeholder="e.g., LHGI, Your Organization">
+              <input type="text" class="form-control" name="mail_sender_name" value="{{ settings.get('MAIL_SENDER_NAME', '') }}" placeholder="e.g., LHGI, Your Organization">
               <div class="form-text">The display name shown in email clients (e.g., "LHGI &lt;lhgi@minipass.me&gt;")</div>
             </div>
 
@@ -93,22 +93,22 @@
                   <div class="border-top p-3">
                     <div class="mb-3">
                       <label class="form-label">Mail Server</label>
-                      <input type="text" class="form-control" name="mail_server" value="{{ settings.MAIL_SERVER or '' }}" required>
+                      <input type="text" class="form-control" name="mail_server" value="{{ settings.get('MAIL_SERVER', '') }}" required>
                     </div>
 
                     <div class="mb-3">
                       <label class="form-label">Mail Port</label>
-                      <input type="number" class="form-control" name="mail_port" value="{{ settings.MAIL_PORT or '587' }}" required>
+                      <input type="number" class="form-control" name="mail_port" value="{{ settings.get('MAIL_PORT', '587') }}" required>
                     </div>
 
                     <div class="form-check mb-3">
-                      <input type="checkbox" class="form-check-input" name="mail_use_tls" id="mail_use_tls" {% if settings.MAIL_USE_TLS == 'True' %}checked{% endif %}>
+                      <input type="checkbox" class="form-check-input" name="mail_use_tls" id="mail_use_tls" {% if settings.get('MAIL_USE_TLS') == 'True' %}checked{% endif %}>
                       <label class="form-check-label" for="mail_use_tls">Use TLS</label>
                     </div>
 
                     <div class="mb-3">
                       <label class="form-label">Email Username</label>
-                      <input type="email" class="form-control" name="mail_username" value="{{ settings.MAIL_USERNAME or '' }}" required>
+                      <input type="email" class="form-control" name="mail_username" value="{{ settings.get('MAIL_USERNAME', '') }}" required>
                     </div>
 
                     <div class="mb-3">
