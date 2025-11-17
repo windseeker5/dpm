@@ -3589,20 +3589,21 @@ def resize_hero_image(image_data, template_type, max_file_size_mb=2):
 # 📊 FINANCIAL REPORTING FUNCTIONS
 # ================================
 
-def get_financial_data(start_date=None, end_date=None, activity_id=None):
+def get_financial_data(start_date=None, end_date=None, activity_id=None, basis='cash'):
     """
-    Aggregate financial data from Passport sales, Income, and Expenses.
+    Get financial data for reporting with Cash Flow Accounting support.
 
     Args:
         start_date: datetime object for start of period (UTC, optional)
         end_date: datetime object for end of period (UTC, optional)
         activity_id: Optional activity ID to filter by specific activity
+        basis: 'cash' (default) or 'accrual' - accounting basis
 
     Returns:
-        dict: Financial data with summary and by-activity breakdown
+        dict with cash_received, cash_paid, net_cash_flow,
+        accounts_receivable, accounts_payable, transactions
     """
-    from models import Passport, Income, Expense, Activity, User
-    from sqlalchemy import func
+    from models import Passport, Income, Expense, Activity, PassportType, User
     from datetime import datetime, timezone
 
     # Default to all-time if no dates provided
@@ -3617,140 +3618,187 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
     if end_date.tzinfo is None:
         end_date = end_date.replace(tzinfo=timezone.utc)
 
-    # Build base queries with date filtering
-    passport_query = db.session.query(Passport).filter(
-        Passport.created_dt >= start_date,
-        Passport.created_dt <= end_date
-    )
-    income_query = db.session.query(Income).filter(
+    # Initialize totals
+    cash_received = 0.0
+    cash_paid = 0.0
+    accounts_receivable = 0.0
+    accounts_payable = 0.0
+    all_transactions = []
+
+    # PASSPORT SALES (Income)
+    passport_query = db.session.query(Passport).join(Activity).join(PassportType)
+
+    if basis == 'cash':
+        # Cash Basis: Only paid passports, use payment_date for filtering
+        passport_query = passport_query.filter(
+            Passport.paid == True,
+            Passport.paid_date >= start_date,
+            Passport.paid_date <= end_date
+        )
+    else:
+        # Accrual Basis: All passports, use created_dt for filtering
+        passport_query = passport_query.filter(
+            Passport.created_dt >= start_date,
+            Passport.created_dt <= end_date
+        )
+
+    if activity_id:
+        passport_query = passport_query.filter(Passport.activity_id == activity_id)
+
+    passports = passport_query.all()
+
+    for passport in passports:
+        user = db.session.get(User, passport.user_id) if passport.user_id else None
+        if passport.paid:
+            cash_received += passport.sold_amt
+        else:
+            accounts_receivable += passport.sold_amt
+
+        all_transactions.append({
+            'id': None,
+            'date': passport.paid_date.strftime('%Y-%m-%d') if passport.paid_date else passport.created_dt.strftime('%Y-%m-%d'),
+            'datetime': passport.paid_date if passport.paid_date else passport.created_dt,
+            'type': 'Income',
+            'category': 'Passport Sales',
+            'description': f"{passport.passport_type.name if passport.passport_type else 'Passport'} - {user.name if user else 'Unknown'}",
+            'amount': passport.sold_amt,
+            'payment_status': 'received' if passport.paid else 'pending',
+            'payment_date': passport.paid_date.strftime('%Y-%m-%d') if passport.paid_date else '',
+            'payment_method': '',  # Passport sales don't track payment method
+            'due_date': '',  # Passport sales don't have due dates
+            'receipt_filename': None,
+            'activity_id': passport.activity_id,
+            'activity_name': passport.activity.name,
+            'activity_image': passport.activity.image_filename or passport.activity.logo_filename,
+            'editable': False,  # Passport sales not editable from financial report
+            'source_type': 'passport',
+            'created_by': passport.marked_paid_by or 'System'
+        })
+
+    # MANUAL INCOME ENTRIES
+    # Query ALL income transactions (regardless of payment status)
+    # KPIs will be calculated based on payment_status below
+    income_query = db.session.query(Income).join(Activity)
+
+    # Filter by invoice date to get all transactions in the period
+    income_query = income_query.filter(
         Income.date >= start_date,
         Income.date <= end_date
     )
-    expense_query = db.session.query(Expense).filter(
+
+    if activity_id:
+        income_query = income_query.filter(Income.activity_id == activity_id)
+
+    incomes = income_query.all()
+
+    # Calculate KPIs based on payment status (cash basis accounting)
+    for income in incomes:
+        if income.payment_status == 'received':
+            cash_received += income.amount
+        elif income.payment_status == 'pending':
+            accounts_receivable += income.amount
+
+        all_transactions.append({
+            'id': income.id,
+            'date': income.payment_date.strftime('%Y-%m-%d') if income.payment_date else income.date.strftime('%Y-%m-%d'),
+            'datetime': income.payment_date if income.payment_date else income.date,
+            'type': 'Income',
+            'category': income.category,
+            'description': income.note or '',
+            'amount': income.amount,
+            'payment_status': income.payment_status,
+            'payment_date': income.payment_date.strftime('%Y-%m-%d') if income.payment_date else '',
+            'payment_method': income.payment_method or '',
+            'due_date': '',  # Income doesn't have due_date
+            'receipt_filename': income.receipt_filename,
+            'activity_id': income.activity_id,
+            'activity_name': income.activity.name,
+            'activity_image': income.activity.image_filename or income.activity.logo_filename,
+            'editable': True,
+            'source_type': 'income',
+            'created_by': income.created_by or 'Unknown'
+        })
+
+    # EXPENSES
+    # Query ALL expense transactions (regardless of payment status)
+    # KPIs will be calculated based on payment_status below
+    expense_query = db.session.query(Expense).join(Activity)
+
+    # Filter by bill date to get all transactions in the period
+    expense_query = expense_query.filter(
         Expense.date >= start_date,
         Expense.date <= end_date
     )
 
-    # Apply activity filter if provided
     if activity_id:
-        passport_query = passport_query.filter(Passport.activity_id == activity_id)
-        income_query = income_query.filter(Income.activity_id == activity_id)
         expense_query = expense_query.filter(Expense.activity_id == activity_id)
 
-    # Get all activities involved
-    if activity_id:
-        activities = [db.session.get(Activity, activity_id)]
-    else:
-        activity_ids = set()
-        for p in passport_query.all():
-            activity_ids.add(p.activity_id)
-        for i in income_query.all():
-            activity_ids.add(i.activity_id)
-        for e in expense_query.all():
-            activity_ids.add(e.activity_id)
-        activities = [db.session.get(Activity, aid) for aid in activity_ids if db.session.get(Activity, aid)]
+    expenses = expense_query.all()
 
-    # Initialize summary
-    total_revenue = 0.0
-    total_expenses = 0.0
-    by_activity = []
-    all_transactions = []
+    # Calculate KPIs based on payment status (cash basis accounting)
+    for expense in expenses:
+        if expense.payment_status == 'paid':
+            cash_paid += expense.amount
+        elif expense.payment_status == 'unpaid':
+            accounts_payable += expense.amount
 
-    # Process each activity
-    for activity in activities:
-        activity_revenue = 0.0
-        activity_expenses = 0.0
-        activity_transactions = []
-
-        # Get passport sales for this activity
-        passports = passport_query.filter(Passport.activity_id == activity.id).all()
-        for passport in passports:
-            user = db.session.get(User, passport.user_id) if passport.user_id else None
-            transaction = {
-                'id': None,  # Passport sales don't have income ID
-                'date': passport.created_dt.strftime('%Y-%m-%d'),
-                'datetime': passport.created_dt,
-                'type': 'Income',
-                'category': 'Passport Sales',
-                'description': f"{passport.passport_type_name or 'Passport'} - {user.name if user else 'Unknown'}",
-                'amount': float(passport.sold_amt or 0),
-                'receipt_filename': None,
-                'activity_id': activity.id,
-                'activity_name': activity.name,
-                'editable': False,  # Passport sales are system-generated, not editable
-                'source_type': 'passport',
-                'created_by': 'System'  # Passport sales are auto-generated
-            }
-            activity_revenue += transaction['amount']
-            activity_transactions.append(transaction)
-            all_transactions.append(transaction)
-
-        # Get other income for this activity
-        incomes = income_query.filter(Income.activity_id == activity.id).all()
-        for income in incomes:
-            transaction = {
-                'id': income.id,  # Income record ID for editing/deleting
-                'date': income.date.strftime('%Y-%m-%d'),
-                'datetime': income.date,
-                'type': 'Income',
-                'category': income.category,
-                'description': income.note or income.category,
-                'amount': float(income.amount),
-                'receipt_filename': income.receipt_filename,
-                'activity_id': activity.id,
-                'activity_name': activity.name,
-                'editable': True,  # User-created income entries are editable
-                'source_type': 'income',
-                'created_by': income.created_by or 'System'  # Admin who created this entry
-            }
-            activity_revenue += transaction['amount']
-            activity_transactions.append(transaction)
-            all_transactions.append(transaction)
-
-        # Get expenses for this activity
-        expenses = expense_query.filter(Expense.activity_id == activity.id).all()
-        for expense in expenses:
-            transaction = {
-                'id': expense.id,  # Expense record ID for editing/deleting
-                'date': expense.date.strftime('%Y-%m-%d'),
-                'datetime': expense.date,
-                'type': 'Expense',
-                'category': expense.category,
-                'description': expense.description or expense.category,
-                'amount': float(expense.amount),
-                'receipt_filename': expense.receipt_filename,
-                'activity_id': activity.id,
-                'activity_name': activity.name,
-                'editable': True,  # User-created expense entries are editable
-                'source_type': 'expense',
-                'created_by': expense.created_by or 'System'  # Admin who created this entry
-            }
-            activity_expenses += transaction['amount']
-            activity_transactions.append(transaction)
-            all_transactions.append(transaction)
-
-        # Sort activity transactions by date (newest first)
-        activity_transactions.sort(key=lambda x: x['datetime'], reverse=True)
-
-        # Add to by_activity list
-        by_activity.append({
-            'activity_id': activity.id,
-            'activity_name': activity.name,
-            'activity_image': activity.image_filename or activity.logo_filename,
-            'total_revenue': activity_revenue,
-            'total_expenses': activity_expenses,
-            'net_income': activity_revenue - activity_expenses,
-            'transactions': activity_transactions
+        all_transactions.append({
+            'id': expense.id,
+            'date': expense.payment_date.strftime('%Y-%m-%d') if expense.payment_date else expense.date.strftime('%Y-%m-%d'),
+            'datetime': expense.payment_date if expense.payment_date else expense.date,
+            'type': 'Expense',
+            'category': expense.category,
+            'description': expense.description or '',
+            'amount': expense.amount,
+            'payment_status': expense.payment_status,
+            'payment_date': expense.payment_date.strftime('%Y-%m-%d') if expense.payment_date else '',
+            'payment_method': expense.payment_method or '',
+            'due_date': expense.due_date.strftime('%Y-%m-%d') if expense.due_date else '',
+            'receipt_filename': expense.receipt_filename,
+            'activity_id': expense.activity_id,
+            'activity_name': expense.activity.name,
+            'activity_image': expense.activity.image_filename or expense.activity.logo_filename,
+            'editable': True,
+            'source_type': 'expense',
+            'created_by': expense.created_by or 'Unknown'
         })
 
-        total_revenue += activity_revenue
-        total_expenses += activity_expenses
-
-    # Sort activities by revenue (highest first)
-    by_activity.sort(key=lambda x: x['total_revenue'], reverse=True)
-
-    # Sort all transactions by date (newest first)
+    # Sort transactions by date (newest first)
     all_transactions.sort(key=lambda x: x['datetime'], reverse=True)
+
+    # Group by activity
+    by_activity = []
+    if activity_id:
+        # Single activity view
+        activity = db.session.get(Activity, activity_id)
+        if activity:
+            activity_transactions = [t for t in all_transactions if t['activity_id'] == activity.id]
+            by_activity.append({
+                'activity_id': activity.id,
+                'activity_name': activity.name,
+                'activity_image': activity.image_filename or activity.logo_filename,
+                'total_revenue': sum(t['amount'] for t in activity_transactions if t['type'] == 'Income' and t['payment_status'] in ['received', 'paid']),
+                'total_expenses': sum(t['amount'] for t in activity_transactions if t['type'] == 'Expense' and t['payment_status'] == 'paid'),
+                'net_income': sum(t['amount'] for t in activity_transactions if t['type'] == 'Income' and t['payment_status'] in ['received', 'paid']) -
+                              sum(t['amount'] for t in activity_transactions if t['type'] == 'Expense' and t['payment_status'] == 'paid'),
+                'transactions': activity_transactions
+            })
+    else:
+        # All activities
+        activities = db.session.query(Activity).all()
+        for activity in activities:
+            activity_transactions = [t for t in all_transactions if t['activity_id'] == activity.id]
+            if activity_transactions:
+                by_activity.append({
+                    'activity_id': activity.id,
+                    'activity_name': activity.name,
+                    'activity_image': activity.image_filename or activity.logo_filename,
+                    'total_revenue': sum(t['amount'] for t in activity_transactions if t['type'] == 'Income' and t['payment_status'] in ['received', 'paid']),
+                    'total_expenses': sum(t['amount'] for t in activity_transactions if t['type'] == 'Expense' and t['payment_status'] == 'paid'),
+                    'net_income': sum(t['amount'] for t in activity_transactions if t['type'] == 'Income' and t['payment_status'] in ['received', 'paid']) -
+                                  sum(t['amount'] for t in activity_transactions if t['type'] == 'Expense' and t['payment_status'] == 'paid'),
+                    'transactions': activity_transactions
+                })
 
     # Determine period label
     if start_date.year == 2000 and end_date >= datetime.now(timezone.utc):
@@ -3760,9 +3808,14 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None):
 
     return {
         'summary': {
-            'total_revenue': total_revenue,
-            'total_expenses': total_expenses,
-            'net_income': total_revenue - total_expenses,
+            'cash_received': cash_received,
+            'cash_paid': cash_paid,
+            'net_cash_flow': cash_received - cash_paid,
+            'accounts_receivable': accounts_receivable,
+            'accounts_payable': accounts_payable,
+            'total_revenue': cash_received + accounts_receivable,  # Accrual total
+            'total_expenses': cash_paid + accounts_payable,  # Accrual total
+            'net_income': (cash_received + accounts_receivable) - (cash_paid + accounts_payable),
             'period_label': period_label,
             'start_date': start_date,
             'end_date': end_date
@@ -3788,8 +3841,21 @@ def export_financial_csv(financial_data):
     output = StringIO()
     writer = csv.writer(output)
 
-    # Write header
-    writer.writerow(['Date', 'Activity', 'Type', 'Category', 'Description', 'Amount', 'Receipt'])
+    # Write header with cash flow accounting fields
+    writer.writerow([
+        'Date',
+        'Activity',
+        'Type',
+        'Category',
+        'Description',
+        'Amount',
+        'Payment Status',
+        'Payment Date',
+        'Payment Method',
+        'Due Date',
+        'Receipt',
+        'Created By'
+    ])
 
     # Write all transactions
     for transaction in financial_data['all_transactions']:
@@ -3800,7 +3866,12 @@ def export_financial_csv(financial_data):
             transaction['category'],
             transaction['description'],
             f"{transaction['amount']:.2f}",
-            transaction['receipt_filename'] or 'N/A'
+            transaction['payment_status'].title(),
+            transaction['payment_date'] or 'N/A',
+            transaction['payment_method'] or 'N/A',
+            transaction['due_date'] or 'N/A',
+            transaction['receipt_filename'] or 'N/A',
+            transaction['created_by']
         ])
 
     return output.getvalue()
