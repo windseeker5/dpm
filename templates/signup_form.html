@@ -30,7 +30,8 @@
   
   <style>
     body {
-      background-color: #f2f4f7;
+      margin: 0;
+      padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
@@ -48,76 +49,99 @@
     .signup-wrapper {
       min-height: 100vh;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding-top: 2rem;
-      padding-bottom: 2rem;
-      padding-left: 1rem;
-      padding-right: 1rem;
-      overflow-y: auto;
-    }
-    
-    .signup-card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-      display: flex;
-      width: 100%;
-      max-width: 1400px;
-      max-height: calc(100vh - 4rem);
       overflow: hidden;
     }
-    
+
+    .signup-card {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+
     .signup-form {
       flex: 1;
-      padding: 4rem;
+      background: #ffffff;
+      padding: 6rem;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
+      justify-content: center;
       overflow-y: auto;
     }
-    
+
     .signup-image {
       flex: 1;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      border-radius: 0 12px 12px 0;
+    }
+
+    .signup-form-content {
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .btn-submit {
+      width: 60%;
+      margin: 0 auto;
+      display: block;
     }
 
     /* Mobile-first responsive design */
     @media (max-width: 768px) {
+      body {
+        overflow: auto;
+      }
+
       .signup-wrapper {
-        padding: 0;
-        align-items: flex-start;
+        display: block;
+        height: auto;
+        overflow: visible;
       }
-      
+
       .signup-card {
-        flex-direction: column;
-        min-height: auto;
-        border-radius: 0;
-        box-shadow: none;
-        max-width: none;
+        display: block;
+        height: auto;
+        min-height: 100vh;
       }
-      
+
       .signup-form {
-        padding: 2rem 1.5rem;
-        min-height: auto;
+        padding: 1rem 1.5rem;
+        min-height: 100vh;
         justify-content: flex-start;
-        padding-top: 2rem;
-        padding-bottom: 2rem;
       }
-      
+
       .signup-image {
-        display: none; /* Hide large image on mobile */
+        display: none;
       }
-      
+
       .page-title {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
         text-align: center;
         margin-bottom: 0.5rem;
+        margin-top: 0;
       }
-      
+
+      /* Hide logo on mobile */
+      .logo-section {
+        display: none !important;
+      }
+
+      /* Sticky pricing on mobile */
+      #pricing-info {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .btn-submit {
+        width: 100%;
+      }
+
       /* Mobile-optimized form elements */
       .form-control {
         font-size: 16px; /* Prevent zoom on iOS */
@@ -234,26 +258,18 @@
     <!-- Left Side: Form -->
     <div class="signup-form p-5">
 
-      
+
       <!-- Logo and Header -->
       {% if settings and settings["LOGO_FILENAME"] %}
-      <div class="text-center mb-4">
-        <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo" 
+      <div class="text-center mb-4 logo-section">
+        <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo"
              style="height: 120px; display: block; margin: 0 auto;">
       </div>
       {% endif %}
-      
-      <!-- Mobile header image (small activity preview) -->
-      <div class="d-block d-md-none mb-3">
-        {% if activity.image_filename %}
-        <div class="text-center">
-          <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}" 
-               alt="{{ activity.name }}" 
-               style="width: 100%; max-width: 300px; height: 150px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-        </div>
-        {% endif %}
-      </div>
-      
+
+      <!-- Form Content Container (max-width 500px) -->
+      <div class="signup-form-content">
+
       <!-- Title -->
       <div class="text-center mb-4">
         <h1 class="page-title mb-1">{{ activity.name }}</h1>
@@ -264,48 +280,82 @@
         {% endif %}
       </div>
 
-      <!-- Price and Sessions (Dynamic based on passport type) -->
-      <div class="text-muted text-center mb-4 p-3 bg-blue-lt rounded-3" style="font-size: 1.1rem;" id="pricing-info">
-        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-          <div class="d-flex align-items-center gap-1">
-            <i class="ti ti-currency-dollar" style="font-size: 1.2rem;"></i> 
-            <strong id="price-display">
-              {% if selected_passport_type %}
-                ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
-              {% elif passport_types|length == 1 %}
-                ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
-              {% else %}
-                ${{ "%.2f"|format(activity.price_per_user or 0) }}
-              {% endif %}
-            </strong>
+      <!-- Activity Information Card - Compact 2-Column Grid -->
+      <div class="mb-4 p-3 rounded-3" id="pricing-info" style="border: 1px solid #dee2e6; background: transparent;">
+
+        <div class="row g-3">
+          <!-- Row 1: Price and Sessions -->
+          <div class="col-6">
+            <div class="d-flex align-items-center gap-2">
+              <i class="ti ti-currency-dollar text-muted"></i>
+              <div>
+                <div class="text-muted" style="font-size: 0.75rem;">Prix</div>
+                <strong id="price-display" style="font-size: 1rem;">
+                  {% if selected_passport_type %}
+                    ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
+                  {% elif passport_types|length == 1 %}
+                    ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
+                  {% else %}
+                    ${{ "%.2f"|format(activity.price_per_user or 0) }}
+                  {% endif %}
+                </strong>
+              </div>
+            </div>
           </div>
-          <div class="d-flex align-items-center gap-1">
-            <i class="ti ti-ticket" style="font-size: 1.2rem;"></i> 
-            <strong id="sessions-display">
-              {% if selected_passport_type %}
-                {{ selected_passport_type.sessions_included }}
-              {% elif passport_types|length == 1 %}
-                {{ passport_types[0].sessions_included }}
-              {% else %}
-                {{ activity.sessions_included }}
-              {% endif %}
-            </strong> 
-            <span id="sessions-text">
-              {% if selected_passport_type %}
-                {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
-              {% elif passport_types|length == 1 %}
-                {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
-              {% else %}
-                {{ "session" if activity.sessions_included == 1 else "sessions" }}
-              {% endif %}
-            </span>
+
+          <div class="col-6">
+            <div class="d-flex align-items-center gap-2">
+              <i class="ti ti-ticket text-muted"></i>
+              <div>
+                <div class="text-muted" style="font-size: 0.75rem;">Sessions</div>
+                <strong id="sessions-display" style="font-size: 1rem;">
+                  {% if selected_passport_type %}
+                    {{ selected_passport_type.sessions_included }}
+                  {% elif passport_types|length == 1 %}
+                    {{ passport_types[0].sessions_included }}
+                  {% else %}
+                    {{ activity.sessions_included }}
+                  {% endif %}
+                  <span id="sessions-text">
+                    {% if selected_passport_type %}
+                      {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
+                    {% elif passport_types|length == 1 %}
+                      {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
+                    {% else %}
+                      {{ "session" if activity.sessions_included == 1 else "sessions" }}
+                    {% endif %}
+                  </span>
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: Location and Payment -->
+          {% if activity.location_address_formatted %}
+          <div class="col-6">
+            <div class="d-flex align-items-center gap-2">
+              <i class="ti ti-map-pin text-muted"></i>
+              <div>
+                <div class="text-muted" style="font-size: 0.75rem;">Lieu</div>
+                <div style="font-size: 0.85rem;">{{ activity.location_address_formatted }}</div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="{% if activity.location_address_formatted %}col-6{% else %}col-12{% endif %}">
+            <div class="d-flex align-items-center gap-2">
+              <i class="ti ti-credit-card text-muted"></i>
+              <div>
+                <div class="text-muted" style="font-size: 0.75rem;">Interac</div>
+                <div style="font-size: 0.85rem;">
+                  <strong>{{ settings.get("PAYMENT_EMAIL_ADDRESS", "lhgi@minipass.me") }}</strong>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        {% if selected_passport_type and selected_passport_type.payment_instructions %}
-        <div class="text-center">
-          <small class="text-muted">{{ selected_passport_type.payment_instructions }}</small>
-        </div>
-        {% endif %}
+
       </div>
       
 
@@ -399,7 +449,7 @@
         <div class="mb-4">
           <label class="form-label d-flex align-items-center gap-2">
             <i class="ti ti-phone"></i>
-            Numéro de téléphone
+            Numéro de téléphone <span class="text-muted">(optionnel)</span>
           </label>
           <input type="tel" name="phone" class="form-control" placeholder="+1(514)123-4567" autocomplete="tel">
         </div>
@@ -416,25 +466,16 @@
           </div>
         </div>
 
-        <!-- Terms -->
-        <div class="mb-4">
-          <div class="form-check d-flex align-items-center gap-3">
-            <input class="form-check-input" type="checkbox" name="accept_terms" required id="accept-terms">
-            <label class="form-check-label d-flex align-items-center" for="accept-terms">
-              <i class="ti ti-shield-check me-1 text-success"></i>
-              J'accepte les termes et conditions
-            </label>
-          </div>
-        </div>
-
         <!-- Submit -->
         <div class="d-grid mb-4">
-          <button type="submit" class="btn btn-success shadow rounded-3">
+          <button type="submit" class="btn btn-success shadow rounded-3 btn-submit">
             <i class="ti ti-send me-2"></i> Je m'inscris
           </button>
         </div>
 
       </form>
+
+      </div><!-- End signup-form-content -->
 
     </div>
 
