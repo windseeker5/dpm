@@ -4562,6 +4562,10 @@ def activity_income(activity_id, income_id=None):
             income.amount = request.form.get("amount", type=float)
             income.note = request.form.get("note")
             income.date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
+            # Payment status fields
+            income.payment_status = request.form.get("payment_status", "received")
+            income.payment_date = datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and request.form.get("payment_status") == "received" else None
+            income.payment_method = request.form.get("payment_method")
         else:
             # Create new income
             income = Income(
@@ -4570,7 +4574,11 @@ def activity_income(activity_id, income_id=None):
                 amount=request.form.get("amount", type=float),
                 note=request.form.get("note"),
                 date=datetime.strptime(request.form.get("date"), "%Y-%m-%d"),
-                created_by=session.get("admin")
+                created_by=session.get("admin"),
+                # Payment status fields
+                payment_status=request.form.get("payment_status", "received"),
+                payment_date=datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and request.form.get("payment_status") == "received" else None,
+                payment_method=request.form.get("payment_method")
             )
             db.session.add(income)
 
@@ -4680,6 +4688,11 @@ def activity_expenses(activity_id, expense_id=None):
             expense.amount = request.form.get("amount", type=float)
             expense.description = request.form.get("description")
             expense.date = datetime.strptime(request.form.get("date"), "%Y-%m-%d")
+            # Payment status fields
+            expense.payment_status = request.form.get("payment_status", "paid")
+            expense.payment_date = datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and request.form.get("payment_status") == "paid" else None
+            expense.due_date = datetime.strptime(request.form.get("due_date"), "%Y-%m-%d") if request.form.get("due_date") and request.form.get("payment_status") == "unpaid" else None
+            expense.payment_method = request.form.get("payment_method")
         else:
             # Create new
             expense = Expense(
@@ -4688,7 +4701,12 @@ def activity_expenses(activity_id, expense_id=None):
                 amount=request.form.get("amount", type=float),
                 description=request.form.get("description"),
                 date=datetime.strptime(request.form.get("date"), "%Y-%m-%d"),
-                created_by=session.get("admin")
+                created_by=session.get("admin"),
+                # Payment status fields
+                payment_status=request.form.get("payment_status", "paid"),
+                payment_date=datetime.strptime(request.form.get("payment_date"), "%Y-%m-%d") if request.form.get("payment_date") and request.form.get("payment_status") == "paid" else None,
+                due_date=datetime.strptime(request.form.get("due_date"), "%Y-%m-%d") if request.form.get("due_date") and request.form.get("payment_status") == "unpaid" else None,
+                payment_method=request.form.get("payment_method")
             )
             db.session.add(expense)
 
@@ -4852,6 +4870,50 @@ def delete_expense(expense_id):
         return redirect(url_for("activity_expenses", activity_id=activity_id))
 
 
+@app.route('/admin/mark-income-paid/<int:income_id>', methods=['POST'])
+def mark_income_paid(income_id):
+    """Mark an income transaction as received"""
+    if 'admin_logged_in' not in session and 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+    try:
+        income = Income.query.get_or_404(income_id)
+
+        # Update payment status
+        income.payment_status = 'received'
+        income.payment_date = datetime.now(timezone.utc)
+
+        db.session.commit()
+
+        flash(f'Income of ${income.amount:.2f} marked as received', 'success')
+        return jsonify({'success': True, 'message': 'Income marked as received'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/admin/mark-expense-paid/<int:expense_id>', methods=['POST'])
+def mark_expense_paid(expense_id):
+    """Mark an expense transaction as paid"""
+    if 'admin_logged_in' not in session and 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+    try:
+        expense = Expense.query.get_or_404(expense_id)
+
+        # Update payment status
+        expense.payment_status = 'paid'
+        expense.payment_date = datetime.now(timezone.utc)
+
+        db.session.commit()
+
+        flash(f'Expense of ${expense.amount:.2f} marked as paid', 'success')
+        return jsonify({'success': True, 'message': 'Expense marked as paid'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @app.route("/admin/activity", methods=["GET", "POST"])

@@ -127,6 +127,19 @@ class Expense(db.Model):
     created_by = db.Column(db.String(100))  # admin email or name
     receipt_filename = db.Column(db.String(255), nullable=True)
 
+    # Payment tracking fields (Cash Flow Accounting)
+    payment_status = db.Column(db.String(20), default="paid")
+    # Values: "unpaid", "paid", "cancelled"
+
+    payment_date = db.Column(db.DateTime, nullable=True)
+    # Actual date payment was made
+
+    due_date = db.Column(db.DateTime, nullable=True)
+    # When unpaid bill is due
+
+    payment_method = db.Column(db.String(50), nullable=True)
+    # Values: "e-transfer", "cash", "cheque", "credit_card", "other"
+
     activity = db.relationship("Activity", backref="expenses")
 
 
@@ -141,6 +154,16 @@ class Income(db.Model):
     created_by = db.Column(db.String(100))  # admin email or name
 
     receipt_filename = db.Column(db.String(255), nullable=True)  # ✅ Add this
+
+    # Payment tracking fields (Cash Flow Accounting)
+    payment_status = db.Column(db.String(20), default="received")
+    # Values: "pending", "received", "cancelled"
+
+    payment_date = db.Column(db.DateTime, nullable=True)
+    # Actual date payment was received
+
+    payment_method = db.Column(db.String(50), nullable=True)
+    # Values: "e-transfer", "cash", "cheque", "credit_card", "other"
 
     activity = db.relationship("Activity", backref="incomes")
 

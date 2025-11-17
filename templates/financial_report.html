@@ -49,41 +49,57 @@
         <!-- Mobile Summary Cards Carousel -->
         <div class="mobile-kpi-container mb-3">
           <div class="mobile-kpi-scroll">
-            <!-- Total Revenue Card -->
+            <!-- Cash Received Card -->
             <div class="mobile-kpi-card">
               <div class="card" style="border-radius: 12px; min-height: 130px;">
                 <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                  <div class="text-muted small text-uppercase mb-2">REVENUE</div>
-                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.total_revenue) }}</div>
-                  <div class="text-muted small">
-                    All activities
-                  </div>
+                  <div class="text-muted small text-uppercase mb-2">CASH RECEIVED</div>
+                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.cash_received) }}</div>
+                  <div class="text-muted small">Actual deposits</div>
                 </div>
               </div>
             </div>
 
-            <!-- Total Expenses Card -->
+            <!-- Cash Paid Card -->
             <div class="mobile-kpi-card">
               <div class="card" style="border-radius: 12px; min-height: 130px;">
                 <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                  <div class="text-muted small text-uppercase mb-2">EXPENSES</div>
-                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.total_expenses) }}</div>
-                  <div class="text-muted small">
-                    All activities
-                  </div>
+                  <div class="text-muted small text-uppercase mb-2">CASH PAID</div>
+                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.cash_paid) }}</div>
+                  <div class="text-muted small">Actual payments</div>
                 </div>
               </div>
             </div>
 
-            <!-- Net Income Card -->
+            <!-- Net Cash Flow Card -->
             <div class="mobile-kpi-card">
               <div class="card" style="border-radius: 12px; min-height: 130px;">
                 <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                  <div class="text-muted small text-uppercase mb-2">NET INCOME</div>
-                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.net_income) }}</div>
-                  <div class="text-muted small">
-                    All activities
-                  </div>
+                  <div class="text-muted small text-uppercase mb-2">NET CASH FLOW</div>
+                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.net_cash_flow) }}</div>
+                  <div class="text-muted small">Bank reconciliation</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accounts Receivable Card -->
+            <div class="mobile-kpi-card">
+              <div class="card" style="border-radius: 12px; min-height: 130px;">
+                <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                  <div class="text-muted small text-uppercase mb-2">ACCOUNTS RECEIVABLE (AR)</div>
+                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.accounts_receivable) }}</div>
+                  <div class="text-muted small">Unpaid invoices</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accounts Payable Card -->
+            <div class="mobile-kpi-card">
+              <div class="card" style="border-radius: 12px; min-height: 130px;">
+                <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                  <div class="text-muted small text-uppercase mb-2">ACCOUNTS PAYABLE (AP)</div>
+                  <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.accounts_payable) }}</div>
+                  <div class="text-muted small">Unpaid bills</div>
                 </div>
               </div>
             </div>
@@ -94,6 +110,8 @@
             <div class="mobile-dot active" data-index="0"></div>
             <div class="mobile-dot" data-index="1"></div>
             <div class="mobile-dot" data-index="2"></div>
+            <div class="mobile-dot" data-index="3"></div>
+            <div class="mobile-dot" data-index="4"></div>
           </div>
         </div>
 
@@ -118,9 +136,9 @@
               <thead>
                 <tr>
                   <th style="width: 70px; padding-left: 1.5rem;"></th>
-                  <th class="text-center" style="width: 27%;">Revenue</th>
-                  <th class="text-center" style="width: 27%;">Expenses</th>
-                  <th class="text-center" style="width: 27%; padding-right: 1rem;">Net</th>
+                  <th class="text-center" style="width: 27%;">Cash Received</th>
+                  <th class="text-center" style="width: 27%;">Cash Paid</th>
+                  <th class="text-center" style="width: 27%; padding-right: 1rem;">Net Cash Flow</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,43 +184,62 @@
 
       <!-- Desktop Content (Hidden on Mobile) -->
       <div class="d-none d-md-block">
-        <!-- Summary Cards -->
+        <!-- Summary Cards Row 1: Cash Basis (Primary) -->
+        <div class="row mb-3">
+          <!-- Cash Received -->
+          <div class="col-md-4">
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">CASH RECEIVED</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.cash_received) }}</div>
+                <div class="text-muted small">Actual deposits</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cash Paid -->
+          <div class="col-md-4">
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">CASH PAID</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.cash_paid) }}</div>
+                <div class="text-muted small">Actual payments</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Net Cash Flow -->
+          <div class="col-md-4">
+            <div class="card" style="border-radius: 12px; min-height: 130px;">
+              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="text-muted small text-uppercase mb-2">NET CASH FLOW</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.net_cash_flow) }}</div>
+                <div class="text-muted small">Bank reconciliation</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Cards Row 2: Accrual Basis (Secondary) -->
         <div class="row mb-4">
-          <!-- Total Revenue -->
-          <div class="col-md-4">
-            <div class="card" style="border-radius: 12px; min-height: 130px;">
+          <!-- Accounts Receivable -->
+          <div class="col-md-6">
+            <div class="card" style="border-radius: 12px; min-height: 110px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">REVENUE</div>
-                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.total_revenue) }}</div>
-                <div class="text-muted small">
-                  All activities
-                </div>
+                <div class="text-muted small text-uppercase mb-2">ACCOUNTS RECEIVABLE (AR)</div>
+                <div class="h2 mb-2" style="font-weight: 600; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.accounts_receivable) }}</div>
+                <div class="text-muted small">Unpaid invoices</div>
               </div>
             </div>
           </div>
 
-          <!-- Total Expenses -->
-          <div class="col-md-4">
-            <div class="card" style="border-radius: 12px; min-height: 130px;">
+          <!-- Accounts Payable -->
+          <div class="col-md-6">
+            <div class="card" style="border-radius: 12px; min-height: 110px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">EXPENSES</div>
-                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.total_expenses) }}</div>
-                <div class="text-muted small">
-                  All activities
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Net Income -->
-          <div class="col-md-4">
-            <div class="card" style="border-radius: 12px; min-height: 130px;">
-              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">NET INCOME</div>
-                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.net_income) }}</div>
-                <div class="text-muted small">
-                  All activities
-                </div>
+                <div class="text-muted small text-uppercase mb-2">ACCOUNTS PAYABLE (AP)</div>
+                <div class="h2 mb-2" style="font-weight: 600; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.accounts_payable) }}</div>
+                <div class="text-muted small">Unpaid bills</div>
               </div>
             </div>
           </div>
@@ -219,9 +256,9 @@
             <thead>
               <tr>
                 <th>Activity</th>
-                <th class="text-end">Revenue</th>
-                <th class="text-end">Expenses</th>
-                <th class="text-end">Net Income</th>
+                <th class="text-end">Cash Received</th>
+                <th class="text-end">Cash Paid</th>
+                <th class="text-end">Net Cash Flow</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
@@ -272,6 +309,7 @@
                             <th>Description</th>
                             <th class="d-none d-md-table-cell">Created By</th>
                             <th class="text-end">Amount</th>
+                            <th class="text-center">Status</th>
                             <th class="text-center">Actions</th>
                           </tr>
                         </thead>
@@ -293,6 +331,15 @@
                               {{ format_currency(transaction.amount) }}
                             </td>
                             <td class="text-center">
+                              {% if transaction.payment_status in ['paid', 'received'] %}
+                                <span class="badge bg-success">Paid</span>
+                              {% elif transaction.payment_status in ['pending', 'unpaid'] %}
+                                <span class="badge bg-warning">Unpaid</span>
+                              {% else %}
+                                <span class="badge bg-secondary">{{ transaction.payment_status|title }}</span>
+                              {% endif %}
+                            </td>
+                            <td class="text-center">
                               {% if transaction.editable %}
                                 <div class="dropdown">
                                   <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
@@ -305,6 +352,15 @@
                                       <i class="ti ti-file me-2"></i>View Receipt
                                     </a>
                                     {% endif %}
+
+                                    {% if transaction.payment_status in ['pending', 'unpaid'] and transaction.source_type in ['income', 'expense'] %}
+                                    <a class="dropdown-item text-success" href="#"
+                                       onclick="markAsPaid('{{ transaction.source_type }}', {{ transaction.id }}); return false;">
+                                      <i class="ti ti-check me-2"></i>Mark as Paid
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    {% endif %}
+
                                     <a class="dropdown-item" href="#"
                                        onclick="openDrawerWithData('{{ transaction.source_type }}', {{ transaction.id }}, '{{ transaction.date }}', {{ transaction.activity_id }}, '{{ transaction.category }}', {{ transaction.amount }}, '{{ transaction.description }}', '{{ transaction.receipt_filename or '' }}'); return false;">
                                       <i class="ti ti-edit me-2"></i>Edit Entry
@@ -334,9 +390,9 @@
             <tfoot>
               <tr class="fw-bold bg-light">
                 <td>TOTAL</td>
-                <td class="text-end">{{ format_currency(financial_data.summary.total_revenue) }}</td>
-                <td class="text-end">{{ format_currency(financial_data.summary.total_expenses) }}</td>
-                <td class="text-end">{{ format_currency(financial_data.summary.net_income) }}</td>
+                <td class="text-end">{{ format_currency(financial_data.summary.cash_received) }}</td>
+                <td class="text-end">{{ format_currency(financial_data.summary.cash_paid) }}</td>
+                <td class="text-end">{{ format_currency(financial_data.summary.net_cash_flow) }}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -477,6 +533,40 @@
       </div>
       <input type="file" class="form-control" id="txReceipt" name="receipt" accept=".pdf,.jpg,.jpeg,.png">
       <small class="form-text text-muted">PDF, JPG, or PNG (max 5MB)</small>
+    </div>
+
+    <!-- Payment Status Field -->
+    <div class="mb-3">
+      <label class="form-label required">Payment Status</label>
+      <select class="form-select" id="txPaymentStatus" name="payment_status" required>
+        <option value="received">Received (Paid)</option>
+        <option value="pending">Pending (Not Yet Received)</option>
+      </select>
+    </div>
+
+    <!-- Payment Date Field (shown when received/paid) -->
+    <div class="mb-3" id="txPaymentDateField">
+      <label class="form-label required">Payment Date</label>
+      <input type="date" class="form-control" id="txPaymentDate" name="payment_date" required>
+    </div>
+
+    <!-- Due Date Field (shown when unpaid - expense only) -->
+    <div class="mb-3" id="txDueDateField" style="display: none;">
+      <label class="form-label">Due Date</label>
+      <input type="date" class="form-control" id="txDueDate" name="due_date">
+    </div>
+
+    <!-- Payment Method Field -->
+    <div class="mb-3">
+      <label class="form-label">Payment Method</label>
+      <select class="form-select" id="txPaymentMethod" name="payment_method">
+        <option value="">Select method...</option>
+        <option value="e-transfer">E-Transfer</option>
+        <option value="cash">Cash</option>
+        <option value="cheque">Cheque</option>
+        <option value="credit_card">Credit Card</option>
+        <option value="other">Other</option>
+      </select>
     </div>
   </form>
 
@@ -673,6 +763,27 @@ function openDrawerWithData(type, transactionId, date, activityId, category, amo
     descriptionLabel.textContent = 'Description';
     descriptionField.setAttribute('name', 'description');
   }
+
+  // Update payment status options based on transaction type
+  const paymentStatusSelect = document.getElementById('txPaymentStatus');
+  if (type === 'income') {
+    paymentStatusSelect.innerHTML = `
+      <option value="received">Received (Paid)</option>
+      <option value="pending">Pending (Not Yet Received)</option>
+    `;
+  } else if (type === 'expense') {
+    paymentStatusSelect.innerHTML = `
+      <option value="paid">Paid</option>
+      <option value="unpaid">Unpaid (Bill Not Yet Paid)</option>
+    `;
+  }
+
+  // Set default payment date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('txPaymentDate').value = today;
+
+  // Initialize payment field visibility
+  updatePaymentFieldVisibility();
 
   // If editing, populate form with data
   if (transactionId && date) {
@@ -1014,6 +1125,85 @@ async function executeDelete() {
     alert('Network error. Please try again.');
     confirmBtn.disabled = false;
     confirmBtn.innerHTML = '<i class="ti ti-trash me-2"></i>Delete';
+  }
+}
+
+// Update payment field visibility based on payment status and transaction type
+function updatePaymentFieldVisibility() {
+  const paymentStatus = document.getElementById('txPaymentStatus').value;
+  const transactionType = document.getElementById('transactionType').value;
+  const paymentDateField = document.getElementById('txPaymentDateField');
+  const dueDateField = document.getElementById('txDueDateField');
+  const paymentDateInput = document.getElementById('txPaymentDate');
+  const dueDateInput = document.getElementById('txDueDate');
+
+  if (transactionType === 'income') {
+    // Income: Show payment date when received, hide when pending
+    if (paymentStatus === 'received') {
+      paymentDateField.style.display = 'block';
+      paymentDateInput.required = true;
+      dueDateField.style.display = 'none';
+      dueDateInput.required = false;
+    } else {
+      paymentDateField.style.display = 'none';
+      paymentDateInput.required = false;
+      dueDateField.style.display = 'none';
+      dueDateInput.required = false;
+    }
+  } else if (transactionType === 'expense') {
+    // Expense: Show payment date when paid, due date when unpaid
+    if (paymentStatus === 'paid') {
+      paymentDateField.style.display = 'block';
+      paymentDateInput.required = true;
+      dueDateField.style.display = 'none';
+      dueDateInput.required = false;
+    } else {
+      paymentDateField.style.display = 'none';
+      paymentDateInput.required = false;
+      dueDateField.style.display = 'block';
+      dueDateInput.required = false;
+    }
+  }
+}
+
+// Event listener for payment status changes
+document.addEventListener('DOMContentLoaded', function() {
+  const paymentStatusSelect = document.getElementById('txPaymentStatus');
+  if (paymentStatusSelect) {
+    paymentStatusSelect.addEventListener('change', updatePaymentFieldVisibility);
+  }
+});
+
+// Mark individual transaction as paid/received
+async function markAsPaid(sourceType, id) {
+  if (!confirm('Mark this transaction as paid/received?')) return;
+
+  const url = sourceType === 'income'
+    ? `/admin/mark-income-paid/${id}`
+    : `/admin/mark-expense-paid/${id}`;
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrfToken
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Reload page to show updated status
+      window.location.reload();
+    } else {
+      alert('Error: ' + (data.message || 'Failed to mark as paid'));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Network error. Please try again.');
   }
 }
 </script>
