@@ -88,6 +88,74 @@
       display: block;
     }
 
+    /* Modern Form Styling - Desktop */
+    .form-control,
+    .form-select {
+      background-color: #F8F9FA;
+      border: 1px solid #E9ECEF;
+      border-radius: 4px;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      background-color: #FFFFFF;
+      border-color: #0084ff;
+      box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.1);
+      outline: none;
+    }
+
+    .form-control::placeholder {
+      color: #adb5bd;
+      font-size: 0.8125rem;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 0.625rem;
+      font-size: 0.875rem;
+    }
+
+    /* Enhanced spacing between form fields */
+    .mb-4 {
+      margin-bottom: 1.5rem !important;
+    }
+
+    /* Modern button styling */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      border-radius: 4px;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      border: none;
+      box-shadow: 0 4px 14px rgba(40, 167, 69, 0.35);
+    }
+
+    .btn-success:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(40, 167, 69, 0.45);
+      background: linear-gradient(135deg, #218838 0%, #1ba87d 100%);
+    }
+
+    .btn-success:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    }
+
+    /* Textarea specific styling */
+    textarea.form-control {
+      resize: vertical;
+      min-height: 100px;
+    }
+
     /* Mobile-first responsive design */
     @media (max-width: 768px) {
       body {
@@ -144,36 +212,40 @@
 
       /* Mobile-optimized form elements */
       .form-control {
-        font-size: 16px; /* Prevent zoom on iOS */
-        padding: 0.75rem 1rem;
-        border-radius: 12px;
-        border: 2px solid #e9ecef;
+        font-size: 0.875rem;
+        padding: 0.625rem 0.875rem;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
         transition: all 0.2s ease;
       }
-      
+
       .form-control:focus {
         border-color: #0084ff;
         box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.1);
       }
-      
+
+      .form-control::placeholder {
+        font-size: 0.8125rem;
+      }
+
       .form-label {
         font-weight: 600;
         color: #495057;
         margin-bottom: 0.5rem;
-        font-size: 0.95rem;
+        font-size: 0.875rem;
       }
-      
+
       .form-select {
-        font-size: 16px;
-        padding: 0.75rem 1rem;
-        border-radius: 12px;
-        border: 2px solid #e9ecef;
+        font-size: 0.875rem;
+        padding: 0.625rem 0.875rem;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
       }
       
       .btn {
-        padding: 0.875rem 1.5rem;
+        padding: 0.75rem 1.5rem;
         font-weight: 600;
-        border-radius: 12px;
+        border-radius: 4px;
         font-size: 1rem;
         min-height: 48px; /* Better touch target */
       }
@@ -193,7 +265,7 @@
       #pricing-info {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         padding: 1rem;
-        border-radius: 12px;
+        border-radius: 4px;
         margin-bottom: 2rem;
         gap: 1.5rem;
         font-size: 1.1rem;
@@ -222,7 +294,7 @@
       
       /* Alert styling for passport type info */
       .alert {
-        border-radius: 12px;
+        border-radius: 4px;
         border: none;
         padding: 1rem 1.25rem;
       }
@@ -273,11 +345,6 @@
       <!-- Title -->
       <div class="text-center mb-4">
         <h1 class="page-title mb-1">{{ activity.name }}</h1>
-        {% if selected_passport_type %}
-          <div class="text-muted mb-1" style="font-size: 1.1rem; font-weight: 500;">
-            {{ selected_passport_type.name }}
-          </div>
-        {% endif %}
       </div>
 
       <!-- Activity Information Card - Compact 2-Column Grid -->
@@ -429,8 +496,7 @@
 
         <!-- Name -->
         <div class="mb-4">
-          <label class="form-label d-flex align-items-center gap-2">
-            <i class="ti ti-user"></i>
+          <label class="form-label">
             Nom complet
           </label>
           <input type="text" name="name" class="form-control" required placeholder="Nom complet" autocomplete="name">
@@ -438,8 +504,7 @@
 
         <!-- Email -->
         <div class="mb-4">
-          <label class="form-label d-flex align-items-center gap-2">
-            <i class="ti ti-mail"></i>
+          <label class="form-label">
             Adresse courriel
           </label>
           <input type="email" name="email" class="form-control" required placeholder="courriel@example.com" autocomplete="email">
@@ -447,8 +512,7 @@
 
         <!-- Phone -->
         <div class="mb-4">
-          <label class="form-label d-flex align-items-center gap-2">
-            <i class="ti ti-phone"></i>
+          <label class="form-label">
             Numéro de téléphone <span class="text-muted">(optionnel)</span>
           </label>
           <input type="tel" name="phone" class="form-control" placeholder="+1(514)123-4567" autocomplete="tel">
@@ -456,10 +520,9 @@
 
         <!-- Notes -->
         <div class="mb-4">
-          <div class="form-label d-flex align-items-center gap-2" style="cursor: pointer;" onclick="toggleNotes()">
-            <i class="ti ti-notes"></i>
+          <div class="form-label" style="cursor: pointer;" onclick="toggleNotes()">
             Notes supplémentaires
-            <i class="ti ti-plus" id="notes-toggle-icon" style="margin-left: auto;"></i>
+            <i class="ti ti-plus" id="notes-toggle-icon" style="margin-left: 0.5rem;"></i>
           </div>
           <div id="notes-section" style="display: none; margin-top: 0.5rem;">
             <textarea name="notes" class="form-control" rows="3" placeholder="Toute exigence spéciale, préférences de position ou autres notes..."></textarea>
