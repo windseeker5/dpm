@@ -136,9 +136,9 @@
               <thead>
                 <tr>
                   <th style="width: 70px; padding-left: 1.5rem;"></th>
-                  <th class="text-center" style="width: 27%;">Cash Received</th>
-                  <th class="text-center" style="width: 27%;">Cash Paid</th>
-                  <th class="text-center" style="width: 27%; padding-right: 1rem;">Net Cash Flow</th>
+                  <th class="text-center" style="width: 27%;">CASH IN</th>
+                  <th class="text-center" style="width: 27%;">CASH OUT</th>
+                  <th class="text-center" style="width: 27%; padding-right: 1rem;">NET FLOW</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,9 +256,9 @@
             <thead>
               <tr>
                 <th>Activity</th>
-                <th class="text-end">Cash Received</th>
-                <th class="text-end">Cash Paid</th>
-                <th class="text-end">Net Cash Flow</th>
+                <th class="text-end">CASH RECEIVED</th>
+                <th class="text-end">CASH PAID</th>
+                <th class="text-end">NET CASH FLOW</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
@@ -303,13 +303,12 @@
                       <table class="table table-sm mb-0">
                         <thead>
                           <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Category</th>
+                            <th style="width: 120px;">Date</th>
+                            <th style="width: 160px;">Transaction Type</th>
+                            <th style="width: 140px;">Category</th>
                             <th>Description</th>
                             <th class="d-none d-md-table-cell">Created By</th>
                             <th class="text-end">Amount</th>
-                            <th class="text-center">Status</th>
                             <th class="text-center">Actions</th>
                           </tr>
                         </thead>
@@ -318,26 +317,34 @@
                           <tr>
                             <td>{{ transaction.date }}</td>
                             <td>
-                              {% if transaction.type == 'Income' %}
-                                <span class="badge bg-primary-lt">Income</span>
+                              {% if transaction.source_type == 'passport' %}
+                                {# Passport Sales #}
+                                {% if transaction.payment_status in ['paid', 'received'] %}
+                                  <span class="badge" style="background: #e9ecef; color: #495057;">Passport Sale</span>
+                                {% else %}
+                                  <span class="badge" style="background: #e8f4f8; color: #0c5589;">Passport Sale (Unpaid)</span>
+                                {% endif %}
+                              {% elif transaction.type == 'Income' %}
+                                {# Manual Income Entries #}
+                                {% if transaction.payment_status in ['paid', 'received'] %}
+                                  <span class="badge" style="background: #e9ecef; color: #495057;">Revenue</span>
+                                {% else %}
+                                  <span class="badge" style="background: #e8f4f8; color: #0c5589;">Receivable</span>
+                                {% endif %}
                               {% else %}
-                                <span class="badge bg-orange-lt">Expense</span>
+                                {# Expense Entries #}
+                                {% if transaction.payment_status in ['paid', 'received'] %}
+                                  <span class="badge" style="background: #e9ecef; color: #495057;">Expense</span>
+                                {% else %}
+                                  <span class="badge" style="background: #fff3e0; color: #e65100;">Payable</span>
+                                {% endif %}
                               {% endif %}
                             </td>
-                            <td>{{ transaction.category }}</td>
-                            <td>{{ transaction.description }}</td>
+                            <td style="word-wrap: break-word; max-width: 200px;">{{ transaction.category }}</td>
+                            <td style="word-wrap: break-word; max-width: 250px;">{{ transaction.description }}</td>
                             <td class="d-none d-md-table-cell text-muted">{{ transaction.created_by }}</td>
                             <td class="text-end text-muted">
                               {{ format_currency(transaction.amount) }}
-                            </td>
-                            <td class="text-center">
-                              {% if transaction.payment_status in ['paid', 'received'] %}
-                                <span class="badge bg-success">Paid</span>
-                              {% elif transaction.payment_status in ['pending', 'unpaid'] %}
-                                <span class="badge bg-warning">Unpaid</span>
-                              {% else %}
-                                <span class="badge bg-secondary">{{ transaction.payment_status|title }}</span>
-                              {% endif %}
                             </td>
                             <td class="text-center">
                               {% if transaction.editable %}
@@ -455,6 +462,24 @@
         <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="executeDelete()">
           <i class="ti ti-trash me-2"></i>Delete
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mark as Paid Confirmation Modal -->
+<div class="modal fade" id="markAsPaidModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-check-circle icon mb-2 text-success" style="font-size: 2rem;"></i>
+        <h3>Mark as Paid</h3>
+        <div class="text-muted">Mark this transaction as paid/received?</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success w-100" id="confirmMarkPaid">Confirm</button>
       </div>
     </div>
   </div>
@@ -1175,37 +1200,59 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Mark individual transaction as paid/received
-async function markAsPaid(sourceType, id) {
-  if (!confirm('Mark this transaction as paid/received?')) return;
+function markAsPaid(sourceType, id) {
+  // Store transaction info for modal confirmation
+  window.pendingMarkAsPaid = { sourceType, id };
 
-  const url = sourceType === 'income'
-    ? `/admin/mark-income-paid/${id}`
-    : `/admin/mark-expense-paid/${id}`;
+  // Show beautiful Tabler.io modal instead of ugly popup
+  const modal = new bootstrap.Modal(document.getElementById('markAsPaidModal'));
+  modal.show();
+}
 
-  try {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+// Handle Mark as Paid confirmation
+document.addEventListener('DOMContentLoaded', function() {
+  const confirmBtn = document.getElementById('confirmMarkPaid');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async function() {
+      const { sourceType, id } = window.pendingMarkAsPaid || {};
+      if (!sourceType || !id) return;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': csrfToken
+      // Hide modal
+      const modalElement = document.getElementById('markAsPaidModal');
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      if (modal) modal.hide();
+
+      // Execute the AJAX request
+      const url = sourceType === 'income'
+        ? `/admin/mark-income-paid/${id}`
+        : `/admin/mark-expense-paid/${id}`;
+
+      try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Reload page to show updated status and flash message
+          window.location.reload();
+        } else {
+          alert('Error: ' + (data.message || 'Failed to mark as paid'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Network error. Please try again.');
       }
     });
-
-    const data = await response.json();
-
-    if (data.success) {
-      // Reload page to show updated status
-      window.location.reload();
-    } else {
-      alert('Error: ' + (data.message || 'Failed to mark as paid'));
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Network error. Please try again.');
   }
-}
+});
 </script>
 
 <style>
