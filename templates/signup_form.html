@@ -161,13 +161,22 @@
       font-size: 1.125rem !important;
     }
 
-    /* Desktop only: hide background */
+    /* Desktop only: hide background and show desktop title */
     @media (min-width: 769px) {
       .mobile-hero-wrapper {
         background-image: none !important;
       }
 
       .mobile-hero-wrapper::after {
+        display: none !important;
+      }
+
+      .desktop-title-section {
+        display: block !important;
+      }
+
+      /* Hide mobile title section on desktop */
+      .mobile-title-section {
         display: none !important;
       }
     }
@@ -207,8 +216,12 @@
         margin-top: 0;
       }
 
-      /* Hide logo on mobile */
+      /* Hide logo and desktop title on mobile */
       .logo-section {
+        display: none !important;
+      }
+
+      .desktop-title-section {
         display: none !important;
       }
 
@@ -237,14 +250,6 @@
       .mobile-hero-wrapper > * {
         position: relative;
         z-index: 2;
-      }
-
-      /* Title over hero image */
-      .mobile-hero-wrapper .page-title {
-        color: white !important;
-        text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.9);
-        font-size: 1.75rem;
-        margin-bottom: 1rem;
       }
 
       /* Pricing card over hero image - SINGLE COLUMN, COMPACT */
@@ -457,11 +462,20 @@
       <!-- Form Content Container (max-width 500px) -->
       <div class="signup-form-content">
 
+      <!-- Desktop Title and Description (only visible on desktop) -->
+      <div class="desktop-title-section text-center mb-4">
+        <h1 class="page-title mb-2">{{ activity.name }}</h1>
+        {% if activity.description %}
+        <p class="activity-description text-muted" style="font-size: 1rem; line-height: 1.5; margin-bottom: 1.5rem;">{{ activity.description }}</p>
+        {% endif %}
+      </div>
+
       <!-- Mobile Hero Wrapper (only visible on mobile) -->
       <div class="mobile-hero-wrapper" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else '' }}');">
-        <!-- Title -->
-        <div class="text-center mb-4">
-          <h1 class="page-title mb-1">{{ activity.name }}</h1>
+
+        <!-- Mobile Title - Centered at top -->
+        <div class="text-center mb-4 mobile-title-section">
+          <h1 class="page-title mb-1" style="color: #fff; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);">{{ activity.name }}</h1>
         </div>
 
         <!-- Activity Information Card - Compact 2-Column Grid -->
