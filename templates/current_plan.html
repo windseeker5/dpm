@@ -1,151 +1,97 @@
 {% extends "base.html" %}
-{% block title %}Manage Subscription | Minipass{% endblock %}
+{% block title %}Subscription | Minipass{% endblock %}
 {% block content %}
 
 <div class="page-wrapper">
-  <!-- Page Header -->
-  <div class="page-header d-print-none" style="padding-top: 2rem;">
-    <div class="dashboard-container">
-      <div class="d-flex align-items-center justify-content-between w-100">
-        <div class="d-flex align-items-center">
-          <h1 class="page-title mb-0">
-            <i class="ti ti-credit-card fs-1 text-muted me-2"></i>Manage Subscription
-          </h1>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Page Body -->
   <div class="page-body">
     <div class="dashboard-container">
 
-      <!-- Current Plan Card -->
-      <div class="card bg-white mb-3">
+      <!-- Single Elegant Card -->
+      <div class="card bg-white" style="max-width: 800px; margin: 2rem auto;">
         <div class="card-header">
-          <h2 class="card-title mb-0">Current Subscription Plan</h2>
+          <h2 class="card-title mb-0">
+            <i class="ti ti-credit-card me-2" style="color: #206bc4;"></i>Subscription
+          </h2>
         </div>
         <div class="card-body">
-          <div class="row align-items-center">
+
+          <!-- Plan Info - Compact Grid -->
+          <div class="row g-3 mb-4">
             <div class="col-md-6">
-              <div class="mb-3">
-                <div class="text-muted small mb-1">PLAN</div>
-                <div class="h2 mb-1">
-                  {{ tier_info.name }}
-                  {% if not subscription_meta.is_paid_subscriber %}
-                  <span class="badge bg-azure-lt">Beta</span>
-                  {% endif %}
-                </div>
-                <div class="text-muted">
-                  {% if subscription_meta.is_paid_subscriber %}
-                    {{ tier_info.price }}
-                    {% if subscription_meta.billing_frequency %}
-                      ({{ subscription_meta.billing_frequency|capitalize }} billing)
-                    {% endif %}
-                  {% else %}
-                    {{ tier_info.activities }} {{ 'Activity' if tier_info.activities == 1 else 'Activities' }}
-                  {% endif %}
-                </div>
+              <div class="text-muted small">PLAN</div>
+              <div class="h3 mb-0">
+                {{ tier_info.name }}
+                {% if not subscription_meta.is_paid_subscriber %}
+                <span class="badge bg-azure-lt ms-2">Beta</span>
+                {% endif %}
               </div>
+              {% if subscription_meta.is_paid_subscriber and subscription_meta.billing_frequency %}
+              <div class="text-muted small mt-1">{{ subscription_meta.billing_frequency|capitalize }} billing</div>
+              {% endif %}
             </div>
             <div class="col-md-6">
-              <div class="mb-3">
-                <div class="text-muted small mb-1">ACTIVITY USAGE</div>
-                <div class="h3 mb-2">
-                  {{ usage_info.current }}<span class="text-muted"> / {{ usage_info.limit }}</span>
-                </div>
-                <div class="progress" style="height: 8px;">
-                  <div class="progress-bar {% if usage_info.percentage >= 100 %}bg-danger{% elif usage_info.percentage >= 80 %}bg-warning{% else %}bg-primary{% endif %}"
-                       role="progressbar"
-                       style="width: {{ usage_info.percentage }}%;"
-                       aria-valuenow="{{ usage_info.percentage }}"
-                       aria-valuemin="0"
-                       aria-valuemax="100">
-                  </div>
-                </div>
-                <div class="small text-muted mt-1">
-                  {% if usage_info.percentage >= 100 %}
-                    <i class="ti ti-alert-triangle text-danger me-1"></i>Limit reached
-                  {% elif usage_info.percentage >= 80 %}
-                    <i class="ti ti-alert-circle text-warning me-1"></i>{{ usage_info.limit - usage_info.current }} activities remaining
-                  {% else %}
-                    <i class="ti ti-check text-success me-1"></i>{{ usage_info.limit - usage_info.current }} activities remaining
-                  {% endif %}
-                </div>
+              <div class="text-muted small">ACTIVITIES</div>
+              <div class="h3 mb-0">{{ usage_info.current }} / {{ usage_info.limit }}</div>
+              <div class="text-muted small mt-1">
+                {% if usage_info.percentage >= 100 %}
+                  <i class="ti ti-alert-triangle text-danger me-1"></i>Limit reached
+                {% else %}
+                  {{ usage_info.limit - usage_info.current }} remaining
+                {% endif %}
               </div>
             </div>
           </div>
 
-          <!-- Subscription Details for Paid Subscribers -->
-          {% if subscription_meta.is_paid_subscriber and subscription_meta.renewal_date %}
-          <hr class="my-3">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="text-muted small mb-1">RENEWAL DATE</div>
-              <div class="h4 mb-0">{{ subscription_meta.renewal_date }}</div>
+          <!-- Subscription Details (Paid Only) -->
+          {% if subscription_meta.is_paid_subscriber %}
+          <hr>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <div class="text-muted small">RENEWAL DATE</div>
+              <div class="fw-bold">{{ subscription_meta.renewal_date or 'N/A' }}</div>
             </div>
-            {% if subscription_meta.payment_amount %}
-            <div class="col-md-6">
-              <div class="text-muted small mb-1">SUBSCRIPTION AMOUNT</div>
-              <div class="h4 mb-0">${{ subscription_meta.payment_amount }} CAD</div>
+            <div class="col-md-4">
+              <div class="text-muted small">AMOUNT</div>
+              <div class="fw-bold">${{ subscription_meta.payment_amount or '0' }} CAD</div>
             </div>
-            {% endif %}
+            <div class="col-md-4">
+              <div class="text-muted small">STATUS</div>
+              <div class="fw-bold"><span class="badge bg-success-lt">Active</span></div>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Cancel Subscription -->
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="fw-bold">Cancel Auto-Renewal</div>
+              <div class="text-muted small">Your access continues until {{ subscription_meta.renewal_date }}</div>
+            </div>
+            <form method="POST" class="ms-3">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="cancel">
+              <button type="submit" class="btn btn-outline-danger">
+                <i class="ti ti-ban me-1"></i>Unsubscribe
+              </button>
+            </form>
+          </div>
+          {% else %}
+          <!-- Beta Tester Message -->
+          <hr>
+          <div class="alert alert-info mb-0">
+            <div class="d-flex align-items-center">
+              <i class="ti ti-heart me-3" style="font-size: 2rem;"></i>
+              <div>
+                <div class="fw-bold">Thank you for beta testing!</div>
+                <div class="text-muted">You're helping us build MiniPass. We appreciate your support!</div>
+              </div>
+            </div>
           </div>
           {% endif %}
+
         </div>
       </div>
-
-      <!-- Beta Tester Thank You Message -->
-      {% if not subscription_meta.is_paid_subscriber %}
-      <div class="card bg-white mb-3">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="me-3">
-              <i class="ti ti-heart text-pink" style="font-size: 3rem;"></i>
-            </div>
-            <div>
-              <h3 class="mb-1">🎉 Thank You for Beta Testing!</h3>
-              <p class="text-muted mb-0">
-                You're helping us build MiniPass. We truly appreciate your support and feedback!
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Unsubscribe Section for Paid Subscribers -->
-      {% if subscription_meta.is_paid_subscriber %}
-      <div class="card bg-white mb-3">
-        <div class="card-header">
-          <h3 class="card-title mb-0">Subscription Management</h3>
-        </div>
-        <div class="card-body">
-          <div class="alert alert-info mb-3">
-            <div class="d-flex">
-              <div>
-                <i class="ti ti-info-circle me-2"></i>
-              </div>
-              <div>
-                <strong>About Cancellation</strong><br>
-                If you cancel your subscription, auto-renewal will be turned off. You'll keep full access to your {{ tier_info.name }} plan until {{ subscription_meta.renewal_date or 'the end of your billing period' }}.
-              </div>
-            </div>
-          </div>
-
-          <form method="POST" onsubmit="return confirm('Cancel auto-renewal? You will keep access until {{ subscription_meta.renewal_date or 'the end of your billing period' }}.');">
-            <input type="hidden" name="action" value="cancel">
-            <button type="submit" class="btn btn-outline-danger">
-              <i class="ti ti-ban me-2"></i>Cancel Auto-Renewal
-            </button>
-          </form>
-
-          <p class="text-muted mt-3 mb-0">
-            <small>Need help? <a href="mailto:support@minipass.me">Contact support</a></small>
-          </p>
-        </div>
-      </div>
-      {% endif %}
 
     </div>
   </div>
@@ -155,32 +101,17 @@
 
 {% block head %}
 <style>
-/* Dashboard container alignment */
 .dashboard-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
 
-/* Standard card styling */
 .card {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: #fff !important;
   border: none !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   border-radius: 0.5rem !important;
-}
-
-/* Alert info styling */
-.alert-info {
-  background-color: #e7f5ff;
-  border: 1px solid #a5d8ff;
-  color: #0c5460;
-}
-
-/* Beta badge */
-.badge.bg-azure-lt {
-  background-color: #d3ebff !important;
-  color: #0066cc !important;
 }
 </style>
 {% endblock %}
