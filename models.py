@@ -109,6 +109,7 @@ class PassportType(db.Model):
     sessions_included = db.Column(db.Integer, default=1)
     target_revenue = db.Column(db.Float, default=0.0)
     payment_instructions = db.Column(db.Text)
+    use_custom_payment_instructions = db.Column(db.Boolean, default=False, nullable=False)
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(50), default="active")  # "active", "archived", "deleted"
     archived_at = db.Column(db.DateTime, nullable=True)

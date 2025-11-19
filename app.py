@@ -325,6 +325,58 @@ def is_over_activity_limit():
 
     return False, 0, None
 
+def get_subscription_metadata():
+    """Read subscription info from environment variables.
+
+    Returns:
+        dict: Subscription metadata including:
+            - subscription_id: Stripe subscription ID (if exists)
+            - customer_id: Stripe customer ID (if exists)
+            - billing_frequency: 'monthly' or 'annual'
+            - renewal_date: ISO date string
+            - payment_amount: Amount in CAD
+            - is_paid_subscriber: Boolean indicating if has subscription
+    """
+    return {
+        'subscription_id': os.getenv('STRIPE_SUBSCRIPTION_ID'),
+        'customer_id': os.getenv('STRIPE_CUSTOMER_ID'),
+        'billing_frequency': os.getenv('BILLING_FREQUENCY', 'monthly'),
+        'renewal_date': os.getenv('SUBSCRIPTION_RENEWAL_DATE'),
+        'payment_amount': os.getenv('PAYMENT_AMOUNT'),
+        'is_paid_subscriber': bool(os.getenv('STRIPE_SUBSCRIPTION_ID'))
+    }
+
+def cancel_subscription(subscription_id):
+    """Cancel Stripe subscription at period end.
+
+    Args:
+        subscription_id: Stripe subscription ID
+
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    try:
+        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+
+        if not stripe.api_key:
+            return False, "Stripe API key not configured. Please contact support."
+
+        updated_subscription = stripe.Subscription.modify(
+            subscription_id,
+            cancel_at_period_end=True
+        )
+
+        return True, "Subscription cancelled successfully. Your access will continue until the end of your billing period."
+    except stripe.error.InvalidRequestError as e:
+        return False, f"Invalid subscription: {str(e)}"
+    except stripe.error.AuthenticationError:
+        return False, "Stripe authentication failed. Please contact support."
+    except stripe.error.StripeError as e:
+        return False, f"Stripe error: {str(e)}"
+    except Exception as e:
+        logger.error(f"Unexpected error cancelling subscription: {e}")
+        return False, f"Error cancelling subscription. Please contact support."
+
 
 ##
 ##  All the Scheduler JOB 🟢
@@ -1660,6 +1712,7 @@ def create_activity():
                     sessions_included=int(passport_data.get('sessions_included', 1)),
                     target_revenue=float(passport_data.get('target_revenue', 0.0)),
                     payment_instructions=passport_data.get('payment_instructions', '').strip(),
+                    use_custom_payment_instructions=passport_data.get('use_custom_payment_instructions', 'false').lower() == 'true',
                     status='active'
                 )
                 db.session.add(passport_type)
@@ -1811,7 +1864,8 @@ def edit_activity(activity_id):
                     passport_type.sessions_included = int(passport_data.get('sessions_included', 1))
                     passport_type.target_revenue = float(passport_data.get('target_revenue', 0.0))
                     passport_type.payment_instructions = passport_data.get('payment_instructions', '').strip()
-                    
+                    passport_type.use_custom_payment_instructions = passport_data.get('use_custom_payment_instructions', 'false').lower() == 'true'
+
                     # Preserve passport type names in existing passports when updating
                     passports_to_update = Passport.query.filter_by(passport_type_id=existing_id).all()
                     for passport in passports_to_update:
@@ -1830,6 +1884,7 @@ def edit_activity(activity_id):
                         sessions_included=int(passport_data.get('sessions_included', 1)),
                         target_revenue=float(passport_data.get('target_revenue', 0.0)),
                         payment_instructions=passport_data.get('payment_instructions', '').strip(),
+                        use_custom_payment_instructions=passport_data.get('use_custom_payment_instructions', 'false').lower() == 'true',
                         status='active'
                     )
                     db.session.add(passport_type)
@@ -1894,7 +1949,8 @@ def edit_activity(activity_id):
             'price_per_user': pt.price_per_user,
             'sessions_included': pt.sessions_included,
             'target_revenue': pt.target_revenue,
-            'payment_instructions': pt.payment_instructions or ''
+            'payment_instructions': pt.payment_instructions or '',
+            'use_custom_payment_instructions': pt.use_custom_payment_instructions or False
         })
     
     return render_template("activity_form.html", activity=activity, passport_types=passport_types, summary=summary)
@@ -2997,65 +3053,38 @@ def save_unified_settings():
     return unified_settings()
 
 
-@app.route("/current-plan")
+@app.route("/current-plan", methods=['GET', 'POST'])
 def current_plan():
-    """Display current subscription tier and usage."""
+    """Display current subscription plan and manage subscription."""
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    # Get tier information
-    tier = get_subscription_tier()
+    # Get tier information (existing logic)
     tier_info = get_tier_info()
     usage_info = get_activity_usage_display()
 
-    # Determine available upgrade options
-    upgrade_options = []
-    if tier == 1:
-        upgrade_options = [
-            {
-                'name': 'Professional',
-                'price': '$25/month',
-                'activities': 15,
-                'features': [
-                    '15 active activities',
-                    'All Starter features',
-                    'Priority email support',
-                    'Custom email templates'
-                ]
-            },
-            {
-                'name': 'Enterprise',
-                'price': '$60/month',
-                'activities': 100,
-                'features': [
-                    '100 active activities',
-                    'All Professional features',
-                    'Dedicated support',
-                    'Custom integrations'
-                ]
-            }
-        ]
-    elif tier == 2:
-        upgrade_options = [
-            {
-                'name': 'Enterprise',
-                'price': '$60/month',
-                'activities': 100,
-                'features': [
-                    '100 active activities',
-                    'All Professional features',
-                    'Dedicated support',
-                    'Custom integrations'
-                ]
-            }
-        ]
+    # Get subscription metadata (new) - renamed to avoid conflict with context processor
+    subscription_meta = get_subscription_metadata()
+
+    # Handle unsubscribe POST request
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'cancel' and subscription_meta['is_paid_subscriber']:
+            success, message = cancel_subscription(subscription_meta['subscription_id'])
+
+            if success:
+                flash(message, 'success')
+            else:
+                flash(message, 'error')
+
+            return redirect(url_for('current_plan'))
 
     return render_template(
         "current_plan.html",
-        tier=tier,
         tier_info=tier_info,
         usage_info=usage_info,
-        upgrade_options=upgrade_options
+        subscription_meta=subscription_meta
     )
 
 
@@ -4993,7 +5022,8 @@ def activity_form(activity_id=None):
                 'price_per_user': pt.price_per_user,
                 'sessions_included': pt.sessions_included,
                 'target_revenue': pt.target_revenue,
-                'payment_instructions': pt.payment_instructions or ''
+                'payment_instructions': pt.payment_instructions or '',
+                'use_custom_payment_instructions': pt.use_custom_payment_instructions or False
             })
     else:
         passport_types = []

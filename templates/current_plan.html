@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Current Plan | Minipass{% endblock %}
+{% block title %}Manage Subscription | Minipass{% endblock %}
 {% block content %}
 
 <div class="page-wrapper">
@@ -9,7 +9,7 @@
       <div class="d-flex align-items-center justify-content-between w-100">
         <div class="d-flex align-items-center">
           <h1 class="page-title mb-0">
-            <i class="ti ti-credit-card fs-1 text-muted me-2"></i>Current Plan
+            <i class="ti ti-credit-card fs-1 text-muted me-2"></i>Manage Subscription
           </h1>
         </div>
       </div>
@@ -23,15 +23,29 @@
       <!-- Current Plan Card -->
       <div class="card bg-white mb-3">
         <div class="card-header">
-          <h2 class="card-title mb-0">Your Subscription</h2>
+          <h2 class="card-title mb-0">Current Subscription Plan</h2>
         </div>
         <div class="card-body">
           <div class="row align-items-center">
             <div class="col-md-6">
               <div class="mb-3">
-                <div class="text-muted small mb-1">CURRENT PLAN</div>
-                <div class="h2 mb-1">{{ tier_info.name }} ({{ tier_info.activities }} {{ 'Activity' if tier_info.activities == 1 else 'Activities' }})</div>
-                <div class="text-muted">{{ tier_info.price }}</div>
+                <div class="text-muted small mb-1">PLAN</div>
+                <div class="h2 mb-1">
+                  {{ tier_info.name }}
+                  {% if not subscription_meta.is_paid_subscriber %}
+                  <span class="badge bg-azure-lt">Beta</span>
+                  {% endif %}
+                </div>
+                <div class="text-muted">
+                  {% if subscription_meta.is_paid_subscriber %}
+                    {{ tier_info.price }}
+                    {% if subscription_meta.billing_frequency %}
+                      ({{ subscription_meta.billing_frequency|capitalize }} billing)
+                    {% endif %}
+                  {% else %}
+                    {{ tier_info.activities }} {{ 'Activity' if tier_info.activities == 1 else 'Activities' }}
+                  {% endif %}
+                </div>
               </div>
             </div>
             <div class="col-md-6">
@@ -61,52 +75,74 @@
               </div>
             </div>
           </div>
+
+          <!-- Subscription Details for Paid Subscribers -->
+          {% if subscription_meta.is_paid_subscriber and subscription_meta.renewal_date %}
+          <hr class="my-3">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="text-muted small mb-1">RENEWAL DATE</div>
+              <div class="h4 mb-0">{{ subscription_meta.renewal_date }}</div>
+            </div>
+            {% if subscription_meta.payment_amount %}
+            <div class="col-md-6">
+              <div class="text-muted small mb-1">SUBSCRIPTION AMOUNT</div>
+              <div class="h4 mb-0">${{ subscription_meta.payment_amount }} CAD</div>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
         </div>
       </div>
 
-      <!-- Upgrade Options (if not on highest tier) -->
-      {% if upgrade_options %}
-      <div class="row">
-        {% for option in upgrade_options %}
-        <div class="col-md-6 mb-3">
-          <div class="card bg-white">
-            <div class="card-header">
-              <h3 class="card-title mb-0">{{ option.name }}</h3>
-            </div>
-            <div class="card-body">
-              <div class="mb-3">
-                <div class="h2 text-primary mb-0">{{ option.price }}</div>
-                <div class="text-muted small">Billed annually</div>
-              </div>
-              <ul class="list-unstyled mb-3">
-                {% for feature in option.features %}
-                <li class="mb-2">
-                  <i class="ti ti-check text-success me-2"></i>{{ feature }}
-                </li>
-                {% endfor %}
-              </ul>
-              <a href="mailto:support@minipass.me?subject=Upgrade Request - {{ tier_info.name }} to {{ option.name }}"
-                 class="btn btn-primary w-100">
-                <i class="ti ti-rocket me-2"></i>Upgrade to {{ option.name }}
-              </a>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <!-- Already on highest tier -->
+      <!-- Beta Tester Thank You Message -->
+      {% if not subscription_meta.is_paid_subscriber %}
       <div class="card bg-white mb-3">
         <div class="card-body">
           <div class="d-flex align-items-center">
             <div class="me-3">
-              <i class="ti ti-trophy text-warning" style="font-size: 3rem;"></i>
+              <i class="ti ti-heart text-pink" style="font-size: 3rem;"></i>
             </div>
             <div>
-              <h3 class="mb-1">You're on our highest tier!</h3>
-              <p class="text-muted mb-0">You have access to all Minipass features and 100 active activities.</p>
+              <h3 class="mb-1">🎉 Thank You for Beta Testing!</h3>
+              <p class="text-muted mb-0">
+                You're helping us build MiniPass. We truly appreciate your support and feedback!
+              </p>
             </div>
           </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Unsubscribe Section for Paid Subscribers -->
+      {% if subscription_meta.is_paid_subscriber %}
+      <div class="card bg-white mb-3">
+        <div class="card-header">
+          <h3 class="card-title mb-0">Subscription Management</h3>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info mb-3">
+            <div class="d-flex">
+              <div>
+                <i class="ti ti-info-circle me-2"></i>
+              </div>
+              <div>
+                <strong>About Cancellation</strong><br>
+                If you cancel your subscription, auto-renewal will be turned off. You'll keep full access to your {{ tier_info.name }} plan until {{ subscription_meta.renewal_date or 'the end of your billing period' }}.
+              </div>
+            </div>
+          </div>
+
+          <form method="POST" onsubmit="return confirm('Cancel auto-renewal? You will keep access until {{ subscription_meta.renewal_date or 'the end of your billing period' }}.');">
+            <input type="hidden" name="action" value="cancel">
+            <button type="submit" class="btn btn-outline-danger">
+              <i class="ti ti-ban me-2"></i>Cancel Auto-Renewal
+            </button>
+          </form>
+
+          <p class="text-muted mt-3 mb-0">
+            <small>Need help? <a href="mailto:support@minipass.me">Contact support</a></small>
+          </p>
         </div>
       </div>
       {% endif %}
@@ -132,6 +168,19 @@
   border: none !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   border-radius: 0.5rem !important;
+}
+
+/* Alert info styling */
+.alert-info {
+  background-color: #e7f5ff;
+  border: 1px solid #a5d8ff;
+  color: #0c5460;
+}
+
+/* Beta badge */
+.badge.bg-azure-lt {
+  background-color: #d3ebff !important;
+  color: #0066cc !important;
 }
 </style>
 {% endblock %}

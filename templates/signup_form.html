@@ -439,6 +439,15 @@
         gap: 1rem;
         text-align: center;
       }
+
+      /* Override centering for custom payment instructions */
+      #pricing-info[style*="text-align: left"] {
+        text-align: left !important;
+      }
+
+      #pricing-info[style*="text-align: left"] > div {
+        text-align: left !important;
+      }
     }
   </style>
 </head>
@@ -479,8 +488,13 @@
         </div>
 
         <!-- Activity Information Card - Compact 2-Column Grid -->
-        <div class="mb-4 p-3 rounded-3" id="pricing-info" style="border: 1px solid #dee2e6; background: transparent;">
+        <div class="mb-4 p-3 rounded-3" id="pricing-info" style="border: 1px solid #dee2e6; background: transparent; {% if selected_passport_type and selected_passport_type.use_custom_payment_instructions and selected_passport_type.payment_instructions %}text-align: left !important;{% endif %}">
 
+        {% if selected_passport_type and selected_passport_type.use_custom_payment_instructions and selected_passport_type.payment_instructions %}
+          <!-- CUSTOM MODE: Show custom text with padding (matches preview structure) -->
+          <div style="white-space: pre-wrap; font-size: 0.85rem;">{{ selected_passport_type.payment_instructions }}</div>
+        {% else %}
+          <!-- DEFAULT MODE: Show structured format (UNCHANGED from current design) -->
         <div class="row g-3">
           <!-- Row 1: Price and Sessions -->
           <div class="col-6">
@@ -561,6 +575,7 @@
             </div>
           </div>
         </div>
+        {% endif %}
 
       </div>
       </div><!-- End mobile-hero-wrapper -->
