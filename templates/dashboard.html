@@ -58,8 +58,8 @@
               </div>
               
               <div class="h2 mb-1" id="revenue-value">${{ "{:,.0f}".format(kpi_data['revenue']['current']) }}</div>
-              
-              <div class="d-flex align-items-center mb-2">
+
+              <div class="d-flex align-items-center mb-3">
                 {% set change = kpi_data['revenue']['change'] %}
                 {% if change is not none %}
                   {% if change > 0 %}

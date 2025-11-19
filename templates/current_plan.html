@@ -3,89 +3,99 @@
 {% block content %}
 
 <div class="page-wrapper">
+  <!-- Page Header -->
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
+    <div class="dashboard-container">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title"><i class="ti ti-credit-card text-orange me-2"></i>Subscription</h1>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Body -->
   <div class="page-body">
     <div class="dashboard-container">
 
-      <!-- Single Elegant Card -->
-      <div class="card bg-white" style="max-width: 800px; margin: 2rem auto;">
-        <div class="card-header">
-          <h2 class="card-title mb-0">
-            <i class="ti ti-credit-card me-2" style="color: #206bc4;"></i>Subscription
-          </h2>
-        </div>
-        <div class="card-body">
+      <!-- Subscription Card - Compact -->
+      <div class="card" style="max-width: 650px;">
+        <div class="card-body p-3">
 
-          <!-- Plan Info - Compact Grid -->
-          <div class="row g-3 mb-4">
-            <div class="col-md-6">
-              <div class="text-muted small">PLAN</div>
-              <div class="h3 mb-0">
-                {{ tier_info.name }}
-                {% if not subscription_meta.is_paid_subscriber %}
-                <span class="badge bg-azure-lt ms-2">Beta</span>
-                {% endif %}
-              </div>
+          <!-- Plan -->
+          <div class="row mb-2 align-items-center">
+            <div class="col-sm-3 text-muted"><i class="ti ti-package me-1" style="color: #667085;"></i>Plan</div>
+            <div class="col-sm-9 fw-bold">
+              {{ tier_info.name }}
+              {% if not subscription_meta.is_paid_subscriber %}
+              <span class="badge bg-azure-lt ms-2">Beta</span>
+              {% endif %}
               {% if subscription_meta.is_paid_subscriber and subscription_meta.billing_frequency %}
-              <div class="text-muted small mt-1">{{ subscription_meta.billing_frequency|capitalize }} billing</div>
+              <span class="text-muted fw-normal ms-2">({{ subscription_meta.billing_frequency|capitalize }})</span>
               {% endif %}
             </div>
-            <div class="col-md-6">
-              <div class="text-muted small">ACTIVITIES</div>
-              <div class="h3 mb-0">{{ usage_info.current }} / {{ usage_info.limit }}</div>
-              <div class="text-muted small mt-1">
+          </div>
+
+          <!-- Activities -->
+          <div class="row mb-2 align-items-center">
+            <div class="col-sm-3 text-muted"><i class="ti ti-activity me-1" style="color: #667085;"></i>Activities</div>
+            <div class="col-sm-9">
+              {{ usage_info.current }} / {{ usage_info.limit }}
+              <span class="text-muted ms-2">
                 {% if usage_info.percentage >= 100 %}
-                  <i class="ti ti-alert-triangle text-danger me-1"></i>Limit reached
+                (Limit reached)
                 {% else %}
-                  {{ usage_info.limit - usage_info.current }} remaining
+                ({{ usage_info.limit - usage_info.current }} remaining)
                 {% endif %}
-              </div>
+              </span>
             </div>
           </div>
 
-          <!-- Subscription Details (Paid Only) -->
           {% if subscription_meta.is_paid_subscriber %}
-          <hr>
-          <div class="row g-3 mb-4">
-            <div class="col-md-4">
-              <div class="text-muted small">RENEWAL DATE</div>
-              <div class="fw-bold">{{ subscription_meta.renewal_date or 'N/A' }}</div>
-            </div>
-            <div class="col-md-4">
-              <div class="text-muted small">AMOUNT</div>
-              <div class="fw-bold">${{ subscription_meta.payment_amount or '0' }} CAD</div>
-            </div>
-            <div class="col-md-4">
-              <div class="text-muted small">STATUS</div>
-              <div class="fw-bold"><span class="badge bg-success-lt">Active</span></div>
+          <!-- Next Billing Date -->
+          <div class="row mb-2 align-items-center">
+            <div class="col-sm-3 text-muted"><i class="ti ti-calendar me-1" style="color: #667085;"></i>Next billing</div>
+            <div class="col-sm-9">{{ subscription_meta.renewal_date or 'N/A' }}</div>
+          </div>
+
+          <!-- Amount -->
+          <div class="row mb-2 align-items-center">
+            <div class="col-sm-3 text-muted"><i class="ti ti-currency-dollar me-1" style="color: #667085;"></i>Amount</div>
+            <div class="col-sm-9">${{ subscription_meta.payment_amount or '0' }} CAD</div>
+          </div>
+
+          <!-- Status -->
+          <div class="row mb-2 align-items-center">
+            <div class="col-sm-3 text-muted"><i class="ti ti-circle-check me-1" style="color: #667085;"></i>Status</div>
+            <div class="col-sm-9"><span class="badge bg-success-lt">Active</span></div>
+          </div>
+
+          <hr class="my-2">
+
+          <!-- Cancel Auto-Renewal -->
+          <div class="row align-items-center">
+            <div class="col-sm-3 text-muted"><i class="ti ti-refresh me-1" style="color: #667085;"></i>Auto-renewal</div>
+            <div class="col-sm-9">
+              {% if subscription_details and subscription_details.cancel_at_period_end %}
+                <span class="badge bg-warning-lt">Cancelled</span>
+                <span class="text-muted ms-2">Subscription ends {{ subscription_meta.renewal_date }}</span>
+              {% else %}
+                <form method="POST" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="cancel">
+                  <button type="submit" class="btn btn-danger">Unsubscribe</button>
+                </form>
+              {% endif %}
             </div>
           </div>
 
-          <hr>
-
-          <!-- Cancel Subscription -->
-          <div class="d-flex align-items-center justify-content-between">
-            <div>
-              <div class="fw-bold">Cancel Auto-Renewal</div>
-              <div class="text-muted small">Your access continues until {{ subscription_meta.renewal_date }}</div>
-            </div>
-            <form method="POST" class="ms-3">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="action" value="cancel">
-              <button type="submit" class="btn btn-outline-danger">
-                <i class="ti ti-ban me-1"></i>Unsubscribe
-              </button>
-            </form>
-          </div>
           {% else %}
-          <!-- Beta Tester Message -->
-          <hr>
-          <div class="alert alert-info mb-0">
-            <div class="d-flex align-items-center">
-              <i class="ti ti-heart me-3" style="font-size: 2rem;"></i>
-              <div>
-                <div class="fw-bold">Thank you for beta testing!</div>
-                <div class="text-muted">You're helping us build MiniPass. We appreciate your support!</div>
-              </div>
+          <!-- Beta Tester Status -->
+          <div class="row mb-2 align-items-center">
+            <div class="col-sm-3 text-muted"><i class="ti ti-heart me-1" style="color: #667085;"></i>Status</div>
+            <div class="col-sm-9">
+              <span class="badge bg-azure-lt">Beta Tester</span>
+              <span class="text-muted ms-2">Thank you for helping us build MiniPass!</span>
             </div>
           </div>
           {% endif %}
@@ -97,21 +107,4 @@
   </div>
 </div>
 
-{% endblock %}
-
-{% block head %}
-<style>
-.dashboard-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-.card {
-  background: #fff !important;
-  border: none !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-  border-radius: 0.5rem !important;
-}
-</style>
 {% endblock %}

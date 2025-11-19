@@ -355,27 +355,72 @@ def cancel_subscription(subscription_id):
     Returns:
         tuple: (success: bool, message: str)
     """
+    logger.info(f"[CANCEL_SUB] Starting cancellation for: {subscription_id}")
+
     try:
-        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+        # Get Stripe API key from environment
+        api_key = os.getenv('STRIPE_SECRET_KEY')
+        logger.info(f"[CANCEL_SUB] API key loaded: {bool(api_key)}")
 
-        if not stripe.api_key:
-            return False, "Stripe API key not configured. Please contact support."
+        if not api_key:
+            logger.error("[CANCEL_SUB] STRIPE_SECRET_KEY not found")
+            return False, "Stripe API key not configured"
 
+        # Set Stripe API key
+        stripe.api_key = api_key
+        logger.info(f"[CANCEL_SUB] Calling Stripe API")
+
+        # Cancel subscription at period end
         updated_subscription = stripe.Subscription.modify(
             subscription_id,
             cancel_at_period_end=True
         )
 
-        return True, "Subscription cancelled successfully. Your access will continue until the end of your billing period."
+        logger.info(f"[CANCEL_SUB] SUCCESS - Status: {updated_subscription.status}, cancel_at_period_end: {updated_subscription.cancel_at_period_end}")
+        return True, "Auto-renewal cancelled. You'll have access until your current billing period ends."
+
     except stripe.error.InvalidRequestError as e:
-        return False, f"Invalid subscription: {str(e)}"
-    except stripe.error.AuthenticationError:
-        return False, "Stripe authentication failed. Please contact support."
+        logger.error(f"[CANCEL_SUB] Invalid request: {e}")
+        return False, f"Error: {str(e)}"
+    except stripe.error.AuthenticationError as e:
+        logger.error(f"[CANCEL_SUB] Auth failed: {e}")
+        return False, "Stripe authentication failed"
     except stripe.error.StripeError as e:
+        logger.error(f"[CANCEL_SUB] Stripe error: {e}")
         return False, f"Stripe error: {str(e)}"
     except Exception as e:
-        logger.error(f"Unexpected error cancelling subscription: {e}")
-        return False, f"Error cancelling subscription. Please contact support."
+        logger.error(f"[CANCEL_SUB] Unexpected error: {type(e).__name__}: {e}", exc_info=True)
+        return False, f"Error: {str(e)}"
+
+
+def get_subscription_details():
+    """Fetch live subscription details from Stripe API.
+
+    Returns:
+        dict: Subscription details including cancel_at_period_end status
+    """
+    subscription_id = os.getenv('STRIPE_SUBSCRIPTION_ID')
+
+    if not subscription_id:
+        return None
+
+    try:
+        api_key = os.getenv('STRIPE_SECRET_KEY')
+        if not api_key:
+            logger.error("[GET_SUB_DETAILS] No Stripe API key")
+            return None
+
+        stripe.api_key = api_key
+        sub = stripe.Subscription.retrieve(subscription_id)
+
+        return {
+            'id': sub.id,
+            'status': sub.status,
+            'cancel_at_period_end': getattr(sub, 'cancel_at_period_end', False)
+        }
+    except Exception as e:
+        logger.error(f"[GET_SUB_DETAILS] Error: {e}")
+        return None
 
 
 ##
@@ -3059,32 +3104,45 @@ def current_plan():
     if "admin" not in session:
         return redirect(url_for("login"))
 
+    logger.info(f"[CURRENT_PLAN] === Request: {request.method} ===")
+
     # Get tier information (existing logic)
     tier_info = get_tier_info()
     usage_info = get_activity_usage_display()
 
-    # Get subscription metadata (new) - renamed to avoid conflict with context processor
+    # Get subscription metadata from .env - renamed to avoid conflict with context processor
     subscription_meta = get_subscription_metadata()
+    logger.info(f"[CURRENT_PLAN] Subscription meta - is_paid: {subscription_meta['is_paid_subscriber']}, ID: {subscription_meta.get('subscription_id')}")
+
+    # Get live subscription details from Stripe API
+    subscription_details = get_subscription_details()
+    logger.info(f"[CURRENT_PLAN] Live details from Stripe: {subscription_details}")
 
     # Handle unsubscribe POST request
     if request.method == 'POST':
         action = request.form.get('action')
+        logger.info(f"[CURRENT_PLAN] POST action received: '{action}'")
 
         if action == 'cancel' and subscription_meta['is_paid_subscriber']:
+            logger.info(f"[CURRENT_PLAN] ✓ Condition passed - calling cancel_subscription")
             success, message = cancel_subscription(subscription_meta['subscription_id'])
 
+            logger.info(f"[CURRENT_PLAN] Cancel result - success: {success}, message: {message}")
             if success:
                 flash(message, 'success')
             else:
                 flash(message, 'error')
 
             return redirect(url_for('current_plan'))
+        else:
+            logger.warning(f"[CURRENT_PLAN] ✗ Cancel condition FAILED - action: '{action}', is_paid: {subscription_meta['is_paid_subscriber']}")
 
     return render_template(
         "current_plan.html",
         tier_info=tier_info,
         usage_info=usage_info,
-        subscription_meta=subscription_meta
+        subscription_meta=subscription_meta,
+        subscription_details=subscription_details
     )
 
 
