@@ -83,19 +83,24 @@ class QueryEngine:
 
             # Create simple system prompt with schema
             system_prompt = self._create_system_prompt(schema)
-            
+
             # Create AI request
+            final_model = preferred_model or 'dolphin-mistral:latest'
+            print(f"🔍 QUERY_ENGINE DEBUG: Creating AIRequest with model='{final_model}', preferred_provider='{preferred_provider}'")
+
             ai_request = AIRequest(
                 prompt=question,
                 system_prompt=system_prompt,
-                model=preferred_model or 'dolphin-mistral:latest',
+                model=final_model,
                 temperature=0.1,  # Low temperature for consistent SQL generation
                 max_tokens=500,   # SQL queries shouldn't be too long
                 timeout_seconds=MAX_QUERY_TIMEOUT_SECONDS
             )
-            
+
             # Generate SQL using AI
+            print(f"🚀 QUERY_ENGINE DEBUG: Calling provider_manager.generate(preferred_provider='{preferred_provider}', model='{final_model}')")
             ai_response = await provider_manager.generate(ai_request, preferred_provider)
+            print(f"📥 QUERY_ENGINE DEBUG: Got response from provider='{ai_response.provider}', model='{ai_response.model}', error='{ai_response.error}'")
             
             if ai_response.error:
                 return {
@@ -285,11 +290,13 @@ MANDATORY RULES - DO NOT IGNORE:
 5. These views are optimized and correct - raw tables will give WRONG results
 
 View: monthly_financial_summary (USE FOR: revenue, cash flow, profit, totals)
-Columns: month, account, passport_sales, other_income, cash_received, cash_paid, net_cash_flow, accounts_receivable, accounts_payable, total_revenue, total_expenses, net_income
+Columns: month, account (activity name), passport_sales, other_income, cash_received, cash_paid, net_cash_flow, accounts_receivable, accounts_payable, total_revenue, total_expenses, net_income
+⚠️ IMPORTANT: This view returns one row per activity per month. For TOTALS, you MUST use SUM() and GROUP BY month!
 Examples:
   - "revenue this month" → SELECT SUM(total_revenue) FROM monthly_financial_summary WHERE month = strftime('%Y-%m', 'now')
-  - "cash flow" → SELECT month, net_cash_flow FROM monthly_financial_summary
-  - "profit" → SELECT SUM(net_income) FROM monthly_financial_summary
+  - "cash flow" → SELECT month, SUM(net_cash_flow) as total_cash_flow FROM monthly_financial_summary GROUP BY month ORDER BY month DESC
+  - "cash flow by activity" → SELECT month, account, net_cash_flow FROM monthly_financial_summary ORDER BY month DESC
+  - "profit" → SELECT month, SUM(net_income) as total_profit FROM monthly_financial_summary GROUP BY month ORDER BY month DESC
 
 View: monthly_transactions_detail (USE FOR: transaction details, AR/AP, ledger)
 Columns: month, project, transaction_type, account, customer, amount, payment_status
@@ -316,9 +323,9 @@ Generate the SQL query for the following question:"""
 
     def _clean_generated_sql(self, raw_sql: str) -> str:
         """Clean and normalize generated SQL"""
-        
+
         sql = raw_sql.strip()
-        
+
         # Remove common AI formatting
         if sql.startswith('```sql'):
             sql = sql[6:]
@@ -326,15 +333,109 @@ Generate the SQL query for the following question:"""
             sql = sql[3:]
         if sql.endswith('```'):
             sql = sql[:-3]
-        
+
         # Remove extra whitespace
         sql = ' '.join(sql.split())
-        
+
+        # Fix corrupted SQL - sometimes AI generates "ite SELECT" or "SQLite SELECT" instead of "SELECT"
+        # Extract from "SELECT" onwards (case-insensitive)
+        import re
+        select_match = re.search(r'\b(SELECT)\b', sql, re.IGNORECASE)
+        if select_match:
+            # Extract everything from SELECT onwards
+            sql = sql[select_match.start():]
+
         # Ensure it ends properly (no semicolon)
         sql = sql.rstrip(';')
-        
+
         return sql
-    
+
+    def _format_column_name(self, column: str) -> str:
+        """Format column name for display - convert snake_case to Title Case"""
+
+        # Handle SQL aggregate functions like SUM(net_cash_flow)
+        if '(' in column and ')' in column:
+            # Extract function and column name
+            import re
+            match = re.match(r'(\w+)\((.+)\)', column)
+            if match:
+                func = match.group(1).upper()
+                col_name = match.group(2)
+
+                # Format the column name inside
+                formatted_col = self._format_column_name(col_name)
+
+                # Map function names to friendly names
+                func_map = {
+                    'SUM': 'Total',
+                    'AVG': 'Average',
+                    'COUNT': 'Count',
+                    'MAX': 'Maximum',
+                    'MIN': 'Minimum'
+                }
+                friendly_func = func_map.get(func, func.title())
+
+                return f"{formatted_col} ({friendly_func})"
+
+        # Convert snake_case to Title Case
+        # Split by underscore
+        words = column.replace('_', ' ').split()
+
+        # Capitalize each word
+        formatted_words = []
+        for word in words:
+            # Keep certain words lowercase unless they're the first word
+            lowercase_words = {'of', 'and', 'or', 'the', 'in', 'on', 'at', 'to', 'for'}
+            if word.lower() in lowercase_words and formatted_words:
+                formatted_words.append(word.lower())
+            else:
+                formatted_words.append(word.capitalize())
+
+        return ' '.join(formatted_words)
+
+    def _is_money_column(self, column: str) -> bool:
+        """Detect if a column represents money/currency values"""
+
+        money_keywords = [
+            'revenue', 'cash', 'flow', 'payment', 'cost', 'price',
+            'amount', 'total', 'sum', 'income', 'expense', 'balance',
+            'fee', 'charge', 'paid', 'owing', 'receivable', 'payable'
+        ]
+
+        column_lower = column.lower()
+        return any(keyword in column_lower for keyword in money_keywords)
+
+    def _format_cell_value(self, value, column: str) -> str:
+        """Format cell value based on type and column context"""
+
+        # Handle None/empty values
+        if value is None or value == '':
+            return ''
+
+        # Detect money columns and format as currency
+        if self._is_money_column(column):
+            try:
+                # Convert to float and format as currency
+                amount = float(value)
+                return f"${amount:,.2f}"
+            except (ValueError, TypeError):
+                pass
+
+        # Format floating point numbers (round to 2 decimals)
+        if isinstance(value, float):
+            # Check if it's essentially an integer
+            if value == int(value):
+                return f"{int(value):,}"
+            else:
+                return f"{value:.2f}"
+
+        # Format large integers with comma separators
+        if isinstance(value, int):
+            return f"{value:,}"
+
+        # Return as string for everything else
+        return str(value)
+
     def _format_results(self, query_result: Dict[str, Any], question: str) -> Dict[str, Any]:
         """Format query results for display"""
         
@@ -349,13 +450,20 @@ Generate the SQL query for the following question:"""
         
         data = query_result.get('data', [])
         columns = query_result.get('columns', [])
-        
-        # Convert data to list of lists for easier display
+
+        # Format column names for display
+        formatted_columns = [self._format_column_name(col) for col in columns]
+
+        # Convert data to list of lists with formatted values
         rows = []
         for row_dict in data:
-            row = [row_dict.get(col, '') for col in columns]
-            rows.append(row)
-        
+            formatted_row = []
+            for col in columns:
+                raw_value = row_dict.get(col, '')
+                formatted_value = self._format_cell_value(raw_value, col)
+                formatted_row.append(formatted_value)
+            rows.append(formatted_row)
+
         # PII masking disabled - only admins use this chatbot
         # They need full email addresses to contact users
 
@@ -363,8 +471,8 @@ Generate the SQL query for the following question:"""
         chart_suggestion = self._suggest_chart_type(columns, data, question)
 
         return {
-            'columns': columns,
-            'rows': rows,  # Return unmasked rows
+            'columns': formatted_columns,  # Return formatted column names
+            'rows': rows,  # Return formatted rows
             'row_count': len(data),
             'chart_suggestion': chart_suggestion,
             'sql_executed': query_result.get('sql_executed')
