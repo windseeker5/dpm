@@ -36,6 +36,12 @@ instance/*.backup_*
 static/uploads_backup_*/
 templates/email_templates_backup_*/
 
+#Lean And Clean
+tests/
+test/
+#sql/
+
+
 # Testing screenshots and files
 .playwright-mcp/
 test_backup_*.py
