@@ -58,10 +58,12 @@ class QueryEngine:
                 'admin_email': admin_email,
                 **formatted_result
             }
-            
+
             # 6. Log the query for monitoring
-            self._log_query(final_result)
-            
+            log_id = self._log_query(final_result)
+            if log_id:
+                final_result['query_log_id'] = log_id
+
             return final_result
             
         except Exception as e:
@@ -520,11 +522,11 @@ Generate the SQL query for the following question:"""
         
         return None
     
-    def _log_query(self, result: Dict[str, Any]):
-        """Log query execution for monitoring"""
+    def _log_query(self, result: Dict[str, Any]) -> Optional[int]:
+        """Log query execution for monitoring and return log entry ID"""
         try:
             from models import QueryLog, db
-            
+
             log_entry = QueryLog(
                 admin_email=result.get('admin_email', 'unknown'),
                 original_question=result.get('question', ''),
@@ -538,12 +540,31 @@ Generate the SQL query for the following question:"""
                 tokens_used=result.get('tokens_used', 0),
                 cost_cents=result.get('cost_cents', 0)
             )
-            
+
             db.session.add(log_entry)
             db.session.commit()
-            
+
+            return log_entry.id
+
         except Exception as e:
             current_app.logger.error(f"Failed to log query: {e}")
+            return None
+
+    @staticmethod
+    def update_query_log_answer(log_id: int, answer: str):
+        """Update query log entry with the AI's natural language answer"""
+        try:
+            from models import QueryLog, db
+
+            log_entry = QueryLog.query.get(log_id)
+            if log_entry:
+                log_entry.ai_answer = answer
+                db.session.commit()
+            else:
+                current_app.logger.warning(f"Query log entry {log_id} not found")
+
+        except Exception as e:
+            current_app.logger.error(f"Failed to update query log answer: {e}")
 
 
 # Helper function to create query engine instance

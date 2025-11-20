@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
-from models import Setting, db, Passport, Redemption, Admin, EbankPayment, ReminderLog, Organization
+from models import Setting, db, Passport, Redemption, Admin, EbankPayment, ReminderLog
 
 
 
@@ -2282,56 +2282,22 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     context = context or {}
     inline_images = inline_images or {}
 
-    # ✅ ORGANIZATION DETECTION & SUBDOMAIN-AWARE URLs
-    from models import Organization
-    from flask import session
-    org = None
-    
-    # Priority 1: Get organization from activity parameter (most reliable)
-    if activity and hasattr(activity, 'organization') and activity.organization:
-        org = activity.organization
-        print(f"📧 Using organization from activity: {org.name}")
-    # Priority 2: Get from context
-    elif context and 'organization_id' in context and context['organization_id'] is not None:
-        org = db.session.get(Organization, context['organization_id'])
-        print(f"📧 Using organization from context: {org.name if org else 'None'}")
-    # Priority 3: Try session (for non-activity emails)
-    else:
-        # Safe session access for background threads
-        try:
-            if 'organization_domain' in session:
-                org = Organization.query.filter_by(domain=session['organization_domain']).first()
-                print(f"📧 Using organization from session: {org.name if org else 'None'}")
-        except RuntimeError:
-            # Working outside request context - skip session access
-            pass
-    
-    # Generate URLs and organization info with proper data
-    if org:
-        # Use organization's actual domain
-        base_url = f"https://{org.domain}.minipass.me" if org.domain else "https://minipass.me"
-        # Only set organization_name if not already set (from get_email_context)
-        if 'organization_name' not in context:
-            context['organization_name'] = org.name
-        # Add payment email from organization if not already set
-        if 'payment_email' not in context and org.mail_username:
-            context['payment_email'] = org.mail_username
-    else:
-        # Fallback for system emails without organization context
-        base_url = "https://lhgi.minipass.me"
-        # Only set fallback if not already set
-        if 'organization_name' not in context:
-            context['organization_name'] = "Fondation LHGI"
+    # ✅ Set default organization info and URLs
+    base_url = "https://lhgi.minipass.me"
 
-    # Fallback payment email from settings if not set from organization
+    # Set organization name if not already in context
+    if 'organization_name' not in context:
+        context['organization_name'] = "Fondation LHGI"
+
+    # Set payment email from settings if not in context
     if 'payment_email' not in context:
         payment_email_setting = get_setting("PAYMENT_EMAIL_ADDRESS")
         if payment_email_setting:
             context['payment_email'] = payment_email_setting
 
-    # Use ORG_ADDRESS setting for address (consistent with survey code)
+    # Use ORG_ADDRESS setting for address
     context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
-    
+
     # Always set these URLs and support email
     context['unsubscribe_url'] = f"{base_url}/unsubscribe?email={to_email}"
     context['privacy_url'] = f"{base_url}/privacy"
@@ -2366,7 +2332,6 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     
     # Note: activity_name should be provided by the calling function - no fallback needed
     
-    print(f"🏢 Organization detected: {org.name if org else 'None'}")
     print(f"🌐 Base URL: {base_url}")
     
     # ✅ PHASE 3: Hosted Image System
@@ -2612,7 +2577,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         return False  # Return False on failure
 
 
-def send_email_async(app, user=None, activity=None, organization_id=None, **kwargs):
+def send_email_async(app, user=None, activity=None, **kwargs):
     import threading
 
     # Extract activity ID before thread starts (avoid detached instance error)
@@ -3166,57 +3131,8 @@ def generate_response_token():
 
 
 # ================================
-# 📧 ORGANIZATION EMAIL CONFIGURATION
+# 📧 EMAIL UTILITY FUNCTIONS
 # ================================
-
-def get_email_config_for_context(user=None, activity=None, organization_id=None):
-    """
-    Determine the appropriate email configuration based on context.
-    Priority: organization_id > activity.organization > user.organization > system default
-    
-    Args:
-        user: User object
-        activity: Activity object  
-        organization_id: Direct organization ID
-    
-    Returns:
-        dict: Email configuration or None for system default
-    """
-    from flask import current_app
-    
-    with current_app.app_context():
-        # Priority 1: Direct organization_id
-        if organization_id:
-            org = db.session.get(Organization, organization_id)
-            if org and org.email_enabled and org.is_active:
-                return org.get_email_config()
-        
-        # Priority 2: Activity's organization
-        if activity and hasattr(activity, 'organization') and activity.organization:
-            if activity.organization.email_enabled and activity.organization.is_active:
-                return activity.organization.get_email_config()
-        
-        # Priority 3: User's organization
-        if user and hasattr(user, 'organization') and user.organization:
-            if user.organization.email_enabled and user.organization.is_active:
-                return user.organization.get_email_config()
-        
-        # Priority 4: System default (return None to use global settings)
-        return None
-
-
-def get_organization_by_domain(domain):
-    """
-    Get organization by domain name.
-    
-    Args:
-        domain: Domain part of email (e.g., 'lhgi' from 'lhgi@minipass.me')
-    
-    Returns:
-        Organization object or None
-    """
-    return Organization.query.filter_by(domain=domain, is_active=True).first()
-
 
 def encrypt_password(password):
     """
@@ -3241,131 +3157,6 @@ def decrypt_password(encrypted_password):
         return base64.b64decode(encrypted_password.encode()).decode()
     except:
         return None
-
-
-def create_organization_email_config(name, domain, mail_server, mail_username, mail_password, 
-                                    mail_sender_name=None, mail_port=587, mail_use_tls=True, 
-                                    created_by=None):
-    """
-    Create a new organization with email configuration.
-    
-    Args:
-        name: Organization name
-        domain: Domain for email (without @minipass.me)
-        mail_server: SMTP server
-        mail_username: SMTP username
-        mail_password: SMTP password (will be encrypted)
-        mail_sender_name: Display name for sender
-        mail_port: SMTP port (default 587)
-        mail_use_tls: Use TLS (default True)
-        created_by: Admin who created this config
-    
-    Returns:
-        Organization object
-    """
-    from flask import current_app
-    
-    with current_app.app_context():
-        # Check if organization with this domain already exists
-        existing = Organization.query.filter_by(domain=domain).first()
-        if existing:
-            raise ValueError(f"Organization with domain '{domain}' already exists")
-        
-        # Create new organization
-        org = Organization(
-            name=name,
-            domain=domain,
-            email_enabled=True,
-            mail_server=mail_server,
-            mail_port=mail_port,
-            mail_use_tls=mail_use_tls,
-            mail_username=mail_username,
-            mail_password=encrypt_password(mail_password),
-            mail_sender_name=mail_sender_name,
-            mail_sender_email=f"{domain}@minipass.me",
-            is_active=True,
-            fallback_to_system_email=True,
-            created_by=created_by,
-            updated_by=created_by
-        )
-        
-        db.session.add(org)
-        db.session.commit()
-        
-        return org
-
-
-def update_organization_email_config(organization_id, **kwargs):
-    """
-    Update organization email configuration.
-    
-    Args:
-        organization_id: ID of organization to update
-        **kwargs: Fields to update
-    
-    Returns:
-        Organization object
-    """
-    from flask import current_app
-    
-    with current_app.app_context():
-        org = db.session.get(Organization, organization_id)
-        if not org:
-            raise ValueError(f"Organization with ID {organization_id} not found")
-        
-        # Update fields
-        for field, value in kwargs.items():
-            if field == 'mail_password' and value:
-                value = encrypt_password(value)
-            
-            if hasattr(org, field):
-                setattr(org, field, value)
-        
-        org.updated_at = datetime.now(timezone.utc)
-        db.session.commit()
-        
-        return org
-
-
-def test_organization_email_config(organization_id):
-    """
-    Test organization email configuration by attempting to connect to SMTP server.
-    
-    Args:
-        organization_id: ID of organization to test
-    
-    Returns:
-        tuple: (success: bool, message: str)
-    """
-    from flask import current_app
-    import smtplib
-    
-    with current_app.app_context():
-        org = db.session.get(Organization, organization_id)
-        if not org or not org.email_enabled:
-            return False, "Organization not found or email not enabled"
-        
-        config = org.get_email_config()
-        if not config:
-            return False, "Email configuration not available"
-        
-        try:
-            # Test SMTP connection
-            server = smtplib.SMTP(config['MAIL_SERVER'], config['MAIL_PORT'])
-            server.ehlo()
-            
-            if config.get('MAIL_USE_TLS'):
-                server.starttls()
-            
-            if config.get('MAIL_USERNAME') and config.get('MAIL_PASSWORD'):
-                decrypted_password = decrypt_password(config['MAIL_PASSWORD'])
-                server.login(config['MAIL_USERNAME'], decrypted_password)
-            
-            server.quit()
-            return True, "Email configuration test successful"
-            
-        except Exception as e:
-            return False, f"Email configuration test failed: {str(e)}"
 
 
 def get_email_context(activity, template_type, base_context=None):

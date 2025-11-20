@@ -59,9 +59,6 @@ class User(db.Model):
     
     # Email preferences
     email_opt_out = db.Column(db.Boolean, default=False, nullable=False)
-    
-    # Organization relationship for email context
-    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
 
     signups = db.relationship("Signup", backref="user", lazy=True)
     passports = db.relationship("Passport", backref="user", lazy=True)
@@ -84,9 +81,6 @@ class Activity(db.Model):
     
     # Email template customizations (JSON)
     email_templates = db.Column(db.JSON, nullable=True)
-    
-    # Organization relationship for email context
-    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
 
     # Location fields for geospatial data and sharing
     location_address_raw = db.Column(db.Text, nullable=True)  # What admin typed
@@ -333,42 +327,6 @@ db.Index('ix_survey_response_survey', SurveyResponse.survey_id)
 # 🤖 AI CHATBOT SYSTEM MODELS
 # ================================
 
-class ChatConversation(db.Model):
-    """Chat conversation sessions for the AI analytics chatbot"""
-    id = db.Column(db.Integer, primary_key=True)
-    admin_email = db.Column(db.String(150), nullable=False)
-    session_token = db.Column(db.String(32), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    status = db.Column(db.String(20), default='active')  # active, archived, deleted
-    
-    # Relationships
-    messages = db.relationship("ChatMessage", backref="conversation", lazy=True, cascade="all, delete-orphan")
-
-
-class ChatMessage(db.Model):
-    """Individual chat messages and AI responses"""
-    id = db.Column(db.Integer, primary_key=True)
-    conversation_id = db.Column(db.Integer, db.ForeignKey("chat_conversation.id"), nullable=False)
-    message_type = db.Column(db.String(20), nullable=False)  # user, assistant, system, error
-    content = db.Column(db.Text, nullable=False)
-    sql_query = db.Column(db.Text, nullable=True)  # Generated SQL (if applicable)
-    query_result = db.Column(db.Text, nullable=True)  # JSON result (if applicable)
-    ai_provider = db.Column(db.String(50), nullable=True)  # ollama, anthropic, openai
-    ai_model = db.Column(db.String(100), nullable=True)  # Model used for this message
-    tokens_used = db.Column(db.Integer, default=0)
-    cost_cents = db.Column(db.Integer, default=0)  # Cost in cents
-    response_time_ms = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    # Index for performance
-    __table_args__ = (
-        db.Index('ix_chat_message_conversation', 'conversation_id'),
-        db.Index('ix_chat_message_type', 'message_type'),
-        db.Index('ix_chat_message_created', 'created_at'),
-    )
-
-
 class QueryLog(db.Model):
     """Query execution log for monitoring and analytics"""
     id = db.Column(db.Integer, primary_key=True)
@@ -379,6 +337,7 @@ class QueryLog(db.Model):
     execution_time_ms = db.Column(db.Integer, nullable=True)
     rows_returned = db.Column(db.Integer, default=0)
     error_message = db.Column(db.Text, nullable=True)
+    ai_answer = db.Column(db.Text, nullable=True)  # Natural language answer returned to user
     ai_provider = db.Column(db.String(50), nullable=True)
     ai_model = db.Column(db.String(100), nullable=True)
     tokens_used = db.Column(db.Integer, default=0)
@@ -392,87 +351,3 @@ class QueryLog(db.Model):
         db.Index('ix_query_log_created', 'created_at'),
         db.Index('ix_query_log_provider', 'ai_provider'),
     )
-
-
-class ChatUsage(db.Model):
-    """Daily usage tracking for cost management"""
-    id = db.Column(db.Integer, primary_key=True)
-    admin_email = db.Column(db.String(150), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    total_queries = db.Column(db.Integer, default=0)
-    total_tokens = db.Column(db.Integer, default=0)
-    total_cost_cents = db.Column(db.Integer, default=0)
-    provider_usage = db.Column(db.Text, nullable=True)  # JSON with per-provider stats
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    # Unique constraint on admin_email + date
-    __table_args__ = (
-        db.UniqueConstraint('admin_email', 'date', name='uq_chat_usage_admin_date'),
-        db.Index('ix_chat_usage_date', 'date'),
-    )
-
-
-# Organization Model for Multi-tenant Email Settings
-class Organization(db.Model):
-    """Organization model to support multi-tenant email configurations"""
-    __tablename__ = 'organizations'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255), nullable=False)
-    domain = db.Column(db.String(100), unique=True, nullable=False)  # e.g., 'lhgi' from lhgi@minipass.me
-    
-    # Email Configuration
-    email_enabled = db.Column(db.Boolean, default=False)
-    mail_server = db.Column(db.String(255), nullable=True)  # e.g., 'mail.minipass.me'
-    mail_port = db.Column(db.Integer, default=587)
-    mail_use_tls = db.Column(db.Boolean, default=True)
-    mail_use_ssl = db.Column(db.Boolean, default=False)
-    mail_username = db.Column(db.String(255), nullable=True)  # e.g., 'lhgi@minipass.me'
-    mail_password = db.Column(db.String(500), nullable=True)  # Encrypted password
-    mail_sender_name = db.Column(db.String(255), nullable=True)  # e.g., 'LHGI'
-    mail_sender_email = db.Column(db.String(255), nullable=True)  # Override sender email if different
-    
-    # Additional settings
-    is_active = db.Column(db.Boolean, default=True)
-    fallback_to_system_email = db.Column(db.Boolean, default=True)  # Fallback to system Gmail if org email fails
-    
-    # Audit fields
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    created_by = db.Column(db.String(255), nullable=True)
-    updated_by = db.Column(db.String(255), nullable=True)
-    
-    # Relationships
-    activities = db.relationship('Activity', backref='organization', lazy=True)
-    users = db.relationship('User', backref='organization', lazy=True)
-    
-    def __repr__(self):
-        return f'<Organization {self.name} ({self.domain})>'
-    
-    @property
-    def full_email_address(self):
-        """Get the full email address for this organization"""
-        return f"{self.domain}@minipass.me"
-    
-    def get_email_config(self):
-        """Get email configuration as dictionary"""
-        if not self.email_enabled:
-            return None
-        
-        return {
-            'MAIL_SERVER': self.mail_server,
-            'MAIL_PORT': self.mail_port,
-            'MAIL_USE_TLS': self.mail_use_tls,
-            'MAIL_USE_SSL': self.mail_use_ssl,
-            'MAIL_USERNAME': self.mail_username,
-            'MAIL_PASSWORD': self.mail_password,
-            'MAIL_DEFAULT_SENDER': self.mail_sender_email or self.full_email_address,
-            'SENDER_NAME': self.mail_sender_name or self.name
-        }
-
-
-# ✅ Additional indexes for chatbot performance
-db.Index('ix_chat_conversation_admin', ChatConversation.admin_email)
-db.Index('ix_chat_conversation_token', ChatConversation.session_token)
-db.Index('ix_chat_conversation_status', ChatConversation.status)
