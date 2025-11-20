@@ -25,17 +25,14 @@ class QueryEngine:
     
     async def process_question(self, question: str, admin_email: str,
                              preferred_provider: Optional[str] = None,
-                             preferred_model: Optional[str] = None,
-                             language: str = "en",
-                             context_hints: Optional[List[str]] = None) -> Dict[str, Any]:
+                             preferred_model: Optional[str] = None) -> Dict[str, Any]:
         """Process a natural language question and return structured results"""
 
         start_time = time.time()
 
         try:
             # 1. Generate SQL from natural language
-            sql_result = await self._generate_sql(question, preferred_provider, preferred_model,
-                                                  language, context_hints)
+            sql_result = await self._generate_sql(question, preferred_provider, preferred_model)
             if not sql_result['success']:
                 return sql_result
             
@@ -77,17 +74,15 @@ class QueryEngine:
             }
     
     async def _generate_sql(self, question: str, preferred_provider: Optional[str] = None,
-                          preferred_model: Optional[str] = None,
-                          language: str = "en",
-                          context_hints: Optional[List[str]] = None) -> Dict[str, Any]:
+                          preferred_model: Optional[str] = None) -> Dict[str, Any]:
         """Generate SQL query from natural language question"""
 
         try:
             # Get database schema
             schema = self._get_database_schema()
 
-            # Create system prompt with schema information and bilingual support
-            system_prompt = self._create_system_prompt(schema, language, context_hints)
+            # Create simple system prompt with schema
+            system_prompt = self._create_system_prompt(schema)
             
             # Create AI request
             ai_request = AIRequest(
@@ -143,22 +138,22 @@ class QueryEngine:
             cursor = conn.cursor()
             
             schema = {}
-            
-            # Get all table names
+
+            # Get all table and view names
             cursor.execute("""
-                SELECT name FROM sqlite_master 
-                WHERE type='table' AND name NOT LIKE 'sqlite_%'
-                ORDER BY name
+                SELECT name, type FROM sqlite_master
+                WHERE (type='table' OR type='view') AND name NOT LIKE 'sqlite_%'
+                ORDER BY type DESC, name
             """)
-            
-            tables = cursor.fetchall()
-            
-            for (table_name,) in tables:
-                # Get column information for each table
-                cursor.execute(f"PRAGMA table_info({table_name})")
+
+            objects = cursor.fetchall()
+
+            for (object_name, object_type) in objects:
+                # Get column information for each table/view
+                cursor.execute(f"PRAGMA table_info({object_name})")
                 columns = cursor.fetchall()
-                
-                schema[table_name] = [
+
+                schema[object_name] = [
                     {
                         'name': col[1],
                         'type': col[2],
@@ -263,12 +258,10 @@ class QueryEngine:
             ]
         }
     
-    def _create_system_prompt(self, schema: Dict[str, List[Dict[str, str]]],
-                             language: str = "en",
-                             context_hints: Optional[List[str]] = None) -> str:
-        """Create system prompt with database schema and bilingual support"""
+    def _create_system_prompt(self, schema: Dict[str, List[Dict[str, str]]]) -> str:
+        """Create minimal system prompt with just schema and basic rules"""
 
-        schema_text = "Database Schema:\n\n"
+        schema_text = "DATABASE SCHEMA:\n\n"
 
         for table_name, columns in schema.items():
             schema_text += f"Table: {table_name}\n"
@@ -278,165 +271,48 @@ class QueryEngine:
                 schema_text += f"  - {col['name']}: {col['type']}{pk_marker}{null_marker}\n"
             schema_text += "\n"
 
-        # Add bilingual aliases section
-        bilingual_section = self._get_bilingual_aliases_section()
-
-        # Add business context section
-        business_context = self._get_business_context_section()
-
-        # Add context hints if provided
-        hints_section = ""
-        if context_hints:
-            hints_section = "\nQUERY CONTEXT (from semantic analysis):\n" + "\n".join(f"- {hint}" for hint in context_hints) + "\n"
-
-        # Get language-specific examples
-        if language == "fr":
-            examples = self._get_french_examples()
-        else:
-            examples = self._get_english_examples()
-
-        return f"""You are an expert SQL assistant. Generate SQLite queries based on natural language questions.
+        return f"""You are a SQL query generator for a Minipass activity management platform.
 
 {schema_text}
 
-{bilingual_section}
+⚠️ CRITICAL: USE VIEWS FOR ALL FINANCIAL QUERIES ⚠️
 
-{business_context}
+MANDATORY RULES - DO NOT IGNORE:
+1. For ANY question about revenue, income, sales → USE monthly_financial_summary
+2. For ANY question about cash flow, profit, net income → USE monthly_financial_summary
+3. For ANY question about AR, AP, unpaid invoices → USE monthly_transactions_detail
+4. NEVER use passport, income, expense tables directly for financial queries
+5. These views are optimized and correct - raw tables will give WRONG results
 
-{hints_section}
+View: monthly_financial_summary (USE FOR: revenue, cash flow, profit, totals)
+Columns: month, account, passport_sales, other_income, cash_received, cash_paid, net_cash_flow, accounts_receivable, accounts_payable, total_revenue, total_expenses, net_income
+Examples:
+  - "revenue this month" → SELECT SUM(total_revenue) FROM monthly_financial_summary WHERE month = strftime('%Y-%m', 'now')
+  - "cash flow" → SELECT month, net_cash_flow FROM monthly_financial_summary
+  - "profit" → SELECT SUM(net_income) FROM monthly_financial_summary
 
-IMPORTANT RULES:
-1. ONLY generate SELECT statements - never INSERT, UPDATE, DELETE, DROP, etc.
-2. Use exact table and column names as shown in the schema
-3. Always use proper SQLite syntax (case-sensitive)
-4. For dates, use SQLite date functions like DATE('now'), datetime('now'), etc.
-5. Return ONLY the SQL query - no explanations or markdown formatting
-6. Use JOINs when data spans multiple tables
-7. Add appropriate WHERE clauses to filter results
-8. Use LIMIT to avoid returning too many rows
+View: monthly_transactions_detail (USE FOR: transaction details, AR/AP, ledger)
+Columns: month, project, transaction_type, account, customer, amount, payment_status
+Examples:
+  - "unpaid invoices" → SELECT * FROM monthly_transactions_detail WHERE payment_status = 'Unpaid (AR)'
+  - "accounts receivable" → SELECT * FROM monthly_transactions_detail WHERE payment_status = 'Unpaid (AR)'
 
-{examples}
+CRITICAL BUSINESS RULES:
+- Total Revenue = SUM(passport.sold_amt WHERE paid=1) + SUM(income.amount) - SUM(expense.amount)
+- passport.sold_amt is the actual revenue received (what customer paid)
+- passport_type.price_per_user is the listed price (may differ from actual amount paid)
+- For cash flow or revenue queries, use passport.sold_amt (not price_per_user)
 
-Now generate a SQL query for the following question:"""
+QUERY RULES:
+1. Generate SQLite-compatible SELECT queries only (no INSERT, UPDATE, DELETE, DROP)
+2. Return maximum 100 rows (use LIMIT 100)
+3. Use proper JOINs when querying across tables
+4. Handle both French and English questions naturally
+5. Include relevant columns in results (names, emails, amounts, dates)
+6. For dates, use SQLite date functions: DATE('now'), DATE('now', 'start of month'), etc.
+7. Return ONLY the SQL query - no explanations or markdown formatting
 
-    def _get_bilingual_aliases_section(self) -> str:
-        """Get bilingual column and table aliases section"""
-        return """BILINGUAL COLUMN ALIASES (French → English):
-  - nom → name
-  - courriel → email
-  - téléphone/telephone → phone
-  - adresse → address
-  - montant → amount
-  - prix → price
-  - date → date
-  - statut → status
-  - payé/paye → paid
-
-BILINGUAL TABLE ALIASES (French → English):
-  - utilisateurs/utilisateur/clients/client → user
-  - activités/activite/activité → activity
-  - passeports/passeport → passport
-  - inscriptions/inscription → signup
-
-TIME PERIOD TRANSLATIONS (French → English):
-  - "ce mois" = this month = DATE(created_at) >= DATE('now', 'start of month')
-  - "mois dernier"/"le mois dernier" = last month = DATE(created_at) >= DATE('now', 'start of month', '-1 month') AND DATE(created_at) < DATE('now', 'start of month')
-  - "cette semaine" = this week = DATE(created_at) >= DATE('now', 'start of day', '-' || CAST(strftime('%w', 'now') AS INTEGER) || ' days')
-  - "cette année"/"cette annee" = this year = DATE(created_at) >= DATE('now', 'start of year')
-"""
-
-    def _get_business_context_section(self) -> str:
-        """Get business context section with Minipass-specific rules"""
-        return """MINIPASS BUSINESS CONTEXT:
-
-⚠️ CRITICAL - COMPLETE REVENUE CALCULATION (USE ALL 3 SOURCES):
-  1. Passport Sales: SUM(passport.sold_amt) WHERE passport.paid = 1
-  2. Other Income: SUM(income.amount) WHERE income.payment_status = 'received'
-  3. Total Revenue = Passport Sales + Other Income
-
-  ⚠️ NEVER use only passport.sold_amt - you MUST include income table!
-
-⚠️ CRITICAL - CASH FLOW CALCULATION:
-  - Cash Received = SUM(passport.sold_amt WHERE paid=1) + SUM(income.amount WHERE payment_status='received')
-  - Cash Paid = SUM(expense.amount) WHERE expense.payment_status = 'paid'
-  - Net Cash Flow = Cash Received - Cash Paid
-
-  ⚠️ For "flux de trésorerie" or "cash flow" queries, you MUST use all 3 tables: passport, income, expense
-
-Account Receivable (Money Owed to You):
-  - Unpaid Passports: SUM(passport.sold_amt) WHERE passport.paid = 0
-  - Pending Income: SUM(income.amount) WHERE income.payment_status = 'pending'
-  - Total AR = Unpaid Passports + Pending Income
-
-Account Payable (Money You Owe):
-  - Unpaid Bills: SUM(expense.amount) WHERE expense.payment_status = 'unpaid'
-
-Payment Status Fields:
-  - passport.paid: 1 = paid, 0 = unpaid
-  - income.payment_status: 'received', 'pending', 'cancelled'
-  - expense.payment_status: 'paid', 'unpaid', 'cancelled'
-
-Revenue/Cash Flow by Activity:
-  - Must LEFT JOIN activity with passport, income, AND expense tables
-  - Use COALESCE to handle NULL values from LEFT JOINs
-  - Example structure:
-    SELECT a.name,
-           COALESCE(SUM(CASE WHEN p.paid = 1 THEN p.sold_amt END), 0) as passport_revenue,
-           COALESCE(SUM(CASE WHEN i.payment_status = 'received' THEN i.amount END), 0) as other_income,
-           COALESCE(SUM(CASE WHEN e.payment_status = 'paid' THEN e.amount END), 0) as expenses
-    FROM activity a
-    LEFT JOIN passport p ON p.activity_id = a.id
-    LEFT JOIN income i ON i.activity_id = a.id
-    LEFT JOIN expense e ON e.activity_id = a.id
-    GROUP BY a.id, a.name
-
-User Data:
-  - ALWAYS join through user table for name/email
-  - user.email is unique identifier
-"""
-
-    def _get_french_examples(self) -> str:
-        """Get French few-shot examples"""
-        return """Examples (French):
-
-Question: "Quel est mon flux de trésorerie ce mois?"
-Answer: SELECT (SELECT COALESCE(SUM(sold_amt), 0) FROM passport WHERE paid = 1 AND DATE(paid_date) >= DATE('now', 'start of month')) + (SELECT COALESCE(SUM(amount), 0) FROM income WHERE payment_status = 'received' AND DATE(payment_date) >= DATE('now', 'start of month')) - (SELECT COALESCE(SUM(amount), 0) FROM expense WHERE payment_status = 'paid' AND DATE(payment_date) >= DATE('now', 'start of month')) as flux_tresorerie
-
-Question: "Quel est mon flux de trésorerie par activité"
-Answer: SELECT a.name as activite, COALESCE(SUM(CASE WHEN p.paid = 1 THEN p.sold_amt ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN i.payment_status = 'received' THEN i.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN e.payment_status = 'paid' THEN e.amount ELSE 0 END), 0) as flux_tresorerie FROM activity a LEFT JOIN passport p ON p.activity_id = a.id LEFT JOIN income i ON i.activity_id = a.id LEFT JOIN expense e ON e.activity_id = a.id GROUP BY a.id, a.name ORDER BY flux_tresorerie DESC LIMIT 10
-
-Question: "Montre-moi les utilisateurs qui n'ont pas payé"
-Answer: SELECT u.name, u.email, p.sold_amt FROM passport p JOIN user u ON p.user_id = u.id WHERE p.paid = 0 LIMIT 100
-
-Question: "Combien de revenus par activité cette année?"
-Answer: SELECT a.name as activite, COALESCE(SUM(CASE WHEN p.paid = 1 THEN p.sold_amt ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN i.payment_status = 'received' THEN i.amount ELSE 0 END), 0) as revenu_total FROM activity a LEFT JOIN passport p ON p.activity_id = a.id AND DATE(p.paid_date) >= DATE('now', 'start of year') LEFT JOIN income i ON i.activity_id = a.id AND DATE(i.payment_date) >= DATE('now', 'start of year') GROUP BY a.id, a.name ORDER BY revenu_total DESC
-
-Question: "Quelles activités génèrent le plus de revenus?"
-Answer: SELECT a.name as activite, COALESCE(SUM(CASE WHEN p.paid = 1 THEN p.sold_amt ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN i.payment_status = 'received' THEN i.amount ELSE 0 END), 0) as revenu_total FROM activity a LEFT JOIN passport p ON p.activity_id = a.id LEFT JOIN income i ON i.activity_id = a.id GROUP BY a.id, a.name ORDER BY revenu_total DESC LIMIT 10
-
-Question: "Montre-moi le revenu de ce mois"
-Answer: SELECT (SELECT COALESCE(SUM(sold_amt), 0) FROM passport WHERE paid = 1 AND DATE(paid_date) >= DATE('now', 'start of month')) + (SELECT COALESCE(SUM(amount), 0) FROM income WHERE payment_status = 'received' AND DATE(payment_date) >= DATE('now', 'start of month')) as revenu_total
-"""
-
-    def _get_english_examples(self) -> str:
-        """Get English few-shot examples"""
-        return """Examples (English):
-
-Question: "Show me all users"
-Answer: SELECT * FROM user LIMIT 100
-
-Question: "Find unpaid passports"
-Answer: SELECT u.name, u.email, a.name as activity_name FROM passport p JOIN user u ON p.user_id = u.id JOIN activity a ON p.activity_id = a.id WHERE p.paid = 0 LIMIT 100
-
-Question: "What is our total revenue this month?"
-Answer: SELECT (SELECT COALESCE(SUM(sold_amt), 0) FROM passport WHERE paid = 1 AND DATE(paid_date) >= DATE('now', 'start of month')) + (SELECT COALESCE(SUM(amount), 0) FROM income WHERE payment_status = 'received' AND DATE(payment_date) >= DATE('now', 'start of month')) as total_revenue
-
-Question: "What is our cash flow by activity?"
-Answer: SELECT a.name as activity, COALESCE(SUM(CASE WHEN p.paid = 1 THEN p.sold_amt ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN i.payment_status = 'received' THEN i.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN e.payment_status = 'paid' THEN e.amount ELSE 0 END), 0) as net_cash_flow FROM activity a LEFT JOIN passport p ON p.activity_id = a.id LEFT JOIN income i ON i.activity_id = a.id LEFT JOIN expense e ON e.activity_id = a.id GROUP BY a.id, a.name ORDER BY net_cash_flow DESC LIMIT 10
-
-Question: "Show users who didn't pay for Golf 2025"
-Answer: SELECT u.name, u.email, p.sold_amt FROM passport p JOIN user u ON p.user_id = u.id JOIN activity a ON p.activity_id = a.id WHERE a.name LIKE '%Golf%' AND a.name LIKE '%2025%' AND p.paid = 0 LIMIT 100
-"""
+Generate the SQL query for the following question:"""
 
     def _clean_generated_sql(self, raw_sql: str) -> str:
         """Clean and normalize generated SQL"""

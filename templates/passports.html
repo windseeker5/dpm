@@ -182,8 +182,10 @@
                     <i class="ti ti-mail me-2"></i>Send Reminder
                   </button>
                   {% endif %}
-                  <a class="dropdown-item text-danger" href="#" 
-                     onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
+                  <a class="dropdown-item text-danger delete-passport-btn" href="#"
+                     data-passport-id="{{ passport.id }}"
+                     data-passport-name="{{ passport.user.name or 'Anonymous' }}"
+                     data-uses-remaining="{{ passport.uses_remaining or 0 }}">
                     <i class="ti ti-trash me-2"></i>Delete
                   </a>
                 </div>
@@ -364,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function confirmPassportDelete(passportId, passportName, usesRemaining) {
   document.getElementById('deletePassportName').textContent = passportName;
   document.getElementById('deletePassportId').value = passportId;
-  
+
   // Show warning if user still has remaining sessions
   const warningDiv = document.getElementById('deletePassportWarning');
   if (usesRemaining > 0) {
@@ -374,11 +376,23 @@ function confirmPassportDelete(passportId, passportName, usesRemaining) {
   } else {
     warningDiv.style.display = 'none';
   }
-  
+
   document.getElementById('passportDeleteForm').action = "{{ url_for('passports_bulk_action') }}";
   const modal = new bootstrap.Modal(document.getElementById('passportDeleteModal'));
   modal.show();
 }
+
+// Event listener for delete buttons with data attributes
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.delete-passport-btn')) {
+    e.preventDefault();
+    const btn = e.target.closest('.delete-passport-btn');
+    const passportId = parseInt(btn.dataset.passportId);
+    const passportName = btn.dataset.passportName;
+    const usesRemaining = parseInt(btn.dataset.usesRemaining);
+    confirmPassportDelete(passportId, passportName, usesRemaining);
+  }
+});
 </script>
 {% endblock %}
 {% block styles %}
