@@ -39,7 +39,10 @@ class GeminiProvider(AIProvider):
         """Generate response using Gemini API"""
         start_time = time.time()
 
+        print(f"🌟 GEMINI PROVIDER: generate() called with request.model='{request.model}'")
+
         if not self.api_key:
+            print(f"❌ GEMINI PROVIDER: No API key configured!")
             return AIResponse(
                 content="",
                 model=request.model,
@@ -50,6 +53,7 @@ class GeminiProvider(AIProvider):
         try:
             # Determine which model to use
             model = request.model if request.model and 'gemini' in request.model else self.default_model
+            print(f"🔍 GEMINI PROVIDER: Selected model='{model}' (request had '{request.model}', default is '{self.default_model}')")
 
             # Ensure model name doesn't already have "models/" prefix
             if not model.startswith('models/'):
@@ -79,6 +83,7 @@ class GeminiProvider(AIProvider):
 
             # API endpoint with proper model path
             endpoint = f"{self.base_url}/{model_path}:generateContent?key={self.api_key}"
+            print(f"🚀 GEMINI PROVIDER: Calling API endpoint: {self.base_url}/{model_path}:generateContent")
 
             # Make request to Gemini
             timeout = aiohttp.ClientTimeout(total=request.timeout_seconds)
@@ -94,6 +99,7 @@ class GeminiProvider(AIProvider):
                         except:
                             error_message = response_text
 
+                        print(f"❌ GEMINI PROVIDER: API returned error {response.status}: {error_message}")
                         return AIResponse(
                             content="",
                             model=model,
@@ -134,6 +140,8 @@ class GeminiProvider(AIProvider):
 
                         # Calculate cost (free tier = $0, but track for future)
                         cost_cents = self.calculate_cost(prompt_tokens, completion_tokens, model)
+
+                        print(f"✅ GEMINI PROVIDER: Success! Generated {len(content)} chars in {response_time_ms}ms, {total_tokens} tokens")
 
                         return AIResponse(
                             content=content,

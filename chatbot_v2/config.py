@@ -24,7 +24,7 @@ CHATBOT_ENABLE_GROQ = os.environ.get('CHATBOT_ENABLE_GROQ', 'true').lower() == '
 # Query Settings
 MAX_QUERY_TIMEOUT_SECONDS = 30
 MAX_RESULT_ROWS = 1000
-DEFAULT_AI_MODEL = 'gemini-2.0-flash-exp'  # Gemini 2.0 Flash Experimental (1,500 RPD, 15 RPM)
+DEFAULT_AI_MODEL = 'gemini-2.5-flash'  # Gemini 2.5 Flash (WORKS! Free tier available)
 
 # Model preferences (in order of preference)
 # Note: Groq is used as automatic fallback when Gemini hits rate limits

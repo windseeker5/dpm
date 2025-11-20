@@ -18,6 +18,15 @@ from .ai_providers import AIRequest
 # Create the blueprint
 chatbot_bp = Blueprint('chatbot', __name__, url_prefix='/chatbot')
 
+# Whitelist of working Gemini models (free tier compatible)
+# These are the ONLY models we should show to users
+WORKING_GEMINI_MODELS = [
+    'gemini-2.5-flash',         # Default - WORKS! 500 RPD free tier
+    'gemini-2.0-flash',         # Backup - 1,500 RPD free tier
+    'gemini-1.5-flash',         # Stable - 1,500 RPD free tier
+    'gemini-1.5-flash-8b'       # Fast - 1,500 RPD free tier
+]
+
 # Greeting patterns
 GREETING_PATTERNS = [
     r'\b(hello|hi|hey|greetings|good morning|good afternoon|good evening)\b',
@@ -99,21 +108,18 @@ def check_gemini_availability():
 
 
 def get_gemini_models():
-    """Get available Gemini models"""
+    """Get available Gemini models - returns only WORKING models"""
     provider = get_gemini_provider()
     if not provider or not provider.check_availability():
         return []
 
-    try:
-        models = provider.get_available_models()
-        return [{
-            "id": model,
-            "name": model,
-            "available": True
-        } for model in models]
-    except Exception as e:
-        current_app.logger.error(f"Error getting Gemini models: {e}")
-        return []
+    # Return only the whitelist of working models (free tier compatible)
+    # Don't query API - we know these work and have quota available
+    return [{
+        "id": model,
+        "name": model,
+        "available": True
+    } for model in WORKING_GEMINI_MODELS]
 
 
 @chatbot_bp.route('/')
@@ -149,12 +155,18 @@ def ask_question():
         data = request.form.to_dict()
 
     question = data.get('question', '').strip()
-    model = data.get('model', 'gemini-2.0-flash-exp')  # Default to Gemini 2.0 Flash Exp (1,500 RPD)
+    model_from_ui = data.get('model', WORKING_GEMINI_MODELS[0])  # Default to first working model
 
-    # FORCE Gemini model if UI sends a non-Gemini model name
-    # This ensures we use Gemini as primary provider, not Groq fallback
-    if 'gemini' not in model.lower():
-        model = 'gemini-2.0-flash-exp'  # Override to Gemini model
+    print(f"🔍 ROUTE DEBUG: Received from UI - model='{model_from_ui}'")
+
+    # FORCE working Gemini model
+    # Many Gemini models have quota=0 on free tier (like gemini-2.5-pro-preview, gemini-2.0-flash-exp)
+    if model_from_ui not in WORKING_GEMINI_MODELS:
+        model = WORKING_GEMINI_MODELS[0]  # Use first working model as default
+        print(f"🔄 ROUTE DEBUG: Overriding to working model '{model}' (was '{model_from_ui}')")
+    else:
+        model = model_from_ui
+        print(f"✅ ROUTE DEBUG: Using working model '{model}' from UI")
 
     # Basic validation
     if not question:
@@ -220,6 +232,8 @@ def ask_question():
         # Create query engine and process question using Gemini
         query_engine = create_query_engine(db_path)
 
+        print(f"🚀 ROUTE DEBUG: Calling query_engine with preferred_provider='gemini', preferred_model='{model}'")
+
         # Run async query processing - simple and direct
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -233,6 +247,8 @@ def ask_question():
             )
         )
         loop.close()
+
+        print(f"📥 ROUTE DEBUG: Result - provider={result.get('ai_provider')}, model={result.get('ai_model')}, success={result.get('success')}")
 
         # Log the result for debugging
         current_app.logger.info(f"Query result: {json.dumps(result, indent=2, default=str)}")
@@ -252,6 +268,16 @@ def ask_question():
                 answer = f"I found {row_count} results for your question."
 
             # Format response for the simple template
+            actual_provider = result.get('ai_provider', 'unknown')
+            actual_model = result.get('ai_model', model)
+
+            # Add subtle provider info at the end (only if NOT Gemini)
+            if actual_provider == 'groq':
+                answer = f"{answer}\n\n_Using Groq fallback - Gemini unavailable_"
+            elif actual_provider != 'gemini':
+                answer = f"{answer}\n\n_Using {actual_provider}_"
+            # Don't add anything if Gemini is used (expected behavior)
+
             response = {
                 'success': True,
                 'question': question,
@@ -261,10 +287,10 @@ def ask_question():
                 'columns': result.get('columns', []),
                 'row_count': row_count,
                 'conversational': False,
-                'model': result.get('ai_model', model),
+                'model': actual_model,
                 'conversation_id': result.get('conversation_id'),
                 'timestamp': datetime.now().isoformat(),
-                'provider': 'gemini'
+                'provider': actual_provider  # ← REAL provider, not hardcoded!
             }
             return jsonify(response)
         else:
@@ -341,32 +367,61 @@ def list_models():
 
 @chatbot_bp.route('/model-status')
 def model_status():
-    """Model status endpoint for frontend LED indicator"""
-    gemini_available = check_gemini_availability()
+    """Model status endpoint for frontend LED indicator - TESTS ACTUAL GENERATION"""
+    import asyncio
+    from .ai_providers import provider_manager, AIRequest
 
-    if gemini_available:
-        # Try to get models to confirm full functionality
-        models = get_gemini_models()
-        if models:
+    # TEST ACTUAL GENERATION (not just model listing)
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        # Try a tiny test request with Gemini
+        test_request = AIRequest(
+            prompt="test",
+            system_prompt="Reply with 'ok'",
+            model=WORKING_GEMINI_MODELS[0],  # Use first working model
+            temperature=0,
+            max_tokens=10,
+            timeout_seconds=5
+        )
+
+        result = loop.run_until_complete(
+            provider_manager.generate(test_request, preferred_provider='gemini')
+        )
+        loop.close()
+
+        # Check if Gemini actually worked
+        if result.provider == 'gemini' and result.error is None:
             return jsonify({
                 'status': 'online',
-                'model': f'{len(models)} models available',
+                'model': f'Gemini ({result.model})',
                 'connected': True,
-                'models_count': len(models)
+                'provider': 'gemini'
+            })
+        elif result.provider == 'groq':
+            # Gemini failed, Groq was used as fallback
+            return jsonify({
+                'status': 'offline',
+                'model': f'Using Groq fallback ({result.model})',
+                'connected': False,
+                'provider': 'groq',
+                'gemini_error': 'Quota exceeded or unavailable'
             })
         else:
             return jsonify({
-                'status': 'partial',
-                'model': 'API online, no models',
+                'status': 'offline',
+                'model': 'All providers failed',
                 'connected': False,
-                'models_count': 0
+                'error': result.error
             })
-    else:
+
+    except Exception as e:
         return jsonify({
-            'status': 'offline',
-            'model': 'Gemini API offline',
+            'status': 'error',
+            'model': 'Status check failed',
             'connected': False,
-            'models_count': 0
+            'error': str(e)
         })
 
 
