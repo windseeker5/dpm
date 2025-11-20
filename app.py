@@ -49,9 +49,9 @@ from werkzeug.utils import secure_filename
 
 # 🧠 Models
 from models import db, Admin, Redemption, Setting, EbankPayment, ReminderLog, EmailLog, Income, Expense
-from models import Activity, User, Signup, Passport, PassportType, AdminActionLog, Organization
+from models import Activity, User, Signup, Passport, PassportType, AdminActionLog
 from models import SurveyTemplate, Survey, SurveyResponse
-from models import ChatConversation, ChatMessage, QueryLog, ChatUsage
+from models import QueryLog
 
 
 # ⚙️ Config
@@ -1688,8 +1688,7 @@ def create_activity():
             location_address_raw=location_address_raw if location_address_raw else None,
             location_address_formatted=location_address_formatted if location_address_formatted else None,
             location_coordinates=location_coordinates if location_address_formatted else None,
-            goal_revenue=goal_revenue,
-            organization_id=None,  # Explicitly set to None for nullable foreign key
+            goal_revenue=goal_revenue
         )
 
         db.session.add(new_activity)
@@ -2668,262 +2667,6 @@ def setup():
         backup_files=backup_files,
         email_templates=email_templates
     )
-
-
-# ================================
-# 📧 ORGANIZATION EMAIL MANAGEMENT
-# ================================
-
-@app.route("/admin/organizations")
-def list_organizations():
-    """List all organizations with their email configurations"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    organizations = Organization.query.all()
-    return jsonify({
-        'organizations': [{
-            'id': org.id,
-            'name': org.name,
-            'domain': org.domain,
-            'full_email': org.full_email_address,
-            'email_enabled': org.email_enabled,
-            'is_active': org.is_active,
-            'mail_server': org.mail_server,
-            'mail_username': org.mail_username,
-            'sender_name': org.mail_sender_name,
-            'created_at': org.created_at.isoformat() if org.created_at else None,
-            'updated_at': org.updated_at.isoformat() if org.updated_at else None
-        } for org in organizations]
-    })
-
-
-@app.route("/admin/organizations/create", methods=["POST"])
-def create_organization():
-    """Create a new organization with email configuration"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        from utils import create_organization_email_config
-        
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-        
-        # Validate required fields
-        required_fields = ['name', 'domain', 'mail_server', 'mail_username', 'mail_password']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
-        
-        # Create organization
-        org = create_organization_email_config(
-            name=data['name'],
-            domain=data['domain'],
-            mail_server=data['mail_server'],
-            mail_username=data['mail_username'],
-            mail_password=data['mail_password'],
-            mail_sender_name=data.get('mail_sender_name'),
-            mail_port=int(data.get('mail_port', 587)),
-            mail_use_tls=data.get('mail_use_tls', True),
-            created_by=session.get('admin')
-        )
-        
-        # Log admin action
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Organization '{org.name}' created with email configuration"
-        ))
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Organization created successfully',
-            'organization_id': org.id
-        })
-        
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        return jsonify({'error': f'Failed to create organization: {str(e)}'}), 500
-
-
-@app.route("/admin/organizations/<int:org_id>/update", methods=["PUT"])
-def update_organization(org_id):
-    """Update organization email configuration"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        from utils import update_organization_email_config
-        
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-        
-        # Add updated_by to the data
-        data['updated_by'] = session.get('admin')
-        
-        # Update organization
-        org = update_organization_email_config(org_id, **data)
-        
-        # Log admin action
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Organization '{org.name}' email configuration updated"
-        ))
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Organization updated successfully'
-        })
-        
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        return jsonify({'error': f'Failed to update organization: {str(e)}'}), 500
-
-
-@app.route("/admin/organizations/<int:org_id>/test", methods=["POST"])
-def test_organization_email(org_id):
-    """Test organization email configuration"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        from utils import test_organization_email_config
-        
-        success, message = test_organization_email_config(org_id)
-        
-        # Log admin action
-        org = db.session.get(Organization, org_id)
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Email configuration test for '{org.name if org else 'Unknown'}': {message}"
-        ))
-        db.session.commit()
-        
-        return jsonify({
-            'success': success,
-            'message': message
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Test failed: {str(e)}'}), 500
-
-
-@app.route("/admin/organizations/<int:org_id>/toggle", methods=["POST"])
-def toggle_organization_email(org_id):
-    """Toggle organization email enabled status"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        org = Organization.query.get_or_404(org_id)
-        org.email_enabled = not org.email_enabled
-        org.updated_by = session.get('admin')
-        org.updated_at = datetime.now(timezone.utc)
-        
-        db.session.commit()
-        
-        status = "enabled" if org.email_enabled else "disabled"
-        
-        # Log admin action
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Organization '{org.name}' email {status}"
-        ))
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': f'Organization email {status}',
-            'email_enabled': org.email_enabled
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Failed to toggle organization: {str(e)}'}), 500
-
-
-@app.route("/admin/organizations/<int:org_id>/delete", methods=["DELETE"])
-def delete_organization(org_id):
-    """Delete organization (soft delete by marking as inactive)"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        org = Organization.query.get_or_404(org_id)
-        org_name = org.name
-        
-        # Soft delete - just mark as inactive
-        org.is_active = False
-        org.email_enabled = False
-        org.updated_by = session.get('admin')
-        org.updated_at = datetime.now(timezone.utc)
-        
-        db.session.commit()
-        
-        # Log admin action
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Organization '{org_name}' deactivated"
-        ))
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Organization deactivated successfully'
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Failed to delete organization: {str(e)}'}), 500
-
-
-# Test route for quickly creating LHGI organization
-@app.route("/admin/create-test-org", methods=["POST"])
-def create_test_org():
-    """Create test organization for LHGI (development/testing purposes)"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        from utils import create_organization_email_config
-        
-        # Check if LHGI already exists
-        existing = Organization.query.filter_by(domain='lhgi').first()
-        if existing:
-            return jsonify({'error': 'LHGI organization already exists'}), 400
-        
-        # Create LHGI organization with test credentials
-        org = create_organization_email_config(
-            name="LHGI",
-            domain="lhgi",
-            mail_server="mail.minipass.me",
-            mail_username="lhgi@minipass.me",
-            mail_password="monsterinc00",
-            mail_sender_name="LHGI",
-            mail_port=587,
-            mail_use_tls=True,
-            created_by=session.get('admin')
-        )
-        
-        # Log admin action
-        db.session.add(AdminActionLog(
-            admin_email=session.get("admin", "unknown"),
-            action=f"Test organization 'LHGI' created"
-        ))
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'LHGI test organization created successfully',
-            'organization_id': org.id
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Failed to create test organization: {str(e)}'}), 500
 
 
 # ================================
@@ -7695,7 +7438,7 @@ def send_survey_invitations(survey_id):
     from sqlalchemy.orm import joinedload
     print(f"📥 Loading survey with eager loading...")
     survey = db.session.get(Survey, survey_id, options=[
-        joinedload(Survey.activity).joinedload(Activity.organization)
+        joinedload(Survey.activity)
     ])
 
     if not survey:
@@ -7705,7 +7448,6 @@ def send_survey_invitations(survey_id):
 
     print(f"✅ Survey loaded: {survey.name}")
     print(f"   Activity: {survey.activity.name}")
-    print(f"   Organization: {survey.activity.organization.name if survey.activity.organization else 'None'}")
     
     # For surveys, include all participants (paid and unpaid)
     # Eagerly load user and activity relationships to avoid detached instance errors
@@ -7802,7 +7544,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'activity_logo_url': activity_logo_url  # Add logo URL to base context
@@ -7822,8 +7564,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_id': survey.activity.organization_id if survey.activity.organization_id else None,
-                    'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
@@ -7844,7 +7585,6 @@ def send_survey_invitations(survey_id):
                     app=current_app._get_current_object(),
                     user=passport.user,
                     activity=survey.activity,  # Pass activity to use customized email templates
-                    organization_id=survey.activity.organization_id if survey.activity.organization_id else None,
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
@@ -7894,7 +7634,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'activity_logo_url': activity_logo_url  # Add logo URL to base context
@@ -7914,8 +7654,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_id': survey.activity.organization_id if survey.activity.organization_id else None,
-                    'organization_name': survey.activity.organization.name if survey.activity.organization else get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
@@ -7936,7 +7675,6 @@ def send_survey_invitations(survey_id):
                     app=current_app._get_current_object(),
                     user=passport.user,
                     activity=survey.activity,  # Pass activity to use customized email templates
-                    organization_id=survey.activity.organization_id if survey.activity.organization_id else None,
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
@@ -8751,7 +8489,7 @@ def email_preview(activity_id):
         base_context['survey_name'] = 'Customer Satisfaction Survey'
         base_context['survey_url'] = 'https://example.com/survey/sample'
         base_context['question_count'] = 8
-        base_context['organization_name'] = activity.organization.name if activity.organization else 'Minipass'
+        base_context['organization_name'] = 'Minipass'
         base_context['organization_address'] = '123 Main St, City, State'
         base_context['support_email'] = 'support@minipass.me'
         # These will be overridden by get_email_context if customized
@@ -9323,7 +9061,7 @@ def test_email_template(activity_id):
             base_context['survey_name'] = 'Test Satisfaction Survey'
             base_context['survey_url'] = 'https://example.com/survey/test123'
             base_context['question_count'] = 8
-            base_context['organization_name'] = activity.organization.name if activity.organization else 'Minipass'
+            base_context['organization_name'] = 'Minipass'
             base_context['organization_address'] = '123 Main St, City, State'
             base_context['support_email'] = 'support@minipass.me'
             # These will be overridden by get_email_context if customized

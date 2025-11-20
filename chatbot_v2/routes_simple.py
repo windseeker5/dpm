@@ -257,15 +257,66 @@ def ask_question():
         result['conversation_id'] = data.get('conversation_id', 'gemini')
 
         if result.get('success'):
-            # Create natural language answer based on results
+            # Generate natural language answer from results using AI
             row_count = result.get('row_count', 0)
+            rows = result.get('rows', [])
+            columns = result.get('columns', [])
 
             if row_count == 0:
                 answer = "I didn't find any results for that query. Try asking in a different way or check if the data exists."
-            elif row_count == 1:
-                answer = "I found 1 result for your question."
             else:
-                answer = f"I found {row_count} results for your question."
+                # Call AI to generate natural language answer from the data
+                try:
+                    provider = get_gemini_provider()
+                    if provider:
+                        # Prepare data for AI to analyze
+                        # Convert rows to readable format (limit to first 10 rows for token efficiency)
+                        data_sample = rows[:10] if len(rows) > 10 else rows
+                        data_str = json.dumps(data_sample, indent=2, default=str)
+
+                        # Create prompt for AI to answer the question
+                        answer_prompt = f"""Answer this user question based on the query results below.
+
+User Question: {question}
+
+SQL Query Results ({row_count} total rows, showing up to 10):
+Columns: {', '.join(columns)}
+Data:
+{data_str}
+
+Instructions:
+- Provide a direct, natural language answer to the user's question
+- Use specific numbers and data from the results
+- Be concise (2-3 sentences max)
+- Don't mention SQL, queries, or technical details
+- Format numbers nicely (e.g., $1,234.56)
+
+Answer:"""
+
+                        ai_request = AIRequest(
+                            prompt=answer_prompt,
+                            system_prompt="You are a helpful data analyst. Answer questions about business data clearly and concisely.",
+                            model=WORKING_GEMINI_MODELS[0],
+                            temperature=0.3,  # Lower temperature for factual responses
+                            max_tokens=200
+                        )
+
+                        # Run async AI call
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        ai_response = loop.run_until_complete(provider.generate(ai_request))
+                        loop.close()
+
+                        if ai_response and ai_response.content:
+                            answer = ai_response.content
+                        else:
+                            answer = f"I found {row_count} results for your question."
+                    else:
+                        answer = f"I found {row_count} results for your question."
+
+                except Exception as e:
+                    current_app.logger.error(f"Failed to generate natural language answer: {e}")
+                    answer = f"I found {row_count} results for your question."
 
             # Format response for the simple template
             actual_provider = result.get('ai_provider', 'unknown')
@@ -277,6 +328,11 @@ def ask_question():
             elif actual_provider != 'gemini':
                 answer = f"{answer}\n\n_Using {actual_provider}_"
             # Don't add anything if Gemini is used (expected behavior)
+
+            # Update query log with the REAL answer for debugging
+            if result.get('query_log_id'):
+                from chatbot_v2.query_engine import QueryEngine
+                QueryEngine.update_query_log_answer(result['query_log_id'], answer)
 
             response = {
                 'success': True,
