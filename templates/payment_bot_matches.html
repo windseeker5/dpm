@@ -184,7 +184,10 @@
                   </a>
                   <div class="dropdown-menu dropdown-menu-end">
                     {% if payment.result == 'NO_MATCH' %}
-                      <a href="#" class="dropdown-item" onclick="archivePaymentEmail('{{ payment.bank_info_name }}', {{ payment.bank_info_amt }}, '{{ payment.from_email }}'); return false;">
+                      <a href="#" class="dropdown-item archive-payment-btn"
+                         data-name="{{ payment.bank_info_name }}"
+                         data-amount="{{ payment.bank_info_amt }}"
+                         data-email="{{ payment.from_email }}">
                         <i class="ti ti-archive me-2"></i>Archive Email
                       </a>
                     {% elif payment.result == 'MANUAL_PROCESSED' %}
@@ -351,6 +354,18 @@ function archivePaymentEmail(name, amount, email) {
   const modal = new bootstrap.Modal(document.getElementById('archivePaymentModal'));
   modal.show();
 }
+
+// Event listener for archive buttons with data attributes
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.archive-payment-btn')) {
+    e.preventDefault();
+    const btn = e.target.closest('.archive-payment-btn');
+    const name = btn.dataset.name;
+    const amount = parseFloat(btn.dataset.amount);
+    const email = btn.dataset.email;
+    archivePaymentEmail(name, amount, email);
+  }
+});
 
 // Handle archive confirmation
 document.getElementById('confirmArchiveBtn').addEventListener('click', async function() {

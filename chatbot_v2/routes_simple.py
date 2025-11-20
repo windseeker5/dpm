@@ -14,7 +14,6 @@ from .providers.gemini import create_gemini_provider
 from .config import GOOGLE_AI_API_KEY, CHATBOT_ENABLE_GEMINI
 from .query_engine import create_query_engine
 from .ai_providers import AIRequest
-from .query_preprocessor import QueryPreprocessor
 
 # Create the blueprint
 chatbot_bp = Blueprint('chatbot', __name__, url_prefix='/chatbot')
@@ -152,6 +151,11 @@ def ask_question():
     question = data.get('question', '').strip()
     model = data.get('model', 'gemini-2.0-flash-exp')  # Default to Gemini 2.0 Flash Exp (1,500 RPD)
 
+    # FORCE Gemini model if UI sends a non-Gemini model name
+    # This ensures we use Gemini as primary provider, not Groq fallback
+    if 'gemini' not in model.lower():
+        model = 'gemini-2.0-flash-exp'  # Override to Gemini model
+
     # Basic validation
     if not question:
         return jsonify({
@@ -213,27 +217,19 @@ def ask_question():
             import os
             db_path = os.path.join(current_app.root_path, db_path)
 
-        # NEW: Pre-process question for bilingual support
-        preprocessor = QueryPreprocessor()
-        processed = preprocessor.process(question)
-
-        current_app.logger.info(f"Query preprocessing: language={processed['language']}, intent={processed['detected_intent']}, confidence={processed['confidence']}")
-
         # Create query engine and process question using Gemini
         query_engine = create_query_engine(db_path)
 
-        # Run async query processing with bilingual support
+        # Run async query processing - simple and direct
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         result = loop.run_until_complete(
             query_engine.process_question(
-                processed['enhanced_question'],  # Use enhanced question
+                question,  # Pass raw question directly - trust the AI
                 admin_email,
                 preferred_provider='gemini',
-                preferred_model=model,
-                language=processed['language'],  # Pass detected language
-                context_hints=processed['context_hints']  # Pass context hints
+                preferred_model=model
             )
         )
         loop.close()

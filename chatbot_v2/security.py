@@ -44,9 +44,11 @@ class SQLSecurity:
     # Allowed table names (whitelist approach)
     ALLOWED_TABLES = {
         'user', 'activity', 'passport', 'signup', 'passport_type',
-        'expense', 'income', 'admin', 'admin_action_log', 
+        'expense', 'income', 'admin', 'admin_action_log',
         'survey', 'survey_template', 'survey_response',
-        'redemption', 'setting', 'email_log', 'query_log'
+        'redemption', 'setting', 'email_log', 'query_log',
+        # Accounting-standard financial views
+        'monthly_transactions_detail', 'monthly_financial_summary'
     }
     
     @classmethod

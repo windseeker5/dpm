@@ -108,25 +108,55 @@ class AIProviderManager:
         
         # Try each provider in order
         last_error = None
+
+        print(f"🔍 PROVIDER DEBUG: Trying providers in order: {provider_order}")
+        print(f"🔍 PROVIDER DEBUG: Preferred provider: {preferred_provider}")
+        print(f"🔍 PROVIDER DEBUG: Request model: {request.model}")
+
         for provider_name in provider_order:
             provider = self.providers.get(provider_name)
             if not provider:
+                print(f"❌ PROVIDER DEBUG: Provider '{provider_name}' not found")
                 continue
-                
+
+            print(f"🔄 PROVIDER DEBUG: Trying provider '{provider_name}'...")
+
             try:
-                # Check availability first
-                if not provider.check_availability():
-                    continue
-                
+                # Skip availability check if this is the explicitly preferred provider
+                # This prevents fallback when user specifically requests a provider
+                is_preferred = (preferred_provider and provider_name == preferred_provider)
+
+                if not is_preferred:
+                    # Only check availability for fallback providers
+                    print(f"🔍 PROVIDER DEBUG: Checking availability for '{provider_name}'...")
+                    if not provider.check_availability():
+                        print(f"❌ PROVIDER DEBUG: Provider '{provider_name}' not available")
+                        continue
+                    print(f"✅ PROVIDER DEBUG: Provider '{provider_name}' is available")
+                else:
+                    print(f"⚡ PROVIDER DEBUG: Skipping availability check for preferred provider '{provider_name}'")
+
                 # Generate response
+                print(f"🚀 PROVIDER DEBUG: Calling {provider_name}.generate()...")
                 response = await provider.generate(request)
+                print(f"📥 PROVIDER DEBUG: Response from '{provider_name}': error={response.error}, provider={response.provider}")
+
                 if response.error is None:
+                    print(f"✅ PROVIDER DEBUG: SUCCESS with '{provider_name}'")
                     return response
                 else:
                     last_error = response.error
-                    
+                    # If this was the preferred provider and it failed, try fallbacks
+                    if is_preferred:
+                        print(f"⚠️ PREFERRED PROVIDER '{provider_name}' FAILED: {response.error}")
+                    else:
+                        print(f"⚠️ Provider '{provider_name}' failed: {response.error}")
+
             except Exception as e:
                 last_error = str(e)
+                print(f"❌ PROVIDER DEBUG: Exception with '{provider_name}': {e}")
+                if preferred_provider and provider_name == preferred_provider:
+                    print(f"⚠️ PREFERRED PROVIDER '{provider_name}' EXCEPTION: {e}")
                 continue
         
         # All providers failed
