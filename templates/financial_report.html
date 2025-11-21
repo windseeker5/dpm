@@ -303,49 +303,71 @@
                       <table class="table table-sm mb-0">
                         <thead>
                           <tr>
-                            <th style="width: 120px;">Date</th>
-                            <th style="width: 160px;">Transaction Type</th>
-                            <th style="width: 140px;">Category</th>
-                            <th>Description</th>
-                            <th class="d-none d-md-table-cell">Created By</th>
-                            <th class="text-end">Amount</th>
-                            <th class="text-center">Actions</th>
+                            <th style="width: 100px;">Date</th>
+                            <th style="width: 130px;">Transaction</th>
+                            <th style="width: 180px;">Customer</th>
+                            <th style="width: 200px;">Memo</th>
+                            <th class="text-end" style="width: 100px;">Amount</th>
+                            <th style="width: 120px;">Status</th>
+                            <th class="d-none d-md-table-cell" style="width: 140px;">Entered By</th>
+                            <th class="text-center" style="width: 100px;">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {% for transaction in activity.transactions %}
                           <tr>
-                            <td>{{ transaction.date }}</td>
+                            {# Transaction Date #}
+                            <td>{{ transaction.transaction_date or transaction.date }}</td>
+
+                            {# Transaction Type #}
                             <td>
-                              {% if transaction.source_type == 'passport' %}
-                                {# Passport Sales #}
-                                {% if transaction.payment_status in ['paid', 'received'] %}
-                                  <span class="badge" style="background: #e9ecef; color: #495057;">Passport Sale</span>
-                                {% else %}
-                                  <span class="badge" style="background: #e8f4f8; color: #0c5589;">Passport Sale (Unpaid)</span>
-                                {% endif %}
-                              {% elif transaction.type == 'Income' %}
-                                {# Manual Income Entries #}
-                                {% if transaction.payment_status in ['paid', 'received'] %}
-                                  <span class="badge" style="background: #e9ecef; color: #495057;">Revenue</span>
-                                {% else %}
-                                  <span class="badge" style="background: #e8f4f8; color: #0c5589;">Receivable</span>
-                                {% endif %}
+                              {% if transaction.transaction_type == 'Passport Sale' %}
+                                Passport Sale
+                              {% elif transaction.transaction_type == 'Other Income' %}
+                                Other Income
+                              {% elif transaction.transaction_type == 'Expense' %}
+                                Expense
                               {% else %}
-                                {# Expense Entries #}
-                                {% if transaction.payment_status in ['paid', 'received'] %}
-                                  <span class="badge" style="background: #e9ecef; color: #495057;">Expense</span>
-                                {% else %}
-                                  <span class="badge" style="background: #fff3e0; color: #e65100;">Payable</span>
-                                {% endif %}
+                                {{ transaction.transaction_type or transaction.type }}
                               {% endif %}
                             </td>
-                            <td style="word-wrap: break-word; max-width: 200px;">{{ transaction.category }}</td>
-                            <td style="word-wrap: break-word; max-width: 250px;">{{ transaction.description }}</td>
-                            <td class="d-none d-md-table-cell text-muted">{{ transaction.created_by }}</td>
+
+                            {# Customer #}
+                            <td style="word-wrap: break-word; max-width: 150px;">
+                              {{ transaction.customer or '' }}
+                            </td>
+
+                            {# Memo #}
+                            <td style="word-wrap: break-word; max-width: 250px;">
+                              {{ transaction.memo or transaction.description or '' }}
+                            </td>
+
+                            {# Amount #}
                             <td class="text-end text-muted">
                               {{ format_currency(transaction.amount) }}
                             </td>
+
+                            {# Payment Status #}
+                            <td>
+                              {% if transaction.payment_status in ['Paid', 'paid', 'received'] %}
+                                <span class="badge bg-success-lt">Paid</span>
+                              {% elif transaction.payment_status in ['Unpaid (AR)', 'pending'] %}
+                                <span class="badge bg-secondary-lt">Unpaid (AR)</span>
+                              {% elif transaction.payment_status == 'Receivable' %}
+                                <span class="badge bg-secondary-lt">Receivable</span>
+                              {% elif transaction.payment_status in ['Payable', 'unpaid'] %}
+                                <span class="badge bg-secondary-lt">Unpaid (AP)</span>
+                              {% else %}
+                                <span class="badge bg-secondary-lt">{{ transaction.payment_status }}</span>
+                              {% endif %}
+                            </td>
+
+                            {# Entered By #}
+                            <td class="d-none d-md-table-cell text-muted">
+                              {{ transaction.entered_by or transaction.created_by or 'System' }}
+                            </td>
+
+                            {# Actions (only for editable transactions) #}
                             <td class="text-center">
                               {% if transaction.editable %}
                                 <div class="dropdown">
@@ -369,7 +391,7 @@
                                     {% endif %}
 
                                     <a class="dropdown-item" href="#"
-                                       onclick="openDrawerWithData('{{ transaction.source_type }}', {{ transaction.id }}, '{{ transaction.date }}', {{ transaction.activity_id }}, '{{ transaction.category }}', {{ transaction.amount }}, '{{ transaction.description }}', '{{ transaction.receipt_filename or '' }}'); return false;">
+                                       onclick="openDrawerWithData('{{ transaction.source_type }}', {{ transaction.id }}, '{{ transaction.date }}', {{ transaction.activity_id }}, '{{ transaction.category }}', {{ transaction.amount }}, '{{ transaction.description }}', '{{ transaction.receipt_filename or '' }}', '{{ transaction.payment_method or '' }}'); return false;">
                                       <i class="ti ti-edit me-2"></i>Edit Entry
                                     </a>
                                     <div class="dropdown-divider"></div>
@@ -379,9 +401,7 @@
                                   </div>
                                 </div>
                               {% else %}
-                                <span class="badge bg-secondary-lt">
-                                  <i class="ti ti-lock me-1"></i>System
-                                </span>
+                                <span class="text-muted small">System</span>
                               {% endif %}
                             </td>
                           </tr>
@@ -740,13 +760,13 @@ function openDrawer(type, transactionId) {
 }
 
 // Open drawer with transaction data (for editing)
-function openDrawerWithData(type, transactionId, date, activityId, category, amount, description, receiptFilename) {
+function openDrawerWithData(type, transactionId, date, activityId, category, amount, description, receiptFilename, paymentMethod) {
   // Check if mobile
   const isMobile = window.innerWidth < 768;
 
   if (isMobile) {
     // Use Bootstrap modal for mobile
-    openMobileModal(type, transactionId, date, activityId, category, amount, description, receiptFilename);
+    openMobileModal(type, transactionId, date, activityId, category, amount, description, receiptFilename, paymentMethod);
     return;
   }
 
@@ -818,6 +838,11 @@ function openDrawerWithData(type, transactionId, date, activityId, category, amo
     document.getElementById('txAmount').value = amount;
     document.getElementById('txDescription').value = description;
 
+    // Set payment method if provided
+    if (paymentMethod) {
+      document.getElementById('txPaymentMethod').value = paymentMethod;
+    }
+
     // Handle existing receipt
     if (receiptFilename && receiptFilename !== '') {
       document.getElementById('existingReceiptName').textContent = receiptFilename;
@@ -838,7 +863,7 @@ function openDrawerWithData(type, transactionId, date, activityId, category, amo
 }
 
 // Open mobile modal
-function openMobileModal(type, transactionId, date, activityId, category, amount, description, receiptFilename) {
+function openMobileModal(type, transactionId, date, activityId, category, amount, description, receiptFilename, paymentMethod) {
   const form = document.getElementById('mobileTransactionForm');
   const categorySelect = document.getElementById('mobileTxCategory');
   const descriptionLabel = document.getElementById('mobileDescriptionLabel');
@@ -881,6 +906,11 @@ function openMobileModal(type, transactionId, date, activityId, category, amount
     document.getElementById('mobileTxCategory').value = category;
     document.getElementById('mobileTxAmount').value = amount;
     document.getElementById('mobileTxDescription').value = description;
+
+    // Set payment method if provided
+    if (paymentMethod) {
+      document.getElementById('mobileTxPaymentMethod').value = paymentMethod;
+    }
 
     // Handle existing receipt
     if (receiptFilename && receiptFilename !== '') {
