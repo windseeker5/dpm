@@ -822,33 +822,47 @@ def get_kpi_data(activity_id=None, period='7d'):
                 query = query.filter(Income.activity_id == activity_id)
             return query
         
-        # KPI 1: Revenue (all passport amounts + income amounts)
-        # Current period revenue
-        passport_revenue = get_base_passport_query().filter(
-            Passport.created_dt >= current_start,
-            Passport.created_dt <= current_end
-        ).with_entities(func.sum(Passport.sold_amt)).scalar() or 0
-        
-        income_revenue = get_base_income_query().filter(
-            Income.date >= current_start,
-            Income.date <= current_end
-        ).with_entities(func.sum(Income.amount)).scalar() or 0
-        
-        current_revenue = passport_revenue + income_revenue
-        
+        # KPI 1: Revenue - Using SQL views for consistency with Financial Report
+        from sqlalchemy import text
+        from models import Activity
+
+        # Convert datetime ranges to date strings for view queries
+        current_start_date = current_start.strftime('%Y-%m-%d')
+        current_end_date = current_end.strftime('%Y-%m-%d')
+        current_start_month = current_start.strftime('%Y-%m')
+        current_end_month = current_end.strftime('%Y-%m')
+
+        # Build query for current period using financial summary view
+        revenue_query = """
+            SELECT COALESCE(SUM(cash_received), 0) as total_revenue
+            FROM monthly_financial_summary
+            WHERE month >= :start_month AND month <= :end_month
+        """
+        params = {'start_month': current_start_month, 'end_month': current_end_month}
+
+        # Add activity filter if specified
+        if activity_id:
+            activity = Activity.query.get(activity_id)
+            if activity:
+                revenue_query += " AND account = :activity_name"
+                params['activity_name'] = activity.name
+
+        # Execute query for current period
+        result = db.session.execute(text(revenue_query), params)
+        current_revenue = float(result.scalar() or 0)
+
         # Previous period revenue (if not 'all')
         if period != 'all':
-            prev_passport_revenue = get_base_passport_query().filter(
-                Passport.created_dt >= prev_start,
-                Passport.created_dt <= prev_end
-            ).with_entities(func.sum(Passport.sold_amt)).scalar() or 0
-            
-            prev_income_revenue = get_base_income_query().filter(
-                Income.date >= prev_start,
-                Income.date <= prev_end
-            ).with_entities(func.sum(Income.amount)).scalar() or 0
-            
-            prev_revenue = prev_passport_revenue + prev_income_revenue
+            prev_start_month = prev_start.strftime('%Y-%m')
+            prev_end_month = prev_end.strftime('%Y-%m')
+
+            prev_params = {'start_month': prev_start_month, 'end_month': prev_end_month}
+            if activity_id and activity:
+                prev_params['activity_name'] = activity.name
+
+            result = db.session.execute(text(revenue_query), prev_params)
+            prev_revenue = float(result.scalar() or 0)
+
             if prev_revenue > 0:
                 revenue_change = ((current_revenue - prev_revenue) / prev_revenue * 100)
             elif current_revenue > 0:
@@ -3380,6 +3394,276 @@ def resize_hero_image(image_data, template_type, max_file_size_mb=2):
 # 📊 FINANCIAL REPORTING FUNCTIONS
 # ================================
 
+def get_financial_data_from_views(start_date=None, end_date=None, activity_filter=None):
+    """
+    Get financial data using SQL views for consistency with chatbot.
+
+    Args:
+        start_date: Start date (datetime or string YYYY-MM-DD, or None for all time)
+        end_date: End date (datetime or string YYYY-MM-DD, or None for all time)
+        activity_filter: Optional activity ID to filter by
+
+    Returns:
+        dict with summary, by_activity, transactions (same structure as old function)
+    """
+    from sqlalchemy import text
+    from models import Activity, db
+    from datetime import datetime
+
+    # Handle None dates - default to all time
+    if start_date is None:
+        start_date = '2000-01-01'
+    if end_date is None:
+        end_date = '2099-12-31'
+
+    # Convert dates to strings if needed
+    if isinstance(start_date, datetime):
+        start_date = start_date.strftime('%Y-%m-%d')
+    if isinstance(end_date, datetime):
+        end_date = end_date.strftime('%Y-%m-%d')
+
+    # Step 1: Query transaction detail view for individual transactions
+    trans_query = """
+        SELECT
+            month,
+            project as account,
+            transaction_type,
+            transaction_date,
+            customer,
+            memo,
+            amount,
+            payment_status,
+            entered_by
+        FROM monthly_transactions_detail
+        WHERE transaction_date >= :start_date AND transaction_date <= :end_date
+    """
+
+    params = {'start_date': start_date, 'end_date': end_date}
+
+    if activity_filter:
+        # Need to get activity name for filtering since view uses account name
+        activity = Activity.query.get(activity_filter)
+        if activity:
+            trans_query += " AND project = :activity_name"
+            params['activity_name'] = activity.name
+
+    # Execute transaction query
+    result = db.session.execute(text(trans_query), params)
+    transactions = []
+
+    # Step 2: Process and enrich transactions
+    for row in result:
+        # Handle transaction_date - could be string or datetime object
+        transaction_date_str = row.transaction_date
+        if isinstance(transaction_date_str, datetime):
+            # Already a datetime object
+            txn_datetime = transaction_date_str
+            transaction_date_str = transaction_date_str.strftime('%Y-%m-%d')
+        elif isinstance(transaction_date_str, str):
+            # Parse string - handle both date-only and datetime formats
+            if ' ' in transaction_date_str:
+                # Has time component - take just the date part
+                transaction_date_str = transaction_date_str.split(' ')[0]
+            txn_datetime = datetime.strptime(transaction_date_str, '%Y-%m-%d')
+        else:
+            # Fallback
+            transaction_date_str = str(transaction_date_str)
+            txn_datetime = datetime.now()
+
+        txn = {
+            'month': row.month,
+            'account': row.account,  # This is activity name from view
+            'transaction_type': row.transaction_type,
+            'transaction_date': transaction_date_str,
+            'date': transaction_date_str,  # For sorting
+            'datetime': txn_datetime,
+            'customer': row.customer,
+            'description': row.memo or '',
+            'memo': row.memo or '',
+            'amount': float(row.amount),
+            'payment_status': row.payment_status,
+            'entered_by': row.entered_by or 'System',
+            'created_by': row.entered_by or 'System'
+        }
+
+        # Get activity info for UI metadata
+        activity = Activity.query.filter_by(name=row.account).first()
+        if activity:
+            txn['activity_id'] = activity.id
+            txn['activity_name'] = activity.name
+            txn['activity_image'] = activity.image_filename
+        else:
+            txn['activity_id'] = None
+            txn['activity_name'] = row.account
+            txn['activity_image'] = None
+
+        # Determine editability and source type
+        # Check if this is a system-generated passport sale (check both transaction_type AND entered_by)
+        is_passport_system = (
+            txn['transaction_type'] == 'Passport Sale' or
+            txn['entered_by'] in ['Passport System', 'System'] or
+            'Passport' in str(txn['entered_by'])
+        )
+
+        if is_passport_system or txn['transaction_type'] == 'Passport Sale':
+            txn['editable'] = False
+            txn['source_type'] = 'passport'
+            txn['type'] = 'Income'
+            txn['category'] = 'Passport Sales'
+        elif txn['transaction_type'] in ['Other Income', 'Income']:
+            txn['editable'] = True
+            txn['source_type'] = 'income'
+            txn['type'] = 'Income'
+            txn['category'] = row.customer or 'Other Income'  # customer field has category for income
+        elif txn['transaction_type'] == 'Expense':
+            txn['editable'] = True
+            txn['source_type'] = 'expense'
+            txn['type'] = 'Expense'
+            txn['category'] = row.customer or 'Expense'  # customer field has category for expenses
+        else:
+            # Default for unknown transaction types
+            txn['editable'] = True
+            txn['source_type'] = 'other'
+            txn['type'] = 'Income'  # Default to Income
+            txn['category'] = txn['transaction_type']
+
+        # Get ID and receipt from original tables for editable transactions
+        txn['id'] = None
+        txn['receipt_filename'] = None
+        txn['payment_method'] = None
+
+        if txn['editable'] and txn['activity_id']:
+            from models import Income, Expense
+            from sqlalchemy import func, and_
+
+            # Convert date string to date object for comparison
+            try:
+                if isinstance(transaction_date_str, str):
+                    # Handle both 'YYYY-MM-DD' and 'YYYY-MM-DD HH:MM:SS.mmmmmm' formats
+                    date_str = transaction_date_str.split()[0]  # Take just the date part
+                    compare_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                else:
+                    compare_date = transaction_date_str
+
+                if txn['source_type'] == 'income':
+                    # Query Income table - use SQL date casting for robust comparison
+                    income_record = Income.query.filter(
+                        and_(
+                            Income.activity_id == txn['activity_id'],
+                            func.date(Income.date) == compare_date,
+                            func.abs(Income.amount - txn['amount']) < 0.01  # Floating point tolerance
+                        )
+                    ).first()
+
+                    if income_record:
+                        txn['id'] = income_record.id
+                        txn['receipt_filename'] = income_record.receipt_filename
+                        txn['category'] = income_record.category
+                        txn['payment_method'] = income_record.payment_method
+
+                elif txn['source_type'] == 'expense':
+                    # Query Expense table
+                    expense_record = Expense.query.filter(
+                        and_(
+                            Expense.activity_id == txn['activity_id'],
+                            func.date(Expense.date) == compare_date,
+                            func.abs(Expense.amount - txn['amount']) < 0.01  # Floating point tolerance
+                        )
+                    ).first()
+
+                    if expense_record:
+                        txn['id'] = expense_record.id
+                        txn['receipt_filename'] = expense_record.receipt_filename
+                        txn['category'] = expense_record.category
+                        txn['payment_method'] = expense_record.payment_method
+            except Exception as e:
+                # If date parsing fails, skip ID lookup
+                pass
+
+        transactions.append(txn)
+
+    # Step 3: Calculate summary KPIs from financial summary view
+    # Calculate month range for summary query
+    start_month = start_date[:7]  # YYYY-MM
+    end_month = end_date[:7]  # YYYY-MM
+
+    summary_query = """
+        SELECT
+            COALESCE(SUM(cash_received), 0) as cash_received,
+            COALESCE(SUM(cash_paid), 0) as cash_paid,
+            COALESCE(SUM(net_cash_flow), 0) as net_cash_flow,
+            COALESCE(SUM(accounts_receivable), 0) as accounts_receivable,
+            COALESCE(SUM(accounts_payable), 0) as accounts_payable,
+            COALESCE(SUM(total_revenue), 0) as total_revenue,
+            COALESCE(SUM(total_expenses), 0) as total_expenses
+        FROM monthly_financial_summary
+        WHERE month >= :start_month AND month <= :end_month
+    """
+
+    sum_params = {'start_month': start_month, 'end_month': end_month}
+
+    if activity_filter and activity:
+        summary_query += " AND account = :activity_name"
+        sum_params['activity_name'] = activity.name
+
+    summary_result = db.session.execute(text(summary_query), sum_params)
+    summary_row = summary_result.fetchone()
+
+    summary = {
+        'cash_received': float(summary_row.cash_received),
+        'cash_paid': float(summary_row.cash_paid),
+        'net_cash_flow': float(summary_row.net_cash_flow),
+        'accounts_receivable': float(summary_row.accounts_receivable),
+        'accounts_payable': float(summary_row.accounts_payable),
+        'total_revenue': float(summary_row.total_revenue),
+        'total_expenses': float(summary_row.total_expenses)
+    }
+
+    # Step 4: Group transactions by activity
+    by_activity = []
+    activities_dict = {}
+
+    for txn in transactions:
+        activity_id = txn.get('activity_id')
+        if not activity_id:
+            continue  # Skip if no activity found
+
+        if activity_id not in activities_dict:
+            activities_dict[activity_id] = {
+                'activity_id': activity_id,
+                'activity_name': txn['activity_name'],
+                'activity_image': txn['activity_image'],
+                'total_revenue': 0,
+                'total_expenses': 0,
+                'transactions': []
+            }
+
+        # Add transaction to activity
+        activities_dict[activity_id]['transactions'].append(txn)
+
+        # Calculate activity totals (only paid transactions)
+        if txn['payment_status'] in ['Paid', 'received']:
+            if txn['type'] == 'Income':
+                activities_dict[activity_id]['total_revenue'] += txn['amount']
+            elif txn['type'] == 'Expense':
+                activities_dict[activity_id]['total_expenses'] += txn['amount']
+
+    # Calculate net income per activity and convert to list
+    for activity in activities_dict.values():
+        activity['net_income'] = activity['total_revenue'] - activity['total_expenses']
+        by_activity.append(activity)
+
+    # Sort transactions by date (newest first)
+    transactions.sort(key=lambda x: x['datetime'], reverse=True)
+
+    # Return in expected format
+    return {
+        'summary': summary,
+        'by_activity': by_activity,
+        'transactions': transactions
+    }
+
+
 def get_financial_data(start_date=None, end_date=None, activity_id=None, basis='cash'):
     """
     Get financial data for reporting with Cash Flow Accounting support.
@@ -3648,21 +3932,23 @@ def export_financial_csv(financial_data):
         'Created By'
     ])
 
-    # Write all transactions
-    for transaction in financial_data['all_transactions']:
+    # Write all transactions (support both old 'all_transactions' and new 'transactions' keys)
+    transactions = financial_data.get('all_transactions') or financial_data.get('transactions', [])
+
+    for transaction in transactions:
         writer.writerow([
-            transaction['date'],
-            transaction['activity_name'],
-            transaction['type'],
-            transaction['category'],
-            transaction['description'],
-            f"{transaction['amount']:.2f}",
-            transaction['payment_status'].title(),
-            transaction['payment_date'] or 'N/A',
-            transaction['payment_method'] or 'N/A',
-            transaction['due_date'] or 'N/A',
-            transaction['receipt_filename'] or 'N/A',
-            transaction['created_by']
+            transaction.get('date', transaction.get('transaction_date', 'N/A')),
+            transaction.get('activity_name', 'N/A'),
+            transaction.get('type', transaction.get('transaction_type', 'N/A')),
+            transaction.get('category', 'N/A'),
+            transaction.get('description', transaction.get('memo', 'N/A')),
+            f"{transaction.get('amount', 0):.2f}",
+            transaction.get('payment_status', 'N/A').title(),
+            transaction.get('payment_date', 'N/A'),
+            transaction.get('payment_method', 'N/A'),
+            transaction.get('due_date', 'N/A'),
+            transaction.get('receipt_filename', 'N/A'),
+            transaction.get('created_by', transaction.get('entered_by', 'N/A'))
         ])
 
     return output.getvalue()

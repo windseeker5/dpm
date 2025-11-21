@@ -3936,10 +3936,10 @@ def financial_report():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from utils import get_financial_data
+    from utils import get_financial_data_from_views
 
     # Get financial data (all time, all activities)
-    financial_data = get_financial_data(start_date=None, end_date=None, activity_id=None)
+    financial_data = get_financial_data_from_views(start_date=None, end_date=None, activity_filter=None)
 
     # Get all activities for the drawer form
     activities = Activity.query.order_by(Activity.name).all()
@@ -3955,21 +3955,98 @@ def financial_report_export():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from utils import get_financial_data, export_financial_csv
     from flask import Response
+    from datetime import datetime
+    from sqlalchemy import text
+    import csv
+    from io import StringIO
 
     export_format = request.args.get("format", "csv")
 
-    # Get financial data (all time, all activities)
-    financial_data = get_financial_data(start_date=None, end_date=None, activity_id=None)
+    # Get date range parameters (default to all time)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    activity_filter = request.args.get('activity_filter')
 
     # Generate filename
-    period_label = financial_data['summary']['period_label'].replace(' ', '_').replace(',', '')
-    filename = f"financial_report_{period_label}.{export_format}"
+    if start_date and end_date:
+        filename = f"financial_report_{start_date}_to_{end_date}.{export_format}"
+    else:
+        filename = f"financial_report_all_time.{export_format}"
 
     # Export based on format
     if export_format == "csv":
-        csv_content = export_financial_csv(financial_data)
+        # Query view directly for CSV export (exact structure)
+        query = """
+            SELECT
+                month,
+                project,
+                transaction_type,
+                transaction_date,
+                customer,
+                memo,
+                amount,
+                payment_status,
+                entered_by
+            FROM monthly_transactions_detail
+            WHERE 1=1
+        """
+
+        params = {}
+
+        # Add date filters if provided
+        if start_date:
+            query += " AND transaction_date >= :start_date"
+            params['start_date'] = start_date
+        if end_date:
+            query += " AND transaction_date <= :end_date"
+            params['end_date'] = end_date
+
+        # Add activity filter if provided
+        if activity_filter:
+            activity = Activity.query.get(int(activity_filter))
+            if activity:
+                query += " AND project = :activity_name"
+                params['activity_name'] = activity.name
+
+        # Order by date descending
+        query += " ORDER BY transaction_date DESC"
+
+        # Execute query
+        result = db.session.execute(text(query), params)
+
+        # Create CSV with exact view column names
+        output = StringIO()
+        writer = csv.writer(output)
+
+        # Write header (exact view column names)
+        writer.writerow([
+            'month',
+            'project',
+            'transaction_type',
+            'transaction_date',
+            'customer',
+            'memo',
+            'amount',
+            'payment_status',
+            'entered_by'
+        ])
+
+        # Write data
+        for row in result:
+            writer.writerow([
+                row.month,
+                row.project,
+                row.transaction_type,
+                row.transaction_date,
+                row.customer or '',
+                row.memo or '',
+                f"{row.amount:.2f}",
+                row.payment_status,
+                row.entered_by or ''
+            ])
+
+        csv_content = output.getvalue()
         return Response(
             csv_content,
             mimetype="text/csv",
