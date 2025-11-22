@@ -97,7 +97,7 @@ def upgrade():
         batch_op.create_unique_constraint('uq_organizations_domain', ['domain'])
 
     with op.batch_alter_table('passport', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_passport_pass_code'))
+        # batch_op.drop_index(batch_op.f('ix_passport_pass_code'))  # Index doesn't exist in fresh DBs
         batch_op.create_unique_constraint('uq_passport_pass_code', ['pass_code'])
 
     with op.batch_alter_table('passport_type', schema=None) as batch_op:
