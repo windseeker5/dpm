@@ -79,7 +79,8 @@ from utils import (
     notify_signup_event,
     generate_pass_code,
     generate_survey_token,
-    generate_response_token
+    generate_response_token,
+    HERO_CID_MAP  # Shared constant for email template hero image CIDs
 )
 
 # 🧠 Data Tools
@@ -7613,7 +7614,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'activity_logo_url': activity_logo_url  # Add logo URL to base context
@@ -7634,7 +7635,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                 }
@@ -7660,7 +7661,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
@@ -7668,7 +7669,9 @@ def send_survey_invitations(survey_id):
                     # Survey email template variables - now RENDERED (Jinja2 variables already processed)
                     'title': rendered_title,
                     'intro_text': rendered_intro,
-                    'conclusion_text': rendered_conclusion
+                    'conclusion_text': rendered_conclusion,
+                    # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
+                    '_skip_email_context': True
                 }
                 
                 print(f"🔵 About to call send_email_async()")
@@ -7730,7 +7733,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'activity_logo_url': activity_logo_url  # Add logo URL to base context
@@ -7751,7 +7754,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                 }
@@ -7777,7 +7780,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
@@ -7785,7 +7788,9 @@ def send_survey_invitations(survey_id):
                     # Survey email template variables - now RENDERED (Jinja2 variables already processed)
                     'title': rendered_title,
                     'intro_text': rendered_intro,
-                    'conclusion_text': rendered_conclusion
+                    'conclusion_text': rendered_conclusion,
+                    # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
+                    '_skip_email_context': True
                 }
                 
                 print(f"🔵 About to call send_email_async()")
@@ -8590,9 +8595,9 @@ def email_preview(activity_id):
         base_context['survey_name'] = 'Customer Satisfaction Survey'
         base_context['survey_url'] = 'https://example.com/survey/sample'
         base_context['question_count'] = 8
-        base_context['organization_name'] = 'Minipass'
-        base_context['organization_address'] = '123 Main St, City, State'
-        base_context['support_email'] = 'support@minipass.me'
+        base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+        base_context['organization_address'] = get_setting('ORG_ADDRESS', '')
+        base_context['support_email'] = get_setting('SUPPORT_EMAIL', 'support@minipass.me')
         # These will be overridden by get_email_context if customized
         base_context['title'] = 'We\'d Love Your Feedback!'
         base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
@@ -8669,18 +8674,11 @@ def email_preview(activity_id):
                 
                 print(f"📧 EMAIL TEMPLATE: activity={activity.id}, template_type={template_type}")
                 print(f"📧 EMAIL TEMPLATE: Custom hero found: {has_custom_hero}, is_custom: {is_custom_hero}")
-                
-                # Known hero CID mappings for different template types
-                hero_cid_map = {
-                    'newPass': 'hero_new_pass',
-                    'welcome': 'hero_welcome',
-                    'renewal': 'hero_renewal'
-                }
-                
+
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
                     # Skip hero-related images ONLY if we have a custom hero image
-                    expected_hero_cid = hero_cid_map.get(template_type, f'hero_{template_type}')
+                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                     if (img_id == expected_hero_cid and has_custom_hero):
                         print(f"📧 EMAIL TEMPLATE: Skipping template hero '{img_id}' because custom hero exists")
                         continue
@@ -8699,7 +8697,7 @@ def email_preview(activity_id):
                 # Now handle custom hero image if it exists
                 if has_custom_hero:
                     hero_base64 = base64.b64encode(hero_data).decode('utf-8')
-                    expected_hero_cid = hero_cid_map.get(template_type, f'hero_{template_type}')
+                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                     cid_ref = f'cid:{expected_hero_cid}'
                     data_uri = f'data:image/png;base64,{hero_base64}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
@@ -8939,18 +8937,10 @@ def email_preview_live(activity_id):
                 print(f"📧 EMAIL LIVE PREVIEW: activity={activity.id}, template_type={template_type}")
                 print(f"📧 EMAIL LIVE PREVIEW: Custom hero found: {has_custom_hero}, uploaded hero: {has_uploaded_hero}")
 
-                # Known hero CID mappings for different template types
-                hero_cid_map = {
-                    'newPass': 'hero_new_pass',
-                    'welcome': 'hero_welcome',
-                    'renewal': 'hero_renewal',
-                    'survey_invitation': 'sondage'
-                }
-                
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
                     # Skip hero-related images if we have a custom hero OR uploaded hero
-                    expected_hero_cid = hero_cid_map.get(template_type, f'hero_{template_type}')
+                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                     if (img_id == expected_hero_cid and (has_custom_hero or has_uploaded_hero)):
                         print(f"📧 EMAIL LIVE PREVIEW: Skipping template hero '{img_id}' because custom/uploaded hero exists")
                         continue
@@ -8969,14 +8959,14 @@ def email_preview_live(activity_id):
                 # Handle hero image replacement - prioritize uploaded hero over custom hero
                 if has_uploaded_hero:
                     hero_base64 = base64.b64encode(uploaded_hero_data).decode('utf-8')
-                    expected_hero_cid = hero_cid_map.get(template_type, f'hero_{template_type}')
+                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                     cid_ref = f'cid:{expected_hero_cid}'
                     data_uri = f'data:image/png;base64,{hero_base64}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
                     print(f"📧 EMAIL LIVE PREVIEW: Replaced {cid_ref} with UPLOADED HERO image")
                 elif has_custom_hero:
                     hero_base64 = base64.b64encode(hero_data).decode('utf-8')
-                    expected_hero_cid = hero_cid_map.get(template_type, f'hero_{template_type}')
+                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                     cid_ref = f'cid:{expected_hero_cid}'
                     data_uri = f'data:image/png;base64,{hero_base64}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
@@ -9162,9 +9152,9 @@ def test_email_template(activity_id):
             base_context['survey_name'] = 'Test Satisfaction Survey'
             base_context['survey_url'] = 'https://example.com/survey/test123'
             base_context['question_count'] = 8
-            base_context['organization_name'] = 'Minipass'
-            base_context['organization_address'] = '123 Main St, City, State'
-            base_context['support_email'] = 'support@minipass.me'
+            base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+            base_context['organization_address'] = get_setting('ORG_ADDRESS', '')
+            base_context['support_email'] = get_setting('SUPPORT_EMAIL', 'support@minipass.me')
             # These will be overridden by get_email_context if customized
             base_context['title'] = 'We\'d Love Your Feedback!'
             base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
@@ -9254,18 +9244,11 @@ def test_email_template(activity_id):
                 inline_images_data = json.load(f)
                 # Convert base64 strings to bytes
                 import base64
-                
-                # Known hero CID mappings for different template types
-                hero_cid_map = {
-                    'newPass': 'hero_new_pass',
-                    'welcome': 'hero_welcome',
-                    'renewal': 'hero_renewal'
-                }
-                
+
                 for img_id, base64_data in inline_images_data.items():
                     try:
                         # Skip hero-related images if we have a custom hero image
-                        expected_hero_cid = hero_cid_map.get(template_type, f'hero_{template_type}')
+                        expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                         if (img_id == expected_hero_cid and has_custom_hero):
                             print(f"📧 TEST EMAIL: Skipping template hero '{img_id}' because custom hero exists")
                             continue
@@ -9292,12 +9275,7 @@ def test_email_template(activity_id):
         
         # Add custom hero image if it exists
         if has_custom_hero:
-            hero_cid_map = {
-                'newPass': 'hero_new_pass',
-                'welcome': 'hero_welcome',
-                'renewal': 'hero_renewal'
-            }
-            expected_hero_cid = hero_cid_map.get(template_type, f'hero_{template_type}')
+            expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
             inline_images[expected_hero_cid] = hero_data
             print(f"📧 TEST EMAIL: Added custom hero image for CID '{expected_hero_cid}' ({len(hero_data)} bytes)")
         

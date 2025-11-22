@@ -28,6 +28,22 @@ import imaplib
 import email
 import re
 
+
+# ================================
+# EMAIL TEMPLATE CONSTANTS
+# ================================
+
+# Hero image CID mappings for email templates (matches compiled template structure)
+# This constant prevents code duplication and ensures consistency across all email functions
+HERO_CID_MAP = {
+    'newPass': 'hero_new_pass',
+    'paymentReceived': 'currency-dollar',
+    'latePayment': 'thumb-down',
+    'signup': 'good-news',
+    'redeemPass': 'hand-rock',
+    'survey_invitation': 'sondage'
+}
+
 from rapidfuzz import fuzz
 import imaplib
 
@@ -2512,7 +2528,10 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                     context = {}
                 
                 # 📧 Apply email template customizations if activity is provided
-                if activity_in_thread and template_name and not html_body:
+                # Skip if context already has rendered Jinja2 variables (indicated by _skip_email_context flag)
+                skip_context_processing = context.get('_skip_email_context', False) if context else False
+
+                if activity_in_thread and template_name and not html_body and not skip_context_processing:
                     # Map template names to our template types
                     template_type_mapping = {
                         'email_templates/newPass/index.html': 'newPass',
@@ -2547,6 +2566,10 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                         if context.get('subject'):
                             subject = context['subject']
 
+                # Clean up internal flag before rendering
+                if context and '_skip_email_context' in context:
+                    del context['_skip_email_context']
+
                 # Load inline images for compiled templates
                 if template_name and not html_body:
                     # Normalize template name to get base name
@@ -2563,8 +2586,7 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                                 inline_images[cid] = base64.b64decode(img_base64)
 
                     # Load custom hero images for activity (if activity provided)
-                    # NOTE: survey_invitation hero is embedded in compiled template, skip dynamic loading
-                    if activity_in_thread and base_template != 'survey_invitation':
+                    if activity_in_thread:
                         from utils import get_activity_hero_image
 
                         # Map template names to template types
@@ -2573,7 +2595,8 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                             'paymentReceived': 'paymentReceived',
                             'latePayment': 'latePayment',
                             'signup': 'signup',
-                            'redeemPass': 'redeemPass'
+                            'redeemPass': 'redeemPass',
+                            'survey_invitation': 'survey_invitation'
                         }
 
                         template_type = template_type_map.get(base_template)
@@ -2581,16 +2604,8 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                             hero_data, is_custom, is_template_default = get_activity_hero_image(activity_in_thread, template_type)
 
                             if hero_data and not is_template_default:
-                                # Map template types to their CID names
-                                hero_cid_map = {
-                                    'newPass': 'hero_new_pass',
-                                    'paymentReceived': 'hero_payment_received',
-                                    'latePayment': 'hero_late_payment',
-                                    'signup': 'hero_signup',
-                                    'survey_invitation': 'hero_survey_invitation'
-                                }
-
-                                hero_cid = hero_cid_map.get(template_type)
+                                # Use shared constant for hero CID mappings
+                                hero_cid = HERO_CID_MAP.get(template_type)
                                 if hero_cid:
                                     inline_images[hero_cid] = hero_data
                                     hero_type = "custom" if is_custom else "activity fallback"
@@ -2735,6 +2750,8 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         "intro_text": intro,
         "conclusion_text": conclusion,
         "logo_url": "/static/minipass_logo.png",
+        # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
+        "_skip_email_context": True
     }
     
     # Add organization variables for footer (from Settings table)
@@ -2766,13 +2783,22 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
             cid_map = json.load(f)
         for cid, img_base64 in cid_map.items():
             inline_images[cid] = base64.b64decode(img_base64)
-        
+
         # 🚫 DO NOT add logo attachments to signup emails
         # Signup emails should not have logo attachments - they're meant to be clean celebration emails
         # Logo is already embedded in the compiled template if needed
-        
-        # Don't replace hero image for signup emails - use the compiled template's celebration image
-        
+
+        # Load custom hero image for signup emails (if activity has one)
+        from utils import get_activity_hero_image
+        hero_data, is_custom, is_template_default = get_activity_hero_image(activity, 'signup')
+        if hero_data and not is_template_default:
+            # Replace template default with custom uploaded hero or activity fallback
+            hero_cid = HERO_CID_MAP.get('signup')
+            if hero_cid:
+                inline_images[hero_cid] = hero_data
+                hero_type = "custom" if is_custom else "activity fallback"
+                print(f"✅ {hero_type} hero image applied for signup: cid={hero_cid}, size={len(hero_data)} bytes")
+
         send_email_async(
             app=app,
             user=signup.user,
@@ -2920,6 +2946,8 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "activity_name": activity.name if activity else "",
         "unsubscribe_url": "",  # Will be filled by send_email with subdomain
         "privacy_url": "",      # Will be filled by send_email with subdomain
+        # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
+        "_skip_email_context": True
     }
     
     # Add organization variables for footer (from Settings table)
@@ -2949,16 +2977,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     if hero_data and not is_template_default:
         # Replace template images with custom uploads or activity fallbacks
         # Template defaults are already loaded in inline_images from the JSON
-        hero_cid_map = {
-            'newPass': 'hero_new_pass',
-            'paymentReceived': 'hero_payment_received',
-            'latePayment': 'hero_late_payment',
-            'signup': 'hero_signup',
-            'waitlist': 'hero_waitlist',
-            'survey_invitation': 'hero_survey_invitation'
-        }
-        
-        hero_cid = hero_cid_map.get(template_type)
+        hero_cid = HERO_CID_MAP.get(template_type)
         if hero_cid:
             inline_images[hero_cid] = hero_data  # Replace template default with custom/fallback
             hero_type = "custom" if is_custom else "activity fallback"
