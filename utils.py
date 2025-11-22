@@ -333,29 +333,6 @@ class ContentSanitizer:
         return sanitized
 
 
-def get_gravatar_url(email, size=64):
-    """
-    Generate Gravatar URL for email address with identicon fallback
-    
-    Args:
-        email (str): User's email address
-        size (int): Size of the avatar image (default: 64)
-    
-    Returns:
-        str: Gravatar URL
-    """
-    import hashlib
-    
-    if not email:
-        email = 'unknown@example.com'
-    
-    # Create MD5 hash of lowercase email
-    email_hash = hashlib.md5(email.lower().strip().encode('utf-8')).hexdigest()
-    
-    # Return Gravatar URL with identicon fallback
-    return f"https://www.gravatar.com/avatar/{email_hash}?s={size}&d=identicon"
-
-
 def utc_to_local(dt_utc):
     if not dt_utc:
         return None
@@ -448,92 +425,6 @@ def generate_qr_code_image(pass_code):
 
 
 # ✅ PHASE 3: Optimized QR Code Generation & Hosted Image System
-def generate_optimized_qr_code(pass_code):
-    """Generate QR code optimized for email (200x200px)"""
-    try:
-        from PIL import Image
-    except ImportError:
-        # Fallback to original method if PIL not available
-        return generate_qr_code_image(pass_code)
-    
-    import os
-    
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=8,  # Smaller box size for 200x200
-        border=2,
-    )
-    qr.add_data(pass_code)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Resize to exactly 200x200
-    img = img.resize((200, 200), Image.Resampling.LANCZOS)
-    
-    img_bytes = io.BytesIO()
-    img.save(img_bytes, format="PNG", optimize=True)
-    img_bytes.seek(0)
-    
-    return img_bytes
-
-
-def save_qr_code_to_static(pass_code, qr_data, base_url):
-    """Save QR code to static directory and return URL"""
-    import os
-    
-    os.makedirs('static/uploads/qr', exist_ok=True)
-    file_path = f'static/uploads/qr/{pass_code}.png'
-    
-    with open(file_path, 'wb') as f:
-        f.write(qr_data)
-    
-    return f"{base_url}/static/uploads/qr/{pass_code}.png"
-
-
-def get_or_create_qr_code_url(pass_code, base_url):
-    """Get existing QR code URL or create new one"""
-    import os
-    
-    qr_path = f'static/uploads/qr/{pass_code}.png'
-    
-    if os.path.exists(qr_path):
-        return f"{base_url}/static/uploads/qr/{pass_code}.png"
-    
-    # Generate new optimized QR code
-    qr_data = generate_optimized_qr_code(pass_code).read()
-    return save_qr_code_to_static(pass_code, qr_data, base_url)
-
-
-def generate_image_urls(context, base_url):
-    """Generate URLs for email images based on context"""
-    import os
-    
-    urls = {}
-    
-    # QR code URL
-    if 'pass_code' in context:
-        urls['qr_code_url'] = get_or_create_qr_code_url(context['pass_code'], base_url)
-    
-    # Hero image URL
-    if 'activity_id' in context:
-        activity_id = context['activity_id']
-        # Check if custom hero exists
-        hero_path = f'static/uploads/{activity_id}_hero.png'
-        if os.path.exists(hero_path):
-            urls['hero_image_url'] = f"{base_url}/static/uploads/{activity_id}_hero.png"
-    
-    # Logo URL  
-    if 'activity_id' in context:
-        activity_id = context['activity_id']
-        logo_path = f'static/uploads/{activity_id}_owner_logo.png'
-        if os.path.exists(logo_path):
-            urls['logo_url'] = f"{base_url}/static/uploads/{activity_id}_owner_logo.png"
-    
-    return urls
-
-
 def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
     """
     Builds the history log for a digital pass, converting UTC timestamps to local time (America/Toronto).
@@ -1958,11 +1849,6 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email, cu
         return False, f"Error: {str(e)}"
 
 
-def strip_html_tags(html):
-    return re.sub('<[^<]+?>', '', html)
-
-
-
 # ✅ Log admin action centrally
 def log_admin_action(action: str):
     from models import AdminActionLog, db
@@ -3147,30 +3033,6 @@ def generate_response_token():
 # ================================
 # 📧 EMAIL UTILITY FUNCTIONS
 # ================================
-
-def encrypt_password(password):
-    """
-    Encrypt password for secure storage.
-    Using simple base64 encoding for now - in production should use proper encryption.
-    """
-    import base64
-    if not password:
-        return None
-    return base64.b64encode(password.encode()).decode()
-
-
-def decrypt_password(encrypted_password):
-    """
-    Decrypt stored password.
-    Using simple base64 decoding for now - in production should use proper decryption.
-    """
-    import base64
-    if not encrypted_password:
-        return None
-    try:
-        return base64.b64decode(encrypted_password.encode()).decode()
-    except:
-        return None
 
 
 def get_email_context(activity, template_type, base_context=None):
