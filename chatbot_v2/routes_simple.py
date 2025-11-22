@@ -142,11 +142,19 @@ def index():
 def ask_question():
     """Process a user question using Gemini and query engine"""
 
-    # Simple auth check - allow testing for development
+    # Strict auth check - require valid admin session
     admin_email = session.get('admin')
     if not admin_email:
-        current_app.logger.warning("No admin session, allowing for development")
-        admin_email = "test@example.com"
+        # Only allow bypass in DEBUG mode for local development
+        if current_app.config.get('DEBUG'):
+            current_app.logger.warning("⚠️ DEBUG MODE: Bypassing auth for development")
+            admin_email = "test@example.com"
+        else:
+            # Production: require authentication
+            return jsonify({
+                'error': 'Authentication required',
+                'message': 'Please log in to use the AI chatbot'
+            }), 401
 
     # Get question from request
     if request.content_type and 'application/json' in request.content_type:

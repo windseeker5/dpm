@@ -20,27 +20,112 @@ def upgrade():
     """
     Remove unused organizations table and foreign keys.
     This was built for multi-tenant feature that was never activated.
-    Table has 0 records, no activities or users reference it.
+
+    IMPROVED: Now safely migrates organization data to Settings table before dropping.
 
     Note: We need to drop/recreate views because SQLite doesn't allow
     table alterations when views reference those tables.
     """
-    # Step 1: Drop views that depend on user/activity tables
+
+    # ===== STEP 0: DATA MIGRATION (CRITICAL FOR PRODUCTION) =====
+    # Migrate organization data to Settings table before dropping
+
+    from sqlalchemy import text
+    connection = op.get_bind()
+
+    # Check if ORG_NAME already exists in settings
+    org_name_exists = connection.execute(
+        text("SELECT COUNT(*) FROM setting WHERE key = 'ORG_NAME'")
+    ).scalar()
+
+    if org_name_exists == 0:
+        print("🔍 ORG_NAME not found in settings, checking organizations table...")
+
+        # Check if organizations table exists and has data
+        try:
+            org_data = connection.execute(
+                text("SELECT id, name, mail_username FROM organizations LIMIT 1")
+            ).fetchone()
+
+            if org_data:
+                # Organization exists - migrate to settings
+                org_name = org_data[1] if org_data[1] else 'Fondation LHGI'
+                org_email = org_data[2] if org_data[2] else None
+
+                print(f"✅ Found organization: {org_name}")
+                print(f"   Migrating to Settings table...")
+
+                # Insert ORG_NAME
+                connection.execute(
+                    text("INSERT INTO setting (key, value) VALUES (:key, :value)"),
+                    {"key": "ORG_NAME", "value": org_name}
+                )
+                print(f"   ✅ Created ORG_NAME = '{org_name}'")
+
+                # Insert MAIL_USERNAME if not already set
+                mail_exists = connection.execute(
+                    text("SELECT COUNT(*) FROM setting WHERE key = 'MAIL_USERNAME'")
+                ).scalar()
+
+                if mail_exists == 0 and org_email:
+                    connection.execute(
+                        text("INSERT INTO setting (key, value) VALUES (:key, :value)"),
+                        {"key": "MAIL_USERNAME", "value": org_email}
+                    )
+                    print(f"   ✅ Created MAIL_USERNAME = '{org_email}'")
+
+            else:
+                # No organization data - create default settings
+                print("⚠️  No organization data found, creating default settings...")
+                connection.execute(
+                    text("INSERT INTO setting (key, value) VALUES (:key, :value)"),
+                    {"key": "ORG_NAME", "value": "Fondation LHGI"}
+                )
+                print("   ✅ Created default ORG_NAME = 'Fondation LHGI'")
+
+        except Exception as e:
+            # Organizations table might not exist or have different schema
+            print(f"⚠️  Could not read organizations table: {e}")
+            print("   Creating default ORG_NAME setting...")
+            connection.execute(
+                text("INSERT INTO setting (key, value) VALUES (:key, :value)"),
+                {"key": "ORG_NAME", "value": "Fondation LHGI"}
+            )
+            print("   ✅ Created default ORG_NAME = 'Fondation LHGI'")
+    else:
+        print("✅ ORG_NAME already exists in settings, skipping migration")
+
+    # Ensure ORG_ADDRESS exists
+    org_address_exists = connection.execute(
+        text("SELECT COUNT(*) FROM setting WHERE key = 'ORG_ADDRESS'")
+    ).scalar()
+
+    if org_address_exists == 0:
+        connection.execute(
+            text("INSERT INTO setting (key, value) VALUES (:key, :value)"),
+            {"key": "ORG_ADDRESS", "value": "821 rue des Sables, Rimouski, QC G5L 6Y7"}
+        )
+        print("✅ Created default ORG_ADDRESS")
+
+    print("\n🎯 Data migration complete - proceeding with table removal...\n")
+
+    # ===== STEP 1: Drop views that depend on user/activity tables =====
     op.execute('DROP VIEW IF EXISTS monthly_transactions_detail')
     op.execute('DROP VIEW IF EXISTS monthly_financial_summary')
 
-    # Step 2: Drop organization_id from user table
+    # ===== STEP 2: Drop organization_id from user table =====
     with op.batch_alter_table('user', schema=None) as batch_op:
         batch_op.drop_column('organization_id')
 
-    # Step 3: Drop organization_id from activity table
+    # ===== STEP 3: Drop organization_id from activity table =====
     with op.batch_alter_table('activity', schema=None) as batch_op:
         batch_op.drop_column('organization_id')
 
-    # Step 4: Drop organizations table
+    # ===== STEP 4: Drop organizations table =====
     op.drop_table('organizations')
+    print("✅ Organizations table dropped")
 
-    # Step 5: Recreate the views (without organization dependencies)
+    # ===== STEP 5: Recreate the views (without organization dependencies) =====
     op.execute('''
         CREATE VIEW monthly_transactions_detail AS
         SELECT
@@ -193,6 +278,17 @@ def upgrade():
         WHERE COALESCE(pc.month, par.month, ic.month, iar.month, ec.month, eap.month) IS NOT NULL
         ORDER BY month DESC, a.name
     ''')
+
+    print("\n" + "="*70)
+    print("✅ MIGRATION COMPLETE - Organizations table removed successfully")
+    print("="*70)
+    print("📊 Summary:")
+    print("   - Organization data migrated to Settings table")
+    print("   - ORG_NAME and ORG_ADDRESS settings created")
+    print("   - organization_id columns dropped from user and activity")
+    print("   - Organizations table dropped")
+    print("   - Financial views recreated")
+    print("="*70 + "\n")
 
 
 def downgrade():
