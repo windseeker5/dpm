@@ -1523,44 +1523,20 @@ def main():
         log("✅", "Transaction committed successfully", Colors.GREEN)
         print()
 
-        # Task 7: Mark Flask migrations as complete
-        log("🏷️ ", "TASK 7: Marking Flask migrations as complete", Colors.BLUE)
-        try:
-            import subprocess
-            result = subprocess.run(
-                ['flask', 'db', 'stamp', 'head'],
-                capture_output=True,
-                text=True,
-                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
-
-            if result.returncode == 0:
-                log("✅", "  Flask migrations marked as complete (flask db stamp head)", Colors.GREEN)
-                completed += 1
-            else:
-                log("⚠️ ", f"  Warning: flask db stamp failed: {result.stderr}", Colors.YELLOW)
-                log("💡", "  You may need to run manually: flask db stamp head", Colors.YELLOW)
-        except Exception as e:
-            log("⚠️ ", f"  Warning: Could not run flask db stamp: {e}", Colors.YELLOW)
-            log("💡", "  You may need to run manually: flask db stamp head", Colors.YELLOW)
-
-        print()
-
         # Final summary
         separator()
         log("🎉", f"{Colors.BOLD}UPGRADE COMPLETED SUCCESSFULLY!{Colors.RESET}", Colors.GREEN)
         separator()
-        log("📊", f"Database tasks: {len(tasks)}/{len(tasks)} completed")
-        log("📊", f"Total tasks: {completed}/{len(tasks) + 1} completed (including Flask stamp)")
+        log("📊", f"Tasks completed: {len(tasks)}/{len(tasks)}")
         log("🕐", f"Finished: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         separator()
 
         print()
         log("📝", f"{Colors.BOLD}NEXT STEPS:{Colors.RESET}", Colors.BLUE)
-        log("1️⃣ ", "Test your application:")
-        print(f"     {Colors.YELLOW}flask run{Colors.RESET}")
-        log("2️⃣ ", "Verify passport scanning works for hockey game!")
-        log("3️⃣ ", "Check all images/uploads display correctly")
+        log("1️⃣ ", "Fix migration tracking:")
+        print(f"     {Colors.YELLOW}sqlite3 instance/minipass.db \"UPDATE alembic_version SET version_num = '90c766ac9eed';\" {Colors.RESET}")
+        log("2️⃣ ", "Restart your application container")
+        log("3️⃣ ", "Test login and verify all features work")
         separator()
 
         return True
