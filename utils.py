@@ -2685,7 +2685,7 @@ def send_email_async(app, user=None, activity=None, **kwargs):
 
 
 def notify_signup_event(app, *, signup, activity, timestamp=None):
-    from utils import send_email_async, get_email_context
+    from utils import send_email_async, get_email_context, get_setting
     from flask import render_template_string, url_for
     import os
     import json
@@ -2737,9 +2737,9 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         "logo_url": "/static/minipass_logo.png",
     }
     
-    # Add organization variables for footer
-    context['organization_name'] = activity.organization.name if activity.organization else "Fondation LHGI"
-    context['organization_address'] = "821 rue des Sables, Rimouski, QC G5L 6Y7"
+    # Add organization variables for footer (from Settings table)
+    context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+    context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
 
     # Find compiled template
     # For signup, theme is already "signup_compiled/index.html"
@@ -2800,7 +2800,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
 
 
 def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None, timestamp=None):
-    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_email_context
+    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_email_context, get_setting
     from flask import render_template, render_template_string, url_for
     from datetime import datetime, timezone
     import json
@@ -2922,9 +2922,9 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "privacy_url": "",      # Will be filled by send_email with subdomain
     }
     
-    # Add organization variables for footer
-    context['organization_name'] = activity.organization.name if activity.organization else "Fondation LHGI"
-    context['organization_address'] = "821 rue des Sables, Rimouski, QC G5L 6Y7"
+    # Add organization variables for footer (from Settings table)
+    context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+    context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
 
     # Load compiled inline_images.json
     import json
@@ -3103,25 +3103,15 @@ def get_email_context(activity, template_type, base_context=None):
 
     # Add organization_name and payment_email BEFORE Jinja2 rendering
     if 'organization_name' not in context:
-        if activity and hasattr(activity, 'organization') and activity.organization:
-            context['organization_name'] = activity.organization.name
-            print(f"✅ Set organization_name from activity.organization: {activity.organization.name}")
-        else:
-            # Fallback to Settings table (for single-tenant containers)
-            context['organization_name'] = get_setting('ORG_NAME', 'Minipass')
-            print(f"✅ Set organization_name from settings: {context['organization_name']}")
+        # Get from Settings table (organization table removed)
+        context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+        print(f"✅ Set organization_name from settings: {context['organization_name']}")
 
     if 'payment_email' not in context:
         print(f"🔍 Checking for payment_email...")
-        # Try to get from activity's organization
-        if activity and hasattr(activity, 'organization') and activity.organization and activity.organization.mail_username:
-            context['payment_email'] = activity.organization.mail_username
-            print(f"✅ Set payment_email from organization: {activity.organization.mail_username}")
-        else:
-            # Fallback to Settings table (for single-tenant containers)
-            # Try MAIL_USERNAME first (primary email setting), then PAYMENT_EMAIL_ADDRESS
-            print(f"⚠️ No organization.mail_username found, checking settings...")
-            payment_email_setting = get_setting("MAIL_USERNAME") or get_setting("PAYMENT_EMAIL_ADDRESS")
+        # Get from Settings table (organization table removed)
+        # Try MAIL_USERNAME first (primary email setting), then PAYMENT_EMAIL_ADDRESS
+        payment_email_setting = get_setting("MAIL_USERNAME") or get_setting("PAYMENT_EMAIL_ADDRESS")
             print(f"🔍 get_setting('MAIL_USERNAME' or 'PAYMENT_EMAIL_ADDRESS') returned: {repr(payment_email_setting)}")
             if payment_email_setting:
                 context['payment_email'] = payment_email_setting
