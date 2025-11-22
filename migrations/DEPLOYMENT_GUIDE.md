@@ -176,13 +176,18 @@ You should see color-coded output like this:
 ======================================================================
 ```
 
-### Step 6: Verify Migration Version
+### Step 6: Fix Migration Tracking
+
+**IMPORTANT**: Production databases have old migration IDs that no longer exist in current migration files. After the upgrade script completes, you must manually update the migration tracking:
 
 ```bash
 # Go back to app directory
 cd ..
 
-# Check migration version (should show: 90c766ac9eed)
+# Fix migration tracking (required for production databases)
+sqlite3 instance/minipass.db "UPDATE alembic_version SET version_num = '90c766ac9eed';"
+
+# Verify migration version (should show: 90c766ac9eed)
 FLASK_APP=app.py flask db current
 ```
 
@@ -191,17 +196,9 @@ Expected output:
 90c766ac9eed (head)
 ```
 
-### Step 7: Test Application
+**Why is this needed?** Production databases were created with older migration files that have since been consolidated. The upgrade script applies all schema changes correctly, but the migration tracking metadata needs manual updating.
 
-```bash
-# Test that Flask app still works
-curl http://localhost:8889/  # or whatever port the app runs on
-
-# Or if using Docker:
-docker exec lhgi curl http://localhost:8889/
-```
-
-### Step 8: Restart Application Container
+### Step 7: Restart Application Container
 
 ```bash
 # Navigate to docker-compose directory
@@ -214,7 +211,7 @@ docker-compose restart lhgi  # or customer container name
 docker-compose ps
 ```
 
-### Step 9: Verify Application Functionality
+### Step 8: Verify Application Functionality
 
 - Access the customer's website
 - Test login
@@ -233,7 +230,7 @@ docker-compose logs -f lhgi --tail=50
 
 ### Option 1: Manual Sequential Deployment
 
-Run Steps 2-9 for each customer, one at a time.
+Run Steps 2-8 for each customer, one at a time.
 
 **Recommended for:**
 - First-time running this upgrade
@@ -272,8 +269,11 @@ for customer in "${!CUSTOMERS[@]}"; do
         cd migrations
         python upgrade_production_database.py
 
-        # Verify
+        # Fix migration tracking (required for production databases)
         cd ..
+        sqlite3 instance/minipass.db "UPDATE alembic_version SET version_num = '90c766ac9eed';"
+
+        # Verify
         FLASK_APP=app.py flask db current
 
         # Restart
@@ -341,19 +341,6 @@ docker-compose logs -f lhgi
 3. Check that Flask and all dependencies are installed
 4. Verify database file permissions
 5. Restore from backup if needed
-
-### Flask db current Shows Wrong Version
-
-**Problem**: After upgrade, `flask db current` doesn't show `90c766ac9eed`
-
-**Solution**:
-```bash
-# Manually stamp the migration version
-FLASK_APP=app.py flask db stamp head
-
-# Verify
-FLASK_APP=app.py flask db current
-```
 
 ### Application Shows Errors After Upgrade
 
@@ -455,7 +442,7 @@ The `upgrade_production_database.py` script provides a safe, automated way to up
 1. SSH into customer VPS
 2. Backup database
 3. Run `python migrations/upgrade_production_database.py`
-4. Verify migration version
+4. **Fix migration tracking** (required): `sqlite3 instance/minipass.db "UPDATE alembic_version SET version_num = '90c766ac9eed';"`
 5. Restart application
 6. Test functionality
 

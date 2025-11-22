@@ -35,6 +35,7 @@ static/backups/*.db
 instance/*.backup_*
 static/uploads_backup_*/
 templates/email_templates_backup_*/
+templates/email_templates/*_original_old_oct9/
 
 #Lean And Clean
 tests/
