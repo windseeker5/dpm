@@ -113,7 +113,7 @@ def upgrade():
                autoincrement=True)
 
     with op.batch_alter_table('survey', schema=None) as batch_op:
-        batch_op.create_index('ix_survey_activity', ['activity_id'], unique=False)
+        # batch_op.create_index('ix_survey_activity', ['activity_id'], unique=False)  # Already exists in fresh DBs
         batch_op.create_unique_constraint('uq_survey_survey_token', ['survey_token'])
 
     with op.batch_alter_table('survey_response', schema=None) as batch_op:
