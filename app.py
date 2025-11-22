@@ -503,6 +503,7 @@ def get_git_branch():
 @app.context_processor
 def inject_globals_and_csrf():
     from flask_wtf.csrf import generate_csrf
+    from flask import has_request_context
 
     # Calculate pending signups count for sidebar badge
     pending_signups_count = 0
@@ -511,7 +512,7 @@ def inject_globals_and_csrf():
     current_admin = None
 
     try:
-        if "admin" in session:  # Only calculate if admin is logged in
+        if has_request_context() and "admin" in session:  # Only calculate if admin is logged in
             pending_signups_count = Signup.query.filter_by(status='pending').count()
             # Calculate active passports (uses_remaining > 0 OR unpaid) - matches Active filter logic
             active_passport_count = Passport.query.filter(
@@ -539,7 +540,7 @@ def inject_globals_and_csrf():
 
     # Get subscription tier info for templates
     subscription_info = None
-    if "admin" in session:
+    if has_request_context() and "admin" in session:
         try:
             subscription_info = get_activity_usage_display()
         except Exception:
@@ -7621,11 +7622,38 @@ def send_survey_invitations(survey_id):
                 # Get email context using activity-specific templates
                 email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
 
-                subject = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
+                # CRITICAL FIX: Render Jinja2 variables in customized template strings
+                # The customized templates contain Jinja2 variables like {{ activity_name }} that need to be rendered
+                from jinja2 import Template as JinjaTemplate
+
+                # Build rendering context with all available variables
+                render_context = {
+                    'user_name': passport.user.name or 'Participant',
+                    'activity_name': survey.activity.name,
+                    'activity': survey.activity,  # For accessing activity properties
+                    'survey_name': survey.name,
+                    'survey_url': survey_url,
+                    'question_count': question_count,
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_address': get_setting('ORG_ADDRESS', ''),
+                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                }
+
+                # Render subject, title, intro_text, and conclusion_text if they contain Jinja2 variables
+                subject_template = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
+                title_template = email_context.get('title', 'We\'d Love Your Feedback!')
+                intro_template = email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>')
+                conclusion_template = email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
+
+                subject = JinjaTemplate(subject_template).render(**render_context)
+                rendered_title = JinjaTemplate(title_template).render(**render_context)
+                rendered_intro = JinjaTemplate(intro_template).render(**render_context)
+                rendered_conclusion = JinjaTemplate(conclusion_template).render(**render_context)
+
                 template_name = 'survey_invitation'  # Match the template folder name
 
                 # Note: inline_images and logo loading is handled automatically by send_email_async()
-                
+
                 context = {
                     'user_name': passport.user.name or 'Participant',
                     'activity_name': survey.activity.name,
@@ -7637,10 +7665,10 @@ def send_survey_invitations(survey_id):
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
                     'privacy_url': "https://minipass.me/privacy",
-                    # Survey email template variables - must match template exactly
-                    'title': email_context.get('title', 'We\'d Love Your Feedback!'),
-                    'intro_text': email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>'),
-                    'conclusion_text': email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
+                    # Survey email template variables - now RENDERED (Jinja2 variables already processed)
+                    'title': rendered_title,
+                    'intro_text': rendered_intro,
+                    'conclusion_text': rendered_conclusion
                 }
                 
                 print(f"🔵 About to call send_email_async()")
@@ -7711,11 +7739,38 @@ def send_survey_invitations(survey_id):
                 # Get email context using activity-specific templates
                 email_context = get_email_context(survey.activity, 'survey_invitation', base_context)
 
-                subject = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
+                # CRITICAL FIX: Render Jinja2 variables in customized template strings
+                # The customized templates contain Jinja2 variables like {{ activity_name }} that need to be rendered
+                from jinja2 import Template as JinjaTemplate
+
+                # Build rendering context with all available variables
+                render_context = {
+                    'user_name': passport.user.name or 'Participant',
+                    'activity_name': survey.activity.name,
+                    'activity': survey.activity,  # For accessing activity properties
+                    'survey_name': survey.name,
+                    'survey_url': survey_url,
+                    'question_count': question_count,
+                    'organization_name': get_setting('ORG_NAME', 'Minipass'),
+                    'organization_address': get_setting('ORG_ADDRESS', ''),
+                    'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
+                }
+
+                # Render subject, title, intro_text, and conclusion_text if they contain Jinja2 variables
+                subject_template = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
+                title_template = email_context.get('title', 'We\'d Love Your Feedback!')
+                intro_template = email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>')
+                conclusion_template = email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
+
+                subject = JinjaTemplate(subject_template).render(**render_context)
+                rendered_title = JinjaTemplate(title_template).render(**render_context)
+                rendered_intro = JinjaTemplate(intro_template).render(**render_context)
+                rendered_conclusion = JinjaTemplate(conclusion_template).render(**render_context)
+
                 template_name = 'survey_invitation'  # Match the template folder name
 
                 # Note: inline_images and logo loading is handled automatically by send_email_async()
-                
+
                 context = {
                     'user_name': passport.user.name or 'Participant',
                     'activity_name': survey.activity.name,
@@ -7727,10 +7782,10 @@ def send_survey_invitations(survey_id):
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
                     'privacy_url': "https://minipass.me/privacy",
-                    # Survey email template variables - must match template exactly
-                    'title': email_context.get('title', 'We\'d Love Your Feedback!'),
-                    'intro_text': email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>'),
-                    'conclusion_text': email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
+                    # Survey email template variables - now RENDERED (Jinja2 variables already processed)
+                    'title': rendered_title,
+                    'intro_text': rendered_intro,
+                    'conclusion_text': rendered_conclusion
                 }
                 
                 print(f"🔵 About to call send_email_async()")

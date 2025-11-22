@@ -2214,7 +2214,6 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     print(f"  unsubscribe_url: {context.get('unsubscribe_url', 'MISSING!')}")
     print(f"  privacy_url: {context.get('privacy_url', 'MISSING!')}")
     print(f"  activity provided: {activity is not None}")
-    print(f"  org detected: {org.name if org else 'None'}")
     
     # Debug: Print context variables for signup emails
     if template_name and 'signup' in template_name:
@@ -2505,6 +2504,7 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                 inline_images = kwargs.get("inline_images", {})
                 html_body = kwargs.get("html_body")
                 timestamp_override = kwargs.get("timestamp_override")
+                organization_id = kwargs.get("organization_id")
 
                 # ✅ FINAL SAFETY: If html_body exists, force clear template_name/context
                 if html_body:
