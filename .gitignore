@@ -40,6 +40,9 @@ templates/email_templates_backup_*/
 tests/
 test/
 #sql/
+docs/
+CLAUDE.md
+
 
 
 # Testing screenshots and files
