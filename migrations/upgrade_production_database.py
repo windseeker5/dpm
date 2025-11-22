@@ -392,7 +392,6 @@ def task6_verify_schema(cursor):
         ('activity', 'location_address_raw', 'Location fields'),
         ('activity', 'location_address_formatted', 'Location fields'),
         ('activity', 'location_coordinates', 'Location fields'),
-        ('activity', 'organization_id', 'Organization support'),
     ]
 
     all_good = True
@@ -986,6 +985,478 @@ def task12_fix_survey_deletion_fk(cursor):
         cursor.execute("PRAGMA foreign_keys = ON")
         raise
 
+
+# ============================================================================
+# TASK 13: Add Payment Status Columns (Migration 0307966a5581)
+# ============================================================================
+def task13_add_payment_status_columns(cursor):
+    """Add payment status tracking to income and expense tables"""
+    log("💳", "TASK 13: Adding payment status columns", Colors.BLUE)
+
+    added = 0
+    skipped = 0
+
+    # Expense table columns
+    expense_columns = [
+        ('payment_status', "VARCHAR(20) DEFAULT 'paid'"),
+        ('payment_date', 'DATETIME'),
+        ('due_date', 'DATETIME'),
+        ('payment_method', 'VARCHAR(50)')
+    ]
+
+    if check_table_exists(cursor, 'expense'):
+        for col_name, col_type in expense_columns:
+            if check_column_exists(cursor, 'expense', col_name):
+                log("⏭️ ", f"  expense.{col_name} already exists", Colors.YELLOW)
+                skipped += 1
+            else:
+                try:
+                    cursor.execute(f"ALTER TABLE expense ADD COLUMN {col_name} {col_type}")
+                    log("✅", f"  Added expense.{col_name}", Colors.GREEN)
+                    added += 1
+                except sqlite3.OperationalError as e:
+                    log("❌", f"  Failed to add expense.{col_name}: {e}", Colors.RED)
+                    raise
+    else:
+        log("⏭️ ", "  expense table doesn't exist, skipping", Colors.YELLOW)
+
+    # Income table columns
+    income_columns = [
+        ('payment_status', "VARCHAR(20) DEFAULT 'received'"),
+        ('payment_date', 'DATETIME'),
+        ('payment_method', 'VARCHAR(50)')
+    ]
+
+    if check_table_exists(cursor, 'income'):
+        for col_name, col_type in income_columns:
+            if check_column_exists(cursor, 'income', col_name):
+                log("⏭️ ", f"  income.{col_name} already exists", Colors.YELLOW)
+                skipped += 1
+            else:
+                try:
+                    cursor.execute(f"ALTER TABLE income ADD COLUMN {col_name} {col_type}")
+                    log("✅", f"  Added income.{col_name}", Colors.GREEN)
+                    added += 1
+                except sqlite3.OperationalError as e:
+                    log("❌", f"  Failed to add income.{col_name}: {e}", Colors.RED)
+                    raise
+    else:
+        log("⏭️ ", "  income table doesn't exist, skipping", Colors.YELLOW)
+
+    log("📊", f"  Summary: {added} columns added, {skipped} already existed")
+    return True
+
+
+# ============================================================================
+# TASK 14: Add Custom Payment Instructions Flag (Migration af5045ed1c22)
+# ============================================================================
+def task14_add_custom_payment_flag(cursor):
+    """Add use_custom_payment_instructions to passport_type"""
+    log("💰", "TASK 14: Adding custom payment instructions flag", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'passport_type'):
+        log("⏭️ ", "  passport_type table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'passport_type', 'use_custom_payment_instructions'):
+        log("⏭️ ", "  use_custom_payment_instructions already exists", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("""
+            ALTER TABLE passport_type
+            ADD COLUMN use_custom_payment_instructions BOOLEAN DEFAULT 0
+        """)
+        log("✅", "  Added use_custom_payment_instructions column", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to add column: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
+# TASK 15: Create Financial Views (Migrations a9e8d26b87b3 + 90c766ac9eed)
+# ============================================================================
+def task15_create_financial_views(cursor):
+    """Create accounting-standard financial views (FIXED VERSION from migration 90c766ac9eed)"""
+    log("📊", "TASK 15: Creating financial views", Colors.BLUE)
+
+    # Drop old views if they exist
+    try:
+        cursor.execute("DROP VIEW IF EXISTS monthly_transactions_detail")
+        cursor.execute("DROP VIEW IF EXISTS monthly_financial_summary")
+        log("🔄", "  Dropped old views if they existed", Colors.BLUE)
+    except:
+        pass
+
+    # Create detail view
+    try:
+        cursor.execute("""
+            CREATE VIEW monthly_transactions_detail AS
+            SELECT
+                strftime('%Y-%m', COALESCE(p.paid_date, p.created_dt)) as month,
+                a.name as project,
+                'Income' as transaction_type,
+                COALESCE(p.paid_date, p.created_dt) as transaction_date,
+                'Passport Sales' as account,
+                u.name as customer,
+                NULL as vendor,
+                p.notes as memo,
+                p.sold_amt as amount,
+                CASE WHEN p.paid = 1 THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
+                'Passport System' as entered_by
+            FROM passport p
+            JOIN activity a ON p.activity_id = a.id
+            LEFT JOIN user u ON p.user_id = u.id
+
+            UNION ALL
+
+            SELECT
+                strftime('%Y-%m', i.date) as month,
+                a.name as project,
+                'Income' as transaction_type,
+                i.date as transaction_date,
+                i.category as account,
+                NULL as customer,
+                NULL as vendor,
+                i.note as memo,
+                i.amount,
+                CASE
+                    WHEN i.payment_status = 'received' THEN 'Paid'
+                    WHEN i.payment_status = 'pending' THEN 'Unpaid (AR)'
+                    ELSE 'Unpaid (AR)'
+                END as payment_status,
+                COALESCE(i.created_by, 'System') as entered_by
+            FROM income i
+            JOIN activity a ON i.activity_id = a.id
+
+            UNION ALL
+
+            SELECT
+                strftime('%Y-%m', e.date) as month,
+                a.name as project,
+                'Expense' as transaction_type,
+                e.date as transaction_date,
+                e.category as account,
+                NULL as customer,
+                NULL as vendor,
+                e.description as memo,
+                e.amount,
+                CASE
+                    WHEN e.payment_status = 'paid' THEN 'Paid'
+                    WHEN e.payment_status = 'unpaid' THEN 'Unpaid (AP)'
+                    ELSE 'Unpaid (AP)'
+                END as payment_status,
+                COALESCE(e.created_by, 'System') as entered_by
+            FROM expense e
+            JOIN activity a ON e.activity_id = a.id
+
+            ORDER BY month DESC, transaction_date DESC
+        """)
+        log("✅", "  Created monthly_transactions_detail view", Colors.GREEN)
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to create transactions detail view: {e}", Colors.RED)
+        raise
+
+    # Create summary view (FIXED VERSION from migration 90c766ac9eed)
+    try:
+        cursor.execute("""
+            CREATE VIEW monthly_financial_summary AS
+            WITH
+            all_month_activity AS (
+                SELECT DISTINCT
+                    strftime('%Y-%m', paid_date) as month,
+                    activity_id
+                FROM passport
+                WHERE paid = 1 AND paid_date IS NOT NULL
+
+                UNION
+
+                SELECT DISTINCT
+                    strftime('%Y-%m', COALESCE(paid_date, created_dt)) as month,
+                    activity_id
+                FROM passport
+                WHERE paid = 0
+
+                UNION
+
+                SELECT DISTINCT
+                    strftime('%Y-%m', date) as month,
+                    activity_id
+                FROM income
+                WHERE payment_status = 'received'
+
+                UNION
+
+                SELECT DISTINCT
+                    strftime('%Y-%m', date) as month,
+                    activity_id
+                FROM income
+                WHERE payment_status = 'pending'
+
+                UNION
+
+                SELECT DISTINCT
+                    strftime('%Y-%m', date) as month,
+                    activity_id
+                FROM expense
+                WHERE payment_status = 'paid'
+
+                UNION
+
+                SELECT DISTINCT
+                    strftime('%Y-%m', date) as month,
+                    activity_id
+                FROM expense
+                WHERE payment_status = 'unpaid'
+            ),
+            monthly_passports_cash AS (
+                SELECT
+                    strftime('%Y-%m', paid_date) as month,
+                    activity_id,
+                    SUM(sold_amt) as passport_sales_cash
+                FROM passport
+                WHERE paid = 1 AND paid_date IS NOT NULL
+                GROUP BY month, activity_id
+            ),
+            monthly_passports_ar AS (
+                SELECT
+                    strftime('%Y-%m', COALESCE(paid_date, created_dt)) as month,
+                    activity_id,
+                    SUM(sold_amt) as passport_sales_ar
+                FROM passport
+                WHERE paid = 0
+                GROUP BY month, activity_id
+            ),
+            monthly_income_cash AS (
+                SELECT
+                    strftime('%Y-%m', date) as month,
+                    activity_id,
+                    SUM(amount) as other_income_cash
+                FROM income
+                WHERE payment_status = 'received'
+                GROUP BY month, activity_id
+            ),
+            monthly_income_ar AS (
+                SELECT
+                    strftime('%Y-%m', date) as month,
+                    activity_id,
+                    SUM(amount) as other_income_ar
+                FROM income
+                WHERE payment_status = 'pending'
+                GROUP BY month, activity_id
+            ),
+            monthly_expenses_cash AS (
+                SELECT
+                    strftime('%Y-%m', date) as month,
+                    activity_id,
+                    SUM(amount) as expenses_cash
+                FROM expense
+                WHERE payment_status = 'paid'
+                GROUP BY month, activity_id
+            ),
+            monthly_expenses_ap AS (
+                SELECT
+                    strftime('%Y-%m', date) as month,
+                    activity_id,
+                    SUM(amount) as expenses_ap
+                FROM expense
+                WHERE payment_status = 'unpaid'
+                GROUP BY month, activity_id
+            )
+            SELECT
+                ma.month,
+                ma.activity_id,
+                a.name as account,
+
+                COALESCE(pc.passport_sales_cash, 0) as passport_sales,
+                COALESCE(ic.other_income_cash, 0) as other_income,
+                COALESCE(pc.passport_sales_cash, 0) + COALESCE(ic.other_income_cash, 0) as cash_received,
+                COALESCE(ec.expenses_cash, 0) as cash_paid,
+                (COALESCE(pc.passport_sales_cash, 0) + COALESCE(ic.other_income_cash, 0) - COALESCE(ec.expenses_cash, 0)) as net_cash_flow,
+
+                COALESCE(par.passport_sales_ar, 0) as passport_ar,
+                COALESCE(iar.other_income_ar, 0) as other_income_ar,
+                COALESCE(par.passport_sales_ar, 0) + COALESCE(iar.other_income_ar, 0) as accounts_receivable,
+                COALESCE(eap.expenses_ap, 0) as accounts_payable,
+
+                (COALESCE(pc.passport_sales_cash, 0) + COALESCE(par.passport_sales_ar, 0) +
+                 COALESCE(ic.other_income_cash, 0) + COALESCE(iar.other_income_ar, 0)) as total_revenue,
+                (COALESCE(ec.expenses_cash, 0) + COALESCE(eap.expenses_ap, 0)) as total_expenses,
+                ((COALESCE(pc.passport_sales_cash, 0) + COALESCE(par.passport_sales_ar, 0) +
+                  COALESCE(ic.other_income_cash, 0) + COALESCE(iar.other_income_ar, 0)) -
+                 (COALESCE(ec.expenses_cash, 0) + COALESCE(eap.expenses_ap, 0))) as net_income
+
+            FROM all_month_activity ma
+            JOIN activity a ON ma.activity_id = a.id
+            LEFT JOIN monthly_passports_cash pc ON ma.month = pc.month AND ma.activity_id = pc.activity_id
+            LEFT JOIN monthly_passports_ar par ON ma.month = par.month AND ma.activity_id = par.activity_id
+            LEFT JOIN monthly_income_cash ic ON ma.month = ic.month AND ma.activity_id = ic.activity_id
+            LEFT JOIN monthly_income_ar iar ON ma.month = iar.month AND ma.activity_id = iar.activity_id
+            LEFT JOIN monthly_expenses_cash ec ON ma.month = ec.month AND ma.activity_id = ec.activity_id
+            LEFT JOIN monthly_expenses_ap eap ON ma.month = eap.month AND ma.activity_id = eap.activity_id
+            ORDER BY ma.month DESC, a.name
+        """)
+        log("✅", "  Created monthly_financial_summary view (FIXED VERSION)", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to create financial summary view: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
+# TASK 16: Add AI Answer Column (Migration 937a43599a19)
+# ============================================================================
+def task16_add_ai_answer_column(cursor):
+    """Add ai_answer column to query_log for chatbot responses"""
+    log("🤖", "TASK 16: Adding ai_answer column to query_log", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'query_log'):
+        log("⏭️ ", "  query_log table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'query_log', 'ai_answer'):
+        log("⏭️ ", "  ai_answer column already exists", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("ALTER TABLE query_log ADD COLUMN ai_answer TEXT")
+        log("✅", "  Added ai_answer column", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to add ai_answer column: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
+# TASK 17: Remove Organizations Table (Migration cb97872b8def)
+# ============================================================================
+def task17_remove_organizations_table(cursor):
+    """Remove unused organizations table and migrate data to Settings"""
+    log("🗑️ ", "TASK 17: Removing organizations table", Colors.BLUE)
+
+    # Check if organizations table exists
+    if not check_table_exists(cursor, 'organizations'):
+        log("⏭️ ", "  Organizations table doesn't exist (already removed)", Colors.YELLOW)
+
+        # Still ensure Settings are populated
+        cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_NAME'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("INSERT INTO setting (key, value) VALUES (?, ?)",
+                          ('ORG_NAME', 'Fondation LHGI'))
+            log("✅", "  Created default ORG_NAME in settings", Colors.GREEN)
+
+        cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_ADDRESS'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("INSERT INTO setting (key, value) VALUES (?, ?)",
+                          ('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7'))
+            log("✅", "  Created default ORG_ADDRESS in settings", Colors.GREEN)
+
+        return True
+
+    # Migrate organization data to Settings
+    log("🔄", "  Migrating organization data to Settings table", Colors.BLUE)
+    try:
+        cursor.execute("SELECT name, mail_username FROM organizations LIMIT 1")
+        org_data = cursor.fetchone()
+
+        if org_data:
+            org_name = org_data[0] or 'Fondation LHGI'
+            org_email = org_data[1]
+
+            # Insert ORG_NAME
+            cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_NAME'")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("INSERT INTO setting (key, value) VALUES (?, ?)",
+                              ('ORG_NAME', org_name))
+                log("✅", f"  Migrated ORG_NAME: {org_name}", Colors.GREEN)
+
+            # Insert MAIL_USERNAME if exists
+            if org_email:
+                cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'MAIL_USERNAME'")
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute("INSERT INTO setting (key, value) VALUES (?, ?)",
+                                  ('MAIL_USERNAME', org_email))
+                    log("✅", f"  Migrated MAIL_USERNAME: {org_email}", Colors.GREEN)
+    except Exception as e:
+        log("⚠️ ", f"  Could not read organization data: {e}", Colors.YELLOW)
+        cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_NAME'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("INSERT INTO setting (key, value) VALUES (?, ?)",
+                          ('ORG_NAME', 'Fondation LHGI'))
+            log("✅", "  Created default ORG_NAME", Colors.GREEN)
+
+    # Ensure ORG_ADDRESS exists
+    cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_ADDRESS'")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO setting (key, value) VALUES (?, ?)",
+                      ('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7'))
+        log("✅", "  Created ORG_ADDRESS", Colors.GREEN)
+
+    # Drop views that reference organization columns
+    log("🔄", "  Dropping views before table modifications", Colors.BLUE)
+    cursor.execute("DROP VIEW IF EXISTS monthly_transactions_detail")
+    cursor.execute("DROP VIEW IF EXISTS monthly_financial_summary")
+
+    # Remove organization_id from user table if it exists
+    if check_column_exists(cursor, 'user', 'organization_id'):
+        log("🔄", "  Removing organization_id from user table", Colors.BLUE)
+        try:
+            cursor.execute("PRAGMA foreign_keys = OFF")
+            cursor.execute("""
+                CREATE TABLE user_new (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    email VARCHAR(100),
+                    phone_number VARCHAR(20),
+                    email_opt_out BOOLEAN NOT NULL DEFAULT 0
+                )
+            """)
+            cursor.execute("""
+                INSERT INTO user_new (id, name, email, phone_number, email_opt_out)
+                SELECT id, name, email, phone_number, COALESCE(email_opt_out, 0) FROM user
+            """)
+            cursor.execute("DROP TABLE user")
+            cursor.execute("ALTER TABLE user_new RENAME TO user")
+            cursor.execute("PRAGMA foreign_keys = ON")
+            log("✅", "  Removed organization_id from user table", Colors.GREEN)
+        except Exception as e:
+            cursor.execute("PRAGMA foreign_keys = ON")
+            log("❌", f"  Failed to modify user table: {e}", Colors.RED)
+            raise
+
+    # Remove organization_id from activity table if it exists
+    if check_column_exists(cursor, 'activity', 'organization_id'):
+        log("🔄", "  Removing organization_id from activity table", Colors.BLUE)
+        try:
+            cursor.execute("PRAGMA foreign_keys = OFF")
+            # Get all columns except organization_id
+            cursor.execute("PRAGMA table_info(activity)")
+            columns = [row[1] for row in cursor.fetchall() if row[1] != 'organization_id']
+            columns_str = ', '.join(columns)
+
+            # Create new table without organization_id
+            cursor.execute(f"CREATE TABLE activity_new AS SELECT {columns_str} FROM activity")
+            cursor.execute("DROP TABLE activity")
+            cursor.execute("ALTER TABLE activity_new RENAME TO activity")
+            cursor.execute("PRAGMA foreign_keys = ON")
+            log("✅", "  Removed organization_id from activity table", Colors.GREEN)
+        except Exception as e:
+            cursor.execute("PRAGMA foreign_keys = ON")
+            log("❌", f"  Failed to modify activity table: {e}", Colors.RED)
+            raise
+
+    # Finally, drop organizations table
+    try:
+        cursor.execute("DROP TABLE organizations")
+        log("✅", "  Dropped organizations table", Colors.GREEN)
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to drop organizations table: {e}", Colors.RED)
+        raise
+
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -1008,6 +1479,7 @@ def main():
 
     tasks = [
         ("Schema Changes", task1_add_location_fields),
+        ("Payment Status Columns", task13_add_payment_status_columns),
         ("Data Backfill", task2_backfill_financial_records),
         ("Foreign Keys", task3_fix_redemption_cascade),
         ("Survey Templates", task4_add_french_survey),
@@ -1019,6 +1491,10 @@ def main():
         ("PassportType Deletion FKs", task10_fix_passport_type_deletion_fks),
         ("Drop Old Pass Table", task11_drop_old_pass_table),
         ("Survey Deletion FK", task12_fix_survey_deletion_fk),
+        ("Custom Payment Flag", task14_add_custom_payment_flag),
+        ("AI Answer Column", task16_add_ai_answer_column),
+        ("Remove Organizations", task17_remove_organizations_table),
+        ("Financial Views", task15_create_financial_views),
     ]
 
     completed = 0
