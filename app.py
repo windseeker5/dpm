@@ -5,7 +5,6 @@ import re
 import uuid
 import json
 import base64
-import socket
 import hashlib
 import bcrypt
 import stripe
@@ -186,20 +185,10 @@ try:
     # Exempt geocode API from CSRF (for AJAX calls)
     csrf.exempt(geocode_api)
     print("✅ Geocode API exempted from CSRF")
-    
-    # Add test notification route
-    @app.route("/test-notifications")
-    def test_notifications():
-        """Test page for SSE notifications"""
-        if "admin" not in session:
-            return redirect(url_for("login"))
-        return render_template("test_notifications.html")
 except Exception as e:
     print(f"❌ Simple Chatbot registration failed: {e}")
     import traceback
     traceback.print_exc()
-
-import hashlib
 
 @app.template_filter("hashlib_md5")
 def hashlib_md5(s):
@@ -7954,28 +7943,6 @@ def delete_survey(survey_id):
 
 
 # Duplicate endpoints removed - using the ones defined earlier in the file
-
-
-@app.route("/test/sse")
-def test_sse_page():
-    """Serve the SSE test page for admin users"""
-    if "admin" not in session:
-        flash("Admin access required.", "error")
-        return redirect(url_for("login"))
-    
-    return send_from_directory("test/html", "sse_test.html")
-
-
-@app.route("/test/notification-endpoints")
-def test_notification_endpoints_page():
-    """Serve the notification endpoints test page for admin users"""
-    if "admin" not in session:
-        flash("Admin access required.", "error")
-        return redirect(url_for("login"))
-    
-    return send_from_directory("test/html", "notification_endpoints_test.html")
-
-
 
 
 # NOTE: Default survey templates are created on first admin login, not on startup
