@@ -3112,12 +3112,12 @@ def get_email_context(activity, template_type, base_context=None):
         # Get from Settings table (organization table removed)
         # Try MAIL_USERNAME first (primary email setting), then PAYMENT_EMAIL_ADDRESS
         payment_email_setting = get_setting("MAIL_USERNAME") or get_setting("PAYMENT_EMAIL_ADDRESS")
-            print(f"🔍 get_setting('MAIL_USERNAME' or 'PAYMENT_EMAIL_ADDRESS') returned: {repr(payment_email_setting)}")
-            if payment_email_setting:
-                context['payment_email'] = payment_email_setting
-                print(f"✅ Set payment_email from settings: {payment_email_setting}")
-            else:
-                print(f"❌ No payment_email found in settings! Value was: {repr(payment_email_setting)}")
+        print(f"🔍 get_setting('MAIL_USERNAME' or 'PAYMENT_EMAIL_ADDRESS') returned: {repr(payment_email_setting)}")
+        if payment_email_setting:
+            context['payment_email'] = payment_email_setting
+            print(f"✅ Set payment_email from settings: {payment_email_setting}")
+        else:
+            print(f"❌ No payment_email found in settings! Value was: {repr(payment_email_setting)}")
     else:
         print(f"ℹ️ payment_email already in context: {context['payment_email']}")
 
