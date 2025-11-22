@@ -156,7 +156,9 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 logger = logging.getLogger(__name__)
 
 csrf = CSRFProtect(app)
-app.config["SECRET_KEY"] = "MY_SECRET_KEY_FOR_NOW"
+# CRITICAL: Load SECRET_KEY from environment variable for security
+# Fallback generates new key on each restart (sessions will be invalidated)
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", os.urandom(32).hex())
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
