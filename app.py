@@ -325,16 +325,38 @@ def get_subscription_metadata():
             - subscription_id: Stripe subscription ID (if exists)
             - customer_id: Stripe customer ID (if exists)
             - billing_frequency: 'monthly' or 'annual'
-            - renewal_date: ISO date string
-            - payment_amount: Amount in CAD
+            - renewal_date: Formatted date string (YYYY-MM-DD)
+            - payment_amount: Amount in dollars (converted from cents)
             - is_paid_subscriber: Boolean indicating if has subscription
     """
+    # Format renewal date (remove time portion)
+    renewal_date_raw = os.getenv('SUBSCRIPTION_RENEWAL_DATE')
+    renewal_date_formatted = None
+    if renewal_date_raw:
+        try:
+            # Parse ISO datetime and extract just the date
+            from datetime import datetime
+            dt = datetime.fromisoformat(renewal_date_raw.replace('Z', '+00:00'))
+            renewal_date_formatted = dt.strftime('%Y-%m-%d')
+        except (ValueError, AttributeError):
+            renewal_date_formatted = renewal_date_raw  # Fallback to raw if parsing fails
+
+    # Convert payment amount from cents to dollars
+    payment_amount_raw = os.getenv('PAYMENT_AMOUNT')
+    payment_amount_formatted = None
+    if payment_amount_raw:
+        try:
+            amount_cents = int(payment_amount_raw)
+            payment_amount_formatted = f"{amount_cents / 100:.2f}"
+        except (ValueError, TypeError):
+            payment_amount_formatted = payment_amount_raw  # Fallback to raw if conversion fails
+
     return {
         'subscription_id': os.getenv('STRIPE_SUBSCRIPTION_ID'),
         'customer_id': os.getenv('STRIPE_CUSTOMER_ID'),
         'billing_frequency': os.getenv('BILLING_FREQUENCY', 'monthly'),
-        'renewal_date': os.getenv('SUBSCRIPTION_RENEWAL_DATE'),
-        'payment_amount': os.getenv('PAYMENT_AMOUNT'),
+        'renewal_date': renewal_date_formatted,
+        'payment_amount': payment_amount_formatted,
         'is_paid_subscriber': bool(os.getenv('STRIPE_SUBSCRIPTION_ID'))
     }
 

@@ -505,6 +505,7 @@
         </div>
       </div>
 
+      {% if logs and logs|length > 0 %}
       <!-- Activity Log Section -->
       <div class="activity-log-section mb-5">
         <div class="row mb-3">
@@ -512,7 +513,7 @@
             <h2 class="section-title mb-0"><i class="ti ti-file-description text-blue me-2"></i>Recent events</h2>
           </div>
         </div>
-        
+
         <!-- Main Events Table -->
         <div class="card main-table-card">
           <div class="card-header" style="min-height: 50px;">
@@ -547,6 +548,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
       
     </div>
   </div>
