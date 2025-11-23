@@ -364,7 +364,19 @@ def get_setting(key, default=""):
     """
     Legacy function for backwards compatibility.
     New code should use SettingsManager.get() instead.
+
+    Priority order:
+    1. Environment variable (from docker-compose)
+    2. Database setting table
+    3. Default value
     """
+    import os
+
+    # First check environment variables (from docker-compose)
+    env_value = os.environ.get(key)
+    if env_value is not None and env_value != "":
+        return env_value
+
     with current_app.app_context():
         try:
             from models.settings import SettingsManager
