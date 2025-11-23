@@ -2457,3 +2457,55 @@ body {
     height: calc(100vh - 80px);
   }
 }
+
+/* ============================================
+   Empty State Component Styles
+   ============================================ */
+
+.empty-state-container {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+}
+
+.empty-state-icon {
+  opacity: 0.6;
+}
+
+.empty-state-title {
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-description {
+  color: #64748b;
+  font-size: 14px;
+  max-width: 400px;
+  line-height: 1.5;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .empty-state-container {
+    padding: 2rem 1rem;
+  }
+
+  .empty-state-icon i {
+    font-size: 36px !important;
+  }
+
+  .empty-state-title {
+    font-size: 16px;
+  }
+
+  .empty-state-description {
+    font-size: 13px;
+  }
+}
