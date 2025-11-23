@@ -1343,8 +1343,8 @@ def task17_remove_organizations_table(cursor):
         cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_NAME'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("INSERT INTO setting (key, value) VALUES (?, ?)",
-                          ('ORG_NAME', 'Fondation LHGI'))
-            log("✅", "  Created default ORG_NAME in settings", Colors.GREEN)
+                          ('ORG_NAME', ''))
+            log("✅", "  Created empty ORG_NAME placeholder (will be set during deployment)", Colors.GREEN)
 
         cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_ADDRESS'")
         if cursor.fetchone()[0] == 0:
@@ -1361,7 +1361,7 @@ def task17_remove_organizations_table(cursor):
         org_data = cursor.fetchone()
 
         if org_data:
-            org_name = org_data[0] or 'Fondation LHGI'
+            org_name = org_data[0] or ''
             org_email = org_data[1]
 
             # Insert ORG_NAME
@@ -1383,8 +1383,8 @@ def task17_remove_organizations_table(cursor):
         cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_NAME'")
         if cursor.fetchone()[0] == 0:
             cursor.execute("INSERT INTO setting (key, value) VALUES (?, ?)",
-                          ('ORG_NAME', 'Fondation LHGI'))
-            log("✅", "  Created default ORG_NAME", Colors.GREEN)
+                          ('ORG_NAME', ''))
+            log("✅", "  Created empty ORG_NAME placeholder (will be set during deployment)", Colors.GREEN)
 
     # Ensure ORG_ADDRESS exists
     cursor.execute("SELECT COUNT(*) FROM setting WHERE key = 'ORG_ADDRESS'")

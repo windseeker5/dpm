@@ -75,23 +75,23 @@ def upgrade():
                     print(f"   ✅ Created MAIL_USERNAME = '{org_email}'")
 
             else:
-                # No organization data - create default settings
-                print("⚠️  No organization data found, creating default settings...")
+                # No organization data - create empty placeholder (deployment will set correct value)
+                print("⚠️  No organization data found, creating empty ORG_NAME placeholder...")
                 connection.execute(
                     text("INSERT INTO setting (key, value) VALUES (:key, :value)"),
-                    {"key": "ORG_NAME", "value": "Fondation LHGI"}
+                    {"key": "ORG_NAME", "value": ""}
                 )
-                print("   ✅ Created default ORG_NAME = 'Fondation LHGI'")
+                print("   ✅ Created empty ORG_NAME (will be set during deployment)")
 
         except Exception as e:
             # Organizations table might not exist or have different schema
             print(f"⚠️  Could not read organizations table: {e}")
-            print("   Creating default ORG_NAME setting...")
+            print("   Creating empty ORG_NAME placeholder...")
             connection.execute(
                 text("INSERT INTO setting (key, value) VALUES (:key, :value)"),
-                {"key": "ORG_NAME", "value": "Fondation LHGI"}
+                {"key": "ORG_NAME", "value": ""}
             )
-            print("   ✅ Created default ORG_NAME = 'Fondation LHGI'")
+            print("   ✅ Created empty ORG_NAME (will be set during deployment)")
     else:
         print("✅ ORG_NAME already exists in settings, skipping migration")
 
