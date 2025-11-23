@@ -70,21 +70,51 @@
           </div>
         </div>
       </div>
-      <div class="table-responsive">
-        <table class="table table-hover">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th class="d-none d-md-table-cell">Created</th>
-            <th class="d-none d-md-table-cell">Activity</th>
-            <th class="d-none d-lg-table-cell text-center">Status</th>
-            <th class="d-none d-md-table-cell text-center">Amount</th>
-            <th class="d-none d-md-table-cell text-center">Remain</th>
-            <th class="text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for signup in signups %}
+
+      {% if is_first_time_empty %}
+        <!-- First-Time Empty State -->
+        <div class="empty-state-container text-center py-5">
+          <div class="empty-state-icon mb-3">
+            <i class="ti ti-user-check" style="font-size: 48px; color: #206bc4;"></i>
+          </div>
+          <h3 class="empty-state-title mb-2">No signups yet</h3>
+          <p class="empty-state-description text-muted mb-3">
+            Signups will appear here when users register for your activities.
+          </p>
+        </div>
+
+      {% elif is_zero_results %}
+        <!-- Zero Results Empty State -->
+        <div class="empty-state-container text-center py-5">
+          <div class="empty-state-icon mb-3">
+            <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
+          </div>
+          <h3 class="empty-state-title mb-2">No signups match your filters</h3>
+          <p class="empty-state-description text-muted mb-3">
+            Try clearing your search or adjusting your filter criteria.
+          </p>
+          <a href="{{ url_for('list_signups', show_all='true') }}" class="btn btn-link">
+            Clear all filters
+          </a>
+        </div>
+
+      {% else %}
+        <!-- Normal Table View -->
+        <div class="table-responsive">
+          <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th class="d-none d-md-table-cell">Created</th>
+              <th class="d-none d-md-table-cell">Activity</th>
+              <th class="d-none d-lg-table-cell text-center">Status</th>
+              <th class="d-none d-md-table-cell text-center">Amount</th>
+              <th class="d-none d-md-table-cell text-center">Remain</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for signup in signups %}
           <tr>
             <td style="vertical-align: middle;">
               <div class="d-flex align-items-center">
@@ -242,22 +272,8 @@
         {% endif %}
       </div>
       </div>
+      {% endif %}
     </div>
-
-    <!-- Empty State - Only show when there are NO signups at all in the database -->
-    {% if statistics.total == 0 %}
-    <div class="card">
-      <div class="empty">
-        <div class="empty-icon">
-          <i class="ti ti-users-off"></i>
-        </div>
-        <p class="empty-title">No signups found</p>
-        <p class="empty-subtitle">
-          Signups will appear here when users register for activities
-        </p>
-      </div>
-    </div>
-    {% endif %}
 
     </div>
   </div>

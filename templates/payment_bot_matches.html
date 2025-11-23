@@ -71,22 +71,52 @@
             </div>
           </div>
         </div>
-        <div class="table-responsive">
-          <table class="table table-hover">
-          <thead>
-            <tr>
-              <th style="padding-left: 1.5rem;">Payment Sender</th>
-              <th class="d-none d-md-table-cell">Payment Date</th>
-              <th class="d-md-none text-center">Status</th>
-              <th class="d-none d-md-table-cell text-center">Amount</th>
-              <th class="d-none d-md-table-cell text-center">Status</th>
-              <th class="d-none d-lg-table-cell">Matched To</th>
-              <th class="d-none d-lg-table-cell">Reason</th>
-              <th class="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for payment in payments %}
+
+        {% if is_first_time_empty %}
+          <!-- First-Time Empty State -->
+          <div class="empty-state-container text-center py-5">
+            <div class="empty-state-icon mb-3">
+              <i class="ti ti-mail" style="font-size: 48px; color: #20c997;"></i>
+            </div>
+            <h3 class="empty-state-title mb-2">No payment emails yet</h3>
+            <p class="empty-state-description text-muted mb-3">
+              Email notifications from Interac e-Transfer will appear here for automatic payment matching.
+            </p>
+          </div>
+
+        {% elif is_zero_results %}
+          <!-- Zero Results Empty State -->
+          <div class="empty-state-container text-center py-5">
+            <div class="empty-state-icon mb-3">
+              <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
+            </div>
+            <h3 class="empty-state-title mb-2">No payments match your filters</h3>
+            <p class="empty-state-description text-muted mb-3">
+              Try adjusting your search or filter criteria.
+            </p>
+            <a href="{{ url_for('payment_bot_matches', show_all='true') }}" class="btn btn-link">
+              Clear all filters
+            </a>
+          </div>
+
+        {% else %}
+          <!-- Normal Table View -->
+          <div class="table-responsive">
+            <table class="table table-hover">
+            <thead>
+              <tr>
+                <th style="padding-left: 1.5rem;">Payment Sender</th>
+                <th class="d-none d-md-table-cell">Payment Date</th>
+                <th class="d-md-none text-center">Status</th>
+                <th class="d-none d-md-table-cell text-center">Amount</th>
+                <th class="d-none d-md-table-cell text-center">Status</th>
+                <th class="d-none d-lg-table-cell">Matched To</th>
+                <th class="d-none d-lg-table-cell">Reason</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for payment in payments %}
             <tr>
               <!-- Payment Sender Column: Always visible -->
               <td style="vertical-align: middle; padding-left: 1.5rem;">
@@ -259,6 +289,8 @@
             <span class="text-muted">No entries found</span>
           {% endif %}
         </div>
+        </div>
+        {% endif %}
       </div>
 
     </div>

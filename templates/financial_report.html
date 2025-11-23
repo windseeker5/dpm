@@ -250,9 +250,23 @@
         <div class="card-header">
           <h3 class="card-title">Transactions by Activity</h3>
         </div>
-        <div class="table-responsive">
-          {% if financial_data.by_activity|length > 0 %}
-          <table class="table card-table table-vcenter">
+
+        {% if is_first_time_empty %}
+          <!-- First-Time Empty State -->
+          <div class="empty-state-container text-center py-5">
+            <div class="empty-state-icon mb-3">
+              <i class="ti ti-chart-bar" style="font-size: 48px; color: #099268;"></i>
+            </div>
+            <h3 class="empty-state-title mb-2">No financial data yet</h3>
+            <p class="empty-state-description text-muted mb-3">
+              Financial records will appear here as you receive payments and manage income.
+            </p>
+          </div>
+
+        {% else %}
+          <!-- Normal Table View -->
+          <div class="table-responsive">
+            <table class="table card-table table-vcenter">
             <thead>
               <tr>
                 <th>Activity</th>
@@ -423,20 +437,9 @@
                 <td></td>
               </tr>
             </tfoot>
-          </table>
-          {% else %}
-          <!-- Empty State -->
-          <div class="empty">
-            <div class="empty-icon">
-              <i class="ti ti-report-money"></i>
-            </div>
-            <p class="empty-title">No Financial Data</p>
-            <p class="empty-subtitle">
-              No transactions found for the selected period and activity.
-            </p>
+            </table>
           </div>
-          {% endif %}
-        </div>
+        {% endif %}
       </div>
       </div>
       <!-- End Desktop Content -->

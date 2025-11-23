@@ -80,22 +80,55 @@
           </div>
         </div>
       </div>
-      <div class="table-responsive">
-        <table class="table table-hover">
-        <thead>
-          <tr>
-            <th>Activity Name</th>
-            <th class="d-none d-md-table-cell">Type</th>
-            <th class="d-none d-lg-table-cell text-center">Status</th>
-            <th class="d-none d-lg-table-cell text-center"># Types</th>
-            <th class="d-none d-md-table-cell text-center">Active</th>
-            <th class="d-none d-md-table-cell text-center">Signups</th>
-            <th class="d-none d-md-table-cell text-center">Revenue</th>
-            <th class="text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for activity in activities %}
+
+      {% if is_first_time_empty %}
+        <!-- First-Time Empty State -->
+        <div class="empty-state-container text-center py-5">
+          <div class="empty-state-icon mb-3">
+            <i class="ti ti-activity-heartbeat" style="font-size: 48px; color: #e03131;"></i>
+          </div>
+          <h3 class="empty-state-title mb-2">No activities yet</h3>
+          <p class="empty-state-description text-muted mb-3">
+            Activities are the core of your organization. Create your first activity to start managing signups and passports.
+          </p>
+          <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
+            <i class="ti ti-plus me-1"></i>Create Activity
+          </a>
+        </div>
+
+      {% elif is_zero_results %}
+        <!-- Zero Results Empty State -->
+        <div class="empty-state-container text-center py-5">
+          <div class="empty-state-icon mb-3">
+            <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
+          </div>
+          <h3 class="empty-state-title mb-2">No activities match your filters</h3>
+          <p class="empty-state-description text-muted mb-3">
+            Try adjusting your search or filter criteria to find what you're looking for.
+          </p>
+          <a href="{{ url_for('list_activities', show_all='true') }}" class="btn btn-link">
+            Clear all filters
+          </a>
+        </div>
+
+      {% else %}
+        <!-- Normal Table View -->
+        <div class="table-responsive">
+          <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Activity Name</th>
+              <th class="d-none d-md-table-cell">Type</th>
+              <th class="d-none d-lg-table-cell text-center">Status</th>
+              <th class="d-none d-lg-table-cell text-center"># Types</th>
+              <th class="d-none d-md-table-cell text-center">Active</th>
+              <th class="d-none d-md-table-cell text-center">Signups</th>
+              <th class="d-none d-md-table-cell text-center">Revenue</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for activity in activities %}
           <tr>
             <td style="vertical-align: middle;">
               <div class="d-flex align-items-center">
@@ -236,22 +269,8 @@
         {% endif %}
       </div>
       </div>
+      {% endif %}
     </div>
-
-    <!-- Empty State - Only show when there are NO activities at all in the database AND no active search/filter -->
-    {% if activities|length == 0 and not current_filters.q and not current_filters.status %}
-    <div class="card">
-      <div class="empty">
-        <div class="empty-icon">
-          <i class="ti ti-activity"></i>
-        </div>
-        <p class="empty-title">No activities found</p>
-        <p class="empty-subtitle">
-          Activities will appear here once you create them
-        </p>
-      </div>
-    </div>
-    {% endif %}
 
     </div>
   </div>

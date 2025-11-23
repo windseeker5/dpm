@@ -1144,7 +1144,11 @@ def list_signups():
         'approved': approved_signups,
         'recent': recent_signups
     }
-    
+
+    # Determine empty state type
+    is_first_time_empty = all_signups == 0
+    is_zero_results = len(signups) == 0 and not is_first_time_empty
+
     # Get all activities for filter dropdown
     activities = Activity.query.order_by(Activity.name).all()
     
@@ -1162,6 +1166,8 @@ def list_signups():
                          statuses=statuses,
                          passport_types=passport_types,
                          statistics=statistics,
+                         is_first_time_empty=is_first_time_empty,
+                         is_zero_results=is_zero_results,
                          current_filters={
                              'q': q,
                              'activity_id': activity_id,
@@ -3682,10 +3688,16 @@ def list_activities():
     activity_types = db.session.query(Activity.type).distinct().filter(Activity.type.isnot(None)).all()
     activity_types = [t[0] for t in activity_types if t[0]]
 
+    # Determine empty state type
+    is_first_time_empty = all_activities_count == 0
+    is_zero_results = len(activities) == 0 and not is_first_time_empty
+
     return render_template("activities.html",
                          activities=activities,
                          activity_types=activity_types,
                          statistics=statistics,
+                         is_first_time_empty=is_first_time_empty,
+                         is_zero_results=is_zero_results,
                          current_filters={
                              'q': q,
                              'status': status,
@@ -3794,12 +3806,18 @@ def list_surveys():
         'completed_responses': completed_responses,
         'avg_completion_rate': avg_completion_rate
     }
-    
-    return render_template("surveys.html", 
-                         surveys=surveys, 
+
+    # Determine empty state type
+    is_first_time_empty = total_surveys_count == 0
+    is_zero_results = len(surveys) == 0 and not is_first_time_empty
+
+    return render_template("surveys.html",
+                         surveys=surveys,
                          activities=activities,
                          survey_templates=survey_templates,
                          statistics=statistics,
+                         is_first_time_empty=is_first_time_empty,
+                         is_zero_results=is_zero_results,
                          current_filters={
                              'q': q,
                              'status': status,
@@ -3924,10 +3942,16 @@ def list_passports():
     # Determine if showing all (explicitly requested)
     show_all = show_all_param == "true"
 
+    # Determine empty state type
+    is_first_time_empty = all_passports_count == 0
+    is_zero_results = len(passports) == 0 and not is_first_time_empty
+
     return render_template("passports.html",
                          passports=passports,
                          activities=activities,
                          statistics=statistics,
+                         is_first_time_empty=is_first_time_empty,
+                         is_zero_results=is_zero_results,
                          current_filters={
                              'q': q,
                              'activity': activity_id,
@@ -3959,9 +3983,16 @@ def financial_report():
     # Get all activities for the drawer form
     activities = Activity.query.order_by(Activity.name).all()
 
+    # Determine empty state type based on total income records
+    total_records = len(financial_data.get('income_records', []))
+    is_first_time_empty = total_records == 0
+    is_zero_results = False  # Financial page doesn't have filters currently
+
     return render_template("financial_report.html",
                          financial_data=financial_data,
-                         activities=activities)
+                         activities=activities,
+                         is_first_time_empty=is_first_time_empty,
+                         is_zero_results=is_zero_results)
 
 
 @app.route("/reports/financial/export")
@@ -4113,6 +4144,10 @@ def user_contacts_report():
         'active_users': active_users_data['summary']['active_users'],
     }
 
+    # Determine empty state type
+    is_first_time_empty = statistics['total_users'] == 0
+    is_zero_results = len(user_data['users']) == 0 and not is_first_time_empty
+
     # Current filter state
     current_filters = {
         'q': q,
@@ -4123,6 +4158,8 @@ def user_contacts_report():
     return render_template("user_contacts_report.html",
                          users=user_data['users'],
                          statistics=statistics,
+                         is_first_time_empty=is_first_time_empty,
+                         is_zero_results=is_zero_results,
                          current_filters=current_filters)
 
 
@@ -4253,10 +4290,16 @@ def payment_bot_matches():
         'manual_count': manual_count
     }
 
+    # Determine empty state type
+    is_first_time_empty = total_payments == 0
+    is_zero_results = len(payments) == 0 and not is_first_time_empty
+
     return render_template("payment_bot_matches.html",
                          payments=payments,
                          pagination=pagination,
                          statistics=statistics,
+                         is_first_time_empty=is_first_time_empty,
+                         is_zero_results=is_zero_results,
                          current_filters={
                              'q': q,
                              'status': status_filter,

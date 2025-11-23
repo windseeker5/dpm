@@ -147,21 +147,51 @@
           </div>
         </div>
       </div>
-      <div class="table-responsive">
-        <table class="table table-hover">
-        <thead>
-          <tr>
-            <th>Survey</th>
-            <th class="d-none d-md-table-cell">Created</th>
-            <th class="d-none d-md-table-cell">Activity</th>
-            <th class="d-none d-md-table-cell">Status</th>
-            <th class="d-none d-md-table-cell">Sent/Completed</th>
-            <th class="d-none d-md-table-cell">Completion Rate</th>
-            <th class="text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for survey in surveys %}
+
+      {% if is_first_time_empty %}
+        <!-- First-Time Empty State -->
+        <div class="empty-state-container text-center py-5">
+          <div class="empty-state-icon mb-3">
+            <i class="ti ti-clipboard-check" style="font-size: 48px; color: #fab005;"></i>
+          </div>
+          <h3 class="empty-state-title mb-2">No surveys yet</h3>
+          <p class="empty-state-description text-muted mb-3">
+            Create your first survey using one of your templates to start collecting feedback from participants.
+          </p>
+        </div>
+
+      {% elif is_zero_results %}
+        <!-- Zero Results Empty State -->
+        <div class="empty-state-container text-center py-5">
+          <div class="empty-state-icon mb-3">
+            <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
+          </div>
+          <h3 class="empty-state-title mb-2">No surveys match your filters</h3>
+          <p class="empty-state-description text-muted mb-3">
+            Try adjusting your search or filter criteria to find what you're looking for.
+          </p>
+          <a href="{{ url_for('list_surveys', show_all='true') }}" class="btn btn-link">
+            Clear all filters
+          </a>
+        </div>
+
+      {% else %}
+        <!-- Normal Table View -->
+        <div class="table-responsive">
+          <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Survey</th>
+              <th class="d-none d-md-table-cell">Created</th>
+              <th class="d-none d-md-table-cell">Activity</th>
+              <th class="d-none d-md-table-cell">Status</th>
+              <th class="d-none d-md-table-cell">Sent/Completed</th>
+              <th class="d-none d-md-table-cell">Completion Rate</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for survey in surveys %}
           <tr>
             <td>
               <div class="d-flex align-items-center">
@@ -265,30 +295,14 @@
               </div>
             </td>
           </tr>
-          {% else %}
-          <tr>
-            <td colspan="7" class="text-center py-5">
-              <div class="empty">
-                <div class="empty-img">
-                  <i class="ti ti-clipboard-check" style="font-size: 4rem; color: #ccc;"></i>
-                </div>
-                <p class="empty-title">No surveys found</p>
-                <p class="empty-subtitle text-muted">
-                  {% if current_filters.q or current_filters.status or current_filters.activity or current_filters.template %}
-                    Try adjusting your search filters or <a href="{{ url_for('list_surveys') }}">clear all filters</a>
-                  {% else %}
-                    Get started by creating a survey using one of your templates, or create a new template
-                  {% endif %}
-                </p>
-              </div>
-            </td>
-          </tr>
           {% endfor %}
-        </tbody>
-      </table>
-      </div>
-      
-      <!-- Pagination -->
+          </tbody>
+        </table>
+        </div>
+      {% endif %}
+
+      <!-- Pagination (only show when there's data) -->
+      {% if not is_first_time_empty and not is_zero_results %}
       <div class="card-footer d-flex justify-content-between align-items-center">
         {% if pagination and pagination.total > 0 %}
           <span class="text-muted">Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ ((pagination.page - 1) * pagination.per_page) + surveys|length }} of {{ pagination.total }} entries</span>
@@ -344,10 +358,9 @@
           {% endif %}
         {% elif surveys|length > 0 %}
           <span class="text-muted">Showing {{ surveys|length }} of {{ surveys|length }} entries</span>
-        {% else %}
-          <span class="text-muted">No entries found</span>
         {% endif %}
       </div>
+      {% endif %}
       </div>
     </div>
 
