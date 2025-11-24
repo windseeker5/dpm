@@ -3984,7 +3984,7 @@ def financial_report():
     activities = Activity.query.order_by(Activity.name).all()
 
     # Determine empty state type based on total income records
-    total_records = len(financial_data.get('income_records', []))
+    total_records = len(financial_data.get('by_activity', []))
     is_first_time_empty = total_records == 0
     is_zero_results = False  # Financial page doesn't have filters currently
 
