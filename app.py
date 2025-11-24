@@ -2602,10 +2602,14 @@ def setup():
             "DEFAULT_PASS_AMOUNT": str(REMOVED_FIELD_DEFAULTS['default_pass_amount']),
             "DEFAULT_SESSION_QT": str(REMOVED_FIELD_DEFAULTS['default_session_qt']),
             "EMAIL_INFO_TEXT": REMOVED_FIELD_DEFAULTS['email_info_text'],
-            "EMAIL_FOOTER_TEXT": REMOVED_FIELD_DEFAULTS['email_footer_text'],
-            "ORG_NAME": request.form.get("ORG_NAME", "").strip(),
-            "CALL_BACK_DAYS": request.form.get("CALL_BACK_DAYS", "0").strip()
+            "EMAIL_FOOTER_TEXT": REMOVED_FIELD_DEFAULTS['email_footer_text']
         }
+
+        # Only update ORG_NAME and CALL_BACK_DAYS if they're in the form (prevents overwriting from other tabs)
+        if "ORG_NAME" in request.form:
+            extra_settings["ORG_NAME"] = request.form.get("ORG_NAME", "").strip()
+        if "CALL_BACK_DAYS" in request.form:
+            extra_settings["CALL_BACK_DAYS"] = request.form.get("CALL_BACK_DAYS", "0").strip()
 
         for key, value in extra_settings.items():
             existing = Setting.query.filter_by(key=key).first()
@@ -2615,15 +2619,17 @@ def setup():
                 db.session.add(Setting(key=key, value=value))
 
         # 🤖 Step 5: Email Payment Bot Config
+        # Only update bot settings if they're in the form (prevents overwriting from other tabs)
         bot_settings = {
-            "ENABLE_EMAIL_PAYMENT_BOT": "enable_email_payment_bot" in request.form,
-            "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
-            "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
-            "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
-            # OBSOLETE: gmail_label_folder_processed removed from UI on 2025-01-24
-            # "GMAIL_LABEL_FOLDER_PROCESSED": request.form.get("gmail_label_folder_processed", "InteractProcessed").strip()
             "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed']
         }
+
+        if "enable_email_payment_bot" in request.form or "bank_email_from" in request.form:
+            # Bot config section was submitted, update all bot settings
+            bot_settings["ENABLE_EMAIL_PAYMENT_BOT"] = "enable_email_payment_bot" in request.form
+            bot_settings["BANK_EMAIL_FROM"] = request.form.get("bank_email_from", "").strip()
+            bot_settings["BANK_EMAIL_SUBJECT"] = request.form.get("bank_email_subject", "").strip()
+            bot_settings["BANK_EMAIL_NAME_CONFIDANCE"] = request.form.get("bank_email_name_confidance", "85").strip()
 
         for key, value in bot_settings.items():
             existing = Setting.query.filter_by(key=key).first()
