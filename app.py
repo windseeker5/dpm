@@ -218,10 +218,13 @@ with app.app_context():
 # ================================
 
 def get_subscription_tier():
-    """Get current subscription tier from environment variable.
+    """Get current subscription tier from database Setting table.
+    Fallback to environment variable for backwards compatibility.
     Returns: 1 (Starter), 2 (Professional), or 3 (Enterprise)
     """
-    return int(os.getenv('MINIPASS_TIER', '1'))
+    from utils import get_setting
+    tier = get_setting('MINIPASS_TIER', '1')
+    return int(tier) if tier else 1
 
 def get_activity_limit():
     """Get maximum active activities allowed for current subscription tier."""
@@ -318,7 +321,7 @@ def is_over_activity_limit():
     return False, 0, None
 
 def get_subscription_metadata():
-    """Read subscription info from environment variables.
+    """Read subscription info from database Setting table.
 
     Returns:
         dict: Subscription metadata including:
@@ -328,9 +331,41 @@ def get_subscription_metadata():
             - renewal_date: Formatted date string (YYYY-MM-DD)
             - payment_amount: Amount in dollars (converted from cents)
             - is_paid_subscriber: Boolean indicating if has subscription
+            - is_beta_tester: Boolean indicating if this is a beta tester
+            - tier: Tier number (for beta testers)
+            - tier_name, tier_display: Tier information (for beta testers)
     """
+    from utils import get_setting
+
+    # Check if this is a beta tester (no Stripe subscription)
+    stripe_sub_id = get_setting('STRIPE_SUBSCRIPTION_ID', '')
+    tier_value = get_setting('MINIPASS_TIER', '')
+
+    if not stripe_sub_id or not tier_value:
+        # Beta tester - show appreciation message
+        return {
+            'is_beta_tester': True,
+            'tier': 3,  # Give Enterprise features
+            'tier_name': 'Beta Tester',
+            'tier_display': 'Beta Tester - Thank You!',
+            'tier_price': 'Complimentary',
+            'tier_activities': 100,  # Unlimited
+            'activity_count': get_activity_count(),
+            'activity_usage_display': 'Unlimited',
+            'next_billing_date': None,
+            'formatted_next_billing': 'N/A',
+            'payment_amount': None,
+            'formatted_payment_amount': 'N/A',
+            'subscription_id': '',
+            'customer_id': '',
+            'billing_frequency': '',
+            'is_paid_subscriber': False,
+            'renewal_date': None
+        }
+
+    # Regular paid subscriber - read from database
     # Format renewal date (remove time portion)
-    renewal_date_raw = os.getenv('SUBSCRIPTION_RENEWAL_DATE')
+    renewal_date_raw = get_setting('SUBSCRIPTION_RENEWAL_DATE')
     renewal_date_formatted = None
     if renewal_date_raw:
         try:
@@ -342,7 +377,7 @@ def get_subscription_metadata():
             renewal_date_formatted = renewal_date_raw  # Fallback to raw if parsing fails
 
     # Convert payment amount from cents to dollars
-    payment_amount_raw = os.getenv('PAYMENT_AMOUNT')
+    payment_amount_raw = get_setting('PAYMENT_AMOUNT')
     payment_amount_formatted = None
     if payment_amount_raw:
         try:
@@ -352,12 +387,13 @@ def get_subscription_metadata():
             payment_amount_formatted = payment_amount_raw  # Fallback to raw if conversion fails
 
     return {
-        'subscription_id': os.getenv('STRIPE_SUBSCRIPTION_ID'),
-        'customer_id': os.getenv('STRIPE_CUSTOMER_ID'),
-        'billing_frequency': os.getenv('BILLING_FREQUENCY', 'monthly'),
+        'is_beta_tester': False,
+        'subscription_id': stripe_sub_id,
+        'customer_id': get_setting('STRIPE_CUSTOMER_ID'),
+        'billing_frequency': get_setting('BILLING_FREQUENCY', 'monthly'),
         'renewal_date': renewal_date_formatted,
         'payment_amount': payment_amount_formatted,
-        'is_paid_subscriber': bool(os.getenv('STRIPE_SUBSCRIPTION_ID'))
+        'is_paid_subscriber': bool(stripe_sub_id)
     }
 
 def cancel_subscription(subscription_id):
@@ -413,7 +449,8 @@ def get_subscription_details():
     Returns:
         dict: Subscription details including cancel_at_period_end status
     """
-    subscription_id = os.getenv('STRIPE_SUBSCRIPTION_ID')
+    from utils import get_setting
+    subscription_id = get_setting('STRIPE_SUBSCRIPTION_ID')
 
     if not subscription_id:
         return None

@@ -1329,6 +1329,55 @@ def task16_add_ai_answer_column(cursor):
 
 
 # ============================================================================
+# TASK 18: Add Stripe Subscription Settings for Beta Testers
+# ============================================================================
+def task18_add_stripe_subscription_settings(cursor):
+    """Add Stripe subscription setting keys with empty values for beta testers"""
+    log("💳", "TASK 18: Adding Stripe subscription settings", Colors.BLUE)
+
+    # Check if setting table exists
+    if not check_table_exists(cursor, 'setting'):
+        log("⏭️ ", "  setting table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    stripe_settings = [
+        ('STRIPE_CUSTOMER_ID', ''),
+        ('STRIPE_SUBSCRIPTION_ID', ''),
+        ('PAYMENT_AMOUNT', ''),
+        ('SUBSCRIPTION_RENEWAL_DATE', ''),
+        ('MINIPASS_TIER', ''),
+        ('BILLING_FREQUENCY', '')
+    ]
+
+    added = 0
+    skipped = 0
+
+    for key, default_value in stripe_settings:
+        # Check if setting already exists
+        cursor.execute("SELECT id, value FROM setting WHERE key = ?", (key,))
+        existing = cursor.fetchone()
+
+        if existing:
+            log("⏭️ ", f"  {key} already exists", Colors.YELLOW)
+            skipped += 1
+        else:
+            try:
+                cursor.execute("""
+                    INSERT INTO setting (key, value)
+                    VALUES (?, ?)
+                """, (key, default_value))
+                log("✅", f"  Added {key} with empty value", Colors.GREEN)
+                added += 1
+            except sqlite3.OperationalError as e:
+                log("❌", f"  Failed to add {key}: {e}", Colors.RED)
+                raise
+
+    log("📊", f"  Summary: {added} settings added, {skipped} already existed")
+    log("ℹ️ ", "  Empty values indicate beta tester - will show appreciation message", Colors.BLUE)
+    return True
+
+
+# ============================================================================
 # TASK 17: Remove Organizations Table (Migration cb97872b8def)
 # ============================================================================
 def task17_remove_organizations_table(cursor):
@@ -1493,6 +1542,7 @@ def main():
         ("Survey Deletion FK", task12_fix_survey_deletion_fk),
         ("Custom Payment Flag", task14_add_custom_payment_flag),
         ("AI Answer Column", task16_add_ai_answer_column),
+        ("Stripe Subscription Settings", task18_add_stripe_subscription_settings),
         ("Remove Organizations", task17_remove_organizations_table),
         ("Financial Views", task15_create_financial_views),
     ]
