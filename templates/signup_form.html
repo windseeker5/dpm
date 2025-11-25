@@ -569,7 +569,11 @@
               <div>
                 <div class="text-muted" style="font-size: 0.75rem;">Paiement Interac</div>
                 <div style="font-size: 0.85rem;">
-                  <strong>{{ settings.get("PAYMENT_EMAIL_ADDRESS", "lhgi@minipass.me") }}</strong>
+                  {% if settings.get("MAIL_USERNAME") %}
+                    <strong>{{ settings.get("MAIL_USERNAME") }}</strong>
+                  {% else %}
+                    <strong class="text-danger">⚠️ Email not configured</strong>
+                  {% endif %}
                 </div>
               </div>
             </div>

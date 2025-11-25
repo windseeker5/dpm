@@ -2222,8 +2222,10 @@ def api_payment_bot_test_email():
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid amount (must be between 0 and 10000)"}), 400
     
-    # Get payment email address from settings (hardcoded fallback for safety)
-    payment_email = get_setting("PAYMENT_EMAIL_ADDRESS", "lhgi@minipass.me")
+    # Get payment email address from settings (use MAIL_USERNAME as the payment email)
+    payment_email = get_setting("MAIL_USERNAME", None)
+    if not payment_email:
+        return jsonify({"error": "Payment email not configured. Please set Mail Username in Email Settings."}), 500
     
     # Build test email content
     subject = f"INTERAC e-Transfer: {sender_name} sent you ${amount_float:.2f} (CAD)"
