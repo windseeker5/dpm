@@ -1378,6 +1378,86 @@ def task18_add_stripe_subscription_settings(cursor):
 
 
 # ============================================================================
+# TASK 19: Fix Activity Table PRIMARY KEY Constraint
+# ============================================================================
+def task19_fix_activity_primary_key(cursor):
+    """Fix activity table PRIMARY KEY constraint (lost by CREATE TABLE AS SELECT bug)"""
+    log("🔑", "TASK 19: Fixing activity table PRIMARY KEY", Colors.BLUE)
+
+    # Check if PRIMARY KEY already exists
+    cursor.execute("PRAGMA table_info(activity)")
+    columns_info = cursor.fetchall()
+    for col in columns_info:
+        # col[5] is pk flag (1 = primary key)
+        if col[1] == 'id' and col[5] == 1:
+            log("⏭️ ", "  activity.id already has PRIMARY KEY", Colors.YELLOW)
+            return True
+
+    log("🔄", "  Recreating activity table with PRIMARY KEY")
+
+    try:
+        cursor.execute("PRAGMA foreign_keys = OFF")
+
+        # Drop views that depend on activity table (Task 15 will recreate them)
+        cursor.execute("DROP VIEW IF EXISTS monthly_transactions_detail")
+        cursor.execute("DROP VIEW IF EXISTS monthly_financial_summary")
+        log("🔄", "  Dropped dependent views (will be recreated by Task 15)")
+
+        # Get current columns
+        cursor.execute("PRAGMA table_info(activity)")
+        columns = [col[1] for col in cursor.fetchall()]
+        columns_str = ', '.join(columns)
+
+        # Create new table with proper PRIMARY KEY
+        cursor.execute("""
+            CREATE TABLE activity_new (
+                id INTEGER NOT NULL PRIMARY KEY,
+                name TEXT NOT NULL,
+                type TEXT,
+                description TEXT,
+                sessions_included INTEGER,
+                price_per_user REAL,
+                goal_users INTEGER,
+                goal_revenue REAL,
+                cost_to_run REAL,
+                created_by INTEGER,
+                created_dt DATETIME,
+                status TEXT,
+                payment_instructions TEXT,
+                start_date DATETIME,
+                end_date DATETIME,
+                image_filename TEXT,
+                email_templates TEXT,
+                logo_filename TEXT,
+                location_address_raw TEXT,
+                location_address_formatted TEXT,
+                location_coordinates TEXT,
+                FOREIGN KEY(created_by) REFERENCES admin(id)
+            )
+        """)
+
+        # Copy data
+        cursor.execute(f"INSERT INTO activity_new ({columns_str}) SELECT {columns_str} FROM activity")
+        rows_copied = cursor.rowcount
+
+        # Drop old table
+        cursor.execute("DROP TABLE activity")
+
+        # Rename new table
+        cursor.execute("ALTER TABLE activity_new RENAME TO activity")
+
+        cursor.execute("PRAGMA foreign_keys = ON")
+
+        log("✅", f"  activity table recreated with PRIMARY KEY ({rows_copied} rows preserved)", Colors.GREEN)
+        return True
+
+    except sqlite3.OperationalError as e:
+        cursor.execute("PRAGMA foreign_keys = ON")
+        log("❌", f"  Failed to fix activity PRIMARY KEY: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
 # TASK 17: Remove Organizations Table (Migration cb97872b8def)
 # ============================================================================
 def task17_remove_organizations_table(cursor):
@@ -1479,13 +1559,43 @@ def task17_remove_organizations_table(cursor):
         log("🔄", "  Removing organization_id from activity table", Colors.BLUE)
         try:
             cursor.execute("PRAGMA foreign_keys = OFF")
+
             # Get all columns except organization_id
             cursor.execute("PRAGMA table_info(activity)")
             columns = [row[1] for row in cursor.fetchall() if row[1] != 'organization_id']
             columns_str = ', '.join(columns)
 
-            # Create new table without organization_id
-            cursor.execute(f"CREATE TABLE activity_new AS SELECT {columns_str} FROM activity")
+            # Create new table WITH proper PRIMARY KEY constraint (not CREATE TABLE AS SELECT which loses constraints)
+            cursor.execute("""
+                CREATE TABLE activity_new (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    type TEXT,
+                    description TEXT,
+                    sessions_included INTEGER,
+                    price_per_user REAL,
+                    goal_users INTEGER,
+                    goal_revenue REAL,
+                    cost_to_run REAL,
+                    created_by INTEGER,
+                    created_dt DATETIME,
+                    status TEXT,
+                    payment_instructions TEXT,
+                    start_date DATETIME,
+                    end_date DATETIME,
+                    image_filename TEXT,
+                    email_templates TEXT,
+                    logo_filename TEXT,
+                    location_address_raw TEXT,
+                    location_address_formatted TEXT,
+                    location_coordinates TEXT,
+                    FOREIGN KEY(created_by) REFERENCES admin(id)
+                )
+            """)
+
+            # Copy data
+            cursor.execute(f"INSERT INTO activity_new ({columns_str}) SELECT {columns_str} FROM activity")
+
             cursor.execute("DROP TABLE activity")
             cursor.execute("ALTER TABLE activity_new RENAME TO activity")
             cursor.execute("PRAGMA foreign_keys = ON")
@@ -1544,6 +1654,7 @@ def main():
         ("AI Answer Column", task16_add_ai_answer_column),
         ("Stripe Subscription Settings", task18_add_stripe_subscription_settings),
         ("Remove Organizations", task17_remove_organizations_table),
+        ("Activity PRIMARY KEY Fix", task19_fix_activity_primary_key),
         ("Financial Views", task15_create_financial_views),
     ]
 

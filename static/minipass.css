@@ -2341,6 +2341,7 @@ body {
 @media (max-width: 991px) {
   .gradient-header-fixed {
     height: 60px; /* Shorter on mobile */
+    background: #00ab66 !important; /* Solid green to match PWA theme */
   }
 
   .gradient-header-content {
