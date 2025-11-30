@@ -435,7 +435,7 @@ def restore_database(temp_dir):
     shutil.copy2(db_backup_path, db_path)
 
 def restore_uploads(temp_dir):
-    """Restore uploaded files from backup"""
+    """Restore uploaded files from backup - handles busy directories"""
     # Try new backup structure first (static/uploads in zip)
     upload_backup_dir = os.path.join(temp_dir, 'static', 'uploads')
     if not os.path.exists(upload_backup_dir):
@@ -443,20 +443,39 @@ def restore_uploads(temp_dir):
         upload_backup_dir = os.path.join(temp_dir, 'uploads')
     if not os.path.exists(upload_backup_dir):
         return
-    
+
     upload_dir = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
-    
-    # Create backup of current uploads
+
+    # Instead of moving the directory (which fails when busy),
+    # clear contents and copy new files
     if os.path.exists(upload_dir):
-        backup_upload_dir = f"{upload_dir}_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        if os.path.exists(upload_dir):
-            shutil.move(upload_dir, backup_upload_dir)
-    
-    # Restore uploads
-    shutil.copytree(upload_backup_dir, upload_dir)
+        # Remove contents but keep the directory itself
+        for item in os.listdir(upload_dir):
+            item_path = os.path.join(upload_dir, item)
+            try:
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+            except OSError as e:
+                logger.warning(f"[RESTORE] Could not remove {item_path}: {e}")
+    else:
+        os.makedirs(upload_dir)
+
+    # Copy new files into the existing directory
+    for item in os.listdir(upload_backup_dir):
+        src = os.path.join(upload_backup_dir, item)
+        dst = os.path.join(upload_dir, item)
+        try:
+            if os.path.isfile(src):
+                shutil.copy2(src, dst)
+            elif os.path.isdir(src):
+                shutil.copytree(src, dst)
+        except Exception as e:
+            logger.warning(f"[RESTORE] Could not copy {src} to {dst}: {e}")
 
 def restore_templates(temp_dir):
-    """Restore email templates from backup"""
+    """Restore email templates from backup - handles busy directories"""
     # Try new backup structure first (templates/email_templates in zip)
     template_backup_dir = os.path.join(temp_dir, 'templates', 'email_templates')
     if not os.path.exists(template_backup_dir):
@@ -464,16 +483,36 @@ def restore_templates(temp_dir):
         template_backup_dir = os.path.join(temp_dir, 'email_templates')
     if not os.path.exists(template_backup_dir):
         return
-    
+
     template_dir = 'templates/email_templates'
-    
-    # Create backup of current templates
+
+    # Instead of moving the directory (which fails when busy),
+    # clear contents and copy new files
     if os.path.exists(template_dir):
-        backup_template_dir = f"{template_dir}_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        shutil.move(template_dir, backup_template_dir)
-    
-    # Restore templates
-    shutil.copytree(template_backup_dir, template_dir)
+        # Remove contents but keep the directory itself
+        for item in os.listdir(template_dir):
+            item_path = os.path.join(template_dir, item)
+            try:
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+            except OSError as e:
+                logger.warning(f"[RESTORE] Could not remove {item_path}: {e}")
+    else:
+        os.makedirs(template_dir)
+
+    # Copy new files into the existing directory
+    for item in os.listdir(template_backup_dir):
+        src = os.path.join(template_backup_dir, item)
+        dst = os.path.join(template_dir, item)
+        try:
+            if os.path.isfile(src):
+                shutil.copy2(src, dst)
+            elif os.path.isdir(src):
+                shutil.copytree(src, dst)
+        except Exception as e:
+            logger.warning(f"[RESTORE] Could not copy {src} to {dst}: {e}")
 
 def cleanup_old_restore_points(keep_count=3):
     """

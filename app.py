@@ -219,12 +219,20 @@ with app.app_context():
 
 def get_subscription_tier():
     """Get current subscription tier from database Setting table.
-    Fallback to environment variable for backwards compatibility.
     Returns: 1 (Starter), 2 (Professional), or 3 (Enterprise)
+    Beta testers (no tier set) get Enterprise (3) features.
     """
     from utils import get_setting
-    tier = get_setting('MINIPASS_TIER', '1')
-    return int(tier) if tier else 1
+    tier = get_setting('MINIPASS_TIER', '')
+
+    # Beta testers have empty/no tier - give them Enterprise features
+    if not tier or tier.strip() == '':
+        return 3  # Enterprise tier for beta testers
+
+    try:
+        return int(tier)
+    except (ValueError, TypeError):
+        return 3  # Default to Enterprise for invalid values
 
 def get_activity_limit():
     """Get maximum active activities allowed for current subscription tier."""
@@ -507,20 +515,29 @@ def init_scheduler(app):
         
         with app.app_context():
             try:
-                # Payment bot setup
-                if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") == "True":
-                    print("🟢 Email Payment Bot is ENABLED. Scheduling job every 30 minutes.")
-                    def run_payment_bot():
-                        with app.app_context():
+                # Payment bot setup - ALWAYS register job, check setting at runtime
+                def run_payment_bot():
+                    """Payment bot job that checks setting at runtime (no restart needed to enable/disable)"""
+                    with app.app_context():
+                        # Check setting at runtime - this allows dynamic enable/disable without restart
+                        if get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False") != "True":
+                            print("⚪ Payment bot scheduled run: DISABLED (skipping)")
+                            return
+
+                        print("🟢 Payment bot scheduled run: ENABLED (checking emails...)")
+                        try:
                             match_gmail_payments_to_passes()
                             # Auto-cleanup duplicates after processing
                             from utils import cleanup_duplicate_payment_logs_auto
                             cleanup_duplicate_payment_logs_auto()
+                        except Exception as e:
+                            print(f"❌ Payment bot error: {e}")
 
-                    scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
-                else:
-                    print("⚪ Email Payment Bot is DISABLED. No job scheduled.")
-                
+                # Always register the job - it will check the setting each time it runs
+                scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
+                current_setting = get_setting("ENABLE_EMAIL_PAYMENT_BOT", "False")
+                print(f"📅 Email Payment Bot scheduler registered (currently {'ENABLED' if current_setting == 'True' else 'DISABLED'}, checks setting each run)")
+
                 # Unpaid reminders setup
                 scheduler.add_job(func=lambda: send_unpaid_reminders(app), trigger="interval", days=1, id="unpaid_reminders")
                 
@@ -2181,12 +2198,37 @@ def payment_bot_settings():
                 db.session.add(Setting(key=key, value=str(value)))
         
         db.session.commit()
-        
+
         # Log the action
         from utils import log_admin_action
         log_admin_action(f"Email Payment Bot Settings Updated by {session.get('admin', 'Unknown')}")
-        
-        flash("✅ Email Payment Bot settings saved successfully!", "success")
+
+        # Check if we're enabling the bot - if so, trigger immediate first run (async)
+        is_enabling = "enable_email_payment_bot" in request.form
+
+        if is_enabling:
+            # Trigger immediate payment bot run in background thread (non-blocking)
+            import threading
+            from utils import match_gmail_payments_to_passes
+
+            def run_payment_bot_async():
+                """Run payment bot in background thread"""
+                with app.app_context():
+                    try:
+                        print("🚀 Payment bot ENABLED - running first check in background...")
+                        match_gmail_payments_to_passes()
+                        print("✅ Payment bot background check completed!")
+                    except Exception as e:
+                        print(f"❌ Payment bot background run failed: {e}")
+
+            thread = threading.Thread(target=run_payment_bot_async, daemon=True)
+            thread.start()
+            print("🔄 Payment bot first check started in background thread")
+
+            flash("Payment Bot enabled! First email check is running now. Subsequent checks every 30 minutes.", "success")
+        else:
+            flash("Payment Bot disabled. Email checking stopped.", "success")
+
         return redirect(url_for("payment_bot_settings"))
     
     # GET request - load settings
