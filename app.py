@@ -2614,6 +2614,11 @@ def setup():
                 if email:
                     admin_to_delete = Admin.query.filter_by(email=email).first()
                     if admin_to_delete:
+                        # Clear foreign key references before deleting to avoid constraint errors
+                        Activity.query.filter_by(created_by=admin_to_delete.id).update({"created_by": None})
+                        Passport.query.filter_by(created_by=admin_to_delete.id).update({"created_by": None})
+                        SurveyTemplate.query.filter_by(created_by=admin_to_delete.id).update({"created_by": None})
+                        Survey.query.filter_by(created_by=admin_to_delete.id).update({"created_by": None})
                         db.session.delete(admin_to_delete)
 
         # 📧 Step 3: Email settings
