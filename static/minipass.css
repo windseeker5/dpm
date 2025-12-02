@@ -1940,6 +1940,7 @@ html, body {
   
   .minipass-sidebar.show {
     transform: translateX(0);
+    z-index: 1060;  /* Must be higher than .alert (1055) */
   }
   
   .minipass-main {
