@@ -186,15 +186,16 @@
                         {% if backup_files %}
                           <div class="list-group list-group-flush">
                             {% for file in backup_files %}
-                              <div class="list-group-item d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center">
-                                  <i class="ti ti-file-zip text-muted me-3"></i>
-                                  <div>
-                                    <div class="fw-semibold">{{ file }}</div>
-                                    <div class="text-muted small">Complete system backup (database + files)</div>
+                              <div class="list-group-item">
+                                <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-md-between gap-2">
+                                  <div class="d-flex align-items-center">
+                                    <i class="ti ti-file-zip text-muted me-3"></i>
+                                    <div>
+                                      <div class="fw-semibold">{{ file }}</div>
+                                      <div class="text-muted small">Complete system backup (database + files)</div>
+                                    </div>
                                   </div>
-                                </div>
-                                <div class="d-flex gap-2">
+                                  <div class="d-flex gap-2 flex-wrap">
                                   <a href="{{ url_for('static', filename='backups/' ~ file) }}" download class="btn btn-sm btn-outline-primary">
                                     <i class="ti ti-download me-1"></i>
                                     Download
@@ -205,12 +206,13 @@
                                     <i class="ti ti-restore me-1"></i>
                                     Restore
                                   </button>
-                                  <button type="button" class="btn btn-sm btn-outline-danger" 
+                                  <button type="button" class="btn btn-sm btn-outline-danger"
                                           data-bs-toggle="modal" data-bs-target="#confirmDeleteBackupModal"
                                           onclick="setDeleteFilename('{{ file }}')">
                                     <i class="ti ti-trash me-1"></i>
                                     Delete
                                   </button>
+                                  </div>
                                 </div>
                               </div>
                             {% endfor %}
