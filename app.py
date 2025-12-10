@@ -9277,7 +9277,7 @@ def test_email_template(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import send_email, get_email_context, safe_template
+    from utils import send_email, get_email_context, safe_template, get_setting, generate_qr_code_image
     from flask import render_template
     from datetime import datetime
     import os
@@ -9289,16 +9289,18 @@ def test_email_template(activity_id):
     try:
         activity = Activity.query.get_or_404(activity_id)
         template_type = request.form.get('template_type', 'newPass')
-        test_email = request.form.get('test_email', 'kdresdell@gmail.com')
+        # Use logged-in admin's email, fallback to form input or default
+        test_email = request.form.get('test_email') or session.get('admin', 'kdresdell@gmail.com')
         
         print(f"📧 Activity: {activity.name}")
         print(f"📧 Template type: {template_type}")
         
         # Create base context with email blocks (if template needs them)
         base_context = {
-            'user_name': 'Kevin Dresdell',
-            'user_email': 'kdresdell@gmail.com',
+            'user_name': 'Test User',
+            'user_email': test_email,
             'activity_name': activity.name,
+            'activity': activity,  # Full activity object for templates
             'pass_code': 'TEST123',
             'amount': '$25.00',
             'test_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -9325,11 +9327,12 @@ def test_email_template(activity_id):
                 def __init__(self):
                     self.activity = type('obj', (object,), {
                         'name': activity.name,
-                        'id': activity.id
+                        'id': activity.id,
+                        'location_address_formatted': activity.location_address_formatted  # For templates that show location
                     })()
                     self.user = type('obj', (object,), {
                         'name': 'Test User',
-                        'email': 'kdresdell@gmail.com',
+                        'email': test_email,
                         'phone_number': '555-0123'
                     })()
                     self.pass_type = type('obj', (object,), {
@@ -9344,6 +9347,10 @@ def test_email_template(activity_id):
                     self.uses_remaining = 3
 
             pass_data = PassData()
+
+            # CRITICAL: Add pass_data to base_context so templates can access it
+            base_context['pass_data'] = pass_data
+            print(f"✅ TEST EMAIL: Added pass_data to context for {template_type}")
 
             # Render email blocks
             base_context['owner_html'] = render_template(
@@ -9416,26 +9423,38 @@ def test_email_template(activity_id):
                     except Exception as e:
                         print(f"   ⚠️ Failed to decode image {img_id}: {e}")
         
-        # Add logo image from activity or default
+        # Add logo image from activity or organization settings (not hardcoded Minipass logo)
         logo_path = None
         if hasattr(activity, 'logo_filename') and activity.logo_filename:
             logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
         if not logo_path or not os.path.exists(logo_path):
-            # Try default logo
+            # Use organization logo from settings as fallback instead of hardcoded Minipass logo
+            org_logo = get_setting('LOGO_FILENAME', 'logo.png')
+            logo_path = os.path.join('static', 'uploads', org_logo)
+        if not os.path.exists(logo_path):
+            # Final fallback to minipass logo if org logo doesn't exist
             logo_path = 'static/minipass_logo.png'
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
-                inline_images['logo'] = f.read()
-                # Note: logo_image is not needed - templates don't actually use it
-                inline_images['logo_image'] = inline_images['logo']  # Ensure both CID references work
-                print(f"   Added logo: {logo_path}")
+                logo_data = f.read()
+                # owner_card_inline.html uses cid:logo, main templates use cid:logo_image
+                # We need both CIDs but this creates duplicate attachments
+                # Only use 'logo' since that's what the owner card uses
+                inline_images['logo'] = logo_data
+                print(f"   Added logo: {logo_path} ({len(logo_data)} bytes)")
         
         # Add custom hero image if it exists
         if has_custom_hero:
             expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
             inline_images[expected_hero_cid] = hero_data
             print(f"📧 TEST EMAIL: Added custom hero image for CID '{expected_hero_cid}' ({len(hero_data)} bytes)")
-        
+
+        # Generate QR code for test email
+        qr_code_data = generate_qr_code_image('TEST123')
+        if qr_code_data:
+            inline_images['qr_code'] = qr_code_data.read()
+            print(f"   Added QR code: {len(inline_images['qr_code'])} bytes")
+
         print("\n🚀 CALLING send_email() with compiled template...")
         sys.stdout.flush()
         
