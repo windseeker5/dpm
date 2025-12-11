@@ -1511,6 +1511,17 @@ def match_gmail_payments_to_passes():
                 except Exception as e:
                     print(f"⚠️ Failed to emit payment notification: {e}")
 
+                # Send push notification for successful payment match
+                try:
+                    send_push_notification_to_admins(
+                        title=f"Payment Matched: ${amt:.2f}",
+                        body=f"{best_passport.user.name} - {best_passport.activity.name}",
+                        url=f"/payment-bot-matches?filter=matched",
+                        tag=f"payment-{best_passport.id}"
+                    )
+                except Exception as e:
+                    print(f"⚠️ Push notification error (payment match): {e}")
+
                 # Email was already moved BEFORE DB commit (see STEP 1 above)
                 # This ensures transaction safety - if email move fails, payment isn't processed
             else:
@@ -1624,6 +1635,17 @@ def match_gmail_payments_to_passes():
                         note=note_text,
                         email_received_date=email_received_date
                     ))
+
+                # Send push notification for NO_MATCH payment (needs manual review)
+                try:
+                    send_push_notification_to_admins(
+                        title=f"Payment No Match: ${amt:.2f}",
+                        body=f"From: {name} - needs manual review",
+                        url=f"/payment-bot-matches?filter=no_match",
+                        tag=f"nomatch-{name}-{amt}"
+                    )
+                except Exception as e:
+                    print(f"⚠️ Push notification error (payment no-match): {e}")
 
         db.session.commit()
         mail.expunge()
@@ -1963,7 +1985,7 @@ def get_all_activity_logs():
         # 🔵 Payments
         for p in EbankPayment.query.all():
             if p.result == "MATCHED":
-                log_type = "Interact Payment"
+                log_type = "Payment Matched"
                 # NEW: Show bank name and match score for transparency
                 bank_name = p.bank_info_name or "Unknown"
                 match_score = f"{p.name_score:.1f}" if p.name_score else "N/A"
@@ -2014,7 +2036,7 @@ def get_all_activity_logs():
 
             logs.append({
                 "timestamp": r.reminder_sent_at,
-                "type": "Late Reminder Detected",
+                "type": "Reminder Sent",
                 "user": "auto-reminder@system",
                 "details": f"Late payment detected for {user_name} for Activity '{activity_name}' by App Bot"
             })
@@ -2835,6 +2857,18 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
             context=context,
             timestamp_override=timestamp
         )
+
+    # Send push notification to all subscribed admins
+    try:
+        passport_type_name = f" ({passport_type.name})" if passport_type else ""
+        send_push_notification_to_admins(
+            title=f"New Signup: {activity.name}",
+            body=f"{signup.user.name} signed up{passport_type_name}",
+            url=f"/signups?q={signup.user.name}",
+            tag=f"signup-{signup.id}"
+        )
+    except Exception as e:
+        print(f"⚠️ Push notification error (signup): {e}")
 
 
 def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None, timestamp=None):
@@ -3990,5 +4024,154 @@ def export_user_contacts_csv(user_data):
 
     return output.getvalue()
 
+
+# ================================
+# 📱 PUSH NOTIFICATIONS
+# ================================
+
+def get_or_create_vapid_keys():
+    """
+    Get existing VAPID keys or generate new ones if not present.
+    VAPID keys are stored in the Setting table for persistence.
+
+    Returns:
+        dict: {'private_key': str, 'public_key': str}
+    """
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    # Check if keys already exist
+    private_key_setting = Setting.query.filter_by(key="VAPID_PRIVATE_KEY").first()
+    public_key_setting = Setting.query.filter_by(key="VAPID_PUBLIC_KEY").first()
+
+    if private_key_setting and public_key_setting:
+        return {
+            'private_key': private_key_setting.value,
+            'public_key': public_key_setting.value
+        }
+
+    # Generate new ECDSA key pair using P-256 curve (required for VAPID)
+    private_key_obj = ec.generate_private_key(ec.SECP256R1())
+
+    # Get private key in PEM format
+    private_key = private_key_obj.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    ).decode('utf-8')
+
+    # Get public key in URL-safe base64 format (for browser push subscription)
+    public_key_bytes = private_key_obj.public_key().public_bytes(
+        encoding=serialization.Encoding.X962,
+        format=serialization.PublicFormat.UncompressedPoint
+    )
+    public_key_b64 = base64.urlsafe_b64encode(public_key_bytes).decode('utf-8').rstrip('=')
+
+    # Save to database
+    if not private_key_setting:
+        db.session.add(Setting(key="VAPID_PRIVATE_KEY", value=private_key))
+    else:
+        private_key_setting.value = private_key
+
+    if not public_key_setting:
+        db.session.add(Setting(key="VAPID_PUBLIC_KEY", value=public_key_b64))
+    else:
+        public_key_setting.value = public_key_b64
+
+    db.session.commit()
+
+    print(f"✅ Generated new VAPID keys for push notifications")
+
+    return {
+        'private_key': private_key,
+        'public_key': public_key_b64
+    }
+
+
+def send_push_notification_to_admins(title, body, url=None, tag=None):
+    """
+    Send push notification to all admins with active subscriptions.
+
+    Args:
+        title: Notification title
+        body: Notification body text
+        url: URL to open when notification is clicked
+        tag: Optional tag to replace previous notifications with same tag
+
+    Returns:
+        int: Number of notifications successfully sent
+    """
+    from pywebpush import webpush, WebPushException
+    from models import PushSubscription
+    from datetime import datetime, timezone
+    import json
+
+    try:
+        vapid_keys = get_or_create_vapid_keys()
+    except Exception as e:
+        print(f"❌ Failed to get VAPID keys: {e}")
+        return 0
+
+    # Get VAPID claims email from settings, or use default
+    claims_email_setting = Setting.query.filter_by(key="VAPID_CLAIMS_EMAIL").first()
+    vapid_claims_email = claims_email_setting.value if claims_email_setting else "mailto:admin@minipass.me"
+
+    subscriptions = PushSubscription.query.all()
+
+    if not subscriptions:
+        return 0
+
+    payload = json.dumps({
+        'title': title,
+        'body': body,
+        'url': url or '/',
+        'tag': tag,
+        'icon': '/static/icons/icon-192x192.png',
+        'badge': '/static/favicon.png'
+    })
+
+    failed_subscriptions = []
+    success_count = 0
+
+    for sub in subscriptions:
+        subscription_info = {
+            'endpoint': sub.endpoint,
+            'keys': {
+                'p256dh': sub.p256dh_key,
+                'auth': sub.auth_key
+            }
+        }
+
+        try:
+            webpush(
+                subscription_info=subscription_info,
+                data=payload,
+                vapid_private_key=vapid_keys['private_key'],
+                vapid_claims={'sub': vapid_claims_email}
+            )
+            # Update last_used timestamp
+            sub.last_used_dt = datetime.now(timezone.utc)
+            success_count += 1
+        except WebPushException as e:
+            print(f"⚠️ Push notification failed for subscription {sub.id}: {e}")
+            # If subscription is expired or invalid (404, 410), mark for removal
+            if e.response and e.response.status_code in [404, 410]:
+                failed_subscriptions.append(sub.id)
+        except Exception as e:
+            print(f"⚠️ Unexpected push error for subscription {sub.id}: {e}")
+
+    # Clean up invalid subscriptions
+    if failed_subscriptions:
+        PushSubscription.query.filter(
+            PushSubscription.id.in_(failed_subscriptions)
+        ).delete(synchronize_session=False)
+        print(f"🗑️ Removed {len(failed_subscriptions)} expired push subscription(s)")
+
+    db.session.commit()
+
+    if success_count > 0:
+        print(f"📱 Sent push notification to {success_count} device(s): {title}")
+
+    return success_count
 
 

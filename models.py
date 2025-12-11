@@ -45,6 +45,25 @@ class AdminActionLog(db.Model):
     action = db.Column(db.Text)
 
 
+class PushSubscription(db.Model):
+    """Stores push notification subscriptions for admins"""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admin.id", ondelete="CASCADE"), nullable=False)
+    endpoint = db.Column(db.Text, nullable=False, unique=True)  # Push service URL
+    p256dh_key = db.Column(db.Text, nullable=False)  # Public key for encryption
+    auth_key = db.Column(db.Text, nullable=False)  # Auth secret
+    user_agent = db.Column(db.String(255), nullable=True)  # Browser/device info
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    last_used_dt = db.Column(db.DateTime, nullable=True)  # Track last successful push
+
+    # Relationships
+    admin = db.relationship("Admin", backref="push_subscriptions")
+
+    __table_args__ = (
+        db.Index('ix_push_subscription_admin', 'admin_id'),
+    )
+
+
 
 
 # ✅ Generalized SaaS models (non-conflicting with current Pass logic)

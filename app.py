@@ -1332,15 +1332,14 @@ def bulk_signup_action():
 
             db.session.commit()
 
-            # Log admin action
-            signup_word = "signup" if count == 1 else "signups"
+            # Log admin action as "Signup Rejected" for activity log filter
             details = ', '.join(signup_info[:5])
             if len(signup_info) > 5:
                 details += '...'
 
             db.session.add(AdminActionLog(
                 admin_email=admin_email,
-                action=f"Deleted {count} {signup_word}: {details} by {admin_email}"
+                action=f"Rejected signup for {details} by {admin_email}"
             ))
             db.session.commit()
 
@@ -1638,7 +1637,11 @@ def approve_and_create_pass(signup_id):
     db.session.commit()
     db.session.expire_all()
 
-    # ✅ Step 4: Log admin action
+    # ✅ Step 4: Log admin actions (signup approved + passport created)
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin", "unknown"),
+        action=f"Signup approved for {signup.user.name} for Activity '{signup.activity.name}' by {session.get('admin', 'unknown')}"
+    ))
     db.session.add(AdminActionLog(
         admin_email=session.get("admin", "unknown"),
         action=f"Passport created from signup for {signup.user.name} (Code: {passport.pass_code}) by {session.get('admin', 'unknown')}"
@@ -2535,6 +2538,126 @@ def api_payment_bot_logs():
         })
     
     return jsonify({"logs": logs}), 200
+
+
+# ================================
+# 📱 PUSH NOTIFICATION API ROUTES
+# ================================
+
+@app.route("/api/push/vapid-public-key", methods=["GET"])
+def get_vapid_public_key():
+    """Return the VAPID public key for client-side subscription"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    from utils import get_or_create_vapid_keys
+    try:
+        keys = get_or_create_vapid_keys()
+        return jsonify({"publicKey": keys['public_key']})
+    except Exception as e:
+        current_app.logger.error(f"Error getting VAPID keys: {e}")
+        return jsonify({"error": "Failed to get VAPID keys"}), 500
+
+
+@app.route("/api/push/subscribe", methods=["POST"])
+def push_subscribe():
+    """Save a push notification subscription for the current admin"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    if not data or not data.get('subscription'):
+        return jsonify({"error": "Invalid subscription data"}), 400
+
+    subscription = data['subscription']
+    endpoint = subscription.get('endpoint')
+    keys = subscription.get('keys', {})
+    p256dh = keys.get('p256dh')
+    auth = keys.get('auth')
+
+    if not all([endpoint, p256dh, auth]):
+        return jsonify({"error": "Missing subscription fields"}), 400
+
+    admin = Admin.query.filter_by(email=session.get("admin")).first()
+    if not admin:
+        return jsonify({"error": "Admin not found"}), 404
+
+    from models import PushSubscription
+
+    # Check if subscription already exists (update or create)
+    existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+    if existing:
+        existing.admin_id = admin.id
+        existing.p256dh_key = p256dh
+        existing.auth_key = auth
+        existing.user_agent = request.headers.get('User-Agent', '')[:255]
+    else:
+        new_sub = PushSubscription(
+            admin_id=admin.id,
+            endpoint=endpoint,
+            p256dh_key=p256dh,
+            auth_key=auth,
+            user_agent=request.headers.get('User-Agent', '')[:255]
+        )
+        db.session.add(new_sub)
+
+    db.session.commit()
+
+    from utils import log_admin_action
+    log_admin_action(f"Push notifications enabled by {session.get('admin')}")
+
+    return jsonify({"success": True, "message": "Subscription saved"})
+
+
+@app.route("/api/push/unsubscribe", methods=["POST"])
+def push_unsubscribe():
+    """Remove a push notification subscription"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    endpoint = data.get('endpoint') if data else None
+
+    admin = Admin.query.filter_by(email=session.get("admin")).first()
+    if not admin:
+        return jsonify({"error": "Admin not found"}), 404
+
+    from models import PushSubscription
+
+    if endpoint:
+        # Remove specific subscription
+        PushSubscription.query.filter_by(
+            admin_id=admin.id,
+            endpoint=endpoint
+        ).delete()
+    else:
+        # Remove all subscriptions for this admin
+        PushSubscription.query.filter_by(admin_id=admin.id).delete()
+
+    db.session.commit()
+
+    from utils import log_admin_action
+    log_admin_action(f"Push notifications disabled by {session.get('admin')}")
+
+    return jsonify({"success": True, "message": "Unsubscribed"})
+
+
+@app.route("/api/push/status", methods=["GET"])
+def push_status():
+    """Check if current admin has active push subscriptions"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    admin = Admin.query.filter_by(email=session.get("admin")).first()
+    if not admin:
+        return jsonify({"subscribed": False})
+
+    from models import PushSubscription
+    count = PushSubscription.query.filter_by(admin_id=admin.id).count()
+    return jsonify({
+        "subscribed": count > 0,
+        "subscription_count": count
+    })
 
 
 @app.route("/setup", methods=["GET", "POST"])
@@ -6190,7 +6313,24 @@ def accounting_format(value):
     except (ValueError, TypeError):
         return "$0.00"
 
-
+@app.template_filter("log_type_color")
+def log_type_color(log_type):
+    """Return badge color class suffix for activity log types"""
+    colors = {
+        'Passport Redeemed': 'red',
+        'Email Sent': 'blue',
+        'Passport Created': 'green',
+        'Payment Matched': 'teal',
+        'Marked Paid': 'green',
+        'Signup Submitted': 'yellow',
+        'Signup Approved': 'green',
+        'Signup Rejected': 'red',
+        'Signup Cancelled': 'red',
+        'Activity Created': 'purple',
+        'Admin Action': 'gray',
+        'Reminder Sent': 'purple',
+    }
+    return colors.get(log_type, 'gray')
 
 
 

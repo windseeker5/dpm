@@ -44,3 +44,7 @@ marshmallow
 
 # 🔒 Security
 bleach  # HTML sanitization for email templates
+
+# 📱 Push Notifications
+pywebpush>=1.14.0  # Web Push protocol
+py-vapid>=1.9.0    # VAPID key generation

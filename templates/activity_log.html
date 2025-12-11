@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Transaction Historique{% endblock %}
+{% block title %}Activity Log{% endblock %}
 
 {% block content %}
 
@@ -7,12 +7,9 @@
   <!-- Page Header -->
   <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
-      <div class="row g-2 align-items-center">
-        <div class="col">
-          <div class="text-uppercase text-muted fw-bold lh-1" style="font-size: 0.75rem;">TRANSACTION</div>
-          <h1 class="page-title">HISTORIQUE</h1>
-        </div>
-      </div>
+      <h2 class="mb-0">
+        <i class="ti ti-history me-2" style="color: #206bc4;"></i>Activity Log
+      </h2>
     </div>
   </div>
 
@@ -61,64 +58,76 @@
     </div>
   </div>
 
-    <!-- 🔹 Table -->
+    <!-- 🔹 Table / Cards Container -->
     <div class="card">
     <div class="card-header">
       <h3 class="card-title">Last Transactions</h3>
     </div>
-    <div class="table-responsive">
-      <table class="table card-table table-vcenter" id="logTable">
-        <thead>
-          <tr>
-            <th scope="col" class="text-muted">Date/Time</th>
-            <th scope="col" class="text-muted">Type</th>
-            <th scope="col" class="text-muted">Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for log in logs %}
-          <tr>
-      
-            <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
 
-            <td data-type="{{ log.type }}">
-              {% if log.type == 'Passport Redeemed' %}
-                <i class="ti ti-ticket text-danger"></i>
-              {% elif log.type == 'Email Sent' %}
-                <i class="ti ti-mail text-info"></i>
-              {% elif log.type == 'Passport Created' %}
-                <i class="ti ti-id text-lime"></i>
-              {% elif log.type == 'Interact Payment' %}
-                <i class="ti ti-currency-dollar text-success"></i>  
-              {% elif log.type == 'Marked Paid' %}
-                <i class="ti ti-check text-green"></i>  
-              {% elif log.type == 'Reminder Sent' %}
-                <i class="ti ti-bell text-purple"></i>
-              {% elif log.type == 'Signup Submitted' %}
-                <i class="ti ti-user-plus text-success"></i>  
-              {% elif log.type == 'Signup Approved' %}
-                <i class="ti ti-user-check text-green"></i>
-              {% elif log.type == 'Signup Rejected' %}
-                <i class="ti ti-user-x text-danger"></i>
-              {% elif log.type == 'Signup Cancelled' %}
-                <i class="ti ti-user-x text-danger"></i> <!-- ✅ NEW for Signup Cancelled -->
-              {% elif log.type == 'Activity Created' %}
-                <i class="ti ti-target text-orange"></i>
-              {% elif log.type == 'Admin Action' %}
-                <i class="ti ti-settings text-muted"></i>
-              {% else %}
-                <i class="ti ti-activity text-muted"></i>  
-              {% endif %}
-              {{ log.type }}
-            </td>
-            
+    <!-- Desktop Table View (hidden on mobile) -->
+    <div class="d-none d-md-block">
+      <div class="table-responsive">
+        <table class="table card-table table-vcenter" id="logTable">
+          <thead>
+            <tr>
+              <th scope="col" class="text-muted">Date/Time</th>
+              <th scope="col" class="text-muted">Type</th>
+              <th scope="col" class="text-muted">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr data-type="{{ log.type }}">
+              <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
+              <td>
+                {% if log.type == 'Passport Redeemed' %}
+                  <i class="ti ti-ticket text-danger"></i>
+                {% elif log.type == 'Email Sent' %}
+                  <i class="ti ti-mail text-info"></i>
+                {% elif log.type == 'Passport Created' %}
+                  <i class="ti ti-id text-lime"></i>
+                {% elif log.type == 'Interact Payment' %}
+                  <i class="ti ti-currency-dollar text-success"></i>
+                {% elif log.type == 'Marked Paid' %}
+                  <i class="ti ti-check text-green"></i>
+                {% elif log.type == 'Reminder Sent' %}
+                  <i class="ti ti-bell text-purple"></i>
+                {% elif log.type == 'Signup Submitted' %}
+                  <i class="ti ti-user-plus text-success"></i>
+                {% elif log.type == 'Signup Approved' %}
+                  <i class="ti ti-user-check text-green"></i>
+                {% elif log.type == 'Signup Rejected' %}
+                  <i class="ti ti-user-x text-danger"></i>
+                {% elif log.type == 'Signup Cancelled' %}
+                  <i class="ti ti-user-x text-danger"></i>
+                {% elif log.type == 'Activity Created' %}
+                  <i class="ti ti-target text-orange"></i>
+                {% elif log.type == 'Admin Action' %}
+                  <i class="ti ti-settings text-muted"></i>
+                {% else %}
+                  <i class="ti ti-activity text-muted"></i>
+                {% endif %}
+                {{ log.type }}
+              </td>
+              <td class="log-description">{{ log.details }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-
-            <td>{{ log.details }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <!-- Mobile Card View (hidden on desktop) -->
+    <div class="d-md-none" id="mobileLogCards">
+      {% for log in logs %}
+      <div class="log-card-mobile" data-type="{{ log.type }}">
+        <div class="log-card-badges mb-2">
+          <span class="badge badge-sm bg-gray-lt me-2">{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d') }}</span>
+          <span class="badge badge-sm bg-{{ log.type | log_type_color }}-lt">{{ log.type }}</span>
+        </div>
+        <div class="log-card-description">{{ log.details }}</div>
+      </div>
+      {% endfor %}
     </div>
 
     <!-- Pagination -->
@@ -138,23 +147,51 @@
 document.addEventListener("DOMContentLoaded", function () {
   const searchInput = document.getElementById("searchBox");
   const typeFilter = document.getElementById("filterType");
-  const rows = Array.from(document.querySelectorAll("#logTable tbody tr"));
-  const tableBody = document.querySelector("#logTable tbody");
   const showingCount = document.getElementById("showingCount");
+
+  // Desktop table elements
+  const tableRows = Array.from(document.querySelectorAll("#logTable tbody tr"));
+  const tableBody = document.querySelector("#logTable tbody");
+
+  // Mobile card elements
+  const mobileCards = Array.from(document.querySelectorAll("#mobileLogCards .log-card-mobile"));
+  const mobileContainer = document.getElementById("mobileLogCards");
 
   const rowsPerPage = 50;
   let currentPage = 1;
 
-  function renderTable(filteredRows) {
+  function filterItems(items) {
+    const search = searchInput.value.toLowerCase();
+    const type = typeFilter.value.toLowerCase();
+
+    return items.filter(item => {
+      const itemType = (item.getAttribute("data-type") || "").toLowerCase();
+      const text = item.textContent.toLowerCase();
+      return (!type || itemType.includes(type)) && text.includes(search);
+    });
+  }
+
+  function renderView() {
+    const filteredTableRows = filterItems(tableRows);
+    const filteredMobileCards = filterItems(mobileCards);
+
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
-    const pageRows = filteredRows.slice(start, end);
 
+    // Render desktop table
+    const pageTableRows = filteredTableRows.slice(start, end);
     tableBody.innerHTML = "";
-    pageRows.forEach(row => tableBody.appendChild(row));
-    showingCount.textContent = filteredRows.length;
+    pageTableRows.forEach(row => tableBody.appendChild(row));
 
-    renderPagination(filteredRows.length);
+    // Render mobile cards
+    const pageMobileCards = filteredMobileCards.slice(start, end);
+    mobileContainer.innerHTML = "";
+    pageMobileCards.forEach(card => mobileContainer.appendChild(card));
+
+    // Update count (use table rows count as reference)
+    showingCount.textContent = filteredTableRows.length;
+
+    renderPagination(filteredTableRows.length);
   }
 
   function renderPagination(total) {
@@ -169,35 +206,23 @@ document.addEventListener("DOMContentLoaded", function () {
       li.addEventListener("click", function (e) {
         e.preventDefault();
         currentPage = i;
-        renderTable(filterRows());
+        renderView();
       });
       pagination.appendChild(li);
     }
   }
 
-  function filterRows() {
-    const search = searchInput.value.toLowerCase();
-    const type = typeFilter.value.toLowerCase();
-
-    return rows.filter(row => {
-      const rowType = row.children[1].getAttribute("data-type").toLowerCase();
-
-      const text = row.textContent.toLowerCase();
-      return (!type || rowType.includes(type)) && text.includes(search);
-    });
-  }
-
   searchInput.addEventListener("input", () => {
     currentPage = 1;
-    renderTable(filterRows());
+    renderView();
   });
 
   typeFilter.addEventListener("change", () => {
     currentPage = 1;
-    renderTable(filterRows());
+    renderView();
   });
 
-  renderTable(rows);
+  renderView();
 });
 </script>
 {% endblock %}
