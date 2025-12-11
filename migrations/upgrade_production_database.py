@@ -1458,6 +1458,46 @@ def task19_fix_activity_primary_key(cursor):
 
 
 # ============================================================================
+# TASK 20: Add Push Subscription Table for Web Push Notifications
+# ============================================================================
+def task20_add_push_subscription_table(cursor):
+    """Add push_subscription table for web push notifications"""
+    log("🔔", "TASK 20: Adding push_subscription table", Colors.BLUE)
+
+    # Check if table already exists
+    if check_table_exists(cursor, 'push_subscription'):
+        log("⏭️ ", "  push_subscription table already exists", Colors.YELLOW)
+        return True
+
+    try:
+        # Create the table
+        cursor.execute("""
+            CREATE TABLE push_subscription (
+                id INTEGER NOT NULL PRIMARY KEY,
+                admin_id INTEGER NOT NULL,
+                endpoint TEXT NOT NULL UNIQUE,
+                p256dh_key TEXT NOT NULL,
+                auth_key TEXT NOT NULL,
+                user_agent VARCHAR(255),
+                created_dt DATETIME,
+                last_used_dt DATETIME,
+                FOREIGN KEY(admin_id) REFERENCES admin (id) ON DELETE CASCADE
+            )
+        """)
+        log("✅", "  Created push_subscription table", Colors.GREEN)
+
+        # Create index on admin_id
+        cursor.execute("CREATE INDEX ix_push_subscription_admin ON push_subscription (admin_id)")
+        log("✅", "  Created index ix_push_subscription_admin", Colors.GREEN)
+
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to create push_subscription table: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
 # TASK 17: Remove Organizations Table (Migration cb97872b8def)
 # ============================================================================
 def task17_remove_organizations_table(cursor):
@@ -1655,6 +1695,7 @@ def main():
         ("Stripe Subscription Settings", task18_add_stripe_subscription_settings),
         ("Remove Organizations", task17_remove_organizations_table),
         ("Activity PRIMARY KEY Fix", task19_fix_activity_primary_key),
+        ("Push Subscription Table", task20_add_push_subscription_table),
         ("Financial Views", task15_create_financial_views),
     ]
 
@@ -1695,7 +1736,7 @@ def main():
         print()
         log("📝", f"{Colors.BOLD}NEXT STEPS:{Colors.RESET}", Colors.BLUE)
         log("1️⃣ ", "Fix migration tracking:")
-        print(f"     {Colors.YELLOW}sqlite3 instance/minipass.db \"UPDATE alembic_version SET version_num = '90c766ac9eed';\" {Colors.RESET}")
+        print(f"     {Colors.YELLOW}sqlite3 instance/minipass.db \"UPDATE alembic_version SET version_num = '177944451aa6';\" {Colors.RESET}")
         log("2️⃣ ", "Restart your application container")
         log("3️⃣ ", "Test login and verify all features work")
         separator()
