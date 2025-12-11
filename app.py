@@ -29,7 +29,8 @@ from api.geocode import geocode_api
 # 🌐 Flask Core
 from flask import (
     Flask, render_template, render_template_string, request, redirect,
-    url_for, session, flash, get_flashed_messages, jsonify, current_app, make_response, Response
+    url_for, session, flash, get_flashed_messages, jsonify, current_app, make_response, Response,
+    send_from_directory
 )
 
 
@@ -2544,6 +2545,50 @@ def api_payment_bot_logs():
 # 📱 PUSH NOTIFICATION API ROUTES
 # ================================
 
+@app.route("/service-worker.js")
+def serve_service_worker():
+    """Serve service worker from root for full site scope (required for push notifications)"""
+    return send_from_directory(
+        app.static_folder,
+        'service-worker.js',
+        mimetype='application/javascript'
+    )
+
+
+@app.route("/manifest.json")
+def dynamic_manifest():
+    """Serve dynamic manifest with subdomain as app name for PWA"""
+    host = request.host.split(':')[0]
+    parts = host.split('.')
+
+    if len(parts) >= 3:
+        subdomain = parts[0].upper()
+    else:
+        subdomain = "Minipass"
+
+    manifest = {
+        "name": f"{subdomain} - Activity Manager",
+        "short_name": subdomain,
+        "description": "Manage activities, signups, payments, and digital passes",
+        "start_url": "/?source=pwa",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#00ab66",
+        "orientation": "any",
+        "scope": "/",
+        "icons": [
+            {"src": "/static/favicon.png", "sizes": "32x32", "type": "image/png"},
+            {"src": "/static/icons/icon-96x96.png", "sizes": "96x96", "type": "image/png"},
+            {"src": "/static/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png"},
+            {"src": "/static/apple-touch-icon.png", "sizes": "180x180", "type": "image/png"},
+            {"src": "/static/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+        ]
+    }
+
+    return jsonify(manifest)
+
+
 @app.route("/api/push/vapid-public-key", methods=["GET"])
 def get_vapid_public_key():
     """Return the VAPID public key for client-side subscription"""
@@ -2658,6 +2703,50 @@ def push_status():
         "subscribed": count > 0,
         "subscription_count": count
     })
+
+
+@app.route("/api/push/test", methods=["POST"])
+def push_test():
+    """Send a test push notification to the current admin"""
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    admin = Admin.query.filter_by(email=session.get("admin")).first()
+    if not admin:
+        return jsonify({"success": False, "error": "Admin not found"}), 404
+
+    from models import PushSubscription
+    subscriptions = PushSubscription.query.filter_by(admin_id=admin.id).all()
+
+    if not subscriptions:
+        return jsonify({
+            "success": False,
+            "error": "No push subscriptions found. Please enable push notifications first.",
+            "subscription_count": 0
+        })
+
+    from utils import send_push_notification_to_admin
+    try:
+        sent_count = send_push_notification_to_admin(
+            admin_id=admin.id,
+            title="Test Notification",
+            body="If you see this, push notifications are working!",
+            url="/unified_settings",
+            tag="test-notification"
+        )
+        return jsonify({
+            "success": True,
+            "message": f"Test notification sent to {sent_count} device(s)",
+            "sent_count": sent_count,
+            "subscription_count": len(subscriptions)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Push test error: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "subscription_count": len(subscriptions)
+        }), 500
 
 
 @app.route("/setup", methods=["GET", "POST"])
