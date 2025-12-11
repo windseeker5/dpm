@@ -4053,12 +4053,9 @@ def get_or_create_vapid_keys():
     # Generate new ECDSA key pair using P-256 curve (required for VAPID)
     private_key_obj = ec.generate_private_key(ec.SECP256R1())
 
-    # Get private key in PEM format
-    private_key = private_key_obj.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    ).decode('utf-8')
+    # Get private key as raw bytes (32 bytes for P-256), then base64 encode for pywebpush
+    private_key_bytes = private_key_obj.private_numbers().private_value.to_bytes(32, 'big')
+    private_key_b64 = base64.urlsafe_b64encode(private_key_bytes).decode('utf-8').rstrip('=')
 
     # Get public key in URL-safe base64 format (for browser push subscription)
     public_key_bytes = private_key_obj.public_key().public_bytes(
@@ -4069,9 +4066,9 @@ def get_or_create_vapid_keys():
 
     # Save to database
     if not private_key_setting:
-        db.session.add(Setting(key="VAPID_PRIVATE_KEY", value=private_key))
+        db.session.add(Setting(key="VAPID_PRIVATE_KEY", value=private_key_b64))
     else:
-        private_key_setting.value = private_key
+        private_key_setting.value = private_key_b64
 
     if not public_key_setting:
         db.session.add(Setting(key="VAPID_PUBLIC_KEY", value=public_key_b64))
@@ -4083,7 +4080,7 @@ def get_or_create_vapid_keys():
     print(f"✅ Generated new VAPID keys for push notifications")
 
     return {
-        'private_key': private_key,
+        'private_key': private_key_b64,
         'public_key': public_key_b64
     }
 
