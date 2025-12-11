@@ -256,34 +256,24 @@
 <!-- Push Notifications Module -->
 <script src="{{ url_for('static', filename='js/push-notifications.js') }}?v=1.0"></script>
 <script>
-// Add chevron rotation for Advanced Server Settings
 document.addEventListener('DOMContentLoaded', function() {
+    // Chevron rotation for Advanced Server Settings
     const collapseElement = document.getElementById('collapseAdvanced');
     const chevronIcon = document.getElementById('chevron-icon');
-
     if (collapseElement && chevronIcon) {
-        collapseElement.addEventListener('show.bs.collapse', function () {
-            chevronIcon.style.transform = 'rotate(180deg)';
-            chevronIcon.style.transition = 'transform 0.3s ease';
-        });
-
-        collapseElement.addEventListener('hide.bs.collapse', function () {
-            chevronIcon.style.transform = 'rotate(0deg)';
-            chevronIcon.style.transition = 'transform 0.3s ease';
-        });
+        collapseElement.addEventListener('show.bs.collapse', () => chevronIcon.style.transform = 'rotate(180deg)');
+        collapseElement.addEventListener('hide.bs.collapse', () => chevronIcon.style.transform = 'rotate(0deg)');
     }
 
-    // Initialize Push Notifications Toggle
+    // Push Notifications Toggle
     const pushToggle = document.getElementById('push-notifications-toggle');
     const pushStatus = document.getElementById('push-status');
     const iosWarning = document.getElementById('ios-push-warning');
 
-    // Show iOS warning if applicable
     if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
         iosWarning.style.display = 'block';
     }
 
-    // Initialize the push toggle
     if (typeof MinipassPush !== 'undefined') {
         MinipassPush.initToggle(pushToggle, pushStatus);
     }
