@@ -2511,3 +2511,82 @@ body {
     font-size: 13px;
   }
 }
+
+/* Activity Log Table - Desktop styles preserved */
+#logTable .log-description {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Activity Log Mobile Card Layout */
+.log-card-mobile {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.log-card-mobile:last-child {
+  border-bottom: none;
+}
+
+.log-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.log-card-description {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #334155;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Badge size for activity log */
+.log-card-badges .badge-sm {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  font-weight: 500;
+}
+
+/* Type badge colors - light versions */
+.badge.bg-red-lt {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.badge.bg-blue-lt {
+  background-color: #dbeafe !important;
+  color: #1e40af !important;
+}
+
+.badge.bg-green-lt {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+.badge.bg-teal-lt {
+  background-color: #ccfbf1 !important;
+  color: #115e59 !important;
+}
+
+.badge.bg-yellow-lt {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.badge.bg-purple-lt {
+  background-color: #f3e8ff !important;
+  color: #6b21a8 !important;
+}
+
+.badge.bg-orange-lt {
+  background-color: #ffedd5 !important;
+  color: #9a3412 !important;
+}
+
+.badge.bg-gray-lt {
+  background-color: #f3f4f6 !important;
+  color: #4b5563 !important;
+}

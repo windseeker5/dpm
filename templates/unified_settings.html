@@ -194,6 +194,48 @@
           </div>
         </div>
 
+        <!-- Push Notifications Card -->
+        <div class="card bg-white mb-3">
+          <div class="card-body">
+            <h2 class="mb-4"><i class="ti ti-bell-ringing me-2"></i>Push Notifications</h2>
+
+            <div class="alert alert-info mb-3" style="background-color: #f0f9ff; border-color: #e0f2fe;">
+              <div class="d-flex">
+                <div>
+                  <i class="ti ti-device-mobile alert-icon text-info me-2"></i>
+                </div>
+                <div>
+                  <h4 class="alert-title">Real-time Alerts</h4>
+                  <div class="text-muted">
+                    Get instant notifications on your device when:
+                    <ul class="mb-0 mt-1">
+                      <li>Someone signs up for an activity</li>
+                      <li>A payment is automatically matched</li>
+                      <li>A payment needs manual review (no match)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="push-notifications-toggle" style="width: 3em; height: 1.5em;">
+              <label class="form-check-label ms-2" for="push-notifications-toggle" style="font-size: 1.1rem;">
+                Enable Push Notifications
+              </label>
+            </div>
+
+            <div id="push-status" class="text-muted small"></div>
+
+            <!-- iOS Warning (hidden by default, shown via JS if on iOS) -->
+            <div id="ios-push-warning" class="alert alert-warning mt-3" style="display: none;">
+              <i class="ti ti-brand-apple me-2"></i>
+              <strong>iOS Note:</strong> Push notifications require iOS 16.4+ and the app must be
+              added to your home screen ("Add to Home Screen" in Safari).
+            </div>
+          </div>
+        </div>
+
         <!-- Bottom Save Button -->
         <div class="d-flex justify-content-end mb-3">
           <button type="submit" class="btn btn-success">
@@ -211,12 +253,14 @@
 {% block scripts %}
 <!-- Unified Settings JavaScript -->
 <script src="{{ url_for('static', filename='js/unified-settings.js') }}?v=3.0"></script>
+<!-- Push Notifications Module -->
+<script src="{{ url_for('static', filename='js/push-notifications.js') }}?v=1.0"></script>
 <script>
 // Add chevron rotation for Advanced Server Settings
 document.addEventListener('DOMContentLoaded', function() {
     const collapseElement = document.getElementById('collapseAdvanced');
     const chevronIcon = document.getElementById('chevron-icon');
-    
+
     if (collapseElement && chevronIcon) {
         collapseElement.addEventListener('show.bs.collapse', function () {
             chevronIcon.style.transform = 'rotate(180deg)';
@@ -227,6 +271,21 @@ document.addEventListener('DOMContentLoaded', function() {
             chevronIcon.style.transform = 'rotate(0deg)';
             chevronIcon.style.transition = 'transform 0.3s ease';
         });
+    }
+
+    // Initialize Push Notifications Toggle
+    const pushToggle = document.getElementById('push-notifications-toggle');
+    const pushStatus = document.getElementById('push-status');
+    const iosWarning = document.getElementById('ios-push-warning');
+
+    // Show iOS warning if applicable
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        iosWarning.style.display = 'block';
+    }
+
+    // Initialize the push toggle
+    if (typeof MinipassPush !== 'undefined') {
+        MinipassPush.initToggle(pushToggle, pushStatus);
     }
 });
 </script>
