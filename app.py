@@ -2604,6 +2604,7 @@ def get_vapid_public_key():
         return jsonify({"error": "Failed to get VAPID keys"}), 500
 
 
+@csrf.exempt
 @app.route("/api/push/subscribe", methods=["POST"])
 def push_subscribe():
     """Save a push notification subscription for the current admin"""
@@ -2654,6 +2655,7 @@ def push_subscribe():
     return jsonify({"success": True, "message": "Subscription saved"})
 
 
+@csrf.exempt
 @app.route("/api/push/unsubscribe", methods=["POST"])
 def push_unsubscribe():
     """Remove a push notification subscription"""
@@ -2705,6 +2707,7 @@ def push_status():
     })
 
 
+@csrf.exempt
 @app.route("/api/push/test", methods=["POST"])
 def push_test():
     """Send a test push notification to the current admin"""
