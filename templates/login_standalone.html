@@ -12,8 +12,8 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <!-- PWA Manifest (dynamic - uses subdomain as app name) -->
+  <link rel="manifest" href="/manifest.json">
 
   <!-- PWA Meta Tags -->
   <meta name="mobile-web-app-capable" content="yes">

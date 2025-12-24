@@ -2557,16 +2557,23 @@ def serve_service_worker():
 
 @app.route("/manifest.json")
 def dynamic_manifest():
-    """Serve dynamic manifest with subdomain as app name for PWA"""
+    """Serve dynamic manifest with subdomain as app name for PWA.
+
+    Each subdomain gets a unique PWA identity via the 'id' field.
+    This allows multiple installations (LHGI, HEQ, etc.) on the same device.
+    """
     host = request.host.split(':')[0]
     parts = host.split('.')
 
     if len(parts) >= 3:
         subdomain = parts[0].upper()
+        subdomain_lower = parts[0].lower()
     else:
         subdomain = "Minipass"
+        subdomain_lower = "minipass"
 
     manifest = {
+        "id": f"/{subdomain_lower}/",
         "name": f"{subdomain} - Activity Manager",
         "short_name": subdomain,
         "description": "Manage activities, signups, payments, and digital passes",
@@ -2586,7 +2593,9 @@ def dynamic_manifest():
         ]
     }
 
-    return jsonify(manifest)
+    response = jsonify(manifest)
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
 
 
 @app.route("/api/push/vapid-public-key", methods=["GET"])
