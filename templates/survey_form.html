@@ -6,10 +6,10 @@
   /* Mobile-first survey styling */
   .survey-container {
     max-width: 700px;
-    margin: 0 auto;
+    margin: 20px auto 0;
     padding: 0;
     min-height: 100vh;
-    background-color: #fff;
+    background-color: #f8f9fa;  /* Light gray - not white */
   }
 
   /* Activity Branding Header - Beautiful Image Card */
@@ -26,6 +26,7 @@
     align-items: center;
     justify-content: center;
     padding: 2rem 1.5rem;
+    margin: 0 1.5rem;  /* Align width with question card */
   }
 
   /* Fallback gradient when no image */
@@ -113,10 +114,28 @@
 
   .question-header {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 0.625rem;
-    gap: 1rem;
+    flex-direction: column;
+    align-items: flex-start;  /* Left-align instead of center */
+    margin-bottom: 1rem;
+    gap: 0.5rem;
+  }
+
+  .question-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
+    background: #206bc4;  /* Flat color, no gradient */
+    color: white;
+    border-radius: 1rem;  /* Pill shape */
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+  }
+
+  /* Add "Q" prefix for clarity */
+  .question-number::before {
+    content: "Q";
   }
 
   .question-counter {
@@ -129,11 +148,12 @@
   }
 
   .question-text {
-    flex: 1;
+    width: 100%;
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 0;
     color: #1e293b;
+    text-align: left;
   }
 
   /* Modern Option Cards */
@@ -220,14 +240,81 @@
     padding: 1.5rem;
     color: #64748b;
     font-size: 0.875rem;
-    border-top: 1px solid #e9ecef;
-    background-color: #f8f9fa;
+    border-top: none;
+    background-color: transparent;
   }
+
+  /* Step Wizard Styles */
+  .step-indicator {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+  }
+
+  .survey-step {
+    display: none;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  .survey-step.active {
+    display: block;
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Navigation Buttons */
+  .step-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    gap: 1rem;
+  }
+
+  .btn-prev, .btn-next, .btn-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-prev {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+  }
+
+  .btn-prev:hover {
+    background: #e2e8f0;
+  }
+
+  .btn-next, .btn-submit {
+    background: linear-gradient(135deg, #0054a6, #206bc4);
+    color: white;
+    border: none;
+    margin-left: auto;
+  }
+
+  .btn-next:hover, .btn-submit:hover {
+    background: linear-gradient(135deg, #004494, #1a5ba8);
+    box-shadow: 0 4px 12px rgba(32, 107, 196, 0.3);
+  }
+
 
   /* Mobile optimizations */
   @media (max-width: 576px) {
     .survey-branding {
       padding: 1.5rem 1rem;
+      margin: 0 1rem;  /* Align with mobile survey-content padding */
     }
 
     .survey-content {
@@ -245,7 +332,12 @@
 
     .question-header {
       margin-bottom: 0.5rem;
-      gap: 0.75rem;
+      gap: 0.4rem;
+    }
+
+    .question-number {
+      padding: 0.2rem 0.6rem;
+      font-size: 0.7rem;
     }
 
     .question-counter {
@@ -261,6 +353,15 @@
       margin-bottom: 0.25rem;
       min-height: 44px;
     }
+
+    .btn-prev, .btn-next, .btn-submit {
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .step-navigation {
+      margin-top: 1rem;
+    }
   }
 </style>
 
@@ -272,7 +373,7 @@
        {% endif %}>
 
     <div class="survey-branding-org">
-      {{ ORG_NAME if ORG_NAME else survey.activity.name }}
+      {{ survey.name }}
     </div>
 
     <div class="survey-branding-activity">
@@ -282,17 +383,9 @@
 
   <!-- Survey Content -->
   <div class="survey-content">
-    <!-- Survey Title -->
-    <h1 class="survey-title">{{ survey.name }}</h1>
-
-    {% if survey.description %}
-      <p class="survey-description">{{ survey.description }}</p>
-    {% endif %}
-
-    <!-- Completion Estimate -->
-    <div class="completion-estimate">
-      <i class="ti ti-clock me-1"></i>
-      <strong>Temps estimé :</strong> Environ 1 minute
+    <!-- Step Indicator -->
+    <div class="step-indicator" id="stepIndicator">
+      Question 1 sur {{ questions.questions|length }}
     </div>
 
     <!-- Progress Bar -->
@@ -306,64 +399,82 @@
       <!-- Preserve response token from email invitation -->
       <input type="hidden" name="response_token" value="{{ request.args.get('token', '') }}">
 
-      {% for question in questions.questions %}
-        <div class="question-card" data-question="{{ question.id }}">
-          <div class="question-header">
-            <div class="question-text">
-              {{ question.question }}
-              {% if question.required %}
-                <span class="required-indicator">*</span>
+      <!-- Step Wizard Container -->
+      <div class="survey-steps">
+        {% for question in questions.questions %}
+          <div class="survey-step{% if loop.first %} active{% endif %}" data-step="{{ loop.index }}">
+            <div class="question-card" data-question="{{ question.id }}">
+              <div class="question-header">
+                <span class="question-number">{{ loop.index }}</span>
+                <div class="question-text">
+                  {{ question.question }}
+                  {% if question.required %}
+                    <span class="required-indicator">*</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              {% if question.type == 'rating' %}
+                {% for i in range(question.min_rating, question.max_rating + 1) %}
+                  <label class="option-card" for="q{{ question.id }}_{{ i }}">
+                    <input type="radio"
+                           name="question_{{ question.id }}"
+                           value="{{ i }}"
+                           id="q{{ question.id }}_{{ i }}"
+                           {% if question.required %}required{% endif %}>
+                    <span class="option-content">
+                      ⭐ {{ i }}{% if question.labels and question.labels.get(i|string) %} - {{ question.labels[i|string] }}{% endif %}
+                    </span>
+                  </label>
+                {% endfor %}
+
+              {% elif question.type == 'multiple_choice' %}
+                {% for option in question.options %}
+                  <label class="option-card" for="q{{ question.id }}_{{ loop.index }}">
+                    <input type="radio"
+                           name="question_{{ question.id }}"
+                           value="{{ option }}"
+                           id="q{{ question.id }}_{{ loop.index }}"
+                           {% if question.required %}required{% endif %}>
+                    <span class="option-content">{{ option }}</span>
+                  </label>
+                {% endfor %}
+
+              {% elif question.type == 'open_ended' %}
+                <div class="text-area-question">
+                  <textarea class="form-control"
+                            name="question_{{ question.id }}"
+                            placeholder="Partagez vos impressions..."
+                            {% if question.max_length %}maxlength="{{ question.max_length }}"{% endif %}
+                            {% if question.required %}required{% endif %}></textarea>
+                  {% if question.max_length %}
+                    <div class="form-hint mt-1">Maximum {{ question.max_length }} caractères</div>
+                  {% endif %}
+                </div>
               {% endif %}
             </div>
-            <div class="question-counter">Question {{ loop.index }} sur {{ questions.questions|length }}</div>
+
+            <!-- Navigation Buttons -->
+            <div class="step-navigation">
+              {% if not loop.first %}
+                <button type="button" class="btn-prev" onclick="prevStep()">
+                  <i class="ti ti-chevron-left"></i> Précédent
+                </button>
+              {% endif %}
+
+              {% if loop.last %}
+                <button type="submit" class="btn-submit">
+                  <i class="ti ti-check"></i> Soumettre
+                </button>
+              {% elif question.type == 'open_ended' %}
+                <button type="button" class="btn-next" onclick="nextStep()">
+                  Suivant <i class="ti ti-chevron-right"></i>
+                </button>
+              {% endif %}
+            </div>
           </div>
-
-          {% if question.type == 'rating' %}
-            {% for i in range(question.min_rating, question.max_rating + 1) %}
-              <label class="option-card" for="q{{ question.id }}_{{ i }}">
-                <input type="radio"
-                       name="question_{{ question.id }}"
-                       value="{{ i }}"
-                       id="q{{ question.id }}_{{ i }}"
-                       {% if question.required %}required{% endif %}>
-                <span class="option-content">
-                  ⭐ {{ i }}{% if question.labels and question.labels.get(i|string) %} - {{ question.labels[i|string] }}{% endif %}
-                </span>
-              </label>
-            {% endfor %}
-
-          {% elif question.type == 'multiple_choice' %}
-            {% for option in question.options %}
-              <label class="option-card" for="q{{ question.id }}_{{ loop.index }}">
-                <input type="radio"
-                       name="question_{{ question.id }}"
-                       value="{{ option }}"
-                       id="q{{ question.id }}_{{ loop.index }}"
-                       {% if question.required %}required{% endif %}>
-                <span class="option-content">{{ option }}</span>
-              </label>
-            {% endfor %}
-
-          {% elif question.type == 'open_ended' %}
-            <div class="text-area-question">
-              <textarea class="form-control"
-                        name="question_{{ question.id }}"
-                        placeholder="Partagez vos impressions..."
-                        {% if question.max_length %}maxlength="{{ question.max_length }}"{% endif %}
-                        {% if question.required %}required{% endif %}
-                        onkeyup="updateProgress()"></textarea>
-              {% if question.max_length %}
-                <div class="form-hint mt-1">Maximum {{ question.max_length }} caractères</div>
-              {% endif %}
-            </div>
-          {% endif %}
-        </div>
-      {% endfor %}
-
-      <!-- Submit Button -->
-      <button type="submit" class="survey-submit">
-        <i class="ti ti-check me-2"></i>Soumettre le sondage
-      </button>
+        {% endfor %}
+      </div>
     </form>
   </div>
 
@@ -375,35 +486,51 @@
 </div>
 
 <script>
-  // Progress tracking
-  function updateProgress() {
-    const form = document.getElementById('surveyForm');
-    const questions = document.querySelectorAll('.question-card');
-    const totalQuestions = questions.length;
-    let answeredQuestions = 0;
+  // Step Wizard State
+  let currentStep = 1;
+  const totalSteps = document.querySelectorAll('.survey-step').length;
 
-    questions.forEach(function(questionCard) {
-      const inputs = questionCard.querySelectorAll('input[type="radio"]:checked, textarea');
-      let hasAnswer = false;
-
-      inputs.forEach(function(input) {
-        if (input.type === 'radio' && input.checked) {
-          hasAnswer = true;
-        } else if (input.type === 'textarea' && input.value.trim() !== '') {
-          hasAnswer = true;
-        }
-      });
-
-      if (hasAnswer) {
-        answeredQuestions++;
-      }
+  // Update the UI to show current step
+  function updateStepUI() {
+    // Hide all steps
+    document.querySelectorAll('.survey-step').forEach(function(step) {
+      step.classList.remove('active');
     });
 
-    const progressPercent = (answeredQuestions / totalQuestions) * 100;
-    document.getElementById('progressBar').style.width = progressPercent + '%';
+    // Show current step
+    const activeStep = document.querySelector('.survey-step[data-step="' + currentStep + '"]');
+    if (activeStep) {
+      activeStep.classList.add('active');
+    }
+
+    // Update progress bar (based on step progress)
+    const progress = ((currentStep - 1) / totalSteps) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+
+    // Update step indicator
+    document.getElementById('stepIndicator').textContent = 'Question ' + currentStep + ' sur ' + totalSteps;
+
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Option card click handling
+  // Navigate to next step
+  function nextStep() {
+    if (currentStep < totalSteps) {
+      currentStep++;
+      updateStepUI();
+    }
+  }
+
+  // Navigate to previous step
+  function prevStep() {
+    if (currentStep > 1) {
+      currentStep--;
+      updateStepUI();
+    }
+  }
+
+  // Option card click handling with AUTO-ADVANCE
   document.querySelectorAll('.option-card').forEach(function(card) {
     card.addEventListener('click', function(e) {
       // Prevent double trigger if clicking directly on input
@@ -424,19 +551,12 @@
       // Check the radio input
       input.checked = true;
 
-      // Update progress
-      updateProgress();
-
-      // Auto-scroll to next question
+      // AUTO-ADVANCE after 400ms delay (gives visual feedback first)
       setTimeout(function() {
-        const nextQuestion = questionCard.nextElementSibling;
-        if (nextQuestion && nextQuestion.classList.contains('question-card')) {
-          nextQuestion.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
+        if (currentStep < totalSteps) {
+          nextStep();
         }
-      }, 300);
+      }, 400);
     });
   });
 
@@ -453,54 +573,78 @@
 
       // Add selected to parent card
       card.classList.add('selected');
-      updateProgress();
+
+      // AUTO-ADVANCE after 400ms delay
+      setTimeout(function() {
+        if (currentStep < totalSteps) {
+          nextStep();
+        }
+      }, 400);
     });
   });
 
-  // Form validation with better UX
+  // Form validation on submit
   document.getElementById('surveyForm').addEventListener('submit', function(e) {
-    const requiredInputs = document.querySelectorAll('input[required], textarea[required]');
+    // Validate all required fields before submission
+    const steps = document.querySelectorAll('.survey-step');
     let isValid = true;
+    let firstInvalidStep = null;
 
-    requiredInputs.forEach(function(input) {
-      if (input.type === 'radio') {
-        const radioGroup = document.querySelectorAll(`input[name="${input.name}"]`);
-        const isChecked = Array.from(radioGroup).some(radio => radio.checked);
-        if (!isChecked) {
-          isValid = false;
-          input.closest('.question-card').style.border = '2px solid #dc3545';
-        } else {
-          input.closest('.question-card').style.border = '1px solid #e9ecef';
+    steps.forEach(function(step, index) {
+      const stepNum = index + 1;
+      const requiredInputs = step.querySelectorAll('input[required], textarea[required]');
+
+      requiredInputs.forEach(function(input) {
+        if (input.type === 'radio') {
+          const radioGroup = step.querySelectorAll('input[name="' + input.name + '"]');
+          const isChecked = Array.from(radioGroup).some(function(radio) { return radio.checked; });
+          if (!isChecked) {
+            isValid = false;
+            if (!firstInvalidStep) firstInvalidStep = stepNum;
+            step.querySelector('.question-card').style.border = '2px solid #dc3545';
+          } else {
+            step.querySelector('.question-card').style.border = '1px solid #e9ecef';
+          }
+        } else if (input.tagName === 'TEXTAREA' && input.hasAttribute('required')) {
+          if (input.value.trim() === '') {
+            isValid = false;
+            if (!firstInvalidStep) firstInvalidStep = stepNum;
+            step.querySelector('.question-card').style.border = '2px solid #dc3545';
+          } else {
+            step.querySelector('.question-card').style.border = '1px solid #e9ecef';
+          }
         }
-      } else if (input.type === 'textarea' && input.hasAttribute('required')) {
-        if (input.value.trim() === '') {
-          isValid = false;
-          input.closest('.question-card').style.border = '2px solid #dc3545';
-        } else {
-          input.closest('.question-card').style.border = '1px solid #e9ecef';
-        }
-      }
+      });
     });
 
     if (!isValid) {
       e.preventDefault();
-      // Scroll to first invalid question
-      const firstInvalid = document.querySelector('.question-card[style*="dc3545"]');
-      if (firstInvalid) {
-        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Navigate to first invalid step
+      if (firstInvalidStep) {
+        currentStep = firstInvalidStep;
+        updateStepUI();
       }
     }
   });
 
-  // Initialize progress
-  updateProgress();
-
   // Add loading state to submit button
-  document.getElementById('surveyForm').addEventListener('submit', function() {
-    const submitBtn = document.querySelector('.survey-submit');
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Envoi en cours...';
-    submitBtn.disabled = true;
+  document.getElementById('surveyForm').addEventListener('submit', function(e) {
+    if (!e.defaultPrevented) {
+      const submitBtn = document.querySelector('.btn-submit');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Envoi...';
+        submitBtn.disabled = true;
+      }
+    }
   });
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    updateStepUI();
+  });
+
+  // Also initialize immediately in case DOMContentLoaded already fired
+  updateStepUI();
 </script>
 
 {% endblock %}
