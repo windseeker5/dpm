@@ -2189,7 +2189,8 @@ function initializeMobileCarousel() {
   const dots = document.querySelectorAll('.mobile-dot');
   if (carousel && window.innerWidth < 768) {
     carousel.addEventListener('scroll', () => {
-      const index = Math.round(carousel.scrollLeft / carousel.offsetWidth);
+      const cardWidth = carousel.querySelector('.mobile-kpi-card').offsetWidth + 16;
+      const index = Math.min(dots.length - 1, Math.round(carousel.scrollLeft / cardWidth));
       dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
     });
   }

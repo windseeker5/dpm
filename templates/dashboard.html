@@ -2638,7 +2638,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const dots = document.querySelectorAll('.mobile-dot');
   if (scroll && dots.length > 0) {
     scroll.addEventListener('scroll', () => {
-      const index = Math.round(scroll.scrollLeft / scroll.offsetWidth);
+      const cardWidth = scroll.querySelector('.mobile-kpi-card').offsetWidth + 16;
+      const index = Math.min(dots.length - 1, Math.round(scroll.scrollLeft / cardWidth));
       dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
     });
   }
