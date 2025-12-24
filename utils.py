@@ -4025,6 +4025,102 @@ def export_user_contacts_csv(user_data):
     return output.getvalue()
 
 
+def export_user_contacts_raw_csv(search_query="", status_filter="", show_all=False):
+    """
+    Export RAW passport data to CSV format - one row per passport, no aggregation.
+
+    Args:
+        search_query: Optional search filter for user name/email
+        status_filter: "active" to show only users with passports
+        show_all: If True, ignore status_filter
+
+    Returns:
+        str: CSV formatted string with raw passport data
+    """
+    import csv
+    from io import StringIO
+    from datetime import datetime, timezone
+    from models import User, Passport, Activity, PassportType
+
+    output = StringIO()
+    # Add UTF-8 BOM for Excel compatibility
+    output.write('\ufeff')
+    writer = csv.writer(output)
+
+    # Query raw passport data with joins
+    query = db.session.query(
+        User.name.label('user_name'),
+        User.email.label('user_email'),
+        User.phone_number.label('user_phone'),
+        User.email_opt_out,
+        Activity.name.label('activity_name'),
+        Passport.passport_type_name,
+        Passport.sold_amt,
+        Passport.created_dt,
+        Passport.paid,
+        Passport.paid_date,
+        Passport.uses_remaining,
+        Passport.pass_code,
+        Passport.notes
+    ).join(
+        User, Passport.user_id == User.id
+    ).join(
+        Activity, Passport.activity_id == Activity.id
+    )
+
+    # Apply search filter
+    if search_query:
+        search_pattern = f"%{search_query}%"
+        query = query.filter(
+            db.or_(
+                User.name.ilike(search_pattern),
+                User.email.ilike(search_pattern)
+            )
+        )
+
+    # Order by created date descending
+    query = query.order_by(Passport.created_dt.desc())
+
+    results = query.all()
+
+    # Write column headers (no comment rows - they confuse spreadsheet software)
+    writer.writerow([
+        'User Name',
+        'User Email',
+        'User Phone',
+        'Activity',
+        'Passport Type',
+        'Amount',
+        'Created Date',
+        'Paid',
+        'Paid Date',
+        'Uses Remaining',
+        'Pass Code',
+        'Notes',
+        'Email Opt-Out'
+    ])
+
+    # Write data rows - one per passport
+    for row in results:
+        writer.writerow([
+            row.user_name or '',
+            row.user_email or '',
+            row.user_phone or '',
+            row.activity_name or '',
+            row.passport_type_name or '',
+            f"{row.sold_amt:.2f}" if row.sold_amt else '0.00',
+            row.created_dt.strftime('%Y-%m-%d %H:%M') if row.created_dt else '',
+            'Yes' if row.paid else 'No',
+            row.paid_date.strftime('%Y-%m-%d') if row.paid_date else '',
+            row.uses_remaining if row.uses_remaining is not None else '',
+            row.pass_code or '',
+            row.notes or '',
+            'Yes' if row.email_opt_out else 'No'
+        ])
+
+    return output.getvalue()
+
+
 # ================================
 # 📱 PUSH NOTIFICATIONS
 # ================================

@@ -4302,6 +4302,38 @@ def financial_report():
                          is_zero_results=is_zero_results)
 
 
+def generate_smart_filename(source_type, record_id, date, amount, original_filename):
+    """
+    Generate smart filename for ZIP export: {TYPE}-{ID}_{DATE}_{AMOUNT}_{original}.{ext}
+    Example: INCOME-42_2025-01-15_150_00_receipt.jpg
+    """
+    import re
+    from werkzeug.utils import secure_filename
+
+    # Extract extension
+    ext = original_filename.rsplit('.', 1)[-1].lower() if '.' in original_filename else 'file'
+
+    # Extract original base name (remove UUID prefix if present)
+    original_base = original_filename.rsplit('.', 1)[0]
+    original_base = re.sub(r'^(income|expense)_[a-f0-9]{32}', '', original_base)
+    if not original_base:
+        original_base = 'receipt'
+    original_base = secure_filename(original_base) or 'receipt'
+
+    # Format date
+    if hasattr(date, 'strftime'):
+        date_str = date.strftime('%Y-%m-%d')
+    else:
+        date_str = str(date).split()[0]
+
+    # Format amount (replace . with _ for filename safety)
+    amount_str = f"{float(amount):.2f}".replace('.', '_')
+
+    # Build filename
+    type_prefix = source_type.upper()
+    return f"{type_prefix}-{record_id}_{date_str}_{amount_str}_{original_base}.{ext}"
+
+
 @app.route("/reports/financial/export")
 def financial_report_export():
     """Export financial report in various formats (CSV, IIF, XLSX)"""
@@ -4323,9 +4355,14 @@ def financial_report_export():
 
     # Generate filename
     if start_date and end_date:
-        filename = f"financial_report_{start_date}_to_{end_date}.{export_format}"
+        base_filename = f"financial_report_{start_date}_to_{end_date}"
     else:
-        filename = f"financial_report_all_time.{export_format}"
+        base_filename = "financial_report_all_time"
+
+    if export_format == "zip":
+        filename = f"{base_filename}_with_docs.zip"
+    else:
+        filename = f"{base_filename}.{export_format}"
 
     # Export based on format
     if export_format == "csv":
@@ -4405,6 +4442,146 @@ def financial_report_export():
             mimetype="text/csv",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
+    elif export_format == "zip":
+        # ZIP export with all documents (exports ALL data, ignores filters)
+        from io import BytesIO
+        from zipfile import ZipFile
+        import os
+
+        # Query ALL transactions (Passport sales + Income + Expense) with receipt info
+        # Matches the monthly_transactions_detail view structure
+        zip_query = """
+            SELECT
+                strftime('%Y-%m', COALESCE(p.paid_date, p.created_dt)) as month,
+                a.name as project,
+                'Income' as transaction_type,
+                COALESCE(p.paid_date, p.created_dt) as transaction_date,
+                u.name as customer,
+                p.notes as memo,
+                p.sold_amt as amount,
+                CASE WHEN p.paid = 1 THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
+                'Passport System' as entered_by,
+                NULL as record_id,
+                'passport' as source_type,
+                NULL as receipt_filename
+            FROM passport p
+            JOIN activity a ON p.activity_id = a.id
+            LEFT JOIN user u ON p.user_id = u.id
+
+            UNION ALL
+
+            SELECT
+                strftime('%Y-%m', i.date) as month,
+                a.name as project,
+                'Income' as transaction_type,
+                i.date as transaction_date,
+                NULL as customer,
+                i.note as memo,
+                i.amount,
+                CASE WHEN i.payment_status = 'received' THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
+                COALESCE(i.created_by, 'System') as entered_by,
+                i.id as record_id,
+                'income' as source_type,
+                i.receipt_filename
+            FROM income i
+            JOIN activity a ON i.activity_id = a.id
+
+            UNION ALL
+
+            SELECT
+                strftime('%Y-%m', e.date) as month,
+                a.name as project,
+                'Expense' as transaction_type,
+                e.date as transaction_date,
+                NULL as customer,
+                e.description as memo,
+                e.amount,
+                CASE WHEN e.payment_status = 'paid' THEN 'Paid' ELSE 'Unpaid (AP)' END as payment_status,
+                COALESCE(e.created_by, 'System') as entered_by,
+                e.id as record_id,
+                'expense' as source_type,
+                e.receipt_filename
+            FROM expense e
+            JOIN activity a ON e.activity_id = a.id
+
+            ORDER BY transaction_date DESC
+        """
+
+        # Execute query (no filters - exports everything)
+        zip_result = db.session.execute(text(zip_query))
+
+        # Create in-memory ZIP
+        zip_buffer = BytesIO()
+        with ZipFile(zip_buffer, 'w') as zipf:
+            # Generate CSV with document_filename column
+            csv_output = StringIO()
+            writer = csv.writer(csv_output)
+
+            # Write header with document_filename column
+            writer.writerow([
+                'month',
+                'project',
+                'transaction_type',
+                'transaction_date',
+                'customer',
+                'memo',
+                'amount',
+                'payment_status',
+                'entered_by',
+                'document_filename'
+            ])
+
+            documents_added = set()
+            receipts_dir = os.path.join(app.static_folder, 'uploads', 'receipts')
+
+            for row in zip_result:
+                doc_filename = ''
+
+                if row.receipt_filename:
+                    # Generate smart filename
+                    doc_filename = generate_smart_filename(
+                        source_type=row.source_type,
+                        record_id=row.record_id,
+                        date=row.transaction_date,
+                        amount=row.amount,
+                        original_filename=row.receipt_filename
+                    )
+
+                    # Add document to ZIP if not already added and file exists
+                    if doc_filename not in documents_added:
+                        receipt_path = os.path.join(receipts_dir, row.receipt_filename)
+                        # Security: verify path is within receipts directory
+                        receipt_path = os.path.abspath(receipt_path)
+                        if receipt_path.startswith(os.path.abspath(receipts_dir)) and os.path.exists(receipt_path):
+                            zipf.write(receipt_path, f'documents/{doc_filename}')
+                            documents_added.add(doc_filename)
+                        else:
+                            # File missing - skip silently, leave doc_filename empty
+                            doc_filename = ''
+
+                # Write CSV row
+                writer.writerow([
+                    row.month,
+                    row.project,
+                    row.transaction_type,
+                    row.transaction_date,
+                    row.customer or '',
+                    row.memo or '',
+                    f"{row.amount:.2f}",
+                    row.payment_status,
+                    row.entered_by or '',
+                    doc_filename
+                ])
+
+            # Add CSV to ZIP
+            zipf.writestr('financial_report.csv', csv_output.getvalue())
+
+        zip_buffer.seek(0)
+        return Response(
+            zip_buffer.getvalue(),
+            mimetype='application/zip',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
     elif export_format == "iif":
         # TODO: Implement QuickBooks IIF export in Phase 2
         flash("QuickBooks IIF export coming soon! Use CSV for now.", "info")
@@ -4472,38 +4649,24 @@ def user_contacts_report():
 
 @app.route("/reports/user-contacts/export")
 def user_contacts_export():
-    """Export user contact list in CSV format"""
+    """Export user contact list in CSV format - RAW data (one row per passport)"""
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from utils import get_user_contact_report, export_user_contacts_csv
+    from utils import export_user_contacts_raw_csv
     from datetime import datetime, timezone
     from flask import Response
 
-    # Get filter parameters (same as main report)
+    # Get search filter (if any)
     q = request.args.get("q", "").strip()
-    status_filter = request.args.get("status", "")
-    show_all_param = request.args.get("show_all", "")
-
-    # Set default filter to "active" if no filter specified
-    if not status_filter and show_all_param != "true":
-        status_filter = "active"
-
-    # Get user contact data
-    user_data = get_user_contact_report(
-        search_query=q,
-        status_filter=status_filter,
-        show_all=(show_all_param == "true")
-    )
 
     # Generate filename
     now = datetime.now(timezone.utc)
-    filter_part = "active" if status_filter == "active" else "all"
     search_part = f"_search_{q[:20]}" if q else ""
-    filename = f"user_contacts_{filter_part}{search_part}_{now.strftime('%Y-%m-%d')}.csv"
+    filename = f"user_contacts_raw{search_part}_{now.strftime('%Y-%m-%d')}.csv"
 
-    # Export to CSV
-    csv_content = export_user_contacts_csv(user_data)
+    # Export raw passport data to CSV
+    csv_content = export_user_contacts_raw_csv(search_query=q)
 
     return Response(
         csv_content,
