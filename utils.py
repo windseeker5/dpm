@@ -2211,6 +2211,19 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     from datetime import datetime
     import sys
 
+    def clean_mime_headers(msg):
+        """Remove MIME-Version from nested parts to avoid Amavis BAD-HEADER-7 quarantine.
+
+        Python's email.mime library adds MIME-Version: 1.0 to every MIME part,
+        but mail servers like Amavis flag multiple MIME-Version headers as suspicious.
+        This removes MIME-Version from all nested parts, keeping only the root header.
+        """
+        if msg.is_multipart():
+            for part in msg.get_payload():
+                if 'MIME-Version' in part:
+                    del part['MIME-Version']
+                clean_mime_headers(part)
+
     # ✅ Check if user has opted out of emails
     from models import User
     email_user = User.query.filter_by(email=to_email).first()
@@ -2507,6 +2520,11 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
 
         print(f"📤 Sending email from {from_email} to {to_email}...")
         sys.stdout.flush()
+
+        # Fix: Remove duplicate MIME-Version headers from nested parts
+        # Prevents Amavis BAD-HEADER-7 quarantine
+        clean_mime_headers(msg)
+
         server.sendmail(from_email, [to_email], msg.as_string())
         server.quit()
         
