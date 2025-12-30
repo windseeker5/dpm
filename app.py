@@ -3943,7 +3943,7 @@ def list_activities():
 
     # Calculate statistics using ALL activities (not filtered results)
     active_activities = len([a for a in all_activities if a.status == 'active'])
-    inactive_activities = len([a for a in all_activities if a.status == 'inactive'])
+    inactive_activities = len([a for a in all_activities if a.status != 'active'])
 
     # Create statistics dict to pass to template
     statistics = {
@@ -3969,7 +3969,10 @@ def list_activities():
         )
 
     if status:
-        query = query.filter(Activity.status == status)
+        if status == 'not_active':
+            query = query.filter(Activity.status != 'active')
+        else:
+            query = query.filter(Activity.status == status)
 
     if activity_type:
         query = query.filter(Activity.type.ilike(f"%{activity_type}%"))
