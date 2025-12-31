@@ -10,14 +10,17 @@ from io import BytesIO
 from PIL import Image, ImageChops
 
 
-def process_hero_image(image_path: str, padding: int = 0):
+def process_hero_image(image_path: str, padding: int = 0, target_width: int = 117):
     """
-    Process hero images by removing white background (RGB 255,255,255),
-    cropping to actual content, and optionally adding padding.
+    Process hero images by:
+    1. Removing white background (RGB 255,255,255) and cropping to actual content
+    2. Resizing to standard width (90px) while keeping aspect ratio
+       (matches HTML width="90" so email clients display correctly)
 
     Args:
         image_path: Path to the image file
         padding: Pixels of padding to add around cropped image (default: 0)
+        target_width: Target width in pixels (default: 90, matches HTML display width)
 
     Returns:
         PIL Image object with processed image
@@ -34,9 +37,9 @@ def process_hero_image(image_path: str, padding: int = 0):
         import numpy as np
         img_array = np.array(img)
 
-        # Define "white" as pixels where R, G, B are all > 250 (nearly white)
-        # This handles slight variations in white background
-        white_threshold = 250
+        # Define "white" as pixels where R, G, B are all > 240 (nearly white)
+        # Lowered from 250 to 240 to catch off-white backgrounds from AI generators
+        white_threshold = 240
         is_white = (img_array[:, :, 0] > white_threshold) & \
                    (img_array[:, :, 1] > white_threshold) & \
                    (img_array[:, :, 2] > white_threshold)
@@ -57,23 +60,62 @@ def process_hero_image(image_path: str, padding: int = 0):
 
             print(f"   📐 Cropped from {img.size} to {img_cropped.size} (removed white background)")
 
+            # Step 2: Resize to target width (200px), keeping aspect ratio
+            # This matches HTML width="200" so email clients display correctly
+            current_width, current_height = img_cropped.size
+            if current_width != target_width:
+                scale_factor = target_width / current_width
+                new_height = int(current_height * scale_factor)
+                img_resized = img_cropped.resize((target_width, new_height), Image.Resampling.LANCZOS)
+                print(f"   📏 Resized from {img_cropped.size} to {img_resized.size} (target width: {target_width}px)")
+            else:
+                img_resized = img_cropped
+                print(f"   📏 Already at target width: {target_width}px")
+
+            # Step 3: Replace all near-white pixels with pure white (255,255,255)
+            # This eliminates gray backgrounds from AI-generated images
+            img_resized_array = np.array(img_resized)
+            near_white_mask = (img_resized_array[:, :, 0] > white_threshold) & \
+                              (img_resized_array[:, :, 1] > white_threshold) & \
+                              (img_resized_array[:, :, 2] > white_threshold)
+            img_resized_array[near_white_mask] = [255, 255, 255]
+            img_resized = Image.fromarray(img_resized_array)
+            print(f"   🎨 Replaced near-white pixels with pure white (255,255,255)")
+
             if padding > 0:
                 # Add padding if requested
-                new_width = img_cropped.width + (padding * 2)
-                new_height = img_cropped.height + (padding * 2)
+                padded_width = img_resized.width + (padding * 2)
+                padded_height = img_resized.height + (padding * 2)
 
                 # Create new image with padding (white background)
-                img_padded = Image.new('RGB', (new_width, new_height), (255, 255, 255))
-                img_padded.paste(img_cropped, (padding, padding))
+                img_padded = Image.new('RGB', (padded_width, padded_height), (255, 255, 255))
+                img_padded.paste(img_resized, (padding, padding))
 
                 print(f"   ➕ Added {padding}px padding → final size: {img_padded.size}")
                 return img_padded
             else:
-                return img_cropped
+                return img_resized
         else:
-            # If no non-white content found, return original
-            print(f"   ⚠️  No non-white content found, returning original")
-            return img
+            # If no non-white content found, still resize to target width
+            print(f"   ⚠️  No non-white content found, resizing original")
+            current_width, current_height = img.size
+            if current_width != target_width:
+                scale_factor = target_width / current_width
+                new_height = int(current_height * scale_factor)
+                img_resized = img.resize((target_width, new_height), Image.Resampling.LANCZOS)
+                print(f"   📏 Resized from {img.size} to {img_resized.size} (target width: {target_width}px)")
+            else:
+                img_resized = img
+
+            # Replace near-white pixels with pure white
+            img_resized_array = np.array(img_resized)
+            near_white_mask = (img_resized_array[:, :, 0] > white_threshold) & \
+                              (img_resized_array[:, :, 1] > white_threshold) & \
+                              (img_resized_array[:, :, 2] > white_threshold)
+            img_resized_array[near_white_mask] = [255, 255, 255]
+            img_resized = Image.fromarray(img_resized_array)
+            print(f"   🎨 Replaced near-white pixels with pure white (255,255,255)")
+            return img_resized
 
     except Exception as e:
         print(f"⚠️  Warning: Could not process image {image_path}: {e}")
@@ -386,6 +428,11 @@ def main():
         print(f"🎯 COMPILATION COMPLETED SUCCESSFULLY for '{folder}'")
         if update_original:
             print(f"✅ Pristine original updated - deploy to production!")
+        print("")
+        print("⚠️  IMPORTANT: Clear the hero image cache for changes to take effect!")
+        print("   Option 1: Restart Flask server")
+        print("   Option 2: POST to /admin/clear-template-cache (while logged in)")
+        print("   Option 3: curl -X POST http://localhost:5000/admin/clear-template-cache -b 'session=...'")
         sys.exit(0)
     else:
         print(f"💥 COMPILATION FAILED for '{folder}'")
