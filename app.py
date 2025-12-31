@@ -9128,6 +9128,21 @@ def reset_email_template(activity_id):
         }), 500
 
 
+@app.route("/admin/clear-template-cache", methods=["POST"])
+def clear_template_cache():
+    """Clear the hero image cache after recompiling templates"""
+    if "admin" not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+    from utils import clear_hero_image_cache
+    clear_hero_image_cache()
+
+    return jsonify({
+        'success': True,
+        'message': 'Template hero image cache cleared successfully'
+    })
+
+
 @app.route("/activity/<int:activity_id>/email-preview")
 def email_preview(activity_id):
     """Preview email template using compiled template with email blocks and real images"""

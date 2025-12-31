@@ -77,6 +77,7 @@ def get_template_default_hero(template_type):
     Load the default hero image from compiled template's inline_images.json
 
     Note: Cached with @lru_cache for performance (avoids repeated JSON reads + base64 decoding)
+    Use clear_hero_image_cache() to clear after updating templates
     
     Args:
         template_type: Type of template (newPass, paymentReceived, etc.)
@@ -138,6 +139,16 @@ def get_template_default_hero(template_type):
     except Exception as e:
         print(f"❌ Error loading template hero: {e}")
         return None
+
+
+def clear_hero_image_cache():
+    """
+    Clear the lru_cache for get_template_default_hero.
+    Call this after updating/recompiling email templates to ensure
+    the latest hero images are used.
+    """
+    get_template_default_hero.cache_clear()
+    print("✅ Hero image cache cleared")
 
 
 def get_activity_hero_image(activity, template_type):
