@@ -10,7 +10,7 @@ from io import BytesIO
 from PIL import Image, ImageChops
 
 
-def process_hero_image(image_path: str, padding: int = 0, target_width: int = 117):
+def process_hero_image(image_path: str, padding: int = 0, target_width: int = 152):
     """
     Process hero images by:
     1. Removing white background (RGB 255,255,255) and cropping to actual content

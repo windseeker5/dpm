@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Minipass - Email Prototype V2</title>
+
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
+
+  <style type="text/css">
+    /* IMPROVED Mobile-first CSS */
+    @media only screen and (max-width: 600px) {
+      .main-table {
+        width: 100% !important;
+        min-width: 320px !important;
+        margin: 16px auto !important;
+      }
+      .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .hero-image {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 120px !important;
+      }
+      /* FIXED: Reduced mobile padding from 75px to 16px */
+      .content-padding {
+        padding: 0 16px 20px 16px !important;
+      }
+      .intro-padding {
+        padding: 16px 16px 20px 16px !important;
+      }
+      .conclusion-padding {
+        padding: 0 16px 24px 16px !important;
+      }
+      /* IMPROVED: Smaller QR code on mobile - less dominant */
+      .qr-code {
+        width: 200px !important;
+        height: 200px !important;
+        max-width: 60% !important;
+      }
+      .footer-table {
+        width: 100% !important;
+        padding: 0 16px !important;
+      }
+      .footer-text {
+        padding: 0 16px 16px 16px !important;
+        font-size: 12px !important;
+      }
+      /* IMPROVED: Larger mobile font sizes */
+      .mobile-font-size {
+        font-size: 16px !important;
+        line-height: 1.6 !important;
+      }
+      .mobile-title {
+        font-size: 24px !important;
+        padding-bottom: 16px !important;
+      }
+      /* NEW: Instruction box mobile styling */
+      .instruction-box {
+        margin: 0 16px 20px 16px !important;
+        padding: 16px !important;
+      }
+      .instruction-title {
+        font-size: 15px !important;
+      }
+      .instruction-text {
+        font-size: 14px !important;
+      }
+      /* QR section mobile */
+      .qr-section {
+        padding: 0 16px 20px 16px !important;
+      }
+      .qr-label {
+        font-size: 13px !important;
+      }
+    }
+
+    @media only screen and (max-width: 480px) {
+      .qr-code {
+        width: 180px !important;
+        height: 180px !important;
+      }
+      .hero-container {
+        padding: 24px 0 16px 0 !important;
+      }
+    }
+
+    /* Outlook specific fixes */
+    <!--[if mso]>
+    .main-table {
+      width: 600px !important;
+    }
+    <![endif]-->
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; color: #4b5563; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f6fa; min-width: 100%;">
+    <tr>
+      <td align="center" style="padding: 0;">
+
+        <!-- Outer Card Container -->
+        <table class="main-table" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius: 8px; overflow:hidden; margin: 40px auto; max-width: 600px;">
+
+          <!-- Hero Image Section -->
+          <tr>
+            <td class="hero-container" align="center" style="padding: 40px 0 20px; line-height: 0;">
+              <img class="hero-image" src="cid:hero_image" alt="Nouveau Pass" width="117" style="display: block; width: 117px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
+            </td>
+          </tr>
+
+          <!-- Dynamic Title - IMPROVED: Larger font -->
+          <tr>
+            <td class="mobile-title" align="center" style="font-size: 24px; font-weight: bold; color: #232b38; padding: 20px 20px 16px 20px;">
+              Votre passeport est prêt
+            </td>
+          </tr>
+
+          <!-- Intro Text - IMPROVED: Larger font, less padding -->
+          <tr>
+            <td class="intro-padding mobile-font-size" style="padding: 16px 40px 24px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">
+              <p style="margin: 0 0 12px 0;">Bonjour <strong>Ken Dresdell</strong>,</p>
+              <p style="margin: 0 0 12px 0;">Excellente nouvelle ! Votre passeport numérique vient d'être créé.</p>
+              <p style="margin: 0;">Il vous donne accès à <strong>4 participations</strong> pour <strong>HEQ Adulte 25/26</strong>.</p>
+            </td>
+          </tr>
+
+          <!-- ============================================ -->
+          <!-- REORDERED: Owner Card NOW COMES FIRST -->
+          <!-- ============================================ -->
+          <tr>
+            <td class="content-padding" style="padding: 0 40px 24px;">
+              <!-- SAMPLE OWNER CARD - This is the {{ owner_html }} block -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #fef9e7 0%, #e8f4fd 100%); border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size: 18px; font-weight: bold; color: #92400e; padding-bottom: 12px;">
+                          HEQ Adulte 25/26
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td style="width: 70%; vertical-align: top;">
+                                <p style="margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: #1e293b;">Ken Dresdell</p>
+                                <p style="margin: 0 0 6px 0; font-size: 14px; color: #3b82f6;">kdresdell@gmail.com</p>
+                                <p style="margin: 0 0 6px 0; font-size: 14px; color: #64748b;">(581) 624-0081</p>
+                                <p style="margin: 0; font-size: 14px; color: #3b82f6;">Activités restantes: <strong>4</strong></p>
+                              </td>
+                              <td style="width: 30%; text-align: right; vertical-align: top;">
+                                <p style="margin: 0; font-size: 22px; font-weight: bold; color: #059669;">$155.00</p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ============================================ -->
+          <!-- NEW: Instruction Box - Clear guidance -->
+          <!-- ============================================ -->
+          <tr>
+            <td align="center" style="padding: 0 40px 24px;">
+              <table class="instruction-box" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center">
+                          <p class="instruction-title" style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #0369a1;">
+                            Comment utiliser votre passeport
+                          </p>
+                          <p class="instruction-text" style="margin: 0 0 12px 0; font-size: 15px; color: #475569; line-height: 1.5;">
+                            Présentez le code QR ci-dessous à chaque participation.
+                          </p>
+                          <p class="instruction-text" style="margin: 0; font-size: 14px; color: #64748b; line-height: 1.5;">
+                            <strong>Note:</strong> Ne scannez pas ce code vous-même.<br>
+                            Montrez-le au responsable de l'activité.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ============================================ -->
+          <!-- REORDERED & RESTYLED: QR Code Section -->
+          <!-- Now comes AFTER the card and instructions -->
+          <!-- ============================================ -->
+          <tr>
+            <td class="qr-section" align="center" style="padding: 0 40px 24px;">
+              <!-- QR Label Above -->
+              <p class="qr-label" style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                Votre code d'accès
+              </p>
+              <!-- QR Code - SMALLER than before -->
+              <img class="qr-code" src="cid:qr_code" alt="QR Code" width="240" height="240" style="border-radius: 8px; border: 2px solid #e2e8f0; display: block; background: #fff; padding: 8px;">
+              <!-- QR Label Below -->
+              <p class="qr-label" style="margin: 12px 0 0 0; font-size: 13px; color: #94a3b8;">
+                À présenter lors de vos activités
+              </p>
+            </td>
+          </tr>
+
+          <!-- History Table -->
+          <tr>
+            <td class="content-padding" style="padding: 0 40px 24px;">
+              <!-- SAMPLE HISTORY TABLE - This is the {{ history_html }} block -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <tr style="background-color: #f8fafc;">
+                  <th style="padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0;">Activité</th>
+                  <th style="padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0;">Date</th>
+                  <th style="padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0;">Par</th>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-size: 14px; color: #1e293b; border-bottom: 1px solid #f1f5f9;">Création</td>
+                  <td style="padding: 12px 16px; font-size: 14px; color: #64748b; border-bottom: 1px solid #f1f5f9;">2025-11-24 23:57</td>
+                  <td style="padding: 12px 16px; font-size: 14px; color: #64748b; border-bottom: 1px solid #f1f5f9;">kdresdell</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-size: 14px; color: #1e293b;">Paiement</td>
+                  <td style="padding: 12px 16px; font-size: 14px; color: #64748b;">
+                    <span style="color: #dc2626;">Non payé</span>
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 14px; color: #64748b;">—</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Conclusion Text - IMPROVED: Better padding -->
+          <tr>
+            <td class="conclusion-padding mobile-font-size" style="padding: 0 40px 40px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">
+              <p style="margin: 0 0 12px 0;"><strong>Rappel important :</strong></p>
+              <p style="margin: 0 0 12px 0;">Votre passeport n'est pas encore payé. Merci de compléter le paiement de <strong>155.00$</strong> à l'adresse courriel suivante : <a href="mailto:heq_app@minipass.me" style="color: #3b82f6;">heq_app@minipass.me</a> pour activer votre accès.</p>
+              <p style="margin: 0 0 12px 0;">Merci de faire partie de cette aventure ! Votre participation nous permet de continuer à offrir ces activités de qualité.</p>
+              <p style="margin: 0;">Si vous avez des questions ou besoin d'assistance, n'hésitez pas à nous contacter directement.</p>
+              <p style="margin: 16px 0 0 0;">À très bientôt,<br><strong>L'équipe Fondation LHGI</strong></p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Legal Compliance Footer -->
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+          <tr>
+            <td align="center" style="font-size: 13px; color: #6b7280; padding: 20px 32px;">
+              <p style="margin: 0 0 10px 0;">Pour toute question, contactez-nous à
+                <a href="mailto:lhgi@minipass.me" style="color:#3b82f6; text-decoration:none;">lhgi@minipass.me</a>
+              </p>
+              <p style="margin: 5px 0; color:#6b7280; font-size: 12px;">
+                Fondation LHGI • 821 rue des Sables, Rimouski, QC G5L 6Y7
+              </p>
+              <p style="margin: 10px 0; font-size: 12px;">
+                <a href="#" style="color:#3b82f6; text-decoration:none;">Se désabonner</a> |
+                <a href="#" style="color:#3b82f6; text-decoration:none;">Politique de confidentialité</a>
+              </p>
+              <p style="margin: 5px 0; color:#94a3b8; font-size: 11px;">
+                Vous recevez ce courriel car vous êtes inscrit à HEQ Adulte 25/26
+              </p>
+              <p style="color:#94a3b8; margin: 10px 0 0 0; font-size: 11px;">
+                © 2025 Fondation LHGI. Tous droits réservés.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
