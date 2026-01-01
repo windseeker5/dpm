@@ -1,11 +1,11 @@
-<table cellpadding="0" cellspacing="0" border="0"
-       style="width: 360px; margin: 0 auto 30px; border-radius: 12px;
+<table cellpadding="0" cellspacing="0" border="0" width="100%"
+       style="width: 100%; margin: 0 auto 30px; border-radius: 12px;
               background: linear-gradient(to right, #fef8e1, #d6faff);
               box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); border: none;">
 
-  <!-- 🟩 Activity Title -->
+  <!-- 🟩 Activity Title - V10 SYMMETRIC -->
   <tr>
-    <td colspan="2" style="padding: 18px 16px 8px; text-align: center;">
+    <td colspan="2" style="padding: 40px 40px 20px 40px; text-align: center;">
       <div style="
         font-size: 20px;
         font-weight: 700;
@@ -20,7 +20,7 @@
   <!-- 👤 User Info + Logo + Price -->
   <tr>
     <!-- 👤 Left side: user info -->
-    <td style="padding: 12px 16px; width: 60%; vertical-align: middle;">
+    <td style="padding: 12px 20px 40px 40px; width: 50%; vertical-align: middle;">
       <div style="font-size: 15px; font-weight: bold; color: #1b3556; margin-bottom: 4px;">
         {{ pass_data.user.name if pass_data.user else pass_data.user_name }}
       </div>
@@ -39,9 +39,9 @@
     </td>
 
     <!-- 🖼 Logo + Price stacked -->
-    <td style="padding: 12px 16px; width: 40%; vertical-align: middle;">
+    <td style="padding: 12px 40px 40px 20px; width: 50%; vertical-align: middle;">
       <div style="text-align: center;">
-        <img src="cid:logo" alt="Logo" width="90"
+        <img src="cid:logo" alt="Logo" width="112"
              style="border-radius: 8px; display: block; margin: 0 auto 6px;" />
         <div style="font-size: 16px; font-weight: bold; color: #142743;">
           ${{ "%.2f"|format(pass_data.sold_amt) }}
