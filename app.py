@@ -8989,7 +8989,17 @@ def save_email_templates(activity_id):
                 template_data['intro_text'] = intro_text
             if conclusion_text:
                 template_data['conclusion_text'] = conclusion_text
-            
+
+            # Handle show_qr_code toggle (only for templates with QR codes)
+            if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
+                # Checkbox: 'on' if checked, empty/missing if unchecked
+                form_value = request.form.get(f'{template_type}_show_qr_code')
+                show_qr_code = form_value == 'on'
+                template_data['show_qr_code'] = show_qr_code
+                print(f"🔍 DEBUG SAVE: {template_type}_show_qr_code form value = '{form_value}'")
+                print(f"🔍 DEBUG SAVE: show_qr_code = {show_qr_code}")
+                print(f"🔍 DEBUG SAVE: template_data = {template_data}")
+
             # Update image references if files were uploaded
             # Check for template-specific hero image
             for uploaded_template, uploaded_hero in hero_files_uploaded:
@@ -9099,7 +9109,8 @@ def reset_email_template(activity_id):
             template_data = activity.email_templates[template_type]
             
             # Clear the customizable fields while preserving any system fields
-            fields_to_reset = ['subject', 'title', 'intro_text', 'conclusion_text', 'hero_image', 'activity_logo']
+            # Note: show_qr_code is included so it resets to default (True = show QR)
+            fields_to_reset = ['subject', 'title', 'intro_text', 'conclusion_text', 'hero_image', 'activity_logo', 'show_qr_code']
             for field in fields_to_reset:
                 if field in template_data:
                     del template_data[field]
@@ -9270,10 +9281,16 @@ def email_preview(activity_id):
     
     # Get merged context with activity customizations (preserves email blocks)
     context = get_email_context(activity, template_type, base_context)
-    
+
+    # Get show_qr_code setting from activity's email templates (default True)
+    show_qr_code = True
+    if activity.email_templates and template_type in activity.email_templates:
+        show_qr_code = activity.email_templates[template_type].get('show_qr_code', True)
+    context['show_qr_code'] = show_qr_code
+
     # Get the compiled template path
     template_path = safe_template(template_type)
-    
+
     try:
         # Render the compiled template with the merged context
         rendered_html = render_template(template_path, **context)
@@ -9338,14 +9355,19 @@ def email_preview(activity_id):
                 # Replace both logo and logo_image references
                 rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
                 rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
-        
-        
-        # Generate sample QR code for preview
-        qr_code_data = generate_qr_code_image('SAMPLE123')
-        if qr_code_data:
-            qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
-            rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
-        
+
+
+        # Generate sample QR code for preview (only if enabled)
+        # Get show_qr_code setting from activity's email templates (default True)
+        preview_show_qr = True
+        if activity.email_templates and template_type in activity.email_templates:
+            preview_show_qr = activity.email_templates[template_type].get('show_qr_code', True)
+        if preview_show_qr:
+            qr_code_data = generate_qr_code_image('SAMPLE123')
+            if qr_code_data:
+                qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
+                rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
+
         # Add a preview banner to distinguish from actual emails
         preview_banner = """
         <div style="background: #ffeaa7; color: #2d3436; padding: 10px; text-align: center; font-weight: bold; border-bottom: 2px solid #fdcb6e;">
@@ -9482,7 +9504,14 @@ def email_preview_live(activity_id):
     
     # Create temporary customizations from form data without saving to database
     live_customizations = {}
-    
+
+    # Handle show_qr_code toggle from form data (for templates that have QR codes)
+    if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
+        show_qr_form_key = f'{template_type}_show_qr_code'
+        # Checkbox: 'on' if checked, empty/missing if unchecked
+        show_qr_code = request.form.get(show_qr_form_key) == 'on'
+        live_customizations['show_qr_code'] = show_qr_code
+
     # Extract and sanitize customizations from form data for current template type
     form_fields = ['subject', 'title', 'intro_text', 'conclusion_text', 'cta_text', 'cta_url', 'custom_message']
     for field in form_fields:
@@ -9519,7 +9548,20 @@ def email_preview_live(activity_id):
     try:
         # Get merged context with live customizations
         context = get_email_context(activity, template_type, base_context)
-        
+
+        # Get show_qr_code setting from merged template (default True)
+        show_qr_code = True
+        if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
+            show_qr_code = merged_template.get('show_qr_code', True)
+        context['show_qr_code'] = show_qr_code
+
+        # DEBUG: Log preview values
+        print(f"🔍 DEBUG PREVIEW: template_type = {template_type}")
+        print(f"🔍 DEBUG PREVIEW: live_customizations = {live_customizations}")
+        print(f"🔍 DEBUG PREVIEW: merged_template = {merged_template}")
+        print(f"🔍 DEBUG PREVIEW: show_qr_code = {show_qr_code}")
+        print(f"🔍 DEBUG PREVIEW: context['show_qr_code'] = {context.get('show_qr_code')}")
+
         # Get the compiled template path
         template_path = safe_template(template_type)
         
@@ -9610,13 +9652,14 @@ def email_preview_live(activity_id):
         
         # The uploaded hero image is now handled above in the main image processing loop
         # This ensures it works with auto-detected CID references
-        
-        # Generate sample QR code for preview
-        qr_code_data = generate_qr_code_image('SAMPLE123')
-        if qr_code_data:
-            qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
-            rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
-        
+
+        # Generate sample QR code for preview (only if enabled)
+        if show_qr_code:
+            qr_code_data = generate_qr_code_image('SAMPLE123')
+            if qr_code_data:
+                qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
+                rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
+
         # Add a live preview banner to distinguish from saved templates
         preview_banner = """
         <div style="background: #74b9ff; color: #2d3436; padding: 10px; text-align: center; font-weight: bold; border-bottom: 2px solid #0984e3;">

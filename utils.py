@@ -3001,10 +3001,17 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     template_type = event_type_mapping.get(event_type, 'newPass')
     
     # Check if activity has custom template for this event type
-    has_custom_template = (activity.email_templates and 
-                          template_type in activity.email_templates and 
+    has_custom_template = (activity.email_templates and
+                          template_type in activity.email_templates and
                           activity.email_templates[template_type])
-    
+
+    # DEBUG: Log the template state
+    print(f"🔍 DEBUG notify_pass_event: template_type={template_type}")
+    print(f"🔍 DEBUG: activity.email_templates = {activity.email_templates}")
+    print(f"🔍 DEBUG: has_custom_template = {has_custom_template}")
+    if activity.email_templates and template_type in activity.email_templates:
+        print(f"🔍 DEBUG: show_qr_code in templates = {activity.email_templates[template_type].get('show_qr_code', 'NOT SET')}")
+
     # If no custom template (reset/default state), use regular email path
     if not has_custom_template:
         # Map event type to compiled template paths
@@ -3016,17 +3023,25 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         }
         template_name = template_mapping.get(event_type, 'newPass_compiled/index.html')
 
+        # Get show_qr_code setting (default True for non-customized templates)
+        show_qr_code = True
+
         # Build base context with pass data
         base_context = {
             "pass_data": pass_data,
             "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data),
             "history_html": render_template("email_blocks/history_table_inline.html", history=get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)),
             "activity_name": activity.name if activity else "",
-            "qr_code": generate_qr_code_image(pass_data.pass_code).read(),
+            "show_qr_code": show_qr_code,
         }
 
         # Use get_email_context to load defaults from email_defaults.json and add variables
         context = get_email_context(activity, template_type, base_context)
+
+        # Build inline_images - only include QR code if enabled
+        inline_images = {}
+        if show_qr_code:
+            inline_images["qr_code"] = generate_qr_code_image(pass_data.pass_code).read()
 
         # Use the standard send_email function with compiled template
         send_email_async(
@@ -3038,7 +3053,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
             template_name=template_name,
             context=context,
             timestamp_override=timestamp,
-            inline_images={"qr_code": generate_qr_code_image(pass_data.pass_code).read()}
+            inline_images=inline_images
         )
         return
     
@@ -3051,7 +3066,12 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     
     # Get email context using activity-specific templates
     email_context = get_email_context(activity, template_type, base_context)
-    
+
+    # Get show_qr_code setting from activity's email templates (default True)
+    show_qr_code = True
+    if activity.email_templates and template_type in activity.email_templates:
+        show_qr_code = activity.email_templates[template_type].get('show_qr_code', True)
+
     # Extract template values
     subject = email_context.get('subject', f"[Minipass] {event_type.title()} Notification")
     title = email_context.get('title', f"{event_type.title()} Confirmation")
@@ -3066,7 +3086,8 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     print("🔔 Email debug - title:", title)
     print("🔔 Email debug - intro:", intro[:80])
 
-    qr_data = generate_qr_code_image(pass_data.pass_code).read()
+    # Only generate QR code if enabled
+    qr_data = generate_qr_code_image(pass_data.pass_code).read() if show_qr_code else None
     history = get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)
 
     # Map event type to template directory - Use compiled template paths
@@ -3101,6 +3122,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "activity_name": activity.name if activity else "",
         "unsubscribe_url": "",  # Will be filled by send_email with subdomain
         "privacy_url": "",      # Will be filled by send_email with subdomain
+        "show_qr_code": show_qr_code,  # For conditional QR display in template
         # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
         "_skip_email_context": True
     }
@@ -3124,8 +3146,9 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
                 inline_images[cid] = base64.b64decode(img_base64)
         print(f"Loaded {len(inline_images)} inline images from compiled template")
 
-    # Add dynamic content (QR code must be generated per passport)
-    inline_images['qr_code'] = qr_data
+    # Add dynamic content (QR code must be generated per passport, only if enabled)
+    if show_qr_code and qr_data:
+        inline_images['qr_code'] = qr_data
     
     # Use new hero image selection system
     hero_data, is_custom, is_template_default = get_activity_hero_image(activity, template_type)

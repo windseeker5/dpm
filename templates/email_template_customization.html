@@ -373,13 +373,28 @@
       <!-- Conclusion Text -->
       <div class="mb-3">
         <label for="modal_{{ template_key }}_conclusion_text" class="form-label">Conclusion Text</label>
-        <textarea name="{{ template_key }}_conclusion_text" 
+        <textarea name="{{ template_key }}_conclusion_text"
                   id="modal_{{ template_key }}_conclusion_text"
-                  class="form-control template-textarea" 
+                  class="form-control template-textarea"
                   rows="5"
                   placeholder="Closing message for the email">{{ template_data.get('conclusion_text', '') }}</textarea>
       </div>
-      
+
+      <!-- QR Code Toggle (only for templates with QR codes) -->
+      {% if template_key in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment'] %}
+      <div class="mb-3">
+        <label class="form-check">
+          <input type="checkbox"
+                 class="form-check-input"
+                 name="{{ template_key }}_show_qr_code"
+                 id="modal_{{ template_key }}_show_qr_code"
+                 {% if template_data.get('show_qr_code', True) %}checked{% endif %}>
+          <span class="form-check-label">Afficher le code QR dans l'email</span>
+        </label>
+        <small class="form-hint">Désactivez si vos utilisateurs n'utilisent pas le code QR.</small>
+      </div>
+      {% endif %}
+
       <!-- Global Settings (only show for first template) -->
       {% if loop.first %}
       <hr class="my-4">
@@ -636,6 +651,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (introEditor) formData.append(`${templateType}_intro_text`, introEditor.getContent());
             if (conclusionEditor) formData.append(`${templateType}_conclusion_text`, conclusionEditor.getContent());
 
+            // Get QR code toggle for preview
+            // Get QR code toggle for preview - search INSIDE the modal to avoid duplicate ID issue
+            const showQrCheckbox = document.querySelector(`#customizeModal #modal_${templateType}_show_qr_code`);
+            if (showQrCheckbox) {
+                formData.append(`${templateType}_show_qr_code`, showQrCheckbox.checked ? 'on' : '');
+            }
+
             // Send POST request to live preview endpoint and open result in new tab
             fetch('/activity/{{ activity.id }}/email-preview-live', {
                 method: 'POST',
@@ -712,14 +734,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get file inputs for images
             const heroImageInput = document.querySelector(`#modal_${templateType}_hero_image`);
             const ownerLogoInput = document.querySelector(`#modal_${templateType}_owner_logo`);
-            
+
             if (heroImageInput && heroImageInput.files[0]) {
                 formData.append(`${templateType}_hero_image`, heroImageInput.files[0]);
             }
             if (ownerLogoInput && ownerLogoInput.files[0]) {
                 formData.append(`${templateType}_owner_logo`, ownerLogoInput.files[0]);
             }
-            
+
+            // Get QR code toggle (for templates that have it) - search INSIDE the modal to avoid duplicate ID issue
+            const showQrCheckbox = document.querySelector(`#customizeModal #modal_${templateType}_show_qr_code`);
+            if (showQrCheckbox) {
+                formData.append(`${templateType}_show_qr_code`, showQrCheckbox.checked ? 'on' : '');
+            }
+
             // Save to backend
             fetch(`/activity/{{ activity.id }}/email-templates/save`, {
                 method: 'POST',
