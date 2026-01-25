@@ -27,10 +27,10 @@
         "cta_url": "https://minipass.me/payment"
     },
     "signup": {
-        "subject": "Inscription confirmée",
-        "title": "Inscription confirmée",
-        "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p>\n<p>Votre inscription à <strong>{{ activity_name }}</strong> est confirmée !</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}\n<p>Dès réception de votre paiement, votre passeport numérique vous sera envoyé automatiquement.</p>",
-        "conclusion_text": "<p>Merci de faire partie de cette aventure ! Nous sommes ravis de vous compter parmi nous.</p>\n<p>Votre passeport numérique sera créé automatiquement dès la confirmation de votre paiement. Vous le recevrez par courriel avec toutes les informations nécessaires.</p>\n<p>À très bientôt,<br>\n<em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
+        "subject": "Demande d'inscription reçue",
+        "title": "Demande d'inscription reçue",
+        "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p>\n<p>Merci pour votre demande d'inscription à <strong>{{ activity_name }}</strong> !</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}\n<p>Votre demande est maintenant entre les mains de notre équipe. Dès qu'elle sera approuvée, vous recevrez votre passeport numérique directement par courriel. Celui-ci contiendra toutes les informations nécessaires, incluant les modalités de paiement.</p>",
+        "conclusion_text": "<p>En attendant, aucune action n'est requise de votre part.</p>\n<p>Nous vous remercions de votre patience et espérons vous accueillir bientôt !</p>\n<p><em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
         "custom_message": "",
         "cta_text": "Voir les détails",
         "cta_url": "https://minipass.me/my-signups"
