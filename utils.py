@@ -436,6 +436,78 @@ def save_setting(key, value, changed_by=None, change_reason=None):
             return value
 
 
+def get_fiscal_year_range(reference_date=None):
+    """
+    Get the start and end dates for the fiscal year containing the reference date.
+    Uses FISCAL_YEAR_START_MONTH setting (default: 1 = January = calendar year).
+
+    Args:
+        reference_date: Date to find fiscal year for (default: today)
+
+    Returns:
+        tuple: (start_date, end_date) as datetime objects with UTC timezone
+    """
+    from datetime import datetime, timezone
+
+    if reference_date is None:
+        reference_date = datetime.now(timezone.utc)
+
+    # Get fiscal year start month from settings (default: 1 = January)
+    try:
+        start_month = int(get_setting("FISCAL_YEAR_START_MONTH", "1"))
+        if start_month < 1 or start_month > 12:
+            start_month = 1
+    except (ValueError, TypeError):
+        start_month = 1
+
+    # Determine fiscal year based on reference date
+    ref_month = reference_date.month
+    ref_year = reference_date.year
+
+    if ref_month >= start_month:
+        # We're in the fiscal year that started this calendar year
+        fy_start_year = ref_year
+    else:
+        # We're in the fiscal year that started last calendar year
+        fy_start_year = ref_year - 1
+
+    # Calculate start date (first day of start_month in fy_start_year)
+    start_date = datetime(fy_start_year, start_month, 1, tzinfo=timezone.utc)
+
+    # Calculate end date (last day before next fiscal year starts)
+    if start_month == 1:
+        # Calendar year: Jan 1 to Dec 31
+        end_date = datetime(fy_start_year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+    else:
+        # Fiscal year: start_month/year to (start_month-1)/next_year
+        end_year = fy_start_year + 1
+        end_month = start_month - 1
+        # Get last day of end_month
+        if end_month in [1, 3, 5, 7, 8, 10, 12]:
+            last_day = 31
+        elif end_month in [4, 6, 9, 11]:
+            last_day = 30
+        else:  # February
+            # Check for leap year
+            if (end_year % 4 == 0 and end_year % 100 != 0) or (end_year % 400 == 0):
+                last_day = 29
+            else:
+                last_day = 28
+        end_date = datetime(end_year, end_month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+
+    return start_date, end_date
+
+
+def get_fiscal_year_display(reference_date=None):
+    """
+    Get a human-readable display string for the current fiscal year.
+
+    Returns:
+        str: e.g., "Jan 1, 2025 - Dec 31, 2025" or "Apr 1, 2025 - Mar 31, 2026"
+    """
+    start_date, end_date = get_fiscal_year_range(reference_date)
+    return f"{start_date.strftime('%b %d, %Y')} - {end_date.strftime('%b %d, %Y')}"
+
 
 def generate_pass_code():
     """
@@ -694,8 +766,8 @@ def get_kpi_data(activity_id=None, period='7d'):
     
     Args:
         activity_id: Optional activity ID for activity-specific KPIs (None for global)
-        period: Time period - '7d', '30d', '90d', or 'all'
-        
+        period: Time period - '7d', '30d', '90d', 'fy' (fiscal year), or 'all'
+
     Returns:
         dict: KPI data with current values, previous values, changes, and trends
     """
@@ -722,6 +794,14 @@ def get_kpi_data(activity_id=None, period='7d'):
             current_start = now - timedelta(days=90)
             prev_start = now - timedelta(days=180)
             prev_end = now - timedelta(days=90)
+            trend_days = 30  # Show last 30 days for trend
+        elif period == 'fy':
+            # Fiscal year period
+            current_start, current_end_fy = get_fiscal_year_range()
+            # Get previous fiscal year for comparison
+            prev_fy_start, prev_fy_end = get_fiscal_year_range(current_start - timedelta(days=1))
+            prev_start = prev_fy_start
+            prev_end = prev_fy_end
             trend_days = 30  # Show last 30 days for trend
         elif period == 'all':
             current_start = datetime.min.replace(tzinfo=timezone.utc)
