@@ -34,6 +34,33 @@
               <div class="tab-pane fade show active" id="tab-admins">
                 <h2 class="mb-4">Admin Accounts</h2>
                 {% include 'partials/settings_admins.html' %}
+
+                <!-- Fiscal Year Settings Card -->
+                <div class="card bg-white mt-4">
+                  <div class="card-body">
+                    <h2 class="mb-4">Fiscal Year</h2>
+                    <div class="mb-3">
+                      <label class="form-label">Fiscal Year Starts</label>
+                      <select name="FISCAL_YEAR_START_MONTH" class="form-select">
+                        <option value="1" {% if settings.get('FISCAL_YEAR_START_MONTH', '1') == '1' %}selected{% endif %}>January (Calendar Year)</option>
+                        <option value="2" {% if settings.get('FISCAL_YEAR_START_MONTH') == '2' %}selected{% endif %}>February</option>
+                        <option value="3" {% if settings.get('FISCAL_YEAR_START_MONTH') == '3' %}selected{% endif %}>March</option>
+                        <option value="4" {% if settings.get('FISCAL_YEAR_START_MONTH') == '4' %}selected{% endif %}>April</option>
+                        <option value="5" {% if settings.get('FISCAL_YEAR_START_MONTH') == '5' %}selected{% endif %}>May</option>
+                        <option value="6" {% if settings.get('FISCAL_YEAR_START_MONTH') == '6' %}selected{% endif %}>June</option>
+                        <option value="7" {% if settings.get('FISCAL_YEAR_START_MONTH') == '7' %}selected{% endif %}>July</option>
+                        <option value="8" {% if settings.get('FISCAL_YEAR_START_MONTH') == '8' %}selected{% endif %}>August</option>
+                        <option value="9" {% if settings.get('FISCAL_YEAR_START_MONTH') == '9' %}selected{% endif %}>September</option>
+                        <option value="10" {% if settings.get('FISCAL_YEAR_START_MONTH') == '10' %}selected{% endif %}>October</option>
+                        <option value="11" {% if settings.get('FISCAL_YEAR_START_MONTH') == '11' %}selected{% endif %}>November</option>
+                        <option value="12" {% if settings.get('FISCAL_YEAR_START_MONTH') == '12' %}selected{% endif %}>December</option>
+                      </select>
+                      <div class="form-text">
+                        Current Fiscal Year: {{ fiscal_year_display }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Email Settings Tab -->

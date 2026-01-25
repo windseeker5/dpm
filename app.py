@@ -2883,6 +2883,8 @@ def setup():
             extra_settings["ORG_NAME"] = request.form.get("ORG_NAME", "").strip()
         if "CALL_BACK_DAYS" in request.form:
             extra_settings["CALL_BACK_DAYS"] = request.form.get("CALL_BACK_DAYS", "0").strip()
+        if "FISCAL_YEAR_START_MONTH" in request.form:
+            extra_settings["FISCAL_YEAR_START_MONTH"] = request.form.get("FISCAL_YEAR_START_MONTH", "1").strip()
 
         for key, value in extra_settings.items():
             existing = Setting.query.filter_by(key=key).first()
@@ -2996,13 +2998,18 @@ def setup():
     email_templates.append("email_survey_invitation.html")
     email_templates.sort()
 
+    # Get fiscal year display string
+    from utils import get_fiscal_year_display
+    fiscal_year_display = get_fiscal_year_display()
+
     return render_template(
         "setup.html",
         settings=settings,
         admins=admins,
         backup_file=backup_file,
         backup_files=backup_files,
-        email_templates=email_templates
+        email_templates=email_templates,
+        fiscal_year_display=fiscal_year_display
     )
 
 
@@ -3167,7 +3174,7 @@ def unified_settings():
     
     # GET request - load all settings
     settings = {s.key: s.value for s in Setting.query.all()}
-    
+
     return render_template("unified_settings.html", settings=settings)
 
 
@@ -4294,10 +4301,28 @@ def financial_report():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from utils import get_financial_data_from_views
+    from utils import get_financial_data_from_views, get_fiscal_year_range, get_fiscal_year_display
 
-    # Get financial data (all time, all activities)
-    financial_data = get_financial_data_from_views(start_date=None, end_date=None, activity_filter=None)
+    # Get period filter (default to fiscal year)
+    period = request.args.get('period', 'fy')
+
+    # Calculate date range based on period
+    start_date = None
+    end_date = None
+    period_display = "All Time"
+
+    if period == 'fy':
+        fy_start, fy_end = get_fiscal_year_range()
+        start_date = fy_start.strftime('%Y-%m-%d')
+        end_date = fy_end.strftime('%Y-%m-%d')
+        period_display = get_fiscal_year_display()
+    elif period == 'all':
+        start_date = None
+        end_date = None
+        period_display = "All Time"
+
+    # Get financial data with date filters
+    financial_data = get_financial_data_from_views(start_date=start_date, end_date=end_date, activity_filter=None)
 
     # Get all activities for the drawer form
     activities = Activity.query.order_by(Activity.name).all()
@@ -4311,7 +4336,9 @@ def financial_report():
                          financial_data=financial_data,
                          activities=activities,
                          is_first_time_empty=is_first_time_empty,
-                         is_zero_results=is_zero_results)
+                         is_zero_results=is_zero_results,
+                         current_period=period,
+                         period_display=period_display)
 
 
 def generate_smart_filename(source_type, record_id, date, amount, original_filename):
@@ -4360,10 +4387,23 @@ def financial_report_export():
 
     export_format = request.args.get("format", "csv")
 
-    # Get date range parameters (default to all time)
+    # Get period parameter (supports 'fy' for fiscal year, 'all' for all time)
+    period = request.args.get('period', 'fy')
+
+    # Get date range parameters
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     activity_filter = request.args.get('activity_filter')
+
+    # If period is specified but not explicit dates, calculate from period
+    if period == 'fy' and not start_date and not end_date:
+        from utils import get_fiscal_year_range
+        fy_start, fy_end = get_fiscal_year_range()
+        start_date = fy_start.strftime('%Y-%m-%d')
+        end_date = fy_end.strftime('%Y-%m-%d')
+    elif period == 'all':
+        start_date = None
+        end_date = None
 
     # Generate filename
     if start_date and end_date:
@@ -6501,7 +6541,7 @@ def get_kpi_data_api():
     try:
         # Get and validate period parameter
         period = request.args.get('period', '7d')
-        valid_periods = ['7d', '30d', '90d', 'all']
+        valid_periods = ['7d', '30d', '90d', 'fy', 'all']
         
         if period not in valid_periods:
             return jsonify({

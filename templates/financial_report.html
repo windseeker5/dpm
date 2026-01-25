@@ -19,7 +19,18 @@
       <div class="row g-2 align-items-center">
         <div class="col">
           <h1 class="page-title"><i class="ti ti-report-money text-blue me-2"></i>Financial</h1>
-          <p class="text-muted">View comprehensive income and expense data for accounting</p>
+          <div class="d-flex align-items-center gap-2">
+            <p class="text-muted mb-0">{{ period_display }}</p>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-link text-muted dropdown-toggle p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
+                <i class="ti ti-filter"></i>
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item {% if current_period == 'fy' %}active{% endif %}" href="{{ url_for('financial_report', period='fy') }}">Fiscal Year</a></li>
+                <li><a class="dropdown-item {% if current_period == 'all' %}active{% endif %}" href="{{ url_for('financial_report', period='all') }}">All Time</a></li>
+              </ul>
+            </div>
+          </div>
         </div>
         <div class="col-auto d-none d-md-block">
           <!-- Action Buttons (Hidden on Mobile) -->
@@ -35,10 +46,10 @@
                 <i class="ti ti-download me-2"></i>Export
               </button>
               <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item" href="{{ url_for('financial_report_export', format='csv') }}">
+                <a class="dropdown-item" href="{{ url_for('financial_report_export', format='csv', period=current_period) }}">
                   <i class="ti ti-file-spreadsheet me-2"></i>CSV Only
                 </a>
-                <a class="dropdown-item" href="{{ url_for('financial_report_export', format='zip') }}">
+                <a class="dropdown-item" href="{{ url_for('financial_report_export', format='zip', period=current_period) }}">
                   <i class="ti ti-file-zip me-2"></i>ZIP with Documents
                 </a>
               </div>
