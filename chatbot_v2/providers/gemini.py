@@ -18,13 +18,11 @@ class GeminiProvider(AIProvider):
 
     # Gemini API pricing (for tracking, free tier = $0)
     # Flash models are free up to rate limits
+    # Updated Jan 2026: Removed retired 1.5/2.0 models (shut down Sept 2025)
     PRICING = {
-        'gemini-2.0-flash-exp': {'input': 0, 'output': 0},  # Free tier BEST: 1,500 RPD, 15 RPM
-        'gemini-2.0-flash': {'input': 0, 'output': 0},  # Free tier: 1,500 RPD
-        'gemini-2.5-flash': {'input': 0, 'output': 0},  # Free tier: 500 RPD
-        'gemini-2.5-pro': {'input': 0, 'output': 0},  # Free tier (limited): 100 RPD
-        'gemini-1.5-flash': {'input': 0, 'output': 0},  # Legacy
-        'gemini-1.5-pro': {'input': 0, 'output': 0},  # Legacy
+        'gemini-2.5-flash': {'input': 0, 'output': 0},       # Primary - free tier
+        'gemini-2.5-flash-lite': {'input': 0, 'output': 0},  # Lighter/faster variant
+        'gemini-2.5-pro': {'input': 0, 'output': 0},         # Quality (limited free tier)
     }
 
     def __init__(self, api_key: str, model: str = None):
@@ -239,11 +237,12 @@ class GeminiProvider(AIProvider):
     def _get_default_models(self) -> list[str]:
         """Return default Gemini models as fallback"""
 
-        # Return the current generation free-tier models
+        # Return the current generation free-tier models (Jan 2026)
+        # Note: 1.5/2.0 series were retired Sept 2025
         return [
-            'gemini-2.5-flash',      # Fastest, newest (2.5)
-            'gemini-2.0-flash',      # Fast and reliable (2.0)
-            'gemini-2.5-pro'         # Best quality, lower limits
+            'gemini-2.5-flash',       # Primary - best for general use
+            'gemini-2.5-flash-lite',  # Lighter/faster variant
+            'gemini-2.5-pro'          # Best quality, lower limits
         ]
 
     def calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> int:

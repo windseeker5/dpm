@@ -20,11 +20,11 @@ chatbot_bp = Blueprint('chatbot', __name__, url_prefix='/chatbot')
 
 # Whitelist of working Gemini models (free tier compatible)
 # These are the ONLY models we should show to users
+# Updated Jan 2026: Gemini 1.5 models were SHUT DOWN on Sept 29, 2025
 WORKING_GEMINI_MODELS = [
-    'gemini-2.5-flash',         # Default - WORKS! 500 RPD free tier
-    'gemini-2.0-flash',         # Backup - 1,500 RPD free tier
-    'gemini-1.5-flash',         # Stable - 1,500 RPD free tier
-    'gemini-1.5-flash-8b'       # Fast - 1,500 RPD free tier
+    'gemini-2.5-flash',         # Primary - free tier, best for general use
+    'gemini-2.5-flash-lite',    # Backup - lighter/faster variant
+    'gemini-2.5-pro',           # Quality option (limited free tier)
 ]
 
 # Greeting patterns
@@ -51,39 +51,6 @@ def is_greeting_or_conversation(question: str) -> bool:
         return True
 
     return False
-
-
-async def get_conversational_response(question: str, provider) -> str:
-    """Get a natural conversational response from Gemini"""
-    system_prompt = """You are a helpful AI assistant for Minipass, a platform that helps manage activities, users, and revenue.
-
-When users greet you or ask conversational questions:
-- Respond naturally and professionally
-- Remind them you can help analyze their data about users, activities, revenue, signups, and passports
-- Keep responses brief (1-2 sentences)
-- Be friendly and encouraging
-
-Examples:
-User: "Hello"
-You: "Hi! I'm your Minipass AI assistant. I can help you analyze your data - ask me about your users, revenue, activities, or any insights you need!"
-
-User: "Thanks"
-You: "You're welcome! Feel free to ask me anything about your data anytime."
-
-User: "What can you do?"
-You: "I can help you analyze your Minipass data! Ask me about your revenue, user signups, activity performance, or any metrics you'd like to see."
-"""
-
-    ai_request = AIRequest(
-        prompt=question,
-        system_prompt=system_prompt,
-        model='gemini-2.0-flash-exp',  # Use 2.0 Flash Exp for higher rate limits
-        temperature=0.7,  # Higher temperature for natural conversation
-        max_tokens=150
-    )
-
-    response = await provider.generate(ai_request)
-    return response.content if response.content else "Hello! I'm here to help you analyze your Minipass data. What would you like to know?"
 
 
 def get_gemini_provider():
@@ -189,43 +156,54 @@ def ask_question():
             'error': 'Question is too long (max 2000 characters)'
         }), 400
 
-    # Check if Gemini is available
-    if not check_gemini_availability():
-        return jsonify({
-            'success': False,
-            'error': '⚠️ AI Analytics temporarily unavailable. Please contact Minipass support.'
-        }), 503
+    # Import provider_manager for fallback support
+    from .ai_providers import provider_manager
 
     try:
         # Check if this is a greeting or conversational question
         if is_greeting_or_conversation(question):
-            # Handle conversational questions with Gemini
-            provider = get_gemini_provider()
-            if not provider:
-                return jsonify({
-                    'success': False,
-                    'error': '⚠️ AI Analytics temporarily unavailable. Please contact Minipass support.'
-                }), 503
+            # Handle conversational questions using provider_manager (with fallback)
+            system_prompt = """You are a helpful AI assistant for Minipass, a platform that helps manage activities, users, and revenue.
 
-            # Run async conversational response
+When users greet you or ask conversational questions:
+- Respond naturally and professionally
+- Remind them you can help analyze their data about users, activities, revenue, signups, and passports
+- Keep responses brief (1-2 sentences)
+- Be friendly and encouraging"""
+
+            ai_request = AIRequest(
+                prompt=question,
+                system_prompt=system_prompt,
+                model=model,
+                temperature=0.7,
+                max_tokens=150
+            )
+
+            # Run async with provider_manager (has Groq fallback)
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            answer = loop.run_until_complete(
-                get_conversational_response(question, provider)
+            result = loop.run_until_complete(
+                provider_manager.generate(ai_request, preferred_provider='gemini')
             )
             loop.close()
+
+            if result.error:
+                return jsonify({
+                    'success': False,
+                    'error': f'⚠️ AI Analytics temporarily unavailable: {result.error}'
+                }), 503
 
             # Return conversational response
             response = {
                 'success': True,
                 'question': question,
-                'answer': answer,
-                'conversational': True,  # Flag to indicate no SQL/data
-                'model': model,
+                'answer': result.content or "Hello! I'm here to help you analyze your Minipass data. What would you like to know?",
+                'conversational': True,
+                'model': result.model,
                 'conversation_id': data.get('conversation_id', 'gemini'),
                 'timestamp': datetime.now().isoformat(),
-                'provider': 'gemini'
+                'provider': result.provider
             }
             return jsonify(response)
 
@@ -273,17 +251,15 @@ def ask_question():
             if row_count == 0:
                 answer = "I didn't find any results for that query. Try asking in a different way or check if the data exists."
             else:
-                # Call AI to generate natural language answer from the data
+                # Call AI to generate natural language answer from the data (with fallback)
                 try:
-                    provider = get_gemini_provider()
-                    if provider:
-                        # Prepare data for AI to analyze
-                        # Convert rows to readable format (limit to first 10 rows for token efficiency)
-                        data_sample = rows[:10] if len(rows) > 10 else rows
-                        data_str = json.dumps(data_sample, indent=2, default=str)
+                    # Prepare data for AI to analyze
+                    # Convert rows to readable format (limit to first 10 rows for token efficiency)
+                    data_sample = rows[:10] if len(rows) > 10 else rows
+                    data_str = json.dumps(data_sample, indent=2, default=str)
 
-                        # Create prompt for AI to answer the question
-                        answer_prompt = f"""Answer this user question based on the query results below.
+                    # Create prompt for AI to answer the question
+                    answer_prompt = f"""Answer this user question based on the query results below.
 
 User Question: {question}
 
@@ -301,24 +277,24 @@ Instructions:
 
 Answer:"""
 
-                        ai_request = AIRequest(
-                            prompt=answer_prompt,
-                            system_prompt="You are a helpful data analyst. Answer questions about business data clearly and concisely.",
-                            model=WORKING_GEMINI_MODELS[0],
-                            temperature=0.3,  # Lower temperature for factual responses
-                            max_tokens=200
-                        )
+                    ai_request = AIRequest(
+                        prompt=answer_prompt,
+                        system_prompt="You are a helpful data analyst. Answer questions about business data clearly and concisely.",
+                        model=WORKING_GEMINI_MODELS[0],
+                        temperature=0.3,
+                        max_tokens=200
+                    )
 
-                        # Run async AI call
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                        ai_response = loop.run_until_complete(provider.generate(ai_request))
-                        loop.close()
+                    # Run async AI call with provider_manager (has Groq fallback)
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    ai_response = loop.run_until_complete(
+                        provider_manager.generate(ai_request, preferred_provider='gemini')
+                    )
+                    loop.close()
 
-                        if ai_response and ai_response.content:
-                            answer = ai_response.content
-                        else:
-                            answer = f"I found {row_count} results for your question."
+                    if ai_response and ai_response.content and not ai_response.error:
+                        answer = ai_response.content
                     else:
                         answer = f"I found {row_count} results for your question."
 
