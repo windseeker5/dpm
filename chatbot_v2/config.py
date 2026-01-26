@@ -28,12 +28,13 @@ DEFAULT_AI_MODEL = 'gemini-2.5-flash'  # Gemini 2.5 Flash (WORKS! Free tier avai
 
 # Model preferences (in order of preference)
 # Note: Groq is used as automatic fallback when Gemini hits rate limits
+# Updated Jan 2026: Gemini 1.5/2.0 models retired Sept 2025, use 2.5 series
 PREFERRED_MODELS = [
-    'gemini-2.0-flash-exp',  # Try Gemini first: 1,500 RPD, 15 RPM, 1M TPM
-    'llama-3.3-70b-versatile',  # Groq fallback: 14,400 RPD, 30 RPM (29x more!)
-    'gemini-2.0-flash',      # Gemini backup: 1,500 RPD
-    'llama-3.1-8b-instant',  # Groq fast model
-    'gemini-2.5-flash',      # Limited: 500 RPD
+    'gemini-2.5-flash',           # Primary Gemini - free tier
+    'llama-3.3-70b-versatile',    # Groq fallback: 14,400 RPD, 30 RPM
+    'gemini-2.5-flash-lite',      # Gemini backup - lighter/faster
+    'llama-3.1-8b-instant',       # Groq fast model
+    'gemini-2.5-pro',             # Gemini quality (limited free tier)
 ]
 
 # Security Settings
