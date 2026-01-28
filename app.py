@@ -624,6 +624,10 @@ def inject_globals_and_csrf():
         except Exception:
             subscription_info = None
 
+    # Get payment email (prefer DISPLAY_PAYMENT_EMAIL, fall back to MAIL_USERNAME)
+    display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+    payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
+
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
@@ -633,7 +637,8 @@ def inject_globals_and_csrf():
         'active_passport_count': active_passport_count,
         'unmatched_payment_count': unmatched_payment_count,
         'current_admin': current_admin,  # Add current admin for template personalization
-        'subscription': subscription_info  # Subscription tier info
+        'subscription': subscription_info,  # Subscription tier info
+        'payment_email': payment_email  # For displaying payment instructions (uses display email if set)
     }
 
 
@@ -3144,7 +3149,8 @@ def unified_settings():
                 "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
                 "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
                 "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
-                "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed']
+                "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed'],
+                "DISPLAY_PAYMENT_EMAIL": request.form.get("display_payment_email", "").strip()
             }
             
             for key, value in bot_settings.items():

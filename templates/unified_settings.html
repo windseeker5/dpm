@@ -165,10 +165,21 @@
                     <i class="ti ti-mail me-2"></i>
                   </div>
                   <div>
-                    <h4 class="alert-title">Payment Email Address</h4>
+                    <h4 class="alert-title">Payment Email Address (Inbox)</h4>
                     <div class="text-muted">{{ settings.MAIL_USERNAME or 'Not configured - please set Email Username in Advanced Settings' }}</div>
                   </div>
                 </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Display Payment Email (Optional)</label>
+                <input type="email" class="form-control" name="display_payment_email"
+                       value="{{ settings.DISPLAY_PAYMENT_EMAIL or '' }}"
+                       placeholder="Leave empty to use the inbox email above">
+                <small class="form-hint">
+                  If set, this email will appear in payment instructions sent to users.
+                  Useful when you have a legacy email that forwards to your inbox.
+                </small>
               </div>
 
               <div class="mb-3">

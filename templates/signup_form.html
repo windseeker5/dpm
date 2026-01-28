@@ -569,8 +569,8 @@
               <div>
                 <div class="text-muted" style="font-size: 0.75rem;">Paiement Interac</div>
                 <div style="font-size: 0.85rem;">
-                  {% if settings.get("MAIL_USERNAME") %}
-                    <strong>{{ settings.get("MAIL_USERNAME") }}</strong>
+                  {% if payment_email %}
+                    <strong>{{ payment_email }}</strong>
                   {% else %}
                     <strong class="text-danger">⚠️ Email not configured</strong>
                   {% endif %}
