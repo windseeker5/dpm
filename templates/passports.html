@@ -199,10 +199,9 @@
                     <i class="ti ti-pencil me-2"></i>Edit Details
                   </a>
                   {% if not passport.paid %}
-                  <a class="dropdown-item text-success" href="{{ url_for('mark_passport_paid', passport_id=passport.id) }}" 
-                     onclick="return confirm('Mark this passport as paid?')">
+                  <button type="button" class="dropdown-item text-success" data-bs-toggle="modal" data-bs-target="#mark-paid-modal-{{ passport.id }}">
                     <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-                  </a>
+                  </button>
                   {% endif %}
                   <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
                     <i class="ti ti-qrcode me-2"></i>View QR Code
@@ -306,6 +305,31 @@
         <form method="POST" action="{{ url_for('send_passport_reminder', passport_id=passport.id) }}" class="w-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-warning w-100">Yes, Send Reminder</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Mark as Paid Modals -->
+{% for passport in passports %}
+{% if not passport.paid %}
+<div class="modal modal-blur fade" id="mark-paid-modal-{{ passport.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-currency-dollar icon mb-2 text-success" style="font-size: 2rem;"></i>
+        <h3>Confirm Payment</h3>
+        <div class="text-muted">Mark {{ passport.user.name }}'s passport as paid?</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{{ url_for('mark_passport_paid', passport_id=passport.id) }}" class="w-100">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-success w-100">Yes, mark as paid</button>
         </form>
       </div>
     </div>
