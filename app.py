@@ -3821,7 +3821,7 @@ def edit_passport(passport_id):
         return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
     # 🟢 FIX: fetch activities and pass to template
-    activity_list = Activity.query.order_by(Activity.name).all()
+    activity_list = Activity.query.filter_by(status='active').order_by(Activity.name).all()
     
     # Load passport types for the passport's activity
     from models import PassportType
@@ -6752,8 +6752,8 @@ def create_passport():
     # 👉 GET METHOD
     default_amt = get_setting("DEFAULT_PASS_AMOUNT", "50")
     default_qt = get_setting("DEFAULT_SESSION_QT", "4")
-    activity_list = Activity.query.order_by(Activity.name).all()
-    
+    activity_list = Activity.query.filter_by(status='active').order_by(Activity.name).all()
+
     # Get activity_id from URL parameters if provided
     selected_activity_id = request.args.get('activity_id', type=int)
     
