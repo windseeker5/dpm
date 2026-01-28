@@ -3306,14 +3306,20 @@ def get_email_context(activity, template_type, base_context=None):
 
     if 'payment_email' not in context:
         print(f"🔍 Checking for payment_email...")
-        # Get from Settings table - use MAIL_USERNAME as payment email
-        payment_email_setting = get_setting("MAIL_USERNAME")
-        print(f"🔍 get_setting('MAIL_USERNAME') returned: {repr(payment_email_setting)}")
-        if payment_email_setting:
-            context['payment_email'] = payment_email_setting
-            print(f"✅ Set payment_email from settings: {payment_email_setting}")
+        # Check for display override first (for legacy email forwarding setups)
+        display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+        if display_email:
+            context['payment_email'] = display_email
+            print(f"✅ Set payment_email from DISPLAY_PAYMENT_EMAIL: {display_email}")
         else:
-            print(f"❌ No payment_email found in settings! Value was: {repr(payment_email_setting)}")
+            # Fall back to inbox email (MAIL_USERNAME)
+            payment_email_setting = get_setting("MAIL_USERNAME")
+            print(f"🔍 get_setting('MAIL_USERNAME') returned: {repr(payment_email_setting)}")
+            if payment_email_setting:
+                context['payment_email'] = payment_email_setting
+                print(f"✅ Set payment_email from MAIL_USERNAME: {payment_email_setting}")
+            else:
+                print(f"❌ No payment_email found in settings! Value was: {repr(payment_email_setting)}")
     else:
         print(f"ℹ️ payment_email already in context: {context['payment_email']}")
 
