@@ -969,14 +969,14 @@ div.dropdown-divider {
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">REVENUE</div>
                 <div class="h1 mb-2" id="mobile-revenue-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
-                  {% if kpi_data and kpi_data['revenue'] %}
-                    ${{ "{:,.0f}".format(kpi_data['revenue']['current']) }}
+                  {% if mobile_kpi_data and mobile_kpi_data['revenue'] %}
+                    ${{ "{:,.0f}".format(mobile_kpi_data['revenue']['current']) }}
                   {% else %}
                     $0
                   {% endif %}
                 </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>Last 7 days
+                  <i class="ti ti-calendar me-1"></i>Fiscal Year
                 </div>
               </div>
             </div>
@@ -988,14 +988,14 @@ div.dropdown-divider {
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">ACTIVE PASSPORTS</div>
                 <div class="h1 mb-2" id="mobile-active-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
-                  {% if kpi_data and kpi_data['active_users'] %}
-                    {{ "{:,.0f}".format(kpi_data['active_users']['current']) }}
+                  {% if mobile_kpi_data and mobile_kpi_data['active_users'] %}
+                    {{ "{:,.0f}".format(mobile_kpi_data['active_users']['current']) }}
                   {% else %}
                     0
                   {% endif %}
                 </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>Last 7 days
+                  <i class="ti ti-calendar me-1"></i>Fiscal Year
                 </div>
               </div>
             </div>
@@ -1007,14 +1007,14 @@ div.dropdown-divider {
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">PASSPORTS REDEEMED</div>
                 <div class="h1 mb-2" id="mobile-redeemed-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
-                  {% if kpi_data and kpi_data['passports_redeemed'] %}
-                    {{ "{:,.0f}".format(kpi_data['passports_redeemed']['current']) }}
+                  {% if mobile_kpi_data and mobile_kpi_data['passports_redeemed'] %}
+                    {{ "{:,.0f}".format(mobile_kpi_data['passports_redeemed']['current']) }}
                   {% else %}
                     0
                   {% endif %}
                 </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>Last 7 days
+                  <i class="ti ti-calendar me-1"></i>Fiscal Year
                 </div>
               </div>
             </div>
@@ -1026,14 +1026,14 @@ div.dropdown-divider {
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">UNPAID PASSPORTS</div>
                 <div class="h1 mb-2" id="mobile-pending-value" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">
-                  {% if kpi_data and kpi_data['unpaid_passports'] %}
-                    {{ "{:,.0f}".format(kpi_data['unpaid_passports']['current']) }}
+                  {% if mobile_kpi_data and mobile_kpi_data['unpaid_passports'] %}
+                    {{ "{:,.0f}".format(mobile_kpi_data['unpaid_passports']['current']) }}
                   {% else %}
                     0
                   {% endif %}
                 </div>
                 <div class="text-muted small">
-                  <i class="ti ti-timeline me-1"></i>Last 7 days
+                  <i class="ti ti-calendar me-1"></i>Fiscal Year
                 </div>
               </div>
             </div>

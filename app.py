@@ -963,8 +963,8 @@ def dashboard():
     # Use new simplified KPI data function
     kpi_data = get_kpi_data()
 
-    # Always generate all-time data for mobile view (CSS d-md-none handles visibility)
-    mobile_kpi_data = get_kpi_data(activity_id=None, period='all')
+    # Always generate fiscal year data for mobile view (CSS d-md-none handles visibility)
+    mobile_kpi_data = get_kpi_data(activity_id=None, period='fy')
     activities = db.session.query(Activity).filter_by(status='active').all()
     activity_cards = []
 
@@ -5665,6 +5665,9 @@ def activity_dashboard(activity_id):
     from utils import get_kpi_data
     kpi_data = get_kpi_data(activity_id=activity_id)  # Filter for this specific activity
 
+    # Generate fiscal year data for mobile view
+    mobile_kpi_data = get_kpi_data(activity_id=activity_id, period='fy')
+
     # Get the 7-day KPI data by default (this will be the initial view)
     current_kpi = kpi_data.get('revenue', {})
 
@@ -5824,6 +5827,7 @@ def activity_dashboard(activity_id):
         survey_templates=survey_templates,
         passport_types=passport_types,
         kpi_data=kpi_data,
+        mobile_kpi_data=mobile_kpi_data,
         dashboard_stats=dashboard_stats,
         activity_logs=activity_logs,
         logs=activity_logs,  # Added for compatibility with copied KPI cards JavaScript
