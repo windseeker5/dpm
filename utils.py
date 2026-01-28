@@ -3843,14 +3843,39 @@ def get_financial_data(start_date=None, end_date=None, activity_id=None, basis='
         })
 
     # EXPENSES
-    # Query ALL expense transactions (regardless of payment status)
-    # KPIs will be calculated based on payment_status below
+    # Query expense transactions with proper date filtering:
+    # - Paid expenses: filter by bill date (date field)
+    # - Unpaid expenses: filter by effective date (payment_date > due_date > date)
+    # This ensures unpaid expenses with future payment dates appear in the correct fiscal year
+    from sqlalchemy import func, or_, and_
+
+    # Build effective date expression for unpaid expenses
+    effective_date = func.coalesce(Expense.payment_date, Expense.due_date, Expense.date)
+
     expense_query = db.session.query(Expense).join(Activity)
 
-    # Filter by bill date to get all transactions in the period
+    # Filter: paid expenses by bill date OR unpaid expenses by effective date
     expense_query = expense_query.filter(
-        Expense.date >= start_date,
-        Expense.date <= end_date
+        or_(
+            # Paid expenses: use bill date (current behavior)
+            and_(
+                Expense.payment_status == 'paid',
+                Expense.date >= start_date,
+                Expense.date <= end_date
+            ),
+            # Unpaid expenses: use effective date (payment_date > due_date > date)
+            and_(
+                Expense.payment_status == 'unpaid',
+                effective_date >= start_date,
+                effective_date <= end_date
+            ),
+            # Cancelled expenses: use bill date
+            and_(
+                Expense.payment_status == 'cancelled',
+                Expense.date >= start_date,
+                Expense.date <= end_date
+            )
+        )
     )
 
     if activity_id:
