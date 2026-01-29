@@ -1527,7 +1527,7 @@ def create_pass_from_signup(signup_id):
         passport_type_name=passport_type.name if passport_type else None,  # Preserve type name
         sold_amt=passport_type.price_per_user if passport_type else 0.0,
         uses_remaining=passport_type.sessions_included if passport_type else 1,
-        created_dt=datetime.now(),
+        created_dt=datetime.now(timezone.utc),
         paid=signup.paid,
         notes=f"Created from signup {signup.id}"
     )
@@ -7049,7 +7049,7 @@ def create_passport():
             sold_amt=sold_amt,
             uses_remaining=sessions_qt,
             created_by=current_admin.id if current_admin else None,
-            created_dt=datetime.now(),  # fresh datetime
+            created_dt=datetime.now(timezone.utc),  # fresh datetime (UTC)
             paid=paid,
             notes=notes
         )

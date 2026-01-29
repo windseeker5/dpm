@@ -1531,7 +1531,7 @@ def match_gmail_payments_to_passes():
                     print(f"💾 STEP 2: Processing payment in database")
                     best_passport.paid = True
                     best_passport.paid_date = now_utc
-                    best_passport.marked_paid_by = "gmail-bot@system"
+                    best_passport.marked_paid_by = "minipass-bot@system"
 
                     print(f"🔍 PRE-COMMIT STATE:")
                     print(f"   passport.paid = {best_passport.paid}")
@@ -1548,7 +1548,7 @@ def match_gmail_payments_to_passes():
                         existing_payment.name_score = best_score
                         existing_payment.result = "MATCHED"
                         existing_payment.mark_as_paid = True
-                        existing_payment.note = "Matched by Gmail Bot (retry successful)."
+                        existing_payment.note = "Matched by Minipass Bot (retry successful)."
                         existing_payment.timestamp = datetime.now(timezone.utc)
                         if email_received_date:
                             existing_payment.email_received_date = email_received_date
@@ -1567,7 +1567,7 @@ def match_gmail_payments_to_passes():
                             name_score=best_score,
                             result="MATCHED",
                             mark_as_paid=True,
-                            note="Matched by Gmail Bot.",
+                            note="Matched by Minipass Bot.",
                             email_received_date=email_received_date
                         ))
 
@@ -1585,9 +1585,9 @@ def match_gmail_payments_to_passes():
                     print(f"🔍 POST-COMMIT VERIFICATION (refreshed from DB):")
                     print(f"   passport.marked_paid_by = {repr(best_passport.marked_paid_by)}")
 
-                    if best_passport.marked_paid_by != "gmail-bot@system":
+                    if best_passport.marked_paid_by != "minipass-bot@system":
                         print(f"❌ BUG DETECTED: marked_paid_by didn't persist!")
-                        print(f"   Expected: 'gmail-bot@system'")
+                        print(f"   Expected: 'minipass-bot@system'")
                         print(f"   Got: {repr(best_passport.marked_paid_by)}")
                     else:
                         print(f"✅ marked_paid_by persisted correctly")
@@ -1613,7 +1613,7 @@ def match_gmail_payments_to_passes():
                     event_type="payment_received",
                     pass_data=best_passport,  # ✅ update keyword
                     activity=best_passport.activity,
-                    admin_email="gmail-bot@system",
+                    admin_email="minipass-bot@system",
                     timestamp=now_utc
                 )
 
