@@ -105,10 +105,17 @@
       gap: 0.875rem;
     }
     
+    .flash-alert .alert-icon-container {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .flash-alert .alert-icon {
-      font-size: 1.25rem;
-      margin-top: 0.125rem;
-      opacity: 0.9;
+      font-size: 1.75rem;
+      color: #fff;
+      opacity: 1;
     }
     
     .flash-alert .alert-title {
@@ -392,7 +399,7 @@
                 {% if category != 'tier_limit' %}
                 <div class="alert-icon-container">
                   {% if category == 'success' %}
-                    <i class="ti ti-check-circle alert-icon"></i>
+                    <i class="ti ti-circle-check alert-icon"></i>
                   {% elif category == 'error' %}
                     <i class="ti ti-alert-circle alert-icon"></i>
                   {% elif category == 'warning' %}

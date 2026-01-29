@@ -106,7 +106,7 @@ REMOVED_FIELD_DEFAULTS = {
 
 
 db_path = os.path.join("instance", "minipass.db")
-print(f"📦 Using database → {db_path}")
+print(f"Using database → {db_path}")
 
 
 
@@ -143,7 +143,7 @@ migrate = Migrate(app, db)
 
 
 #if not os.path.exists(db_path):
-#    print(f"❌ {db_path} is missing!")
+#    print(f"{db_path} is missing!")
 #    exit(1)
 
 
@@ -167,12 +167,12 @@ app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 try:
     from chatbot_v2.routes_simple import chatbot_bp
     app.register_blueprint(chatbot_bp)
-    print("✅ Gemini chatbot (correct template) registered successfully")
+    print("Gemini chatbot (correct template) registered successfully")
     
     # Register Settings API Blueprint
     from api.settings import settings_api
     app.register_blueprint(settings_api)
-    print("✅ Settings API registered successfully")
+    print("Settings API registered successfully")
     
     
     # List routes to verify
@@ -182,13 +182,13 @@ try:
     
     # Exempt chatbot API from CSRF for testing
     csrf.exempt(chatbot_bp)
-    print("✅ Chatbot API exempted from CSRF")
+    print("Chatbot API exempted from CSRF")
 
     # Exempt geocode API from CSRF (for AJAX calls)
     csrf.exempt(geocode_api)
-    print("✅ Geocode API exempted from CSRF")
+    print("Geocode API exempted from CSRF")
 except Exception as e:
-    print(f"❌ Simple Chatbot registration failed: {e}")
+    print(f"Simple Chatbot registration failed: {e}")
     import traceback
     traceback.print_exc()
 
@@ -532,7 +532,7 @@ def init_scheduler(app):
                             from utils import cleanup_duplicate_payment_logs_auto
                             cleanup_duplicate_payment_logs_auto()
                         except Exception as e:
-                            print(f"❌ Payment bot error: {e}")
+                            print(f"Payment bot error: {e}")
 
                 # Always register the job - it will check the setting each time it runs
                 scheduler.add_job(run_payment_bot, trigger="interval", minutes=30, id="email_payment_bot")
@@ -544,12 +544,12 @@ def init_scheduler(app):
                 
                 # Start the scheduler
                 scheduler.start()
-                print("✅ Scheduler initialized and started successfully (master worker).")
+                print("Scheduler initialized and started successfully (master worker).")
                 
             except OperationalError as e:
-                print("⚠️ DB not ready yet (probably during initial setup), skipping scheduler setup.")
+                print("DB not ready yet (probably during initial setup), skipping scheduler setup.")
             except Exception as e:
-                print(f"❌ Error initializing scheduler: {e}")
+                print(f"Error initializing scheduler: {e}")
     
     except (IOError, OSError):
         # Another worker already has the lock
@@ -725,7 +725,7 @@ def retry_failed_emails():
 
         retried += 1
 
-    flash(f"📤 Retried {retried} failed email(s) — sent to {override_email}.", "info")
+    flash(f"Retried {retried} failed email(s) — sent to {override_email}.", "info")
     return redirect(url_for("dashboard"))
 
 
@@ -1081,7 +1081,7 @@ def mark_signup_paid(signup_id):
 
     signup = db.session.get(Signup, signup_id)
     if not signup:
-        flash("❌ Signup not found.", "error")
+        flash("Signup not found.", "error")
         return redirect(url_for("list_signups"))
 
     signup.paid = True
@@ -1091,7 +1091,7 @@ def mark_signup_paid(signup_id):
     # Emit SSE notification for signup payment
     # SSE notifications removed for leaner performance
 
-    flash(f"✅ Marked {signup.user.name}'s signup as paid.", "success")
+    flash(f"Marked {signup.user.name}'s signup as paid.", "success")
     return redirect(url_for("list_signups"))
 
 
@@ -1249,7 +1249,7 @@ def bulk_signup_action():
     selected_ids = request.form.getlist('selected_signups')
     
     if not selected_ids:
-        flash("❌ No signups selected.", "error")
+        flash("No signups selected.", "error")
         return redirect(url_for("list_signups"))
     
     try:
@@ -1257,7 +1257,7 @@ def bulk_signup_action():
         signups = Signup.query.filter(Signup.id.in_(selected_ids)).all()
         
         if not signups:
-            flash("❌ No valid signups found.", "error")
+            flash("No valid signups found.", "error")
             return redirect(url_for("list_signups"))
         
         admin_email = session.get("admin", "unknown")
@@ -1283,7 +1283,7 @@ def bulk_signup_action():
             ))
             db.session.commit()
             
-            flash(f"✅ {count} signups marked as paid.", "success")
+            flash(f"{count} signups marked as paid.", "success")
             
         elif action == 'send_reminders':
             count = 0
@@ -1309,7 +1309,7 @@ def bulk_signup_action():
             ))
             db.session.commit()
             
-            flash(f"✅ Payment reminders sent to {count} signups.", "success")
+            flash(f"Payment reminders sent to {count} signups.", "success")
             
         elif action == 'approve':
             count = 0
@@ -1327,7 +1327,7 @@ def bulk_signup_action():
             ))
             db.session.commit()
             
-            flash(f"✅ {count} signups approved.", "success")
+            flash(f"{count} signups approved.", "success")
             
         elif action == 'delete':
             count = len(signups)
@@ -1349,14 +1349,14 @@ def bulk_signup_action():
             ))
             db.session.commit()
 
-            flash(f"✅ {count} signups deleted.", "success")
+            flash(f"{count} signups deleted.", "success")
             
         else:
-            flash("❌ Invalid action.", "error")
+            flash("Invalid action.", "error")
 
     except Exception as e:
         db.session.rollback()
-        flash(f"❌ Error processing bulk action: {str(e)}", "error")
+        flash(f"Error processing bulk action: {str(e)}", "error")
 
     # Check if request came from activity dashboard
     activity_id = request.form.get("activity_id")
@@ -1500,7 +1500,7 @@ def create_pass_from_signup(signup_id):
 
     signup = db.session.get(Signup, signup_id)
     if not signup:
-        flash("❌ Signup not found.", "error")
+        flash("Signup not found.", "error")
         return redirect(url_for("list_signups"))
 
     from models import Passport
@@ -1508,7 +1508,7 @@ def create_pass_from_signup(signup_id):
     # Check if a passport already exists
     existing_passport = Passport.query.filter_by(user_id=signup.user_id, activity_id=signup.activity_id).first()
     if existing_passport:
-        flash("⚠️ A passport for this user and activity already exists.", "warning")
+        flash("A passport for this user and activity already exists.", "warning")
         return redirect(url_for("list_signups"))
 
     # Get passport type from signup or fallback to first one for this activity
@@ -1534,7 +1534,7 @@ def create_pass_from_signup(signup_id):
     db.session.add(new_passport)
     db.session.commit()
 
-    flash("✅ Passport created from signup!", "success")
+    flash("Passport created from signup!", "success")
     return redirect(url_for("list_signups"))
 
 
@@ -1546,14 +1546,14 @@ def edit_signup(signup_id):
 
     signup = db.session.get(Signup, signup_id)
     if not signup:
-        flash("❌ Signup not found.", "error")
+        flash("Signup not found.", "error")
         return redirect(url_for("list_signups"))
 
     if request.method == "POST":
         signup.subject = request.form.get("subject", "").strip()
         signup.description = request.form.get("description", "").strip()
         db.session.commit()
-        flash("✅ Signup updated.", "success")
+        flash("Signup updated.", "success")
         return redirect(url_for("list_signups"))
 
     return render_template("edit_signup.html", signup=signup)
@@ -1567,7 +1567,7 @@ def update_signup_status(signup_id):
 
     signup = db.session.get(Signup, signup_id)
     if not signup:
-        flash("❌ Signup not found.", "error")
+        flash("Signup not found.", "error")
         return redirect(url_for("list_signups"))
 
     status = request.form.get("status")
@@ -1585,9 +1585,9 @@ def update_signup_status(signup_id):
             f"Signup ID {signup.id}, {user_name}, for Activity '{activity_name}' was marked as {status}"
         )
 
-        flash(f"✅ Signup marked as {status}.", "success")
+        flash(f"Signup marked as {status}.", "success")
     else:
-        flash("❌ Invalid status.", "error")
+        flash("Invalid status.", "error")
 
     return redirect(url_for("list_signups"))
 
@@ -1601,7 +1601,7 @@ def approve_and_create_pass(signup_id):
 
     signup = db.session.get(Signup, signup_id)
     if not signup:
-        flash("❌ Signup not found.", "error")
+        flash("Signup not found.", "error")
         return redirect(url_for("list_signups"))
 
     from models import Passport, AdminActionLog, Admin
@@ -1855,7 +1855,7 @@ def create_activity():
         ))
         db.session.commit()
 
-        flash(f"✅ Activity created successfully with {len(passport_types_data)} passport types!", "success")
+        flash(f"Activity created successfully with {len(passport_types_data)} passport types!", "success")
         return redirect(url_for("edit_activity", activity_id=new_activity.id))
 
     # ✅ GET request - check tier limit BEFORE showing form
@@ -1893,16 +1893,16 @@ def edit_activity(activity_id):
     activity = db.session.get(Activity, activity_id)
 
     if not activity:
-        flash("❌ Activity not found.", "error")
+        flash("Activity not found.", "error")
         return redirect(url_for("dashboard"))
 
     # Check for deletion success/error messages from query parameters
     deleted_name = request.args.get('deleted')
     error_msg = request.args.get('error')
     if deleted_name:
-        flash(f"✅ Passport type '{deleted_name}' has been deleted successfully!", "success")
+        flash(f"Passport type '{deleted_name}' has been deleted successfully!", "success")
     elif error_msg:
-        flash(f"❌ Error deleting passport type: {error_msg}", "error")
+        flash(f"Error deleting passport type: {error_msg}", "error")
 
     if request.method == "POST":
         import os
@@ -2048,7 +2048,7 @@ def edit_activity(activity_id):
         ))
         db.session.commit()
 
-        flash(f"✅ Activity updated successfully! Created: {passport_types_created}, Updated: {passport_types_updated}, Archived: {passport_types_archived} passport types.", "success")
+        flash(f"Activity updated successfully! Created: {passport_types_created}, Updated: {passport_types_updated}, Archived: {passport_types_archived} passport types.", "success")
         return redirect(url_for("edit_activity", activity_id=activity.id))
 
     # 🧮 Add financial summary data (shown at bottom of form)
@@ -2094,7 +2094,7 @@ def edit_activity(activity_id):
 def signup(activity_id):
     activity = db.session.get(Activity, activity_id)
     if not activity:
-        flash("❌ Activity not found.", "error")
+        flash("Activity not found.", "error")
         return redirect(url_for("dashboard"))
 
     # Get passport type if specified
@@ -2140,7 +2140,7 @@ def signup(activity_id):
         
         # SSE notifications removed for leaner performance
 
-        flash("✅ Signup submitted!", "success")
+        flash("Signup submitted!", "success")
         return redirect(url_for("signup_thank_you", signup_id=signup.id))
 
     return render_template("signup_form.html", activity=activity, settings=settings, 
@@ -2152,7 +2152,7 @@ def signup_thank_you(signup_id):
     """Thank you page after successful signup"""
     signup = db.session.get(Signup, signup_id)
     if not signup:
-        flash("❌ Signup not found.", "error")
+        flash("Signup not found.", "error")
         return redirect(url_for("dashboard"))
     
     activity = signup.activity
@@ -2187,19 +2187,19 @@ def payment_bot_settings():
                 emails_found = result.get('emails_found', 0)
 
                 if matched > 0:
-                    flash(f"✅ Test completed! {matched} payment(s) matched to passports!", "success")
+                    flash(f"Test completed! {matched} payment(s) matched to passports!", "success")
                 elif no_match > 0:
-                    flash(f"⚠️ Test completed! {no_match} payment(s) need manual review (no matching passport)", "warning")
+                    flash(f"Test completed! {no_match} payment(s) need manual review (no matching passport)", "warning")
                 elif emails_found > 0 and skipped > 0:
-                    flash(f"ℹ️ Test completed! {skipped} payment(s) already processed - no new payments.", "info")
+                    flash(f"Test completed! {skipped} payment(s) already processed - no new payments.", "info")
                 else:
-                    flash("ℹ️ Test completed! No new payments found in inbox.", "info")
+                    flash("Test completed! No new payments found in inbox.", "info")
             else:
-                flash("ℹ️ Test completed! No new payments found.", "info")
+                flash("Test completed! No new payments found.", "info")
                 
         except Exception as e:
-            print(f"❌ Payment bot test error: {e}")
-            flash(f"❌ Test failed: {str(e)}", "error")
+            print(f"Payment bot test error: {e}")
+            flash(f"Test failed: {str(e)}", "error")
         
         return redirect(url_for("payment_bot_settings"))
     
@@ -2242,9 +2242,9 @@ def payment_bot_settings():
                     try:
                         print("🚀 Payment bot ENABLED - running first check in background...")
                         match_gmail_payments_to_passes()
-                        print("✅ Payment bot background check completed!")
+                        print("Payment bot background check completed!")
                     except Exception as e:
-                        print(f"❌ Payment bot background run failed: {e}")
+                        print(f"Payment bot background run failed: {e}")
 
             thread = threading.Thread(target=run_payment_bot_async, daemon=True)
             thread.start()
@@ -2338,7 +2338,7 @@ def api_payment_bot_check_emails():
     if True:  # Temporary bypass
         print("🔧 BYPASSING AUTH FOR DEBUG")
     elif "admin" not in session:
-        print("❌ Unauthorized - no admin in session")
+        print("Unauthorized - no admin in session")
         return jsonify({"error": "Unauthorized"}), 401
     
     from utils import match_gmail_payments_to_passes, get_setting, log_admin_action, cleanup_duplicate_payment_logs_auto
@@ -2427,7 +2427,7 @@ def api_move_payment_email():
             log_admin_action(f"Manually moved payment email: {bank_info_name} - ${bank_info_amt}")
             return jsonify({"success": True, "message": message}), 200
         else:
-            print(f"⚠️ API DEBUG: Returning error 400 with message: {message}")
+            print(f"API DEBUG: Returning error 400 with message: {message}")
             return jsonify({"success": False, "error": message}), 400
 
     except Exception as e:
@@ -2642,8 +2642,8 @@ def api_create_passport_from_payment():
             mail_pwd = get_setting("MAIL_PASSWORD")
             processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
 
-            print(f"📧 EMAIL MOVE: Starting...")
-            print(f"📧 EMAIL MOVE: Payment UID stored: {payment.email_uid}")
+            print(f"EMAIL MOVE: Starting...")
+            print(f"EMAIL MOVE: Payment UID stored: {payment.email_uid}")
 
             if mail_user and mail_pwd and payment.email_uid:
                 imap_server = get_setting("IMAP_SERVER")
@@ -2662,7 +2662,7 @@ def api_create_passport_from_payment():
 
                 # Use the stored UID directly - no need to search!
                 uid = payment.email_uid
-                print(f"📧 Using stored UID: {uid}")
+                print(f"Using stored UID: {uid}")
 
                 # Check if folder exists, create if needed
                 folder_status, _ = mail.select(processed_folder)
@@ -2670,9 +2670,9 @@ def api_create_passport_from_payment():
                     print(f"📁 Folder '{processed_folder}' doesn't exist, creating...")
                     try:
                         mail.create(processed_folder)
-                        print(f"✅ Created folder '{processed_folder}'")
+                        print(f"Created folder '{processed_folder}'")
                     except Exception as create_err:
-                        print(f"⚠️ Could not create folder: {create_err}")
+                        print(f"Could not create folder: {create_err}")
 
                 # Switch back to inbox to perform the copy
                 mail.select("inbox")
@@ -2682,20 +2682,20 @@ def api_create_passport_from_payment():
                 if copy_result[0] == 'OK':
                     mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
                     email_moved = True
-                    print(f"✅ Payment email moved to {processed_folder} folder")
+                    print(f"Payment email moved to {processed_folder} folder")
                 else:
-                    print(f"❌ Failed to copy email: {copy_result}")
+                    print(f"Failed to copy email: {copy_result}")
 
                 mail.expunge()
                 mail.logout()
             elif not payment.email_uid:
-                print(f"⚠️ No email UID stored for this payment - cannot move email")
+                print(f"No email UID stored for this payment - cannot move email")
                 print(f"   (This payment was processed before UID storage was implemented)")
 
         except Exception as e:
             import traceback
-            print(f"⚠️ Could not move payment email (non-critical): {e}")
-            print(f"⚠️ EMAIL MOVE TRACEBACK: {traceback.format_exc()}")
+            print(f"Could not move payment email (non-critical): {e}")
+            print(f"EMAIL MOVE TRACEBACK: {traceback.format_exc()}")
             # Don't fail the whole operation if email move fails
 
         # Small sleep for timestamp ordering (follows existing pattern)
@@ -3211,7 +3211,7 @@ def setup():
             else:
                 db.session.add(Setting(key="ACTIVITY_LIST", value=json.dumps(activity_list)))
         except Exception as e:
-            print("❌ Failed to save activity list:", e)
+            print("Failed to save activity list:", e)
 
         # 🖼 Step 7: Logo Upload
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -3228,7 +3228,7 @@ def setup():
             else:
                 db.session.add(Setting(key="LOGO_FILENAME", value=filename))
 
-            flash("✅ Logo uploaded successfully!", "success")
+            flash("Logo uploaded successfully!", "success")
 
 
         db.session.commit()
@@ -3267,7 +3267,7 @@ def setup():
 
     # Safely check if templates directory exists
     if not os.path.exists(template_base):
-        print(f"⚠️ Templates directory not found: {template_base}")
+        print(f"Templates directory not found: {template_base}")
         os.makedirs(template_base, exist_ok=True)
 
     for entry in os.listdir(template_base):
@@ -3326,22 +3326,22 @@ def unified_settings():
 
                 if matched > 0:
                     # Success - found and matched payments
-                    flash(f"✅ Found {matched} payment(s) matched to passports!", "success")
+                    flash(f"Found {matched} payment(s) matched to passports!", "success")
                 elif no_match > 0:
                     # Warning - found payments but couldn't match
-                    flash(f"⚠️ Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
+                    flash(f"Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
                 elif emails_found > 0 and skipped > 0:
                     # Info - found emails but all were already processed
-                    flash(f"ℹ️ {skipped} payment(s) already processed - no new payments.", "info")
+                    flash(f"{skipped} payment(s) already processed - no new payments.", "info")
                 else:
                     # Info - no payments found in inbox
-                    flash("ℹ️ No new payments found in inbox.", "info")
+                    flash("No new payments found in inbox.", "info")
             else:
-                flash("ℹ️ Payment bot completed. No emails to process.", "info")
+                flash("Payment bot completed. No emails to process.", "info")
                 
         except Exception as e:
-            print(f"❌ Payment bot test error: {e}")
-            flash(f"❌ Payment bot test failed: {str(e)}", "error")
+            print(f"Payment bot test error: {e}")
+            flash(f"Payment bot test failed: {str(e)}", "error")
 
         # Redirect back to payment_bot_matches page
         return redirect(url_for("payment_bot_matches"))
@@ -3355,11 +3355,11 @@ def unified_settings():
             log_admin_action(f"Manual late payment reminder test by {session.get('admin', 'Unknown')}")
             send_unpaid_reminders(current_app, force_send=True)
             
-            flash("✅ Late payment reminder test completed. Check console for details.", "success")
+            flash("Late payment reminder test completed. Check console for details.", "success")
                 
         except Exception as e:
-            print(f"❌ Late payment reminder test error: {e}")
-            flash(f"❌ Late payment reminder test failed: {str(e)}", "error")
+            print(f"Late payment reminder test error: {e}")
+            flash(f"Late payment reminder test failed: {str(e)}", "error")
 
         # Redirect back to payment_bot_matches if that's where they came from
         return redirect(url_for("payment_bot_matches"))
@@ -3381,19 +3381,19 @@ def unified_settings():
                     emails_found = result.get('emails_found', 0)
 
                     if matched > 0:
-                        flash(f"✅ Found {matched} payment(s) matched to passports!", "success")
+                        flash(f"Found {matched} payment(s) matched to passports!", "success")
                     elif no_match > 0:
-                        flash(f"⚠️ Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
+                        flash(f"Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
                     elif emails_found > 0 and skipped > 0:
-                        flash(f"ℹ️ {skipped} payment(s) already processed - no new payments.", "info")
+                        flash(f"{skipped} payment(s) already processed - no new payments.", "info")
                     else:
-                        flash("ℹ️ No new payments found in inbox.", "info")
+                        flash("No new payments found in inbox.", "info")
                 else:
-                    flash("ℹ️ Payment bot completed. No emails to process.", "info")
+                    flash("Payment bot completed. No emails to process.", "info")
 
             except Exception as e:
-                print(f"❌ Payment bot test error: {e}")
-                flash(f"❌ Payment bot test failed: {str(e)}", "error")
+                print(f"Payment bot test error: {e}")
+                flash(f"Payment bot test failed: {str(e)}", "error")
 
             return redirect(url_for("unified_settings"))
             
@@ -3477,14 +3477,14 @@ def unified_settings():
             log_admin_action(f"Unified Settings Updated by {session.get('admin', 'Unknown')}")
 
             # Always use standard flash messages and redirect
-            flash("✅ All settings saved successfully!", "success")
+            flash("All settings saved successfully!", "success")
             return redirect(url_for("unified_settings"))
 
         except Exception as e:
             db.session.rollback()
 
             # Always use standard flash messages and redirect
-            flash(f"❌ Error saving settings: {str(e)}", "error")
+            flash(f"Error saving settings: {str(e)}", "error")
             return redirect(url_for("unified_settings"))
     
     # GET request - load all settings
@@ -3564,10 +3564,10 @@ def erase_app_data():
                 db.session.execute(table.delete())
 
         db.session.commit()
-        flash("🧨 All app data erased successfully, except Admins and Settings.", "success")
+        flash("All app data erased successfully, except Admins and Settings.", "success")
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error erasing data: {e}")
+        print(f"Error erasing data: {e}")
         flash("An error occurred while erasing data.", "error")
 
     return redirect(url_for("setup"))
@@ -3591,7 +3591,7 @@ def generate_backup():
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         zip_filename = f"minipass_backup_{timestamp}.zip"
-        print("📦 Generating backup:", zip_filename)
+        print("Generating backup:", zip_filename)
 
         tmp_dir = tempfile.mkdtemp()
         zip_path = os.path.join(tmp_dir, zip_filename)
@@ -3635,7 +3635,7 @@ def generate_backup():
 
         print(f"🛠 Moving zip from {zip_path} → {final_path}")
         shutil.move(zip_path, final_path)
-        print(f"✅ Backup saved to: {final_path}")
+        print(f"Backup saved to: {final_path}")
 
         # Auto-cleanup: Keep only the 5 most recent backups
         backup_dir = os.path.join("static", "backups")
@@ -3648,12 +3648,12 @@ def generate_backup():
                 for old_backup in backup_files[5:]:  # Keep first 5, delete rest
                     old_path = os.path.join(backup_dir, old_backup)
                     os.remove(old_path)
-                    print(f"🗑️ Deleted old backup: {old_backup}")
+                    print(f"Deleted old backup: {old_backup}")
 
-        flash(f"📦 Backup created: {zip_filename}", "success")
+        flash(f"Backup created: {zip_filename}", "success")
     except Exception as e:
-        print("❌ Backup failed:", str(e))
-        flash("❌ Backup failed. Check logs.", "danger")
+        print("Backup failed:", str(e))
+        flash("Backup failed. Check logs.", "danger")
 
     return redirect(url_for("setup", backup_file=zip_filename) + "#tab-backup")
 
@@ -3666,19 +3666,19 @@ def delete_backup(filename):
     try:
         # Security: Only allow .zip files and prevent path traversal
         if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
-            flash("❌ Invalid backup filename.", "danger")
+            flash("Invalid backup filename.", "danger")
             return redirect(url_for("setup") + "#tab-backup")
 
         backup_path = os.path.join("static", "backups", filename)
         if os.path.exists(backup_path):
             os.remove(backup_path)
-            print(f"🗑️ Backup deleted: {filename}")
-            flash(f"🗑️ Backup deleted: {filename}", "success")
+            print(f"Backup deleted: {filename}")
+            flash(f"Backup deleted: {filename}", "success")
         else:
-            flash("❌ Backup file not found.", "danger")
+            flash("Backup file not found.", "danger")
     except Exception as e:
-        print("❌ Delete backup failed:", str(e))
-        flash("❌ Failed to delete backup. Check logs.", "danger")
+        print("Delete backup failed:", str(e))
+        flash("Failed to delete backup. Check logs.", "danger")
 
     return redirect(url_for("setup") + "#tab-backup")
 
@@ -3691,12 +3691,12 @@ def restore_backup(filename):
     try:
         # Security: Only allow .zip files and prevent path traversal
         if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
-            flash("❌ Invalid backup filename.", "danger")
+            flash("Invalid backup filename.", "danger")
             return redirect(url_for("setup") + "#tab-backup")
 
         backup_path = os.path.join("static", "backups", filename)
         if not os.path.exists(backup_path):
-            flash("❌ Backup file not found.", "danger")
+            flash("Backup file not found.", "danger")
             return redirect(url_for("setup") + "#tab-backup")
 
         # Import restore functions directly
@@ -3718,15 +3718,15 @@ def restore_backup(filename):
                 restore_uploads(temp_extract_dir)
                 restore_templates(temp_extract_dir)
             
-            flash(f"✅ Successfully restored from backup: {filename}", "success")
+            flash(f"Successfully restored from backup: {filename}", "success")
             
         except Exception as restore_error:
-            print(f"❌ Direct restore failed: {str(restore_error)}")
-            flash(f"❌ Restore failed: {str(restore_error)}", "danger")
+            print(f"Direct restore failed: {str(restore_error)}")
+            flash(f"Restore failed: {str(restore_error)}", "danger")
 
     except Exception as e:
-        print("❌ Restore backup failed:", str(e))
-        flash("❌ Failed to restore backup. Check logs.", "danger")
+        print("Restore backup failed:", str(e))
+        flash("Failed to restore backup. Check logs.", "danger")
 
     return redirect(url_for("setup") + "#tab-backup")
 
@@ -3739,17 +3739,17 @@ def upload_and_restore_backup():
     try:
         # Check if file was uploaded
         if 'backup_file' not in request.files:
-            flash("❌ No backup file selected.", "danger")
+            flash("No backup file selected.", "danger")
             return redirect(url_for("setup") + "#tab-backup")
 
         file = request.files['backup_file']
         if file.filename == '':
-            flash("❌ No backup file selected.", "danger")
+            flash("No backup file selected.", "danger")
             return redirect(url_for("setup") + "#tab-backup")
 
         # Validate file extension
         if not file.filename.endswith('.zip'):
-            flash("❌ Only ZIP backup files are supported.", "danger")
+            flash("Only ZIP backup files are supported.", "danger")
             return redirect(url_for("setup") + "#tab-backup")
 
         # Save uploaded file temporarily
@@ -3796,7 +3796,7 @@ def upload_and_restore_backup():
             except:
                 pass
 
-            flash(f"✅ Successfully restored from uploaded backup: {filename}", "success")
+            flash(f"Successfully restored from uploaded backup: {filename}", "success")
             
         except Exception as restore_error:
             # Clean up the temporary uploaded file
@@ -3805,12 +3805,12 @@ def upload_and_restore_backup():
             except:
                 pass
             
-            print(f"❌ Direct restore failed: {str(restore_error)}")
-            flash(f"❌ Restore failed: {str(restore_error)}", "danger")
+            print(f"Direct restore failed: {str(restore_error)}")
+            flash(f"Restore failed: {str(restore_error)}", "danger")
 
     except Exception as e:
-        print("❌ Upload and restore failed:", str(e))
-        flash("❌ Failed to upload and restore backup. Check logs.", "danger")
+        print("Upload and restore failed:", str(e))
+        flash("Failed to upload and restore backup. Check logs.", "danger")
 
     return redirect(url_for("setup") + "#tab-backup")
 
@@ -3830,7 +3830,7 @@ def users_json():
         for u in users if u[0]  # ✅ Filter out empty names
     ]
 
-    print("📦 Sending user cache JSON:", result)
+    print("Sending user cache JSON:", result)
     return jsonify(result)
 
 
@@ -3909,9 +3909,9 @@ def login():
             admin = Admin.query.filter_by(email=email).first()
 
         if not admin:
-            print("❌ No admin found with that email.")
+            print("No admin found with that email.")
         else:
-            print(f"✅ Admin found: {admin.email}")
+            print(f"Admin found: {admin.email}")
             print(f"🔐 Stored hash (type): {type(admin.password_hash)}")
             print(f"🔐 Stored hash (value): {admin.password_hash}")
 
@@ -3921,11 +3921,11 @@ def login():
                     stored_hash = stored_hash.decode()
 
                 if bcrypt.checkpw(password.encode(), stored_hash.encode()):
-                    print("✅ Password matched.")
+                    print("Password matched.")
                     session["admin"] = email
                     return redirect(url_for("dashboard"))
                 else:
-                    print("❌ Password does NOT match.")
+                    print("Password does NOT match.")
             except Exception as e:
                 print("💥 Exception during bcrypt check:", e)
 
@@ -3993,7 +3993,7 @@ def redeem_passport_qr(pass_code):
 
     passport = Passport.query.filter_by(pass_code=pass_code).first()
     if not passport:
-        flash("❌ Passport not found!", "error")
+        flash("Passport not found!", "error")
         return redirect(url_for("dashboard"))
 
     # 🛡️ Prevent duplicate redemptions (double-click protection)
@@ -4005,7 +4005,7 @@ def redeem_passport_qr(pass_code):
     if throttle_key in recent_redemptions:
         last_redemption_time = recent_redemptions[throttle_key]
         if (now_utc - last_redemption_time).total_seconds() < 5:
-            flash("⚠️ Redemption already in progress. Please wait.", "warning")
+            flash("Redemption already in progress. Please wait.", "warning")
             return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
     # Check database for recent redemptions (last 10 seconds) for persistent protection
@@ -4017,7 +4017,7 @@ def redeem_passport_qr(pass_code):
     ).first()
 
     if recent_db_redemption:
-        flash("⚠️ This passport was recently redeemed. Please refresh the page.", "warning")
+        flash("This passport was recently redeemed. Please refresh the page.", "warning")
         return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
     # Record this redemption attempt in memory cache
@@ -4063,7 +4063,7 @@ def redeem_passport_qr(pass_code):
             timestamp=now_utc
         )
 
-        flash(f"✅ Passport {passport.pass_code} redeemed via QR scan!", "success")
+        flash(f"Passport {passport.pass_code} redeemed via QR scan!", "success")
 
         # Check if passport is now empty and activity offers renewal
         if passport.uses_remaining == 0:
@@ -4081,7 +4081,7 @@ def redeem_passport_qr(pass_code):
                     'price': passport_type.price_per_user,
                 }
     else:
-        flash("❌ No uses left on this passport!", "error")
+        flash("No uses left on this passport!", "error")
 
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
@@ -4099,7 +4099,7 @@ def edit_passport(passport_id):
 
     passport = db.session.get(Passport, passport_id)
     if not passport:
-        flash("❌ Passport not found.", "error")
+        flash("Passport not found.", "error")
         return redirect(url_for("dashboard2"))
 
     if request.method == "POST":
@@ -5174,7 +5174,7 @@ def passports_bulk_action():
     passport_ids = request.form.getlist("passport_ids[]") or request.form.getlist("selected_passports")
     
     if not passport_ids:
-        flash("❌ No passports selected.", "error")
+        flash("No passports selected.", "error")
         return redirect(url_for("list_passports"))
     
     passports = Passport.query.filter(Passport.id.in_(passport_ids)).all()
@@ -5201,7 +5201,7 @@ def passports_bulk_action():
         ))
         db.session.commit()
         
-        flash(f"✅ Marked {count} passports as paid.", "success")
+        flash(f"Marked {count} passports as paid.", "success")
     
     elif action == "send_reminders":
         count = 0
@@ -5225,7 +5225,7 @@ def passports_bulk_action():
         ))
         db.session.commit()
         
-        flash(f"📧 Sent payment reminders to {count} unpaid passports.", "success")
+        flash(f"Sent payment reminders to {count} unpaid passports.", "success")
     
     elif action == "delete":
         count = len(passports)
@@ -5252,10 +5252,10 @@ def passports_bulk_action():
         ))
         db.session.commit()
 
-        flash(f"🗑️ Deleted {count} passports.", "success")
+        flash(f"Deleted {count} passports.", "success")
 
     else:
-        flash("❌ Invalid bulk action.", "error")
+        flash("Invalid bulk action.", "error")
 
     # Check if request came from activity dashboard
     activity_id = request.form.get("activity_id")
@@ -5439,7 +5439,7 @@ def activity_income(activity_id, income_id=None):
         ))
 
         db.session.commit()
-        flash("✅ Income saved successfully!", "success")
+        flash("Income saved successfully!", "success")
 
         # Handle AJAX requests (from financial report drawer)
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -5567,7 +5567,7 @@ def activity_expenses(activity_id, expense_id=None):
         ))
 
         db.session.commit()
-        flash("✅ Expense saved successfully!", "success")
+        flash("Expense saved successfully!", "success")
 
         # Handle AJAX requests (from financial report drawer)
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -5843,7 +5843,7 @@ def delete_activity(activity_id):
 
     activity = db.session.get(Activity, activity_id)
     if not activity:
-        flash("❌ Activity not found.", "error")
+        flash("Activity not found.", "error")
         return redirect(url_for("list_activities"))
 
     # Check for active passports first
@@ -5852,7 +5852,7 @@ def delete_activity(activity_id):
     ).filter(Passport.uses_remaining > 0).count()
 
     if active_passports > 0:
-        flash(f"❌ Cannot delete activity. There are {active_passports} active passports.", "error")
+        flash(f"Cannot delete activity. There are {active_passports} active passports.", "error")
         return redirect(url_for("activity_dashboard", activity_id=activity_id))
 
     # Capture activity details BEFORE deletion for logging
@@ -5884,7 +5884,7 @@ def delete_activity(activity_id):
     ))
 
     db.session.commit()
-    flash("✅ Activity deleted successfully.", "success")
+    flash("Activity deleted successfully.", "success")
     return redirect(url_for("dashboard"))
 
 
@@ -5925,7 +5925,7 @@ def activity_dashboard(activity_id):
 
     activity = db.session.get(Activity, activity_id)
     if not activity:
-        flash("❌ Activity not found", "error")
+        flash("Activity not found", "error")
         return redirect(url_for("dashboard2"))
 
     # Get filter and search parameters from request
@@ -7083,7 +7083,7 @@ def create_passport():
             timestamp=now_utc
         )
 
-        flash("✅ Passport created and confirmation email sent.", "success")
+        flash("Passport created and confirmation email sent.", "success")
         if activity_id and activity_id > 0:
             return redirect(url_for("activity_dashboard", activity_id=activity_id))
         else:
@@ -7143,7 +7143,7 @@ def redeem_passport(pass_code):
 
     passport = Passport.query.filter_by(pass_code=pass_code).first()
     if not passport:
-        flash("❌ Passport not found!", "error")
+        flash("Passport not found!", "error")
         return redirect(url_for("dashboard"))
 
     # 🛡️ Prevent duplicate redemptions (double-click protection)
@@ -7155,7 +7155,7 @@ def redeem_passport(pass_code):
     if throttle_key in recent_redemptions:
         last_redemption_time = recent_redemptions[throttle_key]
         if (now_utc - last_redemption_time).total_seconds() < 5:
-            flash("⚠️ Redemption already in progress. Please wait.", "warning")
+            flash("Redemption already in progress. Please wait.", "warning")
             return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
     # Check database for recent redemptions (last 10 seconds) for persistent protection
@@ -7167,7 +7167,7 @@ def redeem_passport(pass_code):
     ).first()
 
     if recent_db_redemption:
-        flash("⚠️ This passport was recently redeemed. Please refresh the page.", "warning")
+        flash("This passport was recently redeemed. Please refresh the page.", "warning")
         return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
     # Record this redemption attempt in memory cache
@@ -7232,7 +7232,7 @@ def redeem_passport(pass_code):
                     'price': passport_type.price_per_user,
                 }
     else:
-        flash("❌ No uses left on this passport!", "error")
+        flash("No uses left on this passport!", "error")
 
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
@@ -7317,7 +7317,7 @@ def mark_passport_paid(passport_id):
 
     passport = db.session.get(Passport, passport_id)
     if not passport:
-        flash("❌ Passport not found!", "error")
+        flash("Passport not found!", "error")
         return redirect(url_for("dashboard2"))
 
     now_utc = datetime.now(timezone.utc)
@@ -7367,11 +7367,11 @@ def send_passport_reminder(passport_id):
 
     passport = db.session.get(Passport, passport_id)
     if not passport:
-        flash("❌ Passport not found!", "error")
+        flash("Passport not found!", "error")
         return redirect(url_for("dashboard2"))
 
     if passport.paid:
-        flash("❌ Cannot send reminder for paid passport!", "error")
+        flash("Cannot send reminder for paid passport!", "error")
         return redirect(request.referrer or url_for("list_passports"))
 
     try:
@@ -7392,9 +7392,9 @@ def send_passport_reminder(passport_id):
         ))
         db.session.commit()
 
-        flash(f"📧 Payment reminder sent to {passport.user.name if passport.user else 'Unknown'}!", "success")
+        flash(f"Payment reminder sent to {passport.user.name if passport.user else 'Unknown'}!", "success")
     except Exception as e:
-        flash(f"❌ Failed to send reminder: {str(e)}", "error")
+        flash(f"Failed to send reminder: {str(e)}", "error")
 
     return redirect(request.referrer or url_for("list_passports"))
 
@@ -7567,7 +7567,7 @@ def create_survey():
         
         # Validate required fields
         if not activity_id or not survey_name or not template_id:
-            flash("❌ Missing required fields", "error")
+            flash("Missing required fields", "error")
             return redirect(url_for("activity_dashboard", activity_id=activity_id))
         
         # Verify activity exists
@@ -7578,13 +7578,13 @@ def create_survey():
             # Numeric template ID - get from database
             template = db.session.get(SurveyTemplate, int(template_id))
             if not template:
-                flash("❌ Invalid survey template", "error")
+                flash("Invalid survey template", "error")
                 return redirect(url_for("activity_dashboard", activity_id=activity_id))
         else:
             # String template ID - get hardcoded template
             template_questions = get_survey_template_questions(template_id)
             if not template_questions:
-                flash("❌ Invalid survey template", "error")
+                flash("Invalid survey template", "error")
                 return redirect(url_for("activity_dashboard", activity_id=activity_id))
             
             # Create survey template in database if it doesn't exist
@@ -7608,12 +7608,12 @@ def create_survey():
         db.session.add(survey)
         db.session.commit()
         
-        flash(f"✅ Survey '{survey_name}' created successfully!", "success")
+        flash(f"Survey '{survey_name}' created successfully!", "success")
         return redirect(url_for("activity_dashboard", activity_id=activity_id))
         
     except Exception as e:
         db.session.rollback()
-        flash(f"❌ Error creating survey: {str(e)}", "error")
+        flash(f"Error creating survey: {str(e)}", "error")
         return redirect(url_for("activity_dashboard", activity_id=activity_id))
 
 
@@ -7657,19 +7657,19 @@ def create_quick_survey():
         template_id = request.form.get("template_id")
 
         if not activity_id or not survey_name or not template_id:
-            flash("❌ Activity, survey name, and template are required", "error")
+            flash("Activity, survey name, and template are required", "error")
             return redirect(url_for("list_surveys"))
 
         # Verify activity exists
         activity = db.session.get(Activity, activity_id)
         if not activity:
-            flash("❌ Activity not found", "error")
+            flash("Activity not found", "error")
             return redirect(url_for("dashboard"))
 
         # Verify template exists
         template = db.session.get(SurveyTemplate, template_id)
         if not template:
-            flash("❌ Survey template not found", "error")
+            flash("Survey template not found", "error")
             return redirect(url_for("list_surveys"))
 
         # Generate unique survey token
@@ -7691,12 +7691,12 @@ def create_quick_survey():
         # Log the action
         log_admin_action(f"Created quick survey '{survey_name}' for activity '{activity.name}' using template '{template.name}'")
 
-        flash(f"✅ Survey '{survey_name}' created successfully using {template.name} template", "success")
+        flash(f"Survey '{survey_name}' created successfully using {template.name} template", "success")
         return redirect(url_for("list_surveys"))
 
     except Exception as e:
         db.session.rollback()
-        flash(f"❌ Error creating survey: {str(e)}", "error")
+        flash(f"Error creating survey: {str(e)}", "error")
         return redirect(url_for("list_surveys"))
 
 
@@ -7730,7 +7730,7 @@ def take_survey(survey_token):
                              questions=template_questions)
         
     except Exception as e:
-        flash(f"❌ Error loading survey: {str(e)}", "error")
+        flash(f"Error loading survey: {str(e)}", "error")
         return redirect(url_for("index"))
 
 
@@ -7741,7 +7741,7 @@ def submit_survey_response(survey_token):
         survey = Survey.query.filter_by(survey_token=survey_token).first_or_404()
         
         if survey.status != "active":
-            flash("❌ This survey is no longer accepting responses", "error")
+            flash("This survey is no longer accepting responses", "error")
             return redirect(url_for("take_survey", survey_token=survey_token))
         
         # Collect responses
@@ -7753,7 +7753,7 @@ def submit_survey_response(survey_token):
             response_value = request.form.get(f"question_{question_id}")
 
             if question.get("required", False) and not response_value:
-                flash(f"❌ Please answer question: {question['question']}", "error")
+                flash(f"Please answer question: {question['question']}", "error")
                 return redirect(url_for("take_survey", survey_token=survey_token))
 
             if response_value:
@@ -7778,7 +7778,7 @@ def submit_survey_response(survey_token):
                 survey_response.user_agent = request.headers.get('User-Agent')
             else:
                 # Token not found - this shouldn't happen but handle gracefully
-                flash("❌ Invalid survey token. Please use the link from your email.", "error")
+                flash("Invalid survey token. Please use the link from your email.", "error")
                 return redirect(url_for("take_survey", survey_token=survey_token))
         else:
             # No response token - this is an anonymous submission
@@ -7818,7 +7818,7 @@ def submit_survey_response(survey_token):
         
     except Exception as e:
         db.session.rollback()
-        flash(f"❌ Error submitting survey: {str(e)}", "error")
+        flash(f"Error submitting survey: {str(e)}", "error")
         return redirect(url_for("take_survey", survey_token=survey_token))
 
 
@@ -7998,11 +7998,11 @@ def create_default_survey_template():
     try:
         db.session.add(template)
         db.session.commit()
-        print(f"✅ Default survey template '{template_name}' created successfully")
+        print(f"Default survey template '{template_name}' created successfully")
         return template
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error creating default survey template: {str(e)}")
+        print(f"Error creating default survey template: {str(e)}")
         return None
 
 
@@ -8016,7 +8016,7 @@ def create_french_simple_survey_template():
         try:
             db.session.delete(existing_template)
             db.session.commit()
-            print(f"🗑️  Deleted existing French template to recreate with proper format")
+            print(f" Deleted existing French template to recreate with proper format")
         except Exception as e:
             db.session.rollback()
             print(f"Warning: Could not delete existing template: {str(e)}")
@@ -8133,11 +8133,11 @@ def create_french_simple_survey_template():
     try:
         db.session.add(template)
         db.session.commit()
-        print(f"✅ French survey template '{template_name}' created successfully with proper format")
+        print(f"French survey template '{template_name}' created successfully with proper format")
         return template
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error creating French survey template: {str(e)}")
+        print(f"Error creating French survey template: {str(e)}")
         return None
 
 
@@ -8538,7 +8538,7 @@ def send_survey_invitations(survey_id):
     log(f"{'='*80}\n")
 
     if "admin" not in session:
-        log("❌ No admin in session - redirecting to login")
+        log("No admin in session - redirecting to login")
         log_file.close()
         return redirect(url_for("login"))
 
@@ -8549,11 +8549,11 @@ def send_survey_invitations(survey_id):
     ])
 
     if not survey:
-        print(f"❌ Survey {survey_id} not found!")
+        print(f"Survey {survey_id} not found!")
         flash("Survey not found", "error")
         return redirect(url_for("list_surveys"))
 
-    print(f"✅ Survey loaded: {survey.name}")
+    print(f"Survey loaded: {survey.name}")
     print(f"   Activity: {survey.activity.name}")
     
     # For surveys, include all participants (paid and unpaid)
@@ -8727,16 +8727,16 @@ def send_survey_invitations(survey_id):
                     context=context
                 )
 
-                print(f"✅ send_email_async() called successfully for {passport.user.email}")
+                print(f"send_email_async() called successfully for {passport.user.email}")
                 sent_count += 1
                 
             except Exception as e:
                 # Log error but continue with other invitations
                 import traceback
                 import io
-                log(f"❌ Failed to send survey invitation to {passport.user.email}")
-                log(f"❌ Error: {e}")
-                log(f"❌ Traceback:")
+                log(f"Failed to send survey invitation to {passport.user.email}")
+                log(f"Error: {e}")
+                log(f"Traceback:")
                 tb_output = io.StringIO()
                 traceback.print_exc(file=tb_output)
                 log(tb_output.getvalue())
@@ -8846,14 +8846,14 @@ def send_survey_invitations(survey_id):
                     context=context
                 )
 
-                print(f"✅ send_email_async() called successfully for {passport.user.email}")
+                print(f"send_email_async() called successfully for {passport.user.email}")
                 sent_count += 1
                 
             except Exception as e:
                 import traceback
-                print(f"❌ Failed to send survey invitation to {passport.user.email}")
-                print(f"❌ Error: {e}")
-                print(f"❌ Traceback:")
+                print(f"Failed to send survey invitation to {passport.user.email}")
+                print(f"Error: {e}")
+                print(f"Traceback:")
                 traceback.print_exc()
                 failed_count += 1
                 failed_emails.append(passport.user.email)
@@ -9055,7 +9055,7 @@ with app.app_context():
 def test_payment_bot_now():
     """SIMPLE payment bot test - just visit this URL"""
     if "admin" not in session:
-        return "❌ Must be logged in as admin", 401
+        return "Must be logged in as admin", 401
     
     try:
         print("🔧 SIMPLE payment bot test started!")
@@ -9064,15 +9064,15 @@ def test_payment_bot_now():
         result = match_gmail_payments_to_passes()
         
         if result and isinstance(result, dict):
-            message = f"✅ Payment bot completed! {result.get('matched', 0)} payments matched."
+            message = f"Payment bot completed! {result.get('matched', 0)} payments matched."
         else:
-            message = "✅ Payment bot completed! No new payments found."
+            message = "Payment bot completed! No new payments found."
             
-        print(f"✅ Payment bot result: {message}")
+        print(f"Payment bot result: {message}")
         return f"<h1>{message}</h1><p><strong>Check your dashboard logs for details.</strong></p><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
         
     except Exception as e:
-        error_msg = f"❌ Payment bot failed: {str(e)}"
+        error_msg = f"Payment bot failed: {str(e)}"
         print(error_msg)
         return f"<h1>{error_msg}</h1><p><a href='/admin/unified-settings'>← Back to Settings</a></p>"
 
@@ -9081,7 +9081,7 @@ def test_payment_bot_now():
 def update_payment_notes():
     """Update existing NO_MATCH payment records with detailed, accurate notes"""
     if "admin" not in session:
-        return "❌ Must be logged in as admin", 401
+        return "Must be logged in as admin", 401
 
     try:
         print("🔧 Starting retroactive payment notes update...")
@@ -9206,12 +9206,12 @@ def update_payment_notes():
 
         db.session.commit()
 
-        message = f"✅ Updated {updated_count} out of {len(no_match_payments)} NO_MATCH payment records with detailed notes!"
+        message = f"Updated {updated_count} out of {len(no_match_payments)} NO_MATCH payment records with detailed notes!"
         print(message)
         return f"<h1>{message}</h1><p><strong>Refresh your payment matches page to see the new detailed reasons.</strong></p><p><a href='/payment-bot-matches'>→ View Payment Matches</a></p>"
 
     except Exception as e:
-        error_msg = f"❌ Update failed: {str(e)}"
+        error_msg = f"Update failed: {str(e)}"
         print(error_msg)
         import traceback
         traceback.print_exc()
@@ -9355,16 +9355,16 @@ def save_email_templates(activity_id):
                         with open(upload_path, 'wb') as f:
                             f.write(resized_image_data)
                         hero_files_uploaded.append((template_type, hero_filename))
-                        print(f"✅ Hero image resized and saved for {template_type}: {hero_filename} - {resize_message}")
+                        print(f"Hero image resized and saved for {template_type}: {hero_filename} - {resize_message}")
                     else:
                         # Fall back to original if resize fails
                         hero_file.seek(0)  # Reset file pointer
                         hero_file.save(upload_path)
                         hero_files_uploaded.append((template_type, hero_filename))
-                        print(f"⚠️ Hero image saved without resizing for {template_type}: {hero_filename} - {resize_message}")
+                        print(f"Hero image saved without resizing for {template_type}: {hero_filename} - {resize_message}")
                     
                 except Exception as e:
-                    flash(f"❌ Error uploading hero image for {template_type}: {str(e)}", "error")
+                    flash(f"Error uploading hero image for {template_type}: {str(e)}", "error")
         
         # Handle activity-wide owner logo upload (shared across all templates)
         owner_logo_file = None
@@ -9392,7 +9392,7 @@ def save_email_templates(activity_id):
                 owner_logo_file.save(upload_path)
                 
             except Exception as e:
-                flash(f"❌ Error uploading owner logo: {str(e)}", "error")
+                flash(f"Error uploading owner logo: {str(e)}", "error")
                 owner_logo_filename = None
         
         # Process selected template type(s)
@@ -9466,11 +9466,11 @@ def save_email_templates(activity_id):
                     cwd=os.path.dirname(compile_script)
                 )
                 if result.returncode != 0:
-                    print(f"⚠️ Warning: Survey template compilation failed: {result.stderr}")
+                    print(f"Warning: Survey template compilation failed: {result.stderr}")
                 else:
-                    print(f"✅ Survey invitation template compiled successfully after save")
+                    print(f"Survey invitation template compiled successfully after save")
             except Exception as e:
-                print(f"⚠️ Warning: Could not auto-compile survey template: {e}")
+                print(f"Warning: Could not auto-compile survey template: {e}")
 
         # Return appropriate response based on request type
         if is_individual_save:
@@ -9483,7 +9483,7 @@ def save_email_templates(activity_id):
                 'template_name': template_names.get(single_template, single_template)
             })
         else:
-            flash("✅ Email templates saved successfully!", "success")
+            flash("Email templates saved successfully!", "success")
         
     except Exception as e:
         db.session.rollback()
@@ -9496,7 +9496,7 @@ def save_email_templates(activity_id):
                 'template_type': single_template if single_template else 'unknown'
             }), 500
         else:
-            flash(f"❌ {error_message}", "error")
+            flash(f"{error_message}", "error")
     
     # Only redirect for bulk saves (form submissions)
     if not is_individual_save:
@@ -9561,18 +9561,18 @@ def reset_email_template(activity_id):
         if os.path.exists(hero_file_path):
             try:
                 os.remove(hero_file_path)
-                print(f"✅ Deleted custom hero image file: {hero_file_path}")
+                print(f"Deleted custom hero image file: {hero_file_path}")
             except Exception as e:
-                print(f"⚠️ Could not delete hero image file {hero_file_path}: {e}")
+                print(f"Could not delete hero image file {hero_file_path}: {e}")
         
         # Also delete owner logo file when resetting if this is the first template (contains global settings)
         owner_logo_path = f"static/uploads/{activity_id}_owner_logo.png"  
         if template_type == 'newPass' and os.path.exists(owner_logo_path):
             try:
                 os.remove(owner_logo_path)
-                print(f"✅ Deleted custom owner logo file: {owner_logo_path}")
+                print(f"Deleted custom owner logo file: {owner_logo_path}")
             except Exception as e:
-                print(f"⚠️ Could not delete owner logo file {owner_logo_path}: {e}")
+                print(f"Could not delete owner logo file {owner_logo_path}: {e}")
         
         # NEW: Restore original compiled template files 
         original_dir = f"templates/email_templates/{template_type}_original"
@@ -9584,11 +9584,11 @@ def reset_email_template(activity_id):
                 if os.path.exists(compiled_dir):
                     shutil.rmtree(compiled_dir)
                 shutil.copytree(original_dir, compiled_dir)
-                print(f"✅ Restored original template files: {original_dir} → {compiled_dir}")
+                print(f"Restored original template files: {original_dir} → {compiled_dir}")
             except Exception as e:
-                print(f"⚠️ Could not restore original template files: {e}")
+                print(f"Could not restore original template files: {e}")
         else:
-            print(f"⚠️ Original template directory not found: {original_dir}")
+            print(f"Original template directory not found: {original_dir}")
         
         # Mark the attribute as modified for SQLAlchemy
         from sqlalchemy.orm.attributes import flag_modified
@@ -9741,15 +9741,15 @@ def email_preview(activity_id):
                 hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
                 has_custom_hero = hero_data is not None and is_custom_hero
                 
-                print(f"📧 EMAIL TEMPLATE: activity={activity.id}, template_type={template_type}")
-                print(f"📧 EMAIL TEMPLATE: Custom hero found: {has_custom_hero}, is_custom: {is_custom_hero}")
+                print(f"EMAIL TEMPLATE: activity={activity.id}, template_type={template_type}")
+                print(f"EMAIL TEMPLATE: Custom hero found: {has_custom_hero}, is_custom: {is_custom_hero}")
 
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
                     # Skip hero-related images ONLY if we have a custom hero image
                     expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                     if (img_id == expected_hero_cid and has_custom_hero):
-                        print(f"📧 EMAIL TEMPLATE: Skipping template hero '{img_id}' because custom hero exists")
+                        print(f"EMAIL TEMPLATE: Skipping template hero '{img_id}' because custom hero exists")
                         continue
                         
                     # Determine image type (most are PNG)
@@ -9761,7 +9761,7 @@ def email_preview(activity_id):
                     cid_ref = f'cid:{img_id}'
                     data_uri = f'data:{mime_type};base64,{base64_data}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"📧 EMAIL TEMPLATE: Replaced {cid_ref} with template image")
+                    print(f"EMAIL TEMPLATE: Replaced {cid_ref} with template image")
                 
                 # Now handle custom hero image if it exists
                 if has_custom_hero:
@@ -9770,7 +9770,7 @@ def email_preview(activity_id):
                     cid_ref = f'cid:{expected_hero_cid}'
                     data_uri = f'data:image/png;base64,{hero_base64}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"📧 EMAIL TEMPLATE: Replaced {cid_ref} with CUSTOM HERO image")
+                    print(f"EMAIL TEMPLATE: Replaced {cid_ref} with CUSTOM HERO image")
         
         # Add logo image as data URI
         logo_path = None
@@ -9914,7 +9914,7 @@ def email_preview_live(activity_id):
 
         # CRITICAL: Add pass_data to base_context so templates can access it
         base_context['pass_data'] = pass_data
-        print(f"✅ PREVIEW: Added pass_data to context for {template_type}")
+        print(f"PREVIEW: Added pass_data to context for {template_type}")
 
         # Render email blocks
         base_context['owner_html'] = render_template(
@@ -10028,15 +10028,15 @@ def email_preview_live(activity_id):
                 has_custom_hero = hero_data is not None and is_custom_hero
                 has_uploaded_hero = uploaded_hero_data is not None
                 
-                print(f"📧 EMAIL LIVE PREVIEW: activity={activity.id}, template_type={template_type}")
-                print(f"📧 EMAIL LIVE PREVIEW: Custom hero found: {has_custom_hero}, uploaded hero: {has_uploaded_hero}")
+                print(f"EMAIL LIVE PREVIEW: activity={activity.id}, template_type={template_type}")
+                print(f"EMAIL LIVE PREVIEW: Custom hero found: {has_custom_hero}, uploaded hero: {has_uploaded_hero}")
 
                 # Replace cid: references with data: URIs
                 for img_id, base64_data in inline_images_data.items():
                     # Skip hero-related images if we have a custom hero OR uploaded hero
                     expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                     if (img_id == expected_hero_cid and (has_custom_hero or has_uploaded_hero)):
-                        print(f"📧 EMAIL LIVE PREVIEW: Skipping template hero '{img_id}' because custom/uploaded hero exists")
+                        print(f"EMAIL LIVE PREVIEW: Skipping template hero '{img_id}' because custom/uploaded hero exists")
                         continue
                         
                     # Determine image type (most are PNG)
@@ -10048,7 +10048,7 @@ def email_preview_live(activity_id):
                     cid_ref = f'cid:{img_id}'
                     data_uri = f'data:{mime_type};base64,{base64_data}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"📧 EMAIL LIVE PREVIEW: Replaced {cid_ref} with template image")
+                    print(f"EMAIL LIVE PREVIEW: Replaced {cid_ref} with template image")
                 
                 # Handle hero image replacement - prioritize uploaded hero over custom hero
                 if has_uploaded_hero:
@@ -10057,14 +10057,14 @@ def email_preview_live(activity_id):
                     cid_ref = f'cid:{expected_hero_cid}'
                     data_uri = f'data:image/png;base64,{hero_base64}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"📧 EMAIL LIVE PREVIEW: Replaced {cid_ref} with UPLOADED HERO image")
+                    print(f"EMAIL LIVE PREVIEW: Replaced {cid_ref} with UPLOADED HERO image")
                 elif has_custom_hero:
                     hero_base64 = base64.b64encode(hero_data).decode('utf-8')
                     expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                     cid_ref = f'cid:{expected_hero_cid}'
                     data_uri = f'data:image/png;base64,{hero_base64}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"📧 EMAIL LIVE PREVIEW: Replaced {cid_ref} with SAVED CUSTOM HERO image")
+                    print(f"EMAIL LIVE PREVIEW: Replaced {cid_ref} with SAVED CUSTOM HERO image")
         
         # Add logo image as data URI
         logo_path = None
@@ -10211,7 +10211,7 @@ def test_email_template(activity_id):
     print(f"Session admin: {'admin' in session}")
     
     if "admin" not in session:
-        print("❌ NOT LOGGED IN - REDIRECTING")
+        print("NOT LOGGED IN - REDIRECTING")
         return redirect(url_for("login"))
     
     from models import Activity
@@ -10222,7 +10222,7 @@ def test_email_template(activity_id):
     import sys
     import json
     
-    print("✅ Admin authenticated, proceeding...")
+    print("Admin authenticated, proceeding...")
     
     try:
         activity = Activity.query.get_or_404(activity_id)
@@ -10230,8 +10230,8 @@ def test_email_template(activity_id):
         # Use logged-in admin's email, fallback to form input or default
         test_email = request.form.get('test_email') or session.get('admin', 'kdresdell@gmail.com')
         
-        print(f"📧 Activity: {activity.name}")
-        print(f"📧 Template type: {template_type}")
+        print(f"Activity: {activity.name}")
+        print(f"Template type: {template_type}")
         
         # Create base context with email blocks (if template needs them)
         base_context = {
@@ -10288,7 +10288,7 @@ def test_email_template(activity_id):
 
             # CRITICAL: Add pass_data to base_context so templates can access it
             base_context['pass_data'] = pass_data
-            print(f"✅ TEST EMAIL: Added pass_data to context for {template_type}")
+            print(f"TEST EMAIL: Added pass_data to context for {template_type}")
 
             # Render email blocks
             base_context['owner_html'] = render_template(
@@ -10308,7 +10308,7 @@ def test_email_template(activity_id):
                     history=history
                 )
             
-            print(f"✅ Added email blocks for {template_type}")
+            print(f"Added email blocks for {template_type}")
             print(f"   owner_html: {len(base_context.get('owner_html', ''))} chars")
             print(f"   history_html: {len(base_context.get('history_html', ''))} chars")
         
@@ -10339,7 +10339,7 @@ def test_email_template(activity_id):
         hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
         has_custom_hero = hero_data is not None and is_custom_hero
         
-        print(f"📧 TEST EMAIL: Custom hero found: {has_custom_hero}, is_custom: {is_custom_hero}")
+        print(f"TEST EMAIL: Custom hero found: {has_custom_hero}, is_custom: {is_custom_hero}")
         
         if os.path.exists(json_path):
             with open(json_path, 'r') as f:
@@ -10352,7 +10352,7 @@ def test_email_template(activity_id):
                         # Skip hero-related images if we have a custom hero image
                         expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
                         if (img_id == expected_hero_cid and has_custom_hero):
-                            print(f"📧 TEST EMAIL: Skipping template hero '{img_id}' because custom hero exists")
+                            print(f"TEST EMAIL: Skipping template hero '{img_id}' because custom hero exists")
                             continue
                             
                         # The JSON contains base64-encoded image data directly
@@ -10385,7 +10385,7 @@ def test_email_template(activity_id):
         if has_custom_hero:
             expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
             inline_images[expected_hero_cid] = hero_data
-            print(f"📧 TEST EMAIL: Added custom hero image for CID '{expected_hero_cid}' ({len(hero_data)} bytes)")
+            print(f"TEST EMAIL: Added custom hero image for CID '{expected_hero_cid}' ({len(hero_data)} bytes)")
 
         # Generate QR code for test email
         qr_code_data = generate_qr_code_image('TEST123')
@@ -10407,7 +10407,7 @@ def test_email_template(activity_id):
         
         print(f"\n✅ send_email() RETURNED: {result}")
         
-        flash(f"✅ Test email sent using compiled template to {test_email}", "success")
+        flash(f"Test email sent using compiled template to {test_email}", "success")
         
         # Log it for debugging
         print(f"\n📬 TEST EMAIL SENT: {subject} to {test_email}")
@@ -10486,7 +10486,7 @@ def upload_activity_logo(activity_id):
             old_logo_path = os.path.join(logos_dir, activity.logo_filename)
             if os.path.exists(old_logo_path):
                 os.remove(old_logo_path)
-                print(f"✅ Deleted old logo: {old_logo_path}")
+                print(f"Deleted old logo: {old_logo_path}")
         
         # Save new logo
         logo_file.save(logo_path)
@@ -10531,7 +10531,7 @@ def delete_activity_logo(activity_id):
             logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
             if os.path.exists(logo_path):
                 os.remove(logo_path)
-                print(f"✅ Deleted logo file: {logo_path}")
+                print(f"Deleted logo file: {logo_path}")
             
             # Clear logo filename from database
             activity.logo_filename = None
@@ -10637,7 +10637,7 @@ def unsubscribe():
             '''
             
         except Exception as e:
-            print(f"❌ Unsubscribe error: {e}")
+            print(f"Unsubscribe error: {e}")
             return "An error occurred. Please try again later.", 500
 
 
