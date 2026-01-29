@@ -1772,7 +1772,8 @@ def create_activity():
             location_address_raw=location_address_raw if location_address_raw else None,
             location_address_formatted=location_address_formatted if location_address_formatted else None,
             location_coordinates=location_coordinates if location_address_formatted else None,
-            goal_revenue=goal_revenue
+            goal_revenue=goal_revenue,
+            offer_passport_renewal=("offer_passport_renewal" in request.form)
         )
 
         db.session.add(new_activity)
@@ -1931,6 +1932,9 @@ def edit_activity(activity_id):
         # 💰 Update goal revenue (optional)
         goal_revenue_str = request.form.get("goal_revenue", "").strip()
         activity.goal_revenue = float(goal_revenue_str) if goal_revenue_str else 0.0
+
+        # Update passport renewal setting
+        activity.offer_passport_renewal = ("offer_passport_renewal" in request.form)
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
@@ -3755,6 +3759,22 @@ def redeem_passport_qr(pass_code):
         )
 
         flash(f"✅ Passport {passport.pass_code} redeemed via QR scan!", "success")
+
+        # Check if passport is now empty and activity offers renewal
+        if passport.uses_remaining == 0:
+            activity = passport.activity
+            passport_type = passport.passport_type
+            if (activity.offer_passport_renewal
+                    and passport_type
+                    and passport_type.status == 'active'):
+                session['renewal_prompt'] = {
+                    'pass_code': passport.pass_code,
+                    'user_name': passport.user.name if passport.user else 'Unknown',
+                    'activity_name': activity.name,
+                    'passport_type_name': passport_type.name,
+                    'sessions': passport_type.sessions_included,
+                    'price': passport_type.price_per_user,
+                }
     else:
         flash("❌ No uses left on this passport!", "error")
 
@@ -6875,12 +6895,95 @@ def redeem_passport(pass_code):
         )
 
         flash(f"Session redeemed! {passport.uses_remaining} uses left.", "success")
+
+        # Check if passport is now empty and activity offers renewal
+        if passport.uses_remaining == 0:
+            activity = passport.activity
+            passport_type = passport.passport_type
+            if (activity.offer_passport_renewal
+                    and passport_type
+                    and passport_type.status == 'active'):
+                session['renewal_prompt'] = {
+                    'pass_code': passport.pass_code,
+                    'user_name': passport.user.name if passport.user else 'Unknown',
+                    'activity_name': activity.name,
+                    'passport_type_name': passport_type.name,
+                    'sessions': passport_type.sessions_included,
+                    'price': passport_type.price_per_user,
+                }
     else:
         flash("❌ No uses left on this passport!", "error")
 
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
 
+@app.route("/renew-passport/<pass_code>", methods=["POST"])
+def renew_passport(pass_code):
+    from models import Passport, AdminActionLog, Admin
+    from utils import notify_pass_event, generate_pass_code
+    from datetime import datetime, timezone
+    import time
+
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    # Find the expired passport
+    expired_passport = Passport.query.filter_by(pass_code=pass_code).first()
+    if not expired_passport:
+        flash("Passport not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    # Validate: passport type must still be active
+    passport_type = expired_passport.passport_type
+    if not passport_type or passport_type.status != 'active':
+        flash("Passport type is no longer active. Cannot renew.", "warning")
+        return redirect(url_for("activity_dashboard", activity_id=expired_passport.activity_id))
+
+    # Reuse the existing user
+    user = expired_passport.user
+
+    # Get current admin
+    current_admin = Admin.query.filter_by(email=session.get("admin")).first()
+
+    # Create new passport with same details
+    new_passport = Passport(
+        pass_code=generate_pass_code(),
+        user_id=user.id,
+        activity_id=expired_passport.activity_id,
+        passport_type_id=passport_type.id,
+        passport_type_name=passport_type.name,
+        sold_amt=passport_type.price_per_user,
+        uses_remaining=passport_type.sessions_included,
+        created_by=current_admin.id if current_admin else None,
+        created_dt=datetime.now(timezone.utc),
+        paid=False,
+        notes=f"Renewed from {pass_code}"
+    )
+
+    db.session.add(new_passport)
+    db.session.commit()
+
+    # Log admin action
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin", "unknown"),
+        action=f"Passport renewed for {user.name} ({new_passport.pass_code}) from expired {pass_code}"
+    ))
+    db.session.commit()
+
+    # Send new passport email
+    time.sleep(0.5)
+    now_utc = datetime.now(timezone.utc)
+    notify_pass_event(
+        app=current_app._get_current_object(),
+        event_type="pass_created",
+        pass_data=new_passport,
+        activity=new_passport.activity,
+        admin_email=session.get("admin"),
+        timestamp=now_utc
+    )
+
+    flash(f"New passport created for {user.name}!", "success")
+    return redirect(url_for("activity_dashboard", activity_id=expired_passport.activity_id))
 
 
 @app.route("/mark-passport-paid/<int:passport_id>", methods=["POST"])

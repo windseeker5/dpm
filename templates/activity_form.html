@@ -48,6 +48,19 @@
             </div>
           </div>
 
+          <!-- Passport Renewal -->
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Passport Renewal</label>
+            <label class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="offer_passport_renewal"
+                     {{ 'checked' if activity and activity.offer_passport_renewal else '' }}>
+              <span class="form-check-label">Offer to create a new passport when one expires</span>
+            </label>
+            <small class="form-text text-muted">
+              Enable for recurring activities (e.g., weekly hockey). Disable for one-time events.
+            </small>
+          </div>
+
 
 
           <!-- Description -->

@@ -392,6 +392,7 @@ def task6_verify_schema(cursor):
         ('activity', 'location_address_raw', 'Location fields'),
         ('activity', 'location_address_formatted', 'Location fields'),
         ('activity', 'location_coordinates', 'Location fields'),
+        ('activity', 'offer_passport_renewal', 'Passport renewal setting'),
     ]
 
     all_good = True
@@ -1906,6 +1907,30 @@ def task21_fix_ap_fiscal_year_filtering(cursor):
 
 
 # ============================================================================
+# TASK 22: Add Passport Renewal Setting to Activity
+# ============================================================================
+def task22_add_passport_renewal_setting(cursor):
+    """Add offer_passport_renewal column to activity table"""
+    log("🔄", "TASK 22: Adding passport renewal setting to Activity", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'activity'):
+        log("⏭️ ", "  Activity table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'activity', 'offer_passport_renewal'):
+        log("⏭️ ", "  Column 'offer_passport_renewal' already exists", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("ALTER TABLE activity ADD COLUMN offer_passport_renewal BOOLEAN DEFAULT 0 NOT NULL")
+        log("✅", "  Added column 'offer_passport_renewal' (default: disabled)", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to add offer_passport_renewal: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -1946,6 +1971,7 @@ def main():
         ("Activity PRIMARY KEY Fix", task19_fix_activity_primary_key),
         ("Push Subscription Table", task20_add_push_subscription_table),
         ("AP Fiscal Year Fix", task21_fix_ap_fiscal_year_filtering),  # Creates views with AP fix
+        ("Passport Renewal Setting", task22_add_passport_renewal_setting),
     ]
 
     completed = 0

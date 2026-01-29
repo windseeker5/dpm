@@ -3396,6 +3396,44 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+{% set renewal = session.pop('renewal_prompt', None) %}
+{% if renewal %}
+<!-- Passport Renewal Modal -->
+<div class="modal modal-blur fade" id="renewal-modal" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-info"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-refresh icon mb-2 text-info" style="font-size: 2rem;"></i>
+        <h3>Passport Expired</h3>
+        <div class="text-muted">
+          <strong>{{ renewal.user_name }}</strong><br>
+          {{ renewal.activity_name }} - {{ renewal.passport_type_name }}<br>
+          {{ renewal.sessions }} sessions at ${{ '%.2f'|format(renewal.price) }}
+        </div>
+        <div class="mt-2 text-muted">Create a new passport?</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">No Thanks</button>
+        <form method="POST" action="{{ url_for('renew_passport', pass_code=renewal.pass_code) }}" class="w-100">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-info w-100">Create New Passport</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('renewal-modal');
+    if (el) {
+      var m = new bootstrap.Modal(el);
+      m.show();
+    }
+  });
+</script>
+{% endif %}
+
 {% endblock %}
 
 {% block styles %}

@@ -97,7 +97,8 @@ class Activity(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(50), default="active")
-    
+    offer_passport_renewal = db.Column(db.Boolean, default=False, nullable=False)
+
     # Email template customizations (JSON)
     email_templates = db.Column(db.JSON, nullable=True)
 
