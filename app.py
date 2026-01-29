@@ -3819,16 +3819,27 @@ def upload_and_restore_backup():
 def users_json():
     from models import User
 
+    # Get all users ordered by ID descending (newest first)
     users = (
-        db.session.query(User.name, User.email, User.phone_number)
-        .distinct()
+        db.session.query(User.name, User.email, User.phone_number, User.id)
+        .filter(User.name.isnot(None))
+        .filter(User.name != '')
+        .order_by(User.id.desc())
         .all()
     )
 
-    result = [
-        {"name": u[0], "email": u[1], "phone": u[2]}
-        for u in users if u[0]  # ✅ Filter out empty names
-    ]
+    # Deduplicate by name (case-insensitive), keeping the first (newest) record
+    seen_names = set()
+    result = []
+    for u in users:
+        name_lower = u[0].strip().lower()
+        if name_lower not in seen_names:
+            seen_names.add(name_lower)
+            result.append({
+                "name": u[0],
+                "email": u[1] or "",
+                "phone": u[2] or ""
+            })
 
     print("Sending user cache JSON:", result)
     return jsonify(result)
