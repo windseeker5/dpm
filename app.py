@@ -2181,9 +2181,21 @@ def payment_bot_settings():
             result = match_gmail_payments_to_passes()
             
             if result and isinstance(result, dict):
-                flash(f"✅ Test completed! {result.get('matched', 0)} payments matched.", "success")
+                matched = result.get('matched', 0)
+                no_match = result.get('no_match', 0)
+                skipped = result.get('skipped', 0)
+                emails_found = result.get('emails_found', 0)
+
+                if matched > 0:
+                    flash(f"✅ Test completed! {matched} payment(s) matched to passports!", "success")
+                elif no_match > 0:
+                    flash(f"⚠️ Test completed! {no_match} payment(s) need manual review (no matching passport)", "warning")
+                elif emails_found > 0 and skipped > 0:
+                    flash(f"ℹ️ Test completed! {skipped} payment(s) already processed - no new payments.", "info")
+                else:
+                    flash("ℹ️ Test completed! No new payments found in inbox.", "info")
             else:
-                flash("✅ Test completed! No new payments found.", "info")
+                flash("ℹ️ Test completed! No new payments found.", "info")
                 
         except Exception as e:
             print(f"❌ Payment bot test error: {e}")
@@ -2478,6 +2490,271 @@ def api_cleanup_duplicate_logs():
         print(f"Traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({"error": f"Failed to clean logs: {str(e)}"}), 500
+
+
+@app.route("/api/get-passport-types/<int:activity_id>", methods=["GET"])
+def api_get_passport_types(activity_id):
+    """Get active passport types for an activity (used by create passport from payment modal)"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        from models import PassportType
+
+        passport_types = PassportType.query.filter_by(
+            activity_id=activity_id,
+            status='active'
+        ).order_by(PassportType.name).all()
+
+        result = [{
+            "id": pt.id,
+            "name": pt.name,
+            "price": pt.price_per_user or 0,
+            "sessions": pt.sessions_included or 1
+        } for pt in passport_types]
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"Error fetching passport types: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/create-passport-from-payment", methods=["POST"])
+@csrf.exempt
+def api_create_passport_from_payment():
+    """Create a passport directly from an unmatched payment, bypassing signup flow"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        from models import User, Passport, PassportType, Activity, EbankPayment, AdminActionLog
+        from utils import generate_pass_code, notify_pass_event, log_admin_action
+        import time
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        # Required fields
+        payment_id = data.get("payment_id")
+        activity_id = data.get("activity_id")
+        passport_type_id = data.get("passport_type_id")
+        user_name = data.get("name", "").strip()
+        user_email = data.get("email", "").strip()
+
+        # Optional fields
+        user_phone = data.get("phone", "").strip() or None
+        amount = data.get("amount")
+        sessions = data.get("sessions")
+
+        # Validate required fields
+        if not payment_id:
+            return jsonify({"error": "Payment ID is required"}), 400
+        if not activity_id:
+            return jsonify({"error": "Activity is required"}), 400
+        if not passport_type_id:
+            return jsonify({"error": "Passport type is required"}), 400
+        if not user_name:
+            return jsonify({"error": "Name is required"}), 400
+        if not user_email:
+            return jsonify({"error": "Email is required - all passport communications are sent via email"}), 400
+
+        # Verify payment exists and is NO_MATCH
+        payment = db.session.get(EbankPayment, payment_id)
+        if not payment:
+            return jsonify({"error": "Payment not found"}), 404
+        if payment.result != "NO_MATCH":
+            return jsonify({"error": "Payment is not in NO_MATCH status"}), 400
+
+        # Verify activity exists and is active
+        activity = db.session.get(Activity, activity_id)
+        if not activity:
+            return jsonify({"error": "Activity not found"}), 404
+        if activity.status != "active":
+            return jsonify({"error": "Activity is not active"}), 400
+
+        # Verify passport type exists and belongs to activity
+        passport_type = db.session.get(PassportType, passport_type_id)
+        if not passport_type:
+            return jsonify({"error": "Passport type not found"}), 404
+        if passport_type.activity_id != activity_id:
+            return jsonify({"error": "Passport type does not belong to selected activity"}), 400
+        if passport_type.status != "active":
+            return jsonify({"error": "Passport type is not active"}), 400
+
+        # Get current admin
+        current_admin = Admin.query.filter_by(email=session.get("admin")).first()
+
+        # Create User (always create new, even if same email reused - follows existing pattern)
+        user = User(name=user_name, email=user_email, phone_number=user_phone)
+        db.session.add(user)
+        db.session.flush()  # Assign user.id
+
+        # Use provided amount or default to passport type price
+        sold_amt = float(amount) if amount is not None else (passport_type.price_per_user or 0)
+
+        # Use provided sessions or default to passport type sessions
+        uses_remaining = int(sessions) if sessions is not None else (passport_type.sessions_included or 1)
+
+        # Create Passport (paid=True since we're creating from a payment)
+        passport = Passport(
+            pass_code=generate_pass_code(),
+            user_id=user.id,
+            activity_id=activity_id,
+            passport_type_id=passport_type_id,
+            passport_type_name=passport_type.name,
+            sold_amt=sold_amt,
+            uses_remaining=uses_remaining,
+            created_by=current_admin.id if current_admin else None,
+            created_dt=datetime.now(timezone.utc),
+            paid=True,
+            paid_date=datetime.now(timezone.utc),
+            marked_paid_by=session.get("admin", "unknown"),
+            notes=f"Created from payment #{payment_id} ({payment.bank_info_name} - ${payment.bank_info_amt})"
+        )
+        db.session.add(passport)
+        db.session.flush()  # Assign passport.id
+
+        # Update EbankPayment to link to passport and mark as matched
+        payment.matched_pass_id = passport.id
+        payment.matched_name = user_name
+        payment.matched_amt = sold_amt
+        payment.result = "MATCHED"
+        payment.note = f"Manually matched via Create Passport by {session.get('admin', 'unknown')}"
+
+        # Log admin action
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin", "unknown"),
+            action=f"Created passport from payment: {user_name} for '{activity.name}' (${sold_amt}) - Payment #{payment_id}"
+        ))
+
+        db.session.commit()
+        db.session.expire_all()
+
+        # Move the payment email to PaymentProcessed folder (same as automatic matching)
+        email_moved = False
+        try:
+            from utils import get_setting
+            import imaplib
+
+            mail_user = get_setting("MAIL_USERNAME")
+            mail_pwd = get_setting("MAIL_PASSWORD")
+            processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
+
+            print(f"📧 EMAIL MOVE: Starting...")
+            print(f"📧 EMAIL MOVE: Payment UID stored: {payment.email_uid}")
+
+            if mail_user and mail_pwd and payment.email_uid:
+                imap_server = get_setting("IMAP_SERVER")
+                if not imap_server:
+                    mail_server = get_setting("MAIL_SERVER")
+                    imap_server = mail_server if mail_server else "imap.gmail.com"
+
+                try:
+                    mail = imaplib.IMAP4_SSL(imap_server)
+                except:
+                    mail = imaplib.IMAP4(imap_server, 143)
+                    mail.starttls()
+
+                mail.login(mail_user, mail_pwd)
+                mail.select("inbox")
+
+                # Use the stored UID directly - no need to search!
+                uid = payment.email_uid
+                print(f"📧 Using stored UID: {uid}")
+
+                # Check if folder exists, create if needed
+                folder_status, _ = mail.select(processed_folder)
+                if folder_status != 'OK':
+                    print(f"📁 Folder '{processed_folder}' doesn't exist, creating...")
+                    try:
+                        mail.create(processed_folder)
+                        print(f"✅ Created folder '{processed_folder}'")
+                    except Exception as create_err:
+                        print(f"⚠️ Could not create folder: {create_err}")
+
+                # Switch back to inbox to perform the copy
+                mail.select("inbox")
+
+                # Copy and delete using stored UID
+                copy_result = mail.uid("COPY", uid, processed_folder)
+                if copy_result[0] == 'OK':
+                    mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                    email_moved = True
+                    print(f"✅ Payment email moved to {processed_folder} folder")
+                else:
+                    print(f"❌ Failed to copy email: {copy_result}")
+
+                mail.expunge()
+                mail.logout()
+            elif not payment.email_uid:
+                print(f"⚠️ No email UID stored for this payment - cannot move email")
+                print(f"   (This payment was processed before UID storage was implemented)")
+
+        except Exception as e:
+            import traceback
+            print(f"⚠️ Could not move payment email (non-critical): {e}")
+            print(f"⚠️ EMAIL MOVE TRACEBACK: {traceback.format_exc()}")
+            # Don't fail the whole operation if email move fails
+
+        # Small sleep for timestamp ordering (follows existing pattern)
+        time.sleep(0.3)
+
+        # Send confirmation emails (only if user has email)
+        if user_email:
+            now_utc = datetime.now(timezone.utc)
+            # Send "passport created" email
+            notify_pass_event(
+                app=current_app._get_current_object(),
+                event_type="pass_created",
+                pass_data=passport,
+                activity=activity,
+                admin_email=session.get("admin"),
+                timestamp=now_utc
+            )
+            # Also send "payment confirmed" email since passport is already paid
+            notify_pass_event(
+                app=current_app._get_current_object(),
+                event_type="pass_paid",
+                pass_data=passport,
+                activity=activity,
+                admin_email=session.get("admin"),
+                timestamp=now_utc
+            )
+            email_sent = True
+        else:
+            email_sent = False
+
+        # Flash message - green if fully successful, warning if email move failed
+        result_msg = f"Passport created for {user_name}"
+        if email_sent:
+            result_msg += f" - confirmation email sent to {user_email}"
+
+        if email_moved:
+            # Full success - green
+            flash(result_msg, "success")
+        else:
+            # Partial success - warning (yellow)
+            result_msg += ". Warning: payment email could not be moved from inbox (manual cleanup needed)"
+            flash(result_msg, "warning")
+
+        return jsonify({
+            "success": True,
+            "message": result_msg,
+            "passport_id": passport.id,
+            "pass_code": passport.pass_code,
+            "email_sent": email_sent,
+            "email_moved": email_moved
+        }), 200
+
+    except Exception as e:
+        import traceback
+        print(f"Error creating passport from payment: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        flash(f"Failed to create passport: {str(e)}", "error")
+        return jsonify({"error": f"Failed to create passport: {str(e)}"}), 500
 
 
 @app.route("/api/payment-notification-html/<notification_id>", methods=["POST"])
@@ -3042,9 +3319,25 @@ def unified_settings():
             result = match_gmail_payments_to_passes()
             
             if result and isinstance(result, dict):
-                flash(f"✅ Payment bot test completed. {result.get('matched', 0)} payments matched.", "success")
+                matched = result.get('matched', 0)
+                no_match = result.get('no_match', 0)
+                skipped = result.get('skipped', 0)
+                emails_found = result.get('emails_found', 0)
+
+                if matched > 0:
+                    # Success - found and matched payments
+                    flash(f"✅ Found {matched} payment(s) matched to passports!", "success")
+                elif no_match > 0:
+                    # Warning - found payments but couldn't match
+                    flash(f"⚠️ Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
+                elif emails_found > 0 and skipped > 0:
+                    # Info - found emails but all were already processed
+                    flash(f"ℹ️ {skipped} payment(s) already processed - no new payments.", "info")
+                else:
+                    # Info - no payments found in inbox
+                    flash("ℹ️ No new payments found in inbox.", "info")
             else:
-                flash("✅ Payment bot test completed. No new payments found.", "info")
+                flash("ℹ️ Payment bot completed. No emails to process.", "info")
                 
         except Exception as e:
             print(f"❌ Payment bot test error: {e}")
@@ -3082,14 +3375,26 @@ def unified_settings():
                 result = match_gmail_payments_to_passes()
                 
                 if result and isinstance(result, dict):
-                    flash(f"✅ Payment bot test completed. {result.get('matched', 0)} payments matched.", "success")
+                    matched = result.get('matched', 0)
+                    no_match = result.get('no_match', 0)
+                    skipped = result.get('skipped', 0)
+                    emails_found = result.get('emails_found', 0)
+
+                    if matched > 0:
+                        flash(f"✅ Found {matched} payment(s) matched to passports!", "success")
+                    elif no_match > 0:
+                        flash(f"⚠️ Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
+                    elif emails_found > 0 and skipped > 0:
+                        flash(f"ℹ️ {skipped} payment(s) already processed - no new payments.", "info")
+                    else:
+                        flash("ℹ️ No new payments found in inbox.", "info")
                 else:
-                    flash("✅ Payment bot test completed. No new payments found.", "info")
-                    
+                    flash("ℹ️ Payment bot completed. No emails to process.", "info")
+
             except Exception as e:
                 print(f"❌ Payment bot test error: {e}")
                 flash(f"❌ Payment bot test failed: {str(e)}", "error")
-            
+
             return redirect(url_for("unified_settings"))
             
         try:
@@ -4842,12 +5147,16 @@ def payment_bot_matches():
     is_first_time_empty = total_payments == 0
     is_zero_results = len(payments) == 0 and not is_first_time_empty
 
+    # Get active activities for the Create Passport modal
+    activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
+
     return render_template("payment_bot_matches.html",
                          payments=payments,
                          pagination=pagination,
                          statistics=statistics,
                          is_first_time_empty=is_first_time_empty,
                          is_zero_results=is_zero_results,
+                         activities=activities,
                          current_filters={
                              'q': q,
                              'status': status_filter,
@@ -6705,6 +7014,17 @@ def create_passport():
         passport_type_id = request.form.get("passport_type_id")
         passport_type_id = int(passport_type_id) if passport_type_id and passport_type_id != "" else None
         notes = request.form.get("notes", "").strip()
+
+        # ✅ Validate required fields - Email is mandatory for all passport communications
+        if not user_name:
+            flash("Name is required.", "error")
+            return redirect(request.url)
+        if not user_email:
+            flash("Email is required - all passport communications are sent via email.", "error")
+            return redirect(request.url)
+        if not activity_id:
+            flash("Activity is required.", "error")
+            return redirect(request.url)
 
         # ✅ Always create a new user (even if same email is reused)
         user = User(name=user_name, email=user_email, phone_number=phone_number)

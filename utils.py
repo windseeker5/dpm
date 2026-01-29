@@ -1291,6 +1291,9 @@ def match_gmail_payments_to_passes():
 
         matches = extract_interac_transfers(user, pwd, mail)
 
+        # Track results for flash message
+        results = {"matched": 0, "no_match": 0, "skipped": 0, "emails_found": len(matches)}
+
         print(f"🔍 DEBUG: Found {len(matches)} email matches")
         for i, match in enumerate(matches):
             print(f"🔍 Email {i+1}: {match.get('subject', 'No subject')[:50]}...")
@@ -1315,13 +1318,32 @@ def match_gmail_payments_to_passes():
 
             # Track if we're updating an existing record to avoid duplicates
             update_existing_record = False
-            
+
             if existing_payment:
                 if existing_payment.result == "MATCHED":
-                    print(f"✅ ALREADY SUCCESSFULLY MATCHED: {name} - ${amt} from {from_email}")
-                    print(f"   Processed on: {existing_payment.timestamp}")
-                    print(f"   Matched to passport ID: {existing_payment.matched_pass_id}")
-                    continue  # Skip only successfully matched payments
+                    # Check if this is truly the SAME email or a DIFFERENT payment
+                    # Same person can pay same amount multiple times - compare email dates
+                    is_same_email = False
+                    if email_received_date and existing_payment.email_received_date:
+                        # Ensure both datetimes are timezone-aware for comparison
+                        new_date = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=timezone.utc)
+                        existing_date = existing_payment.email_received_date
+                        if existing_date.tzinfo is None:
+                            existing_date = existing_date.replace(tzinfo=timezone.utc)
+                        time_diff = abs((new_date - existing_date).total_seconds())
+                        is_same_email = time_diff < 300  # 5 minutes tolerance
+
+                    if is_same_email:
+                        print(f"✅ ALREADY SUCCESSFULLY MATCHED: {name} - ${amt} from {from_email}")
+                        print(f"   Processed on: {existing_payment.timestamp}")
+                        print(f"   Matched to passport ID: {existing_payment.matched_pass_id}")
+                        results["skipped"] += 1
+                        continue  # Skip - truly the same email
+                    else:
+                        print(f"🆕 NEW PAYMENT (different date): {name} - ${amt} from {from_email}")
+                        print(f"   Existing payment date: {existing_payment.email_received_date}")
+                        print(f"   New email date: {email_received_date}")
+                        # Continue processing - this is a NEW payment from same person
                 elif existing_payment.result == "NO_MATCH":
                     print(f"🔄 RETRYING PREVIOUSLY FAILED MATCH: {name} - ${amt} from {from_email}")
                     print(f"   Previous attempt on: {existing_payment.timestamp}")
@@ -1613,11 +1635,15 @@ def match_gmail_payments_to_passes():
                 except Exception as e:
                     print(f"⚠️ Push notification error (payment match): {e}")
 
+                # Track successful match
+                results["matched"] += 1
+
                 # Email was already moved BEFORE DB commit (see STEP 1 above)
                 # This ensures transaction safety - if email move fails, payment isn't processed
             else:
                 # NO MATCH FOUND in unpaid passports - Check if this is a duplicate payment for an already-paid passport
                 print(f"\n❌ NO MATCH FOUND in unpaid passports")
+                results["no_match"] += 1
 
                 # Normalize payment name for comparison
                 def normalize_for_comparison(text):
@@ -1712,6 +1738,8 @@ def match_gmail_payments_to_passes():
                     existing_payment.timestamp = datetime.now(timezone.utc)
                     if email_received_date:
                         existing_payment.email_received_date = email_received_date
+                    if uid:
+                        existing_payment.email_uid = uid  # Store UID for moving email later
                     print(f"   📝 Updated existing NO_MATCH record")
                 else:
                     # Create new record
@@ -1724,7 +1752,8 @@ def match_gmail_payments_to_passes():
                         result="NO_MATCH",
                         mark_as_paid=False,
                         note=note_text,
-                        email_received_date=email_received_date
+                        email_received_date=email_received_date,
+                        email_uid=uid  # Store UID for moving email later
                     ))
 
                 # Send push notification for NO_MATCH payment (needs manual review)
@@ -1741,6 +1770,10 @@ def match_gmail_payments_to_passes():
         db.session.commit()
         mail.expunge()
         mail.logout()
+
+        # Return results summary
+        print(f"\n📊 PAYMENT BOT SUMMARY: {results['matched']} matched, {results['no_match']} no-match, {results['skipped']} skipped")
+        return results
 
 
 def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email, custom_note=None):
@@ -2993,7 +3026,8 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     # Map event types to template keys used in activity.email_templates
     event_type_mapping = {
         'pass_created': 'newPass',
-        'payment_received': 'paymentReceived', 
+        'pass_paid': 'paymentReceived',  # When passport is marked paid
+        'payment_received': 'paymentReceived',
         'payment_late': 'latePayment',
         'pass_redeemed': 'redeemPass'
     }
@@ -3017,6 +3051,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         # Map event type to compiled template paths
         template_mapping = {
             'pass_created': 'newPass_compiled/index.html',
+            'pass_paid': 'paymentReceived_compiled/index.html',  # When passport is marked paid
             'payment_received': 'paymentReceived_compiled/index.html',
             'payment_late': 'latePayment_compiled/index.html',
             'pass_redeemed': 'redeemPass_compiled/index.html'
@@ -3093,6 +3128,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     # Map event type to template directory - Use compiled template paths
     template_mapping = {
         'pass_created': 'newPass_compiled/index.html',
+        'pass_paid': 'paymentReceived_compiled/index.html',  # When passport is marked paid
         'payment_received': 'paymentReceived_compiled/index.html',
         'payment_late': 'latePayment_compiled/index.html',
         'pass_redeemed': 'redeemPass_compiled/index.html'

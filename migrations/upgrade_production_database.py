@@ -1931,6 +1931,40 @@ def task22_add_passport_renewal_setting(cursor):
 
 
 # ============================================================================
+# TASK 23: Add email_uid to EbankPayment for reliable email move
+# ============================================================================
+def task23_add_email_uid_column(cursor):
+    """Add email_uid column to ebank_payment table for reliable email move operations"""
+    log("📧", "TASK 23: Adding email_uid to ebank_payment table", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'ebank_payment'):
+        log("⏭️ ", "  ebank_payment table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'ebank_payment', 'email_uid'):
+        log("⏭️ ", "  Column 'email_uid' already exists", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("ALTER TABLE ebank_payment ADD COLUMN email_uid VARCHAR(50)")
+        log("✅", "  Added column 'email_uid' to ebank_payment", Colors.GREEN)
+
+        # Info about existing records
+        cursor.execute("SELECT COUNT(*) FROM ebank_payment WHERE email_uid IS NULL")
+        null_count = cursor.fetchone()[0]
+
+        if null_count > 0:
+            log("ℹ️ ", f"  {null_count} existing payment(s) will have NULL email_uid", Colors.BLUE)
+            log("ℹ️ ", "  Future payments will have UID stored for reliable email move", Colors.BLUE)
+
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to add email_uid column: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -1972,6 +2006,7 @@ def main():
         ("Push Subscription Table", task20_add_push_subscription_table),
         ("AP Fiscal Year Fix", task21_fix_ap_fiscal_year_filtering),  # Creates views with AP fix
         ("Passport Renewal Setting", task22_add_passport_renewal_setting),
+        ("Email UID for Payment Move", task23_add_email_uid_column),
     ]
 
     completed = 0
