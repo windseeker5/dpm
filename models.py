@@ -255,6 +255,7 @@ class EbankPayment(db.Model):
     mark_as_paid = db.Column(db.Boolean, default=False)
     note = db.Column(db.Text, nullable=True)
     email_received_date = db.Column(db.DateTime, nullable=True)  # When payment email was actually received
+    email_uid = db.Column(db.String(50), nullable=True)  # IMAP UID for moving email later
 
 
 
