@@ -214,6 +214,16 @@
                   </a>
                   <div class="dropdown-menu dropdown-menu-end">
                     {% if payment.result == 'NO_MATCH' %}
+                      {% if payment.unpaid_count > 0 %}
+                      <a href="#" class="dropdown-item check-unpaid-btn"
+                         data-bs-toggle="modal"
+                         data-bs-target="#checkUnpaidPassportsModal"
+                         data-amount="{{ payment.bank_info_amt }}"
+                         data-payment-name="{{ payment.bank_info_name }}">
+                        <i class="ti ti-search me-2"></i>{{ payment.unpaid_count }} unpaid at ${{ "%.0f"|format(payment.bank_info_amt) }}
+                      </a>
+                      <div class="dropdown-divider"></div>
+                      {% endif %}
                       <a href="#" class="dropdown-item create-passport-btn"
                          data-payment-id="{{ payment.id }}"
                          data-name="{{ payment.bank_info_name }}"
@@ -433,6 +443,45 @@
         <button type="button" class="btn btn-primary" id="confirmCreatePassportBtn">
           <i class="ti ti-ticket me-2"></i>Create Passport
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Check Unpaid Passports Modal -->
+<div class="modal modal-blur fade" id="checkUnpaidPassportsModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Unpaid at $<span id="modalAmount"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Clipboard Info - Simple inline text -->
+        <div class="mb-3 p-2 bg-light rounded" id="clipboardToast" style="display: none;">
+          <small class="text-muted"><i class="ti ti-clipboard-check me-1"></i>Copied: </small>
+          <strong id="copiedName"></strong>
+        </div>
+
+        <!-- Loading State -->
+        <div id="unpaidPassportsLoading" class="text-center py-3">
+          <span class="spinner-border spinner-border-sm me-2"></span>Loading...
+        </div>
+
+        <!-- Empty State -->
+        <div id="unpaidPassportsEmpty" class="text-center py-3" style="display: none;">
+          <p class="text-muted mb-0">No unpaid passports found.</p>
+        </div>
+
+        <!-- List of unpaid passports - scrollable -->
+        <div id="unpaidPassportsTableContainer" style="display: none; max-height: 50vh; overflow-y: auto;">
+          <div id="unpaidPassportsList">
+            <!-- Populated via JavaScript -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
@@ -824,6 +873,155 @@ document.getElementById('confirmArchiveBtn').addEventListener('click', async fun
     btn.innerHTML = originalText;
   }
 });
+
+// ========================================
+// Check Unpaid Passports Modal functionality
+// ========================================
+
+// When Check Unpaid Passports modal opens
+document.getElementById('checkUnpaidPassportsModal').addEventListener('show.bs.modal', function(e) {
+  var btn = e.relatedTarget;
+  if (!btn) return;
+
+  var amount = btn.dataset.amount;
+  var paymentName = btn.dataset.paymentName;
+
+  // Show amount in modal title
+  document.getElementById('modalAmount').textContent = parseFloat(amount).toFixed(0);
+
+  // Copy payment name to clipboard
+  if (navigator.clipboard && paymentName) {
+    navigator.clipboard.writeText(paymentName).then(function() {
+      document.getElementById('copiedName').textContent = paymentName;
+      document.getElementById('clipboardToast').style.display = 'block';
+    }).catch(function(err) {
+      console.log('Could not copy to clipboard:', err);
+    });
+  }
+
+  // Show loading, hide content and empty state
+  document.getElementById('unpaidPassportsLoading').style.display = 'block';
+  document.getElementById('unpaidPassportsTableContainer').style.display = 'none';
+  document.getElementById('unpaidPassportsEmpty').style.display = 'none';
+
+  // Fetch unpaid passports
+  fetch('/api/unpaid-passports-by-amount/' + amount)
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      document.getElementById('unpaidPassportsLoading').style.display = 'none';
+
+      if (data.length === 0) {
+        document.getElementById('unpaidPassportsEmpty').style.display = 'block';
+        return;
+      }
+
+      // Generate simple card-based layout
+      var html = '';
+      data.forEach(function(p) {
+        html += '<div class="passport-item border rounded p-3 mb-2" data-id="' + p.id + '">' +
+          '<div class="d-flex justify-content-between align-items-center">' +
+            '<div>' +
+              '<div class="passport-name fw-bold">' + escapeHtml(p.user_name) + '</div>' +
+              '<small class="text-muted">' + escapeHtml(p.activity_name) + '</small>' +
+            '</div>' +
+            '<button class="btn btn-primary edit-name-btn">Edit</button>' +
+          '</div>' +
+        '</div>';
+      });
+      document.getElementById('unpaidPassportsList').innerHTML = html;
+      document.getElementById('unpaidPassportsTableContainer').style.display = 'block';
+    })
+    .catch(function(error) {
+      console.error('Failed to load unpaid passports:', error);
+      document.getElementById('unpaidPassportsLoading').style.display = 'none';
+      document.getElementById('unpaidPassportsEmpty').style.display = 'block';
+    });
+});
+
+// When modal closes, reset state
+document.getElementById('checkUnpaidPassportsModal').addEventListener('hidden.bs.modal', function() {
+  document.getElementById('clipboardToast').style.display = 'none';
+  document.getElementById('unpaidPassportsList').innerHTML = '';
+});
+
+// Edit name button click - show inline input
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('edit-name-btn')) {
+    e.stopImmediatePropagation(); // Prevent save handler from firing
+
+    var item = e.target.closest('.passport-item');
+    var nameEl = item.querySelector('.passport-name');
+    var currentName = nameEl.textContent;
+
+    // Replace name with input field
+    nameEl.innerHTML = '<input type="text" class="form-control name-input" value="' + escapeHtml(currentName) + '">';
+    var input = nameEl.querySelector('.name-input');
+    input.focus();
+    input.select();
+
+    // Change button to Save
+    e.target.textContent = 'Save';
+    e.target.classList.remove('btn-primary', 'edit-name-btn');
+    e.target.classList.add('btn-success', 'save-name-btn');
+  }
+});
+
+// Save name button click
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('save-name-btn')) {
+    var item = e.target.closest('.passport-item');
+    var passportId = item.dataset.id;
+    var inputEl = item.querySelector('.name-input');
+
+    // Make sure input exists (prevents double-fire bug)
+    if (!inputEl) return;
+
+    var newName = inputEl.value.trim();
+    var btn = e.target;
+
+    if (!newName) {
+      alert('Name cannot be empty');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    fetch('/api/update-passport-name/' + passportId, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({name: newName})
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      if (data.success) {
+        // Reload page to show proper Flask flash message
+        window.location.reload();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to update name'));
+        btn.disabled = false;
+        btn.textContent = 'Save';
+      }
+    })
+    .catch(function(error) {
+      console.error('Update name error:', error);
+      alert('Failed to update name: ' + error.message);
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    });
+  }
+});
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+  if (!text) return '';
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 </script>
 
 <style>

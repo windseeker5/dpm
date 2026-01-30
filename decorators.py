@@ -1,7 +1,7 @@
 # decorators.py - Security and utility decorators
 from functools import wraps
 from flask import session, jsonify, request, g
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import hashlib
 from collections import defaultdict
 
@@ -40,7 +40,7 @@ def rate_limit(max_requests=10, window=60):
             endpoint = request.endpoint
             rate_key = f"{client_id}:{endpoint}"
             
-            current_time = datetime.now()
+            current_time = datetime.now(timezone.utc)
             window_start = current_time - timedelta(seconds=window)
             
             # Clean old requests

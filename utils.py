@@ -1163,7 +1163,7 @@ def send_unpaid_reminders(app, force_send=False):
             print("❌ Invalid CALL_BACK_DAYS value. Defaulting to 15.")
             days = 15
 
-        cutoff_date = datetime.now() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         
         if force_send:
             print("🔧 FORCE_SEND mode: Will bypass 'already reminded' checks")
@@ -1178,7 +1178,7 @@ def send_unpaid_reminders(app, force_send=False):
                 .order_by(ReminderLog.reminder_sent_at.desc())\
                 .first()
 
-            if not force_send and recent_reminder and recent_reminder.reminder_sent_at > datetime.now() - timedelta(days=days):
+            if not force_send and recent_reminder and recent_reminder.reminder_sent_at > datetime.now(timezone.utc) - timedelta(days=days):
                 print(f"⏳ Skipping reminder: {p.user.name if p.user else '-'} (already reminded)")
                 continue
 
@@ -1192,13 +1192,13 @@ def send_unpaid_reminders(app, force_send=False):
                     pass_data=p,  # using new models
                     activity=p.activity,
                     admin_email="auto-reminder@system",
-                    timestamp=datetime.now()
+                    timestamp=datetime.now(timezone.utc)
                 )
                 
                 # ✅ Only log to database AFTER email succeeds
                 db.session.add(ReminderLog(
                     passport_id=p.id,
-                    reminder_sent_at=datetime.now()
+                    reminder_sent_at=datetime.now(timezone.utc)
                 ))
                 db.session.commit()
                 print(f"✅ Email sent and logged for: {p.user.name if p.user else '-'}")

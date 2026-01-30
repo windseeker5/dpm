@@ -1085,7 +1085,7 @@ def mark_signup_paid(signup_id):
         return redirect(url_for("list_signups"))
 
     signup.paid = True
-    signup.paid_at = datetime.now()
+    signup.paid_at = datetime.now(timezone.utc)
     db.session.commit()
     
     # Emit SSE notification for signup payment
@@ -1268,7 +1268,7 @@ def bulk_signup_action():
             for signup in signups:
                 if not signup.paid:
                     signup.paid = True
-                    signup.paid_at = datetime.now()
+                    signup.paid_at = datetime.now(timezone.utc)
                     paid_signups.append(signup)
                     count += 1
             
@@ -2755,6 +2755,63 @@ def api_create_passport_from_payment():
         db.session.rollback()
         flash(f"Failed to create passport: {str(e)}", "error")
         return jsonify({"error": f"Failed to create passport: {str(e)}"}), 500
+
+
+@app.route("/api/unpaid-passports-by-amount/<float:amount>")
+def api_get_unpaid_passports_by_amount(amount):
+    """Get list of unpaid passports at a specific amount for the Check Unpaid Passports modal"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    passports = db.session.query(Passport).join(User).join(Activity).filter(
+        Passport.paid == False,
+        Passport.sold_amt == amount
+    ).order_by(Passport.created_dt.desc()).all()
+
+    return jsonify([{
+        'id': p.id,
+        'user_name': p.user.name if p.user else 'Unknown',
+        'user_email': p.user.email if p.user else '',
+        'activity_name': p.activity.name if p.activity else 'Unknown',
+        'passport_type': p.passport_type.name if p.passport_type else (p.passport_type_name or 'N/A'),
+        'created_dt': p.created_dt.strftime('%Y-%m-%d') if p.created_dt else ''
+    } for p in passports])
+
+
+@app.route("/api/update-passport-name/<int:passport_id>", methods=["POST"])
+def api_update_passport_name(passport_id):
+    """Update passport user name - used when matching payment to existing passport with different name"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    new_name = data.get('name', '').strip() if data else ''
+
+    if not new_name:
+        return jsonify({'success': False, 'error': 'Name is required'}), 400
+
+    passport = Passport.query.get(passport_id)
+    if not passport:
+        return jsonify({'success': False, 'error': 'Passport not found'}), 404
+
+    if not passport.user:
+        return jsonify({'success': False, 'error': 'Passport has no associated user'}), 400
+
+    old_name = passport.user.name
+    passport.user.name = new_name
+
+    # Log the action
+    log = AdminActionLog(
+        admin_email=session.get("admin", "unknown"),
+        action=f"Updated passport user name: Passport {passport.pass_code}: '{old_name}' -> '{new_name}'"
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    # Set flash message for page reload
+    flash(f"Name updated to \"{new_name}\". Will match on next sync.", "success")
+
+    return jsonify({'success': True, 'old_name': old_name, 'new_name': new_name})
 
 
 @app.route("/api/payment-notification-html/<notification_id>", methods=["POST"])
@@ -5129,6 +5186,27 @@ def payment_bot_matches():
     # Paginate results
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     payments = pagination.items
+
+    # Get unpaid passport counts by amount for NO_MATCH payments
+    # Use a single query to get counts for all amounts in current page
+    no_match_amounts = set(p.bank_info_amt for p in payments if p.result == 'NO_MATCH' and p.bank_info_amt)
+    unpaid_counts_by_amount = {}
+    if no_match_amounts:
+        unpaid_counts = db.session.query(
+            Passport.sold_amt,
+            db.func.count(Passport.id)
+        ).filter(
+            Passport.paid == False,
+            Passport.sold_amt.in_(no_match_amounts)
+        ).group_by(Passport.sold_amt).all()
+        unpaid_counts_by_amount = {amt: count for amt, count in unpaid_counts}
+
+    # Add unpaid_count attribute to each payment for template access
+    for payment in payments:
+        if payment.result == 'NO_MATCH' and payment.bank_info_amt:
+            payment.unpaid_count = unpaid_counts_by_amount.get(payment.bank_info_amt, 0)
+        else:
+            payment.unpaid_count = 0
 
     # Calculate statistics from ALL records (not filtered)
     total_payments = db.session.query(EbankPayment.id).filter(

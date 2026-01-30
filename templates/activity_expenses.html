@@ -34,8 +34,9 @@
 
             <div class="mb-3">
               <label class="form-label">Date</label>
+              {% set expense_display_date = (expense.date|utc_to_local) if expense else now() %}
               <input type="date" name="date" class="form-control"
-                     value="{{ expense.date.strftime('%Y-%m-%d') if expense else now().strftime('%Y-%m-%d') }}" required>
+                     value="{{ expense_display_date.strftime('%Y-%m-%d') if expense_display_date else now().strftime('%Y-%m-%d') }}" required>
             </div>
 
             <div class="mb-3">
@@ -75,7 +76,7 @@
             <tbody>
               {% for e in expenses %}
               <tr>
-                <td>{{ e.date.strftime('%Y-%m-%d') }}</td>
+                {% set e_display_date = e.date|utc_to_local %}<td>{{ e_display_date.strftime('%Y-%m-%d') if e_display_date else '-' }}</td>
                 <td>{{ e.category }}</td>
                 <td>${{ "%.2f"|format(e.amount) }}</td>
                 <td>{{ e.description or "-" }}</td>
