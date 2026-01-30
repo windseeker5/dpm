@@ -549,13 +549,15 @@
               {% endif %}
             </td>
             <td class="d-none d-md-table-cell">
+              {% set resp_created_display = response.created_dt|utc_to_local %}
               <div class="small">
-                {{ response.created_dt.strftime('%Y-%m-%d %H:%M') if response.created_dt else '-' }}
+                {{ resp_created_display.strftime('%Y-%m-%d %H:%M') if resp_created_display else '-' }}
               </div>
             </td>
             <td class="d-none d-md-table-cell">
+              {% set resp_completed_display = response.completed_dt|utc_to_local %}
               <div class="small">
-                {{ response.completed_dt.strftime('%Y-%m-%d %H:%M') if response.completed_dt else '-' }}
+                {{ resp_completed_display.strftime('%Y-%m-%d %H:%M') if resp_completed_display else '-' }}
               </div>
             </td>
             <td class="text-center" style="vertical-align: middle;">

@@ -177,8 +177,9 @@
               </span>
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {% if passport.created_dt %}
-                {{ passport.created_dt.strftime('%Y-%m-%d') }}
+              {% set display_date = passport.created_dt|utc_to_local %}
+              {% if display_date %}
+                {{ display_date.strftime('%Y-%m-%d') }}
               {% else %}
                 <span class="text-muted">-</span>
               {% endif %}

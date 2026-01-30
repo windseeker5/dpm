@@ -136,8 +136,9 @@
                 </div>
               </div>
             </td>            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {% if signup.signed_up_at %}
-                {{ signup.signed_up_at.strftime('%Y-%m-%d') }}
+              {% set display_date = signup.signed_up_at|utc_to_local %}
+              {% if display_date %}
+                {{ display_date.strftime('%Y-%m-%d') }}
               {% else %}
                 <span class="text-muted">Unknown</span>
               {% endif %}

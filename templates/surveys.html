@@ -209,8 +209,9 @@
               </div>
             </td>
             <td class="d-none d-md-table-cell">
+              {% set survey_display_date = survey.created_dt|utc_to_local %}
               <div class="small">
-                {{ survey.created_dt.strftime('%Y-%m-%d') }}
+                {{ survey_display_date.strftime('%Y-%m-%d') if survey_display_date else '-' }}
               </div>
             </td>
             <td class="d-none d-md-table-cell">

@@ -242,7 +242,7 @@ class Setting(db.Model):
 
 class EbankPayment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))  # ✅ UTC-aware (when bot processed)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # ✅ UTC-aware (when bot processed)
     from_email = db.Column(db.String(150))
     subject = db.Column(db.Text)
     bank_info_name = db.Column(db.String(100))
@@ -266,7 +266,7 @@ class ReminderLog(db.Model):
 
 class EmailLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     to_email = db.Column(db.String(150), nullable=False)
     subject = db.Column(db.String(255), nullable=False)
     pass_code = db.Column(db.String(16), nullable=True)

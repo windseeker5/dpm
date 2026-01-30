@@ -1186,8 +1186,9 @@ div.dropdown-divider {
               </span>
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {% if passport.created_dt %}
-                {{ passport.created_dt.strftime('%Y-%m-%d') }}
+              {% set passport_display_date = passport.created_dt|utc_to_local %}
+              {% if passport_display_date %}
+                {{ passport_display_date.strftime('%Y-%m-%d') }}
               {% else %}
                 <span class="text-muted">-</span>
               {% endif %}
@@ -1507,8 +1508,9 @@ div.dropdown-divider {
                 </div>
               </td>
               <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-                {% if signup.signed_up_at %}
-                  {{ signup.signed_up_at.strftime('%Y-%m-%d') }}
+                {% set signup_display_date = signup.signed_up_at|utc_to_local %}
+                {% if signup_display_date %}
+                  {{ signup_display_date.strftime('%Y-%m-%d') }}
                 {% else %}
                   <span class="text-muted">Unknown</span>
                 {% endif %}
