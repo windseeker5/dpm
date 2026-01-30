@@ -3754,6 +3754,28 @@ def get_financial_data_from_views(start_date=None, end_date=None, activity_filte
     }
 
 
+def get_activity_revenue_from_view():
+    """
+    Get total cash_received per activity from SQL view.
+
+    Returns dict mapping activity_id to total revenue (passport_sales + other_income).
+    This ensures consistency with the Financial Report page.
+    """
+    from sqlalchemy import text
+
+    query = """
+        SELECT activity_id, SUM(cash_received) as total_revenue
+        FROM monthly_financial_summary
+        GROUP BY activity_id
+    """
+
+    try:
+        result = db.session.execute(text(query))
+        return {row.activity_id: float(row.total_revenue or 0) for row in result}
+    except Exception as e:
+        return {}  # Fallback if view doesn't exist
+
+
 def get_financial_data(start_date=None, end_date=None, activity_id=None, basis='cash'):
     """
     Get financial data for reporting with Cash Flow Accounting support.
