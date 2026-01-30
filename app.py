@@ -4402,10 +4402,14 @@ def list_activities():
     # Determine if showing all (explicitly requested)
     show_all = show_all_param == "true"
 
+    # Get revenue from SQL view for consistency with Financial Report
+    from utils import get_activity_revenue_from_view
+    activity_revenue = get_activity_revenue_from_view()
+
     # Calculate statistics for each activity
     for activity in activities:
         activity.signup_count = len([p for p in activity.passports if p.paid])
-        activity.total_revenue = sum(p.sold_amt for p in activity.passports if p.paid)
+        activity.total_revenue = activity_revenue.get(activity.id, 0)
         activity.passport_types_count = len(activity.passport_types)
         activity.active_passports_count = len([p for p in activity.passports if p.paid and p.uses_remaining > 0])
 
