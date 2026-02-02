@@ -35,6 +35,15 @@
         "cta_text": "Voir les détails",
         "cta_url": "https://minipass.me/my-signups"
     },
+    "signup_payment_first": {
+        "subject": "Inscription confirmée - Instructions de paiement",
+        "title": "Inscription confirmée",
+        "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p>\n<p>Votre inscription à <strong>{{ activity_name }}</strong> est confirmée !</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}\n<p>Pour finaliser votre inscription, veuillez effectuer le paiement par virement Interac.</p>",
+        "conclusion_text": "{% if needs_signup_code %}<div style=\"background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;\"><p style=\"margin: 0 0 10px 0;\"><strong>Code requis :</strong></p><p style=\"font-family: monospace; font-size: 18px; background: white; padding: 10px; border-radius: 4px; margin: 0; text-align: center;\"><strong>{{ signup_code }}</strong></p><p style=\"font-size: 14px; color: #856404; margin-top: 10px;\">Une autre inscription avec le même nom et montant existe. Veuillez inclure ce code dans votre message Interac.</p></div>{% endif %}<p><strong>Instructions de paiement :</strong></p><ul><li><strong>Montant :</strong> {{ requested_amount }}</li><li><strong>Envoyer à :</strong> {{ payment_email }}</li>{% if needs_signup_code %}<li><strong>Message Interac :</strong> {{ signup_code }}</li>{% endif %}</ul>{% if not needs_signup_code %}<p style=\"color: #666; font-size: 14px;\">Votre nom sera automatiquement associé à votre paiement.</p>{% endif %}<p>Dès réception de votre paiement, vous recevrez votre passeport numérique par courriel.</p><p><em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
+        "custom_message": "",
+        "cta_text": "Retour à l'accueil",
+        "cta_url": "https://minipass.me"
+    },
     "redeemPass": {
         "subject": "Participation confirmée",
         "title": "Participation confirmée",

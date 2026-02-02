@@ -61,7 +61,100 @@
             </small>
           </div>
 
+          <!-- Workflow Configuration Section -->
+          <div class="mb-4 mt-4">
+            <h5 class="mb-3"><i class="ti ti-git-branch me-2"></i>Registration Workflow</h5>
 
+            <div class="row">
+              <!-- Workflow Type -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Workflow Type</label>
+                <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column">
+                  <label class="form-selectgroup-item flex-fill">
+                    <input type="radio" name="workflow_type" value="approval_first" class="form-selectgroup-input"
+                           {{ 'checked' if not activity or not activity.workflow_type or activity.workflow_type == 'approval_first' else '' }}>
+                    <div class="form-selectgroup-label d-flex align-items-center p-3">
+                      <div class="me-3">
+                        <span class="form-selectgroup-check"></span>
+                      </div>
+                      <div>
+                        <strong class="d-block">Approval First</strong>
+                        <span class="d-block text-muted small">User signs up, admin approves, then user pays</span>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="form-selectgroup-item flex-fill">
+                    <input type="radio" name="workflow_type" value="payment_first" class="form-selectgroup-input"
+                           {{ 'checked' if activity and activity.workflow_type == 'payment_first' else '' }}>
+                    <div class="form-selectgroup-label d-flex align-items-center p-3">
+                      <div class="me-3">
+                        <span class="form-selectgroup-check"></span>
+                      </div>
+                      <div>
+                        <strong class="d-block">Payment First</strong>
+                        <span class="d-block text-muted small">User signs up & pays, passport auto-created on payment</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Quantity Selection -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Quantity Options</label>
+                <label class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" name="allow_quantity_selection" id="allowQuantitySelection"
+                         {{ 'checked' if activity and activity.allow_quantity_selection else '' }}>
+                  <span class="form-check-label">Allow users to select quantity during signup</span>
+                </label>
+                <small class="form-text text-muted">
+                  Users can choose how many sessions to purchase (e.g., buy 3 tickets for a concert)
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Capacity Limits Section -->
+          <div class="mb-4">
+            <h5 class="mb-3"><i class="ti ti-users me-2"></i>Capacity Limits</h5>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" name="is_quantity_limited" id="isQuantityLimited"
+                         {{ 'checked' if activity and activity.is_quantity_limited else '' }}
+                         onchange="toggleCapacityFields()">
+                  <span class="form-check-label">Enable capacity limit</span>
+                </label>
+                <small class="form-text text-muted">
+                  Limit the total number of sessions/spots available
+                </small>
+              </div>
+
+              <div class="col-md-6 mb-3" id="maxSessionsField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
+                <label class="form-label">Maximum Capacity</label>
+                <input type="number" class="form-control" name="max_sessions" min="1"
+                       value="{{ activity.max_sessions if activity and activity.max_sessions else '' }}"
+                       placeholder="e.g., 80">
+                <small class="form-text text-muted">
+                  Total number of spots/sessions available
+                </small>
+              </div>
+            </div>
+
+            <div class="row" id="showRemainingField" style="{{ 'display: flex;' if activity and activity.is_quantity_limited else 'display: none;' }}">
+              <div class="col-md-6 mb-3">
+                <label class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" name="show_remaining_quantity"
+                         {{ 'checked' if activity and activity.show_remaining_quantity else '' }}>
+                  <span class="form-check-label">Show remaining spots on signup form</span>
+                </label>
+                <small class="form-text text-muted">
+                  Display "X spots left" message to users
+                </small>
+              </div>
+            </div>
+          </div>
 
           <!-- Description -->
           <div class="mb-3">
@@ -983,7 +1076,14 @@
     button.innerHTML = '<i class="ti ti-check"></i>';
     setTimeout(() => { button.innerHTML = '<i class="ti ti-copy"></i>'; }, 1500);
   }
-  
+
+  // Toggle capacity limit fields visibility
+  function toggleCapacityFields() {
+    const isLimited = document.getElementById('isQuantityLimited').checked;
+    document.getElementById('maxSessionsField').style.display = isLimited ? 'block' : 'none';
+    document.getElementById('showRemainingField').style.display = isLimited ? 'flex' : 'none';
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     // Image handling variables
     const toggleOnline = document.getElementById('toggleOnlineImage');

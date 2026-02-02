@@ -1759,6 +1759,14 @@ def create_activity():
         admin = Admin.query.filter_by(email=admin_email).first()
         admin_id = admin.id if admin else None
 
+        # Workflow and quantity limit fields
+        workflow_type = request.form.get("workflow_type", "approval_first")
+        allow_quantity_selection = "allow_quantity_selection" in request.form
+        is_quantity_limited = "is_quantity_limited" in request.form
+        max_sessions_str = request.form.get("max_sessions", "").strip()
+        max_sessions = int(max_sessions_str) if max_sessions_str else None
+        show_remaining_quantity = "show_remaining_quantity" in request.form
+
         new_activity = Activity(
             name=name,
             type=activity_type,
@@ -1773,7 +1781,12 @@ def create_activity():
             location_address_formatted=location_address_formatted if location_address_formatted else None,
             location_coordinates=location_coordinates if location_address_formatted else None,
             goal_revenue=goal_revenue,
-            offer_passport_renewal=("offer_passport_renewal" in request.form)
+            offer_passport_renewal=("offer_passport_renewal" in request.form),
+            workflow_type=workflow_type,
+            allow_quantity_selection=allow_quantity_selection,
+            is_quantity_limited=is_quantity_limited,
+            max_sessions=max_sessions,
+            show_remaining_quantity=show_remaining_quantity
         )
 
         db.session.add(new_activity)
@@ -1935,6 +1948,14 @@ def edit_activity(activity_id):
 
         # Update passport renewal setting
         activity.offer_passport_renewal = ("offer_passport_renewal" in request.form)
+
+        # Update workflow and quantity limit fields
+        activity.workflow_type = request.form.get("workflow_type", "approval_first")
+        activity.allow_quantity_selection = "allow_quantity_selection" in request.form
+        activity.is_quantity_limited = "is_quantity_limited" in request.form
+        max_sessions_str = request.form.get("max_sessions", "").strip()
+        activity.max_sessions = int(max_sessions_str) if max_sessions_str else None
+        activity.show_remaining_quantity = "show_remaining_quantity" in request.form
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
@@ -2102,14 +2123,31 @@ def signup(activity_id):
     selected_passport_type = None
     if passport_type_id:
         selected_passport_type = db.session.get(PassportType, passport_type_id)
-    
+
     # Get all passport types for this activity
     passport_types = PassportType.query.filter_by(activity_id=activity.id, status='active').all()
 
     # ✅ Corrected settings loading
     settings = {s.key: s.value for s in Setting.query.all()}
 
+    # Check capacity for quantity-limited activities
+    from utils import get_remaining_capacity
+    remaining_capacity = get_remaining_capacity(activity_id)
+    is_sold_out = remaining_capacity is not None and remaining_capacity <= 0
+
     if request.method == "POST":
+        # Check capacity again on POST to prevent race conditions
+        remaining_capacity = get_remaining_capacity(activity_id)
+        requested_sessions = int(request.form.get("requested_sessions", 1))
+
+        if remaining_capacity is not None:
+            if remaining_capacity <= 0:
+                flash("Sorry, this activity is sold out.", "error")
+                return redirect(url_for("signup", activity_id=activity_id))
+            if requested_sessions > remaining_capacity:
+                flash(f"Only {remaining_capacity} spots remaining. Please reduce your quantity.", "error")
+                return redirect(url_for("signup", activity_id=activity_id))
+
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
         phone = request.form.get("phone", "").strip()
@@ -2123,28 +2161,37 @@ def signup(activity_id):
         passport_type = None
         if selected_passport_type_id:
             passport_type = db.session.get(PassportType, selected_passport_type_id)
-        
-        signup = Signup(
+
+        # Calculate total amount for payment-first workflow
+        unit_price = passport_type.price_per_user if passport_type else 0.0
+        requested_amount = unit_price * requested_sessions
+
+        signup_record = Signup(
             user_id=user.id,
             activity_id=activity.id,
             passport_type_id=selected_passport_type_id if selected_passport_type_id else None,
             subject=f"Signup for {activity.name}" + (f" - {passport_type.name}" if passport_type else ""),
             description=request.form.get("notes", "").strip(),
             form_data="",
+            requested_sessions=requested_sessions,
+            requested_amount=requested_amount
         )
-        db.session.add(signup)
+        db.session.add(signup_record)
+        db.session.flush()  # Get the ID before commit
+        signup_record.signup_code = f"MP-INS-{signup_record.id:07d}"
         db.session.commit()
 
         from utils import notify_signup_event
-        notify_signup_event(app, signup=signup, activity=activity)
-        
+        notify_signup_event(app, signup=signup_record, activity=activity)
+
         # SSE notifications removed for leaner performance
 
         flash("Signup submitted!", "success")
-        return redirect(url_for("signup_thank_you", signup_id=signup.id))
+        return redirect(url_for("signup_thank_you", signup_id=signup_record.id))
 
-    return render_template("signup_form.html", activity=activity, settings=settings, 
-                         passport_types=passport_types, selected_passport_type=selected_passport_type)
+    return render_template("signup_form.html", activity=activity, settings=settings,
+                         passport_types=passport_types, selected_passport_type=selected_passport_type,
+                         remaining_capacity=remaining_capacity, is_sold_out=is_sold_out)
 
 
 @app.route("/signup/thank-you/<int:signup_id>")
@@ -9331,6 +9378,7 @@ def email_template_customization(activity_id):
         'paymentReceived': 'Payment Received',
         'latePayment': 'Late Payment Reminder',
         'signup': 'Signup Confirmation',
+        'signup_payment_first': 'Signup Confirmation (Pay First)',
         'redeemPass': 'Pass Redeemed',
         'survey_invitation': 'Survey Invitation'
     }
@@ -9386,7 +9434,7 @@ def save_email_templates(activity_id):
     
     activity = Activity.query.get_or_404(activity_id)
     
-    template_types = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'redeemPass', 'survey_invitation']
+    template_types = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'signup_payment_first', 'redeemPass', 'survey_invitation']
     
     # Initialize email_templates as empty dict if None
     if activity.email_templates is None:
@@ -9399,9 +9447,10 @@ def save_email_templates(activity_id):
     # Template name mapping for responses
     template_names = {
         'newPass': 'New Pass Created',
-        'paymentReceived': 'Payment Received', 
+        'paymentReceived': 'Payment Received',
         'latePayment': 'Late Payment Reminder',
         'signup': 'Signup Confirmation',
+        'signup_payment_first': 'Signup Confirmation (Pay First)',
         'redeemPass': 'Pass Redeemed',
         'survey_invitation': 'Survey Invitation'
     }
@@ -9619,7 +9668,7 @@ def reset_email_template(activity_id):
         template_type = data['template_type']
         
         # Valid template types
-        valid_templates = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'redeemPass', 'survey_invitation']
+        valid_templates = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'signup_payment_first', 'redeemPass', 'survey_invitation']
         if template_type not in valid_templates:
             return jsonify({
                 'success': False,
@@ -9727,13 +9776,13 @@ def email_preview(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import get_email_context, safe_template, generate_qr_code_image
+    from utils import get_email_context, safe_template, generate_qr_code_image, get_setting
     from flask import render_template
     from datetime import datetime
     import os
     import json
     import base64
-    
+
     activity = Activity.query.get_or_404(activity_id)
     template_type = request.args.get('type', 'newPass')
     
@@ -9758,6 +9807,16 @@ def email_preview(activity_id):
         base_context['title'] = 'We\'d Love Your Feedback!'
         base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
         base_context['conclusion'] = 'Thank you for helping us create better experiences!'
+
+    # Add special context for signup_payment_first template
+    elif template_type == 'signup_payment_first':
+        base_context['needs_signup_code'] = True  # Show the signup code section in preview
+        base_context['signup_code'] = 'MP-INS-0000001'
+        base_context['requested_amount'] = '$50.00'
+        base_context['payment_email'] = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+        base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+        # Activity object for location display
+        base_context['activity'] = activity
 
     # Add email blocks for templates that need them
     elif template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
@@ -9951,16 +10010,16 @@ def email_preview_live(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import get_email_context, safe_template, generate_qr_code_image, ContentSanitizer
+    from utils import get_email_context, safe_template, generate_qr_code_image, ContentSanitizer, get_setting
     from flask import render_template
     from datetime import datetime
     import os
     import json
     import base64
     import bleach
-    
+
     activity = Activity.query.get_or_404(activity_id)
-    
+
     # Get template type from request
     template_type = request.form.get('template_type') or request.args.get('type', 'newPass')
     device_mode = request.form.get('device', 'desktop')  # desktop or mobile
@@ -10027,7 +10086,15 @@ def email_preview_live(activity_id):
             "email_blocks/history_table_inline.html",
             history=history
         )
-    
+
+    # Add special context for signup_payment_first template
+    elif template_type == 'signup_payment_first':
+        base_context['needs_signup_code'] = True  # Show the signup code section in preview
+        base_context['signup_code'] = 'MP-INS-0000001'
+        base_context['requested_amount'] = '$50.00'
+        base_context['payment_email'] = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+        base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+
     # Create temporary customizations from form data without saving to database
     live_customizations = {}
 
@@ -10404,7 +10471,15 @@ def test_email_template(activity_id):
             print(f"Added email blocks for {template_type}")
             print(f"   owner_html: {len(base_context.get('owner_html', ''))} chars")
             print(f"   history_html: {len(base_context.get('history_html', ''))} chars")
-        
+
+        # Add special context for signup_payment_first template
+        elif template_type == 'signup_payment_first':
+            base_context['needs_signup_code'] = True  # Show the signup code section
+            base_context['signup_code'] = 'MP-INS-0000001'
+            base_context['requested_amount'] = '$25.00'
+            base_context['payment_email'] = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+            base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+
         # Get merged context with customizations (preserves email blocks)
         context = get_email_context(activity, template_type, base_context)
         

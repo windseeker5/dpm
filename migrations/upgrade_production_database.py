@@ -1965,6 +1965,86 @@ def task23_add_email_uid_column(cursor):
 
 
 # ============================================================================
+# TASK 24: Add Workflow Type and Quantity Limit Fields
+# ============================================================================
+def task25_add_signup_code_column(cursor):
+    """Add signup_code column to Signup table for reliable payment matching"""
+    log("🔄", "TASK 25: Adding signup_code column for payment matching", Colors.BLUE)
+
+    if check_column_exists(cursor, 'signup', 'signup_code'):
+        log("⏭️ ", "  signup_code column already exists", Colors.YELLOW)
+    else:
+        try:
+            cursor.execute("ALTER TABLE signup ADD COLUMN signup_code VARCHAR(20)")
+            log("✅", "  Added signup_code column", Colors.GREEN)
+        except sqlite3.OperationalError as e:
+            log("❌", f"  Failed to add signup_code: {e}", Colors.RED)
+            raise
+
+    # Backfill existing signups with codes (format: MP-INS-0001234)
+    log("🔄", "  Backfilling existing signups with codes...", Colors.BLUE)
+    cursor.execute("UPDATE signup SET signup_code = 'MP-INS-' || printf('%07d', id) WHERE signup_code IS NULL")
+    rows_updated = cursor.rowcount
+    log("✅", f"  Backfilled {rows_updated} signups with codes", Colors.GREEN)
+
+    return True
+
+
+def task24_add_workflow_quantity_fields(cursor):
+    """Add workflow type and quantity limit fields to Activity and Signup tables"""
+    log("🔄", "TASK 24: Adding workflow type and quantity limit fields", Colors.BLUE)
+
+    # Activity table fields
+    activity_fields = [
+        ('workflow_type', "VARCHAR(50) DEFAULT 'approval_first'"),
+        ('allow_quantity_selection', "BOOLEAN DEFAULT 0"),
+        ('is_quantity_limited', "BOOLEAN DEFAULT 0"),
+        ('max_sessions', "INTEGER"),
+        ('show_remaining_quantity', "BOOLEAN DEFAULT 0"),
+    ]
+
+    # Signup table fields
+    signup_fields = [
+        ('requested_sessions', "INTEGER DEFAULT 1"),
+        ('requested_amount', "FLOAT DEFAULT 0.0"),
+    ]
+
+    added = 0
+    skipped = 0
+
+    # Add Activity fields
+    for field_name, field_def in activity_fields:
+        if check_column_exists(cursor, 'activity', field_name):
+            log("⏭️ ", f"  Activity.{field_name} already exists", Colors.YELLOW)
+            skipped += 1
+        else:
+            try:
+                cursor.execute(f"ALTER TABLE activity ADD COLUMN {field_name} {field_def}")
+                log("✅", f"  Added Activity.{field_name}", Colors.GREEN)
+                added += 1
+            except sqlite3.OperationalError as e:
+                log("❌", f"  Failed to add Activity.{field_name}: {e}", Colors.RED)
+                raise
+
+    # Add Signup fields
+    for field_name, field_def in signup_fields:
+        if check_column_exists(cursor, 'signup', field_name):
+            log("⏭️ ", f"  Signup.{field_name} already exists", Colors.YELLOW)
+            skipped += 1
+        else:
+            try:
+                cursor.execute(f"ALTER TABLE signup ADD COLUMN {field_name} {field_def}")
+                log("✅", f"  Added Signup.{field_name}", Colors.GREEN)
+                added += 1
+            except sqlite3.OperationalError as e:
+                log("❌", f"  Failed to add Signup.{field_name}: {e}", Colors.RED)
+                raise
+
+    log("📊", f"  Summary: {added} added, {skipped} already existed")
+    return True
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -2007,6 +2087,8 @@ def main():
         ("AP Fiscal Year Fix", task21_fix_ap_fiscal_year_filtering),  # Creates views with AP fix
         ("Passport Renewal Setting", task22_add_passport_renewal_setting),
         ("Email UID for Payment Move", task23_add_email_uid_column),
+        ("Workflow and Quantity Fields", task24_add_workflow_quantity_fields),
+        ("Signup Code for Payment Matching", task25_add_signup_code_column),
     ]
 
     completed = 0
