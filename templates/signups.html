@@ -121,18 +121,39 @@
                 <!-- Desktop: User Gravatar -->
                 <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40"
                      class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
-                <!-- Mobile: Activity Logo (square with rounded corners) -->
+                <!-- Mobile: Activity Logo (square with rounded corners) - CLICKABLE -->
                 {% if signup.activity and (signup.activity.image_filename or signup.activity.logo_filename) %}
-                  <img src="{{ url_for('static', filename='uploads/activity_images/' + (signup.activity.image_filename or signup.activity.logo_filename)) }}"
-                       class="rounded me-3 user-avatar d-md-none" alt="{{ signup.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
+                  <a href="{{ url_for('activity_dashboard', activity_id=signup.activity.id) }}" class="d-md-none">
+                    <img src="{{ url_for('static', filename='uploads/activity_images/' + (signup.activity.image_filename or signup.activity.logo_filename)) }}"
+                         class="rounded me-3 user-avatar" alt="{{ signup.activity.name }}" style="width: 40px; height: 40px; object-fit: cover;">
+                  </a>
                 {% else %}
-                  <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
-                    {{ signup.activity.name[0] if signup.activity and signup.activity.name else 'A' }}
-                  </div>
+                  <a href="{{ url_for('activity_dashboard', activity_id=signup.activity.id) if signup.activity else '#' }}" class="d-md-none">
+                    <div class="rounded me-3 bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 12px; color: #6c757d;">
+                      {{ signup.activity.name[0] if signup.activity and signup.activity.name else 'A' }}
+                    </div>
+                  </a>
                 {% endif %}
                 <div>
                   <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
                   <div class="text-muted small d-none d-md-block">{{ signup.user.email or 'No email' }}</div>
+                  <!-- Mobile-only signup info -->
+                  <div class="d-md-none">
+                    {% set status = signup.status or 'pending' %}
+                    {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
+                    {% if status == 'approved' %}
+                      <span class="badge bg-green-lt" style="margin-left: -6px;">Approved</span>
+                    {% elif status == 'pending' and is_payment_first %}
+                      <span class="badge bg-azure-lt" style="margin-left: -6px;">Awaiting Payment</span>
+                    {% elif status == 'pending' %}
+                      <span class="badge bg-yellow-lt" style="margin-left: -6px;">Pending</span>
+                    {% elif status == 'rejected' %}
+                      <span class="badge bg-red-lt" style="margin-left: -6px;">Rejected</span>
+                    {% endif %}
+                    {% if signup.requested_amount %}
+                      <span class="badge bg-secondary-lt ms-1">${{ "%.0f"|format(signup.requested_amount) }}</span>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
             </td>            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
@@ -148,10 +169,13 @@
             </td>
             <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
               {% set status = signup.status or 'pending' %}
+              {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
               {% if status == 'approved' %}
                 <span class="badge bg-green-lt text-green-lt-fg">Approved</span>
+              {% elif status == 'pending' and is_payment_first %}
+                <span class="badge bg-azure-lt text-azure-lt-fg" title="Awaiting Interac payment">Awaiting Payment</span>
               {% elif status == 'pending' %}
-                <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending</span>
+                <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending Approval</span>
               {% elif status == 'rejected' %}
                 <span class="badge bg-red-lt text-red-lt-fg">Rejected</span>
               {% else %}
@@ -159,13 +183,8 @@
               {% endif %}
             </td>
             <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              {% if signup.passport_type_id %}
-                {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
-                {% if passport_type %}
-                  ${{ "%.0f"|format(passport_type.price_per_user or 0) }}
-                {% else %}
-                  <span class="text-muted">-</span>
-                {% endif %}
+              {% if signup.requested_amount %}
+                ${{ "%.0f"|format(signup.requested_amount) }}
               {% else %}
                 <span class="text-muted">-</span>
               {% endif %}
@@ -174,7 +193,7 @@
               {% if signup.passport_type_id %}
                 {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
                 {% if passport_type %}
-                  {{ passport_type.sessions_included }}
+                  {{ signup.requested_sessions or passport_type.sessions_included }}
                 {% else %}
                   <span class="text-muted">-</span>
                 {% endif %}
@@ -190,9 +209,19 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-end">
                   {% if signup.status == 'pending' %}
-                  <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
-                    <i class="ti ti-check me-2"></i>Approve & Create Passport
-                  </button>
+                    {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
+                    {% if is_payment_first %}
+                    <span class="dropdown-item text-muted" style="cursor: default;">
+                      <i class="ti ti-clock me-2"></i>Awaiting Payment
+                    </span>
+                    <button type="button" class="dropdown-item text-azure" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+                      <i class="ti ti-cash me-2"></i>Mark Paid & Create Passport
+                    </button>
+                    {% else %}
+                    <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+                      <i class="ti ti-check me-2"></i>Approve & Create Passport
+                    </button>
+                    {% endif %}
                   {% endif %}
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-danger" href="#"
@@ -283,19 +312,31 @@
 <!-- Approve Signup Modals -->
 {% for signup in signups %}
 {% if signup.status == 'pending' %}
+{% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
 <div class="modal modal-blur fade" id="approveSignupModal-{{ signup.id }}" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
-      <div class="modal-status bg-primary"></div>
+      <div class="modal-status {{ 'bg-azure' if is_payment_first else 'bg-primary' }}"></div>
       <div class="modal-body text-center py-4">
+        {% if is_payment_first %}
+        <i class="ti ti-cash icon mb-2 text-azure" style="font-size: 2rem;"></i>
+        <h3>Mark Paid & Create Passport</h3>
+        <div class="text-muted">Manually mark payment received and create passport for {{ signup.user.name or 'this user' }}?</div>
+        <div class="alert alert-info mt-3 text-start small">
+          <strong>Note:</strong> This is usually done automatically by the payment bot when an Interac payment is detected.
+        </div>
+        {% else %}
         <i class="ti ti-check icon mb-2 text-primary" style="font-size: 2rem;"></i>
         <h3>Approve & Create Passport</h3>
         <div class="text-muted">Approve signup and create passport for {{ signup.user.name or 'this user' }}?</div>
+        {% endif %}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
         <form method="GET" action="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}" class="w-100">
-          <button type="submit" class="btn btn-primary w-100">Yes, Approve & Create</button>
+          <button type="submit" class="btn {{ 'btn-azure' if is_payment_first else 'btn-primary' }} w-100">
+            {% if is_payment_first %}Yes, Mark Paid & Create{% else %}Yes, Approve & Create{% endif %}
+          </button>
         </form>
       </div>
     </div>

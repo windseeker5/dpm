@@ -1495,15 +1495,32 @@ div.dropdown-divider {
                   <!-- Mobile: Activity Logo (square with rounded corners) -->
                   {% if signup.activity and (signup.activity.image_filename or signup.activity.logo_filename) %}
                     <img src="{{ url_for('static', filename='uploads/activity_images/' + (signup.activity.image_filename or signup.activity.logo_filename)) }}"
-                         class="rounded me-3 user-avatar d-md-none" alt="{{ signup.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
+                         class="rounded me-3 user-avatar d-md-none" alt="{{ signup.activity.name }}" style="width: 40px; height: 40px; object-fit: cover;">
                   {% else %}
-                    <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
+                    <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 12px; color: #6c757d;">
                       {{ signup.activity.name[0] if signup.activity and signup.activity.name else 'A' }}
                     </div>
                   {% endif %}
                   <div>
                     <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
                     <div class="text-muted small d-none d-md-block">{{ signup.user.email or 'No email' }}</div>
+                    <!-- Mobile-only signup info -->
+                    <div class="d-md-none">
+                      {% set status = signup.status or 'pending' %}
+                      {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
+                      {% if status == 'approved' %}
+                        <span class="badge bg-green-lt" style="margin-left: -6px;">Approved</span>
+                      {% elif status == 'pending' and is_payment_first %}
+                        <span class="badge bg-azure-lt" style="margin-left: -6px;">Awaiting Payment</span>
+                      {% elif status == 'pending' %}
+                        <span class="badge bg-yellow-lt" style="margin-left: -6px;">Pending</span>
+                      {% elif status == 'rejected' %}
+                        <span class="badge bg-red-lt" style="margin-left: -6px;">Rejected</span>
+                      {% endif %}
+                      {% if signup.requested_amount %}
+                        <span class="badge bg-secondary-lt ms-1">${{ "%.0f"|format(signup.requested_amount) }}</span>
+                      {% endif %}
+                    </div>
                   </div>
                 </div>
               </td>
@@ -1520,10 +1537,13 @@ div.dropdown-divider {
               </td>
               <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
                 {% set status = signup.status or 'pending' %}
+                {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
                 {% if status == 'approved' %}
                   <span class="badge bg-green-lt text-green-lt-fg">Approved</span>
+                {% elif status == 'pending' and is_payment_first %}
+                  <span class="badge bg-azure-lt text-azure-lt-fg">Awaiting Payment</span>
                 {% elif status == 'pending' %}
-                  <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending</span>
+                  <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending Approval</span>
                 {% elif status == 'rejected' %}
                   <span class="badge bg-red-lt text-red-lt-fg">Rejected</span>
                 {% else %}
@@ -1531,13 +1551,8 @@ div.dropdown-divider {
                 {% endif %}
               </td>
               <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-                {% if signup.passport_type_id %}
-                  {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
-                  {% if passport_type %}
-                    ${{ "%.0f"|format(passport_type.price_per_user or 0) }}
-                  {% else %}
-                    <span class="text-muted">-</span>
-                  {% endif %}
+                {% if signup.requested_amount %}
+                  ${{ "%.0f"|format(signup.requested_amount) }}
                 {% else %}
                   <span class="text-muted">-</span>
                 {% endif %}
@@ -1546,7 +1561,7 @@ div.dropdown-divider {
                 {% if signup.passport_type_id %}
                   {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
                   {% if passport_type %}
-                    {{ passport_type.sessions_included }}
+                    {{ signup.requested_sessions or passport_type.sessions_included }}
                   {% else %}
                     <span class="text-muted">-</span>
                   {% endif %}
@@ -1562,9 +1577,15 @@ div.dropdown-divider {
                   </a>
                   <div class="dropdown-menu dropdown-menu-end">
                     {% if signup.status == 'pending' %}
-                    <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
-                      <i class="ti ti-check me-2"></i>Approve & Create Passport
-                    </button>
+                      {% if is_payment_first %}
+                      <button type="button" class="dropdown-item text-azure" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+                        <i class="ti ti-cash me-2"></i>Mark Paid & Create Passport
+                      </button>
+                      {% else %}
+                      <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+                        <i class="ti ti-check me-2"></i>Approve & Create Passport
+                      </button>
+                      {% endif %}
                     {% endif %}
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-danger" href="#"

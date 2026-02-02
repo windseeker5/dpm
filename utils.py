@@ -40,6 +40,7 @@ HERO_CID_MAP = {
     'paymentReceived': 'currency-dollar',
     'latePayment': 'thumb-down',
     'signup': 'good-news',
+    'signup_payment_first': 'good-news',
     'redeemPass': 'hand-rock',
     'survey_invitation': 'sondage'
 }
@@ -69,6 +70,66 @@ from models import Setting
 import uuid
 import bleach
 from urllib.parse import urlparse
+import unicodedata
+
+
+def normalize_name(text):
+    """
+    Normalize name for comparison: remove accents, lowercase, strip.
+
+    This handles accent variations (Hélène vs Helene) and case differences.
+    Used for payment matching and conflict detection.
+
+    Args:
+        text: Name string to normalize
+
+    Returns:
+        Normalized lowercase string without accents
+    """
+    if not text:
+        return ""
+    normalized = unicodedata.normalize('NFD', str(text))
+    without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    return without_accents.lower().strip()
+
+
+def has_conflicting_unpaid_signup(signup, activity):
+    """
+    Check if there are OTHER unpaid signups for this activity
+    with the same normalized name AND same requested_amount.
+
+    This is used to determine if a signup code is needed for payment disambiguation.
+    In 99% of cases, name + amount uniquely identifies the payer, so no code is needed.
+    Only when there's a conflict (same name AND same amount) do we require the code.
+
+    Args:
+        signup: The Signup object to check
+        activity: The Activity the signup belongs to
+
+    Returns:
+        True if there's a naming conflict requiring the signup code for disambiguation
+    """
+    from models import Signup
+
+    current_name = normalize_name(signup.user.name)
+    current_amount = signup.requested_amount or 0.0
+
+    # Find other unpaid signups for same activity
+    potential_conflicts = Signup.query.filter(
+        Signup.activity_id == activity.id,
+        Signup.id != signup.id,  # Exclude current
+        Signup.paid == False,
+        Signup.status.in_(['pending', 'approved'])
+    ).all()
+
+    # Check for same name AND same amount
+    for other in potential_conflicts:
+        other_name = normalize_name(other.user.name)
+        other_amount = other.requested_amount or 0.0
+        if current_name == other_name and abs(current_amount - other_amount) < 0.01:
+            return True
+
+    return False
 
 
 @lru_cache(maxsize=20)
@@ -95,6 +156,7 @@ def get_template_default_hero(template_type):
         'paymentReceived': 'paymentReceived_original',
         'latePayment': 'latePayment_original',
         'signup': 'signup_original',
+        'signup_payment_first': 'signup_payment_first_original',
         'redeemPass': 'redeemPass_original',
         'survey_invitation': 'survey_invitation_original'
     }
@@ -121,6 +183,7 @@ def get_template_default_hero(template_type):
             'paymentReceived': 'currency-dollar',
             'latePayment': 'thumb-down',
             'signup': 'good-news',
+            'signup_payment_first': 'good-news',
             'redeemPass': 'hand-rock',
             'survey_invitation': 'sondage'
         }
@@ -436,6 +499,36 @@ def save_setting(key, value, changed_by=None, change_reason=None):
             return value
 
 
+def get_remaining_capacity(activity_id):
+    """
+    Calculate remaining capacity for a quantity-limited activity.
+
+    Returns the number of spots/sessions still available for signup.
+    For non-limited activities, returns None.
+
+    Args:
+        activity_id: The activity ID to check capacity for
+
+    Returns:
+        int or None: Remaining spots, or None if not quantity-limited
+    """
+    from models import Activity, Passport
+    from sqlalchemy import func
+
+    activity = Activity.query.get(activity_id)
+    if not activity or not activity.is_quantity_limited or not activity.max_sessions:
+        return None
+
+    # Sum all uses_remaining from active passports for this activity
+    # This counts total sessions sold/reserved
+    total_sold = db.session.query(func.coalesce(func.sum(Passport.uses_remaining), 0))\
+        .filter(Passport.activity_id == activity_id)\
+        .scalar()
+
+    remaining = activity.max_sessions - total_sold
+    return max(0, remaining)
+
+
 def get_fiscal_year_range(reference_date=None):
     """
     Get the start and end dates for the fiscal year containing the reference date.
@@ -533,6 +626,79 @@ def generate_qr_code_image(pass_code):
     qr.save(img_bytes, format="PNG")
     img_bytes.seek(0)
     return img_bytes
+
+
+def auto_create_passport_from_signup(signup, payment_record=None, marked_paid_by="minipass-bot@system"):
+    """
+    Create a passport automatically when payment matches a signup (payment-first workflow).
+
+    This function is called by the payment matching logic when a payment is matched
+    to a signup that doesn't have a passport yet.
+
+    Args:
+        signup: Signup model instance that has been paid
+        payment_record: Optional EbankPayment record for tracking
+        marked_paid_by: Who/what marked the payment as paid
+
+    Returns:
+        Passport: The newly created passport, or None if creation failed
+    """
+    from models import Passport, PassportType, Activity
+    from datetime import datetime, timezone
+
+    try:
+        activity = Activity.query.get(signup.activity_id)
+        if not activity:
+            print(f"   [auto_create_passport] ERROR: Activity {signup.activity_id} not found")
+            return None
+
+        passport_type = None
+        if signup.passport_type_id:
+            passport_type = PassportType.query.get(signup.passport_type_id)
+
+        # Generate unique pass code
+        pass_code = generate_pass_code()
+
+        # Create the passport
+        now_utc = datetime.now(timezone.utc)
+        passport = Passport(
+            pass_code=pass_code,
+            user_id=signup.user_id,
+            activity_id=signup.activity_id,
+            passport_type_id=signup.passport_type_id,
+            passport_type_name=passport_type.name if passport_type else None,
+            uses_remaining=signup.requested_sessions,
+            sold_amt=signup.requested_amount,
+            paid=True,
+            paid_date=now_utc,
+            marked_paid_by=marked_paid_by,
+            created_dt=now_utc,
+            notes=f"Auto-created from signup #{signup.id} (payment-first workflow)"
+        )
+
+        db.session.add(passport)
+        db.session.flush()  # Get the passport ID
+
+        # Link signup to passport
+        signup.passport_id = passport.id
+        signup.paid = True
+        signup.paid_at = now_utc
+        signup.status = "completed"
+
+        db.session.commit()
+
+        print(f"   [auto_create_passport] SUCCESS: Created passport {pass_code} for {signup.user.name}")
+        print(f"      Sessions: {passport.uses_remaining}, Amount: ${passport.sold_amt}")
+
+        # Note: Email notification is handled by the caller via notify_pass_event()
+        # to use the standard paymentReceived template with QR code and history
+
+        return passport
+
+    except Exception as e:
+        print(f"   [auto_create_passport] ERROR: {e}")
+        db.session.rollback()
+        return None
 
 
 # ✅ PHASE 3: Optimized QR Code Generation & Hosted Image System
@@ -689,6 +855,35 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                     print(f"⚠️ Could not parse email date '{email_date_str}': {e}")
                     email_received_date = None
 
+            # 📝 Extract transfer message from email body (for signup code matching)
+            transfer_message = None
+            try:
+                body = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain":
+                            payload = part.get_payload(decode=True)
+                            if payload:
+                                body = payload.decode('utf-8', errors='ignore')
+                                break
+                else:
+                    payload = msg.get_payload(decode=True)
+                    if payload:
+                        body = payload.decode('utf-8', errors='ignore')
+
+                # Extract message field from Interac email body
+                # French: "Message :" or "Message de l'expéditeur:"
+                if body:
+                    message_match = re.search(r'Message\s*(?:de l[\'\u2019]exp[ée]diteur)?\s*:\s*["\']?(.+?)["\']?\s*(?:\n|$)', body, re.IGNORECASE)
+                    if message_match:
+                        transfer_message = message_match.group(1).strip()
+                        print(f"📝 Transfer message found: '{transfer_message}'")
+                    else:
+                        print(f"⚠️ No transfer message found in email body")
+                        print(f"   Body preview (first 500 chars): {body[:500] if body else 'EMPTY'}")
+            except Exception as e:
+                print(f"⚠️ Could not extract transfer message: {e}")
+
             # 🛡️ Validate subject and sender
             if not subject.lower().startswith(subject_keyword.lower()):
                 continue
@@ -745,7 +940,9 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                 "subject": subject,
                 "from_email": from_email,
                 "uid": uid,
-                "email_received_date": email_received_date
+                "email_received_date": email_received_date,
+                "transfer_message": transfer_message,
+                "email_body": body  # Store full body for fallback signup code search
             })
 
     except Exception as e:
@@ -1246,7 +1443,7 @@ def cleanup_duplicate_payment_logs_auto():
 
 def match_gmail_payments_to_passes():
     from utils import extract_interac_transfers, get_setting, notify_pass_event
-    from models import EbankPayment, Passport, db
+    from models import EbankPayment, Passport, Signup, db
     from datetime import datetime, timezone, timedelta
     from flask import current_app
     from rapidfuzz import fuzz
@@ -1305,7 +1502,9 @@ def match_gmail_payments_to_passes():
             uid = match.get("uid")
             subject = match["subject"]
             email_received_date = match.get("email_received_date")  # Extract email received date
-            
+            transfer_message = match.get("transfer_message")  # Extract transfer message for signup code matching
+            email_body = match.get("email_body", "")  # Store full body for fallback signup code search
+
             # IMPROVED: Check if we already processed this payment (with time window to prevent duplicates)
             # Check for duplicates within last 48 hours to handle re-sent notifications
             time_window = datetime.now(timezone.utc) - timedelta(hours=48)
@@ -1334,11 +1533,35 @@ def match_gmail_payments_to_passes():
                         is_same_email = time_diff < 300  # 5 minutes tolerance
 
                     if is_same_email:
-                        print(f"✅ ALREADY SUCCESSFULLY MATCHED: {name} - ${amt} from {from_email}")
-                        print(f"   Processed on: {existing_payment.timestamp}")
-                        print(f"   Matched to passport ID: {existing_payment.matched_pass_id}")
-                        results["skipped"] += 1
-                        continue  # Skip - truly the same email
+                        # Check if this email has a DIFFERENT signup code - means it's a different payment
+                        code_match = None
+                        if transfer_message:
+                            code_match = re.search(r'MP-INS-(\d{7})', transfer_message)
+                        # FALLBACK: Search entire email body for signup code
+                        if not code_match and email_body:
+                            code_match = re.search(r'MP-INS-(\d{7})', email_body)
+
+                        if code_match:
+                            new_signup_code = f"MP-INS-{code_match.group(1)}"
+                            # Check if we already matched THIS specific signup code
+                            existing_for_code = EbankPayment.query.join(Passport).join(Signup).filter(
+                                Signup.signup_code == new_signup_code,
+                                EbankPayment.result == "MATCHED"
+                            ).first()
+                            if not existing_for_code:
+                                print(f"🆕 DIFFERENT SIGNUP CODE: {new_signup_code} - processing as new payment")
+                                # Don't skip - this is a different signup, fall through to process
+                            else:
+                                print(f"✅ ALREADY MATCHED THIS CODE: {new_signup_code}")
+                                results["skipped"] += 1
+                                continue
+                        else:
+                            # No signup code found anywhere - use normal duplicate logic
+                            print(f"✅ ALREADY SUCCESSFULLY MATCHED: {name} - ${amt} from {from_email}")
+                            print(f"   Processed on: {existing_payment.timestamp}")
+                            print(f"   Matched to passport ID: {existing_payment.matched_pass_id}")
+                            results["skipped"] += 1
+                            continue
                     else:
                         print(f"🆕 NEW PAYMENT (different date): {name} - ${amt} from {from_email}")
                         print(f"   Existing payment date: {existing_payment.email_received_date}")
@@ -1447,6 +1670,145 @@ def match_gmail_payments_to_passes():
             if best_passport:
                 print(f"\n🎯 FINAL MATCH: {best_passport.user.name} - ${best_passport.sold_amt} (Passport ID: {best_passport.id})")
             else:
+                # No passport match found - check for payment-first signups
+                print(f"\n🔍 No passport match - checking payment-first signups...")
+                from models import Signup, Activity
+
+                # Find signups without passports for payment-first activities
+                unmatched_signups = db.session.query(Signup).join(Activity).filter(
+                    Signup.passport_id == None,
+                    Signup.requested_amount == payment_amount,
+                    Activity.workflow_type == "payment_first"
+                ).all()
+
+                print(f"   Found {len(unmatched_signups)} unmatched payment-first signups for ${payment_amount:.2f}")
+
+                best_signup = None
+                best_signup_score = 0
+
+                # STRATEGY: Name-first matching with signup code for disambiguation
+                # - Most users (~60%) may forget to include the code
+                # - Most names are unique → name matching works fine
+                # - Signup code is a disambiguation tool, not the primary matcher
+
+                # STEP 1: Collect ALL fuzzy name matches above threshold
+                name_matches = []
+                for s in unmatched_signups:
+                    if not s.user:
+                        continue
+                    signup_name_normalized = normalize_name(s.user.name)
+                    score = fuzz.ratio(normalized_payment_name, signup_name_normalized)
+                    if score >= threshold:
+                        name_matches.append((s, score))
+                        print(f"   🔍 Name match: {s.user.name} (Score: {score}%)")
+
+                print(f"   📊 Found {len(name_matches)} name matches above {threshold}% threshold")
+
+                # STEP 2: Decide based on match count
+                if len(name_matches) == 1:
+                    # Single match → use it directly
+                    best_signup = name_matches[0][0]
+                    best_signup_score = name_matches[0][1]
+                    print(f"   ✅ Single match: {best_signup.user.name}")
+
+                elif len(name_matches) > 1:
+                    # Multiple matches → check for ambiguity
+                    scores = [score for _, score in name_matches]
+                    score_range = max(scores) - min(scores)
+
+                    if score_range < 5:  # Ambiguous - scores too close
+                        print(f"   🚨 AMBIGUOUS: {len(name_matches)} matches with similar scores (range: {score_range}%)")
+                        for s, score in name_matches:
+                            print(f"      - {s.user.name}: {score}% (code: {s.signup_code})")
+
+                        # Try to disambiguate using signup code
+                        code_match = None
+                        if transfer_message:
+                            code_match = re.search(r'MP-INS-(\d{7})', transfer_message)
+
+                        # FALLBACK: If not found in transfer_message, search entire email body
+                        if not code_match and email_body:
+                            print(f"   🔍 Searching full email body for signup code...")
+                            code_match = re.search(r'MP-INS-(\d{7})', email_body)
+
+                        if code_match:
+                            signup_code = f"MP-INS-{code_match.group(1)}"
+                            print(f"   🔑 Signup code found: {signup_code}")
+                            # Find which candidate has this code
+                            for s, score in name_matches:
+                                if s.signup_code == signup_code:
+                                    print(f"   ✅ DISAMBIGUATED by code: {signup_code}")
+                                    best_signup = s
+                                    best_signup_score = 100
+                                    break
+
+                        if not best_signup:
+                            # Still ambiguous → flag for manual review (don't auto-match)
+                            print(f"   ⚠️ Cannot disambiguate - needs manual review")
+                    else:
+                        # Clear winner by score
+                        name_matches.sort(key=lambda x: -x[1])
+                        best_signup = name_matches[0][0]
+                        best_signup_score = name_matches[0][1]
+                        print(f"   ✅ Clear winner: {best_signup.user.name} ({best_signup_score}%)")
+
+                if best_signup:
+                    print(f"\n✅ PAYMENT-FIRST SIGNUP MATCH: {best_signup.user.name} - ${best_signup.requested_amount}")
+                    # Auto-create passport from signup
+                    try:
+                        from utils import auto_create_passport_from_signup
+                        new_passport = auto_create_passport_from_signup(best_signup, marked_paid_by="minipass-bot@system")
+                        if new_passport:
+                            print(f"   ✅ Auto-created passport: {new_passport.pass_code}")
+                            # Record the payment
+                            db.session.add(EbankPayment(
+                                from_email=from_email,
+                                subject=subject,
+                                bank_info_name=name,
+                                bank_info_amt=amt,
+                                matched_pass_id=new_passport.id,
+                                matched_name=best_signup.user.name,
+                                matched_amt=best_signup.requested_amount,
+                                name_score=best_signup_score,
+                                result="MATCHED",
+                                mark_as_paid=True,
+                                note="Matched to signup (payment-first), auto-created passport.",
+                                email_received_date=email_received_date
+                            ))
+                            db.session.commit()
+                            results["matched"] += 1
+
+                            # Send payment confirmation email to user
+                            try:
+                                now_utc = datetime.now(timezone.utc)
+                                notify_pass_event(
+                                    app=current_app._get_current_object(),
+                                    event_type="payment_received",
+                                    pass_data=new_passport,
+                                    activity=new_passport.activity,
+                                    admin_email="minipass-bot@system",
+                                    timestamp=now_utc
+                                )
+                                print(f"   📧 Payment confirmation email sent to {new_passport.user.email}")
+                            except Exception as email_error:
+                                print(f"   ⚠️ Email notification failed: {email_error}")
+
+                            # Move email to processed folder
+                            if uid:
+                                try:
+                                    copy_result = mail.uid("COPY", uid, processed_folder)
+                                    if copy_result[0] == 'OK':
+                                        mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                                        print(f"   ✅ Email moved to {processed_folder}")
+                                except Exception as e:
+                                    print(f"   ⚠️ Could not move email: {e}")
+
+                            continue  # Skip the "NO MATCH FOUND" block
+                    except Exception as e:
+                        print(f"   ❌ Error creating passport from signup: {e}")
+                        db.session.rollback()
+
+                # Still no match - log it
                 print(f"\n❌ NO MATCH FOUND")
                 print(f"   Payment: {name} - ${amt}")
 
@@ -1467,7 +1829,7 @@ def match_gmail_payments_to_passes():
                         print(f"   Closest matches for ${amt}:")
                         for user_name, score in closest_matches[:3]:
                             print(f"      - {user_name}: {score}%")
-                
+
             if best_passport:
                 try:
                     now_utc = datetime.now(timezone.utc)
@@ -2472,13 +2834,14 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         # Only use dynamic templates for default fallback subjects
         subject_templates = {
             'newPass': 'Your digital pass is ready',
-            'paymentReceived': 'Payment confirmed - Pass activated', 
+            'paymentReceived': 'Payment confirmed - Pass activated',
             'signup': 'Registration confirmation',
+            'signup_payment_first': 'Registration confirmed - Payment instructions',
             'redeemPass': 'Pass redeemed successfully',
             'latePayment': 'Payment reminder',
             'email_survey_invitation': 'We\'d love your feedback'
         }
-        
+
         # Extract template type from template_name
         template_type = None
         if template_name:
@@ -2486,6 +2849,8 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
                 template_type = 'newPass'
             elif 'paymentReceived' in template_name:
                 template_type = 'paymentReceived'
+            elif 'signup_payment_first' in template_name:
+                template_type = 'signup_payment_first'
             elif 'signup' in template_name:
                 template_type = 'signup'
             elif 'redeemPass' in template_name:
@@ -2722,6 +3087,10 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                         'email_templates/signup/index.html': 'signup',
                         'email_templates/signup_compiled/index.html': 'signup',
                         'signup': 'signup',
+                        'email_templates/signup_payment_first/index.html': 'signup_payment_first',
+                        'email_templates/signup_payment_first_compiled/index.html': 'signup_payment_first',
+                        'signup_payment_first': 'signup_payment_first',
+                        'signup_payment_first_compiled/index.html': 'signup_payment_first',
                         'email_templates/redeemPass/index.html': 'redeemPass',
                         'email_templates/redeemPass_compiled/index.html': 'redeemPass',
                         'redeemPass': 'redeemPass',
@@ -2771,6 +3140,7 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                             'paymentReceived': 'paymentReceived',
                             'latePayment': 'latePayment',
                             'signup': 'signup',
+                            'signup_payment_first': 'signup_payment_first',
                             'redeemPass': 'redeemPass',
                             'survey_invitation': 'survey_invitation'
                         }
@@ -2892,26 +3262,65 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         passport_type = db.session.get(PassportType, signup.passport_type_id)
 
     # Always send signup email with custom templates
-    
+
+    # Determine email template based on workflow type
+    # payment_first: User pays first, then gets passport automatically
+    # approval_first: Admin approves first, then user pays
+    is_payment_first = getattr(activity, 'workflow_type', 'approval_first') == 'payment_first'
+    template_type = 'signup_payment_first' if is_payment_first else 'signup'
+
     # Build base context for custom templates
     base_context = {
         "user_name": signup.user.name,
         "activity_name": activity.name
     }
-    
+
+    # Add payment-first specific context
+    if is_payment_first:
+        payment_email = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+
+        # Only require signup code when there's a naming conflict
+        # (another unpaid signup with same name AND same amount)
+        needs_signup_code = has_conflicting_unpaid_signup(signup, activity)
+
+        base_context["needs_signup_code"] = needs_signup_code
+        base_context["signup_code"] = (signup.signup_code or f"MP-INS-{signup.id:07d}") if needs_signup_code else ""
+        base_context["requested_amount"] = f"${signup.requested_amount:.2f}" if signup.requested_amount else "$0.00"
+        base_context["payment_email"] = payment_email
+
     # Get email context using activity-specific templates
-    email_context = get_email_context(activity, 'signup', base_context)
+    email_context = get_email_context(activity, template_type, base_context)
     
     # Extract template values
     subject = email_context.get('subject', "Confirmation d'inscription")
     title = email_context.get('title', "Votre Inscription est Confirmée")
     intro_raw = email_context.get('intro_text', '')
     conclusion_raw = email_context.get('conclusion_text', '')
-    theme = "signup_compiled/index.html"
+    # Use correct compiled template folder based on workflow type
+    template_folder = 'signup_payment_first_compiled' if is_payment_first else 'signup_compiled'
+    theme = f"{template_folder}/index.html"
 
     # Render intro and conclusion manually with full context
-    intro = render_template_string(intro_raw, user_name=signup.user.name, activity_name=activity.name, activity=activity)
-    conclusion = render_template_string(conclusion_raw, user_name=signup.user.name, activity_name=activity.name, activity=activity)
+    render_context = {
+        "user_name": signup.user.name,
+        "activity_name": activity.name,
+        "activity": activity,
+        "organization_name": get_setting('ORG_NAME', 'Fondation LHGI')
+    }
+    # Add payment-first variables if applicable
+    if is_payment_first:
+        payment_email = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+
+        # Use the same needs_signup_code value from base_context
+        needs_signup_code = base_context.get("needs_signup_code", False)
+
+        render_context["needs_signup_code"] = needs_signup_code
+        render_context["signup_code"] = (signup.signup_code or f"MP-INS-{signup.id:07d}") if needs_signup_code else ""
+        render_context["requested_amount"] = f"${signup.requested_amount:.2f}" if signup.requested_amount else "$0.00"
+        render_context["payment_email"] = payment_email
+
+    intro = render_template_string(intro_raw, **render_context)
+    conclusion = render_template_string(conclusion_raw, **render_context)
 
     # Build context
     context = {
@@ -2966,29 +3375,15 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
 
         # Load custom hero image for signup emails (if activity has one)
         from utils import get_activity_hero_image
-        hero_data, is_custom, is_template_default = get_activity_hero_image(activity, 'signup')
+        hero_data, is_custom, is_template_default = get_activity_hero_image(activity, template_type)
         if hero_data and not is_template_default:
             # Replace template default with custom uploaded hero or activity fallback
-            hero_cid = HERO_CID_MAP.get('signup')
+            hero_cid = HERO_CID_MAP.get(template_type)
             if hero_cid:
                 inline_images[hero_cid] = hero_data
                 hero_type = "custom" if is_custom else "activity fallback"
-                print(f"✅ {hero_type} hero image applied for signup: cid={hero_cid}, size={len(hero_data)} bytes")
+                print(f"✅ {hero_type} hero image applied for {template_type}: cid={hero_cid}, size={len(hero_data)} bytes")
 
-        send_email_async(
-            app=app,
-            user=signup.user,
-            activity=activity,
-            subject=subject,
-            to_email=signup.user.email,
-            template_name="signup_compiled/index.html",
-            context=context,
-            inline_images=inline_images,
-            timestamp_override=timestamp
-        )
-
-    else:
-        # fallback if compiled missing
         send_email_async(
             app=app,
             user=signup.user,
@@ -2996,6 +3391,21 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
             subject=subject,
             to_email=signup.user.email,
             template_name=theme,
+            context=context,
+            inline_images=inline_images,
+            timestamp_override=timestamp
+        )
+
+    else:
+        # fallback if compiled missing - use base template (signup or signup_payment_first)
+        base_template = 'signup_payment_first' if is_payment_first else 'signup'
+        send_email_async(
+            app=app,
+            user=signup.user,
+            activity=activity,
+            subject=subject,
+            to_email=signup.user.email,
+            template_name=f"{base_template}/index.html",
             context=context,
             timestamp_override=timestamp
         )

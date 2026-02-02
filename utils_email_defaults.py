@@ -48,6 +48,13 @@ def get_default_email_templates():
                 'conclusion_text': '<p>Thank you!</p>',
                 'custom_message': ''
             },
+            'signup_payment_first': {
+                'subject': 'Registration Confirmed - Payment Instructions',
+                'title': 'Registration Confirmed',
+                'intro_text': '<p>Your registration is confirmed. Please complete payment.</p>',
+                'conclusion_text': '<p>Thank you!</p>',
+                'custom_message': ''
+            },
             'redeemPass': {
                 'subject': 'Pass Redeemed',
                 'title': 'Enjoy!',

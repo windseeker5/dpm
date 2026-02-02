@@ -589,12 +589,54 @@
 
 
 
+      {% if is_sold_out %}
+      <!-- SOLD OUT Display -->
+      <div class="alert alert-danger text-center mb-4">
+        <i class="ti ti-alert-circle me-2" style="font-size: 1.5rem;"></i>
+        <h4 class="mb-2">COMPLET / SOLD OUT</h4>
+        <p class="mb-0">Cette activité a atteint sa capacité maximale.</p>
+        <p class="mb-0 text-muted small">This activity has reached maximum capacity.</p>
+      </div>
+      {% else %}
+
+      <!-- Remaining Capacity Display -->
+      {% if activity.show_remaining_quantity and remaining_capacity is not none %}
+      <div class="alert alert-info text-center mb-4">
+        <i class="ti ti-users me-2"></i>
+        <strong>{{ remaining_capacity }}</strong> {{ "place restante" if remaining_capacity == 1 else "places restantes" }}
+      </div>
+      {% endif %}
+
       <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <!-- Hidden passport type ID -->
         {% if selected_passport_type %}
           <input type="hidden" name="passport_type_id" value="{{ selected_passport_type.id }}">
+        {% endif %}
+
+        <!-- Quantity Selection (for payment-first with quantity enabled) -->
+        {% if activity.allow_quantity_selection %}
+        <div class="mb-4">
+          <label class="form-label">
+            <i class="ti ti-hash me-1"></i>
+            Quantité
+          </label>
+          <select name="requested_sessions" class="form-select" id="quantity-select" onchange="updateTotalPrice()">
+            {% set max_qty = remaining_capacity if remaining_capacity is not none else 10 %}
+            {% for i in range(1, [max_qty + 1, 11]|min) %}
+            <option value="{{ i }}">{{ i }}</option>
+            {% endfor %}
+          </select>
+          {% if selected_passport_type %}
+          <div class="mt-2">
+            <span class="text-muted small">Prix unitaire: ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}</span>
+            <span class="ms-3 fw-bold">Total: $<span id="total-price">{{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}</span></span>
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <input type="hidden" name="requested_sessions" value="1">
         {% endif %}
 
         <!-- Passport Type Selection (if multiple types available) -->
@@ -695,6 +737,7 @@
         </div>
 
       </form>
+      {% endif %}
 
       </div><!-- End signup-form-content -->
 
@@ -817,6 +860,18 @@ function toggleNotes() {
   } else {
     section.style.display = 'none';
     icon.className = 'ti ti-plus';
+  }
+}
+
+// Update total price when quantity changes
+function updateTotalPrice() {
+  const quantitySelect = document.getElementById('quantity-select');
+  const totalPriceSpan = document.getElementById('total-price');
+  if (quantitySelect && totalPriceSpan) {
+    const quantity = parseInt(quantitySelect.value) || 1;
+    const unitPrice = {{ (selected_passport_type.price_per_user or 0) if selected_passport_type else 0 }};
+    const total = (unitPrice * quantity).toFixed(2);
+    totalPriceSpan.textContent = total;
   }
 }
 

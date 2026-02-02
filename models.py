@@ -110,6 +110,15 @@ class Activity(db.Model):
     # Financial tracking
     goal_revenue = db.Column(db.Float, default=0.0, nullable=True)  # Revenue goal for progress tracking (existing column)
 
+    # Workflow configuration
+    workflow_type = db.Column(db.String(50), default="approval_first")  # "approval_first" | "payment_first"
+    allow_quantity_selection = db.Column(db.Boolean, default=False)     # Show qty picker on signup
+
+    # Quantity limits
+    is_quantity_limited = db.Column(db.Boolean, default=False)
+    max_sessions = db.Column(db.Integer, nullable=True)                 # Total capacity
+    show_remaining_quantity = db.Column(db.Boolean, default=False)      # Display "X left" on form
+
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 
@@ -202,6 +211,13 @@ class Signup(db.Model):
     paid_at = db.Column(db.DateTime)
     passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"))
     status = db.Column(db.String(50), default="pending")
+
+    # Quantity selection for payment-first workflow
+    requested_sessions = db.Column(db.Integer, default=1)    # User's chosen quantity
+    requested_amount = db.Column(db.Float, default=0.0)      # Calculated total (price x qty)
+
+    # Signup code for reliable payment matching (format: MP-INS-0001234)
+    signup_code = db.Column(db.String(20), unique=True, nullable=True)
 
 
 class Passport(db.Model):
