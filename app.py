@@ -5961,10 +5961,19 @@ def activity_form(activity_id=None):
     else:
         passport_types = []
     
+    # Get Google Maps API key for Places Autocomplete
+    google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
+    # Get payment email for display
+    display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
+    payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
+
     return render_template("activity_form.html",
                            activity=activity,
                            passport_types=passport_types,
-                           summary=summary)
+                           summary=summary,
+                           google_maps_api_key=google_maps_api_key,
+                           payment_email=payment_email)
 
 
 

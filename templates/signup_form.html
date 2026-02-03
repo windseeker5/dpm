@@ -51,10 +51,15 @@
       flex: 1;
       max-width: 50%;
       padding: 2rem 3rem;
-      overflow-y: auto;
+      overflow-y: hidden;
       background: #ffffff;
       display: flex;
       flex-direction: column;
+      height: 100vh;
+    }
+
+    .signup-form-side.notes-expanded {
+      overflow-y: auto;
     }
 
     .signup-image-side {
@@ -294,6 +299,7 @@
        ======================================== */
     .order-summary {
       background: #f8f9fa;
+      border: 1px solid var(--success-color);
       border-radius: 8px;
       padding: 1rem 1.25rem;
       margin-bottom: 1.5rem;
@@ -332,6 +338,62 @@
       color: #6c757d;
       font-size: 0.9rem;
       margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    /* Payment Method Card */
+    .payment-method-card {
+      background: #ffffff;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+    }
+
+    .payment-method-radio {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #adb5bd;
+      background: #fff;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .payment-method-radio::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #adb5bd;
+    }
+
+    .payment-method-logo {
+      flex-shrink: 0;
+    }
+
+    .interac-logo-img {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+
+    .payment-method-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .payment-method-desc {
+      font-size: 0.85rem;
+      color: #212529;
       line-height: 1.5;
     }
 
@@ -976,10 +1038,16 @@
               </span></span>
             </div>
 
-            <!-- Payment Info -->
-            <p class="payment-info-text">
-              Paiement par virement Interac. Les instructions de paiement vous seront envoyees par courriel apres votre inscription.
-            </p>
+            <!-- Payment Method -->
+            <div class="payment-method-card">
+              <div class="payment-method-radio"></div>
+              <div class="payment-method-logo">
+                <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img">
+              </div>
+              <div class="payment-method-info">
+                <span class="payment-method-desc"><strong>Interac.</strong> Les instructions de paiement vous seront envoyees par courriel apres votre inscription.</span>
+              </div>
+            </div>
 
             <!-- Name -->
             <div class="form-group">
@@ -1089,13 +1157,17 @@ function updateSummary() {
 function toggleNotes() {
   var section = document.getElementById('notes-section');
   var icon = document.getElementById('notes-toggle-icon');
+  var formSide = document.querySelector('.signup-form-side');
+
   if (section.classList.contains('visible')) {
     section.classList.remove('visible');
     icon.className = 'ti ti-plus';
+    formSide.classList.remove('notes-expanded');
   } else {
     section.classList.add('visible');
     icon.className = 'ti ti-minus';
-    // Scroll down slightly to show the button on mobile
+    formSide.classList.add('notes-expanded');
+    // Scroll to show button
     setTimeout(function() {
       var button = document.querySelector('.buttons-row');
       if (button) {
