@@ -2072,21 +2072,29 @@ def edit_activity(activity_id):
         flash(f"Activity updated successfully! Created: {passport_types_created}, Updated: {passport_types_updated}, Archived: {passport_types_archived} passport types.", "success")
         return redirect(url_for("edit_activity", activity_id=activity.id))
 
-    # 🧮 Add financial summary data (shown at bottom of form)
-    passport_income = sum(p.sold_amt for p in activity.passports if p.paid)
-    other_income = sum(i.amount for i in activity.incomes)
-    total_income = passport_income + other_income
+    # 🧮 Add financial summary data (shown at bottom of form) - use database views for consistency
+    from utils import get_financial_data_from_views, get_fiscal_year_range, get_fiscal_year_display
 
-    cogs = sum(e.amount for e in activity.expenses if e.category == "Cost of Goods Sold")
-    opex = sum(e.amount for e in activity.expenses if e.category != "Cost of Goods Sold")
-    total_expenses = cogs + opex
-    net_income = total_income - total_expenses
+    period = request.args.get('period', 'fy')
+    start_date, end_date, period_display = None, None, "All Time"
+
+    if period == 'fy':
+        fy_start, fy_end = get_fiscal_year_range()
+        start_date = fy_start.strftime('%Y-%m-%d')
+        end_date = fy_end.strftime('%Y-%m-%d')
+        period_display = get_fiscal_year_display()
+
+    financial_data = get_financial_data_from_views(
+        start_date=start_date,
+        end_date=end_date,
+        activity_filter=activity.id
+    )
 
     summary = {
-        "passport_income": passport_income,
-        "other_income": other_income,
-        "total_expenses": total_expenses,
-        "net_income": net_income
+        "passport_income": financial_data['summary']['cash_received'],
+        "other_income": 0,  # View combines all income into cash_received
+        "total_expenses": financial_data['summary']['cash_paid'],
+        "net_income": financial_data['summary']['net_cash_flow']
     }
 
     # Get passport types for this activity (only active ones)
@@ -2106,7 +2114,7 @@ def edit_activity(activity_id):
             'use_custom_payment_instructions': pt.use_custom_payment_instructions or False
         })
     
-    return render_template("activity_form.html", activity=activity, passport_types=passport_types, summary=summary)
+    return render_template("activity_form.html", activity=activity, passport_types=passport_types, summary=summary, current_period=period, period_display=period_display)
 
 
 
