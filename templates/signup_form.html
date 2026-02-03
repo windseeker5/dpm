@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Signup for {{ activity.name }}</title>
 
-  <!-- Tabler Core CSS -->
-
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
@@ -14,7 +12,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
 
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
@@ -23,862 +21,1089 @@
   <!-- Custom Styles -->
   <link href="{{ url_for('static', filename='minipass.css') }}" rel="stylesheet">
 
-
-
-
-
-  
   <style>
+    :root {
+      --primary-color: #206bc4;
+      --success-color: #28a745;
+      --success-gradient: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8f9fa;
     }
 
-    .page-title {
-      font-family: 'Roboto Slab', serif;
-      font-weight: 700;
-      color: #0f172a;
-      font-size: 2.25rem;
-      line-height: 1.2;
-      margin-bottom: 0.5rem;
-      text-align: center;
-      justify-content: center !important;
-    }
-
+    /* ========================================
+       DESKTOP LAYOUT: Split Screen
+       ======================================== */
     .signup-wrapper {
+      display: flex;
       min-height: 100vh;
-      display: flex;
-      overflow: hidden;
     }
 
-    .signup-card {
-      display: flex;
-      width: 100%;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    .signup-form {
+    .signup-form-side {
       flex: 1;
+      max-width: 50%;
+      padding: 2rem 3rem;
+      overflow-y: auto;
       background: #ffffff;
-      padding: 6rem;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      overflow-y: auto;
     }
 
-    .signup-image {
+    .signup-image-side {
       flex: 1;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      position: relative;
     }
 
+    .signup-image-side::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, rgba(0,0,0,0.15), transparent 30%);
+    }
+
+    /* Form container - centered, max 480px */
     .signup-form-content {
-      max-width: 500px;
+      max-width: 480px;
       margin: 0 auto;
       width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
-    .btn-submit {
-      width: 100%;
-      margin: 0 auto;
-      display: block;
+    /* ========================================
+       PROGRESS INDICATOR
+       ======================================== */
+    .signup-progress {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 2rem;
+      padding: 0 1rem;
     }
 
-    /* Modern Form Styling - Desktop */
-    .form-control,
-    .form-select {
-      background-color: #F8F9FA;
-      border: 1px solid #E9ECEF;
-      border-radius: 4px;
-      padding: 0.625rem 0.875rem;
-      font-size: 0.875rem;
-      transition: all 0.2s ease;
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
     }
 
-    .form-control:focus,
-    .form-select:focus {
-      background-color: #FFFFFF;
-      border-color: #0084ff;
-      box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.1);
-      outline: none;
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #e9ecef;
+      color: #6c757d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.75rem;
+      margin-bottom: 0;
     }
 
-    .form-control::placeholder {
-      color: #adb5bd;
-      font-size: 0.8125rem;
+    .progress-step.active .step-number {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .progress-step.completed .step-number {
+      background: var(--success-color);
+      color: white;
+    }
+
+    .step-label {
+      display: none !important;
+    }
+
+    .progress-line {
+      width: 60px;
+      height: 2px;
+      background: #e9ecef;
+      margin: 0 0.5rem;
+      margin-bottom: 0;
+    }
+
+    .progress-line.completed {
+      background: var(--success-color);
+    }
+
+    /* ========================================
+       STEP CONTAINERS
+       ======================================== */
+    .signup-step {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+    }
+
+    .signup-step.active {
+      display: flex;
+    }
+
+    /* ========================================
+       STEP 1: ACTIVITY OVERVIEW
+       ======================================== */
+    .activity-card {
+      background: #ffffff;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .activity-title {
+      font-family: 'Roboto Slab', serif;
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+
+    .activity-description {
+      color: #6c757d;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .info-item i {
+      font-size: 1.125rem;
+      color: #6c757d;
+      margin-top: 0.125rem;
+      flex-shrink: 0;
+    }
+
+    .info-item-content {
+      min-width: 0;
+    }
+
+    .info-label {
+      font-size: 0.7rem;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.125rem;
+    }
+
+    .info-value {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #212529;
+    }
+
+    /* Quantity selector */
+    .quantity-section {
+      background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .quantity-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .quantity-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #212529;
+    }
+
+    .quantity-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .qty-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.25rem;
+      color: #495057;
+    }
+
+    .qty-btn:active {
+      background: #e9ecef;
+    }
+
+    .qty-value {
+      font-weight: 700;
+      font-size: 1.125rem;
+      min-width: 2rem;
+      text-align: center;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dee2e6;
+    }
+
+    .total-label {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    .total-amount {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #212529;
+    }
+
+    /* ========================================
+       STEP 2: CONTACT FORM
+       ======================================== */
+    .order-summary {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .order-summary-qty {
+      font-weight: 700;
+      color: #212529;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .order-summary-name {
+      flex: 1;
+      text-align: left;
+      font-weight: 400;
+      color: #212529;
+      font-size: 0.95rem;
+    }
+
+    .order-summary-price {
+      font-weight: 700;
+      color: #212529;
+      font-size: 1.125rem;
+      flex-shrink: 0;
+    }
+
+    .form-section-title {
+      display: none;
+    }
+
+    .payment-info-text {
+      color: #6c757d;
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    /* Form fields */
+    .form-group {
+      margin-bottom: 1.25rem;
     }
 
     .form-label {
       font-weight: 600;
       color: #495057;
-      margin-bottom: 0.625rem;
       font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      display: block;
     }
 
-    /* Enhanced spacing between form fields */
-    .mb-4 {
-      margin-bottom: 1.5rem !important;
-    }
-
-    /* Modern button styling */
-    .btn {
-      padding: 0.75rem 1.5rem;
-      font-weight: 600;
-      border-radius: 4px;
+    .form-control {
+      width: 100%;
+      padding: 0.75rem 1rem;
       font-size: 1rem;
-      transition: all 0.2s ease;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      background: #ffffff;
     }
 
-    .btn-success {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.15);
+    }
+
+    .form-control::placeholder {
+      color: #adb5bd;
+    }
+
+    /* Notes toggle */
+    .notes-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--primary-color);
+      font-size: 0.875rem;
+      cursor: pointer;
+      margin-bottom: 1rem;
+    }
+
+    .notes-toggle i {
+      font-size: 1rem;
+    }
+
+    #notes-section {
+      display: none;
+      margin-bottom: 1rem;
+    }
+
+    #notes-section.visible {
+      display: block;
+    }
+
+    /* Trust signals - hidden */
+    .trust-signals {
+      display: none;
+    }
+
+    /* ========================================
+       CTA BUTTONS
+       ======================================== */
+    .btn-cta-primary {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      background: var(--success-gradient);
+      color: white;
+      font-size: 1.125rem;
+      font-weight: 600;
       border: none;
+      border-radius: 12px;
+      min-height: 56px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
       box-shadow: 0 4px 14px rgba(40, 167, 69, 0.35);
     }
 
-    .btn-success:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(40, 167, 69, 0.45);
-      background: linear-gradient(135deg, #218838 0%, #1ba87d 100%);
+    .btn-secondary {
+      background: transparent;
+      color: #6c757d;
+      border: none;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    .btn-success:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    .buttons-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
     }
 
-    /* Textarea specific styling */
-    textarea.form-control {
-      resize: vertical;
-      min-height: 100px;
+    .buttons-row .btn-cta-primary {
+      width: 100%;
     }
 
-    /* Desktop pricing card icon sizing */
-    #pricing-info i {
-      font-size: 1.125rem !important;
+    .buttons-row .btn-secondary {
+      align-self: center;
     }
 
-    /* Desktop only: hide background and show desktop title */
-    @media (min-width: 769px) {
-      .mobile-hero-wrapper {
-        background-image: none !important;
-      }
-
-      .mobile-hero-wrapper::after {
-        display: none !important;
-      }
-
-      .desktop-title-section {
-        display: block !important;
-      }
-
-      /* Hide mobile title section on desktop */
-      .mobile-title-section {
-        display: none !important;
-      }
+    /* ========================================
+       SOLD OUT STATE
+       ======================================== */
+    .sold-out-card {
+      background: #fff5f5;
+      border: 1px solid #f8d7da;
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
     }
 
-    /* Mobile-first responsive design */
+    .sold-out-card i {
+      font-size: 3rem;
+      color: #dc3545;
+      margin-bottom: 1rem;
+    }
+
+    .sold-out-card h3 {
+      color: #dc3545;
+      margin-bottom: 0.5rem;
+    }
+
+    .sold-out-card p {
+      color: #6c757d;
+      margin: 0;
+    }
+
+    /* Remaining capacity alert */
+    .capacity-alert {
+      background: #d1ecf1;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      color: #0c5460;
+      font-size: 0.9rem;
+    }
+
+    .capacity-alert i {
+      font-size: 1.125rem;
+    }
+
+    /* ========================================
+       MOBILE LAYOUT
+       ======================================== */
+    .mobile-hero {
+      display: none;
+    }
+
     @media (max-width: 768px) {
       body {
-        overflow: auto;
+        background: #ffffff;
       }
 
       .signup-wrapper {
+        flex-direction: column;
+        min-height: auto;
+        background: #ffffff;
+      }
+
+      .signup-form-side {
+        max-width: 100%;
+        padding: 0;
+        order: 2;
+        min-height: auto;
+      }
+
+      .signup-image-side {
+        display: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        min-height: 0 !important;
+        flex: 0 !important;
+        overflow: hidden;
+      }
+
+      /* Mobile hero banner */
+      .mobile-hero {
         display: block;
-        height: auto;
+        height: 220px;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+      }
+
+      .mobile-hero::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%);
+      }
+
+      .mobile-hero-content {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1.25rem;
+        z-index: 1;
+      }
+
+      .mobile-hero-title {
+        color: white;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 700;
+        font-size: 1.375rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        margin: 0;
+      }
+
+      .signup-form-content {
+        padding: 1.25rem;
+        padding-bottom: 6rem;
+        max-width: 100%;
+        min-height: auto;
         overflow: visible;
       }
 
-      .signup-card {
-        display: block;
-        height: auto;
-        min-height: 100vh;
+      /* Ensure mobile body/html can scroll */
+      html, body {
+        overflow-y: auto !important;
+        height: auto !important;
       }
 
-      .signup-form {
-        padding: 1rem 1.5rem;
-        min-height: 100vh;
-        justify-content: flex-start;
+      .signup-wrapper {
+        min-height: auto;
+        overflow: visible;
       }
 
-      .signup-image {
-        display: none;
+      .signup-progress {
+        margin-bottom: 1.5rem;
       }
 
-      .page-title {
-        font-size: 1.5rem;
-        text-align: center;
-        margin-bottom: 0.5rem;
-        margin-top: 0;
+      .progress-line {
+        width: 40px;
       }
 
-      /* Hide logo and desktop title on mobile */
-      .logo-section {
-        display: none !important;
+      .activity-card {
+        display: none; /* Hide on mobile since hero shows title */
       }
 
-      .desktop-title-section {
-        display: none !important;
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
       }
 
-      /* Mobile Hero Section with Activity Image */
-      .mobile-hero-wrapper {
-        display: block !important;
-        position: relative;
-        width: 100vw;
-        left: 50%;
-        right: 50%;
-        margin-left: -50vw;
-        margin-right: -50vw;
-        margin-top: -2rem;
-        margin-bottom: 0.5rem;
-        padding: 2rem 1.5rem 1rem 1.5rem;
-        min-height: 350px;
-      }
-
-      /* Force background image on mobile - only top portion */
-      .mobile-hero-wrapper[style*="background-image"] {
-        background-size: 100% 250px !important;
-        background-position: top center !important;
-        background-repeat: no-repeat !important;
-      }
-
-      .mobile-hero-wrapper > * {
-        position: relative;
-        z-index: 2;
-      }
-
-      /* Pricing card over hero image - SINGLE COLUMN, COMPACT */
-      .mobile-hero-wrapper #pricing-info {
-        margin-bottom: 0;
-        padding: 2rem !important;
-        background: #FFFFFF !important;
-        box-shadow: none !important;
-        border: 1px solid #DEE2E6 !important;
-      }
-
-      /* Make pricing card single column on mobile */
-      .mobile-hero-wrapper #pricing-info .row.g-3 {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 0 !important;
-      }
-
-      .mobile-hero-wrapper #pricing-info .col-6 {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin-bottom: 0.3rem !important;
-      }
-
-      .mobile-hero-wrapper #pricing-info .col-6:last-child {
-        margin-bottom: 0 !important;
-      }
-
-      /* CRITICAL: Remove ALL padding and force left alignment */
-      .mobile-hero-wrapper #pricing-info .d-flex {
-        align-items: start !important;
-        gap: 1rem !important;
-        padding: 0 !important;
-        margin: 0 !important;
-      }
-
-      /* Show icons on mobile - sized and positioned for alignment */
-      .mobile-hero-wrapper #pricing-info i.ti {
-        display: inline-block !important;
-        font-size: 1rem !important;
-        color: #6c757d !important;
-        flex-shrink: 0 !important;
-        width: 1rem !important;
-        line-height: 1.2 !important;
-        margin-top: 0.1rem !important;
-      }
-
-      /* All text divs aligned to same position - ZERO padding */
-      .mobile-hero-wrapper #pricing-info .d-flex > div {
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 100% !important;
-        text-align: left !important;
-      }
-
-      /* Force all text content to align left - ZERO indentation */
-      .mobile-hero-wrapper #pricing-info .text-muted,
-      .mobile-hero-wrapper #pricing-info strong {
-        padding: 0 !important;
-        margin: 0 !important;
-        text-indent: 0 !important;
-        text-align: left !important;
-      }
-
-      /* Fix text alignment */
-      .mobile-hero-wrapper #pricing-info .text-muted {
-        font-size: 0.7rem !important;
-        line-height: 1.2;
-      }
-
-      .mobile-hero-wrapper #pricing-info strong {
-        font-size: 0.875rem !important;
-        line-height: 1.3;
-      }
-
-      .mobile-hero-wrapper #pricing-info div[style*="font-size: 0.85rem"] {
-        font-size: 0.875rem !important;
-        line-height: 1.3;
-      }
-
-      .btn-submit {
-        width: 100%;
-      }
-
-      /* Mobile-optimized form elements */
-      .form-control {
-        font-size: 0.875rem;
-        padding: 0.625rem 0.875rem;
-        border-radius: 4px;
+      .info-grid-card {
+        background: #ffffff !important;
         border: 1px solid #e9ecef;
-        transition: all 0.2s ease;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
       }
 
-      .form-control:focus {
-        border-color: #0084ff;
-        box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.1);
+      .quantity-section {
+        margin-bottom: 1.25rem;
       }
 
-      .form-control::placeholder {
-        font-size: 0.8125rem;
-      }
-
-      .form-label {
-        font-weight: 600;
-        color: #495057;
-        margin-bottom: 0.5rem;
-        font-size: 0.875rem;
-      }
-
-      .form-select {
-        font-size: 0.875rem;
-        padding: 0.625rem 0.875rem;
-        border-radius: 4px;
-        border: 1px solid #e9ecef;
-      }
-      
-      .btn {
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        border-radius: 4px;
+      .btn-cta-primary {
+        min-height: 52px;
         font-size: 1rem;
-        min-height: 48px; /* Better touch target */
-      }
-      
-      .btn-success {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        border: none;
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-      }
-      
-      .btn-success:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
       }
 
-      /* Remove excessive gap after pricing card */
-      .mobile-hero-wrapper + form {
-        margin-top: -0.5rem !important;
+      .buttons-row {
+        gap: 0.5rem;
+        margin-bottom: 2rem;
       }
 
-      /* Mobile-optimized spacing */
-      .mb-3 {
-        margin-bottom: 1rem !important;
-      }
-
-      .mb-4 {
-        margin-bottom: 1rem !important;
-      }
-      
-      /* Checkbox styling */
-      .form-check-input {
-        width: 1.25rem;
-        height: 1.25rem;
-        margin-top: 0.125rem;
-      }
-      
-      .form-check-label {
-        font-size: 0.95rem;
-        margin-left: 0.5rem;
-      }
-      
-      /* Alert styling for passport type info */
-      .alert {
-        border-radius: 4px;
-        border: none;
-        padding: 1rem 1.25rem;
-      }
-      
-      .alert-info {
-        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-        color: #0c5460;
+      .buttons-row .btn-secondary {
+        width: 100%;
+        justify-content: center;
       }
     }
-    
-    @media (max-width: 480px) {
-      .signup-form {
-        padding: 1.5rem 1rem;
-      }
-      
-      .signup-title {
-        font-size: 1.5rem;
-      }
-      
-      #pricing-info {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-      }
 
-      /* Override centering for custom payment instructions */
-      #pricing-info[style*="text-align: left"] {
-        text-align: left !important;
-      }
+    /* Desktop: Logo on form side - above progress indicator */
+    .form-logo {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
 
-      #pricing-info[style*="text-align: left"] > div {
-        text-align: left !important;
+    .form-logo img {
+      height: 160px;
+      max-width: 300px;
+      object-fit: contain;
+    }
+
+    /* Hide desktop logo on mobile (mobile uses hero logo) */
+    @media (max-width: 768px) {
+      .form-logo {
+        display: none;
       }
+    }
+
+    /* Mobile: Logo CENTERED on hero - NO BACKGROUND */
+    .mobile-hero-logo {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+
+    .mobile-hero-logo img {
+      height: 100px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+    }
+
+    /* Mobile: Activity description on hero */
+    .mobile-hero-description {
+      color: rgba(255,255,255,0.9);
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Custom payment instructions */
+    .custom-payment-info {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      white-space: pre-wrap;
+      font-size: 0.9rem;
+      line-height: 1.5;
     }
   </style>
 </head>
 
 <body>
-<div class="signup-wrapper">
-  <div class="signup-card shadow-lg rounded-3 border-0">
-    
-    <!-- Left Side: Form -->
-    <div class="signup-form p-5">
-
-
-      <!-- Logo and Header -->
-      {% if settings and settings["LOGO_FILENAME"] %}
-      <div class="text-center mb-4 logo-section">
-        <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo"
-             style="height: 120px; display: block; margin: 0 auto;">
-      </div>
+  <!-- Mobile Hero Banner (visible only on mobile) -->
+  <div class="mobile-hero" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else '' }}');">
+    {% if settings and settings["LOGO_FILENAME"] %}
+    <div class="mobile-hero-logo">
+      <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo">
+    </div>
+    {% endif %}
+    <div class="mobile-hero-content">
+      <h1 class="mobile-hero-title">{{ activity.name }}</h1>
+      {% if activity.description %}
+      <p class="mobile-hero-description">{{ activity.description }}</p>
       {% endif %}
+    </div>
+  </div>
 
-      <!-- Form Content Container (max-width 500px) -->
+  <div class="signup-wrapper">
+    <!-- Left Side: Form -->
+    <div class="signup-form-side">
       <div class="signup-form-content">
 
-      <!-- Desktop Title and Description (only visible on desktop) -->
-      <div class="desktop-title-section text-center mb-4">
-        <h1 class="page-title mb-2">{{ activity.name }}</h1>
-        {% if activity.description %}
-        <p class="activity-description text-muted" style="font-size: 1rem; line-height: 1.5; margin-bottom: 1.5rem;">{{ activity.description }}</p>
+        <!-- Logo on form side (desktop only) -->
+        {% if settings and settings["LOGO_FILENAME"] %}
+        <div class="form-logo">
+          <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo">
+        </div>
         {% endif %}
-      </div>
 
-      <!-- Mobile Hero Wrapper (only visible on mobile) -->
-      <div class="mobile-hero-wrapper" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else '' }}');">
-
-        <!-- Mobile Title - Centered at top -->
-        <div class="text-center mb-4 mobile-title-section">
-          <h1 class="page-title mb-1" style="color: #fff; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);">{{ activity.name }}</h1>
+        {% if is_sold_out %}
+        <!-- SOLD OUT State -->
+        <div class="signup-progress">
+          <div class="progress-step active">
+            <div class="step-number">1</div>
+            <div class="step-label">Activite</div>
+          </div>
+          <div class="progress-line"></div>
+          <div class="progress-step">
+            <div class="step-number">2</div>
+            <div class="step-label">Inscription</div>
+          </div>
         </div>
 
-        <!-- Activity Information Card - Compact 2-Column Grid -->
-        <div class="mb-4 p-3 rounded-3" id="pricing-info" style="border: 1px solid #dee2e6; background: transparent; {% if selected_passport_type and selected_passport_type.use_custom_payment_instructions and selected_passport_type.payment_instructions %}text-align: left !important;{% endif %}">
+        <div class="activity-card">
+          <h2 class="activity-title">{{ activity.name }}</h2>
+          {% if activity.description %}
+          <p class="activity-description">{{ activity.description }}</p>
+          {% endif %}
+        </div>
 
-        {% if selected_passport_type and selected_passport_type.use_custom_payment_instructions and selected_passport_type.payment_instructions %}
-          <!-- CUSTOM MODE: Show custom text with padding (matches preview structure) -->
-          <div style="white-space: pre-wrap; font-size: 0.85rem;">{{ selected_passport_type.payment_instructions }}</div>
+        <div class="sold-out-card">
+          <i class="ti ti-alert-circle"></i>
+          <h3>COMPLET / SOLD OUT</h3>
+          <p>Cette activite a atteint sa capacite maximale.</p>
+          <p class="small text-muted mt-2">This activity has reached maximum capacity.</p>
+        </div>
+
         {% else %}
-          <!-- DEFAULT MODE: Show structured format (UNCHANGED from current design) -->
-        <div class="row g-3">
-          <!-- Row 1: Price and Sessions -->
-          <div class="col-6">
-            <div class="d-flex align-items-start gap-2">
-              <i class="ti ti-currency-dollar text-muted"></i>
-              <div>
-                <div class="text-muted" style="font-size: 0.75rem;">Montant</div>
-                <strong id="price-display" style="font-size: 1rem;">
-                  {% if selected_passport_type %}
-                    ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
-                  {% elif passport_types|length == 1 %}
-                    ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
-                  {% else %}
-                    ${{ "%.2f"|format(activity.price_per_user or 0) }}
-                  {% endif %}
-                </strong>
-              </div>
-            </div>
+
+        <!-- Progress Indicator -->
+        <div class="signup-progress">
+          <div class="progress-step active" id="progress-step-1">
+            <div class="step-number" id="step-number-1">1</div>
+            <div class="step-label">Activite</div>
+          </div>
+          <div class="progress-line" id="progress-line-1"></div>
+          <div class="progress-step" id="progress-step-2">
+            <div class="step-number">2</div>
+            <div class="step-label">Inscription</div>
+          </div>
+        </div>
+
+        <!-- ========================================
+             STEP 1: Activity Overview
+             ======================================== -->
+        <div class="signup-step active" id="step-1">
+
+          <!-- Activity Card (desktop only, mobile uses hero) -->
+          <div class="activity-card">
+            <h2 class="activity-title">{{ activity.name }}</h2>
+            {% if activity.description %}
+            <p class="activity-description">{{ activity.description }}</p>
+            {% endif %}
           </div>
 
-          <div class="col-6">
-            <div class="d-flex align-items-start gap-2">
-              <i class="ti ti-ticket text-muted"></i>
-              <div>
-                <div class="text-muted" style="font-size: 0.75rem;">Sessions incluses</div>
-                <strong id="sessions-display" style="font-size: 1rem;">
-                  {% if selected_passport_type %}
-                    {{ selected_passport_type.sessions_included }}
-                  {% elif passport_types|length == 1 %}
-                    {{ passport_types[0].sessions_included }}
-                  {% else %}
-                    {{ activity.sessions_included }}
-                  {% endif %}
-                  <span id="sessions-text">
+          {% if selected_passport_type and selected_passport_type.use_custom_payment_instructions and selected_passport_type.payment_instructions %}
+          <!-- Custom Payment Instructions Mode -->
+          <div class="custom-payment-info">{{ selected_passport_type.payment_instructions }}</div>
+          {% else %}
+          <!-- Standard Info Grid -->
+          <div class="info-grid-card d-block d-md-none">
+            <div class="info-grid">
+              <div class="info-item">
+                <i class="ti ti-currency-dollar"></i>
+                <div class="info-item-content">
+                  <div class="info-label">Montant</div>
+                  <div class="info-value" id="mobile-price-display">
                     {% if selected_passport_type %}
-                      {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
+                      ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
                     {% elif passport_types|length == 1 %}
-                      {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
+                      ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
                     {% else %}
-                      {{ "session" if activity.sessions_included == 1 else "sessions" }}
+                      ${{ "%.2f"|format(activity.price_per_user or 0) }}
                     {% endif %}
-                  </span>
-                </strong>
-              </div>
-            </div>
-          </div>
-
-          <!-- Row 2: Location and Payment -->
-          {% if activity.location_address_formatted %}
-          <div class="col-6">
-            <div class="d-flex align-items-start gap-2">
-              <i class="ti ti-map-pin text-muted"></i>
-              <div>
-                <div class="text-muted" style="font-size: 0.75rem;">Lieu</div>
-                <div style="font-size: 0.85rem; line-height: 1.4;">
-                  {% set address_parts = activity.location_address_formatted.replace(', Canada', '').split(', ') %}
-                  {% if address_parts|length >= 3 %}
-                    <div>{{ address_parts[0] }}</div>
-                    <div>{{ ', '.join(address_parts[1:]) }}</div>
-                  {% else %}
-                    {{ activity.location_address_formatted.replace(', Canada', '') }}
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-
-          <div class="{% if activity.location_address_formatted %}col-6{% else %}col-12{% endif %}">
-            <div class="d-flex align-items-start gap-2">
-              <i class="ti ti-credit-card text-muted"></i>
-              <div>
-                <div class="text-muted" style="font-size: 0.75rem;">Paiement Interac</div>
-                <div style="font-size: 0.85rem;">
-                  {% if payment_email %}
-                    <strong>{{ payment_email }}</strong>
-                  {% else %}
-                    <strong class="text-danger">⚠️ Email not configured</strong>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
-      </div>
-      </div><!-- End mobile-hero-wrapper -->
-
-
-
-
-
-
-      {% if is_sold_out %}
-      <!-- SOLD OUT Display -->
-      <div class="alert alert-danger text-center mb-4">
-        <i class="ti ti-alert-circle me-2" style="font-size: 1.5rem;"></i>
-        <h4 class="mb-2">COMPLET / SOLD OUT</h4>
-        <p class="mb-0">Cette activité a atteint sa capacité maximale.</p>
-        <p class="mb-0 text-muted small">This activity has reached maximum capacity.</p>
-      </div>
-      {% else %}
-
-      <!-- Remaining Capacity Display -->
-      {% if activity.show_remaining_quantity and remaining_capacity is not none %}
-      <div class="alert alert-info text-center mb-4">
-        <i class="ti ti-users me-2"></i>
-        <strong>{{ remaining_capacity }}</strong> {{ "place restante" if remaining_capacity == 1 else "places restantes" }}
-      </div>
-      {% endif %}
-
-      <form method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        <!-- Hidden passport type ID -->
-        {% if selected_passport_type %}
-          <input type="hidden" name="passport_type_id" value="{{ selected_passport_type.id }}">
-        {% endif %}
-
-        <!-- Quantity Selection (for payment-first with quantity enabled) -->
-        {% if activity.allow_quantity_selection %}
-        <div class="mb-4">
-          <label class="form-label">
-            <i class="ti ti-hash me-1"></i>
-            Quantité
-          </label>
-          <select name="requested_sessions" class="form-select" id="quantity-select" onchange="updateTotalPrice()">
-            {% set max_qty = remaining_capacity if remaining_capacity is not none else 10 %}
-            {% for i in range(1, [max_qty + 1, 11]|min) %}
-            <option value="{{ i }}">{{ i }}</option>
-            {% endfor %}
-          </select>
-          {% if selected_passport_type %}
-          <div class="mt-2">
-            <span class="text-muted small">Prix unitaire: ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}</span>
-            <span class="ms-3 fw-bold">Total: $<span id="total-price">{{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}</span></span>
-          </div>
-          {% endif %}
-        </div>
-        {% else %}
-        <input type="hidden" name="requested_sessions" value="1">
-        {% endif %}
-
-        <!-- Passport Type Selection (if multiple types available) -->
-        {% if passport_types|length > 1 and not selected_passport_type %}
-        <div class="mb-4" style="display:none">
-          <label class="form-label d-flex align-items-center gap-2">
-            <i class="ti ti-ticket"></i>
-            Registration Type
-          </label>
-          
-          <!-- Mobile-friendly card selection -->
-          <div class="d-block d-md-none">
-            {% for pt in passport_types %}
-            <div class="passport-type-card mb-3" onclick="selectPassportType({{ pt.id }}, '{{ pt.price_per_user or 0 }}', '{{ pt.sessions_included }}')">
-              <div class="card" style="cursor: pointer; border: 2px solid #e9ecef; transition: all 0.2s ease;">
-                <div class="card-body p-3">
-                  <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 class="mb-1 fw-bold">{{ pt.name }}</h6>
-                      <div class="text-muted small">
-                        <i class="ti ti-currency-dollar me-1"></i>${{ "%.2f"|format(pt.price_per_user or 0) }}
-                        <span class="mx-2">•</span>
-                        <i class="ti ti-ticket me-1"></i>{{ pt.sessions_included }} {{ "session" if pt.sessions_included == 1 else "sessions" }}
-                      </div>
-                      {% if pt.payment_instructions %}
-                        <div class="text-muted small mt-1">{{ pt.payment_instructions }}</div>
-                      {% endif %}
-                    </div>
-                    <div class="form-check">
-                      <input class="form-check-input" type="radio" name="passport_type_id" value="{{ pt.id }}" id="passport-{{ pt.id }}" onchange="updatePricing()">
-                    </div>
                   </div>
                 </div>
               </div>
+
+              <div class="info-item">
+                <i class="ti ti-ticket"></i>
+                <div class="info-item-content">
+                  <div class="info-label">Sessions</div>
+                  <div class="info-value">
+                    {% if selected_passport_type %}
+                      {{ selected_passport_type.sessions_included }} {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
+                    {% elif passport_types|length == 1 %}
+                      {{ passport_types[0].sessions_included }} {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
+                    {% else %}
+                      {{ activity.sessions_included }} {{ "session" if activity.sessions_included == 1 else "sessions" }}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              {% if activity.location_address_formatted %}
+              <div class="info-item">
+                <i class="ti ti-map-pin"></i>
+                <div class="info-item-content">
+                  <div class="info-label">Lieu</div>
+                  <div class="info-value" style="font-size: 0.85rem;">
+                    {% set address_parts = activity.location_address_formatted.replace(', Canada', '').split(', ') %}
+                    {% if address_parts|length >= 2 %}
+                      {{ address_parts[0] }}, {{ address_parts[1] }}
+                    {% else %}
+                      {{ activity.location_address_formatted.replace(', Canada', '') }}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if activity.show_remaining_quantity and remaining_capacity is not none %}
+              <div class="info-item">
+                <i class="ti ti-users"></i>
+                <div class="info-item-content">
+                  <div class="info-label">Places</div>
+                  <div class="info-value">{{ remaining_capacity }} {{ "restante" if remaining_capacity == 1 else "restantes" }}</div>
+                </div>
+              </div>
+              {% endif %}
             </div>
-            {% endfor %}
           </div>
-          
-          <!-- Desktop dropdown -->
-          <div class="d-none d-md-block">
-            <select name="passport_type_id" class="form-select" id="passport-type-select" onchange="updatePricing()">
-              <option value="">Select registration type...</option>
-              {% for pt in passport_types %}
-                <option value="{{ pt.id }}" 
-                        data-price="{{ pt.price_per_user or 0 }}" 
-                        data-sessions="{{ pt.sessions_included }}"
-                        data-payment-instructions="{{ pt.payment_instructions or '' }}">
-                  {{ pt.name }} - ${{ "%.2f"|format(pt.price_per_user or 0) }} 
-                  ({{ pt.sessions_included }} {{ "session" if pt.sessions_included == 1 else "sessions" }})
-                </option>
-              {% endfor %}
-            </select>
+
+          <!-- Desktop info (inside activity card styling) -->
+          <div class="d-none d-md-block" style="background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <div class="info-grid">
+              <div class="info-item">
+                <i class="ti ti-currency-dollar"></i>
+                <div class="info-item-content">
+                  <div class="info-label">Montant</div>
+                  <div class="info-value" id="desktop-price-display">
+                    {% if selected_passport_type %}
+                      ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
+                    {% elif passport_types|length == 1 %}
+                      ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
+                    {% else %}
+                      ${{ "%.2f"|format(activity.price_per_user or 0) }}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-item">
+                <i class="ti ti-ticket"></i>
+                <div class="info-item-content">
+                  <div class="info-label">Sessions</div>
+                  <div class="info-value">
+                    {% if selected_passport_type %}
+                      {{ selected_passport_type.sessions_included }} {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
+                    {% elif passport_types|length == 1 %}
+                      {{ passport_types[0].sessions_included }} {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
+                    {% else %}
+                      {{ activity.sessions_included }} {{ "session" if activity.sessions_included == 1 else "sessions" }}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              {% if activity.location_address_formatted %}
+              <div class="info-item">
+                <i class="ti ti-map-pin"></i>
+                <div class="info-item-content">
+                  <div class="info-label">Lieu</div>
+                  <div class="info-value" style="font-size: 0.85rem;">
+                    {% set address_parts = activity.location_address_formatted.replace(', Canada', '').split(', ') %}
+                    {% if address_parts|length >= 2 %}
+                      {{ address_parts[0] }}, {{ address_parts[1] }}
+                    {% else %}
+                      {{ activity.location_address_formatted.replace(', Canada', '') }}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if activity.show_remaining_quantity and remaining_capacity is not none %}
+              <div class="info-item">
+                <i class="ti ti-users"></i>
+                <div class="info-item-content">
+                  <div class="info-label">Places</div>
+                  <div class="info-value">{{ remaining_capacity }} {{ "restante" if remaining_capacity == 1 else "restantes" }}</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Remaining Capacity Alert (if not shown in grid) -->
+          {% if activity.show_remaining_quantity and remaining_capacity is not none and remaining_capacity <= 10 %}
+          <div class="capacity-alert d-none d-md-flex">
+            <i class="ti ti-alert-triangle"></i>
+            <span><strong>{{ remaining_capacity }}</strong> {{ "place restante" if remaining_capacity == 1 else "places restantes" }}</span>
+          </div>
+          {% endif %}
+
+          <!-- Quantity Selection -->
+          {% if activity.allow_quantity_selection %}
+          <div class="quantity-section">
+            <div class="quantity-row">
+              <span class="quantity-label">Quantite</span>
+              <div class="quantity-controls">
+                <button type="button" class="qty-btn" onclick="updateQty(-1)">-</button>
+                <span class="qty-value" id="qty-display">1</span>
+                <button type="button" class="qty-btn" onclick="updateQty(1)">+</button>
+              </div>
+            </div>
+            <div class="total-row">
+              <span class="total-label">Total</span>
+              <span class="total-amount">$<span id="total-amount">
+                {% if selected_passport_type %}
+                  {{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
+                {% elif passport_types|length == 1 %}
+                  {{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
+                {% else %}
+                  {{ "%.2f"|format(activity.price_per_user or 0) }}
+                {% endif %}
+              </span></span>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Reserve CTA -->
+          <div class="buttons-row">
+            <button type="button" class="btn-cta-primary" onclick="goToStep(2)">
+              Reserver ma place
+              <i class="ti ti-arrow-right"></i>
+            </button>
           </div>
         </div>
+
+        <!-- ========================================
+             STEP 2: Contact Form
+             ======================================== -->
+        <div class="signup-step" id="step-2">
+          <form method="POST" id="signup-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Hidden passport type ID -->
+            {% if selected_passport_type %}
+              <input type="hidden" name="passport_type_id" value="{{ selected_passport_type.id }}">
+            {% endif %}
+
+            <!-- Hidden quantity (updated by JS) -->
+            <input type="hidden" name="requested_sessions" id="hidden-qty" value="1">
+
+            <!-- Order Summary -->
+            <div class="order-summary">
+              {% if activity.allow_quantity_selection %}
+              <span class="order-summary-qty" id="summary-qty-prefix">1 x</span>
+              {% endif %}
+              <span class="order-summary-name">{{ activity.name }}</span>
+              <span class="order-summary-price">$<span id="summary-total">
+                {% if selected_passport_type %}
+                  {{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
+                {% elif passport_types|length == 1 %}
+                  {{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
+                {% else %}
+                  {{ "%.2f"|format(activity.price_per_user or 0) }}
+                {% endif %}
+              </span></span>
+            </div>
+
+            <!-- Payment Info -->
+            <p class="payment-info-text">
+              Paiement par virement Interac. Les instructions de paiement vous seront envoyees par courriel apres votre inscription.
+            </p>
+
+            <!-- Name -->
+            <div class="form-group">
+              <label class="form-label">Nom complet <span style="color: #dc3545;">*</span></label>
+              <input type="text" name="name" class="form-control" required placeholder="Entrez votre nom complet" autocomplete="name">
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+              <label class="form-label">Adresse courriel <span style="color: #dc3545;">*</span></label>
+              <input type="email" name="email" class="form-control" required placeholder="courriel@exemple.com" autocomplete="email">
+            </div>
+
+            <!-- Phone -->
+            <div class="form-group">
+              <label class="form-label">Telephone <span style="color: #6c757d; font-weight: 400;">(optionnel)</span></label>
+              <input type="tel" name="phone" class="form-control" placeholder="+1 (514) 123-4567" autocomplete="tel">
+            </div>
+
+            <!-- Notes Toggle -->
+            <div class="notes-toggle" onclick="toggleNotes()">
+              <i class="ti ti-plus" id="notes-toggle-icon"></i>
+              <span>Ajouter une note</span>
+            </div>
+
+            <div id="notes-section">
+              <textarea name="notes" class="form-control" rows="3" placeholder="Exigences speciales, preferences ou autres notes..."></textarea>
+            </div>
+
+            <!-- Buttons -->
+            <div class="buttons-row">
+              <button type="submit" class="btn-cta-primary">
+                Confirmer l'inscription
+                <i class="ti ti-check"></i>
+              </button>
+              <button type="button" class="btn-secondary" onclick="goToStep(1)">
+                <i class="ti ti-arrow-left"></i>
+                Retour
+              </button>
+            </div>
+          </form>
+        </div>
+
         {% endif %}
-        
 
-        <!-- Name -->
-        <div class="mb-4">
-          <label class="form-label">
-            Nom complet
-          </label>
-          <input type="text" name="name" class="form-control" required placeholder="Nom complet" autocomplete="name">
-        </div>
-
-        <!-- Email -->
-        <div class="mb-4">
-          <label class="form-label">
-            Adresse courriel
-          </label>
-          <input type="email" name="email" class="form-control" required placeholder="courriel@example.com" autocomplete="email">
-        </div>
-
-        <!-- Phone -->
-        <div class="mb-4">
-          <label class="form-label">
-            Numéro de téléphone <span class="text-muted">(optionnel)</span>
-          </label>
-          <input type="tel" name="phone" class="form-control" placeholder="+1(514)123-4567" autocomplete="tel">
-        </div>
-
-        <!-- Notes -->
-        <div class="mb-4">
-          <div class="form-label" style="cursor: pointer;" onclick="toggleNotes()">
-            Ajouter une note
-            <i class="ti ti-plus" id="notes-toggle-icon" style="margin-left: 0.5rem;"></i>
-          </div>
-          <div id="notes-section" style="display: none; margin-top: 0.5rem;">
-            <textarea name="notes" class="form-control" rows="3" placeholder="Toute exigence spéciale, préférences de position ou autres notes..."></textarea>
-          </div>
-        </div>
-
-        <!-- Submit -->
-        <div class="d-grid mb-4">
-          <button type="submit" class="btn btn-success shadow rounded-3 btn-submit">
-            m'inscrire
-          </button>
-        </div>
-
-      </form>
-      {% endif %}
-
-      </div><!-- End signup-form-content -->
-
+      </div>
     </div>
 
-    <!-- Right Side: Image -->
-    <div class="signup-image"
-         style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else '/static/default_signup.jpg' }}');">
-    </div>
-
+    <!-- Right Side: Image (Desktop only) -->
+    <div class="signup-image-side" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else '' }}');"></div>
   </div>
-</div>
-
-<!-- Tabler JS -->
-<script src="https://unpkg.com/@tabler/core@latest/dist/js/tabler.min.js"></script>
 
 <script>
-// Note: Passport type selection functions commented out since UI is hidden
-// The passport type is now determined solely from the URL parameter
-// All functionality preserved through hidden input field
+// Unit price for calculations
+var unitPrice = {{ (selected_passport_type.price_per_user or 0) if selected_passport_type else ((passport_types[0].price_per_user or 0) if passport_types|length == 1 else (activity.price_per_user or 0)) }};
+var maxQty = {{ remaining_capacity if remaining_capacity is not none else 10 }};
+var currentQty = 1;
 
-/*
-// Handle mobile card selection - UNUSED (UI hidden)
-function selectPassportType(id, price, sessions) {
-  // Clear all card selections
-  document.querySelectorAll('.passport-type-card .card').forEach(card => {
-    card.style.borderColor = '#e9ecef';
-    card.style.backgroundColor = '#fff';
-  });
-  
-  // Highlight selected card
-  event.currentTarget.querySelector('.card').style.borderColor = '#0084ff';
-  event.currentTarget.querySelector('.card').style.backgroundColor = '#f8f9ff';
-  
-  // Select the radio button
-  document.getElementById('passport-' + id).checked = true;
-  
-  // Update pricing
-  updatePricingDisplay(price, sessions);
+// Step navigation
+function goToStep(step) {
+  document.querySelectorAll('.signup-step').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById('step-' + step).classList.add('active');
+
+  // Update progress indicator
+  var step1 = document.getElementById('progress-step-1');
+  var step2 = document.getElementById('progress-step-2');
+  var line1 = document.getElementById('progress-line-1');
+  var stepNum1 = document.getElementById('step-number-1');
+
+  if (step === 2) {
+    step1.className = 'progress-step completed';
+    step2.className = 'progress-step active';
+    line1.className = 'progress-line completed';
+    stepNum1.innerHTML = '<i class="ti ti-check"></i>';
+    updateSummary();
+  } else {
+    step1.className = 'progress-step active';
+    step2.className = 'progress-step';
+    line1.className = 'progress-line';
+    stepNum1.innerHTML = '1';
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Update pricing information when passport type is selected - UNUSED (UI hidden)
-function updatePricing() {
-  const select = document.getElementById('passport-type-select');
-  const selectedOption = select ? select.options[select.selectedIndex] : null;
-  
-  // Handle desktop dropdown
-  if (selectedOption && selectedOption.value) {
-    const price = selectedOption.getAttribute('data-price');
-    const sessions = selectedOption.getAttribute('data-sessions');
-    updatePricingDisplay(price, sessions);
-  } else {
-    // Handle mobile radio buttons
-    const checkedRadio = document.querySelector('input[name="passport_type_id"]:checked');
-    if (checkedRadio) {
-      // Find the selected passport type data
-      {% for pt in passport_types %}
-      if (checkedRadio.value == '{{ pt.id }}') {
-        updatePricingDisplay('{{ pt.price_per_user or 0 }}', '{{ pt.sessions_included }}');
-        return;
-      }
-      {% endfor %}
-    }
-    
-    // Reset to default values if nothing selected
-    resetPricingDisplay();
+// Quantity controls
+function updateQty(delta) {
+  var newQty = Math.max(1, Math.min(currentQty + delta, Math.min(maxQty, 10)));
+  if (newQty !== currentQty) {
+    currentQty = newQty;
+    document.getElementById('qty-display').textContent = currentQty;
+    document.getElementById('hidden-qty').value = currentQty;
+    document.getElementById('total-amount').textContent = (currentQty * unitPrice).toFixed(2);
   }
 }
 
-// Update the pricing display elements - UNUSED (UI hidden)
-function updatePricingDisplay(price, sessions) {
-  const priceDisplay = document.getElementById('price-display');
-  const sessionsDisplay = document.getElementById('sessions-display');
-  const sessionsText = document.getElementById('sessions-text');
-  
-  if (priceDisplay) priceDisplay.textContent = '$' + parseFloat(price).toFixed(2);
-  if (sessionsDisplay) sessionsDisplay.textContent = sessions;
-  if (sessionsText) sessionsText.textContent = sessions == '1' ? 'session' : 'sessions';
+// Update order summary on step 2
+function updateSummary() {
+  document.getElementById('summary-total').textContent = (currentQty * unitPrice).toFixed(2);
+  var qtyPrefix = document.getElementById('summary-qty-prefix');
+  if (qtyPrefix) {
+    qtyPrefix.textContent = currentQty + ' x';
+  }
 }
 
-// Reset pricing to default values - UNUSED (UI hidden)
-function resetPricingDisplay() {
-  const priceDisplay = document.getElementById('price-display');
-  const sessionsDisplay = document.getElementById('sessions-display');
-  const sessionsText = document.getElementById('sessions-text');
-  
-  {% if passport_types|length == 1 %}
-    if (priceDisplay) priceDisplay.textContent = '${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}';
-    if (sessionsDisplay) sessionsDisplay.textContent = '{{ passport_types[0].sessions_included }}';
-    if (sessionsText) sessionsText.textContent = '{{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}';
-  {% else %}
-    if (priceDisplay) priceDisplay.textContent = '${{ "%.2f"|format(activity.price_per_user or 0) }}';
-    if (sessionsDisplay) sessionsDisplay.textContent = '{{ activity.sessions_included }}';
-    if (sessionsText) sessionsText.textContent = '{{ "session" if activity.sessions_included == 1 else "sessions" }}';
-  {% endif %}
-}
-
-// Initialize mobile cards on page load - UNUSED (UI hidden)
-document.addEventListener('DOMContentLoaded', function() {
-  // Add click handlers to mobile passport type cards
-  document.querySelectorAll('.passport-type-card').forEach(card => {
-    card.addEventListener('click', function() {
-      const radio = this.querySelector('input[type="radio"]');
-      if (radio) {
-        radio.checked = true;
-        updatePricing();
-      }
-    });
-  });
-});
-*/
-
-// Notes toggle function
+// Notes toggle
 function toggleNotes() {
-  const section = document.getElementById('notes-section');
-  const icon = document.getElementById('notes-toggle-icon');
-  if (section.style.display === 'none') {
-    section.style.display = 'block';
-    icon.className = 'ti ti-minus';
-  } else {
-    section.style.display = 'none';
+  var section = document.getElementById('notes-section');
+  var icon = document.getElementById('notes-toggle-icon');
+  if (section.classList.contains('visible')) {
+    section.classList.remove('visible');
     icon.className = 'ti ti-plus';
+  } else {
+    section.classList.add('visible');
+    icon.className = 'ti ti-minus';
+    // Scroll down slightly to show the button on mobile
+    setTimeout(function() {
+      var button = document.querySelector('.buttons-row');
+      if (button) {
+        button.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }, 100);
   }
 }
-
-// Update total price when quantity changes
-function updateTotalPrice() {
-  const quantitySelect = document.getElementById('quantity-select');
-  const totalPriceSpan = document.getElementById('total-price');
-  if (quantitySelect && totalPriceSpan) {
-    const quantity = parseInt(quantitySelect.value) || 1;
-    const unitPrice = {{ (selected_passport_type.price_per_user or 0) if selected_passport_type else 0 }};
-    const total = (unitPrice * quantity).toFixed(2);
-    totalPriceSpan.textContent = total;
-  }
-}
-
-// Form ready - validation handled by HTML5 attributes
-document.addEventListener('DOMContentLoaded', function() {
-  // CSRF token and hidden fields are preserved
-});
 </script>
 
 </body>
