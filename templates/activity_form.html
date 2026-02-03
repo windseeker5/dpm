@@ -165,63 +165,48 @@
           <!-- Location Section (Optional) -->
           <div class="mb-3">
             <label class="form-label">Activity Location (Optional)</label>
-            <div class="row g-3">
-              <div class="col-12">
-                <input type="text"
-                       class="form-control"
-                       id="locationInput"
-                       placeholder="Enter address (e.g., Complexe Desjardins, Montreal)"
-                       value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
-                <small class="form-text text-muted">
-                  Enter the location where this activity takes place (e.g., arena, gym, studio)
-                </small>
-              </div>
-              <div class="col-12">
-                <button type="button" id="verifyLocationBtn" class="btn btn-primary">
-                  <i class="ti ti-search me-2"></i>Verify Location
-                </button>
-              </div>
+            <div class="input-group">
+              <input type="text"
+                     id="locationAutocomplete"
+                     class="form-control"
+                     placeholder="Enter address (e.g., 821 rue des sables rimouski)"
+                     autocomplete="off"
+                     value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
+              <button type="button" id="lookupLocationBtn" class="btn btn-primary">
+                <i class="ti ti-search me-1"></i>Lookup
+              </button>
+            </div>
+            <small class="form-text text-muted">
+              Type and select from suggestions, or click Lookup to search
+            </small>
+
+            <!-- Loading indicator -->
+            <div id="locationLoading" class="mt-2" style="display: none;">
+              <span class="spinner-border spinner-border-sm me-2"></span>Looking up address...
             </div>
 
-            <!-- Verified Location Display (hidden initially) -->
-            <div id="locationVerifiedSection" class="mt-3" style="display: none;">
-              <div id="locationVerifiedAlert" class="alert alert-success d-flex align-items-center" role="alert">
-                <i class="ti ti-check icon me-2"></i>
-                <div class="flex-grow-1">
-                  <strong id="locationStatusTitle">Location Verified!</strong>
-                  <div id="verifiedAddressDisplay" class="mt-1"></div>
-                  <div id="locationApprovedMessage" class="mt-1 text-muted small" style="display: none;">
-                    Ready to save this activity
-                  </div>
+            <!-- Error display -->
+            <div id="locationError" class="alert alert-warning mt-2" style="display: none;">
+              <i class="ti ti-alert-circle me-1"></i><span id="locationErrorText"></span>
+            </div>
+
+            <!-- Multiple results selection list -->
+            <div id="locationResults" class="list-group mt-2" style="display: none;"></div>
+
+            <!-- Confirmed location display (shows after selection) -->
+            <div id="locationConfirmed" class="alert alert-success mt-2" style="display: none;">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <i class="ti ti-check me-2"></i>
+                  <span id="confirmedAddressText"></span>
                 </div>
-              </div>
-              <div class="d-flex gap-2">
-                <button type="button" id="approveLocationBtn" class="btn btn-success">
-                  <i class="ti ti-check me-2"></i>Approve Location
+                <button type="button" id="clearLocationBtn" class="btn btn-sm btn-outline-secondary">
+                  <i class="ti ti-x me-1"></i>Change
                 </button>
-                <button type="button" id="clearLocationBtn" class="btn btn-secondary">
-                  <i class="ti ti-refresh me-2"></i>Change Location
-                </button>
-                <a href="#" id="viewOnMapLink" target="_blank" class="btn btn-outline-primary">
-                  <i class="ti ti-map-pin me-2"></i>View on Map
-                </a>
               </div>
-            </div>
-
-            <!-- Location Error Display (hidden initially) -->
-            <div id="locationErrorSection" class="mt-3 alert alert-warning" style="display: none;">
-              <i class="ti ti-alert-circle icon me-2"></i>
-              <span id="locationErrorMessage"></span>
-            </div>
-
-            <!-- Loading Indicator -->
-            <div id="locationLoadingSection" class="mt-3" style="display: none;">
-              <div class="text-center">
-                <div class="spinner-border spinner-border-sm me-2" role="status">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <span>Verifying location...</span>
-              </div>
+              <a id="viewMapLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                <i class="ti ti-map-pin me-1"></i>View on Map
+              </a>
             </div>
 
             <!-- Hidden fields to store location data -->
@@ -1063,10 +1048,19 @@
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
 }
+
+/* Google Places Autocomplete dropdown fix - ensure it appears above all elements */
+.pac-container {
+  z-index: 10000 !important;
+}
 </style>
 {% endblock %}
 
 {% block scripts %}
+
+{% if google_maps_api_key %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initLocationAutocomplete" async defer></script>
+{% endif %}
 
 <script>
   function copyToClipboard(button) {
@@ -1082,6 +1076,165 @@
     const isLimited = document.getElementById('isQuantityLimited').checked;
     document.getElementById('maxSessionsField').style.display = isLimited ? 'block' : 'none';
     document.getElementById('showRemainingField').style.display = isLimited ? 'flex' : 'none';
+  }
+
+  // Initialize Google Places Autocomplete (called by Google Maps API callback)
+  function initLocationAutocomplete() {
+    console.log('initLocationAutocomplete called');
+    const input = document.getElementById('locationAutocomplete');
+    if (!input) {
+      console.log('locationAutocomplete input not found');
+      return;
+    }
+    console.log('Creating autocomplete for input:', input);
+
+    const options = {
+      componentRestrictions: { country: 'ca' },
+      types: ['geocode', 'establishment'],  // Include both addresses and places
+      fields: ['formatted_address', 'geometry', 'name']
+    };
+
+    try {
+      const autocomplete = new google.maps.places.Autocomplete(input, options);
+      console.log('Autocomplete created successfully:', autocomplete);
+
+      autocomplete.addListener('place_changed', function() {
+        console.log('place_changed event fired');
+        const place = autocomplete.getPlace();
+        if (!place.geometry) {
+          console.log('No geometry in place:', place);
+          return;
+        }
+
+        setLocationConfirmed(input.value, place.formatted_address,
+          place.geometry.location.lat() + ',' + place.geometry.location.lng());
+      });
+    } catch (error) {
+      console.error('Error creating autocomplete:', error);
+    }
+  }
+
+  // Set location as confirmed (used by both autocomplete and manual lookup)
+  function setLocationConfirmed(rawAddress, formattedAddress, coordinates) {
+    const input = document.getElementById('locationAutocomplete');
+    const inputGroup = input.closest('.input-group');
+    const lookupBtn = document.getElementById('lookupLocationBtn');
+
+    // Populate hidden fields
+    document.getElementById('locationAddressRaw').value = rawAddress;
+    document.getElementById('locationAddressFormatted').value = formattedAddress;
+    document.getElementById('locationCoordinates').value = coordinates;
+
+    // Show confirmation, hide input group
+    document.getElementById('confirmedAddressText').textContent = formattedAddress;
+    document.getElementById('viewMapLink').href = 'https://www.google.com/maps?q=' + coordinates;
+    document.getElementById('locationConfirmed').style.display = 'block';
+    document.getElementById('locationError').style.display = 'none';
+
+    // Hide input and lookup button when confirmed
+    inputGroup.style.display = 'none';
+  }
+
+  // Clear location and show input again
+  function clearLocation() {
+    const input = document.getElementById('locationAutocomplete');
+    const inputGroup = input.closest('.input-group');
+
+    // Clear values
+    input.value = '';
+    document.getElementById('locationAddressRaw').value = '';
+    document.getElementById('locationAddressFormatted').value = '';
+    document.getElementById('locationCoordinates').value = '';
+
+    // Hide confirmation, results, and errors - show input
+    document.getElementById('locationConfirmed').style.display = 'none';
+    document.getElementById('locationError').style.display = 'none';
+    document.getElementById('locationResults').style.display = 'none';
+    inputGroup.style.display = 'flex';
+    input.focus();
+  }
+
+  // Manual lookup using Places Autocomplete API (designed for partial address matching)
+  function lookupLocation() {
+    const input = document.getElementById('locationAutocomplete');
+    const address = input.value.trim();
+
+    if (!address) {
+      alert('Please enter an address first');
+      return;
+    }
+
+    document.getElementById('locationLoading').style.display = 'block';
+    document.getElementById('locationError').style.display = 'none';
+    document.getElementById('locationResults').style.display = 'none';
+
+    // Use Places Autocomplete API for better partial address matching
+    fetch('/api/places/autocomplete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: address })
+    })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('locationLoading').style.display = 'none';
+      if (data.success && data.results && data.results.length > 0) {
+        // Always show selection list so user can pick the right address
+        showLocationResults(address, data.results);
+      } else {
+        document.getElementById('locationErrorText').textContent = data.error || 'No addresses found. Try a more specific address.';
+        document.getElementById('locationError').style.display = 'block';
+      }
+    })
+    .catch(err => {
+      document.getElementById('locationLoading').style.display = 'none';
+      document.getElementById('locationErrorText').textContent = 'Error looking up address. Please try again.';
+      document.getElementById('locationError').style.display = 'block';
+    });
+  }
+
+  // Display location results for user selection (uses Places Details to get coordinates)
+  function showLocationResults(rawAddress, results) {
+    const container = document.getElementById('locationResults');
+    container.innerHTML = '<div class="list-group-item list-group-item-secondary py-2"><small><strong>Select the correct address:</strong></small></div>';
+    results.forEach(function(result) {
+      const item = document.createElement('a');
+      item.href = '#';
+      item.className = 'list-group-item list-group-item-action py-2';
+      item.innerHTML = '<i class="ti ti-map-pin me-2 text-muted"></i>' + result.description;
+      item.onclick = function(e) {
+        e.preventDefault();
+        selectPlaceResult(rawAddress, result.place_id, result.description);
+      };
+      container.appendChild(item);
+    });
+    container.style.display = 'block';
+  }
+
+  // Get full details (coordinates) for selected place and confirm
+  function selectPlaceResult(rawAddress, placeId, description) {
+    document.getElementById('locationResults').style.display = 'none';
+    document.getElementById('locationLoading').style.display = 'block';
+
+    fetch('/api/places/details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ place_id: placeId })
+    })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('locationLoading').style.display = 'none';
+      if (data.success) {
+        setLocationConfirmed(rawAddress, data.formatted_address, data.coordinates);
+      } else {
+        document.getElementById('locationErrorText').textContent = data.error || 'Could not get address details.';
+        document.getElementById('locationError').style.display = 'block';
+      }
+    })
+    .catch(err => {
+      document.getElementById('locationLoading').style.display = 'none';
+      document.getElementById('locationErrorText').textContent = 'Error getting address details.';
+      document.getElementById('locationError').style.display = 'block';
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -2100,125 +2253,42 @@
     updateSignupLinks();
 
     // ========================================
-    // LOCATION VERIFICATION FUNCTIONALITY
+    // LOCATION HANDLERS
     // ========================================
-    const locationInput = document.getElementById('locationInput');
-    const verifyLocationBtn = document.getElementById('verifyLocationBtn');
-    const locationVerifiedSection = document.getElementById('locationVerifiedSection');
-    const locationErrorSection = document.getElementById('locationErrorSection');
-    const locationLoadingSection = document.getElementById('locationLoadingSection');
-    const approveLocationBtn = document.getElementById('approveLocationBtn');
+    // Clear location button
     const clearLocationBtn = document.getElementById('clearLocationBtn');
-    const verifiedAddressDisplay = document.getElementById('verifiedAddressDisplay');
-    const viewOnMapLink = document.getElementById('viewOnMapLink');
+    if (clearLocationBtn) {
+      clearLocationBtn.addEventListener('click', clearLocation);
+    }
 
-    let pendingLocationData = null;
+    // Lookup button (manual geocode fallback)
+    const lookupLocationBtn = document.getElementById('lookupLocationBtn');
+    if (lookupLocationBtn) {
+      lookupLocationBtn.addEventListener('click', lookupLocation);
+    }
 
-    // Verify location button click
-    verifyLocationBtn.addEventListener('click', function() {
-      const address = locationInput.value.trim();
-      if (!address) {
-        alert('Please enter a location address first');
-        return;
-      }
-      verifyLocation(address);
-    });
-
-    // Enter key on location input
-    locationInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        verifyLocationBtn.click();
-      }
-    });
-
-    // Approve location
-    approveLocationBtn.addEventListener('click', function() {
-      if (pendingLocationData) {
-        document.getElementById('locationAddressRaw').value = pendingLocationData.raw;
-        document.getElementById('locationAddressFormatted').value = pendingLocationData.formatted;
-        document.getElementById('locationCoordinates').value = pendingLocationData.coordinates;
-
-        // Visual feedback: Update UI to show approved state
-        document.getElementById('locationStatusTitle').textContent = 'LOCATION APPROVED!';
-        document.getElementById('locationApprovedMessage').style.display = 'block';
-        document.getElementById('locationVerifiedAlert').className = 'alert alert-success d-flex align-items-center border-success';
-        document.getElementById('locationVerifiedAlert').style.backgroundColor = '#d1f2eb'; // Light green background
-        approveLocationBtn.style.display = 'none'; // Hide approve button (already approved)
-      }
-    });
-
-    // Clear/reset location
-    clearLocationBtn.addEventListener('click', function() {
-      locationVerifiedSection.style.display = 'none';
-      locationErrorSection.style.display = 'none';
-      pendingLocationData = null;
-
-      // Reset UI state
-      document.getElementById('locationStatusTitle').textContent = 'Location Verified!';
-      document.getElementById('locationApprovedMessage').style.display = 'none';
-      document.getElementById('locationVerifiedAlert').className = 'alert alert-success d-flex align-items-center';
-      document.getElementById('locationVerifiedAlert').style.backgroundColor = ''; // Reset to default (white)
-      approveLocationBtn.style.display = 'inline-block'; // Show approve button again
-    });
-
-    // Verify location via API
-    function verifyLocation(address) {
-      locationLoadingSection.style.display = 'block';
-      locationVerifiedSection.style.display = 'none';
-      locationErrorSection.style.display = 'none';
-
-      fetch('/api/geocode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: address })
-      })
-      .then(r => r.json())
-      .then(data => {
-        locationLoadingSection.style.display = 'none';
-        if (data.success) {
-          pendingLocationData = {
-            raw: address,
-            formatted: data.formatted_address,
-            coordinates: data.coordinates
-          };
-          verifiedAddressDisplay.textContent = data.formatted_address;
-          viewOnMapLink.href = `https://maps.google.com/?q=${data.coordinates}`;
-          locationVerifiedSection.style.display = 'block';
-        } else {
-          document.getElementById('locationErrorMessage').textContent = data.error || 'Location not found';
-          locationErrorSection.style.display = 'block';
+    // Enter key on location input triggers lookup
+    const locationInput = document.getElementById('locationAutocomplete');
+    if (locationInput) {
+      locationInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          lookupLocation();
         }
-      })
-      .catch(err => {
-        locationLoadingSection.style.display = 'none';
-        document.getElementById('locationErrorMessage').textContent = 'Error verifying location. Please try again.';
-        locationErrorSection.style.display = 'block';
       });
     }
 
-    // Show existing location if editing activity
+    // Pre-populate when editing existing activity with location
     {% if activity and activity.location_address_formatted %}
-    pendingLocationData = {
-      raw: '{{ activity.location_address_raw }}',
-      formatted: '{{ activity.location_address_formatted }}',
-      coordinates: '{{ activity.location_coordinates }}'
-    };
-    verifiedAddressDisplay.textContent = '{{ activity.location_address_formatted }}';
-    viewOnMapLink.href = 'https://maps.google.com/?q={{ activity.location_coordinates }}';
-    locationVerifiedSection.style.display = 'block';
+    (function() {
+      const input = document.getElementById('locationAutocomplete');
+      const inputGroup = input.closest('.input-group');
 
-    // Apply approved state since location is already saved in database
-    document.getElementById('locationStatusTitle').textContent = 'LOCATION APPROVED!';
-    document.getElementById('locationApprovedMessage').style.display = 'block';
-    document.getElementById('locationVerifiedAlert').className = 'alert alert-success d-flex align-items-center border-success';
-    document.getElementById('locationVerifiedAlert').style.backgroundColor = '#d1f2eb'; // Light green background
-    approveLocationBtn.style.display = 'none'; // Hide approve button (already approved)
-
-    // Also populate hidden form fields
-    document.getElementById('locationAddressRaw').value = '{{ activity.location_address_raw }}';
-    document.getElementById('locationAddressFormatted').value = '{{ activity.location_address_formatted }}';
-    document.getElementById('locationCoordinates').value = '{{ activity.location_coordinates }}';
+      document.getElementById('confirmedAddressText').textContent = '{{ activity.location_address_formatted }}';
+      document.getElementById('viewMapLink').href = 'https://www.google.com/maps?q={{ activity.location_coordinates }}';
+      document.getElementById('locationConfirmed').style.display = 'block';
+      inputGroup.style.display = 'none';  // Hide input when location already confirmed
+    })();
     {% endif %}
 
     // Add event listeners for real-time preview updates in Edit Passport Modal
