@@ -4,524 +4,516 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xl mt-4">
-  <div class="row justify-content-center">
-    <div class="col-12 col-lg-10">
-      <form method="POST" enctype="multipart/form-data" class="card shadow-sm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="card-header">
-          <h3 class="card-title">
-            <i class="ti ti-activity me-2"></i>
+<div class="container-xl">
+  <form method="POST" enctype="multipart/form-data" id="activityForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-10">
+
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center py-3">
+          <h2 class="page-title mb-0">
             {{ "Edit Activity" if activity else "Create New Activity" }}
-          </h3>
+          </h2>
+          <div>
+            <a href="{{ url_for('dashboard') }}" class="btn me-2 d-none d-md-inline-flex">Cancel</a>
+            <button type="submit" class="btn btn-success">
+              <i class="ti ti-check me-1"></i>Save
+            </button>
+          </div>
         </div>
 
-        <div class="card-body">
+        <div class="card">
+          <div class="card-body">
 
-          <!-- Activity Name -->
-          <div class="mb-3">
-            <label class="form-label required">Activity Name</label>
-            <input type="text" class="form-control" name="name"
-                   value="{{ activity.name if activity else '' }}" 
-                   placeholder="Enter activity name (e.g., Hockey Training, Yoga Classes)"
-                   required>
-          </div>
-
-          <div class="row">
-            <!-- Activity Type -->
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Activity Type</label>
-              <input type="text" class="form-control" name="type"
-                     value="{{ activity.type if activity else '' }}"
-                     placeholder="e.g., Sports, Fitness, Workshop">
-            </div>
-
-            <!-- Activity Status -->
-            <div class="col-md-6 mb-3">
-              <label class="form-label required">Status</label>
-              <select class="form-select" name="status" required>
+            <!-- ============================================ -->
+            <!-- BASIC INFORMATION SECTION (Always Expanded)  -->
+            <!-- ============================================ -->
+            <div class="mb-4">
+              <!-- Status Toggle (Own Row - First) -->
+              <div class="mb-3 d-flex align-items-center">
                 {% set current_status = activity.status if activity else 'active' %}
-                <option value="active" {{ 'selected' if current_status == 'active' else '' }}>Active</option>
-                <option value="draft" {{ 'selected' if current_status == 'draft' else '' }}>Draft</option>
-                <option value="archived" {{ 'selected' if current_status == 'archived' else '' }}>Archived</option>
-              </select>
-            </div>
-          </div>
+                <span class="me-2" id="statusLabel">{{ 'Active' if current_status == 'active' else 'Archived' }}</span>
+                <label class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" id="statusToggle"
+                         {{ 'checked' if current_status == 'active' else '' }}
+                         onchange="updateStatusValue()">
+                </label>
+                <input type="hidden" name="status" id="statusValue" value="{{ current_status }}">
+              </div>
 
-          <!-- Passport Renewal -->
-          <div class="col-md-6 mb-3">
-            <label class="form-label">Passport Renewal</label>
-            <label class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" name="offer_passport_renewal"
-                     {{ 'checked' if activity and activity.offer_passport_renewal else '' }}>
-              <span class="form-check-label">Offer to create a new passport when one expires</span>
-            </label>
-            <small class="form-text text-muted">
-              Enable for recurring activities (e.g., weekly hockey). Disable for one-time events.
-            </small>
-          </div>
+              <!-- Activity Name (Own Row - Second) -->
+              <div class="mb-3">
+                <label class="form-label required">Activity Name</label>
+                <input type="text" class="form-control" name="name"
+                       value="{{ activity.name if activity else '' }}"
+                       placeholder="Enter activity name (e.g., Hockey Training, Yoga Classes)"
+                       required>
+              </div>
 
-          <!-- Workflow Configuration Section -->
-          <div class="mb-4 mt-4">
-            <h5 class="mb-3"><i class="ti ti-git-branch me-2"></i>Registration Workflow</h5>
+              <!-- Description -->
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" name="description" rows="3" placeholder="What? Where? When? Describe your activity...">{{ activity.description if activity else '' }}</textarea>
+              </div>
 
-            <div class="row">
-              <!-- Workflow Type -->
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Workflow Type</label>
-                <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column">
-                  <label class="form-selectgroup-item flex-fill">
-                    <input type="radio" name="workflow_type" value="approval_first" class="form-selectgroup-input"
-                           {{ 'checked' if not activity or not activity.workflow_type or activity.workflow_type == 'approval_first' else '' }}>
-                    <div class="form-selectgroup-label d-flex align-items-center p-3">
-                      <div class="me-3">
-                        <span class="form-selectgroup-check"></span>
-                      </div>
-                      <div>
-                        <strong class="d-block">Approval First</strong>
-                        <span class="d-block text-muted small">User signs up, admin approves, then user pays</span>
+              <!-- Cover Photo -->
+              <div class="mb-3">
+                <label class="form-label">Cover Photo</label>
+
+                <!-- Thumbnail (100x100 square) -->
+                <div class="position-relative d-inline-block" style="cursor: pointer;" id="coverPhotoWrapper">
+                  {% if activity and activity.image_filename %}
+                    <!-- Has image -->
+                    <img id="coverThumbnail"
+                         src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+                         class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
+                    <!-- Bigger red badge with white X -->
+                    <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
+                          style="cursor: pointer;"
+                          id="deleteImageBtn">
+                      <i class="ti ti-x text-white" style="font-size: 14px;"></i>
+                    </span>
+                  {% else %}
+                    <!-- No image placeholder -->
+                    <div id="coverThumbnail" class="rounded bg-secondary-lt d-flex flex-column align-items-center justify-content-center"
+                         style="width: 100px; height: 100px;">
+                      <i class="ti ti-photo text-muted fs-2"></i>
+                      <small class="text-muted">Add photo</small>
+                    </div>
+                  {% endif %}
+                </div>
+
+                <!-- Options Panel BELOW (GitHub-style filter buttons) -->
+                <div class="collapse mt-3" id="imageOptions">
+                  <div class="card card-body" style="background: #fdfdfe;">
+                    <!-- GitHub Filter Buttons -->
+                    <div class="d-flex justify-content-center mb-3">
+                      <div class="github-filter-group" role="group" aria-label="Image source" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
+                        <a href="#" id="filterSearchWeb" class="github-filter-btn active"
+                           style="background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                          <i class="ti ti-world-search" style="font-size: 16px; margin-right: 4px;"></i>Search Web
+                        </a>
+                        <a href="#" id="filterUpload" class="github-filter-btn"
+                           style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
+                          <i class="ti ti-upload" style="font-size: 16px; margin-right: 4px;"></i>Upload
+                        </a>
                       </div>
                     </div>
-                  </label>
-                  <label class="form-selectgroup-item flex-fill">
-                    <input type="radio" name="workflow_type" value="payment_first" class="form-selectgroup-input"
-                           {{ 'checked' if activity and activity.workflow_type == 'payment_first' else '' }}>
-                    <div class="form-selectgroup-label d-flex align-items-center p-3">
-                      <div class="me-3">
-                        <span class="form-selectgroup-check"></span>
-                      </div>
-                      <div>
-                        <strong class="d-block">Payment First</strong>
-                        <span class="d-block text-muted small">User signs up & pays, passport auto-created on payment</span>
+
+                    <!-- Search Web Content -->
+                    <div id="searchWebContent">
+                      <div class="input-group">
+                        <input type="text" id="imageDescription" class="form-control" placeholder="e.g., Hockey, Yoga">
+                        <button type="button" id="searchImagesBtn" class="btn btn-primary">
+                          <i class="ti ti-search"></i> Search
+                        </button>
                       </div>
                     </div>
-                  </label>
+
+                    <!-- Upload Content -->
+                    <div id="uploadContent" style="display: none;">
+                      <input type="file" name="upload_image" class="form-control" id="uploadInput">
+                      <small class="text-muted">Max 10MB</small>
+                    </div>
+                  </div>
                 </div>
+
+                <input type="hidden" name="selected_image_filename" id="selectedImageFilename" value="{{ activity.image_filename if activity else '' }}">
               </div>
 
-              <!-- Quantity Selection -->
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Quantity Options</label>
-                <label class="form-check form-switch mb-2">
-                  <input class="form-check-input" type="checkbox" name="allow_quantity_selection" id="allowQuantitySelection"
-                         {{ 'checked' if activity and activity.allow_quantity_selection else '' }}>
-                  <span class="form-check-label">Allow users to select quantity during signup</span>
-                </label>
-                <small class="form-text text-muted">
-                  Users can choose how many sessions to purchase (e.g., buy 3 tickets for a concert)
-                </small>
+              <!-- Activity Type (Hidden - kept for backwards compatibility) -->
+              <input type="hidden" name="type" value="{{ activity.type if activity else '' }}">
+            </div>
+
+            <!-- ============================================ -->
+            <!-- SIGNUP SETTINGS SECTION                      -->
+            <!-- ============================================ -->
+            <div class="mb-4 pt-3">
+              <h5 class="text-muted mb-3">Signup Settings</h5>
+              <div class="ps-0">
+
+                    <!-- Signup Workflow -->
+                    <div class="mb-4">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-selectgroup-item w-100">
+                            <input type="radio" name="workflow_type" value="approval_first" class="form-selectgroup-input"
+                                   {{ 'checked' if not activity or not activity.workflow_type or activity.workflow_type == 'approval_first' else '' }}>
+                            <div class="form-selectgroup-label w-100 p-3">
+                              <div class="d-flex align-items-center mb-2">
+                                <i class="ti ti-clipboard-check text-primary me-2"></i>
+                                <strong>Review First</strong>
+                              </div>
+                              <small class="text-muted d-block">
+                                You review each signup before asking for payment.
+                                <br><em>Best for: tryouts, limited spots, selective programs</em>
+                              </small>
+                            </div>
+                          </label>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-selectgroup-item w-100">
+                            <input type="radio" name="workflow_type" value="payment_first" class="form-selectgroup-input"
+                                   {{ 'checked' if activity and activity.workflow_type == 'payment_first' else '' }}>
+                            <div class="form-selectgroup-label w-100 p-3">
+                              <div class="d-flex align-items-center mb-2">
+                                <i class="ti ti-credit-card text-success me-2"></i>
+                                <strong>Pay First</strong>
+                              </div>
+                              <small class="text-muted d-block">
+                                Users pay immediately, auto-approved on payment.
+                                <br><em>Best for: open enrollment, large events, classes</em>
+                              </small>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Capacity Options -->
+                    <div class="mb-3">
+                      <label class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_quantity_limited" id="isQuantityLimited"
+                               {{ 'checked' if activity and activity.is_quantity_limited else '' }}
+                               onchange="toggleCapacityFields()">
+                        <span class="form-check-label">Limit capacity</span>
+                      </label>
+                    </div>
+                    <div class="mb-3" id="maxSessionsField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
+                      <label class="form-label">Maximum spots</label>
+                      <input type="number" class="form-control" name="max_sessions" min="1"
+                             value="{{ activity.max_sessions if activity and activity.max_sessions else '' }}"
+                             placeholder="e.g., 80" style="max-width: 150px;">
+                    </div>
+                    <div id="showRemainingField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
+                      <label class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="show_remaining_quantity"
+                               {{ 'checked' if activity and activity.show_remaining_quantity else '' }}>
+                        <span class="form-check-label">Show remaining spots on signup form</span>
+                      </label>
+                    </div>
+
+                    <!-- Additional Options -->
+                    <div class="mb-3">
+                      <label class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="allow_quantity_selection" id="allowQuantitySelection"
+                               {{ 'checked' if activity and activity.allow_quantity_selection else '' }}>
+                        <span class="form-check-label">Allow users to select quantity during signup</span>
+                      </label>
+                      <small class="form-hint">Users can choose how many sessions to purchase</small>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="offer_passport_renewal"
+                               {{ 'checked' if activity and activity.offer_passport_renewal else '' }}>
+                        <span class="form-check-label">Offer passport renewal when one expires</span>
+                      </label>
+                      <small class="form-hint">Enable for recurring activities (e.g., weekly hockey)</small>
+                    </div>
+
               </div>
             </div>
-          </div>
 
-          <!-- Capacity Limits Section -->
-          <div class="mb-4">
-            <h5 class="mb-3"><i class="ti ti-users me-2"></i>Capacity Limits</h5>
+            <hr class="my-4">
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-check form-switch mb-2">
-                  <input class="form-check-input" type="checkbox" name="is_quantity_limited" id="isQuantityLimited"
-                         {{ 'checked' if activity and activity.is_quantity_limited else '' }}
-                         onchange="toggleCapacityFields()">
-                  <span class="form-check-label">Enable capacity limit</span>
-                </label>
-                <small class="form-text text-muted">
-                  Limit the total number of sessions/spots available
-                </small>
+            <!-- ============================================ -->
+            <!-- SCHEDULE & LOCATION SECTION                  -->
+            <!-- ============================================ -->
+            <div class="mb-4 pt-3">
+              <h5 class="text-muted mb-3">Schedule & Location</h5>
+              <div class="ps-0">
+
+                    <!-- Start and End Dates -->
+                    <div class="row">
+                      <div class="col-md-6 mb-3">
+                        <label class="form-label">Activity Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ activity.start_date.strftime('%Y-%m-%d') if activity and activity.start_date else '' }}">
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label class="form-label">Activity End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ activity.end_date.strftime('%Y-%m-%d') if activity and activity.end_date else '' }}">
+                      </div>
+                    </div>
+
+                    <!-- Location Section -->
+                    <div class="mb-3">
+                      <label class="form-label">Activity Location (Optional)</label>
+                      <div class="input-group">
+                        <input type="text"
+                               id="locationAutocomplete"
+                               class="form-control"
+                               placeholder="Enter address (e.g., 821 rue des sables rimouski)"
+                               autocomplete="off"
+                               value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
+                        <button type="button" id="lookupLocationBtn" class="btn btn-primary">
+                          <i class="ti ti-search me-1"></i>Lookup
+                        </button>
+                      </div>
+                      <small class="form-hint">
+                        Type and select from suggestions, or click Lookup to search
+                      </small>
+
+                      <!-- Loading indicator -->
+                      <div id="locationLoading" class="mt-2" style="display: none;">
+                        <span class="spinner-border spinner-border-sm me-2"></span>Looking up address...
+                      </div>
+
+                      <!-- Error display -->
+                      <div id="locationError" class="alert alert-warning mt-2" style="display: none;">
+                        <i class="ti ti-alert-circle me-1"></i><span id="locationErrorText"></span>
+                      </div>
+
+                      <!-- Multiple results selection list -->
+                      <div id="locationResults" class="list-group mt-2" style="display: none;"></div>
+
+                      <!-- Confirmed location display -->
+                      <div id="locationConfirmed" class="alert alert-success mt-2" style="display: none;">
+                        <div class="d-flex align-items-center justify-content-between">
+                          <div>
+                            <i class="ti ti-check me-2"></i>
+                            <span id="confirmedAddressText"></span>
+                          </div>
+                          <button type="button" id="clearLocationBtn" class="btn btn-sm btn-outline-secondary">
+                            <i class="ti ti-x me-1"></i>Change
+                          </button>
+                        </div>
+                        <a id="viewMapLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                          <i class="ti ti-map-pin me-1"></i>View on Map
+                        </a>
+                      </div>
+
+                      <!-- Hidden fields to store location data -->
+                      <input type="hidden" name="location_address_raw" id="locationAddressRaw" value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
+                      <input type="hidden" name="location_address_formatted" id="locationAddressFormatted" value="{{ activity.location_address_formatted if activity and activity.location_address_formatted else '' }}">
+                      <input type="hidden" name="location_coordinates" id="locationCoordinates" value="{{ activity.location_coordinates if activity and activity.location_coordinates else '' }}">
+                    </div>
+
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- ============================================ -->
+            <!-- ADVANCED SETTINGS SECTION                    -->
+            <!-- ============================================ -->
+            <div class="mb-4 pt-3">
+              <h5 class="text-muted mb-3">Advanced Settings</h5>
+              <div class="ps-0">
+
+                    <!-- Activity Target Revenue -->
+                    <div class="mb-3">
+                      <label class="form-label">Activity Target Revenue (Optional)</label>
+                      <div class="input-group" style="max-width: 300px;">
+                        <span class="input-group-text">$</span>
+                        <input type="number"
+                               class="form-control"
+                               name="goal_revenue"
+                               step="0.01"
+                               min="0"
+                               placeholder="0.00"
+                               value="{{ '%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else '' }}">
+                      </div>
+                      <small class="form-hint">
+                        Set a revenue goal to track progress on your activity dashboard
+                      </small>
+                    </div>
+
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- ============================================ -->
+            <!-- PASSPORT TYPES SECTION (Always Visible)      -->
+            <!-- ============================================ -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                  <i class="ti ti-id me-2"></i>Passport Types
+                </h4>
+                <button type="button" class="btn btn-primary" id="addPassportTypeBtn" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
+                  <i class="ti ti-plus me-2"></i>Passport Type
+                </button>
               </div>
 
-              <div class="col-md-6 mb-3" id="maxSessionsField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
-                <label class="form-label">Maximum Capacity</label>
-                <input type="number" class="form-control" name="max_sessions" min="1"
-                       value="{{ activity.max_sessions if activity and activity.max_sessions else '' }}"
-                       placeholder="e.g., 80">
-                <small class="form-text text-muted">
-                  Total number of spots/sessions available
-                </small>
-              </div>
-            </div>
-
-            <div class="row" id="showRemainingField" style="{{ 'display: flex;' if activity and activity.is_quantity_limited else 'display: none;' }}">
-              <div class="col-md-6 mb-3">
-                <label class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" name="show_remaining_quantity"
-                         {{ 'checked' if activity and activity.show_remaining_quantity else '' }}>
-                  <span class="form-check-label">Show remaining spots on signup form</span>
-                </label>
-                <small class="form-text text-muted">
-                  Display "X spots left" message to users
-                </small>
-              </div>
-            </div>
-          </div>
-
-          <!-- Description -->
-          <div class="mb-3">
-            <label class="form-label">Description</label>
-            <textarea class="form-control" name="description" rows="3">{{ activity.description if activity else '' }}</textarea>
-          </div>
-
-          <!-- Location Section (Optional) -->
-          <div class="mb-3">
-            <label class="form-label">Activity Location (Optional)</label>
-            <div class="input-group">
-              <input type="text"
-                     id="locationAutocomplete"
-                     class="form-control"
-                     placeholder="Enter address (e.g., 821 rue des sables rimouski)"
-                     autocomplete="off"
-                     value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
-              <button type="button" id="lookupLocationBtn" class="btn btn-primary">
-                <i class="ti ti-search me-1"></i>Lookup
-              </button>
-            </div>
-            <small class="form-text text-muted">
-              Type and select from suggestions, or click Lookup to search
-            </small>
-
-            <!-- Loading indicator -->
-            <div id="locationLoading" class="mt-2" style="display: none;">
-              <span class="spinner-border spinner-border-sm me-2"></span>Looking up address...
-            </div>
-
-            <!-- Error display -->
-            <div id="locationError" class="alert alert-warning mt-2" style="display: none;">
-              <i class="ti ti-alert-circle me-1"></i><span id="locationErrorText"></span>
-            </div>
-
-            <!-- Multiple results selection list -->
-            <div id="locationResults" class="list-group mt-2" style="display: none;"></div>
-
-            <!-- Confirmed location display (shows after selection) -->
-            <div id="locationConfirmed" class="alert alert-success mt-2" style="display: none;">
-              <div class="d-flex align-items-center justify-content-between">
-                <div>
-                  <i class="ti ti-check me-2"></i>
-                  <span id="confirmedAddressText"></span>
+              <div class="card">
+                <div class="table-responsive">
+                  <table class="table table-vcenter card-table" id="passportTypesTable" style="display: none;">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th class="d-none d-md-table-cell">Type</th>
+                        <th class="d-none d-md-table-cell">Price</th>
+                        <th class="d-none d-md-table-cell">Sessions</th>
+                        <th class="d-none d-md-table-cell">Signup Link</th>
+                        <th class="w-1">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="passportTypesContainer">
+                      <!-- Passport types will be dynamically added here -->
+                    </tbody>
+                  </table>
                 </div>
-                <button type="button" id="clearLocationBtn" class="btn btn-sm btn-outline-secondary">
-                  <i class="ti ti-x me-1"></i>Change
-                </button>
-              </div>
-              <a id="viewMapLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
-                <i class="ti ti-map-pin me-1"></i>View on Map
-              </a>
-            </div>
 
-            <!-- Hidden fields to store location data -->
-            <input type="hidden" name="location_address_raw" id="locationAddressRaw" value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
-            <input type="hidden" name="location_address_formatted" id="locationAddressFormatted" value="{{ activity.location_address_formatted if activity and activity.location_address_formatted else '' }}">
-            <input type="hidden" name="location_coordinates" id="locationCoordinates" value="{{ activity.location_coordinates if activity and activity.location_coordinates else '' }}">
-          </div>
-
-          <!-- Start and End Dates (with spacing) -->
-          <div class="row mt-4">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Activity Start Date</label>
-              <input type="date" name="start_date" class="form-control" value="{{ activity.start_date.strftime('%Y-%m-%d') if activity and activity.start_date else '' }}">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Activity End Date</label>
-              <input type="date" name="end_date" class="form-control" value="{{ activity.end_date.strftime('%Y-%m-%d') if activity and activity.end_date else '' }}">
-            </div>
-          </div>
-
-          <!-- Activity Target Revenue -->
-          <div class="row">
-            <div class="col-md-12 mb-3">
-              <label class="form-label">Activity Target Revenue (Optional)</label>
-              <div class="input-group">
-                <span class="input-group-text">$</span>
-                <input type="number"
-                       class="form-control"
-                       name="goal_revenue"
-                       step="0.01"
-                       min="0"
-                       placeholder="0.00"
-                       value="{{ '%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else '' }}">
-              </div>
-              <small class="form-text text-muted">
-                Set a revenue goal to track progress on your activity dashboard
-              </small>
-            </div>
-          </div>
-
-          <!-- Image Section -->
-          <div class="mb-3 image-section">
-            <label class="form-label">Activity Cover Photo</label>
-            <div class="row g-3 mt-2">
-              <div class="col-md-6">
-                <label class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="toggleOnlineImage">
-                  <span class="form-check-label">Search images from the Web</span>
-                </label>
-              </div>
-              <div class="col-md-6">
-                <label class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="toggleUploadImage">
-                  <span class="form-check-label">Upload your own image</span>
-                </label>
-              </div>
-            </div>
-
-            <div id="onlineImageSection" class="mt-3" style="display:none;">
-              <div class="input-group">
-                <input type="text" id="imageDescription" class="form-control" placeholder="e.g., Hockey, Yoga, Cooking">
-                <button type="button" id="searchImagesBtn" class="btn btn-primary">
-                  <i class="ti ti-search"></i> Search
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div id="uploadImageSection" class="mt-3" style="display:none;">
-            <label class="form-label">Upload Image (Max 10MB)</label>
-            <input type="file" name="upload_image" class="form-control" id="uploadInput">
-          </div>
-
-
-
-          <!-- Selected Image Preview -->
-          <div id="imagePreviewContainer" class="mt-4 text-start" style="{{ 'display:block;' if activity and activity.image_filename else 'display:none;' }}">
-            <h6 id="imagePreviewTitle" class="mb-3" style="{{ 'display:block;' if activity and activity.image_filename else 'display:none;' }}">Selected Image Preview</h6>
-            <div class="position-relative d-inline-block">
-              {% if activity and activity.image_filename %}
-                <img id="selectedImagePreview"
-                    src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
-                    class="img-fluid rounded shadow-sm mb-2"
-                    style="max-height:250px;">
-              {% else %}
-                <img id="selectedImagePreview"
-                    src=""
-                    class="img-fluid rounded shadow-sm mb-2"
-                    style="max-height:250px;">
-              {% endif %}
-              
-              <button type="button"
-                      id="removeImageBtn"
-                      class="btn btn-danger position-absolute top-0 end-0 m-2"
-                      style="z-index:10;"
-                      data-bs-toggle="modal"
-                      data-bs-target="#deleteImageModal">
-                <i class="ti ti-trash"></i>
-              </button>
-            </div>
-          </div>
-
-          <input type="hidden" name="selected_image_filename" id="selectedImageFilename" value="{{ activity.image_filename if activity else '' }}">
-
-
-
-
-          <!-- Passport Types Section -->
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h4 class="mb-0">Passport Types</h4>
-              <button type="button" class="btn btn-primary" id="addPassportTypeBtn" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
-                <i class="ti ti-plus me-2"></i>Passport Type
-              </button>
-            </div>
-            
-            <div class="card">
-              <div class="table-responsive">
-                <table class="table table-vcenter card-table" id="passportTypesTable" style="display: none;">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th class="d-none d-md-table-cell">Type</th>
-                      <th class="d-none d-md-table-cell">Price</th>
-                      <th class="d-none d-md-table-cell">Sessions</th>
-                      <th class="d-none d-md-table-cell">Signup Link</th>
-                      <th class="w-1">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="passportTypesContainer">
-                    <!-- Passport types will be dynamically added here -->
-                  </tbody>
-                </table>
-              </div>
-
-              <div id="noPassportTypes" class="text-center p-4">
-                <i class="ti ti-id-off text-muted mb-3" style="font-size: 3rem;"></i>
-                <h5 class="text-muted mb-2">No passport types defined</h5>
-                <p class="text-muted mb-3">Create different pricing options and user types for this activity</p>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
-                  <i class="ti ti-plus me-2"></i>Add Your First Passport Type
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Financial Management Section -->
-          {% if activity %}
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <div class="d-flex align-items-center gap-2">
-                <h4 class="mb-0">Activity Finances</h4>
-                <span class="text-muted small">{{ period_display }}</span>
-                <div class="dropdown">
-                  <button class="btn btn-sm btn-link text-muted dropdown-toggle p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
-                    <i class="ti ti-filter"></i>
+                <div id="noPassportTypes" class="text-center p-4">
+                  <i class="ti ti-id-off text-muted mb-3" style="font-size: 3rem;"></i>
+                  <h5 class="text-muted mb-2">No passport types defined</h5>
+                  <p class="text-muted mb-3">Create different pricing options and user types for this activity</p>
+                  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
+                    <i class="ti ti-plus me-2"></i>Add Your First Passport Type
                   </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item {% if current_period == 'fy' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='fy') }}">Fiscal Year</a></li>
-                    <li><a class="dropdown-item {% if current_period == 'all' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='all') }}">All Time</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  Actions
-                </button>
-                <div class="dropdown-menu">
-                  <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
-                    <i class="ti ti-plus me-2"></i>Add Income
-                  </a>
-                  <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                    <i class="ti ti-plus me-2"></i>Add Expense
-                  </a>
-                  <div class="dropdown-divider"></div>
-                  <a class="dropdown-item" href="{{ url_for('financial_report') }}?activity_id={{ activity.id }}" target="_blank">
-                    <i class="ti ti-edit me-2"></i>Edit Financial
-                  </a>
                 </div>
               </div>
             </div>
-            
-            <!-- Income Statement (Profit & Loss) -->
-            {% if summary %}
-            <div class="card">
-              <div class="card-body">
-                <!-- Revenue Section -->
-                <div class="mb-4">
-                  <h6 class="text-uppercase text-muted fw-bold mb-3">Revenue</h6>
-                  <div class="row">
-                    <div class="col-8">
-                      <div class="ps-3 mb-2">Passport Income</div>
-                      <div class="ps-3 mb-2">Other Income</div>
-                    </div>
-                    <div class="col-4 text-end">
-                      <div class="mb-2 text-muted fw-bold">{{ summary.passport_income|accounting_format }}</div>
-                      <div class="mb-2 text-muted fw-bold">{{ summary.other_income|accounting_format }}</div>
-                    </div>
-                  </div>
-                  <hr class="my-2">
-                  <div class="row">
-                    <div class="col-8">
-                      <div class="fw-bold">Total Revenue</div>
-                    </div>
-                    <div class="col-4 text-end">
-                      <div class="fw-bold">{{ (summary.passport_income + summary.other_income)|accounting_format }}</div>
-                    </div>
+
+            <!-- ============================================ -->
+            <!-- FINANCIAL MANAGEMENT SECTION (Edit Only)     -->
+            <!-- ============================================ -->
+            {% if activity %}
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                  <h4 class="mb-0">
+                    <i class="ti ti-report-money me-2"></i>Activity Finances
+                  </h4>
+                  <span class="text-muted small">{{ period_display }}</span>
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-link text-muted dropdown-toggle p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
+                      <i class="ti ti-filter"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item {% if current_period == 'fy' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='fy') }}">Fiscal Year</a></li>
+                      <li><a class="dropdown-item {% if current_period == 'all' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='all') }}">All Time</a></li>
+                    </ul>
                   </div>
                 </div>
-
-                <!-- Expenses Section -->
-                <div class="mb-4">
-                  <h6 class="text-uppercase text-muted fw-bold mb-3">Expenses</h6>
-                  <div class="row">
-                    <div class="col-8">
-                      <div class="ps-3 mb-2">Total Expenses</div>
-                    </div>
-                    <div class="col-4 text-end">
-                      <div class="mb-2 text-muted fw-bold">{{ summary.total_expenses|accounting_format }}</div>
-                    </div>
+                <div class="dropdown">
+                  <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Actions
+                  </button>
+                  <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
+                      <i class="ti ti-plus me-2"></i>Add Income
+                    </a>
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                      <i class="ti ti-plus me-2"></i>Add Expense
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="{{ url_for('financial_report') }}?activity_id={{ activity.id }}" target="_blank">
+                      <i class="ti ti-edit me-2"></i>Edit Financial
+                    </a>
                   </div>
                 </div>
+              </div>
 
-                <!-- Net Income Section -->
-                <hr class="border-2">
-                <div class="row">
-                  <div class="col-8">
-                    <div class="fw-bold mb-0" style="font-size: 1.1rem;">Net Income</div>
+              <!-- Income Statement (Profit & Loss) -->
+              {% if summary %}
+              <div class="card">
+                <div class="card-body">
+                  <!-- Revenue Section -->
+                  <div class="mb-4">
+                    <h6 class="text-uppercase text-muted fw-bold mb-3">Revenue</h6>
+                    <div class="row">
+                      <div class="col-8">
+                        <div class="ps-3 mb-2">Passport Income</div>
+                        <div class="ps-3 mb-2">Other Income</div>
+                      </div>
+                      <div class="col-4 text-end">
+                        <div class="mb-2 text-muted fw-bold">{{ summary.passport_income|accounting_format }}</div>
+                        <div class="mb-2 text-muted fw-bold">{{ summary.other_income|accounting_format }}</div>
+                      </div>
+                    </div>
+                    <hr class="my-2">
+                    <div class="row">
+                      <div class="col-8">
+                        <div class="fw-bold">Total Revenue</div>
+                      </div>
+                      <div class="col-4 text-end">
+                        <div class="fw-bold">{{ (summary.passport_income + summary.other_income)|accounting_format }}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div class="col-4 text-end">
-                    <div class="fw-bold mb-0" style="font-size: 1.1rem;">
-                      {{ summary.net_income|accounting_format }}
+
+                  <!-- Expenses Section -->
+                  <div class="mb-4">
+                    <h6 class="text-uppercase text-muted fw-bold mb-3">Expenses</h6>
+                    <div class="row">
+                      <div class="col-8">
+                        <div class="ps-3 mb-2">Total Expenses</div>
+                      </div>
+                      <div class="col-4 text-end">
+                        <div class="mb-2 text-muted fw-bold">{{ summary.total_expenses|accounting_format }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Net Income Section -->
+                  <hr class="border-2">
+                  <div class="row">
+                    <div class="col-8">
+                      <div class="fw-bold mb-0" style="font-size: 1.1rem;">Net Income</div>
+                    </div>
+                    <div class="col-4 text-end">
+                      <div class="fw-bold mb-0" style="font-size: 1.1rem;">
+                        {{ summary.net_income|accounting_format }}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+              {% endif %}
             </div>
             {% endif %}
+
+            <!-- Signup Links Container (Legacy - Hidden) -->
+            {% if activity %}
+            <div id="signupLinksContainer" style="display: none;">
+              <!-- Legacy container - functionality moved to table -->
+            </div>
+            {% endif %}
+
           </div>
-          {% endif %}
 
-          <!-- Signup Links Section - Now integrated into Passport Types table -->
-          {% if activity %}
-          <div id="signupLinksContainer" style="display: none;">
-            <!-- Legacy container - functionality moved to table -->
+          <!-- Bottom Save Button -->
+          <div class="card-footer text-end">
+            <a href="{{ url_for('dashboard') }}" class="btn me-2">Cancel</a>
+            <button type="submit" class="btn btn-success">
+              <i class="ti ti-check me-1"></i>Save
+            </button>
           </div>
-          {% endif %}
-          
-
         </div>
-
-        <div class="card-footer text-end">
-          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
-          <button type="submit" class="btn btn-success">
-            <i class="ti ti-check me-1"></i>
-            {{ "Update Activity" if activity else "Create Activity" }}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
-  </div>
+  </form>
 </div>
 
- 
-<!-- Modal for Unsplash Images -->
+
 <!-- Modal for Unsplash Images -->
 <div class="modal modal-blur fade" id="unsplashModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
     <div class="modal-content">
-
-      <!-- Modal Header -->
       <div class="modal-header">
         <h5 class="modal-title">Select an Image</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-
-      <!-- Modal Body -->
       <div class="modal-body">
-
-        <!-- Image Grid -->
         <div id="unsplashImages" class="row g-3"></div>
-
-        <!-- Pagination Controls -->
         <div id="unsplashPagination" class="d-flex justify-content-between align-items-center pt-3" style="display: none;">
           <button class="btn btn-outline-secondary" id="prevPageBtn">Previous</button>
           <span id="pageIndicator" class="text-muted small">Page 1</span>
           <button class="btn btn-outline-primary" id="nextPageBtn">Next</button>
         </div>
-
       </div>
-
-      <!-- Modal Footer -->
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- Delete Image Confirmation Modal -->
-<div class="modal modal-blur fade" id="deleteImageModal" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-body">
-        <div class="modal-title">Remove Image?</div>
-        <div>Are you sure you want to remove this image? This action cannot be undone.</div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmRemoveImage">Remove Image</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Add Passport Type Modal -->
 <div class="modal modal-blur fade" id="addPassportTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -537,9 +529,9 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label required">Passport Type Name</label>
-            <input type="text" class="form-control" id="newPassportTypeName" 
+            <input type="text" class="form-control" id="newPassportTypeName"
                    placeholder="e.g., Regular, Premium, Student" required>
-            <div class="form-text">This will be visible to users during signup</div>
+            <div class="form-hint">This will be visible to users during signup</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required">User Type</label>
@@ -547,31 +539,31 @@
               <option value="permanent">Permanent User</option>
               <option value="substitute">Substitute User</option>
             </select>
-            <div class="form-text">Permanent users attend regularly, substitutes fill in when needed</div>
+            <div class="form-hint">Permanent users attend regularly, substitutes fill in when needed</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required">Price per User ($)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="newPassportTypePrice" 
+            <input type="number" step="0.01" min="0" class="form-control" id="newPassportTypePrice"
                    value="0.00" required>
-            <div class="form-text">Amount each user pays for this passport type</div>
+            <div class="form-hint">Amount each user pays for this passport type</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required">Sessions Included</label>
-            <input type="number" min="1" class="form-control" id="newPassportTypeSessions" 
+            <input type="number" min="1" class="form-control" id="newPassportTypeSessions"
                    value="1" required>
-            <div class="form-text">Number of sessions included in this price</div>
+            <div class="form-hint">Number of sessions included in this price</div>
           </div>
           <div class="col-12">
             <label class="form-label">Target Revenue ($)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="newPassportTypeRevenue" 
+            <input type="number" step="0.01" min="0" class="form-control" id="newPassportTypeRevenue"
                    value="0.00">
-            <div class="form-text">Optional: Expected total revenue from this passport type</div>
+            <div class="form-hint">Optional: Expected total revenue from this passport type</div>
           </div>
           <div class="col-12">
             <label class="form-label">Payment Instructions</label>
-            <textarea class="form-control" id="newPassportTypeInstructions" rows="3" 
+            <textarea class="form-control" id="newPassportTypeInstructions" rows="3"
                       placeholder="Enter specific payment instructions for users with this passport type..."></textarea>
-            <div class="form-text">These instructions will be shown to users during signup</div>
+            <div class="form-hint">These instructions will be shown to users during signup</div>
           </div>
         </div>
       </div>
@@ -600,7 +592,7 @@
           <div class="col-md-6">
             <label class="form-label required">Passport Type Name</label>
             <input type="text" class="form-control" id="editPassportTypeName" required>
-            <div class="form-text">This will be visible to users during signup</div>
+            <div class="form-hint">This will be visible to users during signup</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required">User Type</label>
@@ -608,22 +600,22 @@
               <option value="permanent">Permanent User</option>
               <option value="substitute">Substitute User</option>
             </select>
-            <div class="form-text">Permanent users attend regularly, substitutes fill in when needed</div>
+            <div class="form-hint">Permanent users attend regularly, substitutes fill in when needed</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required">Price per User ($)</label>
             <input type="number" step="0.01" min="0" class="form-control" id="editPassportTypePrice" required>
-            <div class="form-text">Amount each user pays for this passport type</div>
+            <div class="form-hint">Amount each user pays for this passport type</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required">Sessions Included</label>
             <input type="number" min="1" class="form-control" id="editPassportTypeSessions" required>
-            <div class="form-text">Number of sessions included in this price</div>
+            <div class="form-hint">Number of sessions included in this price</div>
           </div>
           <div class="col-12">
             <label class="form-label">Target Revenue ($)</label>
             <input type="number" step="0.01" min="0" class="form-control" id="editPassportTypeRevenue">
-            <div class="form-text">Optional: Expected total revenue from this passport type</div>
+            <div class="form-hint">Optional: Expected total revenue from this passport type</div>
           </div>
           <!-- Live Preview Section -->
           <div class="col-12 mb-3">
@@ -685,7 +677,7 @@
                 <div class="p-3" id="customTextPreview" style="white-space: pre-wrap; font-size: 0.85rem;"></div>
               </div>
             </div>
-            <small class="form-text text-muted">This is exactly what users will see on the signup page</small>
+            <small class="form-hint">This is exactly what users will see on the signup page</small>
           </div>
 
           <!-- Toggle Switch -->
@@ -694,7 +686,7 @@
               <input class="form-check-input" type="checkbox" id="useCustomPaymentInstructions">
               <span class="form-check-label">Use custom payment instructions instead of default structured display</span>
             </label>
-            <small class="form-text text-muted">Enable this to replace the entire gray card content with your own custom message</small>
+            <small class="form-hint">Enable this to replace the entire gray card content with your own custom message</small>
           </div>
 
           <!-- Custom Payment Instructions Textarea (Hidden by Default) -->
@@ -702,13 +694,13 @@
             <label class="form-label">Custom Payment Instructions</label>
             <textarea class="form-control" id="editPassportTypeInstructions" rows="5"
                       placeholder="Enter your custom payment instructions. This will replace the entire gray card content on the signup page."></textarea>
-            <div class="form-text">This text will replace all structured information in the gray card</div>
+            <div class="form-hint">This text will replace all structured information in the gray card</div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" id="saveEditPassportType">
+        <button type="button" class="btn btn-primary" id="saveEditPassportType">
           <i class="ti ti-check me-2"></i>Save Changes
         </button>
       </div>
@@ -730,7 +722,7 @@
         <form id="addIncomeForm" method="POST" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="activity_id" value="{{ activity.id if activity }}">
-          
+
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label required">Category</label>
@@ -744,22 +736,22 @@
                 <option value="Other">Other</option>
               </select>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label required">Amount ($)</label>
               <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label required">Date</label>
               <input type="date" name="date" class="form-control" required>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label">Upload Receipt (optional)</label>
               <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
             </div>
-            
+
             <div class="col-12">
               <label class="form-label">Note (optional)</label>
               <textarea name="note" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
@@ -769,7 +761,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" id="saveIncomeBtn">
+        <button type="button" class="btn btn-primary" id="saveIncomeBtn">
           <i class="ti ti-check me-2"></i>Add Income
         </button>
       </div>
@@ -791,7 +783,7 @@
         <form id="addExpenseForm" method="POST" action="{{ url_for('activity_expenses', activity_id=activity.id) if activity else '#' }}" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="return_to" value="activity_form">
-          
+
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label required">Category</label>
@@ -807,22 +799,22 @@
                 <option value="Other">Other</option>
               </select>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label required">Amount ($)</label>
               <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label required">Date</label>
               <input type="date" name="date" class="form-control" required>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label">Upload Receipt (optional)</label>
               <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
             </div>
-            
+
             <div class="col-12">
               <label class="form-label">Description (optional)</label>
               <textarea name="description" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
@@ -855,7 +847,7 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="return_to" value="activity_form">
           <input type="hidden" id="editExpenseId" name="expense_id">
-          
+
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label required">Category</label>
@@ -871,22 +863,22 @@
                 <option value="Other">Other</option>
               </select>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label required">Amount ($)</label>
               <input type="number" name="amount" id="editExpenseAmount" step="0.01" min="0" class="form-control" required>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label required">Date</label>
               <input type="date" name="date" id="editExpenseDate" class="form-control" required>
             </div>
-            
+
             <div class="col-md-6">
               <label class="form-label">Upload Receipt (optional)</label>
               <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
             </div>
-            
+
             <div class="col-12">
               <label class="form-label">Description (optional)</label>
               <textarea name="description" id="editExpenseDescription" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
@@ -967,6 +959,12 @@
   color: #d63384;
 }
 
+/* Page header sticky styling */
+.page-header {
+  border-bottom: 1px solid rgba(98, 105, 118, 0.16);
+  margin-bottom: 0;
+}
+
 .card {
   border: none;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
@@ -989,10 +987,57 @@
   border-color: #004494;
 }
 
-.image-section {
-  background-color: #f8f9fa;
+/* Section headers */
+.section-header {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+/* Form selectgroup - compact workflow type */
+.form-selectgroup {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.form-selectgroup-item {
+  margin: 0;
+}
+
+.form-selectgroup-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(98, 105, 118, 0.16);
   border-radius: 0.375rem;
-  padding: 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+  font-size: 0.875rem;
+}
+
+.form-selectgroup-label:hover {
+  border-color: #0054a6;
+}
+
+.form-selectgroup-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.form-selectgroup-input:checked + .form-selectgroup-label {
+  border-color: #0054a6;
+  background-color: rgba(0, 84, 166, 0.1);
+  color: #0054a6;
+}
+
+/* Form hint styling */
+.form-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #626976;
 }
 
 /* Passport type table styling */
@@ -1015,29 +1060,24 @@
   padding: 0.25rem 0.5rem;
 }
 
-.btn-floating {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
+/* Google Places Autocomplete dropdown fix */
+.pac-container {
+  z-index: 10000 !important;
 }
 
-.financial-quick-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+/* Ghost button for back */
+.btn-ghost-secondary {
+  color: #626976;
+  background: transparent;
+  border: none;
 }
 
+.btn-ghost-secondary:hover {
+  background-color: rgba(98, 105, 118, 0.1);
+  color: #1d2332;
+}
 
 @media (max-width: 768px) {
-  .financial-quick-actions {
-    grid-template-columns: 1fr;
-  }
-
   .card-body {
     padding: 1rem;
   }
@@ -1045,25 +1085,23 @@
   .modal-dialog {
     margin: 1rem;
   }
-}
 
+  .page-header .row {
+    padding: 0.75rem 0 !important;
+  }
 
-.signup-link-card {
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-  padding: 1rem;
-  margin-bottom: 0.5rem;
-  background-color: #fff !important;
-}
+  .page-title {
+    font-size: 1rem;
+  }
 
-.badge-type {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-}
+  .form-selectgroup {
+    flex-direction: column;
+  }
 
-/* Google Places Autocomplete dropdown fix - ensure it appears above all elements */
-.pac-container {
-  z-index: 10000 !important;
+  .form-selectgroup-label {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
 {% endblock %}
@@ -1083,11 +1121,25 @@
     setTimeout(() => { button.innerHTML = '<i class="ti ti-copy"></i>'; }, 1500);
   }
 
+  // Update status value based on toggle
+  function updateStatusValue() {
+    const toggle = document.getElementById('statusToggle');
+    const statusValue = document.getElementById('statusValue');
+    const statusLabel = document.getElementById('statusLabel');
+    if (toggle.checked) {
+      statusValue.value = 'active';
+      statusLabel.textContent = 'Active';
+    } else {
+      statusValue.value = 'archived';
+      statusLabel.textContent = 'Archived';
+    }
+  }
+
   // Toggle capacity limit fields visibility
   function toggleCapacityFields() {
     const isLimited = document.getElementById('isQuantityLimited').checked;
     document.getElementById('maxSessionsField').style.display = isLimited ? 'block' : 'none';
-    document.getElementById('showRemainingField').style.display = isLimited ? 'flex' : 'none';
+    document.getElementById('showRemainingField').style.display = isLimited ? 'block' : 'none';
   }
 
   // Initialize Google Places Autocomplete (called by Google Maps API callback)
@@ -1102,7 +1154,7 @@
 
     const options = {
       componentRestrictions: { country: 'ca' },
-      types: ['geocode', 'establishment'],  // Include both addresses and places
+      types: ['geocode', 'establishment'],
       fields: ['formatted_address', 'geometry', 'name']
     };
 
@@ -1126,11 +1178,10 @@
     }
   }
 
-  // Set location as confirmed (used by both autocomplete and manual lookup)
+  // Set location as confirmed
   function setLocationConfirmed(rawAddress, formattedAddress, coordinates) {
     const input = document.getElementById('locationAutocomplete');
     const inputGroup = input.closest('.input-group');
-    const lookupBtn = document.getElementById('lookupLocationBtn');
 
     // Populate hidden fields
     document.getElementById('locationAddressRaw').value = rawAddress;
@@ -1166,7 +1217,7 @@
     input.focus();
   }
 
-  // Manual lookup using Places Autocomplete API (designed for partial address matching)
+  // Manual lookup using Places Autocomplete API
   function lookupLocation() {
     const input = document.getElementById('locationAutocomplete');
     const address = input.value.trim();
@@ -1180,7 +1231,6 @@
     document.getElementById('locationError').style.display = 'none';
     document.getElementById('locationResults').style.display = 'none';
 
-    // Use Places Autocomplete API for better partial address matching
     fetch('/api/places/autocomplete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1190,7 +1240,6 @@
     .then(data => {
       document.getElementById('locationLoading').style.display = 'none';
       if (data.success && data.results && data.results.length > 0) {
-        // Always show selection list so user can pick the right address
         showLocationResults(address, data.results);
       } else {
         document.getElementById('locationErrorText').textContent = data.error || 'No addresses found. Try a more specific address.';
@@ -1204,7 +1253,7 @@
     });
   }
 
-  // Display location results for user selection (uses Places Details to get coordinates)
+  // Display location results for user selection
   function showLocationResults(rawAddress, results) {
     const container = document.getElementById('locationResults');
     container.innerHTML = '<div class="list-group-item list-group-item-secondary py-2"><small><strong>Select the correct address:</strong></small></div>';
@@ -1222,7 +1271,7 @@
     container.style.display = 'block';
   }
 
-  // Get full details (coordinates) for selected place and confirm
+  // Get full details for selected place and confirm
   function selectPlaceResult(rawAddress, placeId, description) {
     document.getElementById('locationResults').style.display = 'none';
     document.getElementById('locationLoading').style.display = 'block';
@@ -1251,25 +1300,20 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     // Image handling variables
-    const toggleOnline = document.getElementById('toggleOnlineImage');
-    const onlineSection = document.getElementById('onlineImageSection');
-    const toggleUpload = document.getElementById('toggleUploadImage');
-    const uploadSection = document.getElementById('uploadImageSection');
-    const removeImageBtn = document.getElementById('removeImageBtn');
-    const selectedImagePreview = document.getElementById('selectedImagePreview');
+    const coverPhotoWrapper = document.getElementById('coverPhotoWrapper');
     const selectedImageFilename = document.getElementById('selectedImageFilename');
     const uploadInput = document.getElementById('uploadInput');
-    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
-    
+    const imageOptionsCollapse = document.getElementById('imageOptions');
+
     // Passport type variables
     const addPassportTypeBtn = document.getElementById('addPassportTypeBtn');
     const passportTypesContainer = document.getElementById('passportTypesContainer');
     const noPassportTypes = document.getElementById('noPassportTypes');
     const signupLinksContainer = document.getElementById('signupLinksContainer');
-    
+
     let passportTypeCounter = 0;
     let passportTypes = [];
-  
+
     const searchBtn = document.getElementById('searchImagesBtn');
     const imageDescInput = document.getElementById('imageDescription');
     const unsplashModal = new bootstrap.Modal(document.getElementById('unsplashModal'));
@@ -1277,95 +1321,146 @@
     const paginationControls = document.getElementById('unsplashPagination');
     const prevPageBtn = document.getElementById('prevPageBtn');
     const nextPageBtn = document.getElementById('nextPageBtn');
-  
+
     let currentPage = 1;
     let currentQuery = "";
-  
-    toggleOnline.addEventListener('change', () => {
-      onlineSection.style.display = toggleOnline.checked ? 'block' : 'none';
-      if (toggleOnline.checked) {
-        toggleUpload.checked = false;
-        uploadSection.style.display = 'none';
-      }
+
+    // Click on thumbnail to toggle options panel (using event delegation for dynamic content)
+    document.addEventListener('click', function(e) {
+      const wrapper = e.target.closest('#coverPhotoWrapper');
+      if (!wrapper) return;
+      // Don't trigger if clicking the delete X badge
+      if (e.target.closest('#deleteImageBtn')) return;
+      // Toggle the options collapse
+      var bsCollapse = new bootstrap.Collapse(imageOptionsCollapse, {toggle: true});
     });
-  
-    toggleUpload.addEventListener('change', () => {
-      uploadSection.style.display = toggleUpload.checked ? 'block' : 'none';
-      if (toggleUpload.checked) {
-        toggleOnline.checked = false;
-        onlineSection.style.display = 'none';
+
+    // Delete image immediately (no confirmation modal)
+    function setupDeleteButton() {
+      const deleteBtn = document.getElementById('deleteImageBtn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          // Clear the image filename
+          selectedImageFilename.value = '';
+          if (uploadInput) uploadInput.value = '';
+          // Reset thumbnail to placeholder (100x100 square)
+          const wrapper = document.getElementById('coverPhotoWrapper');
+          wrapper.innerHTML = `
+            <div id="coverThumbnail" class="rounded bg-secondary-lt d-flex flex-column align-items-center justify-content-center"
+                 style="width: 100px; height: 100px;">
+              <i class="ti ti-photo text-muted fs-2"></i>
+              <small class="text-muted">Add photo</small>
+            </div>`;
+        });
       }
-    });
-  
-    // Handle confirmation modal for remove image
-    const confirmRemoveImageBtn = document.getElementById('confirmRemoveImage');
-    const imagePreviewTitle = document.getElementById('imagePreviewTitle');
-    
-    if (confirmRemoveImageBtn) {
-      confirmRemoveImageBtn.addEventListener('click', function () {
-        selectedImagePreview.src = "";
-        selectedImageFilename.value = "";
-        uploadInput.value = "";
-        imagePreviewContainer.style.display = 'none';
-        imagePreviewTitle.style.display = 'none';
-        
-        // Close the modal
-        const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteImageModal'));
-        if (deleteModal) deleteModal.hide();
+    }
+    setupDeleteButton();
+
+    // GitHub-style filter buttons for image source
+    const filterSearchWeb = document.getElementById('filterSearchWeb');
+    const filterUpload = document.getElementById('filterUpload');
+    const searchWebContent = document.getElementById('searchWebContent');
+    const uploadContent = document.getElementById('uploadContent');
+
+    const activeStyle = 'background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;';
+    const inactiveStyle = 'background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;';
+
+    if (filterSearchWeb) {
+      filterSearchWeb.addEventListener('click', function(e) {
+        e.preventDefault();
+        filterSearchWeb.style.cssText = activeStyle;
+        filterUpload.style.cssText = inactiveStyle;
+        searchWebContent.style.display = 'block';
+        uploadContent.style.display = 'none';
       });
     }
-  
-    uploadInput.addEventListener('change', function (event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          selectedImagePreview.src = e.target.result;
-          selectedImageFilename.value = "";
-          imagePreviewContainer.style.display = 'block';
-          imagePreviewTitle.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-      }
-    });
-  
-    imageDescInput.addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') {
+
+    if (filterUpload) {
+      filterUpload.addEventListener('click', function(e) {
         e.preventDefault();
-        searchBtn.click();
-      }
-    });
-  
-    searchBtn.addEventListener('click', function () {
-      const query = imageDescInput.value.trim();
-      if (!query) {
-        alert("Please enter a description first.");
-        return;
-      }
-      currentQuery = query;
-      currentPage = 1;
-      loadUnsplashImages(currentPage);
-      unsplashModal.show();
-    });
-  
-    prevPageBtn.addEventListener('click', function () {
-      if (currentPage > 1) {
-        currentPage--;
+        filterUpload.style.cssText = activeStyle;
+        filterSearchWeb.style.cssText = inactiveStyle;
+        uploadContent.style.display = 'block';
+        searchWebContent.style.display = 'none';
+      });
+    }
+
+    // Helper function to update thumbnail with image and delete badge (100x100 square)
+    function updateThumbnailWithImage(imgSrc) {
+      const wrapper = document.getElementById('coverPhotoWrapper');
+      wrapper.innerHTML = `
+        <img id="coverThumbnail"
+             src="${imgSrc}"
+             class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
+        <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
+              style="cursor: pointer;"
+              id="deleteImageBtn">
+          <i class="ti ti-x text-white" style="font-size: 14px;"></i>
+        </span>`;
+      // Re-setup delete button event listener
+      setupDeleteButton();
+    }
+
+    if (uploadInput) {
+      uploadInput.addEventListener('change', function (event) {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            selectedImageFilename.value = "";
+            // Update thumbnail with the uploaded image
+            updateThumbnailWithImage(e.target.result);
+          }
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    if (imageDescInput) {
+      imageDescInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          searchBtn.click();
+        }
+      });
+    }
+
+    if (searchBtn) {
+      searchBtn.addEventListener('click', function () {
+        const query = imageDescInput.value.trim();
+        if (!query) {
+          alert("Please enter a description first.");
+          return;
+        }
+        currentQuery = query;
+        currentPage = 1;
         loadUnsplashImages(currentPage);
-      }
-    });
-  
-    nextPageBtn.addEventListener('click', function () {
-      currentPage++;
-      loadUnsplashImages(currentPage);
-    });
-  
+        unsplashModal.show();
+      });
+    }
+
+    if (prevPageBtn) {
+      prevPageBtn.addEventListener('click', function () {
+        if (currentPage > 1) {
+          currentPage--;
+          loadUnsplashImages(currentPage);
+        }
+      });
+    }
+
+    if (nextPageBtn) {
+      nextPageBtn.addEventListener('click', function () {
+        currentPage++;
+        loadUnsplashImages(currentPage);
+      });
+    }
+
     function loadUnsplashImages(page = 1) {
       if (!currentQuery) return;
-      
-      // Show loading state
+
       unsplashImagesDiv.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-  
+
       fetch(`/unsplash-search?q=${encodeURIComponent(currentQuery)}&page=${page}`)
         .then(response => {
           if (!response.ok) {
@@ -1382,7 +1477,7 @@
             paginationControls.style.display = 'none';
             return;
           }
-  
+
           data.forEach(image => {
             const col = document.createElement('div');
             col.className = 'col-md-4 mb-3';
@@ -1392,19 +1487,20 @@
               </div>
             `;
             col.querySelector('img').addEventListener('click', function () {
-              // Show loading state on the clicked image
               this.style.opacity = '0.5';
               this.style.cursor = 'wait';
-              
+
               fetch(`/download-unsplash-image?url=${encodeURIComponent(image.full)}`)
                 .then(response => response.json())
                 .then(result => {
                   if (result.success) {
-                    selectedImagePreview.src = `/static/uploads/activity_images/${result.filename}`;
+                    const imgUrl = `/static/uploads/activity_images/${result.filename}`;
                     selectedImageFilename.value = result.filename;
-                    uploadInput.value = "";
-                    imagePreviewContainer.style.display = 'block';
-                    imagePreviewTitle.style.display = 'block';
+                    if (uploadInput) uploadInput.value = "";
+
+                    // Update thumbnail with the downloaded image
+                    updateThumbnailWithImage(imgUrl);
+
                     unsplashModal.hide();
                   } else {
                     alert("Failed to download image. Please try again.");
@@ -1421,21 +1517,20 @@
             });
             unsplashImagesDiv.appendChild(col);
           });
-  
+
           paginationControls.style.display = 'flex';
           prevPageBtn.disabled = page === 1;
         })
         .catch(error => {
           console.error('Error loading images:', error);
           let errorMessage = 'Error loading images. Please try again.';
-          
-          // Provide more specific error messages
+
           if (error.message.includes('API key')) {
             errorMessage = 'Image search is not available. The API key needs to be configured by an administrator.';
           } else if (error.message.includes('temporarily unavailable')) {
             errorMessage = 'Image search service is temporarily unavailable. Please try again later.';
           }
-          
+
           unsplashImagesDiv.innerHTML = `
             <div class="text-center p-4">
               <div class="alert alert-warning border-warning mb-3">
@@ -1448,9 +1543,9 @@
               <div class="text-muted small">
                 <p class="mb-2"><strong>Alternative options:</strong></p>
                 <ul class="list-unstyled">
-                  <li>• Use the "Upload your own image" option instead</li>
-                  <li>• Contact your administrator to configure image search</li>
-                  <li>• Proceed without an image for now</li>
+                  <li>Use the "Upload your own image" option instead</li>
+                  <li>Contact your administrator to configure image search</li>
+                  <li>Proceed without an image for now</li>
                 </ul>
               </div>
             </div>
@@ -1458,13 +1553,12 @@
           paginationControls.style.display = 'none';
         });
     }
-    
+
     // Passport Type Management Functions
     function createPassportTypeTableRow(passportType) {
       const id = passportType.id || `new_${passportTypeCounter++}`;
       const typeBadgeClass = passportType.type === 'permanent' ? 'bg-green-lt text-green' : 'bg-yellow-lt text-yellow';
 
-      // Check if this is an existing passport type for signup link
       const isExisting = id && !id.toString().startsWith('new_');
       let signupUrl = '[Available after saving]';
       let signupButtonsDisabled = true;
@@ -1537,12 +1631,11 @@
     const addPassportTypeModal = new bootstrap.Modal(document.getElementById('addPassportTypeModal'));
     const editPassportTypeModal = new bootstrap.Modal(document.getElementById('editPassportTypeModal'));
     const deletePassportTypeModal = new bootstrap.Modal(document.getElementById('deletePassportTypeModal'));
-    
+
     let currentEditingId = null;
     let currentDeletingId = null;
-    
+
     function addNewPassportType() {
-      // Get values from modal
       const name = document.getElementById('newPassportTypeName').value.trim();
       const type = document.getElementById('newPassportTypeType').value;
       const price = document.getElementById('newPassportTypePrice').value;
@@ -1550,7 +1643,6 @@
       const revenue = document.getElementById('newPassportTypeRevenue').value;
       const instructions = document.getElementById('newPassportTypeInstructions').value.trim();
 
-      // Validation
       if (!name) {
         alert('Please enter a passport type name.');
         return;
@@ -1573,7 +1665,6 @@
 
       updateVisibility();
 
-      // Clear modal and close
       clearAddModal();
       addPassportTypeModal.hide();
     }
@@ -1609,7 +1700,6 @@
     }
 
     function updateStructuredPreview() {
-      // Update preview based on current form values
       const price = document.getElementById('editPassportTypePrice').value || '0.00';
       const sessions = document.getElementById('editPassportTypeSessions').value || '1';
 
@@ -1623,7 +1713,6 @@
 
       currentEditingId = id;
 
-      // Populate edit modal
       document.getElementById('editPassportTypeName').value = passportType.name || '';
       document.getElementById('editPassportTypeType').value = passportType.type || 'permanent';
       document.getElementById('editPassportTypePrice').value = passportType.price_per_user || '0.00';
@@ -1631,12 +1720,10 @@
       document.getElementById('editPassportTypeRevenue').value = passportType.target_revenue || '0.00';
       document.getElementById('editPassportTypeInstructions').value = passportType.payment_instructions || '';
 
-      // Populate toggle state
       const useCustom = passportType.use_custom_payment_instructions || false;
       document.getElementById('useCustomPaymentInstructions').checked = useCustom;
       togglePaymentInstructionsMode();
 
-      // Update previews
       updateStructuredPreview();
       if (useCustom) {
         updateCustomPreview();
@@ -1644,11 +1731,10 @@
 
       editPassportTypeModal.show();
     }
-    
+
     function saveEditPassportType() {
       if (!currentEditingId) return;
 
-      // Get values from modal
       const name = document.getElementById('editPassportTypeName').value.trim();
       const type = document.getElementById('editPassportTypeType').value;
       const price = document.getElementById('editPassportTypePrice').value;
@@ -1657,13 +1743,11 @@
       const instructions = document.getElementById('editPassportTypeInstructions').value.trim();
       const useCustom = document.getElementById('useCustomPaymentInstructions').checked;
 
-      // Validation
       if (!name) {
         alert('Please enter a passport type name.');
         return;
       }
 
-      // Update passport type
       const updatedPassportType = {
         id: currentEditingId,
         name: name,
@@ -1675,13 +1759,11 @@
         use_custom_payment_instructions: useCustom
       };
 
-      // Update in array
       const index = passportTypes.findIndex(pt => pt.id == currentEditingId);
       if (index !== -1) {
         passportTypes[index] = updatedPassportType;
       }
 
-      // Update UI
       const row = document.querySelector(`[data-id="${currentEditingId}"]`);
       if (row) {
         row.outerHTML = createPassportTypeTableRow(updatedPassportType);
@@ -1690,31 +1772,26 @@
       editPassportTypeModal.hide();
       currentEditingId = null;
     }
-    
+
     function confirmDeletePassportType(id, name) {
       currentDeletingId = id;
       document.getElementById('deletePassportTypeName').textContent = name;
-      
-      // Check if this is an existing passport type (not new)
+
       if (id && !id.toString().startsWith('new_')) {
-        // Check for dependencies before allowing deletion
         checkPassportTypeDependencies(id, name);
       } else {
-        // It's a new passport type, safe to delete
         deletePassportTypeModal.show();
       }
     }
-    
+
     function checkPassportTypeDependencies(id, name) {
       fetch(`/api/passport-type-dependencies/${id}`)
         .then(response => response.json())
         .then(data => {
           if (data.success) {
             if (data.has_dependencies) {
-              // Show archive confirmation instead of delete
               showArchivePassportTypeModal(id, name, data.passport_count, data.signup_count);
             } else {
-              // Safe to delete
               deletePassportTypeModal.show();
             }
           } else {
@@ -1726,9 +1803,8 @@
           alert('Error checking dependencies. Please try again.');
         });
     }
-    
+
     function showArchivePassportTypeModal(id, name, passportCount, signupCount) {
-      // Create usage list items
       let usageItems = '';
       if (passportCount > 0) {
         const passportText = passportCount === 1 ? 'existing passport' : 'existing passports';
@@ -1738,8 +1814,8 @@
         const signupText = signupCount === 1 ? 'signup' : 'signups';
         usageItems += '<li><strong>' + signupCount + '</strong> ' + signupText + '</li>';
       }
-      
-      const modalHtml = 
+
+      const modalHtml =
         '<div class="modal modal-blur fade" id="archivePassportTypeModal" tabindex="-1">' +
           '<div class="modal-dialog modal-dialog-centered">' +
             '<div class="modal-content">' +
@@ -1786,28 +1862,24 @@
             '</div>' +
           '</div>' +
         '</div>';
-      
-      // Remove existing modal if any
+
       const existingModal = document.getElementById('archivePassportTypeModal');
       if (existingModal) {
         existingModal.remove();
       }
-      
-      // Add new modal to DOM
+
       document.body.insertAdjacentHTML('beforeend', modalHtml);
-      
-      // Show the modal
+
       const archiveModal = new bootstrap.Modal(document.getElementById('archivePassportTypeModal'));
       archiveModal.show();
     }
-    
+
     function archivePassportType(id, name) {
-      // Show loading state
       const archiveButton = document.querySelector('button[onclick*="archivePassportType"]');
       const originalText = archiveButton.innerHTML;
       archiveButton.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm me-2"></i>Archiving...';
       archiveButton.disabled = true;
-      
+
       fetch(`/api/passport-type-archive/${id}`, {
         method: 'POST',
         headers: {
@@ -1817,7 +1889,6 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          // Remove from UI (archive is like deletion from user perspective)
           const row = document.querySelector(`[data-id="${id}"]`);
           if (row) {
             row.remove();
@@ -1825,50 +1896,44 @@
 
           passportTypes = passportTypes.filter(pt => pt.id != id);
           updateVisibility();
-          
-          // Close modal and reset
+
           const archiveModal = bootstrap.Modal.getInstance(document.getElementById('archivePassportTypeModal'));
           if (archiveModal) {
             archiveModal.hide();
           }
           currentDeletingId = null;
-          
-          // Show success message
-          showSuccessMessage(`✅ Passport type "${name}" has been archived successfully!`);
-          
+
+          showSuccessMessage(`Passport type "${name}" has been archived successfully!`);
+
         } else {
-          // Restore button state
           archiveButton.innerHTML = originalText;
           archiveButton.disabled = false;
-          
+
           showErrorMessage('Failed to archive passport type: ' + (data.error || 'Unknown error'));
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        
-        // Restore button state
+
         archiveButton.innerHTML = originalText;
         archiveButton.disabled = false;
-        
+
         showErrorMessage('Connection error. Please check your internet connection and try again.');
       });
     }
-    
+
     function showSuccessMessage(message) {
-      // Create and show a Bootstrap alert for success
-      const alertHtml = 
-        '<div class="alert alert-success alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">' +
+      const alertHtml =
+        '<div class="alert alert-success alert-dismissible fade show position-fixed" style="top: 80px; right: 20px; z-index: 9999; min-width: 300px;">' +
           '<div class="d-flex align-items-center">' +
             '<i class="ti ti-check-circle me-2"></i>' +
             '<span>' + message + '</span>' +
           '</div>' +
           '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
         '</div>';
-      
+
       document.body.insertAdjacentHTML('beforeend', alertHtml);
-      
-      // Auto-dismiss after 5 seconds
+
       setTimeout(() => {
         const alert = document.querySelector('.alert-success');
         if (alert) {
@@ -1876,21 +1941,19 @@
         }
       }, 5000);
     }
-    
+
     function showErrorMessage(message) {
-      // Create and show a Bootstrap alert for errors
-      const alertHtml = 
-        '<div class="alert alert-danger alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">' +
+      const alertHtml =
+        '<div class="alert alert-danger alert-dismissible fade show position-fixed" style="top: 80px; right: 20px; z-index: 9999; min-width: 300px;">' +
           '<div class="d-flex align-items-center">' +
             '<i class="ti ti-alert-circle me-2"></i>' +
             '<span>' + message + '</span>' +
           '</div>' +
           '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
         '</div>';
-      
+
       document.body.insertAdjacentHTML('beforeend', alertHtml);
-      
-      // Auto-dismiss after 8 seconds (longer for errors)
+
       setTimeout(() => {
         const alert = document.querySelector('.alert-danger');
         if (alert) {
@@ -1898,13 +1961,11 @@
         }
       }, 8000);
     }
-    
+
     function deletePassportType() {
       if (!currentDeletingId) return;
 
-      // Check if this is a new unsaved passport type
       if (currentDeletingId.toString().startsWith('new_')) {
-        // It's a new passport type - just remove from UI
         const row = document.querySelector(`[data-id="${currentDeletingId}"]`);
         if (row) {
           row.remove();
@@ -1916,7 +1977,6 @@
         return;
       }
 
-      // It's an existing passport type - call API to archive it
       const deleteButton = document.querySelector('#confirmDeletePassportType');
       const originalText = deleteButton.innerHTML;
       deleteButton.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm me-2"></i>Deleting...';
@@ -1931,24 +1991,21 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          // Redirect with success parameter
           window.location.href = window.location.pathname + '?deleted=' + encodeURIComponent(data.passport_type_name);
         } else {
-          // Redirect with error parameter
           window.location.href = window.location.pathname + '?error=' + encodeURIComponent(data.error || 'Unknown error');
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        // Redirect with error parameter
         window.location.href = window.location.pathname + '?error=Connection error';
       });
     }
-    
+
     function getPassportTypeFromRow(id) {
       const row = document.querySelector(`[data-id="${id}"]`);
       if (!row) return null;
-      
+
       return {
         id: id,
         name: row.querySelector('input[name*="[name]"]').value,
@@ -1959,7 +2016,7 @@
         payment_instructions: row.querySelector('input[name*="[payment_instructions]"]').value
       };
     }
-    
+
     function clearAddModal() {
       document.getElementById('newPassportTypeName').value = '';
       document.getElementById('newPassportTypeType').value = 'permanent';
@@ -1968,7 +2025,7 @@
       document.getElementById('newPassportTypeRevenue').value = '0.00';
       document.getElementById('newPassportTypeInstructions').value = '';
     }
-    
+
     function updateVisibility() {
       const hasPassportTypes = passportTypesContainer.children.length > 0;
       const passportTypesTable = document.getElementById('passportTypesTable');
@@ -1981,13 +2038,11 @@
         passportTypesTable.style.display = 'none';
       }
     }
-    
+
     function updateSignupLinks() {
-      // Signup links are now integrated into the table rows
       // Legacy function - functionality moved to table rows
-      // No longer needed as signup links are integrated into createPassportTypeTableRow
     }
-    
+
     function copySignupLink(button) {
       const input = button.closest('.input-group').querySelector('.signup-url-input');
       input.select();
@@ -2007,7 +2062,6 @@
     }
 
     function showFlashMessage(message, category = 'success') {
-      // Create or get flash overlay
       let overlay = document.getElementById('flashAlertOverlay');
       if (!overlay) {
         overlay = document.createElement('div');
@@ -2019,7 +2073,6 @@
 
       const container = overlay.querySelector('.flash-alert-container');
 
-      // Determine alert style
       const alertClass = category === 'success' ? 'alert-success' :
                          category === 'error' ? 'alert-danger' :
                          category === 'warning' ? 'alert-warning' : 'alert-info';
@@ -2030,7 +2083,6 @@
                     category === 'error' ? 'Error' :
                     category === 'warning' ? 'Warning' : 'Information';
 
-      // Create flash alert
       const alert = document.createElement('div');
       alert.className = `flash-alert alert ${alertClass} alert-dismissible`;
       alert.setAttribute('role', 'alert');
@@ -2052,10 +2104,8 @@
 
       container.appendChild(alert);
 
-      // Animate in
       setTimeout(() => alert.classList.add('show'), 10);
 
-      // Auto-dismiss after 3 seconds
       setTimeout(() => {
         alert.classList.add('hide');
         setTimeout(() => {
@@ -2066,7 +2116,6 @@
         }, 400);
       }, 3000);
 
-      // Handle manual close
       const closeBtn = alert.querySelector('.btn-close');
       closeBtn.addEventListener('click', () => {
         alert.classList.add('hide');
@@ -2082,248 +2131,169 @@
     // Make functions global
     window.copySignupLink = copySignupLink;
     window.copySignupLinkFromDropdown = copySignupLinkFromDropdown;
-    
+
     // Event Listeners for modals
     document.getElementById('saveNewPassportType').addEventListener('click', addNewPassportType);
     document.getElementById('saveEditPassportType').addEventListener('click', saveEditPassportType);
     document.getElementById('confirmDeletePassportType').addEventListener('click', deletePassportType);
-    
+
     // Make functions global for onclick handlers
     window.editPassportType = editPassportType;
     window.confirmDeletePassportType = confirmDeletePassportType;
-    window.copySignupLink = copySignupLink;
-    
+    window.archivePassportType = archivePassportType;
+
     // Income Management Functions
     const addIncomeModal = new bootstrap.Modal(document.getElementById('addIncomeModal'));
     const deleteIncomeModal = new bootstrap.Modal(document.getElementById('deleteIncomeModal'));
-    
+
     let currentDeletingIncomeId = null;
-    
+
     // Set default date to today for add income modal
     const today = new Date().toISOString().split('T')[0];
     const addIncomeDateInput = document.querySelector('#addIncomeForm input[name="date"]');
     if (addIncomeDateInput) {
       addIncomeDateInput.value = today;
     }
-    
+
     function addNewIncome() {
       const form = document.getElementById('addIncomeForm');
-      
-      // Validate form
+
       if (!form.checkValidity()) {
         form.reportValidity();
         return;
       }
-      
-      // Show loading state
+
       const saveBtn = document.getElementById('saveIncomeBtn');
       const originalText = saveBtn.innerHTML;
       saveBtn.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm me-2"></i>Adding...';
       saveBtn.disabled = true;
-      
-      // Submit form to add income and return to activity form
+
       form.action = '/admin/activity-income/{{ activity.id if activity }}?return_to=activity_form';
       form.method = 'POST';
       form.submit();
     }
-    
+
     function editIncome(incomeId) {
-      // For now, redirect to the existing edit page
-      // We can enhance this later with a modal approach
       window.location.href = `/admin/activity-income/{{ activity.id if activity }}/${incomeId}?return_to=activity_form`;
     }
-    
-    
+
     function confirmDeleteIncome(incomeId, category) {
       currentDeletingIncomeId = incomeId;
       document.getElementById('deleteIncomeCategory').textContent = category;
       deleteIncomeModal.show();
     }
-    
+
     function deleteIncome() {
       if (!currentDeletingIncomeId) return;
-      
-      // Create a form to submit the delete request
+
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = `/admin/delete-income/${currentDeletingIncomeId}?return_to=activity_form`;
-      
+
       const csrfToken = document.createElement('input');
       csrfToken.type = 'hidden';
       csrfToken.name = 'csrf_token';
       csrfToken.value = document.querySelector('input[name="csrf_token"]').value;
-      
+
       form.appendChild(csrfToken);
       document.body.appendChild(form);
       form.submit();
     }
-    
+
     // Event listeners for income modals
     document.getElementById('saveIncomeBtn').addEventListener('click', addNewIncome);
     document.getElementById('confirmDeleteIncome').addEventListener('click', deleteIncome);
-    
+
     // Expense Management Functions
     let currentDeletingExpenseId = null;
     const deleteExpenseModal = new bootstrap.Modal(document.getElementById('deleteExpenseModal'));
     const addExpenseModal = new bootstrap.Modal(document.getElementById('addExpenseModal'));
     const editExpenseModal = new bootstrap.Modal(document.getElementById('editExpenseModal'));
-    
+
     function addNewExpense() {
       const form = document.getElementById('addExpenseForm');
-      
-      // Validate form
+
       if (!form.checkValidity()) {
         form.reportValidity();
         return;
       }
-      
-      // Show loading state
+
       const saveBtn = document.getElementById('saveExpenseBtn');
       const originalText = saveBtn.innerHTML;
       saveBtn.innerHTML = '<i class="ti ti-loader-2 spinner-border spinner-border-sm me-2"></i>Adding...';
       saveBtn.disabled = true;
-      
-      // Submit form to add expense and return to activity form
+
       form.submit();
     }
-    
-    function editExpense(expenseId) {
-      // For now, redirect to the existing edit page
-      // We can enhance this later with a modal approach
-      window.location.href = `/admin/activity-expenses/{{ activity.id if activity }}/edit/${expenseId}?return_to=activity_form`;
-    }
-    
-    function confirmDeleteExpense(expenseId, category) {
-      currentDeletingExpenseId = expenseId;
-      document.getElementById('deleteExpenseCategory').textContent = category;
-      deleteExpenseModal.show();
-    }
-    
-    function deleteExpense() {
-      if (!currentDeletingExpenseId) return;
-      
-      // Create a form to submit the delete request
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = `/admin/delete-expense/${currentDeletingExpenseId}?return_to=activity_form`;
-      
-      const csrfToken = document.createElement('input');
-      csrfToken.type = 'hidden';
-      csrfToken.name = 'csrf_token';
-      csrfToken.value = document.querySelector('input[name="csrf_token"]').value;
-      
-      form.appendChild(csrfToken);
-      document.body.appendChild(form);
-      form.submit();
-    }
-    
-    // Event listeners for expense modals
+
+    // Event listener for expense modal
     document.getElementById('saveExpenseBtn').addEventListener('click', addNewExpense);
-    document.getElementById('confirmDeleteExpense').addEventListener('click', deleteExpense);
-    
-    // Function to open receipt in new window
-    function openReceiptWindow(receiptUrl) {
-      const windowFeatures = 'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,location=no,directories=no,status=no,menubar=no';
-      window.open(receiptUrl, 'receiptWindow', windowFeatures);
-    }
-    
-    // Make functions global for onclick handlers
-    window.editIncome = editIncome;
-    window.confirmDeleteIncome = confirmDeleteIncome;
-    window.editExpense = editExpense;
-    window.confirmDeleteExpense = confirmDeleteExpense;
-    window.openReceiptWindow = openReceiptWindow;
-    
-    // Load existing passport types for editing
-    {% if passport_types %}
-    try {
-      const existingPassportTypesData = {{ passport_types|tojson }};
 
-      existingPassportTypesData.forEach((pt, index) => {
-        const existingPassportType = {
-          id: pt.id.toString(),
-          name: pt.name,
-          type: pt.type,
-          price_per_user: pt.price_per_user.toString(),
-          sessions_included: pt.sessions_included.toString(),
-          target_revenue: pt.target_revenue.toString(),
-          payment_instructions: pt.payment_instructions || '',
-          use_custom_payment_instructions: pt.use_custom_payment_instructions || false
-        };
-
-        passportTypes.push(existingPassportType);
-        const rowHtml = createPassportTypeTableRow(existingPassportType);
-        passportTypesContainer.insertAdjacentHTML('beforeend', rowHtml);
-      });
-    } catch (error) {
-      console.error('Error loading passport types:', error);
-    }
-    {% endif %}
-    
-    // Initialize
-    updateVisibility();
-    updateSignupLinks();
-
-    // ========================================
-    // LOCATION HANDLERS
-    // ========================================
-    // Clear location button
-    const clearLocationBtn = document.getElementById('clearLocationBtn');
-    if (clearLocationBtn) {
-      clearLocationBtn.addEventListener('click', clearLocation);
-    }
-
-    // Lookup button (manual geocode fallback)
+    // Initialize location button handlers
     const lookupLocationBtn = document.getElementById('lookupLocationBtn');
     if (lookupLocationBtn) {
       lookupLocationBtn.addEventListener('click', lookupLocation);
     }
 
-    // Enter key on location input triggers lookup
-    const locationInput = document.getElementById('locationAutocomplete');
-    if (locationInput) {
-      locationInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          lookupLocation();
-        }
-      });
+    const clearLocationBtn = document.getElementById('clearLocationBtn');
+    if (clearLocationBtn) {
+      clearLocationBtn.addEventListener('click', clearLocation);
     }
 
-    // Pre-populate when editing existing activity with location
+    // Show confirmed location if data exists
     {% if activity and activity.location_address_formatted %}
-    (function() {
-      const input = document.getElementById('locationAutocomplete');
-      const inputGroup = input.closest('.input-group');
-
-      document.getElementById('confirmedAddressText').textContent = '{{ activity.location_address_formatted }}';
-      document.getElementById('viewMapLink').href = 'https://www.google.com/maps?q={{ activity.location_coordinates }}';
-      document.getElementById('locationConfirmed').style.display = 'block';
-      inputGroup.style.display = 'none';  // Hide input when location already confirmed
-    })();
+    const inputGroup = document.getElementById('locationAutocomplete').closest('.input-group');
+    inputGroup.style.display = 'none';
+    document.getElementById('confirmedAddressText').textContent = '{{ activity.location_address_formatted }}';
+    document.getElementById('viewMapLink').href = 'https://www.google.com/maps?q={{ activity.location_coordinates }}';
+    document.getElementById('locationConfirmed').style.display = 'block';
     {% endif %}
 
-    // Add event listeners for real-time preview updates in Edit Passport Modal
-    const priceInput = document.getElementById('editPassportTypePrice');
-    const sessionsInput = document.getElementById('editPassportTypeSessions');
-    const customToggle = document.getElementById('useCustomPaymentInstructions');
-    const customTextarea = document.getElementById('editPassportTypeInstructions');
+    // Load existing passport types
+    {% if activity and activity.passport_types %}
+    const existingPassportTypes = [
+      {% for pt in activity.passport_types if not pt.is_archived %}
+      {
+        id: {{ pt.id }},
+        name: "{{ pt.name|e }}",
+        type: "{{ pt.type }}",
+        price_per_user: "{{ '%.2f'|format(pt.price_per_user) }}",
+        sessions_included: "{{ pt.sessions_included }}",
+        target_revenue: "{{ '%.2f'|format(pt.target_revenue) if pt.target_revenue else '0.00' }}",
+        payment_instructions: "{{ pt.payment_instructions|e if pt.payment_instructions else '' }}",
+        use_custom_payment_instructions: {{ 'true' if pt.use_custom_payment_instructions else 'false' }}
+      },
+      {% endfor %}
+    ];
 
-    if (priceInput) {
-      priceInput.addEventListener('input', updateStructuredPreview);
+    existingPassportTypes.forEach(pt => {
+      passportTypes.push(pt);
+      const rowHtml = createPassportTypeTableRow(pt);
+      passportTypesContainer.insertAdjacentHTML('beforeend', rowHtml);
+    });
+
+    updateVisibility();
+    {% endif %}
+
+    // Edit modal preview event listeners
+    const editPrice = document.getElementById('editPassportTypePrice');
+    const editSessions = document.getElementById('editPassportTypeSessions');
+    const useCustomToggle = document.getElementById('useCustomPaymentInstructions');
+    const customInstructions = document.getElementById('editPassportTypeInstructions');
+
+    if (editPrice) {
+      editPrice.addEventListener('input', updateStructuredPreview);
     }
-    if (sessionsInput) {
-      sessionsInput.addEventListener('input', updateStructuredPreview);
+    if (editSessions) {
+      editSessions.addEventListener('input', updateStructuredPreview);
     }
-    if (customToggle) {
-      customToggle.addEventListener('change', togglePaymentInstructionsMode);
+    if (useCustomToggle) {
+      useCustomToggle.addEventListener('change', togglePaymentInstructionsMode);
     }
-    if (customTextarea) {
-      customTextarea.addEventListener('input', updateCustomPreview);
+    if (customInstructions) {
+      customInstructions.addEventListener('input', updateCustomPreview);
     }
 
   });
-  </script>
-  
-
+</script>
 {% endblock %}
