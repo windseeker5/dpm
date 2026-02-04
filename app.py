@@ -1895,7 +1895,21 @@ def create_activity():
         return redirect(url_for("list_activities"))
 
     # If within limit, show the form
-    return render_template("activity_form.html", activity=None)
+    # For new activities, all accordion sections are collapsed by default
+    import os
+    from utils import get_setting
+    google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+    display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
+    payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
+
+    return render_template("activity_form.html",
+                          activity=None,
+                          has_workflow_data=False,
+                          has_capacity_data=False,
+                          has_schedule_data=False,
+                          has_advanced_data=False,
+                          google_maps_api_key=google_maps_api_key,
+                          payment_email=payment_email)
 
 
 @app.route("/edit-activity/<int:activity_id>", methods=["GET", "POST"])
@@ -2073,7 +2087,7 @@ def edit_activity(activity_id):
         return redirect(url_for("edit_activity", activity_id=activity.id))
 
     # 🧮 Add financial summary data (shown at bottom of form) - use database views for consistency
-    from utils import get_financial_data_from_views, get_fiscal_year_range, get_fiscal_year_display
+    from utils import get_financial_data_from_views, get_fiscal_year_range, get_fiscal_year_display, get_setting
 
     period = request.args.get('period', 'fy')
     start_date, end_date, period_display = None, None, "All Time"
@@ -2114,7 +2128,45 @@ def edit_activity(activity_id):
             'use_custom_payment_instructions': pt.use_custom_payment_instructions or False
         })
     
-    return render_template("activity_form.html", activity=activity, passport_types=passport_types, summary=summary, current_period=period, period_display=period_display)
+    # Smart accordion expansion: detect which sections have data
+    has_workflow_data = (
+        activity.workflow_type == 'payment_first' or
+        activity.offer_passport_renewal
+    )
+    has_capacity_data = (
+        activity.is_quantity_limited or
+        activity.allow_quantity_selection or
+        activity.max_sessions
+    )
+    has_schedule_data = (
+        activity.start_date or
+        activity.end_date or
+        activity.location_address_formatted
+    )
+    has_advanced_data = (
+        activity.goal_revenue and activity.goal_revenue > 0
+    )
+
+    # Get Google Maps API key for Places Autocomplete
+    import os
+    google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
+    # Get payment email for display
+    display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
+    payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
+
+    return render_template("activity_form.html",
+                          activity=activity,
+                          passport_types=passport_types,
+                          summary=summary,
+                          current_period=period,
+                          period_display=period_display,
+                          has_workflow_data=has_workflow_data,
+                          has_capacity_data=has_capacity_data,
+                          has_schedule_data=has_schedule_data,
+                          has_advanced_data=has_advanced_data,
+                          google_maps_api_key=google_maps_api_key,
+                          payment_email=payment_email)
 
 
 
@@ -5976,12 +6028,41 @@ def activity_form(activity_id=None):
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
+    # Smart accordion expansion: detect which sections have data
+    if activity:
+        has_workflow_data = (
+            activity.workflow_type == 'payment_first' or
+            getattr(activity, 'offer_passport_renewal', False)
+        )
+        has_capacity_data = (
+            getattr(activity, 'is_quantity_limited', False) or
+            getattr(activity, 'allow_quantity_selection', False) or
+            getattr(activity, 'max_sessions', None)
+        )
+        has_schedule_data = (
+            activity.start_date or
+            activity.end_date or
+            getattr(activity, 'location_address_formatted', None)
+        )
+        has_advanced_data = (
+            getattr(activity, 'goal_revenue', 0) and activity.goal_revenue > 0
+        )
+    else:
+        has_workflow_data = False
+        has_capacity_data = False
+        has_schedule_data = False
+        has_advanced_data = False
+
     return render_template("activity_form.html",
                            activity=activity,
                            passport_types=passport_types,
                            summary=summary,
                            google_maps_api_key=google_maps_api_key,
-                           payment_email=payment_email)
+                           payment_email=payment_email,
+                           has_workflow_data=has_workflow_data,
+                           has_capacity_data=has_capacity_data,
+                           has_schedule_data=has_schedule_data,
+                           has_advanced_data=has_advanced_data)
 
 
 
