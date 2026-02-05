@@ -2164,7 +2164,7 @@ html, body {
   right: 0;
   width: 100vw;
   height: 80px;
-  z-index: 9999;
+  z-index: 1048;
 
   /* Option 3: Professional Wealth - Intelligence → Trust → Clarity → Technology → Growth → Success */
   background: linear-gradient(110deg,

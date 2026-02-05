@@ -997,8 +997,7 @@ def dashboard():
         # Get passport type information for this activity
         passport_types = PassportType.query.filter_by(activity_id=a.id).all()
         total_sessions = sum(pt.sessions_included or 0 for pt in passport_types) if passport_types else 0
-        total_target_revenue = sum(pt.target_revenue or 0 for pt in passport_types) if passport_types else 0.0
-        
+
         activity_cards.append({
             "id": a.id,
             "name": a.name,
@@ -1012,7 +1011,7 @@ def dashboard():
             "paid_passports": len(paid_passports),
             "paid_amount": paid_amount,
             "unpaid_amount": unpaid_amount,
-            "goal_revenue": total_target_revenue,
+            "goal_revenue": a.goal_revenue or 0.0,
             "image_filename": a.image_filename,
             "days_left": days_left
         })
@@ -1849,12 +1848,12 @@ def create_activity():
                 passport_type = PassportType(
                     activity_id=new_activity.id,
                     name=passport_data.get('name', '').strip(),
-                    type=passport_data.get('type', 'permanent'),
+                    type='permanent',
                     price_per_user=float(passport_data.get('price_per_user', 0.0)),
                     sessions_included=int(passport_data.get('sessions_included', 1)),
-                    target_revenue=float(passport_data.get('target_revenue', 0.0)),
-                    payment_instructions=passport_data.get('payment_instructions', '').strip(),
-                    use_custom_payment_instructions=passport_data.get('use_custom_payment_instructions', 'false').lower() == 'true',
+                    target_revenue=0.0,
+                    payment_instructions='',
+                    use_custom_payment_instructions=False,
                     status='active'
                 )
                 db.session.add(passport_type)
@@ -2026,19 +2025,15 @@ def edit_activity(activity_id):
                     # Update existing passport type
                     passport_type = existing_pt_dict[existing_id]
                     passport_type.name = passport_data.get('name', '').strip()
-                    passport_type.type = passport_data.get('type', 'permanent')
                     passport_type.price_per_user = float(passport_data.get('price_per_user', 0.0))
                     passport_type.sessions_included = int(passport_data.get('sessions_included', 1))
-                    passport_type.target_revenue = float(passport_data.get('target_revenue', 0.0))
-                    passport_type.payment_instructions = passport_data.get('payment_instructions', '').strip()
-                    passport_type.use_custom_payment_instructions = passport_data.get('use_custom_payment_instructions', 'false').lower() == 'true'
 
                     # Preserve passport type names in existing passports when updating
                     passports_to_update = Passport.query.filter_by(passport_type_id=existing_id).all()
                     for passport in passports_to_update:
                         if not passport.passport_type_name:  # Only update if not already preserved
                             passport.passport_type_name = passport_type.name
-                    
+
                     updated_passport_type_ids.add(existing_id)
                     passport_types_updated += 1
                 else:
@@ -2046,12 +2041,12 @@ def edit_activity(activity_id):
                     passport_type = PassportType(
                         activity_id=activity.id,
                         name=passport_data.get('name', '').strip(),
-                        type=passport_data.get('type', 'permanent'),
+                        type='permanent',
                         price_per_user=float(passport_data.get('price_per_user', 0.0)),
                         sessions_included=int(passport_data.get('sessions_included', 1)),
-                        target_revenue=float(passport_data.get('target_revenue', 0.0)),
-                        payment_instructions=passport_data.get('payment_instructions', '').strip(),
-                        use_custom_payment_instructions=passport_data.get('use_custom_payment_instructions', 'false').lower() == 'true',
+                        target_revenue=0.0,
+                        payment_instructions='',
+                        use_custom_payment_instructions=False,
                         status='active'
                     )
                     db.session.add(passport_type)
@@ -2120,12 +2115,8 @@ def edit_activity(activity_id):
         passport_types.append({
             'id': pt.id,
             'name': pt.name,
-            'type': pt.type,
             'price_per_user': pt.price_per_user,
-            'sessions_included': pt.sessions_included,
-            'target_revenue': pt.target_revenue,
-            'payment_instructions': pt.payment_instructions or '',
-            'use_custom_payment_instructions': pt.use_custom_payment_instructions or False
+            'sessions_included': pt.sessions_included
         })
     
     # Smart accordion expansion: detect which sections have data
@@ -6011,12 +6002,8 @@ def activity_form(activity_id=None):
             passport_types.append({
                 'id': pt.id,
                 'name': pt.name,
-                'type': pt.type,
                 'price_per_user': pt.price_per_user,
-                'sessions_included': pt.sessions_included,
-                'target_revenue': pt.target_revenue,
-                'payment_instructions': pt.payment_instructions or '',
-                'use_custom_payment_instructions': pt.use_custom_payment_instructions or False
+                'sessions_included': pt.sessions_included
             })
     else:
         passport_types = []
