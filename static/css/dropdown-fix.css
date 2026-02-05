@@ -196,9 +196,9 @@ html body .dropdown.show .dropdown-menu {
         min-width: 15rem !important;
     }
     
-    /* Force right alignment on small screens for KPI cards */
-    .card .dropdown-menu,
-    .card .dropdown-menu.show {
+    /* Right-align only TABLE ACTION dropdowns inside cards on mobile */
+    .card td .dropdown-menu,
+    .card td .dropdown-menu.show {
         right: 0 !important;
         left: auto !important;
     }

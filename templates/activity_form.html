@@ -1,6 +1,133 @@
 {% extends "base.html" %}
 {% block title %}
-  {{ "Edit Activity" if activity else "Create New Activity" }}
+  {{ "Edit Activity" if activity else "New Activity" }}
+{% endblock %}
+
+{% block head %}
+<style>
+.form-label.required::after {
+  content: " *";
+  color: #d63384;
+}
+
+/* Page header sticky styling */
+.page-header {
+  border-bottom: 1px solid rgba(98, 105, 118, 0.16);
+  margin-bottom: 0;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  background-color: #fff !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #0054a6;
+  box-shadow: 0 0 0 0.2rem rgba(0, 84, 166, 0.15);
+}
+
+.btn-primary {
+  background-color: #0054a6;
+  border-color: #0054a6;
+}
+
+.btn-primary:hover {
+  background-color: #004494;
+  border-color: #004494;
+}
+
+/* Section headers */
+.section-header {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+/* Workflow card icon container */
+.form-selectgroup-boxes .avatar {
+  --tblr-avatar-size: 3.6rem;
+  --tblr-avatar-box-shadow: none;
+  background-color: rgba(var(--tblr-primary-rgb), 0.15);
+  color: var(--tblr-primary);
+}
+.form-selectgroup-boxes .avatar .ti {
+  font-size: 2.5rem;
+}
+
+/* Form hint styling */
+.form-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #626976;
+}
+
+/* Passport type table styling */
+#passportTypesTable td {
+  vertical-align: middle;
+}
+
+#passportTypesTable .input-group-flat {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+}
+
+#passportTypesTable .input-group-flat .form-control {
+  border: 0;
+}
+
+#passportTypesTable .input-group-text {
+  border: 0;
+  background: transparent;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Google Places Autocomplete dropdown fix */
+.pac-container {
+  z-index: 10000 !important;
+}
+
+/* Ghost button for back */
+.btn-ghost-secondary {
+  color: #626976;
+  background: transparent;
+  border: none;
+}
+
+.btn-ghost-secondary:hover {
+  background-color: rgba(98, 105, 118, 0.1);
+  color: #1d2332;
+}
+
+@media (max-width: 768px) {
+  .card-body {
+    padding: 1rem;
+  }
+
+  .modal-dialog {
+    margin: 1rem;
+  }
+
+  .page-header .row {
+    padding: 0.75rem 0 !important;
+  }
+
+  .page-title {
+    font-size: 1rem;
+  }
+
+  .form-selectgroup {
+    flex-direction: column;
+  }
+
+  .form-selectgroup-label {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -12,9 +139,9 @@
       <div class="col-12 col-lg-10">
 
         <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center py-3">
+        <div class="d-flex justify-content-between align-items-center py-3 px-3">
           <h2 class="page-title mb-0">
-            {{ "Edit Activity" if activity else "Create New Activity" }}
+            {{ "Edit Activity" if activity else "New Activity" }}
           </h2>
           <div>
             <a href="{{ url_for('dashboard') }}" class="btn me-2 d-none d-md-inline-flex">Cancel</a>
@@ -56,6 +183,24 @@
               <div class="mb-3">
                 <label class="form-label">Description</label>
                 <textarea class="form-control" name="description" rows="3" placeholder="What? Where? When? Describe your activity...">{{ activity.description if activity else '' }}</textarea>
+              </div>
+
+              <!-- Activity Target Revenue -->
+              <div class="mb-3">
+                <label class="form-label">Activity Target Revenue (Optional)</label>
+                <div class="input-group" style="max-width: 300px;">
+                  <span class="input-group-text">$</span>
+                  <input type="number"
+                         class="form-control"
+                         name="goal_revenue"
+                         step="0.01"
+                         min="0"
+                         placeholder="0.00"
+                         value="{{ '%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else '' }}">
+                </div>
+                <small class="form-hint">
+                  Set a revenue goal to track progress on your activity dashboard
+                </small>
               </div>
 
               <!-- Cover Photo -->
@@ -127,49 +272,65 @@
               <input type="hidden" name="type" value="{{ activity.type if activity else '' }}">
             </div>
 
+            <!-- Section Divider -->
+            <div class="section-divider mt-5 mb-3"></div>
+
             <!-- ============================================ -->
             <!-- SIGNUP SETTINGS SECTION                      -->
             <!-- ============================================ -->
-            <div class="mb-4 pt-3">
-              <h5 class="text-muted mb-3">Signup Settings</h5>
+            <div class="mb-4">
+              <h3 class="mb-3">Signup Settings</h3>
               <div class="ps-0">
 
                     <!-- Signup Workflow -->
-                    <div class="mb-4">
-                      <div class="row g-3">
-                        <div class="col-md-6">
-                          <label class="form-selectgroup-item w-100">
-                            <input type="radio" name="workflow_type" value="approval_first" class="form-selectgroup-input"
-                                   {{ 'checked' if not activity or not activity.workflow_type or activity.workflow_type == 'approval_first' else '' }}>
-                            <div class="form-selectgroup-label w-100 p-3">
-                              <div class="d-flex align-items-center mb-2">
-                                <i class="ti ti-clipboard-check text-primary me-2"></i>
-                                <strong>Review First</strong>
-                              </div>
-                              <small class="text-muted d-block">
-                                You review each signup before asking for payment.
-                                <br><em>Best for: tryouts, limited spots, selective programs</em>
-                              </small>
+                    <div class="mb-4 form-selectgroup form-selectgroup-boxes">
+
+                      <!-- Review First Card -->
+                      <label class="form-selectgroup-item w-100 mb-3">
+                        <input type="checkbox" name="workflow_type" value="approval_first" class="form-selectgroup-input"
+                               {{ 'checked' if not activity or not activity.workflow_type or activity.workflow_type == 'approval_first' else '' }}>
+                        <div class="form-selectgroup-label w-100 p-3">
+                          <span class="form-selectgroup-check form-selectgroup-check-floated"></span>
+                          <div class="d-flex align-items-center">
+                            <div class="me-3">
+                              <span class="avatar border-0">
+                                <i class="ti ti-clipboard-check"></i>
+                              </span>
                             </div>
-                          </label>
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-selectgroup-item w-100">
-                            <input type="radio" name="workflow_type" value="payment_first" class="form-selectgroup-input"
-                                   {{ 'checked' if activity and activity.workflow_type == 'payment_first' else '' }}>
-                            <div class="form-selectgroup-label w-100 p-3">
-                              <div class="d-flex align-items-center mb-2">
-                                <i class="ti ti-credit-card text-success me-2"></i>
-                                <strong>Pay First</strong>
+                            <div class="flex-fill">
+                              <strong>Review First</strong>
+                              <div class="text-secondary mt-1">
+                                You decide who gets in. Approved signups receive a passport with payment instructions.
+                                <br><em>Ideal for: tryouts, limited spots, skill-based groups</em>
                               </div>
-                              <small class="text-muted d-block">
-                                Users pay immediately, auto-approved on payment.
-                                <br><em>Best for: open enrollment, large events, classes</em>
-                              </small>
                             </div>
-                          </label>
+                          </div>
                         </div>
-                      </div>
+                      </label>
+
+                      <!-- Pay First Card -->
+                      <label class="form-selectgroup-item w-100">
+                        <input type="checkbox" name="workflow_type" value="payment_first" class="form-selectgroup-input"
+                               {{ 'checked' if activity and activity.workflow_type == 'payment_first' else '' }}>
+                        <div class="form-selectgroup-label w-100 p-3">
+                          <span class="form-selectgroup-check form-selectgroup-check-floated"></span>
+                          <div class="d-flex align-items-center">
+                            <div class="me-3">
+                              <span class="avatar border-0">
+                                <i class="ti ti-credit-card"></i>
+                              </span>
+                            </div>
+                            <div class="flex-fill">
+                              <strong>Pay First</strong>
+                              <div class="text-secondary mt-1">
+                                Signups immediately receive payment instructions by email. Once they pay, their passport is delivered automatically — nothing for you to approve.
+                                <br><em>Ideal for: open events, concerts, classes, large groups</em>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+
                     </div>
 
                     <!-- Capacity Options -->
@@ -186,6 +347,7 @@
                       <input type="number" class="form-control" name="max_sessions" min="1"
                              value="{{ activity.max_sessions if activity and activity.max_sessions else '' }}"
                              placeholder="e.g., 80" style="max-width: 150px;">
+                      <small class="form-hint">Signups are blocked when all spots are taken</small>
                     </div>
                     <div id="showRemainingField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
                       <label class="form-check form-switch mb-3">
@@ -202,45 +364,45 @@
                                {{ 'checked' if activity and activity.allow_quantity_selection else '' }}>
                         <span class="form-check-label">Allow users to select quantity during signup</span>
                       </label>
-                      <small class="form-hint">Users can choose how many sessions to purchase</small>
+                      <small class="form-hint">Users can choose how many passports to purchase at once</small>
                     </div>
 
                     <div class="mb-3">
                       <label class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="offer_passport_renewal"
                                {{ 'checked' if activity and activity.offer_passport_renewal else '' }}>
-                        <span class="form-check-label">Offer passport renewal when one expires</span>
+                        <span class="form-check-label">Offer passport renewal when all sessions are used</span>
                       </label>
-                      <small class="form-hint">Enable for recurring activities (e.g., weekly hockey)</small>
+                      <small class="form-hint">When a passport runs out, prompt to renew at the scan screen</small>
                     </div>
 
               </div>
             </div>
 
-            <hr class="my-4">
+            <div class="section-divider mt-5 mb-3"></div>
 
             <!-- ============================================ -->
             <!-- SCHEDULE & LOCATION SECTION                  -->
             <!-- ============================================ -->
             <div class="mb-4 pt-3">
-              <h5 class="text-muted mb-3">Schedule & Location</h5>
+              <h3 class="mb-3">Schedule & Location</h3>
               <div class="ps-0">
 
                     <!-- Start and End Dates -->
                     <div class="row">
                       <div class="col-md-6 mb-3">
-                        <label class="form-label">Activity Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ activity.start_date.strftime('%Y-%m-%d') if activity and activity.start_date else '' }}">
+                        <label class="form-label">Start Date</label>
+                        <input type="datetime-local" name="start_date" class="form-control" value="{{ activity.start_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.start_date else '' }}">
                       </div>
                       <div class="col-md-6 mb-3">
-                        <label class="form-label">Activity End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ activity.end_date.strftime('%Y-%m-%d') if activity and activity.end_date else '' }}">
+                        <label class="form-label">End Date</label>
+                        <input type="datetime-local" name="end_date" class="form-control" value="{{ activity.end_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.end_date else '' }}">
                       </div>
                     </div>
 
                     <!-- Location Section -->
                     <div class="mb-3">
-                      <label class="form-label">Activity Location (Optional)</label>
+                      <label class="form-label">Location (Optional)</label>
                       <div class="input-group">
                         <input type="text"
                                id="locationAutocomplete"
@@ -252,8 +414,8 @@
                           <i class="ti ti-search me-1"></i>Lookup
                         </button>
                       </div>
-                      <small class="form-hint">
-                        Type and select from suggestions, or click Lookup to search
+                      <small id="locationHint" class="form-hint">
+                        Where will this activity take place?
                       </small>
 
                       <!-- Loading indicator -->
@@ -270,19 +432,15 @@
                       <div id="locationResults" class="list-group mt-2" style="display: none;"></div>
 
                       <!-- Confirmed location display -->
-                      <div id="locationConfirmed" class="alert alert-success mt-2" style="display: none;">
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div>
-                            <i class="ti ti-check me-2"></i>
-                            <span id="confirmedAddressText"></span>
-                          </div>
-                          <button type="button" id="clearLocationBtn" class="btn btn-sm btn-outline-secondary">
-                            <i class="ti ti-x me-1"></i>Change
-                          </button>
-                        </div>
-                        <a id="viewMapLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
-                          <i class="ti ti-map-pin me-1"></i>View on Map
+                      <div id="locationConfirmed" class="align-items-center border rounded p-3 mt-2" style="display: none;">
+                        <a id="viewMapLink" href="#" target="_blank" class="text-reset text-decoration-none">
+                          <i class="ti ti-map-pin me-2 text-muted"></i>
+                          <span id="confirmedAddressText"></span>
                         </a>
+                        <span class="ms-auto text-secondary" style="cursor: pointer;"
+                              id="clearLocationBtn">
+                          <i class="ti ti-x" style="font-size: 18px;"></i>
+                        </span>
                       </div>
 
                       <!-- Hidden fields to store location data -->
@@ -294,48 +452,18 @@
               </div>
             </div>
 
-            <hr class="my-4">
-
-            <!-- ============================================ -->
-            <!-- ADVANCED SETTINGS SECTION                    -->
-            <!-- ============================================ -->
-            <div class="mb-4 pt-3">
-              <h5 class="text-muted mb-3">Advanced Settings</h5>
-              <div class="ps-0">
-
-                    <!-- Activity Target Revenue -->
-                    <div class="mb-3">
-                      <label class="form-label">Activity Target Revenue (Optional)</label>
-                      <div class="input-group" style="max-width: 300px;">
-                        <span class="input-group-text">$</span>
-                        <input type="number"
-                               class="form-control"
-                               name="goal_revenue"
-                               step="0.01"
-                               min="0"
-                               placeholder="0.00"
-                               value="{{ '%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else '' }}">
-                      </div>
-                      <small class="form-hint">
-                        Set a revenue goal to track progress on your activity dashboard
-                      </small>
-                    </div>
-
-              </div>
-            </div>
-
-            <hr class="my-4">
+            <div class="section-divider mt-5 mb-3"></div>
 
             <!-- ============================================ -->
             <!-- PASSPORT TYPES SECTION (Always Visible)      -->
             <!-- ============================================ -->
             <div class="mb-4">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">
-                  <i class="ti ti-id me-2"></i>Passport Types
-                </h4>
+                <h3 class="mb-0">
+                  Passport Types
+                </h3>
                 <button type="button" class="btn btn-primary" id="addPassportTypeBtn" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
-                  <i class="ti ti-plus me-2"></i>Passport Type
+                  <i class="ti ti-plus me-1"></i>Type
                 </button>
               </div>
 
@@ -369,27 +497,15 @@
               </div>
             </div>
 
+            <div class="section-divider mt-5 mb-3"></div>
+
             <!-- ============================================ -->
             <!-- FINANCIAL MANAGEMENT SECTION (Edit Only)     -->
             <!-- ============================================ -->
             {% if activity %}
             <div class="mb-4">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center gap-2">
-                  <h4 class="mb-0">
-                    <i class="ti ti-report-money me-2"></i>Activity Finances
-                  </h4>
-                  <span class="text-muted small">{{ period_display }}</span>
-                  <div class="dropdown">
-                    <button class="btn btn-sm btn-link text-muted dropdown-toggle p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
-                      <i class="ti ti-filter"></i>
-                    </button>
-                    <ul class="dropdown-menu">
-                      <li><a class="dropdown-item {% if current_period == 'fy' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='fy') }}">Fiscal Year</a></li>
-                      <li><a class="dropdown-item {% if current_period == 'all' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='all') }}">All Time</a></li>
-                    </ul>
-                  </div>
-                </div>
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <h3 class="mb-0">Finances</h3>
                 <div class="dropdown">
                   <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     Actions
@@ -406,6 +522,18 @@
                       <i class="ti ti-edit me-2"></i>Edit Financial
                     </a>
                   </div>
+                </div>
+              </div>
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="text-muted small">{{ period_display }}</span>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-link text-muted dropdown-toggle p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-filter"></i>
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item {% if current_period == 'fy' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='fy') }}">Fiscal Year</a></li>
+                    <li><a class="dropdown-item {% if current_period == 'all' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='all') }}">All Time</a></li>
+                  </ul>
                 </div>
               </div>
 
@@ -952,160 +1080,6 @@
 
 {% endblock %}
 
-{% block styles %}
-<style>
-.form-label.required::after {
-  content: " *";
-  color: #d63384;
-}
-
-/* Page header sticky styling */
-.page-header {
-  border-bottom: 1px solid rgba(98, 105, 118, 0.16);
-  margin-bottom: 0;
-}
-
-.card {
-  border: none;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  background-color: #fff !important;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: #0054a6;
-  box-shadow: 0 0 0 0.2rem rgba(0, 84, 166, 0.15);
-}
-
-.btn-primary {
-  background-color: #0054a6;
-  border-color: #0054a6;
-}
-
-.btn-primary:hover {
-  background-color: #004494;
-  border-color: #004494;
-}
-
-/* Section headers */
-.section-header {
-  font-weight: 600;
-  font-size: 1rem;
-  color: #1e293b;
-}
-
-/* Form selectgroup - compact workflow type */
-.form-selectgroup {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.form-selectgroup-item {
-  margin: 0;
-}
-
-.form-selectgroup-label {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  border: 1px solid rgba(98, 105, 118, 0.16);
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
-  font-size: 0.875rem;
-}
-
-.form-selectgroup-label:hover {
-  border-color: #0054a6;
-}
-
-.form-selectgroup-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.form-selectgroup-input:checked + .form-selectgroup-label {
-  border-color: #0054a6;
-  background-color: rgba(0, 84, 166, 0.1);
-  color: #0054a6;
-}
-
-/* Form hint styling */
-.form-hint {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  color: #626976;
-}
-
-/* Passport type table styling */
-#passportTypesTable td {
-  vertical-align: middle;
-}
-
-#passportTypesTable .input-group-flat {
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-}
-
-#passportTypesTable .input-group-flat .form-control {
-  border: 0;
-}
-
-#passportTypesTable .input-group-text {
-  border: 0;
-  background: transparent;
-  padding: 0.25rem 0.5rem;
-}
-
-/* Google Places Autocomplete dropdown fix */
-.pac-container {
-  z-index: 10000 !important;
-}
-
-/* Ghost button for back */
-.btn-ghost-secondary {
-  color: #626976;
-  background: transparent;
-  border: none;
-}
-
-.btn-ghost-secondary:hover {
-  background-color: rgba(98, 105, 118, 0.1);
-  color: #1d2332;
-}
-
-@media (max-width: 768px) {
-  .card-body {
-    padding: 1rem;
-  }
-
-  .modal-dialog {
-    margin: 1rem;
-  }
-
-  .page-header .row {
-    padding: 0.75rem 0 !important;
-  }
-
-  .page-title {
-    font-size: 1rem;
-  }
-
-  .form-selectgroup {
-    flex-direction: column;
-  }
-
-  .form-selectgroup-label {
-    width: 100%;
-    justify-content: center;
-  }
-}
-</style>
-{% endblock %}
-
 {% block scripts %}
 
 {% if google_maps_api_key %}
@@ -1188,11 +1162,12 @@
     document.getElementById('locationAddressFormatted').value = formattedAddress;
     document.getElementById('locationCoordinates').value = coordinates;
 
-    // Show confirmation, hide input group
+    // Show confirmation, hide input group and hint
     document.getElementById('confirmedAddressText').textContent = formattedAddress;
     document.getElementById('viewMapLink').href = 'https://www.google.com/maps?q=' + coordinates;
-    document.getElementById('locationConfirmed').style.display = 'block';
+    document.getElementById('locationConfirmed').style.display = 'flex';
     document.getElementById('locationError').style.display = 'none';
+    document.getElementById('locationHint').style.display = 'none';
 
     // Hide input and lookup button when confirmed
     inputGroup.style.display = 'none';
@@ -1209,10 +1184,11 @@
     document.getElementById('locationAddressFormatted').value = '';
     document.getElementById('locationCoordinates').value = '';
 
-    // Hide confirmation, results, and errors - show input
+    // Hide confirmation, results, and errors - show input and hint
     document.getElementById('locationConfirmed').style.display = 'none';
     document.getElementById('locationError').style.display = 'none';
     document.getElementById('locationResults').style.display = 'none';
+    document.getElementById('locationHint').style.display = 'block';
     inputGroup.style.display = 'flex';
     input.focus();
   }
@@ -2244,9 +2220,10 @@
     {% if activity and activity.location_address_formatted %}
     const inputGroup = document.getElementById('locationAutocomplete').closest('.input-group');
     inputGroup.style.display = 'none';
+    document.getElementById('locationHint').style.display = 'none';
     document.getElementById('confirmedAddressText').textContent = '{{ activity.location_address_formatted }}';
     document.getElementById('viewMapLink').href = 'https://www.google.com/maps?q={{ activity.location_coordinates }}';
-    document.getElementById('locationConfirmed').style.display = 'block';
+    document.getElementById('locationConfirmed').style.display = 'flex';
     {% endif %}
 
     // Load existing passport types
@@ -2293,6 +2270,17 @@
     if (customInstructions) {
       customInstructions.addEventListener('input', updateCustomPreview);
     }
+
+    // Workflow type checkbox mutual exclusion
+    document.querySelectorAll('input[name="workflow_type"]').forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        if (this.checked) {
+          document.querySelectorAll('input[name="workflow_type"]').forEach(function(other) {
+            if (other !== cb) other.checked = false;
+          });
+        }
+      });
+    });
 
   });
 </script>
