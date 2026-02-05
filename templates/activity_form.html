@@ -503,7 +503,7 @@
             <!-- FINANCIAL MANAGEMENT SECTION (Edit Only)     -->
             <!-- ============================================ -->
             {% if activity %}
-            <div class="mb-4">
+            <div class="mb-4" id="finances">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <h3 class="mb-0">Finances</h3>
                 <div class="dropdown">
@@ -531,8 +531,8 @@
                     <i class="ti ti-filter"></i>
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item {% if current_period == 'fy' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='fy') }}">Fiscal Year</a></li>
-                    <li><a class="dropdown-item {% if current_period == 'all' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='all') }}">All Time</a></li>
+                    <li><a class="dropdown-item {% if current_period == 'fy' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='fy') }}#finances">Fiscal Year</a></li>
+                    <li><a class="dropdown-item {% if current_period == 'all' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='all') }}#finances">All Time</a></li>
                   </ul>
                 </div>
               </div>
