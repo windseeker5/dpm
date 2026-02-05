@@ -3277,7 +3277,8 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
 
     # Add payment-first specific context
     if is_payment_first:
-        payment_email = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+        display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+        payment_email = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
 
         # Only require signup code when there's a naming conflict
         # (another unpaid signup with same name AND same amount)
@@ -3309,7 +3310,8 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     }
     # Add payment-first variables if applicable
     if is_payment_first:
-        payment_email = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+        display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+        payment_email = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
 
         # Use the same needs_signup_code value from base_context
         needs_signup_code = base_context.get("needs_signup_code", False)

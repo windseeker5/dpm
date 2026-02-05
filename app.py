@@ -9898,7 +9898,8 @@ def email_preview(activity_id):
         base_context['needs_signup_code'] = True  # Show the signup code section in preview
         base_context['signup_code'] = 'MP-INS-0000001'
         base_context['requested_amount'] = '$50.00'
-        base_context['payment_email'] = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+        display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+        base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
         base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
         # Activity object for location display
         base_context['activity'] = activity
@@ -10177,7 +10178,8 @@ def email_preview_live(activity_id):
         base_context['needs_signup_code'] = True  # Show the signup code section in preview
         base_context['signup_code'] = 'MP-INS-0000001'
         base_context['requested_amount'] = '$50.00'
-        base_context['payment_email'] = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+        display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+        base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
         base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
 
     # Create temporary customizations from form data without saving to database
@@ -10562,7 +10564,8 @@ def test_email_template(activity_id):
             base_context['needs_signup_code'] = True  # Show the signup code section
             base_context['signup_code'] = 'MP-INS-0000001'
             base_context['requested_amount'] = '$25.00'
-            base_context['payment_email'] = get_setting('MAIL_USERNAME', 'paiement@minipass.me')
+            display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+            base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
             base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
 
         # Get merged context with customizations (preserves email blocks)
