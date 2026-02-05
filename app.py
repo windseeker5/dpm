@@ -1714,8 +1714,8 @@ def create_activity():
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
 
-        start_date = datetime.strptime(start_date_raw, "%Y-%m-%d") if start_date_raw else None
-        end_date = datetime.strptime(end_date_raw, "%Y-%m-%d") if end_date_raw else None
+        start_date = datetime.strptime(start_date_raw, "%Y-%m-%dT%H:%M") if start_date_raw else None
+        end_date = datetime.strptime(end_date_raw, "%Y-%m-%dT%H:%M") if end_date_raw else None
 
         name = request.form.get("name", "").strip()
         activity_type = request.form.get("type", "").strip()
@@ -1974,8 +1974,8 @@ def edit_activity(activity_id):
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
 
-        activity.start_date = datetime.strptime(start_date_raw, "%Y-%m-%d") if start_date_raw else None
-        activity.end_date = datetime.strptime(end_date_raw, "%Y-%m-%d") if end_date_raw else None
+        activity.start_date = datetime.strptime(start_date_raw, "%Y-%m-%dT%H:%M") if start_date_raw else None
+        activity.end_date = datetime.strptime(end_date_raw, "%Y-%m-%dT%H:%M") if end_date_raw else None
 
         uploaded_file = request.files.get('upload_image')
         selected_image_filename = request.form.get("selected_image_filename", "").strip()
@@ -5956,12 +5956,12 @@ def activity_form(activity_id=None):
 
         # Dates
         try:
-            activity.start_date = datetime.strptime(request.form.get("start_date"), "%Y-%m-%d")
+            activity.start_date = datetime.strptime(request.form.get("start_date"), "%Y-%m-%dT%H:%M")
         except:
             activity.start_date = None
 
         try:
-            activity.end_date = datetime.strptime(request.form.get("end_date"), "%Y-%m-%d")
+            activity.end_date = datetime.strptime(request.form.get("end_date"), "%Y-%m-%dT%H:%M")
         except:
             activity.end_date = None
 
