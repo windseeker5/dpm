@@ -733,16 +733,6 @@
       overflow: hidden;
     }
 
-    /* Custom payment instructions */
-    .custom-payment-info {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-      white-space: pre-wrap;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
   </style>
 </head>
 
@@ -830,10 +820,6 @@
             {% endif %}
           </div>
 
-          {% if selected_passport_type and selected_passport_type.use_custom_payment_instructions and selected_passport_type.payment_instructions %}
-          <!-- Custom Payment Instructions Mode -->
-          <div class="custom-payment-info">{{ selected_passport_type.payment_instructions }}</div>
-          {% else %}
           <!-- Standard Info Grid -->
           <div class="info-grid-card d-block d-md-none">
             <div class="info-grid">
@@ -961,7 +947,6 @@
               {% endif %}
             </div>
           </div>
-          {% endif %}
 
           <!-- Remaining Capacity Alert (if not shown in grid) -->
           {% if activity.show_remaining_quantity and remaining_capacity is not none and remaining_capacity <= 10 %}
