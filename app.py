@@ -9,6 +9,8 @@ import hashlib
 import bcrypt
 import stripe
 import qrcode
+import secrets
+import string
 import subprocess
 import logging
 import traceback
@@ -3238,9 +3240,7 @@ def setup():
 
             existing = Admin.query.filter_by(email=email).first()
             if existing:
-                # Update existing admin
-                if password and password != "********":
-                    existing.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+                # Update existing admin (passwords managed via /change-password and /reset-admin-password)
                 # Update names (allow empty values for backward compatibility)
                 existing.first_name = first_name if first_name else None
                 existing.last_name = last_name if last_name else None
@@ -4079,6 +4079,66 @@ def calculate_activity_survey_rating(activity_id):
     except Exception as e:
         print(f"Error calculating survey rating for activity {activity_id}: {e}")
         return None, 0
+
+
+@app.route("/change-password", methods=["POST"])
+def change_password():
+    if "admin" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid request"}), 400
+
+    current_password = data.get("current_password", "")
+    new_password = data.get("new_password", "")
+
+    if not current_password or not new_password:
+        return jsonify({"error": "Both current and new password are required"}), 400
+
+    if len(new_password) < 8:
+        return jsonify({"error": "New password must be at least 8 characters"}), 400
+
+    admin = Admin.query.filter_by(email=session["admin"]).first()
+    if not admin:
+        return jsonify({"error": "Admin not found"}), 404
+
+    stored_hash = admin.password_hash
+    if isinstance(stored_hash, bytes):
+        stored_hash = stored_hash.decode()
+
+    if not bcrypt.checkpw(current_password.encode(), stored_hash.encode()):
+        return jsonify({"error": "Current password is incorrect"}), 403
+
+    admin.password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Password changed successfully"})
+
+
+@app.route("/reset-admin-password/<int:admin_id>", methods=["POST"])
+def reset_admin_password(admin_id):
+    if "admin" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    current_admin = Admin.query.filter_by(email=session["admin"]).first()
+    if not current_admin:
+        return jsonify({"error": "Admin not found"}), 404
+
+    target_admin = Admin.query.get(admin_id)
+    if not target_admin:
+        return jsonify({"error": "Target admin not found"}), 404
+
+    if target_admin.id == current_admin.id:
+        return jsonify({"error": "Use Change Password for your own account"}), 400
+
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+
+    target_admin.password_hash = bcrypt.hashpw(temp_password.encode(), bcrypt.gensalt()).decode()
+    db.session.commit()
+
+    return jsonify({"success": True, "temp_password": temp_password})
 
 
 @app.route("/login", methods=["GET", "POST"])
