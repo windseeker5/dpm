@@ -397,7 +397,7 @@
                 </a>
                 <div class="card-body">
                   <div class="mb-2">
-                    <h3 class="card-title mb-0">{{ activity.name }}</h3>
+                    <h3 class="card-title mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 3em;">{{ activity.name }}</h3>
                   </div>
                   <div class="d-flex gap-2 flex-wrap mb-3">
                     <span class="badge bg-green-lt">{{ activity.active_passports }} active</span>
@@ -412,7 +412,7 @@
             <!-- Add Activity Placeholder - Skeleton design with clickable card -->
             <div class="col-md-3 mb-3 d-none d-md-block">
               <a href="{{ url_for('create_activity') }}" style="text-decoration: none;">
-                <div class="card" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; height: 276.84px; cursor: pointer;">
+                <div class="card" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; cursor: pointer;">
                   <!-- Placeholder Image with large plus icon -->
                   <div class="img-responsive img-responsive-21x9 card-img-top"
                        style="background-color: #f1f5f9; position: relative;">
@@ -421,7 +421,9 @@
                   <div class="card-body" style="background-color: #f1f5f9;">
                     <div class="mb-2">
                       <!-- Title placeholder - grey rectangle -->
-                      <div style="background-color: #e2e8f0; height: 24px; width: 120px; border-radius: 4px;"></div>
+                      <div style="min-height: 3em;">
+                        <div style="background-color: #e2e8f0; height: 24px; width: 120px; border-radius: 4px;"></div>
+                      </div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap mb-3">
                       <!-- Invisible badges using exact same classes and text length to maintain height -->
@@ -461,7 +463,7 @@
                 </a>
                 <div class="card-body">
                   <div class="mb-2">
-                    <h3 class="card-title mb-0">{{ activity.name }}</h3>
+                    <h3 class="card-title mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 3em;">{{ activity.name }}</h3>
                   </div>
                   <div class="d-flex gap-2 flex-wrap mb-3">
                     <span class="badge bg-green-lt">{{ activity.active_passports }} active</span>
