@@ -65,10 +65,16 @@
                 <!-- Mini Owner Card -->
                 <div class="mini-owner-card mb-1">
                   <div class="d-flex align-items-center gap-1">
+                    {% if has_custom_owner_logo %}
                     <img src="{{ url_for('static', filename='uploads/' + activity.id|string + '_owner_logo.png') }}"
                          alt="Logo"
                          class="mini-logo"
                          onerror="this.src='{{ url_for('static', filename='uploads/' + org_logo_filename) }}';">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='uploads/' + org_logo_filename) }}"
+                         alt="Logo"
+                         class="mini-logo">
+                    {% endif %}
                     <div class="flex-grow-1">
                       <div class="placeholder col-12 mb-0"></div>
                       <div class="placeholder col-8 mb-0"></div>
@@ -406,12 +412,18 @@
         <label class="form-label">Owner Card Logo</label>
         <div class="d-flex align-items-center gap-2">
           <div class="current-logo-preview" id="modal-owner-logo-preview-{{ template_key }}">
-            {% set owner_logo_filename = activity.id|string + '_owner_logo.png' %}
+            {% if has_custom_owner_logo %}
             <img id="modal-owner-img-preview-{{ template_key }}"
-                 src="{{ url_for('static', filename='uploads/' + owner_logo_filename) }}"
+                 src="{{ url_for('static', filename='uploads/' + activity.id|string + '_owner_logo.png') }}"
                  alt="Current owner logo"
                  style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;"
                  onerror="this.src='{{ url_for('static', filename='uploads/' + org_logo_filename) }}';">
+            {% else %}
+            <img id="modal-owner-img-preview-{{ template_key }}"
+                 src="{{ url_for('static', filename='uploads/' + org_logo_filename) }}"
+                 alt="Current owner logo"
+                 style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">
+            {% endif %}
           </div>
           <div class="flex-fill">
             <input type="file" 

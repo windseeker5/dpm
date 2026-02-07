@@ -18,12 +18,12 @@
   <![endif]-->
 
   <style type="text/css">
-    /* Mobile-first CSS with fallbacks */
+    /* V5: Mobile-first CSS with improved margins */
     @media only screen and (max-width: 600px) {
       .main-table {
         width: 100% !important;
         min-width: 320px !important;
-        margin: 20px auto !important;
+        margin: 16px auto !important;
       }
       .container {
         width: 100% !important;
@@ -33,37 +33,40 @@
       .hero-image {
         width: 100% !important;
         height: auto !important;
-        max-width: 100% !important;
+        max-width: 156px !important;
       }
+      /* V5: Reduced mobile margins from 75px to 16px */
       .content-padding {
-        padding: 20px 20px 24px 20px !important;
+        padding: 0 16px 20px 16px !important;
       }
       .intro-padding {
-        padding: 20px 20px 24px 20px !important;
+        padding: 16px 16px 20px 16px !important;
       }
       .conclusion-padding {
-        padding: 0 20px 30px 20px !important;
+        padding: 0 16px 24px 16px !important;
       }
       .footer-table {
         width: 100% !important;
-        padding: 0 20px !important;
+        padding: 0 16px !important;
       }
       .footer-text {
-        padding: 0 20px 20px 20px !important;
+        padding: 0 16px 16px 16px !important;
         font-size: 12px !important;
       }
+      /* V5: Larger mobile font sizes */
       .mobile-font-size {
         font-size: 16px !important;
+        line-height: 1.6 !important;
       }
       .mobile-title {
-        font-size: 22px !important;
-        padding-bottom: 20px !important;
+        font-size: 24px !important;
+        padding-bottom: 16px !important;
       }
     }
 
     @media only screen and (max-width: 480px) {
       .hero-container {
-        padding: 0 !important;
+        padding: 24px 0 16px 0 !important;
       }
     }
   </style>
@@ -76,7 +79,7 @@
   </style>
   <![endif]-->
 </head>
-<body style="margin:0; padding:0; background-color:#f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #4b5563; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
+<body style="margin:0; padding:0; background-color:#f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; color: #4b5563; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f6fa; min-width: 100%;">
     <tr>
       <td align="center" style="padding: 0;">
@@ -87,7 +90,7 @@
           <!-- Hero Image Section -->
           <tr>
             <td class="hero-container" align="center" style="padding: 40px 0 20px; line-height: 0;">
-              <img class="hero-image" src="cid:good-news" alt="Good News" width="117" style="display: block; width: 117px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
+              <img class="hero-image" src="cid:good-news" alt="Good News" width="152" style="display: block; width: 152px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
             </td>
           </tr>
 
@@ -100,19 +103,58 @@
           </tr>
           {% endif %}
 
-          <!-- Intro Text -->
+          <!-- Intro Text - V5: Updated padding and font size -->
           {% if intro_text %}
           <tr>
-            <td class="intro-padding mobile-font-size" style="padding: 30px 75px 32px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
+            <td class="intro-padding mobile-font-size" style="padding: 16px 40px 24px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">
               {{ intro_text | safe }}
             </td>
           </tr>
           {% endif %}
 
-          <!-- Conclusion Text -->
+          <!-- Payment Instructions Block (layout owned by template) -->
+          <tr>
+            <td class="conclusion-padding mobile-font-size" style="padding: 0 40px 20px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">
+              <p><strong>Instructions de paiement :</strong></p>
+
+              <!-- Interac Payment Card -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; margin: 0 0 20px 0;">
+                <tr>
+                  <td style="padding: 16px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align: middle; padding-right: 16px;">
+                          <img src="cid:interac_logo" alt="Interac" width="40" style="display: block; border-radius: 6px;">
+                        </td>
+                        <td style="vertical-align: middle; color: #475569;">
+                          <div style="margin-bottom: 4px;">Montant à transférer : <strong style="color: #1e293b;">{{ requested_amount }}</strong></div>
+                          <div>Email à envoyer : <strong style="color: #1e293b;">{{ payment_email }}</strong></div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Code Warning Box (conditional) -->
+              {% if needs_signup_code %}
+              <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 20px; margin: 0 0 20px 0; border-radius: 8px;">
+                <p style="margin: 0 0 10px 0; font-weight: bold; color: #856404;">⚠️ CODE OBLIGATOIRE</p>
+                <p style="font-family: monospace; font-size: 20px; background: white; padding: 12px; border-radius: 4px; margin: 0 0 15px 0; text-align: center; border: 1px solid #ddd;"><strong>{{ signup_code }}</strong></p>
+                <p style="margin: 0 0 10px 0; color: #856404;">Incluez ce code dans le <strong>« Message au destinataire »</strong> de votre virement Interac.</p>
+                <p style="margin: 0; padding: 10px; background: #ffe69c; border-radius: 4px; font-size: 14px; color: #664d03;">⚠️ <strong>Ce n'est PAS la question de sécurité Interac.</strong><br>C'est le champ optionnel « Message au destinataire ».</p>
+                <p style="margin: 15px 0 0 0; font-size: 13px; color: #856404;"><em>Pourquoi ce code ? Une autre inscription avec le même nom et montant existe.</em></p>
+              </div>
+              {% else %}
+              <p style="color: #666; font-size: 14px; font-style: italic; margin: 0 0 20px 0;">Votre nom sera automatiquement associé à votre paiement.</p>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- Conclusion Text - Simple text from JSON -->
           {% if conclusion_text %}
           <tr>
-            <td class="conclusion-padding mobile-font-size" style="padding: 0 75px 50px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
+            <td class="conclusion-padding mobile-font-size" style="padding: 0 40px 40px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">
               {{ conclusion_text | safe }}
             </td>
           </tr>

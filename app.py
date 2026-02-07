@@ -1795,31 +1795,20 @@ def create_activity():
         try:
             # Define source paths for default images
             default_hero_path = os.path.join("static", "uploads", "defaults", "default_hero.png")
-            
-            # Use organization logo from settings as the default owner logo
-            from utils import get_setting
-            org_logo_filename = get_setting('LOGO_FILENAME', 'flhgi.png')  # Use org logo, not Minipass
-            org_logo_path = os.path.join("static", "uploads", org_logo_filename)
-            
+
             # Define target paths with activity ID
             activity_hero_path = os.path.join("static", "uploads", f"{new_activity.id}_hero.png")
-            activity_logo_path = os.path.join("static", "uploads", f"{new_activity.id}_owner_logo.png")
-            
-            # Copy default images if they exist
+
+            # Copy default hero image if it exists
             if os.path.exists(default_hero_path):
                 shutil.copy(default_hero_path, activity_hero_path)
-            if os.path.exists(org_logo_path):
-                shutil.copy(org_logo_path, activity_logo_path)
-            elif os.path.exists(os.path.join("static", "uploads", "flhgi.png")):
-                # Fallback to FLHGI logo if org logo not found
-                shutil.copy(os.path.join("static", "uploads", "flhgi.png"), activity_logo_path)
-            
+
             # Update email templates to reference the copied images
+            # Note: owner logo is NOT snapshot-copied; emails resolve it from org settings at send time
             updated_templates = new_activity.email_templates.copy()
             for template_type in updated_templates:
                 if isinstance(updated_templates[template_type], dict):
                     updated_templates[template_type]['hero_image'] = f"{new_activity.id}_hero.png"
-                    updated_templates[template_type]['activity_logo'] = f"{new_activity.id}_owner_logo.png"
             
             # Update the activity with the modified templates
             new_activity.email_templates = updated_templates
@@ -3385,6 +3374,11 @@ def setup():
 
             flash("Logo uploaded successfully!", "success")
 
+            # Propagate new org logo to all existing activity owner_logo snapshots
+            for act in Activity.query.all():
+                snapshot = os.path.join(app.config["UPLOAD_FOLDER"], f"{act.id}_owner_logo.png")
+                if os.path.exists(snapshot):
+                    shutil.copy(logo_path, snapshot)
 
         db.session.commit()
         print("[SETUP] Admins configured:", admin_emails)
@@ -3586,7 +3580,13 @@ def unified_settings():
                     setting.value = filename
                 else:
                     db.session.add(Setting(key="LOGO_FILENAME", value=filename))
-            
+
+                # Propagate new org logo to all existing activity owner_logo snapshots
+                for act in Activity.query.all():
+                    snapshot = os.path.join(app.config["UPLOAD_FOLDER"], f"{act.id}_owner_logo.png")
+                    if os.path.exists(snapshot):
+                        shutil.copy(logo_path, snapshot)
+
             # Step 3: Email Settings
             email_settings = {
                 "MAIL_SERVER": request.form.get("mail_server", "").strip(),
@@ -9494,11 +9494,20 @@ def email_template_customization(activity_id):
     # Get organization logo filename for fallback
     org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
 
+    # Check if user has explicitly uploaded a custom owner logo via the template editor
+    has_custom_owner_logo = False
+    if activity.email_templates:
+        for tpl_data in activity.email_templates.values():
+            if isinstance(tpl_data, dict) and tpl_data.get('activity_logo'):
+                has_custom_owner_logo = True
+                break
+
     return render_template("email_template_customization.html",
                          activity=activity,
                          template_types=template_types,
                          current_templates=templates_with_defaults,
-                         org_logo_filename=org_logo_filename)
+                         org_logo_filename=org_logo_filename,
+                         has_custom_owner_logo=has_custom_owner_logo)
 
 
 # Removed obsolete thumbnail generation route - now using Tabler placeholders instead
@@ -10009,17 +10018,19 @@ def email_preview(activity_id):
                     data_uri = f'data:image/png;base64,{hero_base64}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
                     print(f"EMAIL TEMPLATE: Replaced {cid_ref} with CUSTOM HERO image")
-        
-        # Add logo image as data URI
+
+        # Add logo image as data URI (same resolution as email send in utils.py)
         logo_path = None
-        if hasattr(activity, 'logo_filename') and activity.logo_filename:
-            logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
-        if not logo_path or not os.path.exists(logo_path):
-            # Use organization logo from settings as fallback instead of hardcoded Minipass logo
+        # Check for activity-specific owner logo first (custom upload via template editor)
+        activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
+        if os.path.exists(activity_logo_path):
+            logo_path = activity_logo_path
+        if not logo_path:
+            # Use organization logo from settings as fallback
             from utils import get_setting
             org_logo = get_setting('LOGO_FILENAME', 'logo.png')
             logo_path = os.path.join('static', 'uploads', org_logo)
-        
+
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 logo_base64 = base64.b64encode(f.read()).decode('utf-8')
@@ -10312,17 +10323,19 @@ def email_preview_live(activity_id):
                     data_uri = f'data:image/png;base64,{hero_base64}'
                     rendered_html = rendered_html.replace(cid_ref, data_uri)
                     print(f"EMAIL LIVE PREVIEW: Replaced {cid_ref} with SAVED CUSTOM HERO image")
-        
-        # Add logo image as data URI
+
+        # Add logo image as data URI (same resolution as email send in utils.py)
         logo_path = None
-        if hasattr(activity, 'logo_filename') and activity.logo_filename:
-            logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
-        if not logo_path or not os.path.exists(logo_path):
-            # Use organization logo from settings as fallback instead of hardcoded Minipass logo
+        # Check for activity-specific owner logo first (custom upload via template editor)
+        activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
+        if os.path.exists(activity_logo_path):
+            logo_path = activity_logo_path
+        if not logo_path:
+            # Use organization logo from settings as fallback
             from utils import get_setting
             org_logo = get_setting('LOGO_FILENAME', 'logo.png')
             logo_path = os.path.join('static', 'uploads', org_logo)
-        
+
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 logo_base64 = base64.b64encode(f.read()).decode('utf-8')
@@ -10617,12 +10630,14 @@ def test_email_template(activity_id):
                     except Exception as e:
                         print(f"   ⚠️ Failed to decode image {img_id}: {e}")
         
-        # Add logo image from activity or organization settings (not hardcoded Minipass logo)
+        # Add logo image (same resolution as email send in utils.py)
         logo_path = None
-        if hasattr(activity, 'logo_filename') and activity.logo_filename:
-            logo_path = os.path.join('static', 'uploads', 'logos', activity.logo_filename)
-        if not logo_path or not os.path.exists(logo_path):
-            # Use organization logo from settings as fallback instead of hardcoded Minipass logo
+        # Check for activity-specific owner logo first (custom upload via template editor)
+        activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
+        if os.path.exists(activity_logo_path):
+            logo_path = activity_logo_path
+        if not logo_path:
+            # Use organization logo from settings as fallback
             org_logo = get_setting('LOGO_FILENAME', 'logo.png')
             logo_path = os.path.join('static', 'uploads', org_logo)
         if not os.path.exists(logo_path):
@@ -10631,9 +10646,6 @@ def test_email_template(activity_id):
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 logo_data = f.read()
-                # owner_card_inline.html uses cid:logo, main templates use cid:logo_image
-                # We need both CIDs but this creates duplicate attachments
-                # Only use 'logo' since that's what the owner card uses
                 inline_images['logo'] = logo_data
                 print(f"   Added logo: {logo_path} ({len(logo_data)} bytes)")
         
