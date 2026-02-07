@@ -10,8 +10,8 @@
         <img src="{{ url_for('static', filename='uploads/activity_images/' + (signup.activity.image_filename or signup.activity.logo_filename)) }}"
              class="rounded me-3 user-avatar d-md-none" alt="{{ signup.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
       {% else %}
-        <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
-          {{ signup.activity.name[0] if signup.activity and signup.activity.name else 'A' }}
+        <div class="rounded me-3 d-md-none d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #fff; background: {{ placeholder_color(signup.activity.name if signup.activity else 'Activity') }};">
+          {{ placeholder_letter(signup.activity.name if signup.activity else 'Activity') }}
         </div>
       {% endif %}
       <div>

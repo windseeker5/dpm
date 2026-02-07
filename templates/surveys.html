@@ -198,8 +198,8 @@
                 {% if survey.activity and survey.activity.image_filename %}
                 <div class="avatar avatar-md me-3" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + survey.activity.image_filename) }}); background-size: cover; background-position: center; border-radius: 8px;"></div>
                 {% else %}
-                <div class="avatar avatar-md me-3" style="background-color: #e0e0e0; border-radius: 8px;">
-                  <i class="ti ti-clipboard-check text-muted"></i>
+                <div class="avatar avatar-md me-3 d-flex align-items-center justify-content-center" style="background: {{ placeholder_color(survey.activity.name if survey.activity else survey.name) }}; border-radius: 8px; color: #fff; font-weight: 700;">
+                  {{ placeholder_letter(survey.activity.name if survey.activity else survey.name) }}
                 </div>
                 {% endif %}
                 <div>

@@ -738,10 +738,16 @@
 
 <body>
   <!-- Mobile Hero Banner (visible only on mobile) -->
-  <div class="mobile-hero" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else '' }}');">
+  <div class="mobile-hero" style="{% if activity.image_filename %}background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');{% else %}background: {{ placeholder_css(activity.name) }};{% endif %}">
     {% if settings and settings["LOGO_FILENAME"] %}
     <div class="mobile-hero-logo">
       <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo">
+    </div>
+    {% else %}
+    <div class="mobile-hero-logo">
+      <div style="width: 80px; height: 80px; border-radius: 12px; background: {{ placeholder_color(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}; color: #fff; font-weight: 700; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">
+        {{ placeholder_letter(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}
+      </div>
     </div>
     {% endif %}
     <div class="mobile-hero-content">
@@ -761,6 +767,12 @@
         {% if settings and settings["LOGO_FILENAME"] %}
         <div class="form-logo">
           <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo">
+        </div>
+        {% else %}
+        <div class="form-logo">
+          <div style="width: 120px; height: 120px; border-radius: 12px; background: {{ placeholder_color(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}; color: #fff; font-weight: 700; font-size: 3rem; display: inline-flex; align-items: center; justify-content: center;">
+            {{ placeholder_letter(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}
+          </div>
         </div>
         {% endif %}
 
@@ -1082,7 +1094,13 @@
     </div>
 
     <!-- Right Side: Image (Desktop only) -->
-    <div class="signup-image-side" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else '' }}');"></div>
+    {% if activity.image_filename %}
+    <div class="signup-image-side" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');"></div>
+    {% else %}
+    <div class="signup-image-side" style="background: {{ placeholder_css(activity.name) }}; display: flex; align-items: center; justify-content: center;">
+      <span style="font-size: 8rem; font-weight: 700; color: rgba(255,255,255,0.15);">{{ placeholder_letter(activity.name) }}</span>
+    </div>
+    {% endif %}
   </div>
 
 <script>

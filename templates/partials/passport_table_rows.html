@@ -10,8 +10,8 @@
         <img src="{{ url_for('static', filename='uploads/activity_images/' + (passport.activity.image_filename or passport.activity.logo_filename)) }}"
              class="rounded-circle me-3 user-avatar d-md-none" alt="{{ passport.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
       {% else %}
-        <div class="rounded-circle me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
-          {{ passport.activity.name[0] if passport.activity and passport.activity.name else 'A' }}
+        <div class="rounded-circle me-3 d-md-none d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #fff; background: {{ placeholder_color(passport.activity.name if passport.activity else 'Activity') }};">
+          {{ placeholder_letter(passport.activity.name if passport.activity else 'Activity') }}
         </div>
       {% endif %}
       <div>

@@ -105,10 +105,14 @@
 <body>
 <div class="thank-you-wrapper">
   <!-- Organization Logo (optional) -->
-  {% if activity.organization and activity.organization.logo_filename %}
-  <img src="{{ url_for('static', filename='uploads/org_logos/' + activity.organization.logo_filename) }}"
-       alt="{{ activity.organization.name }}"
+  {% if settings.get('LOGO_FILENAME') %}
+  <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+       alt="{{ settings.get('ORG_NAME', 'Organization') }}"
        class="organization-logo">
+  {% else %}
+  <div class="organization-logo d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 10px; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700; font-size: 1.25rem; margin: 0 auto 2rem;">
+    {{ placeholder_letter(settings.get('ORG_NAME', activity.name)) }}
+  </div>
   {% endif %}
 
   <!-- Success Icon -->

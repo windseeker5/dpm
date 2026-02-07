@@ -628,6 +628,8 @@ def inject_globals_and_csrf():
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
+    from utils import get_placeholder_css, get_placeholder_letter, get_placeholder_color
+
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
@@ -638,7 +640,10 @@ def inject_globals_and_csrf():
         'unmatched_payment_count': unmatched_payment_count,
         'current_admin': current_admin,  # Add current admin for template personalization
         'subscription': subscription_info,  # Subscription tier info
-        'payment_email': payment_email  # For displaying payment instructions (uses display email if set)
+        'payment_email': payment_email,  # For displaying payment instructions (uses display email if set)
+        'placeholder_css': get_placeholder_css,
+        'placeholder_letter': get_placeholder_letter,
+        'placeholder_color': get_placeholder_color,
     }
 
 
@@ -3565,10 +3570,24 @@ def unified_settings():
                 else:
                     db.session.add(Setting(key=key, value=value))
             
-            # Step 2: Logo Upload
+            # Step 2: Logo Upload / Delete
             logo_filename = None  # Track uploaded logo for response
+            delete_logo = request.form.get("delete_logo") == "1"
+            if delete_logo:
+                logo_setting = Setting.query.filter_by(key="LOGO_FILENAME").first()
+                if logo_setting and logo_setting.value:
+                    old_logo_path = os.path.join(app.config["UPLOAD_FOLDER"], logo_setting.value)
+                    if os.path.exists(old_logo_path):
+                        os.remove(old_logo_path)
+                    logo_setting.value = ""
+                # Clean up activity owner_logo snapshots so they regenerate
+                for act in Activity.query.all():
+                    snapshot = os.path.join(app.config["UPLOAD_FOLDER"], f"{act.id}_owner_logo.png")
+                    if os.path.exists(snapshot):
+                        os.remove(snapshot)
+
             logo_file = request.files.get("ORG_LOGO_FILE")
-            if logo_file and logo_file.filename:
+            if logo_file and logo_file.filename and not delete_logo:
                 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
                 filename = secure_filename(logo_file.filename)
                 logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
@@ -9494,6 +9513,21 @@ def email_template_customization(activity_id):
     # Get organization logo filename for fallback
     org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
 
+    # Check if the org logo file actually exists on disk
+    org_logo_path = os.path.join('static', 'uploads', org_logo_filename) if org_logo_filename else ''
+    org_logo_exists = bool(org_logo_filename) and os.path.exists(org_logo_path)
+
+    # Generate placeholder data URI for template if no real logo
+    placeholder_logo_data_uri = None
+    if not org_logo_exists:
+        try:
+            org_name = get_setting('ORG_NAME', 'Minipass')
+            from utils import generate_placeholder_logo_image
+            buf = generate_placeholder_logo_image(org_name, size=120)
+            placeholder_logo_data_uri = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('utf-8')
+        except Exception:
+            pass
+
     # Check if user has explicitly uploaded a custom owner logo via the template editor
     has_custom_owner_logo = False
     if activity.email_templates:
@@ -9507,6 +9541,8 @@ def email_template_customization(activity_id):
                          template_types=template_types,
                          current_templates=templates_with_defaults,
                          org_logo_filename=org_logo_filename,
+                         org_logo_exists=org_logo_exists,
+                         placeholder_logo_data_uri=placeholder_logo_data_uri,
                          has_custom_owner_logo=has_custom_owner_logo)
 
 
@@ -10031,12 +10067,22 @@ def email_preview(activity_id):
             org_logo = get_setting('LOGO_FILENAME', 'logo.png')
             logo_path = os.path.join('static', 'uploads', org_logo)
 
-        if os.path.exists(logo_path):
+        if logo_path and os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 logo_base64 = base64.b64encode(f.read()).decode('utf-8')
-                # Replace both logo and logo_image references
                 rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
                 rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
+        else:
+            # Generate placeholder logo when no real logo exists
+            from utils import generate_placeholder_logo_image
+            org_name = get_setting('ORG_NAME', 'Minipass')
+            try:
+                placeholder_buf = generate_placeholder_logo_image(org_name)
+                logo_base64 = base64.b64encode(placeholder_buf.read()).decode('utf-8')
+                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
+                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
+            except Exception:
+                pass
 
 
         # Generate sample QR code for preview (only if enabled)
@@ -10336,13 +10382,23 @@ def email_preview_live(activity_id):
             org_logo = get_setting('LOGO_FILENAME', 'logo.png')
             logo_path = os.path.join('static', 'uploads', org_logo)
 
-        if os.path.exists(logo_path):
+        if logo_path and os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 logo_base64 = base64.b64encode(f.read()).decode('utf-8')
-                # Replace both logo and logo_image references
                 rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
                 rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
-        
+        else:
+            # Generate placeholder logo when no real logo exists
+            from utils import generate_placeholder_logo_image
+            org_name = get_setting('ORG_NAME', 'Minipass')
+            try:
+                placeholder_buf = generate_placeholder_logo_image(org_name)
+                logo_base64 = base64.b64encode(placeholder_buf.read()).decode('utf-8')
+                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
+                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
+            except Exception:
+                pass
+
         # The uploaded hero image is now handled above in the main image processing loop
         # This ensures it works with auto-detected CID references
 
@@ -10640,10 +10696,18 @@ def test_email_template(activity_id):
             # Use organization logo from settings as fallback
             org_logo = get_setting('LOGO_FILENAME', 'logo.png')
             logo_path = os.path.join('static', 'uploads', org_logo)
-        if not os.path.exists(logo_path):
-            # Final fallback to minipass logo if org logo doesn't exist
-            logo_path = 'static/minipass_logo.png'
-        if os.path.exists(logo_path):
+        if not logo_path or not os.path.exists(logo_path):
+            # Try placeholder before minipass fallback
+            from utils import generate_placeholder_logo_image
+            org_name = get_setting('ORG_NAME', 'Minipass')
+            try:
+                placeholder_buf = generate_placeholder_logo_image(org_name)
+                inline_images['logo'] = placeholder_buf.read()
+                logo_path = None  # Skip file-based loading below
+                print(f"   Added placeholder logo for '{org_name}'")
+            except Exception:
+                logo_path = 'static/minipass_logo.png'
+        if logo_path and os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 logo_data = f.read()
                 inline_images['logo'] = logo_data

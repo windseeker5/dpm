@@ -70,10 +70,14 @@
                          alt="Logo"
                          class="mini-logo"
                          onerror="this.src='{{ url_for('static', filename='uploads/' + org_logo_filename) }}';">
-                    {% else %}
+                    {% elif org_logo_exists %}
                     <img src="{{ url_for('static', filename='uploads/' + org_logo_filename) }}"
                          alt="Logo"
                          class="mini-logo">
+                    {% elif placeholder_logo_data_uri %}
+                    <img src="{{ placeholder_logo_data_uri }}" alt="Logo" class="mini-logo">
+                    {% else %}
+                    <div style="width: 16px; height: 16px; border-radius: 2px; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700; font-size: 0.5rem; display: inline-flex; align-items: center; justify-content: center;">{{ placeholder_letter(activity.name) }}</div>
                     {% endif %}
                     <div class="flex-grow-1">
                       <div class="placeholder col-12 mb-0"></div>
@@ -417,12 +421,22 @@
                  src="{{ url_for('static', filename='uploads/' + activity.id|string + '_owner_logo.png') }}"
                  alt="Current owner logo"
                  style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;"
-                 onerror="this.src='{{ url_for('static', filename='uploads/' + org_logo_filename) }}';">
-            {% else %}
+                 onerror="this.src='{{ placeholder_logo_data_uri or url_for('static', filename='uploads/' + org_logo_filename) }}';">
+            {% elif org_logo_exists %}
             <img id="modal-owner-img-preview-{{ template_key }}"
                  src="{{ url_for('static', filename='uploads/' + org_logo_filename) }}"
                  alt="Current owner logo"
                  style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">
+            {% elif placeholder_logo_data_uri %}
+            <img id="modal-owner-img-preview-{{ template_key }}"
+                 src="{{ placeholder_logo_data_uri }}"
+                 alt="Organization placeholder logo"
+                 style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">
+            {% else %}
+            <div id="modal-owner-img-preview-{{ template_key }}"
+                 style="width: 60px; height: 60px; border-radius: 6px; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;">
+              {{ placeholder_letter(activity.name) }}
+            </div>
             {% endif %}
           </div>
           <div class="flex-fill">

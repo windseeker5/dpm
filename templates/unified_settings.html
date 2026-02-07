@@ -45,13 +45,25 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Upload Logo</label>
-              <div class="mb-2">
-                <img id="logo-preview" 
-                     src="{{ url_for('static', filename='uploads/' ~ settings.LOGO_FILENAME) if settings.LOGO_FILENAME else '' }}" 
-                     alt="Logo Preview"
-                     style="max-height: 80px; display: {{ 'block' if settings.LOGO_FILENAME else 'none' }};">
+              <label class="form-label">Organization Logo</label>
+              <div class="position-relative d-inline-block mb-2" id="logoWrapper">
+                {% if settings.get('LOGO_FILENAME') %}
+                  <img id="logo-preview"
+                       src="{{ url_for('static', filename='uploads/' ~ settings.LOGO_FILENAME) }}"
+                       class="rounded" style="width: 80px; height: 80px; object-fit: contain; background: #f8f9fa;">
+                  <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
+                        style="cursor: pointer;" id="deleteLogoBtn">
+                    <i class="ti ti-x text-white" style="font-size: 14px;"></i>
+                  </span>
+                {% else %}
+                  <div id="logo-preview" class="rounded bg-secondary-lt d-flex flex-column align-items-center justify-content-center"
+                       style="width: 80px; height: 80px;">
+                    <i class="ti ti-photo text-muted fs-2"></i>
+                    <small class="text-muted">No logo</small>
+                  </div>
+                {% endif %}
               </div>
+              <input type="hidden" name="delete_logo" id="deleteLogoFlag" value="">
               <input type="file" name="ORG_LOGO_FILE" class="form-control" accept="image/*" id="logo-file-input">
             </div>
           </div>
