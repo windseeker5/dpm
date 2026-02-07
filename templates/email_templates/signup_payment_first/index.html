@@ -112,7 +112,46 @@
           </tr>
           {% endif %}
 
-          <!-- Conclusion Text - V5: Updated padding and font size -->
+          <!-- Payment Instructions Block (layout owned by template) -->
+          <tr>
+            <td class="conclusion-padding mobile-font-size" style="padding: 0 40px 20px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">
+              <p><strong>Instructions de paiement :</strong></p>
+
+              <!-- Interac Payment Card -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; margin: 0 0 20px 0;">
+                <tr>
+                  <td style="padding: 16px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align: middle; padding-right: 16px;">
+                          <img src="cid:interac_logo" alt="Interac" width="40" style="display: block; border-radius: 6px;">
+                        </td>
+                        <td style="vertical-align: middle; color: #475569;">
+                          <div style="margin-bottom: 4px;">Montant à transférer : <strong style="color: #1e293b;">{{ requested_amount }}</strong></div>
+                          <div>Email à envoyer : <strong style="color: #1e293b;">{{ payment_email }}</strong></div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Code Warning Box (conditional) -->
+              {% if needs_signup_code %}
+              <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 20px; margin: 0 0 20px 0; border-radius: 8px;">
+                <p style="margin: 0 0 10px 0; font-weight: bold; color: #856404;">⚠️ CODE OBLIGATOIRE</p>
+                <p style="font-family: monospace; font-size: 20px; background: white; padding: 12px; border-radius: 4px; margin: 0 0 15px 0; text-align: center; border: 1px solid #ddd;"><strong>{{ signup_code }}</strong></p>
+                <p style="margin: 0 0 10px 0; color: #856404;">Incluez ce code dans le <strong>« Message au destinataire »</strong> de votre virement Interac.</p>
+                <p style="margin: 0; padding: 10px; background: #ffe69c; border-radius: 4px; font-size: 14px; color: #664d03;">⚠️ <strong>Ce n'est PAS la question de sécurité Interac.</strong><br>C'est le champ optionnel « Message au destinataire ».</p>
+                <p style="margin: 15px 0 0 0; font-size: 13px; color: #856404;"><em>Pourquoi ce code ? Une autre inscription avec le même nom et montant existe.</em></p>
+              </div>
+              {% else %}
+              <p style="color: #666; font-size: 14px; font-style: italic; margin: 0 0 20px 0;">Votre nom sera automatiquement associé à votre paiement.</p>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- Conclusion Text - Simple text from JSON -->
           {% if conclusion_text %}
           <tr>
             <td class="conclusion-padding mobile-font-size" style="padding: 0 40px 40px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">

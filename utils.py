@@ -3375,6 +3375,14 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         # Signup emails should not have logo attachments - they're meant to be clean celebration emails
         # Logo is already embedded in the compiled template if needed
 
+        # Add Interac logo for payment_first signup emails (referenced in conclusion_text as cid:interac_logo)
+        if is_payment_first:
+            interac_logo_path = os.path.join("templates/email_templates/signup_payment_first/interac_logo.jpg")
+            if os.path.exists(interac_logo_path):
+                with open(interac_logo_path, "rb") as img_file:
+                    inline_images["interac_logo"] = img_file.read()
+                print(f"✅ Interac logo embedded for signup_payment_first email")
+
         # Load custom hero image for signup emails (if activity has one)
         from utils import get_activity_hero_image
         hero_data, is_custom, is_template_default = get_activity_hero_image(activity, template_type)
