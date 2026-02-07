@@ -75,20 +75,55 @@
               <div class="form-hint">Used for display name and avatar initials</div>
             </div>
             <div class="col-12">
-              <label class="form-label">Password</label>
-              <div class="input-group">
-                <input type="password" name="admin_password[]" value="********"
-                       class="form-control admin-password" data-is-placeholder="true" required>
-                <button class="btn btn-outline-secondary toggle-password" type="button">
-                  <i class="ti ti-eye"></i>
-                </button>
-              </div>
-              <div class="password-strength mt-2 d-none">
-                <div class="progress progress-sm">
-                  <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+              {% if admin.email == session.get('admin') %}
+              <!-- Self-service Change Password -->
+              <button type="button" class="btn btn-outline-secondary btn-change-password"
+                      data-admin-id="{{ admin.id }}">
+                <i class="ti ti-key me-1"></i>Change Password
+              </button>
+              <div class="change-password-section mt-3 d-none" data-admin-id="{{ admin.id }}">
+                <div class="card card-body bg-muted-lt">
+                  <div class="mb-3">
+                    <label class="form-label">Current Password</label>
+                    <div class="input-group">
+                      <input type="password" class="form-control current-password" placeholder="Enter current password">
+                      <button class="btn btn-outline-secondary toggle-password" type="button">
+                        <i class="ti ti-eye"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">New Password</label>
+                    <div class="input-group">
+                      <input type="password" class="form-control new-password" placeholder="Enter new password">
+                      <button class="btn btn-outline-secondary toggle-password" type="button">
+                        <i class="ti ti-eye"></i>
+                      </button>
+                    </div>
+                    <div class="password-strength mt-2 d-none">
+                      <div class="progress progress-sm">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                      </div>
+                      <div class="form-hint password-strength-text"></div>
+                    </div>
+                  </div>
+                  <div class="change-password-alert d-none"></div>
+                  <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary btn-save-password" data-admin-id="{{ admin.id }}">
+                      <i class="ti ti-check me-1"></i>Save
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-cancel-password">Cancel</button>
+                  </div>
                 </div>
-                <div class="form-hint password-strength-text">Leave blank to keep current password</div>
               </div>
+              {% else %}
+              <!-- Reset Password for other admins -->
+              <button type="button" class="btn btn-outline-secondary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#reset-password-modal-{{ loop.index }}">
+                <i class="ti ti-key me-1"></i>Reset Password
+              </button>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -138,6 +173,50 @@
                 data-admin-email="{{ admin.email }}"
                 data-admin-index="{{ loop.index }}">
           <i class="ti ti-trash me-2"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Reset Password Modals (one per non-self admin) -->
+{% for admin in admins %}
+{% if admin.email != session.get('admin') %}
+<div class="modal modal-blur fade" id="reset-password-modal-{{ loop.index }}" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-warning"></div>
+
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-key me-2"></i> Reset Password
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="text-muted mb-3">Generate a new password for:</p>
+        <p class="fw-bold mb-3">{{ admin.email }}</p>
+        <div class="reset-password-result d-none" data-admin-id="{{ admin.id }}">
+          <div class="alert alert-warning mb-2">
+            <i class="ti ti-alert-triangle me-1"></i>Save this password! It won't be shown again.
+          </div>
+          <div class="input-group">
+            <input type="text" class="form-control generated-password" readonly>
+            <button class="btn btn-outline-secondary btn-copy-password" type="button">
+              <i class="ti ti-copy"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-warning btn-generate-password"
+                data-admin-id="{{ admin.id }}">
+          <i class="ti ti-refresh me-1"></i>Generate Password
         </button>
       </div>
     </div>
@@ -575,48 +654,46 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Password strength indicator
+  // Password strength indicator (works for both new-password and admin-password inputs)
+  function updatePasswordStrength(input) {
+    const password = input.value;
+    const container = input.closest('.mb-3') || input.closest('.col-12');
+    const strengthDiv = container.querySelector('.password-strength');
+    if (!strengthDiv) return;
+    const progressBar = strengthDiv.querySelector('.progress-bar');
+    const strengthText = strengthDiv.querySelector('.password-strength-text');
+
+    if (password && password.length > 0) {
+      strengthDiv.classList.remove('d-none');
+      let strength = 0;
+      let strengthClass = 'bg-danger';
+      let strengthMessage = 'Weak password';
+
+      if (password.length >= 8) strength += 25;
+      if (/[a-z]/.test(password)) strength += 25;
+      if (/[A-Z]/.test(password)) strength += 25;
+      if (/[0-9]/.test(password)) strength += 12.5;
+      if (/[^A-Za-z0-9]/.test(password)) strength += 12.5;
+
+      if (strength >= 75) {
+        strengthClass = 'bg-success';
+        strengthMessage = 'Strong password';
+      } else if (strength >= 50) {
+        strengthClass = 'bg-warning';
+        strengthMessage = 'Fair password';
+      }
+
+      progressBar.style.width = strength + '%';
+      progressBar.className = 'progress-bar ' + strengthClass;
+      strengthText.textContent = strengthMessage;
+    } else {
+      strengthDiv.classList.add('d-none');
+    }
+  }
+
   document.addEventListener('input', function(e) {
-    if (e.target.classList.contains('admin-password')) {
-      const password = e.target.value;
-      const adminBlock = e.target.closest('.admin-block');
-      const strengthDiv = adminBlock.querySelector('.password-strength');
-      const progressBar = strengthDiv.querySelector('.progress-bar');
-      const strengthText = strengthDiv.querySelector('.password-strength-text');
-      
-      // Mark as not placeholder once user starts typing
-      if (e.target.dataset.isPlaceholder === 'true' && password !== '********') {
-        e.target.dataset.isPlaceholder = 'false';
-      }
-      
-      if (password && password !== '********') {
-        strengthDiv.classList.remove('d-none');
-        
-        // Calculate password strength
-        let strength = 0;
-        let strengthClass = 'bg-danger';
-        let strengthMessage = 'Weak password';
-        
-        if (password.length >= 8) strength += 25;
-        if (/[a-z]/.test(password)) strength += 25;
-        if (/[A-Z]/.test(password)) strength += 25;
-        if (/[0-9]/.test(password)) strength += 12.5;
-        if (/[^A-Za-z0-9]/.test(password)) strength += 12.5;
-        
-        if (strength >= 75) {
-          strengthClass = 'bg-success';
-          strengthMessage = 'Strong password';
-        } else if (strength >= 50) {
-          strengthClass = 'bg-warning';
-          strengthMessage = 'Fair password';
-        }
-        
-        progressBar.style.width = strength + '%';
-        progressBar.className = 'progress-bar ' + strengthClass;
-        strengthText.textContent = strengthMessage;
-      } else if (password === '' || password === '********') {
-        strengthDiv.classList.add('d-none');
-      }
+    if (e.target.classList.contains('admin-password') || e.target.classList.contains('new-password')) {
+      updatePasswordStrength(e.target);
     }
   });
 
@@ -785,20 +862,160 @@ document.addEventListener("DOMContentLoaded", function () {
     newCard.querySelector('.admin-email').focus();
   });
 
+  // Toggle change password section
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-change-password')) {
+      const btn = e.target.closest('.btn-change-password');
+      const adminId = btn.dataset.adminId;
+      const section = document.querySelector(`.change-password-section[data-admin-id="${adminId}"]`);
+      section.classList.toggle('d-none');
+      if (!section.classList.contains('d-none')) {
+        section.querySelector('.current-password').focus();
+      }
+    }
+
+    if (e.target.closest('.btn-cancel-password')) {
+      const section = e.target.closest('.change-password-section');
+      section.classList.add('d-none');
+      section.querySelector('.current-password').value = '';
+      section.querySelector('.new-password').value = '';
+      const alertEl = section.querySelector('.change-password-alert');
+      alertEl.classList.add('d-none');
+      alertEl.innerHTML = '';
+      const strengthDiv = section.querySelector('.password-strength');
+      if (strengthDiv) strengthDiv.classList.add('d-none');
+    }
+  });
+
+  // Save password (self-service change)
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-save-password')) {
+      const btn = e.target.closest('.btn-save-password');
+      const adminId = btn.dataset.adminId;
+      const section = document.querySelector(`.change-password-section[data-admin-id="${adminId}"]`);
+      const currentPw = section.querySelector('.current-password').value;
+      const newPw = section.querySelector('.new-password').value;
+      const alertEl = section.querySelector('.change-password-alert');
+
+      alertEl.classList.add('d-none');
+
+      if (!currentPw || !newPw) {
+        alertEl.className = 'change-password-alert alert alert-danger mb-2';
+        alertEl.innerHTML = '<i class="ti ti-alert-circle me-1"></i>Both fields are required.';
+        alertEl.classList.remove('d-none');
+        return;
+      }
+
+      if (newPw.length < 8) {
+        alertEl.className = 'change-password-alert alert alert-danger mb-2';
+        alertEl.innerHTML = '<i class="ti ti-alert-circle me-1"></i>New password must be at least 8 characters.';
+        alertEl.classList.remove('d-none');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      fetch('/change-password', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+        body: JSON.stringify({current_password: currentPw, new_password: newPw})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          alertEl.className = 'change-password-alert alert alert-success mb-2';
+          alertEl.innerHTML = '<i class="ti ti-check me-1"></i>' + data.message;
+          alertEl.classList.remove('d-none');
+          section.querySelector('.current-password').value = '';
+          section.querySelector('.new-password').value = '';
+          const strengthDiv = section.querySelector('.password-strength');
+          if (strengthDiv) strengthDiv.classList.add('d-none');
+          setTimeout(() => section.classList.add('d-none'), 3000);
+        } else {
+          alertEl.className = 'change-password-alert alert alert-danger mb-2';
+          alertEl.innerHTML = '<i class="ti ti-alert-circle me-1"></i>' + data.error;
+          alertEl.classList.remove('d-none');
+        }
+      })
+      .catch(() => {
+        alertEl.className = 'change-password-alert alert alert-danger mb-2';
+        alertEl.innerHTML = '<i class="ti ti-alert-circle me-1"></i>Network error. Please try again.';
+        alertEl.classList.remove('d-none');
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-check me-1"></i>Save';
+      });
+    }
+  });
+
+  // Generate password (admin resets another admin)
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-generate-password')) {
+      const btn = e.target.closest('.btn-generate-password');
+      const adminId = btn.dataset.adminId;
+      const modal = btn.closest('.modal');
+      const resultDiv = modal.querySelector('.reset-password-result');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
+
+      const csrfToken2 = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      fetch(`/reset-admin-password/${adminId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken2},
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          resultDiv.classList.remove('d-none');
+          resultDiv.querySelector('.generated-password').value = data.temp_password;
+        } else {
+          alert(data.error || 'Failed to reset password');
+        }
+      })
+      .catch(() => alert('Network error. Please try again.'))
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-refresh me-1"></i>Generate Password';
+      });
+    }
+
+    // Copy generated password to clipboard
+    if (e.target.closest('.btn-copy-password')) {
+      const btn = e.target.closest('.btn-copy-password');
+      const input = btn.closest('.input-group').querySelector('.generated-password');
+      navigator.clipboard.writeText(input.value).then(() => {
+        const icon = btn.querySelector('i');
+        icon.classList.replace('ti-copy', 'ti-check');
+        setTimeout(() => icon.classList.replace('ti-check', 'ti-copy'), 2000);
+      });
+    }
+  });
+
+  // Reset the modal state when it's closed
+  document.querySelectorAll('[id^="reset-password-modal-"]').forEach(modal => {
+    modal.addEventListener('hidden.bs.modal', function() {
+      const resultDiv = modal.querySelector('.reset-password-result');
+      resultDiv.classList.add('d-none');
+      resultDiv.querySelector('.generated-password').value = '';
+    });
+  });
+
   // Enhanced form validation
   document.querySelector("form").addEventListener("submit", function (e) {
     // Clear previous errors
     const existingErrors = document.querySelector('.alert-danger');
     if (existingErrors) existingErrors.remove();
-    
+
     let valid = true;
     const errors = [];
     const emails = new Set();
 
     document.querySelectorAll('.admin-block').forEach(block => {
       const email = block.querySelector('input[name="admin_email[]"]').value.trim();
-      const passwordInput = block.querySelector('input[name="admin_password[]"]');
-      const password = passwordInput.value.trim();
 
       // Check for duplicate emails
       if (email) {
@@ -809,20 +1026,17 @@ document.addEventListener("DOMContentLoaded", function () {
         emails.add(email.toLowerCase());
       }
 
-      // Handle placeholder passwords
-      if (password === "********" && passwordInput.dataset.isPlaceholder === "true") {
-        passwordInput.value = "";
-      }
-
       // Check if new admin has password and first name
       if (!block.dataset.loaded) {
+        const passwordInput = block.querySelector('input[name="admin_password[]"]');
+        const password = passwordInput ? passwordInput.value.trim() : '';
         const firstName = block.querySelector('input[name="admin_first_name[]"]').value.trim();
-        
+
         if (email && !password) {
           errors.push(`Please enter a password for new admin: ${email}`);
           valid = false;
         }
-        
+
         if (email && !firstName) {
           errors.push(`Please enter a first name for new admin: ${email}`);
           valid = false;
@@ -832,7 +1046,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!valid) {
       e.preventDefault();
-      
+
       // Show errors using Tabler alert
       const alertDiv = document.createElement('div');
       alertDiv.className = 'alert alert-danger alert-dismissible mb-3';
@@ -850,10 +1064,10 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       `;
-      
+
       const adminList = document.getElementById('admin-list');
       adminList.parentNode.insertBefore(alertDiv, adminList);
-      
+
       // Scroll to error
       alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
