@@ -70,7 +70,7 @@
             <a href="{{ url_for('list_activities', status='not_active') }}"
                class="github-filter-btn {% if current_filters.status == 'not_active' %}active{% endif %}"
                style="{% if current_filters.status == 'not_active' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-eye-off" style="font-size: 16px; margin-right: 4px;"></i>Inactive <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.inactive_activities|default(0) }})</span>
+              <i class="ti ti-archive" style="font-size: 16px; margin-right: 4px;"></i>Archived <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.inactive_activities|default(0) }})</span>
             </a>
             <a href="{{ url_for('list_activities', show_all='true') }}"
                class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
@@ -118,7 +118,7 @@
           <thead>
             <tr>
               <th>Activity Name</th>
-              <th class="d-none d-md-table-cell">Type</th>
+              <th class="d-none d-md-table-cell">Workflow</th>
               <th class="d-none d-lg-table-cell text-center">Status</th>
               <th class="d-none d-lg-table-cell text-center"># Types</th>
               <th class="d-none d-md-table-cell text-center">Active</th>
@@ -140,18 +140,37 @@
                 <div>
                   <div class="fw-bold">{{ activity.name }}</div>
                   <div class="text-muted small">{{ activity.description[:50] }}{% if activity.description and activity.description|length > 50 %}...{% endif %}</div>
+                  <!-- Mobile-only metrics -->
+                  <div class="d-md-none mt-1">
+                    {% set status = activity.status or 'active' %}
+                    {% if status in ['inactive', 'archived'] %}
+                      <span class="badge bg-yellow-lt">Archived</span>
+                    {% elif status == 'draft' %}
+                      <span class="badge bg-gray-lt">Draft</span>
+                    {% endif %}
+                    {% if activity.active_passports_count %}
+                      <span class="badge bg-blue-lt ms-1"><i class="ti ti-users me-1"></i>{{ activity.active_passports_count }}</span>
+                    {% endif %}
+                    {% if activity.total_revenue %}
+                      <span class="badge bg-green-lt ms-1">${{ "%.0f"|format(activity.total_revenue) }}</span>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              <span class="text-muted">{{ activity.type.title() if activity.type else '-' }}</span>
+              {% if activity.workflow_type == 'payment_first' %}
+                <span class="badge bg-green-lt">Pay First</span>
+              {% else %}
+                <span class="badge bg-blue-lt">Review First</span>
+              {% endif %}
             </td>
             <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
               {% set status = activity.status or 'active' %}
               {% if status == 'active' %}
                 <span class="badge bg-green-lt text-green-lt-fg">Active</span>
               {% elif status == 'inactive' %}
-                <span class="badge bg-yellow-lt text-yellow-lt-fg">Inactive</span>
+                <span class="badge bg-yellow-lt text-yellow-lt-fg">Archived</span>
               {% elif status == 'draft' %}
                 <span class="badge bg-gray-lt text-gray-lt-fg">Draft</span>
               {% else %}
@@ -183,17 +202,14 @@
                   <a class="dropdown-item" href="{{ url_for('activity_dashboard', activity_id=activity.id) }}">
                     <i class="ti ti-eye me-2"></i>View Details
                   </a>
-                  <a class="dropdown-item" href="{{ url_for('list_signups', activity_id=activity.id) }}">
-                    <i class="ti ti-users me-2"></i>View Signups
-                  </a>
                   {% if activity.status != 'active' %}
                   <a class="dropdown-item text-success" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                    <i class="ti ti-play me-2"></i>Activate
+                    <i class="ti ti-refresh me-2"></i>Restore
                   </a>
                   {% endif %}
                   {% if activity.status == 'active' %}
                   <a class="dropdown-item text-warning" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                    <i class="ti ti-pause me-2"></i>Deactivate
+                    <i class="ti ti-archive me-2"></i>Archive
                   </a>
                   {% endif %}
                   <div class="dropdown-divider"></div>
