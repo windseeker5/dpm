@@ -85,12 +85,8 @@
                 <div class="card card-body bg-muted-lt">
                   <div class="mb-3">
                     <label class="form-label">Current Password</label>
-                    <div class="input-group">
-                      <input type="password" class="form-control current-password" placeholder="Enter current password">
-                      <button class="btn btn-outline-secondary toggle-password" type="button">
-                        <i class="ti ti-eye"></i>
-                      </button>
-                    </div>
+                    <input type="password" class="form-control current-password" placeholder="Enter current password" autocomplete="off">
+                    <div class="form-hint">Enter your current password to confirm your identity</div>
                   </div>
                   <div class="mb-3">
                     <label class="form-label">New Password</label>
@@ -107,7 +103,6 @@
                       <div class="form-hint password-strength-text"></div>
                     </div>
                   </div>
-                  <div class="change-password-alert d-none"></div>
                   <div class="d-flex gap-2">
                     <button type="button" class="btn btn-primary btn-save-password" data-admin-id="{{ admin.id }}">
                       <i class="ti ti-check me-1"></i>Save
@@ -870,6 +865,11 @@ document.addEventListener("DOMContentLoaded", function () {
       const section = document.querySelector(`.change-password-section[data-admin-id="${adminId}"]`);
       section.classList.toggle('d-none');
       if (!section.classList.contains('d-none')) {
+        // Force-clear fields to wipe any browser autofill
+        section.querySelector('.current-password').value = '';
+        section.querySelector('.new-password').value = '';
+        const strengthDiv = section.querySelector('.password-strength');
+        if (strengthDiv) strengthDiv.classList.add('d-none');
         section.querySelector('.current-password').focus();
       }
     }
@@ -879,13 +879,93 @@ document.addEventListener("DOMContentLoaded", function () {
       section.classList.add('d-none');
       section.querySelector('.current-password').value = '';
       section.querySelector('.new-password').value = '';
-      const alertEl = section.querySelector('.change-password-alert');
-      alertEl.classList.add('d-none');
-      alertEl.innerHTML = '';
       const strengthDiv = section.querySelector('.password-strength');
       if (strengthDiv) strengthDiv.classList.add('d-none');
     }
   });
+
+  // Flash message helper (matches base.html flash overlay structure)
+  function showFlashMessage(message, type) {
+    type = type || 'info';
+    const alertClass = type === 'success' ? 'alert-success'
+                     : type === 'error'   ? 'alert-danger'
+                     : type === 'warning' ? 'alert-warning'
+                     : 'alert-info';
+    const iconClass = type === 'success' ? 'ti-circle-check'
+                    : type === 'error'   ? 'ti-alert-circle'
+                    : type === 'warning' ? 'ti-alert-triangle'
+                    : 'ti-info-circle';
+    const title = type === 'success' ? 'Success'
+                : type === 'error'   ? 'Error'
+                : type === 'warning' ? 'Warning'
+                : 'Information';
+
+    // Get or create the overlay
+    let overlay = document.getElementById('flashAlertOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'flash-alert-overlay';
+      overlay.id = 'flashAlertOverlay';
+      overlay.innerHTML = '<div class="flash-alert-container"></div>';
+      document.body.appendChild(overlay);
+    }
+    const container = overlay.querySelector('.flash-alert-container');
+
+    // Build the alert element
+    const alertEl = document.createElement('div');
+    alertEl.className = 'flash-alert alert ' + alertClass + ' alert-dismissible';
+    alertEl.setAttribute('role', 'alert');
+    alertEl.innerHTML =
+      '<div class="d-flex">' +
+        '<div class="alert-icon-container">' +
+          '<i class="ti ' + iconClass + ' alert-icon"></i>' +
+        '</div>' +
+        '<div class="flex-fill">' +
+          '<div class="alert-title">' + title + '</div>' +
+          '<div class="alert-message">' + message + '</div>' +
+        '</div>' +
+        '<button type="button" class="btn-close" aria-label="Close notification"></button>' +
+      '</div>' +
+      '<div class="flash-alert-progress"></div>';
+    container.appendChild(alertEl);
+
+    // Slide in
+    setTimeout(function() { alertEl.classList.add('show'); }, 20);
+
+    // Progress bar animation
+    const progressBar = alertEl.querySelector('.flash-alert-progress');
+    setTimeout(function() {
+      progressBar.style.animation = 'flashProgress 5s linear';
+    }, 200);
+
+    // Auto-dismiss after 6 seconds
+    let autoDismissId = setTimeout(function() { dismissAlert(); }, 6000);
+
+    // Pause on hover
+    alertEl.addEventListener('mouseenter', function() {
+      clearTimeout(autoDismissId);
+      progressBar.style.animationPlayState = 'paused';
+    });
+    alertEl.addEventListener('mouseleave', function() {
+      progressBar.style.animationPlayState = 'running';
+      autoDismissId = setTimeout(function() { dismissAlert(); }, 3000);
+    });
+
+    // Close button
+    alertEl.querySelector('.btn-close').addEventListener('click', function(ev) {
+      ev.preventDefault();
+      dismissAlert();
+    });
+
+    function dismissAlert() {
+      alertEl.classList.add('hide');
+      alertEl.classList.remove('show');
+      setTimeout(function() {
+        if (alertEl.parentNode) alertEl.remove();
+        if (overlay.querySelectorAll('.flash-alert').length === 0) overlay.remove();
+      }, 400);
+    }
+  }
 
   // Save password (self-service change)
   document.addEventListener('click', function(e) {
@@ -895,21 +975,14 @@ document.addEventListener("DOMContentLoaded", function () {
       const section = document.querySelector(`.change-password-section[data-admin-id="${adminId}"]`);
       const currentPw = section.querySelector('.current-password').value;
       const newPw = section.querySelector('.new-password').value;
-      const alertEl = section.querySelector('.change-password-alert');
-
-      alertEl.classList.add('d-none');
 
       if (!currentPw || !newPw) {
-        alertEl.className = 'change-password-alert alert alert-danger mb-2';
-        alertEl.innerHTML = '<i class="ti ti-alert-circle me-1"></i>Both fields are required.';
-        alertEl.classList.remove('d-none');
+        showFlashMessage('Both fields are required.', 'error');
         return;
       }
 
       if (newPw.length < 8) {
-        alertEl.className = 'change-password-alert alert alert-danger mb-2';
-        alertEl.innerHTML = '<i class="ti ti-alert-circle me-1"></i>New password must be at least 8 characters.';
-        alertEl.classList.remove('d-none');
+        showFlashMessage('New password must be at least 8 characters.', 'error');
         return;
       }
 
@@ -925,24 +998,14 @@ document.addEventListener("DOMContentLoaded", function () {
       .then(r => r.json())
       .then(data => {
         if (data.success) {
-          alertEl.className = 'change-password-alert alert alert-success mb-2';
-          alertEl.innerHTML = '<i class="ti ti-check me-1"></i>' + data.message;
-          alertEl.classList.remove('d-none');
-          section.querySelector('.current-password').value = '';
-          section.querySelector('.new-password').value = '';
-          const strengthDiv = section.querySelector('.password-strength');
-          if (strengthDiv) strengthDiv.classList.add('d-none');
-          setTimeout(() => section.classList.add('d-none'), 3000);
+          showFlashMessage('Password changed successfully. Redirecting to login...', 'success');
+          setTimeout(function() { window.location.href = '/logout'; }, 2000);
         } else {
-          alertEl.className = 'change-password-alert alert alert-danger mb-2';
-          alertEl.innerHTML = '<i class="ti ti-alert-circle me-1"></i>' + data.error;
-          alertEl.classList.remove('d-none');
+          showFlashMessage(data.error, 'error');
         }
       })
       .catch(() => {
-        alertEl.className = 'change-password-alert alert alert-danger mb-2';
-        alertEl.innerHTML = '<i class="ti ti-alert-circle me-1"></i>Network error. Please try again.';
-        alertEl.classList.remove('d-none');
+        showFlashMessage('Network error. Please try again.', 'error');
       })
       .finally(() => {
         btn.disabled = false;
