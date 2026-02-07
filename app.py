@@ -1864,7 +1864,7 @@ def create_activity():
         db.session.commit()
 
         flash(f"Activity created successfully with {len(passport_types_data)} passport types!", "success")
-        return redirect(url_for("edit_activity", activity_id=new_activity.id))
+        return redirect(url_for("dashboard"))
 
     # ✅ GET request - check tier limit BEFORE showing form
     can_create, error_msg = check_activity_limit()
@@ -2075,7 +2075,7 @@ def edit_activity(activity_id):
         db.session.commit()
 
         flash(f"Activity updated successfully! Created: {passport_types_created}, Updated: {passport_types_updated}, Archived: {passport_types_archived} passport types.", "success")
-        return redirect(url_for("edit_activity", activity_id=activity.id))
+        return redirect(url_for("dashboard"))
 
     # 🧮 Add financial summary data (shown at bottom of form) - use database views for consistency
     from utils import get_financial_data_from_views, get_fiscal_year_range, get_fiscal_year_display, get_setting
