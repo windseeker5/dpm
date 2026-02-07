@@ -135,7 +135,7 @@
                 {% if activity.image_filename %}
                   <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="avatar avatar-sm me-3" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}); width: 40px; height: 40px; min-width: 40px; min-height: 40px; background-size: cover; background-position: center; cursor: pointer; text-decoration: none; flex-shrink: 0; display: inline-block;"></a>
                 {% else %}
-                  <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="avatar avatar-sm bg-secondary-lt text-secondary me-3" style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; cursor: pointer; text-decoration: none; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;">{{ activity.name[0].upper() }}</a>
+                  <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="avatar avatar-sm me-3" style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; cursor: pointer; text-decoration: none; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700;">{{ placeholder_letter(activity.name) }}</a>
                 {% endif %}
                 <div>
                   <div class="fw-bold">{{ activity.name }}</div>

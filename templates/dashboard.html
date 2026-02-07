@@ -388,9 +388,9 @@
                   </div>
                   {% else %}
                   <div class="img-responsive img-responsive-21x9 card-img-top"
-                       style="background: linear-gradient(45deg, #e3f2fd 0%, #2196f3 100%); position: relative;">
+                       style="background: {{ placeholder_css(activity.name) }}; position: relative;">
                     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;">
-                      <i class="ti ti-calendar-event" style="font-size: 3rem; color: #1976d2; opacity: 0.8;"></i>
+                      <span style="font-size: 3rem; font-weight: 700; color: rgba(255,255,255,0.9);">{{ placeholder_letter(activity.name) }}</span>
                     </div>
                   </div>
                   {% endif %}
@@ -414,7 +414,7 @@
               <a href="{{ url_for('create_activity') }}" style="text-decoration: none;">
                 <div class="card" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; height: 276.84px; cursor: pointer;">
                   <!-- Placeholder Image with large plus icon -->
-                  <div class="img-responsive img-responsive-21x9 card-img-top" 
+                  <div class="img-responsive img-responsive-21x9 card-img-top"
                        style="background-color: #f1f5f9; position: relative;">
                     <i class="ti ti-plus" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: #94a3b8;"></i>
                   </div>
@@ -437,7 +437,7 @@
             {% endif %}
           </div>
         </div>
-        
+
         <!-- Mobile Layout -->
         <div class="d-md-none">
           <div class="d-flex overflow-auto pb-2" style="scroll-snap-type: x mandatory;">
@@ -452,9 +452,9 @@
                   </div>
                   {% else %}
                   <div class="img-responsive img-responsive-21x9 card-img-top"
-                       style="background: linear-gradient(45deg, #e3f2fd 0%, #2196f3 100%); position: relative;">
+                       style="background: {{ placeholder_css(activity.name) }}; position: relative;">
                     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;">
-                      <i class="ti ti-calendar-event" style="font-size: 3rem; color: #1976d2; opacity: 0.8;"></i>
+                      <span style="font-size: 3rem; font-weight: 700; color: rgba(255,255,255,0.9);">{{ placeholder_letter(activity.name) }}</span>
                     </div>
                   </div>
                   {% endif %}

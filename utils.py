@@ -277,6 +277,15 @@ def get_activity_hero_image(activity, template_type):
         else:
             print(f"ℹ️ Template {template_type} has no customizations, skipping activity image fallback")
 
+    # Priority 4: Generate placeholder cover from activity name
+    if activity and activity.name:
+        try:
+            placeholder_buf = generate_placeholder_cover_image(activity.name)
+            print(f"🎨 Using generated placeholder cover for activity '{activity.name}'")
+            return placeholder_buf.read(), False, False
+        except Exception as e:
+            print(f"❌ Error generating placeholder cover: {e}")
+
     # No hero image found
     print(f"❌ No hero image found for {template_type}")
     return None, False, False
@@ -609,6 +618,133 @@ def generate_pass_code():
     """
     return f"MP-{str(uuid.uuid4()).replace('-', '')[:12]}"
 
+
+
+# ── Placeholder Gradients for Missing Activity Covers & Org Logos ──
+
+PLACEHOLDER_GRADIENTS = [
+    ('135deg', '#FF6B6B', '#EE5A24'),  # Coral
+    ('135deg', '#0ABDE3', '#006266'),  # Ocean
+    ('135deg', '#10AC84', '#01A3A4'),  # Forest
+    ('135deg', '#9B59B6', '#6C3483'),  # Purple
+    ('135deg', '#F39C12', '#E67E22'),  # Amber
+    ('135deg', '#2C3E50', '#34495E'),  # Navy
+    ('135deg', '#E84393', '#D63031'),  # Berry
+    ('135deg', '#6C5CE7', '#4834D4'),  # Indigo
+    ('135deg', '#00B894', '#00CEC9'),  # Emerald
+    ('135deg', '#636E72', '#2D3436'),  # Slate
+    ('135deg', '#B53471', '#6F1E51'),  # Wine
+    ('135deg', '#0984E3', '#74B9FF'),  # Azure
+]
+
+PLACEHOLDER_SOLID_COLORS = [
+    '#EE5A24', '#006266', '#01A3A4', '#6C3483',
+    '#E67E22', '#34495E', '#D63031', '#4834D4',
+    '#00CEC9', '#2D3436', '#6F1E51', '#0984E3',
+]
+
+
+def get_placeholder_index(name):
+    if not name:
+        return 0
+    return sum(ord(c) for c in name.lower()) % len(PLACEHOLDER_GRADIENTS)
+
+
+def get_placeholder_letter(name):
+    if not name:
+        return 'A'
+    for c in name:
+        if c.isalpha():
+            return c.upper()
+    return name[0].upper() if name else 'A'
+
+
+def get_placeholder_css(name):
+    idx = get_placeholder_index(name)
+    angle, c1, c2 = PLACEHOLDER_GRADIENTS[idx]
+    return f'linear-gradient({angle}, {c1} 0%, {c2} 100%)'
+
+
+def get_placeholder_color(name):
+    idx = get_placeholder_index(name)
+    return PLACEHOLDER_SOLID_COLORS[idx]
+
+
+def generate_placeholder_cover_image(name, width=800, height=400):
+    from PIL import Image, ImageDraw, ImageFont
+    idx = get_placeholder_index(name)
+    _, c1_hex, c2_hex = PLACEHOLDER_GRADIENTS[idx]
+
+    def hex_to_rgb(h):
+        h = h.lstrip('#')
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+    c1 = hex_to_rgb(c1_hex)
+    c2 = hex_to_rgb(c2_hex)
+
+    img = Image.new('RGB', (width, height))
+    draw = ImageDraw.Draw(img)
+    for y in range(height):
+        ratio = y / height
+        r = int(c1[0] + (c2[0] - c1[0]) * ratio)
+        g = int(c1[1] + (c2[1] - c1[1]) * ratio)
+        b = int(c1[2] + (c2[2] - c1[2]) * ratio)
+        draw.line([(0, y), (width, y)], fill=(r, g, b))
+
+    letter = get_placeholder_letter(name)
+    try:
+        font = ImageFont.truetype('/usr/share/fonts/TTF/Inter-Bold.ttf', int(height * 0.4))
+    except (IOError, OSError):
+        try:
+            font = ImageFont.truetype('/usr/share/fonts/noto/NotoSans-Bold.ttf', int(height * 0.4))
+        except (IOError, OSError):
+            font = ImageFont.load_default()
+
+    bbox = draw.textbbox((0, 0), letter, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    x = (width - tw) / 2 - bbox[0]
+    y_pos = (height - th) / 2 - bbox[1]
+    draw.text((x, y_pos), letter, fill=(255, 255, 255, 230), font=font)
+
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return buf
+
+
+def generate_placeholder_logo_image(name, size=200):
+    from PIL import Image, ImageDraw, ImageFont
+    idx = get_placeholder_index(name)
+    color_hex = PLACEHOLDER_SOLID_COLORS[idx]
+
+    def hex_to_rgb(h):
+        h = h.lstrip('#')
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+    color = hex_to_rgb(color_hex)
+
+    img = Image.new('RGB', (size, size), color)
+    draw = ImageDraw.Draw(img)
+
+    letter = get_placeholder_letter(name)
+    try:
+        font = ImageFont.truetype('/usr/share/fonts/TTF/Inter-Bold.ttf', int(size * 0.5))
+    except (IOError, OSError):
+        try:
+            font = ImageFont.truetype('/usr/share/fonts/noto/NotoSans-Bold.ttf', int(size * 0.5))
+        except (IOError, OSError):
+            font = ImageFont.load_default()
+
+    bbox = draw.textbbox((0, 0), letter, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    x = (size - tw) / 2 - bbox[0]
+    y = (size - th) / 2 - bbox[1]
+    draw.text((x, y), letter, fill=(255, 255, 255), font=font)
+
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return buf
 
 
 def generate_qr_code(pass_code):
@@ -3645,10 +3781,18 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
             inline_images['logo'] = logo_data  # For owner_card_inline.html
             print(f"Using organization logo: {org_logo_filename}")
         else:
-            # Final fallback to default logo
-            logo_data = open("static/minipass_logo.png", "rb").read()
-            inline_images['logo'] = logo_data
-            print("Using default Minipass logo")
+            # Try generating a placeholder logo from org name
+            try:
+                org_name = get_setting('ORG_NAME', 'Minipass')
+                placeholder_logo_buf = generate_placeholder_logo_image(org_name)
+                logo_data = placeholder_logo_buf.read()
+                inline_images['logo'] = logo_data
+                print(f"🎨 Using generated placeholder logo for '{org_name}'")
+            except Exception:
+                # Final fallback to default logo
+                logo_data = open("static/minipass_logo.png", "rb").read()
+                inline_images['logo'] = logo_data
+                print("Using default Minipass logo")
 
     # Determine user and activity for email context
     user_obj = getattr(pass_data, "user", None)

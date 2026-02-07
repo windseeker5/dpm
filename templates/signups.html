@@ -129,8 +129,8 @@
                   </a>
                 {% else %}
                   <a href="{{ url_for('activity_dashboard', activity_id=signup.activity.id) if signup.activity else '#' }}" class="d-md-none">
-                    <div class="rounded me-3 bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 12px; color: #6c757d;">
-                      {{ signup.activity.name[0] if signup.activity and signup.activity.name else 'A' }}
+                    <div class="rounded me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 12px; color: #fff; background: {{ placeholder_color(signup.activity.name if signup.activity else 'Activity') }};">
+                      {{ placeholder_letter(signup.activity.name if signup.activity else 'Activity') }}
                     </div>
                   </a>
                 {% endif %}

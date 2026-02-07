@@ -169,7 +169,7 @@
                     {% if activity.activity_image %}
                       <span class="avatar avatar-sm" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.activity_image) }});"></span>
                     {% else %}
-                      <span class="avatar avatar-sm bg-secondary-lt text-secondary">{{ activity.activity_name[0].upper() }}</span>
+                      <span class="avatar avatar-sm d-flex align-items-center justify-content-center" style="background: {{ placeholder_color(activity.activity_name) }}; color: #fff; font-weight: 700;">{{ placeholder_letter(activity.activity_name) }}</span>
                     {% endif %}
                   </td>
                   <td class="text-center text-muted p-2" style="font-size: 0.85rem;">
@@ -305,7 +305,7 @@
                     {% if activity.activity_image %}
                       <span class="avatar avatar-sm me-2" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.activity_image) }});"></span>
                     {% else %}
-                      <span class="avatar avatar-sm bg-secondary-lt text-secondary me-2">{{ activity.activity_name[0].upper() }}</span>
+                      <span class="avatar avatar-sm me-2 d-flex align-items-center justify-content-center" style="background: {{ placeholder_color(activity.activity_name) }}; color: #fff; font-weight: 700;">{{ placeholder_letter(activity.activity_name) }}</span>
                     {% endif %}
                     <strong>{{ activity.activity_name }}</strong>
                   </div>

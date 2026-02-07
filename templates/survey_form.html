@@ -370,6 +370,8 @@
   <div class="survey-branding{% if not survey.activity.image_filename %} no-image{% endif %}"
        {% if survey.activity.image_filename %}
        style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + survey.activity.image_filename) }}');"
+       {% else %}
+       style="background: {{ placeholder_css(survey.activity.name) }};"
        {% endif %}>
 
     <div class="survey-branding-org">
