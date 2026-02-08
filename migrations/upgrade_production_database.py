@@ -1990,6 +1990,62 @@ def task25_add_signup_code_column(cursor):
     return True
 
 
+def task26_add_stripe_payment_fields(cursor):
+    """Add Stripe credit card payment fields to Activity and Signup tables"""
+    log("🔄", "TASK 26: Adding Stripe payment fields", Colors.BLUE)
+
+    added = 0
+    skipped = 0
+
+    # Activity.accept_credit_card
+    if check_column_exists(cursor, 'activity', 'accept_credit_card'):
+        log("⏭️ ", "  Activity.accept_credit_card already exists", Colors.YELLOW)
+        skipped += 1
+    else:
+        try:
+            cursor.execute("ALTER TABLE activity ADD COLUMN accept_credit_card BOOLEAN DEFAULT 0")
+            log("✅", "  Added Activity.accept_credit_card", Colors.GREEN)
+            added += 1
+        except sqlite3.OperationalError as e:
+            log("❌", f"  Failed to add Activity.accept_credit_card: {e}", Colors.RED)
+            raise
+
+    # Signup.payment_method
+    if check_column_exists(cursor, 'signup', 'payment_method'):
+        log("⏭️ ", "  Signup.payment_method already exists", Colors.YELLOW)
+        skipped += 1
+    else:
+        try:
+            cursor.execute("ALTER TABLE signup ADD COLUMN payment_method VARCHAR(20) DEFAULT 'interac'")
+            log("✅", "  Added Signup.payment_method", Colors.GREEN)
+            added += 1
+        except sqlite3.OperationalError as e:
+            log("❌", f"  Failed to add Signup.payment_method: {e}", Colors.RED)
+            raise
+
+    # Signup.stripe_checkout_session_id
+    if check_column_exists(cursor, 'signup', 'stripe_checkout_session_id'):
+        log("⏭️ ", "  Signup.stripe_checkout_session_id already exists", Colors.YELLOW)
+        skipped += 1
+    else:
+        try:
+            cursor.execute("ALTER TABLE signup ADD COLUMN stripe_checkout_session_id VARCHAR(255)")
+            log("✅", "  Added Signup.stripe_checkout_session_id", Colors.GREEN)
+            added += 1
+        except sqlite3.OperationalError as e:
+            log("❌", f"  Failed to add Signup.stripe_checkout_session_id: {e}", Colors.RED)
+            raise
+
+    # Backfill existing signups
+    cursor.execute("UPDATE signup SET payment_method = 'interac' WHERE payment_method IS NULL")
+    rows_updated = cursor.rowcount
+    if rows_updated > 0:
+        log("✅", f"  Backfilled {rows_updated} signups with payment_method='interac'", Colors.GREEN)
+
+    log("📊", f"  Summary: {added} added, {skipped} already existed")
+    return True
+
+
 def task24_add_workflow_quantity_fields(cursor):
     """Add workflow type and quantity limit fields to Activity and Signup tables"""
     log("🔄", "TASK 24: Adding workflow type and quantity limit fields", Colors.BLUE)
@@ -2089,6 +2145,7 @@ def main():
         ("Email UID for Payment Move", task23_add_email_uid_column),
         ("Workflow and Quantity Fields", task24_add_workflow_quantity_fields),
         ("Signup Code for Payment Matching", task25_add_signup_code_column),
+        ("Stripe Payment Fields", task26_add_stripe_payment_fields),
     ]
 
     completed = 0

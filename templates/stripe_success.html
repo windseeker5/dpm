@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paiement recu - {{ activity.name }}</title>
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+
+  <!-- Tabler Icons -->
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thank-you-wrapper {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      max-width: 400px;
+    }
+
+    .organization-logo {
+      max-height: 48px;
+      margin-bottom: 2rem;
+    }
+
+    .success-icon {
+      width: 60px;
+      height: 60px;
+      background-color: #22c55e;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+
+    .success-icon i {
+      font-size: 1.75rem;
+      color: white;
+    }
+
+    .thank-you-title {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 1rem;
+    }
+
+    .thank-you-message {
+      font-size: 1rem;
+      color: #6b7280;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+
+    .thank-you-message strong {
+      color: #374151;
+    }
+
+    .btn-home {
+      display: inline-block;
+      background-color: #22c55e;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.9375rem;
+      text-decoration: none;
+    }
+
+    .btn-home:hover {
+      background-color: #16a34a;
+      color: white;
+    }
+
+    @media (max-width: 480px) {
+      .thank-you-wrapper {
+        padding: 1.5rem 1rem;
+      }
+
+      .thank-you-title {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+<div class="thank-you-wrapper">
+  <!-- Organization Logo (optional) -->
+  {% if settings.get('LOGO_FILENAME') %}
+  <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+       alt="{{ settings.get('ORG_NAME', 'Organization') }}"
+       class="organization-logo">
+  {% else %}
+  <div class="organization-logo d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 10px; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700; font-size: 1.25rem; margin: 0 auto 2rem;">
+    {{ placeholder_letter(settings.get('ORG_NAME', activity.name)) }}
+  </div>
+  {% endif %}
+
+  <!-- Success Icon -->
+  <div class="success-icon">
+    <i class="ti ti-check"></i>
+  </div>
+
+  {% if signup.paid %}
+  <!-- Payment confirmed -->
+  <h1 class="thank-you-title">Paiement recu!</h1>
+  <p class="thank-you-message">
+    Votre passeport a ete envoye a<br>
+    <strong>{{ signup.user.email }}</strong>
+  </p>
+  {% else %}
+  <!-- Payment processing (webhook may be slightly delayed) -->
+  <h1 class="thank-you-title">Merci!</h1>
+  <p class="thank-you-message">
+    Votre paiement est en cours de traitement.<br>
+    Vous recevrez un courriel de confirmation a<br>
+    <strong>{{ signup.user.email }}</strong>
+  </p>
+  {% endif %}
+
+  <!-- Button -->
+  <a href="https://minipass.me" class="btn-home">
+    Retour a l'accueil
+  </a>
+</div>
+
+</body>
+</html>

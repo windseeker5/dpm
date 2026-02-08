@@ -119,6 +119,9 @@ class Activity(db.Model):
     max_sessions = db.Column(db.Integer, nullable=True)                 # Total capacity
     show_remaining_quantity = db.Column(db.Boolean, default=False)      # Display "X left" on form
 
+    # Stripe credit card payments
+    accept_credit_card = db.Column(db.Boolean, default=False)
+
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 
@@ -218,6 +221,10 @@ class Signup(db.Model):
 
     # Signup code for reliable payment matching (format: MP-INS-0001234)
     signup_code = db.Column(db.String(20), unique=True, nullable=True)
+
+    # Stripe credit card payment fields
+    payment_method = db.Column(db.String(20), default="interac")  # "interac" or "stripe"
+    stripe_checkout_session_id = db.Column(db.String(255), nullable=True)
 
 
 class Passport(db.Model):
