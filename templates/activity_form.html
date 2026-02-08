@@ -376,6 +376,17 @@
                       <small class="form-hint">When a passport runs out, prompt to renew at the scan screen</small>
                     </div>
 
+                    {% if stripe_configured %}
+                    <div class="mb-3">
+                      <label class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="accept_credit_card"
+                               {{ 'checked' if activity and activity.accept_credit_card else '' }}>
+                        <span class="form-check-label">Accept credit card payments (Stripe)</span>
+                      </label>
+                      <small class="form-hint">Customers can pay by credit card via Stripe Checkout</small>
+                    </div>
+                    {% endif %}
+
               </div>
             </div>
 

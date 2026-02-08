@@ -217,6 +217,60 @@
           </div>
         </div>
 
+        <!-- Credit Card Payments (Stripe) Card -->
+        <div class="card bg-white mb-3">
+          <div class="card-body">
+            <div class="border rounded">
+              <button class="btn btn-link w-100 text-start p-3 text-decoration-none text-dark d-flex justify-content-between align-items-center"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapseStripe"
+                      aria-expanded="false"
+                      aria-controls="collapseStripe">
+                <h2 class="mb-0">
+                  <i class="ti ti-credit-card me-2"></i>
+                  Credit Card Settings (Stripe)
+                </h2>
+                <i class="ti ti-chevron-down" id="stripe-chevron-icon"></i>
+              </button>
+              <div id="collapseStripe" class="collapse">
+                <div class="border-top p-3">
+                  <div class="alert alert-info mb-3">
+                    <div class="d-flex">
+                      <div>
+                        <i class="ti ti-brand-stripe alert-icon me-2"></i>
+                      </div>
+                      <div>
+                        <h4 class="alert-title">Accept Credit Cards via Stripe</h4>
+                        <div class="text-secondary">
+                          Let customers pay by credit card for your activities. Requires a <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Stripe account</a>.
+                          Once configured, you can enable credit card payments per activity.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Secret Key</label>
+                    <input type="text" class="form-control" name="stripe_payments_secret_key"
+                           value="{{ settings.STRIPE_PAYMENTS_SECRET_KEY or '' }}"
+                           placeholder="sk_test_... or sk_live_...">
+                    <div class="form-text">Your Stripe Secret Key from the API keys page. Leave blank to keep existing value.</div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Webhook Secret</label>
+                    <input type="text" class="form-control" name="stripe_webhook_secret"
+                           value="{{ settings.STRIPE_WEBHOOK_SECRET or '' }}"
+                           placeholder="whsec_...">
+                    <div class="form-text">Your Stripe Webhook Signing Secret. Leave blank to keep existing value.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Push Notifications Card -->
         <div class="card bg-white mb-3">
           <div class="card-body">
@@ -288,6 +342,14 @@ document.addEventListener('DOMContentLoaded', function() {
         collapseElement.addEventListener('hide.bs.collapse', () => chevronIcon.style.transform = 'rotate(0deg)');
     }
 
+    // Chevron rotation for Stripe Settings
+    const collapseStripe = document.getElementById('collapseStripe');
+    const stripeChevron = document.getElementById('stripe-chevron-icon');
+    if (collapseStripe && stripeChevron) {
+        collapseStripe.addEventListener('show.bs.collapse', () => stripeChevron.style.transform = 'rotate(180deg)');
+        collapseStripe.addEventListener('hide.bs.collapse', () => stripeChevron.style.transform = 'rotate(0deg)');
+    }
+
     // Push Notifications Toggle
     const pushToggle = document.getElementById('push-notifications-toggle');
     const pushStatus = document.getElementById('push-status');
@@ -328,7 +390,8 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 /* Advanced Server Settings improved styling */
-#collapseAdvanced .border-top {
+#collapseAdvanced .border-top,
+#collapseStripe .border-top {
   background-color: #f8f9fa;
 }
 </style>

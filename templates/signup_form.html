@@ -51,15 +51,11 @@
       flex: 1;
       max-width: 50%;
       padding: 2rem 3rem;
-      overflow-y: hidden;
+      overflow-y: auto;
       background: #ffffff;
       display: flex;
       flex-direction: column;
       height: 100vh;
-    }
-
-    .signup-form-side.notes-expanded {
-      overflow-y: auto;
     }
 
     .signup-image-side {
@@ -95,7 +91,7 @@
       justify-content: center;
       align-items: center;
       gap: 0;
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
       padding: 0 1rem;
     }
 
@@ -344,13 +340,22 @@
     /* Payment Method Card */
     .payment-method-card {
       background: #ffffff;
-      border: 1px solid #e9ecef;
+      border: 2px solid #e9ecef;
       border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
+      padding: 0.625rem 1.25rem;
+      margin-bottom: 0.375rem;
       display: flex;
       align-items: center;
       gap: 0.875rem;
+      cursor: pointer;
+    }
+
+    .payment-method-card.selected {
+      border-color: #206bc4;
+    }
+
+    .payment-methods-group {
+      margin-bottom: 1rem;
     }
 
     .payment-method-radio {
@@ -363,6 +368,10 @@
       flex-shrink: 0;
     }
 
+    .payment-method-card.selected .payment-method-radio {
+      border-color: #206bc4;
+    }
+
     .payment-method-radio::after {
       content: '';
       position: absolute;
@@ -372,7 +381,11 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #adb5bd;
+      background: transparent;
+    }
+
+    .payment-method-card.selected .payment-method-radio::after {
+      background: #206bc4;
     }
 
     .payment-method-logo {
@@ -687,11 +700,11 @@
     /* Desktop: Logo on form side - above progress indicator */
     .form-logo {
       text-align: center;
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.75rem;
     }
 
     .form-logo img {
-      height: 160px;
+      height: 120px;
       max-width: 300px;
       object-fit: contain;
     }
@@ -717,7 +730,8 @@
       width: auto;
       object-fit: contain;
       display: block;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+      filter: drop-shadow(0 0 10px rgba(255,255,255,0.9))
+              drop-shadow(0 0 20px rgba(255,255,255,0.6));
     }
 
     /* Mobile: Activity description on hero */
@@ -745,7 +759,7 @@
     </div>
     {% else %}
     <div class="mobile-hero-logo">
-      <div style="width: 80px; height: 80px; border-radius: 12px; background: {{ placeholder_color(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}; color: #fff; font-weight: 700; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">
+      <div style="width: 80px; height: 80px; border-radius: 12px; background: {{ placeholder_color(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}; color: #fff; font-weight: 700; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.9)) drop-shadow(0 0 20px rgba(255,255,255,0.6));">
         {{ placeholder_letter(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}
       </div>
     </div>
@@ -770,7 +784,7 @@
         </div>
         {% else %}
         <div class="form-logo">
-          <div style="width: 120px; height: 120px; border-radius: 12px; background: {{ placeholder_color(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}; color: #fff; font-weight: 700; font-size: 3rem; display: inline-flex; align-items: center; justify-content: center;">
+          <div style="width: 90px; height: 90px; border-radius: 12px; background: {{ placeholder_color(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}; color: #fff; font-weight: 700; font-size: 3rem; display: inline-flex; align-items: center; justify-content: center;">
             {{ placeholder_letter(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}
           </div>
         </div>
@@ -1013,6 +1027,8 @@
             <!-- Hidden passport type ID -->
             {% if selected_passport_type %}
               <input type="hidden" name="passport_type_id" value="{{ selected_passport_type.id }}">
+            {% elif passport_types|length == 1 %}
+              <input type="hidden" name="passport_type_id" value="{{ passport_types[0].id }}">
             {% endif %}
 
             <!-- Hidden quantity (updated by JS) -->
@@ -1036,15 +1052,41 @@
             </div>
 
             <!-- Payment Method -->
-            <div class="payment-method-card">
-              <div class="payment-method-radio"></div>
-              <div class="payment-method-logo">
-                <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img">
+            <input type="hidden" name="payment_method" id="payment_method_input" value="interac">
+            {% if activity.accept_credit_card %}
+            <div class="payment-methods-group">
+              <div class="payment-method-card selected" onclick="selectPaymentMethod('interac', this)">
+                <div class="payment-method-radio"></div>
+                <div class="payment-method-logo">
+                  <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img">
+                </div>
+                <div class="payment-method-info">
+                  <span class="payment-method-desc"><strong>Interac.</strong> Les instructions de paiement vous seront envoyees par courriel apres votre inscription.</span>
+                </div>
               </div>
-              <div class="payment-method-info">
-                <span class="payment-method-desc"><strong>Interac.</strong> Les instructions de paiement vous seront envoyees par courriel apres votre inscription.</span>
+              <div class="payment-method-card" onclick="selectPaymentMethod('stripe', this)">
+                <div class="payment-method-radio"></div>
+                <div class="payment-method-logo">
+                  <i class="ti ti-credit-card" style="font-size: 2.25rem; color: #e67e22;"></i>
+                </div>
+                <div class="payment-method-info">
+                  <span class="payment-method-desc"><strong>Carte de credit.</strong> Payer par carte de credit via Stripe.</span>
+                </div>
               </div>
             </div>
+            {% else %}
+            <div class="payment-methods-group">
+              <div class="payment-method-card selected">
+                <div class="payment-method-radio"></div>
+                <div class="payment-method-logo">
+                  <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img">
+                </div>
+                <div class="payment-method-info">
+                  <span class="payment-method-desc"><strong>Interac.</strong> Les instructions de paiement vous seront envoyees par courriel apres votre inscription.</span>
+                </div>
+              </div>
+            </div>
+            {% endif %}
 
             <!-- Name -->
             <div class="form-group">
@@ -1160,16 +1202,13 @@ function updateSummary() {
 function toggleNotes() {
   var section = document.getElementById('notes-section');
   var icon = document.getElementById('notes-toggle-icon');
-  var formSide = document.querySelector('.signup-form-side');
 
   if (section.classList.contains('visible')) {
     section.classList.remove('visible');
     icon.className = 'ti ti-plus';
-    formSide.classList.remove('notes-expanded');
   } else {
     section.classList.add('visible');
     icon.className = 'ti ti-minus';
-    formSide.classList.add('notes-expanded');
     // Scroll to show button
     setTimeout(function() {
       var button = document.querySelector('.buttons-row');
@@ -1177,6 +1216,18 @@ function toggleNotes() {
         button.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
     }, 100);
+  }
+}
+
+function selectPaymentMethod(method, el) {
+  document.getElementById('payment_method_input').value = method;
+  document.querySelectorAll('.payment-method-card').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+  var btn = document.querySelector('.btn-cta-primary');
+  if (btn) {
+    btn.innerHTML = method === 'stripe'
+      ? 'Payer par carte <i class="ti ti-credit-card"></i>'
+      : 'Confirmer l\'inscription <i class="ti ti-check"></i>';
   }
 }
 </script>

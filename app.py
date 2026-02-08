@@ -1788,6 +1788,7 @@ def create_activity():
             location_coordinates=location_coordinates if location_address_formatted else None,
             goal_revenue=goal_revenue,
             offer_passport_renewal=("offer_passport_renewal" in request.form),
+            accept_credit_card=("accept_credit_card" in request.form),
             workflow_type=workflow_type,
             allow_quantity_selection=allow_quantity_selection,
             is_quantity_limited=is_quantity_limited,
@@ -1897,6 +1898,8 @@ def create_activity():
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
+    stripe_configured = bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
+
     return render_template("activity_form.html",
                           activity=None,
                           has_workflow_data=False,
@@ -1904,7 +1907,8 @@ def create_activity():
                           has_schedule_data=False,
                           has_advanced_data=False,
                           google_maps_api_key=google_maps_api_key,
-                          payment_email=payment_email)
+                          payment_email=payment_email,
+                          stripe_configured=stripe_configured)
 
 
 @app.route("/edit-activity/<int:activity_id>", methods=["GET", "POST"])
@@ -1957,6 +1961,7 @@ def edit_activity(activity_id):
 
         # Update passport renewal setting
         activity.offer_passport_renewal = ("offer_passport_renewal" in request.form)
+        activity.accept_credit_card = ("accept_credit_card" in request.form)
 
         # Update workflow and quantity limit fields
         activity.workflow_type = request.form.get("workflow_type", "approval_first")
@@ -2118,7 +2123,8 @@ def edit_activity(activity_id):
     # Smart accordion expansion: detect which sections have data
     has_workflow_data = (
         activity.workflow_type == 'payment_first' or
-        activity.offer_passport_renewal
+        activity.offer_passport_renewal or
+        activity.accept_credit_card
     )
     has_capacity_data = (
         activity.is_quantity_limited or
@@ -2142,6 +2148,8 @@ def edit_activity(activity_id):
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
+    stripe_configured = bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
+
     return render_template("activity_form.html",
                           activity=activity,
                           passport_types=passport_types,
@@ -2153,7 +2161,8 @@ def edit_activity(activity_id):
                           has_schedule_data=has_schedule_data,
                           has_advanced_data=has_advanced_data,
                           google_maps_api_key=google_maps_api_key,
-                          payment_email=payment_email)
+                          payment_email=payment_email,
+                          stripe_configured=stripe_configured)
 
 
 
@@ -2213,6 +2222,10 @@ def signup(activity_id):
         unit_price = passport_type.price_per_user if passport_type else 0.0
         requested_amount = unit_price * requested_sessions
 
+        payment_method = request.form.get("payment_method", "interac")
+        if payment_method not in ("interac", "stripe"):
+            payment_method = "interac"
+
         signup_record = Signup(
             user_id=user.id,
             activity_id=activity.id,
@@ -2221,20 +2234,54 @@ def signup(activity_id):
             description=request.form.get("notes", "").strip(),
             form_data="",
             requested_sessions=requested_sessions,
-            requested_amount=requested_amount
+            requested_amount=requested_amount,
+            payment_method=payment_method
         )
         db.session.add(signup_record)
         db.session.flush()  # Get the ID before commit
         signup_record.signup_code = f"MP-INS-{signup_record.id:07d}"
         db.session.commit()
 
-        from utils import notify_signup_event
-        notify_signup_event(app, signup=signup_record, activity=activity)
+        if payment_method == "stripe":
+            # Redirect to Stripe Checkout for credit card payment
+            try:
+                from utils import get_setting
+                stripe_secret_key = get_setting('STRIPE_PAYMENTS_SECRET_KEY', '')
+                if not stripe_secret_key:
+                    flash("Credit card payments are not configured. Please use Interac.", "error")
+                    return redirect(url_for("signup", activity_id=activity_id))
 
-        # SSE notifications removed for leaner performance
+                checkout_session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    line_items=[{
+                        'price_data': {
+                            'currency': 'cad',
+                            'product_data': {'name': activity.name},
+                            'unit_amount': int(round(requested_amount * 100)),
+                        },
+                        'quantity': 1,
+                    }],
+                    mode='payment',
+                    success_url=url_for('stripe_success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
+                    cancel_url=url_for('signup', activity_id=activity_id, _external=True),
+                    metadata={'signup_id': str(signup_record.id)},
+                    customer_email=email,
+                    api_key=stripe_secret_key,
+                )
+                signup_record.stripe_checkout_session_id = checkout_session.id
+                db.session.commit()
+                return redirect(checkout_session.url, code=303)
+            except Exception as e:
+                print(f"[Stripe Checkout] Error creating session: {e}")
+                flash("Error creating payment session. Please try again or use Interac.", "error")
+                return redirect(url_for("signup", activity_id=activity_id))
+        else:
+            # Existing Interac flow
+            from utils import notify_signup_event
+            notify_signup_event(app, signup=signup_record, activity=activity)
 
-        flash("Signup submitted!", "success")
-        return redirect(url_for("signup_thank_you", signup_id=signup_record.id))
+            flash("Signup submitted!", "success")
+            return redirect(url_for("signup_thank_you", signup_id=signup_record.id))
 
     return render_template("signup_form.html", activity=activity, settings=settings,
                          passport_types=passport_types, selected_passport_type=selected_passport_type,
@@ -2252,11 +2299,103 @@ def signup_thank_you(signup_id):
     activity = signup.activity
     settings = {s.key: s.value for s in Setting.query.all()}
     
-    return render_template("signup_thank_you.html", 
-                          signup=signup, 
-                          activity=activity, 
+    return render_template("signup_thank_you.html",
+                          signup=signup,
+                          activity=activity,
                           settings=settings)
 
+
+@app.route("/stripe/webhook", methods=["POST"])
+@csrf.exempt
+def stripe_webhook():
+    """Handle Stripe webhook events for credit card payments"""
+    from utils import get_setting, auto_create_passport_from_signup
+    import json as json_mod
+
+    payload = request.get_data()
+    sig_header = request.headers.get('Stripe-Signature', '')
+    webhook_secret = get_setting('STRIPE_WEBHOOK_SECRET', '')
+
+    if not webhook_secret:
+        print("[Stripe Webhook] No webhook secret configured")
+        return jsonify({"error": "Webhook not configured"}), 400
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except ValueError:
+        print("[Stripe Webhook] Invalid payload")
+        return jsonify({"error": "Invalid payload"}), 400
+    except stripe.error.SignatureVerificationError:
+        print("[Stripe Webhook] Invalid signature")
+        return jsonify({"error": "Invalid signature"}), 400
+
+    if event['type'] == 'checkout.session.completed':
+        session_data = event['data']['object']
+        signup_id = session_data.get('metadata', {}).get('signup_id')
+
+        if not signup_id:
+            print("[Stripe Webhook] No signup_id in metadata")
+            return jsonify({"status": "ignored"}), 200
+
+        try:
+            signup_id_int = int(signup_id)
+        except (ValueError, TypeError):
+            print(f"[Stripe Webhook] Invalid signup_id format: {signup_id}")
+            return jsonify({"status": "ignored"}), 200
+
+        signup_record = db.session.get(Signup, signup_id_int)
+        if not signup_record:
+            print(f"[Stripe Webhook] Signup {signup_id} not found")
+            return jsonify({"status": "ignored"}), 200
+
+        if signup_record.paid:
+            print(f"[Stripe Webhook] Signup {signup_id} already paid, skipping")
+            return jsonify({"status": "already_processed"}), 200
+
+        # Create passport and mark as paid
+        passport = auto_create_passport_from_signup(signup_record, marked_paid_by="stripe-checkout")
+
+        if passport:
+            # Send payment confirmation email with QR code
+            try:
+                activity = signup_record.activity
+                from utils import notify_pass_event
+                notify_pass_event(app, event_type='payment_received', pass_data=passport,
+                                  activity=activity)
+                print(f"[Stripe Webhook] Passport created and email sent for signup {signup_id}")
+            except Exception as e:
+                print(f"[Stripe Webhook] Email notification failed: {e}")
+
+            # Send signup notification to admin
+            try:
+                from utils import notify_signup_event
+                notify_signup_event(app, signup=signup_record, activity=activity)
+            except Exception as e:
+                print(f"[Stripe Webhook] Admin notification failed: {e}")
+        else:
+            print(f"[Stripe Webhook] Failed to create passport for signup {signup_id}")
+
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route("/signup/stripe-success")
+def stripe_success():
+    """Success page after Stripe Checkout payment"""
+    session_id = request.args.get('session_id')
+    if not session_id:
+        return redirect(url_for("dashboard"))
+
+    signup = Signup.query.filter_by(stripe_checkout_session_id=session_id).first()
+    if not signup:
+        return redirect(url_for("dashboard"))
+
+    activity = signup.activity
+    settings = {s.key: s.value for s in Setting.query.all()}
+
+    return render_template("stripe_success.html",
+                          signup=signup,
+                          activity=activity,
+                          settings=settings)
 
 
 @app.route("/payment-bot-settings", methods=["GET", "POST"])
@@ -3642,7 +3781,21 @@ def unified_settings():
                     existing.value = str(value)
                 else:
                     db.session.add(Setting(key=key, value=str(value)))
-            
+
+            # Step 4b: Stripe Credit Card Payment Settings (skip blank to preserve existing)
+            stripe_fields = {
+                "STRIPE_PAYMENTS_SECRET_KEY": request.form.get("stripe_payments_secret_key", "").strip(),
+                "STRIPE_WEBHOOK_SECRET": request.form.get("stripe_webhook_secret", "").strip(),
+            }
+            for key, value in stripe_fields.items():
+                if not value:
+                    continue  # Don't overwrite existing key with blank
+                existing = Setting.query.filter_by(key=key).first()
+                if existing:
+                    existing.value = value
+                else:
+                    db.session.add(Setting(key=key, value=value))
+
             # Step 5: Save all changes
             db.session.commit()
 
