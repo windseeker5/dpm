@@ -2774,10 +2774,10 @@ def api_create_passport_from_payment():
         activity_id = data.get("activity_id")
         passport_type_id = data.get("passport_type_id")
         user_name = data.get("name", "").strip()
-        user_email = data.get("email", "").strip()
+        user_email = (data.get("email") or "").strip()
 
         # Optional fields
-        user_phone = data.get("phone", "").strip() or None
+        user_phone = (data.get("phone") or "").strip() or None
         amount = data.get("amount")
         sessions = data.get("sessions")
 
