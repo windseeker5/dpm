@@ -341,3 +341,44 @@ div.dropdown-menu[data-popper-placement] {
     outline: 2px solid blue !important;
 }
 */
+
+/* ===== ULTRA-NARROW SCREENS - ENSURE ACTIONS COLUMN VISIBLE ===== */
+/*
+ * Fix for Jean-François's bug: Actions column invisible on 360px mobile screens
+ * Reduces padding to ensure Actions column stays visible without horizontal scroll
+ * Scoped to ≤360px to avoid affecting normal mobile/desktop layouts
+ */
+@media (max-width: 360px) {
+  /* Reduce left padding on first column to save space */
+  .table-responsive .table th:first-child,
+  .table-responsive .table td:first-child {
+    padding-left: 0.5rem !important; /* was 1.5rem */
+  }
+
+  /* Reduce all cell horizontal padding for compact layout */
+  .table-responsive .table th,
+  .table-responsive .table td {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Make mobile action dropdown button more compact */
+  .table-responsive .table .btn.d-md-none {
+    padding: 0.25rem 0.375rem !important; /* was 0.375rem 0.5rem */
+  }
+
+  /* Slightly reduce font size for better fit */
+  .table-responsive .table td {
+    font-size: 0.875rem;
+  }
+
+  /* Ensure payment sender column doesn't overflow */
+  .table-responsive .table td:first-child .fw-bold {
+    font-size: 0.875rem;
+    word-break: break-word;
+  }
+
+  .table-responsive .table td:first-child .text-muted {
+    font-size: 0.75rem;
+  }
+}
