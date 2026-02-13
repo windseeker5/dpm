@@ -267,6 +267,7 @@ class EbankPayment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # ✅ UTC-aware (when bot processed)
     from_email = db.Column(db.String(150))
+    reply_to_email = db.Column(db.String(150))  # Real sender from Reply-To header
     subject = db.Column(db.Text)
     bank_info_name = db.Column(db.String(100))
     bank_info_amt = db.Column(db.Float)

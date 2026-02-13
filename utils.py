@@ -970,6 +970,15 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
             # 📦 Parse email headers
             msg = email.message_from_bytes(raw_email)
             from_email = email.utils.parseaddr(msg.get("From"))[1]
+
+            # 📧 Extract Reply-To header (real sender)
+            reply_to_header = msg.get("Reply-To")
+            reply_to_email = None
+            if reply_to_header:
+                reply_to_email = email.utils.parseaddr(reply_to_header)[1]
+                if reply_to_email and '@' in reply_to_email:
+                    print(f"📧 Reply-To found: {reply_to_email}")
+
             subject_raw = msg["Subject"]
             subject = email.header.decode_header(subject_raw)[0][0]
             if isinstance(subject, bytes):
@@ -1075,6 +1084,7 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                 "bank_info_amt": amount,
                 "subject": subject,
                 "from_email": from_email,
+                "reply_to_email": reply_to_email,
                 "uid": uid,
                 "email_received_date": email_received_date,
                 "transfer_message": transfer_message,
@@ -1635,6 +1645,7 @@ def match_gmail_payments_to_passes():
             name = match["bank_info_name"]
             amt = match["bank_info_amt"]
             from_email = match.get("from_email")
+            reply_to_email = match.get("reply_to_email")  # Real sender from Reply-To header
             uid = match.get("uid")
             subject = match["subject"]
             email_received_date = match.get("email_received_date")  # Extract email received date
@@ -1899,6 +1910,7 @@ def match_gmail_payments_to_passes():
                             # Record the payment
                             db.session.add(EbankPayment(
                                 from_email=from_email,
+                                reply_to_email=reply_to_email,
                                 subject=subject,
                                 bank_info_name=name,
                                 bank_info_amt=amt,
@@ -2056,6 +2068,7 @@ def match_gmail_payments_to_passes():
                         print(f"   📝 Creating new EbankPayment MATCHED record")
                         db.session.add(EbankPayment(
                             from_email=from_email,
+                            reply_to_email=reply_to_email,
                             subject=subject,
                             bank_info_name=name,
                             bank_info_amt=amt,
@@ -2243,6 +2256,7 @@ def match_gmail_payments_to_passes():
                     # Create new record
                     db.session.add(EbankPayment(
                         from_email=from_email,
+                        reply_to_email=reply_to_email,
                         subject=subject,
                         bank_info_name=name,
                         bank_info_amt=amt,
