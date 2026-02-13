@@ -3817,7 +3817,17 @@ def unified_settings():
     # GET request - load all settings
     settings = {s.key: s.value for s in Setting.query.all()}
 
-    return render_template("unified_settings.html", settings=settings)
+    # Extract subdomain from request host for webhook URL
+    host = request.host.split(':')[0]  # Remove port if present
+
+    if host.endswith('.minipass.me'):
+        # Production: use the current host directly (already in format: subdomain_app.minipass.me)
+        webhook_url = f"https://{host}/stripe/webhook"
+    else:
+        # Development (localhost/127.0.0.1): use fallback
+        webhook_url = f"https://minipass_app.minipass.me/stripe/webhook"
+
+    return render_template("unified_settings.html", settings=settings, webhook_url=webhook_url)
 
 
 # Alternative route name to match template url_for reference
