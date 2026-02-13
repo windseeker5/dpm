@@ -265,58 +265,8 @@
         </div>
 
         <!-- Pagination -->
-        <div class="card-footer d-flex justify-content-between align-items-center">
-          {% if payments|length > 0 %}
-            <span class="text-muted">Showing {{ payments|length }} of {{ pagination.total }} entries (Page {{ pagination.page }} of {{ pagination.pages }})</span>
-
-            <!-- Pagination Controls -->
-            {% if pagination.pages > 1 %}
-            <nav aria-label="Page navigation">
-              <ul class="pagination m-0">
-                {% if pagination.has_prev %}
-                <li class="page-item">
-                  <a class="page-link" href="{{ url_for('payment_bot_matches', page=pagination.prev_num, q=current_filters.q, status=current_filters.status) }}">
-                    <i class="ti ti-chevron-left"></i> Previous
-                  </a>
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                  <span class="page-link"><i class="ti ti-chevron-left"></i> Previous</span>
-                </li>
-                {% endif %}
-
-                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
-                  {% if page_num %}
-                    {% if page_num == pagination.page %}
-                      <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
-                    {% else %}
-                      <li class="page-item">
-                        <a class="page-link" href="{{ url_for('payment_bot_matches', page=page_num, q=current_filters.q, status=current_filters.status) }}">{{ page_num }}</a>
-                      </li>
-                    {% endif %}
-                  {% else %}
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                  {% endif %}
-                {% endfor %}
-
-                {% if pagination.has_next %}
-                <li class="page-item">
-                  <a class="page-link" href="{{ url_for('payment_bot_matches', page=pagination.next_num, q=current_filters.q, status=current_filters.status) }}">
-                    Next <i class="ti ti-chevron-right"></i>
-                  </a>
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                  <span class="page-link">Next <i class="ti ti-chevron-right"></i></span>
-                </li>
-                {% endif %}
-              </ul>
-            </nav>
-            {% endif %}
-          {% else %}
-            <span class="text-muted">No entries found</span>
-          {% endif %}
-        </div>
+        {% from 'macros/pagination.html' import render_pagination %}
+        {{ render_pagination(pagination, current_filters, payments) }}
         </div>
         {% endif %}
       </div>
