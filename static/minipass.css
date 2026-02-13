@@ -987,6 +987,50 @@ html {
   font-weight: 700;
 }
 
+/* Avatar notification badge */
+.avatar-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 700;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10;
+}
+
+/* Mobile bottom nav badge */
+.mobile-nav-item {
+  position: relative;
+}
+
+.mobile-nav-badge {
+  position: absolute;
+  top: 0.25rem;
+  left: calc(50% + 0.5rem);
+  background: #ef4444;
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 700;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10;
+}
+
 .nav-tag {
   background: #f3f4f6;
   color: #6b7280;
@@ -2590,4 +2634,33 @@ body {
 .badge.bg-gray-lt {
   background-color: #f3f4f6 !important;
   color: #4b5563 !important;
+}
+/* ============================================
+   MOBILE RESPONSIVE PAGINATION
+   ============================================ */
+
+/* Hide page numbers on mobile, keep Previous/Next buttons visible */
+@media (max-width: 767px) {
+  .pagination .page-item:not(:first-child):not(:last-child) {
+    display: none;
+  }
+  
+  /* Make pagination buttons more touch-friendly on mobile */
+  .pagination .page-link {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Stack pagination on mobile if needed */
+  .card-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .card-footer .pagination {
+    margin-left: 0 !important;
+  }
 }

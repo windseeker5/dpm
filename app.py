@@ -4593,9 +4593,71 @@ def activity_log():
         return redirect(url_for("login"))
 
     from utils import get_all_activity_logs
-    logs = get_all_activity_logs()
 
-    return render_template("activity_log.html", logs=logs)
+    # Get pagination and filter parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    search = request.args.get('q', '').strip().lower()
+    log_type = request.args.get('type', '').strip().lower()
+
+    # Get all logs
+    all_logs = get_all_activity_logs()
+
+    # Apply filters
+    filtered_logs = all_logs
+    if search or log_type:
+        filtered_logs = []
+        for log in all_logs:
+            # Type filter
+            if log_type and log_type not in log.get('type', '').lower():
+                continue
+
+            # Search filter (search in type, user, and details)
+            if search:
+                searchable_text = f"{log.get('type', '')} {log.get('user', '')} {log.get('details', '')}".lower()
+                if search not in searchable_text:
+                    continue
+
+            filtered_logs.append(log)
+
+    # Calculate pagination
+    total = len(filtered_logs)
+    total_pages = (total + per_page - 1) // per_page  # Ceiling division
+
+    # Get page slice
+    start = (page - 1) * per_page
+    end = start + per_page
+    logs = filtered_logs[start:end]
+
+    # Create pagination object (simple dict to mimic Flask-SQLAlchemy pagination)
+    class SimplePagination:
+        def __init__(self, items, page, per_page, total):
+            self.items = items
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = (total + per_page - 1) // per_page
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1 if self.has_prev else None
+            self.next_num = page + 1 if self.has_next else None
+
+        def iter_pages(self, left_edge=2, left_current=2, right_current=3, right_edge=2):
+            """Generate page numbers with ellipsis"""
+            last = 0
+            for num in range(1, self.pages + 1):
+                if (num <= left_edge or
+                    (num > self.page - left_current - 1 and num < self.page + right_current) or
+                    num > self.pages - right_edge):
+                    if last + 1 != num:
+                        yield None
+                    yield num
+                    last = num
+
+    pagination = SimplePagination(logs, page, per_page, total)
+    current_filters = {'q': request.args.get('q', ''), 'type': request.args.get('type', '')}
+
+    return render_template("activity_log.html", logs=logs, pagination=pagination, current_filters=current_filters)
 
 
 
@@ -4666,7 +4728,9 @@ def list_activities():
     if is_over:
         return redirect(url_for("tier_limit_exceeded"))
 
-    # Get filter parameters
+    # Get pagination and filter parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "")
     activity_type = request.args.get("type", "")
@@ -4737,7 +4801,9 @@ def list_activities():
         except ValueError:
             pass
 
-    activities = query.all()
+    # Paginate the results
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    activities = pagination.items
 
     # Determine if showing all (explicitly requested)
     show_all = show_all_param == "true"
@@ -4763,6 +4829,7 @@ def list_activities():
 
     return render_template("activities.html",
                          activities=activities,
+                         pagination=pagination,
                          activity_types=activity_types,
                          statistics=statistics,
                          is_first_time_empty=is_first_time_empty,
@@ -4782,7 +4849,9 @@ def list_surveys():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    # Get filter parameters
+    # Get pagination and filter parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "")
     show_all_param = request.args.get("show_all", "")
@@ -4841,23 +4910,24 @@ def list_surveys():
     active_surveys_count = len([s for s in all_surveys if s.status == 'active'])
     closed_surveys_count = len([s for s in all_surveys if s.status == 'closed'])
 
-    # NOW apply filters to get the displayed surveys
-    surveys = query.all()
+    # Paginate the results
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    surveys = pagination.items
 
     # Get activities and templates for filter dropdowns
     activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
     survey_templates = SurveyTemplate.query.order_by(SurveyTemplate.name).all()
 
-    # Calculate KPI statistics for displayed surveys only
+    # Calculate KPI statistics for displayed surveys only (using paginated results)
     total_surveys = len(surveys)
     active_surveys = len([s for s in surveys if s.status == 'active'])
     inactive_surveys = total_surveys - active_surveys
-    
+
     # Calculate proper completion rates based on invitations sent vs completed
     total_invitations = sum(len([r for r in s.responses if r.invited_dt]) for s in surveys)
     completed_responses = sum(len([r for r in s.responses if r.completed]) for s in surveys)
     avg_completion_rate = (completed_responses / total_invitations * 100) if total_invitations > 0 else 0
-    
+
     # Calculate statistics for each survey
     for survey in surveys:
         survey.invitation_count = len([r for r in survey.responses if r.invited_dt])  # Invited users
@@ -4882,6 +4952,7 @@ def list_surveys():
 
     return render_template("surveys.html",
                          surveys=surveys,
+                         pagination=pagination,
                          activities=activities,
                          survey_templates=survey_templates,
                          statistics=statistics,
@@ -4903,7 +4974,9 @@ def list_passports():
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    # Get filter parameters
+    # Get pagination and filter parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     q = request.args.get("q", "").strip()
     activity_id = request.args.get("activity", "")
     payment_status = request.args.get("payment_status", "")
@@ -4983,7 +5056,9 @@ def list_passports():
         except ValueError:
             pass
 
-    passports = query.all()
+    # Paginate the results
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    passports = pagination.items
 
     # Get activities for filter dropdown
     activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
@@ -5017,6 +5092,7 @@ def list_passports():
 
     return render_template("passports.html",
                          passports=passports,
+                         pagination=pagination,
                          activities=activities,
                          statistics=statistics,
                          is_first_time_empty=is_first_time_empty,

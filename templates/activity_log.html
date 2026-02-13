@@ -20,41 +20,47 @@
     <!-- 🔹 Search + Filter Controls -->
     <div class="card mb-3">
     <div class="card-body">
-      <div class="row g-2 align-items-center">
+      <form method="get" action="{{ url_for('activity_log') }}">
+        <div class="row g-2 align-items-center">
+          <!-- Dropdown Filter -->
+          <div class="col-md-3">
+            <select name="type" class="form-select" onchange="this.form.submit()">
+              <option value="">All Types</option>
+              <option value="Passport Created" {% if current_filters.type == 'Passport Created' %}selected{% endif %}>Passport Created</option>
+              <option value="Passport Redeemed" {% if current_filters.type == 'Passport Redeemed' %}selected{% endif %}>Passport Redeemed</option>
+              <option value="Email Sent" {% if current_filters.type == 'Email Sent' %}selected{% endif %}>Email Sent</option>
+              <option value="Payment Matched" {% if current_filters.type == 'Payment Matched' %}selected{% endif %}>Payment Matched</option>
+              <option value="Marked Paid" {% if current_filters.type == 'Marked Paid' %}selected{% endif %}>Marked Paid</option>
+              <option value="Reminder Sent" {% if current_filters.type == 'Reminder Sent' %}selected{% endif %}>Reminder Sent</option>
+              <option value="Signup Submitted" {% if current_filters.type == 'Signup Submitted' %}selected{% endif %}>Signup Submitted</option>
+              <option value="Signup Approved" {% if current_filters.type == 'Signup Approved' %}selected{% endif %}>Signup Approved</option>
+              <option value="Signup Rejected" {% if current_filters.type == 'Signup Rejected' %}selected{% endif %}>Signup Rejected</option>
+              <option value="Activity Created" {% if current_filters.type == 'Activity Created' %}selected{% endif %}>Activity Created</option>
+              <option value="Admin Action" {% if current_filters.type == 'Admin Action' %}selected{% endif %}>Admin Action</option>
+            </select>
+          </div>
 
+          <!-- Search Input -->
+          <div class="col-md">
+            <div class="input-icon">
+              <span class="input-icon-addon">
+                <i class="ti ti-search"></i>
+              </span>
+              <input type="text" name="q" class="form-control" placeholder="Search logs..." value="{{ current_filters.q }}">
+            </div>
+          </div>
 
-        <!-- Dropdown Filter -->
-        <div class="col-md-3">
-          <select id="filterType" class="form-select">
-            <option value="">All Types</option>
-            <option value="Passport Created">Passport Created</option>
-            <option value="Passport Redeemed">Passport Redeemed</option>
-            <option value="Email Sent">Email Sent</option>
-            <option value="Payment Matched">Payment Matched</option>
-            <option value="Marked Paid">Marked Paid</option>
-            <option value="Reminder Sent">Reminder Sent</option>
-            <option value="Signup Submitted">Signup Submitted</option>
-            <option value="Signup Approved">Signup Approved</option>
-            <option value="Signup Rejected">Signup Rejected</option>
-            <option value="Activity Created">Activity Created</option>
-            <option value="Admin Action">Admin Action</option>
-          </select>
-        </div>
-
-
-
-
-
-        <!-- Search Input -->
-        <div class="col-md">
-          <div class="input-icon">
-            <span class="input-icon-addon">
-              <i class="ti ti-search"></i>
-            </span>
-            <input type="text" id="searchBox" class="form-control" placeholder="Search logs...">
+          <!-- Search Button -->
+          <div class="col-md-auto">
+            <button type="submit" class="btn btn-primary">
+              <i class="ti ti-search me-1"></i> Search
+            </button>
+            {% if current_filters.q or current_filters.type %}
+            <a href="{{ url_for('activity_log') }}" class="btn btn-link">Clear</a>
+            {% endif %}
           </div>
         </div>
-      </div>
+      </form>
     </div>
   </div>
 
@@ -131,98 +137,11 @@
     </div>
 
     <!-- Pagination -->
-    <div class="card-footer d-flex align-items-center">
-      <p class="m-0 text-muted">Showing <span id="showingCount">0</span> of {{ logs|length }}</p>
-      <ul class="pagination m-0 ms-auto" id="paginationControls"></ul>
-    </div>
+    {% from 'macros/pagination.html' import render_pagination %}
+    {{ render_pagination(pagination, current_filters, logs) }}
     </div>
 
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const searchInput = document.getElementById("searchBox");
-  const typeFilter = document.getElementById("filterType");
-  const showingCount = document.getElementById("showingCount");
-
-  // Desktop table elements
-  const tableRows = Array.from(document.querySelectorAll("#logTable tbody tr"));
-  const tableBody = document.querySelector("#logTable tbody");
-
-  // Mobile card elements
-  const mobileCards = Array.from(document.querySelectorAll("#mobileLogCards .log-card-mobile"));
-  const mobileContainer = document.getElementById("mobileLogCards");
-
-  const rowsPerPage = 50;
-  let currentPage = 1;
-
-  function filterItems(items) {
-    const search = searchInput.value.toLowerCase();
-    const type = typeFilter.value.toLowerCase();
-
-    return items.filter(item => {
-      const itemType = (item.getAttribute("data-type") || "").toLowerCase();
-      const text = item.textContent.toLowerCase();
-      return (!type || itemType.includes(type)) && text.includes(search);
-    });
-  }
-
-  function renderView() {
-    const filteredTableRows = filterItems(tableRows);
-    const filteredMobileCards = filterItems(mobileCards);
-
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-
-    // Render desktop table
-    const pageTableRows = filteredTableRows.slice(start, end);
-    tableBody.innerHTML = "";
-    pageTableRows.forEach(row => tableBody.appendChild(row));
-
-    // Render mobile cards
-    const pageMobileCards = filteredMobileCards.slice(start, end);
-    mobileContainer.innerHTML = "";
-    pageMobileCards.forEach(card => mobileContainer.appendChild(card));
-
-    // Update count (use table rows count as reference)
-    showingCount.textContent = filteredTableRows.length;
-
-    renderPagination(filteredTableRows.length);
-  }
-
-  function renderPagination(total) {
-    const pageCount = Math.ceil(total / rowsPerPage);
-    const pagination = document.getElementById("paginationControls");
-    pagination.innerHTML = "";
-
-    for (let i = 1; i <= pageCount; i++) {
-      const li = document.createElement("li");
-      li.className = `page-item ${i === currentPage ? "active" : ""}`;
-      li.innerHTML = `<a href="#" class="page-link">${i}</a>`;
-      li.addEventListener("click", function (e) {
-        e.preventDefault();
-        currentPage = i;
-        renderView();
-      });
-      pagination.appendChild(li);
-    }
-  }
-
-  searchInput.addEventListener("input", () => {
-    currentPage = 1;
-    renderView();
-  });
-
-  typeFilter.addEventListener("change", () => {
-    currentPage = 1;
-    renderView();
-  });
-
-  renderView();
-});
-</script>
 {% endblock %}

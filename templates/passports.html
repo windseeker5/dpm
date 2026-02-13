@@ -232,16 +232,10 @@
         </tbody>
       </table>
       </div>
-      
+
       <!-- Pagination -->
-      <div class="card-footer d-flex justify-content-between align-items-center">
-        {% if passports|length > 0 %}
-          <span class="text-muted">Showing {{ passports|length }} of {{ statistics.total_passports|default(0) }} entries</span>
-          <!-- Pagination will be enabled when backend implements it -->
-        {% else %}
-          <span class="text-muted">No entries found</span>
-        {% endif %}
-      </div>
+      {% from 'macros/pagination.html' import render_pagination %}
+      {{ render_pagination(pagination, current_filters, passports) }}
       </div>
       {% endif %}
     </div>
