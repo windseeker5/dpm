@@ -662,6 +662,14 @@ def datetimeformat(value, format="%Y-%m-%d %H:%M"):
     return value.strftime(format) if value else ""
 
 
+@app.template_filter("combine")
+def combine_dicts(dict1, dict2):
+    """Combine two dictionaries (dict2 overwrites dict1)"""
+    result = dict1.copy() if dict1 else {}
+    if dict2:
+        result.update(dict2)
+    return result
+
 
 @app.before_request
 def check_first_run():
@@ -6477,6 +6485,11 @@ def activity_dashboard(activity_id):
     show_all_param = request.args.get('show_all', '')
     q = request.args.get('q', '').strip()  # Add search parameter support
 
+    # Get pagination parameters
+    passport_page = request.args.get('passport_page', 1, type=int)
+    signup_page = request.args.get('signup_page', 1, type=int)
+    per_page = 10
+
     # Default to 'active' filter if no passport filter specified (unless explicitly showing all)
     if not passport_filter and show_all_param != "true":
         passport_filter = "active"
@@ -6500,8 +6513,11 @@ def activity_dashboard(activity_id):
     
     # IMPORTANT: On activity_dashboard, search only applies to passports, NOT signups
     # Signups are displayed unfiltered by search query for clarity
-    
-    signups = signups_query.order_by(Signup.signed_up_at.desc()).all()
+
+    signup_pagination = signups_query.order_by(Signup.signed_up_at.desc()).paginate(
+        page=signup_page, per_page=per_page, error_out=False
+    )
+    signups = signup_pagination.items
 
     # Load passports with filtering
     passports_query = (
@@ -6536,8 +6552,11 @@ def activity_dashboard(activity_id):
                 Passport.notes.ilike(f"%{q}%")
             )
         )
-    
-    passports = passports_query.order_by(Passport.created_dt.desc()).all()
+
+    passport_pagination = passports_query.order_by(Passport.created_dt.desc()).paginate(
+        page=passport_page, per_page=per_page, error_out=False
+    )
+    passports = passport_pagination.items
 
     # Use the enhanced get_kpi_data function with activity filtering
     from utils import get_kpi_data
@@ -6723,11 +6742,15 @@ def activity_dashboard(activity_id):
         # Add filter-related data for server-side filtering (like Passports page)
         passport_statistics=passport_statistics,
         current_filters={
+            'activity_id': activity_id,
             'q': q,
             'passport_filter': passport_filter,
             'signup_filter': signup_filter,
-            'show_all': show_all
-        }
+            'show_all': 'true' if show_all else ''
+        },
+        # Add pagination objects
+        passport_pagination=passport_pagination,
+        signup_pagination=signup_pagination
     )
 
 
@@ -9021,9 +9044,20 @@ def delete_survey_template(template_id):
 def survey_results(survey_id):
     if "admin" not in session:
         return redirect(url_for("login"))
-    
+
     survey = Survey.query.get_or_404(survey_id)
-    responses = SurveyResponse.query.filter_by(survey_id=survey_id).all()
+
+    # Add pagination for responses
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    response_pagination = SurveyResponse.query.filter_by(survey_id=survey_id).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    responses = response_pagination.items
+
+    # For analysis, we still need all responses
+    all_responses = SurveyResponse.query.filter_by(survey_id=survey_id).all()
     
     # Parse questions for analysis
     try:
@@ -9032,7 +9066,7 @@ def survey_results(survey_id):
     except:
         questions = []
     
-    # Analyze responses
+    # Analyze responses (use all_responses for complete analysis)
     analysis = {}
     for question in questions:
         question_id = str(question['id'])
@@ -9042,7 +9076,7 @@ def survey_results(survey_id):
             'summary': {}
         }
 
-        for response in responses:
+        for response in all_responses:
             if response.responses:
                 try:
                     response_data = json.loads(response.responses)
@@ -9060,10 +9094,13 @@ def survey_results(survey_id):
         else:
             analysis[question_id]['summary'] = {'count': len(analysis[question_id]['responses'])}
     
-    return render_template("survey_results.html", 
-                         survey=survey, 
-                         responses=responses, 
-                         analysis=analysis)
+    return render_template("survey_results.html",
+                         survey=survey,
+                         responses=responses,
+                         all_responses=all_responses,
+                         analysis=analysis,
+                         pagination=response_pagination,
+                         current_filters={})
 
 
 @app.route("/send-survey-invitations/<int:survey_id>", methods=["POST"])
