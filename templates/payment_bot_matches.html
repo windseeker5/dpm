@@ -14,7 +14,7 @@
       <!-- Page Title -->
       <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
         <h2 class="mb-0">
-          <i class="ti ti-mail-dollar me-2" style="color: #e03131;"></i>Inbox Payments
+          <i class="ti ti-mail-down me-2" style="color: #ffc107;"></i>Payments
         </h2>
         <a href="/admin/unified-settings?test_payment_bot=1" class="btn btn-primary">
           Refresh
@@ -107,7 +107,6 @@
               <tr>
                 <th style="padding-left: 1.5rem;">Payment Sender</th>
                 <th class="d-none d-md-table-cell">Payment Date</th>
-                <th class="d-md-none text-center">Status</th>
                 <th class="d-none d-md-table-cell text-center">Amount</th>
                 <th class="d-none d-md-table-cell text-center">Status</th>
                 <th class="d-none d-lg-table-cell">Matched To</th>
@@ -121,8 +120,40 @@
               <!-- Payment Sender Column: Always visible -->
               <td style="vertical-align: middle; padding-left: 1.5rem;">
                 <div>
+                  <!-- Row 1: Name (always visible) -->
                   <div class="fw-bold">{{ payment.bank_info_name or 'Unknown' }}</div>
-                  <div class="text-muted small">{{ payment.from_email or 'No email' }}</div>
+
+                  <!-- Row 2: Email on desktop, Date on mobile -->
+                  <div class="text-muted small d-none d-md-block">{{ payment.reply_to_email or payment.from_email or 'No email' }}</div>
+                  {% set display_date = (payment.email_received_date or payment.timestamp)|utc_to_local %}
+                  {% if display_date %}
+                    <div class="text-muted small d-md-none d-flex align-items-center" style="margin-left: 8px;">
+                      <i class="ti ti-calendar"></i> {{ display_date.strftime('%Y-%m-%d') }}
+                    </div>
+                  {% endif %}
+
+                  <!-- Row 3: Status + Amount badges (mobile only) -->
+                  <div class="d-md-none mt-1">
+                    {% if payment.result == 'MATCHED' %}
+                      <span class="badge bg-green-lt text-green-lt-fg">
+                        <i class="ti ti-circle-check"></i> Matched
+                      </span>
+                    {% elif payment.result == 'NO_MATCH' %}
+                      <span class="badge bg-orange-lt text-orange-lt-fg">
+                        <i class="ti ti-alert-circle"></i> No Match
+                      </span>
+                    {% elif payment.result == 'MANUAL_PROCESSED' %}
+                      <span class="badge bg-blue-lt text-blue-lt-fg">
+                        <i class="ti ti-archive"></i> Archived
+                      </span>
+                    {% endif %}
+
+                    {% if payment.bank_info_amt %}
+                      <span class="badge bg-blue-lt ms-1">${{ "%.0f"|format(payment.bank_info_amt) }}</span>
+                    {% endif %}
+
+                    <!-- Date badge REMOVED - now shown as regular text above -->
+                  </div>
                 </div>
               </td>
 
@@ -134,28 +165,6 @@
                     <div>{{ display_date.strftime('%Y-%m-%d') }}</div>
                     <div class="text-muted" style="font-size: 0.875rem;">{{ display_date.strftime('%H:%M:%S') }}</div>
                   </div>
-                {% else %}
-                  <span class="text-muted">-</span>
-                {% endif %}
-              </td>
-
-              <!-- Status & Amount: Mobile only -->
-              <td class="d-md-none text-center" style="vertical-align: middle;">
-                <!-- Status badge -->
-                <div class="mb-1">
-                  {% if payment.result == 'MATCHED' %}
-                    <span class="badge bg-green-lt text-green-lt-fg">Matched</span>
-                  {% elif payment.result == 'NO_MATCH' %}
-                    <span class="badge bg-orange-lt text-orange-lt-fg">No Match</span>
-                  {% elif payment.result == 'MANUAL_PROCESSED' %}
-                    <span class="badge bg-blue-lt text-blue-lt-fg">Archived</span>
-                  {% else %}
-                    <span class="badge bg-gray-lt">Unknown</span>
-                  {% endif %}
-                </div>
-                <!-- Amount below badge -->
-                {% if payment.bank_info_amt %}
-                  <span class="fw-bold">${{ "%.0f"|format(payment.bank_info_amt) }}</span>
                 {% else %}
                   <span class="text-muted">-</span>
                 {% endif %}
@@ -209,7 +218,7 @@
                     Actions
                   </a>
                   <!-- Mobile: Icon-only button without dropdown arrow -->
-                  <a href="#" class="btn btn-outline-secondary d-md-none" data-bs-toggle="dropdown" style="padding: 0.375rem 0.5rem;">
+                  <a href="#" class="btn btn-outline-secondary btn-lg d-md-none" data-bs-toggle="dropdown">
                     <i class="ti ti-menu-2"></i>
                   </a>
                   <div class="dropdown-menu dropdown-menu-end">
@@ -227,14 +236,16 @@
                       <a href="#" class="dropdown-item create-passport-btn"
                          data-payment-id="{{ payment.id }}"
                          data-name="{{ payment.bank_info_name }}"
-                         data-amount="{{ payment.bank_info_amt }}">
+                         data-amount="{{ payment.bank_info_amt }}"
+                         data-reply-to-email="{{ payment.reply_to_email or '' }}">
                         <i class="ti ti-ticket me-2"></i>Create Passport
                       </a>
                       <div class="dropdown-divider"></div>
                       <a href="#" class="dropdown-item archive-payment-btn"
                          data-name="{{ payment.bank_info_name }}"
                          data-amount="{{ payment.bank_info_amt }}"
-                         data-email="{{ payment.from_email }}">
+                         data-email="{{ payment.from_email }}"
+                         data-reply-to-email="{{ payment.reply_to_email or '' }}">
                         <i class="ti ti-archive me-2"></i>Archive Email
                       </a>
                     {% elif payment.result == 'MANUAL_PROCESSED' %}
@@ -587,8 +598,8 @@ function getNameSuggestions(query) {
 }
 
 // Open Create Passport modal
-function openCreatePassportModal(paymentId, name, amount) {
-  currentCreatePassportData = { paymentId, name, amount };
+function openCreatePassportModal(paymentId, name, amount, replyToEmail) {
+  currentCreatePassportData = { paymentId, name, amount, replyToEmail };
 
   // Reset form
   document.getElementById('createPassportForm').reset();
@@ -602,16 +613,20 @@ function openCreatePassportModal(paymentId, name, amount) {
   document.getElementById('cpPassportType').disabled = true;
   document.getElementById('cpSessions').value = '';
   document.getElementById('cpAmountWarning').style.display = 'none';
-  document.getElementById('cpEmailHint').textContent = 'Auto-filled if matching user found';
 
-  // Try to find user in cache by name
-  const matchedUser = findUserByName(name);
-  if (matchedUser) {
-    if (matchedUser.email) {
+  // PRIORITY 1: Use Reply-To email if available
+  if (replyToEmail && replyToEmail.includes('@')) {
+    document.getElementById('cpEmail').value = replyToEmail;
+    document.getElementById('cpEmailHint').innerHTML = '<i class="ti ti-check text-success"></i> From payment sender';
+  } else {
+    // PRIORITY 2: Fallback to user cache lookup
+    document.getElementById('cpEmailHint').textContent = 'Required for passport confirmation';
+    const matchedUser = findUserByName(name);
+    if (matchedUser && matchedUser.email) {
       document.getElementById('cpEmail').value = matchedUser.email;
       document.getElementById('cpEmailHint').innerHTML = '<i class="ti ti-check text-success"></i> Found in user cache';
     }
-    if (matchedUser.phone) {
+    if (matchedUser && matchedUser.phone) {
       document.getElementById('cpPhone').value = matchedUser.phone;
     }
   }
@@ -718,24 +733,57 @@ document.getElementById('cpPassportType').addEventListener('change', function() 
   const amountInput = document.getElementById('cpAmount');
 
   if (selected && selected.dataset.sessions) {
-    sessionsInput.value = selected.dataset.sessions;
-
-    // Check for amount mismatch
     const typePrice = parseFloat(selected.dataset.price) || 0;
     const paymentAmount = parseFloat(amountInput.value) || 0;
 
-    if (typePrice > 0 && paymentAmount > 0 && Math.abs(typePrice - paymentAmount) > 0.01) {
-      document.getElementById('cpAmountWarningText').textContent =
-        `Payment amount ($${paymentAmount.toFixed(2)}) differs from passport type price ($${typePrice.toFixed(2)})`;
-      amountWarning.style.display = 'block';
-    } else {
-      amountWarning.style.display = 'none';
+    // Auto-detect if payment matches multiple sessions
+    let suggestedSessions = parseInt(selected.dataset.sessions) || 1;
+    if (typePrice > 0 && paymentAmount > 0) {
+      const ratio = paymentAmount / typePrice;
+      // If payment is a clean multiple of type price, suggest that many sessions
+      if (Math.abs(ratio - Math.round(ratio)) < 0.01 && ratio >= 1) {
+        suggestedSessions = Math.round(ratio);
+      }
     }
+
+    sessionsInput.value = suggestedSessions;
+
+    // Check amount with sessions
+    checkAmountMatch();
   } else {
     sessionsInput.value = '';
     amountWarning.style.display = 'none';
   }
 });
+
+// Helper function to check if payment amount matches passport price × sessions
+function checkAmountMatch() {
+  const selected = document.getElementById('cpPassportType').selectedOptions[0];
+  const sessionsInput = document.getElementById('cpSessions');
+  const amountWarning = document.getElementById('cpAmountWarning');
+  const amountInput = document.getElementById('cpAmount');
+
+  if (!selected || !selected.dataset.price) {
+    amountWarning.style.display = 'none';
+    return;
+  }
+
+  const typePrice = parseFloat(selected.dataset.price) || 0;
+  const paymentAmount = parseFloat(amountInput.value) || 0;
+  const sessions = parseInt(sessionsInput.value) || 1;
+  const expectedTotal = typePrice * sessions;
+
+  if (typePrice > 0 && paymentAmount > 0 && Math.abs(expectedTotal - paymentAmount) > 0.01) {
+    document.getElementById('cpAmountWarningText').textContent =
+      `Payment amount ($${paymentAmount.toFixed(2)}) differs from passport type price ($${typePrice.toFixed(2)} × ${sessions} session${sessions > 1 ? 's' : ''} = $${expectedTotal.toFixed(2)})`;
+    amountWarning.style.display = 'block';
+  } else {
+    amountWarning.style.display = 'none';
+  }
+}
+
+// Recheck amount when sessions field changes
+document.getElementById('cpSessions').addEventListener('input', checkAmountMatch);
 
 // Handle Create Passport button click
 document.addEventListener('click', function(e) {
@@ -745,7 +793,8 @@ document.addEventListener('click', function(e) {
     const paymentId = btn.dataset.paymentId;
     const name = btn.dataset.name;
     const amount = btn.dataset.amount;
-    openCreatePassportModal(paymentId, name, amount);
+    const replyToEmail = btn.dataset.replyToEmail || '';
+    openCreatePassportModal(paymentId, name, amount, replyToEmail);
   }
 });
 

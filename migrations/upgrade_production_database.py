@@ -2046,6 +2046,23 @@ def task26_add_stripe_payment_fields(cursor):
     return True
 
 
+def task27_add_reply_to_email_field(cursor):
+    """Add reply_to_email field to EbankPayment table"""
+    log("📧", "TASK 27: Adding reply_to_email field", Colors.BLUE)
+
+    if check_column_exists(cursor, 'ebank_payment', 'reply_to_email'):
+        log("⏭️ ", "  Column already exists", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("ALTER TABLE ebank_payment ADD COLUMN reply_to_email VARCHAR(150)")
+        log("✅", "  Added column 'reply_to_email'", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed: {e}", Colors.RED)
+        raise
+
+
 def task24_add_workflow_quantity_fields(cursor):
     """Add workflow type and quantity limit fields to Activity and Signup tables"""
     log("🔄", "TASK 24: Adding workflow type and quantity limit fields", Colors.BLUE)
@@ -2146,6 +2163,7 @@ def main():
         ("Workflow and Quantity Fields", task24_add_workflow_quantity_fields),
         ("Signup Code for Payment Matching", task25_add_signup_code_column),
         ("Stripe Payment Fields", task26_add_stripe_payment_fields),
+        ("Reply-To Email Field", task27_add_reply_to_email_field),
     ]
 
     completed = 0
