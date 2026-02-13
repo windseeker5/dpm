@@ -2060,6 +2060,9 @@ def match_gmail_payments_to_passes():
                         existing_payment.mark_as_paid = True
                         existing_payment.note = "Matched by Minipass Bot (retry successful)."
                         existing_payment.timestamp = datetime.now(timezone.utc)
+                        existing_payment.reply_to_email = reply_to_email
+                        existing_payment.from_email = from_email
+                        existing_payment.subject = subject
                         if email_received_date:
                             existing_payment.email_received_date = email_received_date
                         print(f"   📝 Updated existing EbankPayment record to MATCHED")
@@ -2247,6 +2250,9 @@ def match_gmail_payments_to_passes():
                     existing_payment.mark_as_paid = False
                     existing_payment.note = note_text
                     existing_payment.timestamp = datetime.now(timezone.utc)
+                    existing_payment.reply_to_email = reply_to_email
+                    existing_payment.from_email = from_email
+                    existing_payment.subject = subject
                     if email_received_date:
                         existing_payment.email_received_date = email_received_date
                     if uid:
