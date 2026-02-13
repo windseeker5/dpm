@@ -496,17 +496,17 @@
           <a href="javascript:void(0)"
              class="github-filter-btn active"
              data-filter="completed">
-            <i class="ti ti-check"></i>Completed <span class="filter-count">({{ responses|selectattr('completed', 'equalto', True)|list|length }})</span>
+            <i class="ti ti-check"></i>Completed <span class="filter-count">({{ all_responses|selectattr('completed', 'equalto', True)|list|length }})</span>
           </a>
           <a href="javascript:void(0)"
              class="github-filter-btn"
              data-filter="in_progress">
-            In Progress <span class="filter-count">({{ responses|selectattr('completed', 'equalto', False)|list|length }})</span>
+            In Progress <span class="filter-count">({{ all_responses|selectattr('completed', 'equalto', False)|list|length }})</span>
           </a>
           <a href="javascript:void(0)"
              class="github-filter-btn"
              data-filter="all">
-            <i class="ti ti-list"></i>All <span class="filter-count">({{ responses|length }})</span>
+            <i class="ti ti-list"></i>All <span class="filter-count">({{ all_responses|length }})</span>
           </a>
         </div>
       </div>
@@ -582,6 +582,10 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    {% from 'macros/pagination.html' import render_pagination %}
+    {{ render_pagination(pagination, current_filters, responses) }}
   </div>
   {% endif %}
 

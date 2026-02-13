@@ -1370,14 +1370,10 @@ div.dropdown-divider {
       </div>
       
       <!-- Pagination -->
-      <div class="card-footer d-flex justify-content-between align-items-center">
-        {% if passes|length > 0 %}
-          <span class="text-muted">Showing {{ passes|length }} of {{ passes|length }} entries</span>
-          <!-- Pagination will be enabled when backend implements it -->
-        {% else %}
-          <span class="text-muted">No entries found</span>
-        {% endif %}
-      </div>
+      {% from 'macros/pagination.html' import render_pagination %}
+      {% set passport_filters = current_filters.copy() %}
+      {% set _ = passport_filters.update({'signup_page': request.args.get('signup_page', 1)}) %}
+      {{ render_pagination(passport_pagination, passport_filters, passes, page_param='passport_page') }}
       </div>
 
       <!-- Approve Signup Modals -->
@@ -1614,14 +1610,9 @@ div.dropdown-divider {
         </div>
         
         <!-- Pagination -->
-        <div class="card-footer d-flex justify-content-between align-items-center">
-          {% if signups|length > 0 %}
-            <span class="text-muted">Showing {{ signups|length }} of {{ signups|length }} entries</span>
-            <!-- Pagination will be enabled when backend implements it -->
-          {% else %}
-            <span class="text-muted">No entries found</span>
-          {% endif %}
-        </div>
+        {% set signup_filters = current_filters.copy() %}
+        {% set _ = signup_filters.update({'passport_page': request.args.get('passport_page', 1)}) %}
+        {{ render_pagination(signup_pagination, signup_filters, signups, page_param='signup_page') }}
       </div>
 
       <!-- Empty State - Only show when there are NO signups at all for this activity -->

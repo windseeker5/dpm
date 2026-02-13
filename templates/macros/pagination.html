@@ -9,9 +9,10 @@
     - pagination: Flask-SQLAlchemy pagination object
     - current_filters: Dict of current query parameters to preserve (e.g., {'q': 'search', 'status': 'active'})
     - items: Current page's items list (for accurate entry counter)
+    - page_param: Optional name of the page parameter (default: 'page'). Use for multi-table pagination (e.g., 'passport_page', 'signup_page')
 #}
 
-{% macro render_pagination(pagination, current_filters={}, items=[]) %}
+{% macro render_pagination(pagination, current_filters={}, items=[], page_param='page') %}
   <div class="card-footer d-flex justify-content-between align-items-center">
     {% if pagination and pagination.total > 0 %}
       <span class="text-muted">Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ ((pagination.page - 1) * pagination.per_page) + items|length }} of {{ pagination.total }} entries</span>
@@ -21,7 +22,8 @@
             <!-- Previous page -->
             <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
               {% if pagination.has_prev %}
-                <a class="page-link" href="{{ url_for(request.endpoint, page=pagination.prev_num, **current_filters) }}" aria-label="Previous">
+                {% set prev_params = {page_param: pagination.prev_num} %}
+                <a class="page-link" href="{{ url_for(request.endpoint, **prev_params|combine(current_filters)) }}" aria-label="Previous">
                   <i class="ti ti-chevron-left"></i>
                 </a>
               {% else %}
@@ -36,7 +38,8 @@
               {% if page_num %}
                 {% if page_num != pagination.page %}
                   <li class="page-item">
-                    <a class="page-link" href="{{ url_for(request.endpoint, page=page_num, **current_filters) }}">{{ page_num }}</a>
+                    {% set page_params = {page_param: page_num} %}
+                    <a class="page-link" href="{{ url_for(request.endpoint, **page_params|combine(current_filters)) }}">{{ page_num }}</a>
                   </li>
                 {% else %}
                   <li class="page-item active">
@@ -53,7 +56,8 @@
             <!-- Next page -->
             <li class="page-item {{ 'disabled' if not pagination.has_next }}">
               {% if pagination.has_next %}
-                <a class="page-link" href="{{ url_for(request.endpoint, page=pagination.next_num, **current_filters) }}" aria-label="Next">
+                {% set next_params = {page_param: pagination.next_num} %}
+                <a class="page-link" href="{{ url_for(request.endpoint, **next_params|combine(current_filters)) }}" aria-label="Next">
                   <i class="ti ti-chevron-right"></i>
                 </a>
               {% else %}
