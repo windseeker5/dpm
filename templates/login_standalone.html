@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#6366f1">
+  <meta name="theme-color" content="#00ab66">
   
   <title>Login - Minipass</title>
   
@@ -38,7 +38,7 @@
 
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #00ab66 0%, #00916d 100%);
       min-height: 100vh;
       overflow-x: hidden;
     }
@@ -52,7 +52,7 @@
     /* Left side - Decorative patterns */
     .login-left {
       flex: 0 0 55%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #00ab66 0%, #00916d 100%);
       position: relative;
       display: flex;
       align-items: center;
@@ -203,13 +203,13 @@
     }
 
     .form-control:focus {
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      border-color: #00ab66;
+      box-shadow: 0 0 0 3px rgba(0, 171, 102, 0.15);
       outline: none;
     }
 
     .btn-login {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #00ab66 0%, #00916d 100%);
       border: none;
       border-radius: 0.5rem;
       padding: 0.875rem 1.5rem;
@@ -226,13 +226,29 @@
 
     .btn-login:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-      background: linear-gradient(135deg, #5a67d8 0%, #6b46a3 100%);
+      box-shadow: 0 4px 12px rgba(0, 171, 102, 0.4);
+      background: linear-gradient(135deg, #009959 0%, #007d5a 100%);
       color: white;
     }
 
     .btn-login:active {
       transform: translateY(0);
+    }
+
+    /* Desktop-only: organization logo in white section */
+    .org-logo-desktop {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    /* Mobile-only: organization logo in green section */
+    .org-logo-mobile {
+      display: none;  /* Hidden by default on desktop */
+    }
+
+    /* Mobile-only: Minipass branding below form */
+    .minipass-branding-mobile {
+      display: none;  /* Hidden by default on desktop */
     }
 
     /* Mobile responsiveness */
@@ -242,8 +258,81 @@
       }
 
       .login-left {
-        flex: 0 0 30%;
-        min-height: 30vh;
+        flex: 0 0 35%;  /* Increased from 30% to 35% */
+        min-height: 35vh;  /* Increased from 30vh to 35vh */
+      }
+
+      /* Hide desktop version of organization logo */
+      .org-logo-desktop {
+        display: none;
+      }
+
+      /* Show mobile version in green section */
+      .org-logo-mobile {
+        display: block;
+        text-align: center;
+        position: relative;
+      }
+
+      /* White circle behind logo (5% smaller) with glow */
+      .org-logo-mobile::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 106px;  /* 5% smaller than 112px logo */
+        height: 106px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.4),
+                    0 0 50px rgba(255, 255, 255, 0.2);  /* Original glow */
+        z-index: 0;
+      }
+
+      /* Mobile organization logo sizing */
+      .org-logo-mobile img,
+      .org-logo-mobile > div {
+        width: 112px !important;  /* Reduced by 20% from 140px */
+        height: 112px !important;
+        position: relative;
+        z-index: 1;  /* Above the white circle */
+      }
+
+      /* Hide Minipass branding from green section */
+      .brand-content {
+        display: none;
+      }
+
+      /* Show Minipass branding below form */
+      .minipass-branding-mobile {
+        display: block;
+        text-align: center;
+        margin-top: 1rem;  /* Reduced from 2rem for better spacing */
+        padding: 1.5rem 0;
+        transition: opacity 0.2s ease;
+      }
+
+      .minipass-branding-mobile:hover {
+        opacity: 0.8;
+      }
+
+      .minipass-branding-mobile img {
+        max-width: 119px;  /* Reduced by 15% from 140px */
+        height: auto;
+        margin-bottom: 1rem;
+      }
+
+      /* Hide login subtitle on mobile to save space */
+      .login-subtitle {
+        display: none;
+      }
+
+      .minipass-branding-mobile .tagline {
+        font-size: 0.875rem;
+        color: #64748b;  /* Gray text */
+        line-height: 1.5;
+        opacity: 0.85;
       }
 
       .brand-logo {
@@ -270,8 +359,8 @@
 
     @media (max-width: 480px) {
       .login-left {
-        flex: 0 0 25%;
-        min-height: 25vh;
+        flex: 0 0 30%;  /* Adjusted for smallest screens */
+        min-height: 30vh;
       }
 
       .login-right {
@@ -295,6 +384,8 @@
         <div class="shape"></div>
         <div class="shape"></div>
       </div>
+
+      <!-- Desktop: Minipass branding -->
       <div class="brand-content">
         <div class="brand-logo">
           <img src="{{ url_for('static', filename='minipass_logo.png') }}" alt="Minipass Logo" style="max-width: 200px; height: auto;">
@@ -303,12 +394,46 @@
           Streamline your activity management with modern digital passes and seamless user experiences.
         </div>
       </div>
+
+      <!-- Mobile: Organization logo -->
+      <div class="org-logo-mobile">
+        {% if org_logo %}
+          <img src="{{ url_for('static', filename='uploads/' ~ org_logo) }}"
+               alt="Organization"
+               style="width: 112px; height: 112px; object-fit: contain; border-radius: 50%;">
+        {% else %}
+          <div style="width: 112px; height: 112px; border-radius: 50%;
+                      background: {{ placeholder_color(org_name) }};
+                      color: #fff; font-weight: 700; font-size: 2.8rem;
+                      display: flex; align-items: center; justify-content: center;
+                      margin: 0 auto;">
+            {{ placeholder_letter(org_name) }}
+          </div>
+        {% endif %}
+      </div>
     </div>
 
     <!-- Right side - Login form -->
     <div class="login-right">
       <div class="login-form-container">
         <div class="login-header">
+          <!-- Organization Logo - Desktop Only -->
+          <div class="org-logo-desktop">
+            {% if org_logo %}
+              <img src="{{ url_for('static', filename='uploads/' ~ org_logo) }}"
+                   alt="Organization"
+                   style="width: 120px; height: 120px; object-fit: contain; border-radius: 50%;">
+            {% else %}
+              <div style="width: 120px; height: 120px; border-radius: 50%;
+                          background: {{ placeholder_color(org_name) }};
+                          color: #fff; font-weight: 700; font-size: 3rem;
+                          display: flex; align-items: center; justify-content: center;
+                          margin: 0 auto;">
+                {{ placeholder_letter(org_name) }}
+              </div>
+            {% endif %}
+          </div>
+
           <h1 class="login-title">
             <i class="ti ti-lock"></i>
             Login
@@ -344,6 +469,16 @@
             </div>
           </div>
         </form>
+
+        <!-- Mobile: Minipass branding below form -->
+        <a href="https://minipass.me" target="_blank" rel="noopener noreferrer" class="minipass-branding-mobile" style="text-decoration: none; color: inherit;">
+          <img src="{{ url_for('static', filename='mp-logo-regular.png') }}"
+               alt="Minipass"
+               style="max-width: 119px; height: auto; margin-bottom: 1rem;">
+          <div class="tagline">
+            Streamline your activity management with modern digital passes and seamless user experiences.
+          </div>
+        </a>
       </div>
     </div>
   </div>

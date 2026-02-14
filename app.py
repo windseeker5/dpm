@@ -4348,7 +4348,14 @@ def login():
         flash("Invalid login!", "error")
         return redirect(url_for("login"))
 
-    return render_template("login_standalone.html")
+    from utils import get_setting, get_placeholder_color, get_placeholder_letter
+    org_logo = get_setting('LOGO_FILENAME', '')
+    org_name = get_setting('ORG_NAME', 'Minipass')
+    return render_template("login_standalone.html",
+                         org_logo=org_logo,
+                         org_name=org_name,
+                         placeholder_color=get_placeholder_color,
+                         placeholder_letter=get_placeholder_letter)
 
 
 
