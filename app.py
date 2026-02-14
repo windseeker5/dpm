@@ -9684,7 +9684,8 @@ def update_payment_notes():
         # Get all NO_MATCH payments
         no_match_payments = EbankPayment.query.filter_by(result='NO_MATCH').all()
         updated_count = 0
-        threshold = 85
+        threshold = int(get_setting("BANK_EMAIL_NAME_CONFIDANCE", "85"))
+        DIAGNOSTIC_MIN = 50  # Show candidates above 50% for context in diagnostic messages
 
         for payment in no_match_payments:
             name = payment.bank_info_name
@@ -9765,7 +9766,7 @@ def update_payment_notes():
                             if not p.user:
                                 continue
                             score = fuzz.ratio(normalized_payment_name, normalize_name(p.user.name))
-                            if score >= 50:
+                            if score >= DIAGNOSTIC_MIN:
                                 all_candidates.append((p.user.name, score))
 
                         all_candidates.sort(key=lambda x: x[1], reverse=True)
@@ -9778,7 +9779,7 @@ def update_payment_notes():
                             candidate_strs = [f"{cname} ({score:.0f}%)" for cname, score in top_candidates]
                             note_parts.append(f"all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
                         else:
-                            note_parts.append(f"no names above 50% similarity.")
+                            note_parts.append(f"all names below {threshold}% threshold (no candidates above {DIAGNOSTIC_MIN}%).")
                             if unpaid_passports:
                                 example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
                                 if example_names:

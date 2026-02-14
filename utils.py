@@ -1605,6 +1605,7 @@ def match_gmail_payments_to_passes():
             return
 
         threshold = int(get_setting("BANK_EMAIL_NAME_CONFIDANCE", "85"))
+        DIAGNOSTIC_MIN = 50  # Show candidates above 50% for context in diagnostic messages
         processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
 
         # Get IMAP server from settings, fallback to MAIL_SERVER or Gmail
@@ -2215,7 +2216,7 @@ def match_gmail_payments_to_passes():
                         if not p.user:
                             continue
                         score = fuzz.ratio(normalize_name(name), normalize_name(p.user.name))
-                        if score >= 50:  # Only show candidates above 50% to avoid noise
+                        if score >= DIAGNOSTIC_MIN:  # Only show candidates above 50% to avoid noise
                             all_candidates.append((p.user.name, score))
 
                     # Sort by score and take top 3
@@ -2233,8 +2234,8 @@ def match_gmail_payments_to_passes():
                         candidate_strs = [f"{cname} ({score:.0f}%)" for cname, score in top_candidates]
                         note_parts.append(f"all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
                     else:
-                        # No similar names at all
-                        note_parts.append(f"no names above 50% similarity.")
+                        # No candidates above diagnostic threshold
+                        note_parts.append(f"all names below {threshold}% threshold (no candidates above {DIAGNOSTIC_MIN}%).")
                         # Show a few example names for context
                         if unpaid_passports:
                             example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
