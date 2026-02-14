@@ -3502,6 +3502,13 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
     context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
 
+    # Add payment-first variables if applicable (for signup_payment_first template)
+    if is_payment_first:
+        context['payment_email'] = base_context['payment_email']
+        context['needs_signup_code'] = base_context['needs_signup_code']
+        context['signup_code'] = base_context['signup_code']
+        context['requested_amount'] = base_context['requested_amount']
+
     # Find compiled template
     # For signup, theme is already "signup_compiled/index.html"
     if "_compiled" in theme:
