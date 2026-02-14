@@ -1126,7 +1126,7 @@ def list_signups():
     signup_status = request.args.get('status')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    show_all_param = request.args.get('show_all')
+    show_all_param = request.args.get('show_all', '').lower()
 
     # Default to pending status when no filters are set (like passport defaults to active)
     if not signup_status and not payment_status and show_all_param != "true":
@@ -1248,7 +1248,7 @@ def list_signups():
                              'status': signup_status,
                              'start_date': start_date,
                              'end_date': end_date,
-                             'show_all': show_all_param == "true"
+                             'show_all': "true" if show_all_param == "true" else None
                          })
 
 
@@ -4751,7 +4751,7 @@ def list_activities():
     activity_type = request.args.get("type", "")
     start_date = request.args.get("start_date", "")
     end_date = request.args.get("end_date", "")
-    show_all_param = request.args.get("show_all", "")
+    show_all_param = request.args.get("show_all", "").lower()
 
     # Default to 'active' filter if no status specified (unless explicitly showing all)
     if not status and show_all_param != "true":
@@ -4855,7 +4855,7 @@ def list_activities():
                              'type': activity_type,
                              'start_date': start_date,
                              'end_date': end_date,
-                             'show_all': show_all
+                             'show_all': "true" if show_all_param == "true" else None
                          })
 
 
@@ -4869,7 +4869,7 @@ def list_surveys():
     per_page = 10
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "")
-    show_all_param = request.args.get("show_all", "")
+    show_all_param = request.args.get("show_all", "").lower()
     activity_id = request.args.get("activity", "")
     template_id = request.args.get("template", "")
     start_date = request.args.get("start_date", "")
@@ -4976,7 +4976,7 @@ def list_surveys():
                          current_filters={
                              'q': q,
                              'status': status,
-                             'show_all': show_all_param == "true",
+                             'show_all': "true" if show_all_param == "true" else None,
                              'activity': activity_id,
                              'template': template_id,
                              'start_date': start_date,
@@ -4996,7 +4996,7 @@ def list_passports():
     activity_id = request.args.get("activity", "")
     payment_status = request.args.get("payment_status", "")
     status = request.args.get("status", "")
-    show_all_param = request.args.get("show_all", "")
+    show_all_param = request.args.get("show_all", "").lower()
     start_date = request.args.get("start_date", "")
     end_date = request.args.get("end_date", "")
     min_amount = request.args.get("min_amount", "")
@@ -5121,7 +5121,7 @@ def list_passports():
                              'end_date': end_date,
                              'min_amount': min_amount,
                              'max_amount': max_amount,
-                             'show_all': show_all
+                             'show_all': "true" if show_all_param == "true" else None
                          })
 
 
@@ -5492,7 +5492,7 @@ def user_contacts_report():
     # Get filter parameters
     q = request.args.get("q", "").strip()
     status_filter = request.args.get("status", "")
-    show_all_param = request.args.get("show_all", "")
+    show_all_param = request.args.get("show_all", "").lower()
 
     # Set default filter to "active" if no filter specified
     if not status_filter and show_all_param != "true":
@@ -5522,7 +5522,7 @@ def user_contacts_report():
     current_filters = {
         'q': q,
         'status': status_filter,
-        'show_all': show_all_param == "true"
+        'show_all': "true" if show_all_param == "true" else None
     }
 
     return render_template("user_contacts_report.html",
@@ -5570,7 +5570,7 @@ def payment_bot_matches():
     # Get filter parameters
     q = request.args.get("q", "").strip()
     status_filter = request.args.get("status", "")
-    show_all_param = request.args.get("show_all", "")
+    show_all_param = request.args.get("show_all", "").lower()
     page = request.args.get("page", 1, type=int)
     per_page = 50
 
@@ -5684,7 +5684,7 @@ def payment_bot_matches():
                          current_filters={
                              'q': q,
                              'status': status_filter,
-                             'show_all': show_all_param == "true"
+                             'show_all': "true" if show_all_param == "true" else None
                          })
 
 
@@ -6489,7 +6489,7 @@ def activity_dashboard(activity_id):
     # Get filter and search parameters from request
     passport_filter = request.args.get('passport_filter', '')
     signup_filter = request.args.get('signup_filter', 'pending')
-    show_all_param = request.args.get('show_all', '')
+    show_all_param = request.args.get('show_all', '').lower()
     q = request.args.get('q', '').strip()  # Add search parameter support
 
     # Get pagination parameters
@@ -6753,7 +6753,7 @@ def activity_dashboard(activity_id):
             'q': q,
             'passport_filter': passport_filter,
             'signup_filter': signup_filter,
-            'show_all': 'true' if show_all else ''
+            'show_all': "true" if show_all_param == "true" else None
         },
         # Add pagination objects
         passport_pagination=passport_pagination,
@@ -8726,7 +8726,7 @@ def list_survey_templates():
     # Get filter parameters
     q = request.args.get("q", "").strip()
     usage_filter = request.args.get("usage_filter", "")
-    show_all_param = request.args.get("show_all", "")
+    show_all_param = request.args.get("show_all", "").lower()
 
     # Query ALL templates first (for statistics)
     all_templates = SurveyTemplate.query.all()
@@ -8789,7 +8789,7 @@ def list_survey_templates():
                          current_filters={
                              'q': q,
                              'usage_filter': usage_filter,
-                             'show_all': show_all_param == 'true'
+                             'show_all': "true" if show_all_param == "true" else None
                          })
 
 
