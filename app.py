@@ -566,19 +566,19 @@ def initialize_background_tasks():
 
 
 
-def get_git_branch():
-    """Get current git branch name"""
+def get_git_version():
+    """Get current git commit hash (short 7-char version)"""
     try:
         result = subprocess.run(
-            ['git', 'branch', '--show-current'],
+            ['git', 'rev-parse', '--short=7', 'HEAD'],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.abspath(__file__))
         )
-        branch = result.stdout.strip()
-        return branch if branch else 'main'
+        commit_hash = result.stdout.strip()
+        return commit_hash if commit_hash else 'unknown'
     except Exception:
-        return 'main'
+        return 'unknown'
 
 @app.context_processor
 def inject_globals_and_csrf():
@@ -635,7 +635,7 @@ def inject_globals_and_csrf():
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
-        'git_branch': get_git_branch(),
+        'git_version': get_git_version(),
         'csrf_token': generate_csrf,  # returns the raw CSRF token
         'pending_signups_count': pending_signups_count,
         'active_passport_count': active_passport_count,
