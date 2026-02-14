@@ -567,7 +567,17 @@ def initialize_background_tasks():
 
 
 def get_git_version():
-    """Get current git commit hash (short 7-char version)"""
+    """Get git version from version.txt file (created during deployment) or git command (dev)"""
+    # Try version.txt first (production Docker)
+    try:
+        version_file = os.path.join(os.path.dirname(__file__), 'version.txt')
+        if os.path.exists(version_file):
+            with open(version_file) as f:
+                return f.read().strip()
+    except:
+        pass
+
+    # Fallback to git command (local development)
     try:
         result = subprocess.run(
             ['git', 'rev-parse', '--short=7', 'HEAD'],
@@ -575,9 +585,8 @@ def get_git_version():
             text=True,
             cwd=os.path.dirname(os.path.abspath(__file__))
         )
-        commit_hash = result.stdout.strip()
-        return commit_hash if commit_hash else 'unknown'
-    except Exception:
+        return result.stdout.strip() or 'unknown'
+    except:
         return 'unknown'
 
 @app.context_processor
