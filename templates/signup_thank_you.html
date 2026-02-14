@@ -35,25 +35,68 @@
       max-width: 400px;
     }
 
-    .organization-logo {
-      max-height: 48px;
-      margin-bottom: 2rem;
+    .logo-container {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 2rem;
     }
 
-    .success-icon {
-      width: 60px;
-      height: 60px;
-      background-color: #22c55e;
-      border-radius: 50%;
+    .organization-logo {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+
+    .organization-logo-fallback {
+      width: 100px;
+      height: 100px;
+      border-radius: 12px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 3.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 1.5rem;
     }
 
-    .success-icon i {
-      font-size: 1.75rem;
+    .success-badge {
+      position: absolute;
+      bottom: -8px;
+      right: -8px;
+      width: 35px;
+      height: 35px;
+      background-color: #22c55e;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: badgeFadeIn 0.3s ease 0.4s backwards;
+    }
+
+    .success-badge i {
+      font-size: 1.25rem;
       color: white;
+    }
+
+    @keyframes badgeFadeIn {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Respect user preference for reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .success-badge {
+        animation: none;
+      }
     }
 
     .thank-you-title {
@@ -95,6 +138,33 @@
         padding: 1.5rem 1rem;
       }
 
+      .logo-container {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+      }
+
+      .organization-logo,
+      .organization-logo-fallback {
+        width: 80px;
+        height: 80px;
+      }
+
+      .organization-logo-fallback {
+        font-size: 2.75rem;
+      }
+
+      .success-badge {
+        width: 30px;
+        height: 30px;
+        bottom: -6px;
+        right: -6px;
+      }
+
+      .success-badge i {
+        font-size: 1rem;
+      }
+
       .thank-you-title {
         font-size: 1.5rem;
       }
@@ -104,20 +174,21 @@
 
 <body>
 <div class="thank-you-wrapper">
-  <!-- Organization Logo (optional) -->
-  {% if settings.get('LOGO_FILENAME') %}
-  <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-       alt="{{ settings.get('ORG_NAME', 'Organization') }}"
-       class="organization-logo">
-  {% else %}
-  <div class="organization-logo d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 10px; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700; font-size: 1.25rem; margin: 0 auto 2rem;">
-    {{ placeholder_letter(settings.get('ORG_NAME', activity.name)) }}
-  </div>
-  {% endif %}
+  <!-- Organization Logo with Success Badge -->
+  <div class="logo-container">
+    {% if settings.get('LOGO_FILENAME') %}
+    <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+         alt="{{ settings.get('ORG_NAME', 'Organization') }}"
+         class="organization-logo">
+    {% else %}
+    <div class="organization-logo-fallback" style="background: {{ placeholder_color(settings.get('ORG_NAME', activity.name)) }};">
+      {{ placeholder_letter(settings.get('ORG_NAME', activity.name)) }}
+    </div>
+    {% endif %}
 
-  <!-- Success Icon -->
-  <div class="success-icon">
-    <i class="ti ti-check"></i>
+    <div class="success-badge">
+      <i class="ti ti-check"></i>
+    </div>
   </div>
 
   <!-- Title -->
