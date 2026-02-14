@@ -6611,12 +6611,18 @@ def activity_dashboard(activity_id):
     # Active = has remaining uses OR unpaid
     active_passports_count = len([p for p in all_passports if p.uses_remaining > 0 or not p.paid])
 
+    # Calculate total redemptions (sessions consumed) for this activity
+    total_redemptions_count = db.session.query(Redemption).join(Passport).filter(
+        Passport.activity_id == activity_id
+    ).count()
+
     # Statistics dict for template (used in filter button counts)
     passport_statistics = {
         'total_passports': total_passports_count,
         'paid_passports': paid_passports_count,
         'unpaid_passports': unpaid_passports_count,
         'active_passports': active_passports_count,
+        'total_redemptions': total_redemptions_count,
     }
     
     # Helper function to safely compare dates
