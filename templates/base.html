@@ -481,12 +481,19 @@
           <a href="#" class="header-user-link d-flex align-items-center" data-bs-toggle="dropdown">
             <span class="avatar avatar-sm"
                   style="background-image: url('{% if current_admin and current_admin.avatar_filename %}{{ url_for('static', filename='uploads/avatars/' ~ current_admin.avatar_filename) }}{% else %}https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon{% endif %}')">
-              {% if unmatched_payment_count and unmatched_payment_count > 0 %}
-              <span class="avatar-badge">{{ unmatched_payment_count }}</span>
+              {% set total_notifications = (unmatched_payment_count or 0) + (pending_signups_count or 0) %}
+              {% if total_notifications > 0 %}
+              <span class="avatar-badge">{{ total_notifications }}</span>
               {% endif %}
             </span>
           </a>
           <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+            {% if pending_signups_count and pending_signups_count > 0 %}
+            <a href="{{ url_for('list_signups') }}" class="dropdown-item text-warning">
+              <i class="ti ti-user-plus me-2"></i>Signups ({{ pending_signups_count }})
+            </a>
+            <div class="dropdown-divider"></div>
+            {% endif %}
             {% if unmatched_payment_count and unmatched_payment_count > 0 %}
             <a href="{{ url_for('payment_bot_matches') }}" class="dropdown-item text-danger">
               <i class="ti ti-mail-dollar me-2"></i>Payments ({{ unmatched_payment_count }})
@@ -743,7 +750,7 @@
           <footer class="minipass-footer d-none d-md-block">
             <div class="minipass-footer-content">
               <div class="minipass-footer-text">
-                © 2025, <b>minipass.me</b> , All rights reserved. # version: {{ git_branch if git_branch else "main" }}
+                © 2026, <b>minipass.me</b> · All rights reserved · v{{ git_version }}
               </div>
             </div>
           </footer>
