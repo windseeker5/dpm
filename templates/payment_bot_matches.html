@@ -680,23 +680,10 @@ document.getElementById('cpPassportType').addEventListener('change', function() 
   const selected = this.options[this.selectedIndex];
   const sessionsInput = document.getElementById('cpSessions');
   const amountWarning = document.getElementById('cpAmountWarning');
-  const amountInput = document.getElementById('cpAmount');
 
   if (selected && selected.dataset.sessions) {
-    const typePrice = parseFloat(selected.dataset.price) || 0;
-    const paymentAmount = parseFloat(amountInput.value) || 0;
-
-    // Auto-detect if payment matches multiple sessions
-    let suggestedSessions = parseInt(selected.dataset.sessions) || 1;
-    if (typePrice > 0 && paymentAmount > 0) {
-      const ratio = paymentAmount / typePrice;
-      // If payment is a clean multiple of type price, suggest that many sessions
-      if (Math.abs(ratio - Math.round(ratio)) < 0.01 && ratio >= 1) {
-        suggestedSessions = Math.round(ratio);
-      }
-    }
-
-    sessionsInput.value = suggestedSessions;
+    // Always use the passport type's included sessions
+    sessionsInput.value = parseInt(selected.dataset.sessions) || 1;
 
     // Check amount with sessions
     checkAmountMatch();
@@ -721,11 +708,15 @@ function checkAmountMatch() {
   const typePrice = parseFloat(selected.dataset.price) || 0;
   const paymentAmount = parseFloat(amountInput.value) || 0;
   const sessions = parseInt(sessionsInput.value) || 1;
-  const expectedTotal = typePrice * sessions;
+
+  // Calculate per-session price from the passport type's package price
+  const sessionsIncluded = parseInt(selected.dataset.sessions) || 1;
+  const perSessionPrice = typePrice / sessionsIncluded;
+  const expectedTotal = perSessionPrice * sessions;
 
   if (typePrice > 0 && paymentAmount > 0 && Math.abs(expectedTotal - paymentAmount) > 0.01) {
     document.getElementById('cpAmountWarningText').textContent =
-      `Payment amount ($${paymentAmount.toFixed(2)}) differs from passport type price ($${typePrice.toFixed(2)} × ${sessions} session${sessions > 1 ? 's' : ''} = $${expectedTotal.toFixed(2)})`;
+      `Payment amount ($${paymentAmount.toFixed(2)}) differs from passport type price ($${typePrice.toFixed(2)} ÷ ${sessionsIncluded} session${sessionsIncluded > 1 ? 's' : ''} × ${sessions} = $${expectedTotal.toFixed(2)})`;
     amountWarning.style.display = 'block';
   } else {
     amountWarning.style.display = 'none';
