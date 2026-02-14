@@ -624,10 +624,10 @@ div.dropdown-divider {
 
               <!-- Stats Row - Minimal design: gray icon + black number -->
               <div class="activity-stats-minimal">
-            <!-- Users Count -->
-            <div class="stat-minimal">
-              <i class="ti ti-users"></i>
-              <span>{{ passes|length }}</span>
+            <!-- Total Sessions Consumed -->
+            <div class="stat-minimal" title="Total sessions consumed">
+              <i class="ti ti-check"></i>
+              <span>{{ passport_statistics.total_redemptions|default(0) }}</span>
             </div>
 
             <!-- Location - Only show if set, clickable to copy -->
