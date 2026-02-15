@@ -42,7 +42,7 @@ tests/
 test/
 tools/
 #sql/
-docs/
+#docs/
 CLAUDE.md
 
 
