@@ -3056,7 +3056,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     # Generate unique Message-ID
     timestamp = int(datetime.now(timezone.utc).timestamp() * 1000000)  # microsecond precision
     msg["Message-ID"] = f"<{timestamp}@minipass.me>"
-    
+
     # Add organization tracking if available
     if hasattr(context, 'get') and context.get('organization_id'):
         msg["X-Entity-Ref-ID"] = str(context['organization_id'])
