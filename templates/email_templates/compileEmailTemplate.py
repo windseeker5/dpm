@@ -126,7 +126,7 @@ def process_hero_image(image_path: str, padding: int = 0, target_width: int = 15
         return Image.open(image_path)
 
 
-def compile_email_template_to_folder(template_name: str, update_original: bool = False):
+def compile_email_template_to_folder(template_name: str, update_original: bool = False, url_mode: bool = False):
     """
     Compile email template with comprehensive logging and error handling
 
@@ -134,9 +134,17 @@ def compile_email_template_to_folder(template_name: str, update_original: bool =
         template_name: Name of the template to compile (e.g., 'newPass', 'signup')
         update_original: If True, updates the pristine original folder (for production deployment)
                         If False, only updates compiled folder (for development/testing)
+        url_mode: If True, produces URL-referenced HTML (Phase 3 hybrid hosted images).
+                  Hero images are replaced with {{ hero_image_url }}, interac logo with
+                  its static hosted URL. inline_images.json is still written (needed by
+                  the /hero-image/ route). If False (default), produces CID-based HTML.
     """
     try:
         print(f"📧 Starting compilation of '{template_name}'")
+        if url_mode:
+            print(f"🌐 IMAGE MODE: URL-based (Phase 3 hybrid hosted images)")
+        else:
+            print(f"📎 IMAGE MODE: CID inline (classic)")
         if update_original:
             print(f"🔄 MODE: Production Deployment (updating pristine original)")
         else:
@@ -191,48 +199,69 @@ def compile_email_template_to_folder(template_name: str, update_original: bool =
             raise ValueError(f"Source HTML file '{source_html_path}' is empty")
 
         cid_map = {}
-        
-        # Match <img src="..."> tags
+
+        # In URL mode: strip dead {% set logo_url = 'cid:logo_image' %} line (Phase 3)
+        if url_mode:
+            html = re.sub(r'\{%\s*set logo_url\s*=\s*\'cid:logo_image\'\s*%\}\n?', '', html)
+
+        # Match <img src="..."> tags (only file-path references, not cid: or http: already)
         matches = re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', html)
+        # Filter to local file references only
+        matches = [m for m in matches if not m.startswith('cid:') and not m.startswith('http')]
         print(f"🖼️  Processing {len(matches)} images")
-        
+
         for match in matches:
             asset_path = os.path.join(source_dir, os.path.basename(match))
 
             if os.path.exists(asset_path):
                 cid = os.path.splitext(os.path.basename(asset_path))[0]
-                print(f"📎 Embedding image: {asset_path} as cid:{cid}")
+                filename = os.path.basename(asset_path).lower()
 
                 try:
                     # Check if this is a hero image (should be preprocessed)
-                    is_hero_image = any(hero_name in os.path.basename(asset_path).lower()
+                    is_hero_image = any(hero_name in filename
                                       for hero_name in ['hero', 'good-news', 'currency-dollar',
                                                        'hand-rock', 'thumb-down', 'sondage'])
 
+                    # Check if this is the interac logo
+                    is_interac = 'interac' in filename
+
                     if is_hero_image:
                         print(f"🎨 Preprocessing hero image (auto-crop, NO padding)...")
-                        # Process the hero image (crop only, NO padding)
                         img_processed = process_hero_image(asset_path, padding=0)
 
-                        # Convert to bytes
                         img_buffer = BytesIO()
                         img_processed.save(img_buffer, format='PNG', optimize=True)
                         img_bytes = img_buffer.getvalue()
                         img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+                        # Always store in cid_map — still needed by /hero-image/ route
                         cid_map[cid] = img_base64
 
-                        print(f"✅ Successfully preprocessed and embedded {len(img_bytes)} bytes for {cid}")
+                        if url_mode:
+                            # URL mode: replace with Jinja2 variable (no CID attachment)
+                            html = html.replace(match, '{{ hero_image_url }}')
+                            print(f"✅ Hero encoded for /hero-image/ route, src → {{{{ hero_image_url }}}} ({len(img_bytes)} bytes)")
+                        else:
+                            html = html.replace(match, f"cid:{cid}")
+                            print(f"✅ Successfully preprocessed and embedded {len(img_bytes)} bytes for {cid}")
+
+                    elif is_interac and url_mode:
+                        # URL mode: use {{ site_url }} Jinja variable — resolved per deployment
+                        jinja_url = "{{ site_url }}/static/images/email/interac-logo.jpg"
+                        html = html.replace(match, jinja_url)
+                        print(f"✅ Interac logo → {{ site_url }} Jinja variable (not embedded)")
+                        # Do NOT add to cid_map — not needed by any route
+
                     else:
-                        # Non-hero images (QR codes, logos, etc.) - no preprocessing
+                        # Non-hero images (logos, etc.) — no preprocessing
                         with open(asset_path, "rb") as img_file:
                             img_bytes = img_file.read()
                             img_base64 = base64.b64encode(img_bytes).decode("utf-8")
                             cid_map[cid] = img_base64
 
+                        html = html.replace(match, f"cid:{cid}")
                         print(f"✅ Successfully embedded {len(img_bytes)} bytes for {cid}")
 
-                    # Replace img src with cid:...
-                    html = html.replace(match, f"cid:{cid}")
                 except Exception as e:
                     print(f"❌ ERROR: Failed to process image {asset_path}: {e}")
                     raise
@@ -397,13 +426,19 @@ def main():
     """Main function with improved argument handling and error reporting"""
     if len(sys.argv) < 2:
         print("❌ ERROR: Template name required")
-        print("💡 Usage: python compileEmailTemplate.py <template_name> [--update-original]")
-        print("💡 Available templates: signup, newPass, paymentReceived, latePayment, redeemPass, survey_invitation")
+        print("💡 Usage: python compileEmailTemplate.py <template_name> [--update-original] [--url-mode]")
+        print("💡 Available templates: signup, newPass, paymentReceived, latePayment, redeemPass, survey_invitation, signup_payment_first")
         print("")
         print("📋 Modes:")
         print("   Development (default):   Updates _compiled only, preserves _original")
         print("   Production:              python compileEmailTemplate.py <name> --update-original")
         print("                            Updates BOTH _compiled AND _original (pristine defaults)")
+        print("")
+        print("🖼️  Image modes:")
+        print("   CID inline (default):    Images embedded as MIME attachments (classic)")
+        print("   URL-based:               python compileEmailTemplate.py <name> --url-mode")
+        print("                            Hero → {{ hero_image_url }}, interac → hosted URL")
+        print("                            inline_images.json still written (for /hero-image/ route)")
         print("")
         print("🎯 Use --update-original when:")
         print("   - Deploying improved templates to production")
@@ -413,15 +448,18 @@ def main():
 
     folder = sys.argv[1]
     update_original = '--update-original' in sys.argv or '--update-pristine' in sys.argv
+    url_mode = '--url-mode' in sys.argv
 
-    print(f"🚀 Email Template Compiler v3.0 - Starting compilation...")
+    print(f"🚀 Email Template Compiler v3.1 - Starting compilation...")
     print(f"📅 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"📁 Template: {folder}")
+    if url_mode:
+        print(f"🌐 Image mode: URL-based (Phase 3 hybrid hosted images)")
     if update_original:
         print(f"⚠️  WARNING: Will update pristine original - customers will see this when resetting!")
     print("─" * 60)
 
-    success = compile_email_template_to_folder(folder, update_original=update_original)
+    success = compile_email_template_to_folder(folder, update_original=update_original, url_mode=url_mode)
 
     print("─" * 60)
     if success:

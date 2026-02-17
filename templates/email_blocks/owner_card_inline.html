@@ -41,7 +41,7 @@
     <!-- 🖼 Logo + Price stacked -->
     <td style="padding: 16px 30px 28px 10px; width: 50%; vertical-align: middle;">
       <div style="text-align: center;">
-        <img src="cid:logo" alt="Logo" width="130"
+        <img src="{{ owner_logo_url | default('cid:logo') }}" alt="Logo" width="130"
              style="border-radius: 8px; display: block; margin: 0 auto 10px;" />
         <div style="font-size: 22px; font-weight: bold; color: #142743;">
           ${{ "%.2f"|format(pass_data.sold_amt) }}
