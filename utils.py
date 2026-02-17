@@ -2889,7 +2889,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     inline_images = inline_images or {}
 
     # ✅ Set default organization info and URLs
-    base_url = "https://lhgi.minipass.me"
+    base_url = get_setting('SITE_URL', '').rstrip('/')
 
     # Set organization name if not already in context
     if 'organization_name' not in context:
@@ -2939,18 +2939,14 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     
     print(f"🌐 Base URL: {base_url}")
     
-    # ✅ PHASE 3: Hosted Image System
+    # ✅ PHASE 3: Hybrid Hosted Images
     if use_hosted_images:
-        # Generate hosted image URLs instead of inline data
-        image_urls = generate_image_urls(context, base_url)
-        context.update(image_urls)
-        
-        print(f"🖼️ Using hosted images: {len(image_urls)} URLs generated")
-        
-        # Clear inline images for hosted mode
-        inline_images = {}
+        # Keep only QR code as CID attachment — all other images (hero, logo, interac)
+        # are served via HTTP URLs already present in the template context from Step 3.
+        inline_images = {k: v for k, v in inline_images.items() if k == 'qr_code'}
+        print(f"🌐 Hosted images mode: {len(inline_images)} CID attachment(s) (QR code only)")
     else:
-        print(f"📎 Using inline images: {len(inline_images)} embedded")
+        print(f"📎 Inline images mode: {len(inline_images)} embedded")
     
     sys.stdout.flush()
 
@@ -3570,7 +3566,8 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
             template_name=theme,
             context=context,
             inline_images=inline_images,
-            timestamp_override=timestamp
+            timestamp_override=timestamp,
+            use_hosted_images=True
         )
 
     else:
@@ -3648,13 +3645,24 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         # Get show_qr_code setting (default True for non-customized templates)
         show_qr_code = True
 
+        # Compute owner_logo_url before rendering owner card (Phase 3 — hosted images)
+        _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
+        _activity_logo_path = os.path.join("static/uploads", f"{activity.id}_owner_logo.png") if activity else None
+        if _activity_logo_path and os.path.exists(_activity_logo_path):
+            _owner_logo_url = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
+        else:
+            _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+            _org_logo_path = os.path.join("static/uploads", _org_logo_filename)
+            _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if os.path.exists(_org_logo_path) else None
+
         # Build base context with pass data
         base_context = {
             "pass_data": pass_data,
-            "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data),
+            "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data, owner_logo_url=_owner_logo_url),
             "history_html": render_template("email_blocks/history_table_inline.html", history=get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)),
             "activity_name": activity.name if activity else "",
             "show_qr_code": show_qr_code,
+            "owner_logo_url": _owner_logo_url,
         }
 
         # Use get_email_context to load defaults from email_defaults.json and add variables
@@ -3675,7 +3683,8 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
             template_name=template_name,
             context=context,
             timestamp_override=timestamp,
-            inline_images=inline_images
+            inline_images=inline_images,
+            use_hosted_images=True
         )
         return
     
@@ -3721,7 +3730,18 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         'pass_redeemed': 'redeemPass_compiled/index.html'
     }
     theme = template_mapping.get(event_type, 'newPass_compiled/index.html')
-    
+
+    # Compute hosted image URLs (Phase 3 — Hybrid Hosted Images)
+    _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
+    _hero_image_url = f"{_BASE_URL}/activity/{activity.id}/hero-image/{template_type}" if activity else None
+    _activity_logo_path = os.path.join("static/uploads", f"{activity.id}_owner_logo.png") if activity else None
+    if _activity_logo_path and os.path.exists(_activity_logo_path):
+        _owner_logo_url = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
+    else:
+        _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+        _org_logo_path = os.path.join("static/uploads", _org_logo_filename)
+        _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if os.path.exists(_org_logo_path) else None
+
     context = {
         "pass_data": {
             "pass_code": pass_data.pass_code,
@@ -3737,7 +3757,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "title": title,
         "intro_text": intro,
         "conclusion_text": conclusion,
-        "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data),
+        "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data, owner_logo_url=_owner_logo_url),
         "history_html": render_template("email_blocks/history_table_inline.html", history=history),
         "email_info": "",
         "logo_url": "/static/minipass_logo.png",
@@ -3746,10 +3766,12 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "unsubscribe_url": "",  # Will be filled by send_email with subdomain
         "privacy_url": "",      # Will be filled by send_email with subdomain
         "show_qr_code": show_qr_code,  # For conditional QR display in template
+        "hero_image_url": _hero_image_url,
+        "owner_logo_url": _owner_logo_url,
         # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
         "_skip_email_context": True
     }
-    
+
     # Add organization variables for footer (from Settings table)
     context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
     context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
@@ -3838,7 +3860,8 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         template_name=theme,
         context=context,
         inline_images=inline_images,
-        timestamp_override=timestamp
+        timestamp_override=timestamp,
+        use_hosted_images=True
     )
 
 
@@ -3990,6 +4013,23 @@ def get_email_context(activity, template_type, base_context=None):
             else:
                 org_logo = get_setting('LOGO_FILENAME', 'logo.png')
                 context['activity_logo_url'] = f'/static/uploads/{org_logo}'
+
+    # Phase 3 — Hybrid Hosted Images
+    # Add hero_image_url, owner_logo_url, and site_url for URL-based image delivery
+    _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
+    context['site_url'] = _BASE_URL  # Used in templates for static assets (e.g. interac logo)
+    if activity and 'hero_image_url' not in context:
+        context['hero_image_url'] = f"{_BASE_URL}/activity/{activity.id}/hero-image/{template_type}"
+
+    if activity and 'owner_logo_url' not in context:
+        _activity_logo_path = os.path.join("static/uploads", f"{activity.id}_owner_logo.png")
+        if os.path.exists(_activity_logo_path):
+            context['owner_logo_url'] = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
+        else:
+            _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+            _org_logo_path = os.path.join("static/uploads", _org_logo_filename)
+            if os.path.exists(_org_logo_path):
+                context['owner_logo_url'] = f"{_BASE_URL}/static/uploads/{_org_logo_filename}"
 
     return context
 

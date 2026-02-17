@@ -9326,12 +9326,13 @@ def send_survey_invitations(survey_id):
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
-                    context=context
+                    context=context,
+                    use_hosted_images=True
                 )
 
                 print(f"send_email_async() called successfully for {passport.user.email}")
                 sent_count += 1
-                
+
             except Exception as e:
                 # Log error but continue with other invitations
                 import traceback
@@ -9445,12 +9446,13 @@ def send_survey_invitations(survey_id):
                     subject=subject,
                     to_email=passport.user.email,
                     template_name=template_name,
-                    context=context
+                    context=context,
+                    use_hosted_images=True
                 )
 
                 print(f"send_email_async() called successfully for {passport.user.email}")
                 sent_count += 1
-                
+
             except Exception as e:
                 import traceback
                 print(f"Failed to send survey invitation to {passport.user.email}")
@@ -10570,11 +10572,23 @@ def email_preview_live(activity_id):
         base_context['pass_data'] = pass_data
         print(f"PREVIEW: Added pass_data to context for {template_type}")
 
+        # Phase 3: Compute owner_logo_url for hosted images
+        _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
+        _activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
+        if os.path.exists(_activity_logo_path):
+            _owner_logo_url = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
+        else:
+            _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+            _org_logo_path = os.path.join('static', 'uploads', _org_logo_filename)
+            _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if os.path.exists(_org_logo_path) else None
+
         # Render email blocks
         base_context['owner_html'] = render_template(
             "email_blocks/owner_card_inline.html",
-            pass_data=pass_data
+            pass_data=pass_data,
+            owner_logo_url=_owner_logo_url
         )
+        base_context['owner_logo_url'] = _owner_logo_url
 
         # Add history for ALL templates that need it
         history = [
@@ -10658,108 +10672,26 @@ def email_preview_live(activity_id):
         print(f"🔍 DEBUG PREVIEW: show_qr_code = {show_qr_code}")
         print(f"🔍 DEBUG PREVIEW: context['show_qr_code'] = {context.get('show_qr_code')}")
 
-        # Get the compiled template path
-        template_path = safe_template(template_type)
-        
-        # Render the compiled template with the merged context
-        rendered_html = render_template(template_path, **context)
-        
-        # Handle uploaded hero image from form data BEFORE processing default images
-        uploaded_hero_data = None
+        # Phase 3: Handle uploaded hero BEFORE render — set context['hero_image_url'] to data URI
         hero_file_key = f'{template_type}_hero_image'
         if hero_file_key in request.files:
             hero_file = request.files[hero_file_key]
             if hero_file and hero_file.filename:
                 try:
-                    # Read uploaded file data directly without saving to disk
-                    hero_file.seek(0)  # Reset file pointer
+                    hero_file.seek(0)
                     uploaded_hero_data = hero_file.read()
+                    hero_base64 = base64.b64encode(uploaded_hero_data).decode('utf-8')
+                    context['hero_image_url'] = f'data:image/png;base64,{hero_base64}'
+                    print(f"EMAIL LIVE PREVIEW: Using UPLOADED HERO as data URI in context")
                 except Exception as e:
                     print(f"Error reading uploaded hero file: {e}")
-        
-        # Load inline images and convert to data URIs for browser display
-        compiled_folder = template_path.replace('/index.html', '')
-        json_path = os.path.join('templates', compiled_folder, 'inline_images.json')
-        
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as f:
-                inline_images_data = json.load(f)
-                
-                # Use the proper hero image utility function to determine current hero
-                from utils import get_activity_hero_image
-                hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
-                has_custom_hero = hero_data is not None and is_custom_hero
-                has_uploaded_hero = uploaded_hero_data is not None
-                
-                print(f"EMAIL LIVE PREVIEW: activity={activity.id}, template_type={template_type}")
-                print(f"EMAIL LIVE PREVIEW: Custom hero found: {has_custom_hero}, uploaded hero: {has_uploaded_hero}")
 
-                # Replace cid: references with data: URIs
-                for img_id, base64_data in inline_images_data.items():
-                    # Skip hero-related images if we have a custom hero OR uploaded hero
-                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
-                    if (img_id == expected_hero_cid and (has_custom_hero or has_uploaded_hero)):
-                        print(f"EMAIL LIVE PREVIEW: Skipping template hero '{img_id}' because custom/uploaded hero exists")
-                        continue
-                        
-                    # Determine image type (most are PNG)
-                    mime_type = 'image/png'
-                    if img_id in ['facebook', 'instagram']:
-                        mime_type = 'image/png'
-                    
-                    # Replace cid:image_id with data URI
-                    cid_ref = f'cid:{img_id}'
-                    data_uri = f'data:{mime_type};base64,{base64_data}'
-                    rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"EMAIL LIVE PREVIEW: Replaced {cid_ref} with template image")
-                
-                # Handle hero image replacement - prioritize uploaded hero over custom hero
-                if has_uploaded_hero:
-                    hero_base64 = base64.b64encode(uploaded_hero_data).decode('utf-8')
-                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
-                    cid_ref = f'cid:{expected_hero_cid}'
-                    data_uri = f'data:image/png;base64,{hero_base64}'
-                    rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"EMAIL LIVE PREVIEW: Replaced {cid_ref} with UPLOADED HERO image")
-                elif has_custom_hero:
-                    hero_base64 = base64.b64encode(hero_data).decode('utf-8')
-                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
-                    cid_ref = f'cid:{expected_hero_cid}'
-                    data_uri = f'data:image/png;base64,{hero_base64}'
-                    rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"EMAIL LIVE PREVIEW: Replaced {cid_ref} with SAVED CUSTOM HERO image")
+        # Get the compiled template path
+        template_path = safe_template(template_type)
 
-        # Add logo image as data URI (same resolution as email send in utils.py)
-        logo_path = None
-        # Check for activity-specific owner logo first (custom upload via template editor)
-        activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
-        if os.path.exists(activity_logo_path):
-            logo_path = activity_logo_path
-        if not logo_path:
-            # Use organization logo from settings as fallback
-            from utils import get_setting
-            org_logo = get_setting('LOGO_FILENAME', 'logo.png')
-            logo_path = os.path.join('static', 'uploads', org_logo)
-
-        if logo_path and os.path.exists(logo_path):
-            with open(logo_path, 'rb') as f:
-                logo_base64 = base64.b64encode(f.read()).decode('utf-8')
-                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
-                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
-        else:
-            # Generate placeholder logo when no real logo exists
-            from utils import generate_placeholder_logo_image
-            org_name = get_setting('ORG_NAME', 'Minipass')
-            try:
-                placeholder_buf = generate_placeholder_logo_image(org_name)
-                logo_base64 = base64.b64encode(placeholder_buf.read()).decode('utf-8')
-                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
-                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
-            except Exception:
-                pass
-
-        # The uploaded hero image is now handled above in the main image processing loop
-        # This ensures it works with auto-detected CID references
+        # Render the compiled template with the merged context
+        # hero_image_url and owner_logo_url are already resolved in context (Phase 3)
+        rendered_html = render_template(template_path, **context)
 
         # Generate sample QR code for preview (only if enabled)
         if show_qr_code:
@@ -10831,9 +10763,7 @@ def email_preview_live(activity_id):
 
 @app.route('/activity/<int:activity_id>/hero-image/<template_type>')
 def get_hero_image(activity_id, template_type):
-    """Get the current hero image for a specific template type"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
+    """Get the current hero image for a specific template type — PUBLIC route (used in emails)"""
     
     from models import Activity
     from utils import get_activity_hero_image
@@ -10965,11 +10895,23 @@ def test_email_template(activity_id):
             base_context['pass_data'] = pass_data
             print(f"TEST EMAIL: Added pass_data to context for {template_type}")
 
+            # Phase 3: Compute owner_logo_url for hosted images
+            _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
+            _activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
+            if os.path.exists(_activity_logo_path):
+                _owner_logo_url = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
+            else:
+                _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+                _org_logo_path = os.path.join('static', 'uploads', _org_logo_filename)
+                _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if os.path.exists(_org_logo_path) else None
+
             # Render email blocks
             base_context['owner_html'] = render_template(
                 "email_blocks/owner_card_inline.html",
-                pass_data=pass_data
+                pass_data=pass_data,
+                owner_logo_url=_owner_logo_url
             )
+            base_context['owner_logo_url'] = _owner_logo_url
 
             # Add history for templates that need it
             if template_type in ['redeemPass', 'latePayment']:
@@ -11013,70 +10955,9 @@ def test_email_template(activity_id):
         template_path = safe_template(template_type)
         print(f"   Template path: {template_path}")
         
-        # Load inline images for compiled template
-        compiled_folder = template_path.replace('/index.html', '')
-        json_path = os.path.join('templates', compiled_folder, 'inline_images.json')
+        # Phase 3: Only attach QR code as CID — all other images served via HTTP URLs
+        import base64
         inline_images = {}
-        
-        # Use the proper hero image utility function to determine current hero
-        from utils import get_activity_hero_image
-        hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
-        has_custom_hero = hero_data is not None and is_custom_hero
-        
-        print(f"TEST EMAIL: Custom hero found: {has_custom_hero}, is_custom: {is_custom_hero}")
-        
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as f:
-                inline_images_data = json.load(f)
-                # Convert base64 strings to bytes
-                import base64
-
-                for img_id, base64_data in inline_images_data.items():
-                    try:
-                        # Skip hero-related images if we have a custom hero image
-                        expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
-                        if (img_id == expected_hero_cid and has_custom_hero):
-                            print(f"TEST EMAIL: Skipping template hero '{img_id}' because custom hero exists")
-                            continue
-                            
-                        # The JSON contains base64-encoded image data directly
-                        inline_images[img_id] = base64.b64decode(base64_data)
-                        print(f"   Loaded inline image: {img_id} ({len(inline_images[img_id])} bytes)")
-                    except Exception as e:
-                        print(f"   ⚠️ Failed to decode image {img_id}: {e}")
-        
-        # Add logo image (same resolution as email send in utils.py)
-        logo_path = None
-        # Check for activity-specific owner logo first (custom upload via template editor)
-        activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
-        if os.path.exists(activity_logo_path):
-            logo_path = activity_logo_path
-        if not logo_path:
-            # Use organization logo from settings as fallback
-            org_logo = get_setting('LOGO_FILENAME', 'logo.png')
-            logo_path = os.path.join('static', 'uploads', org_logo)
-        if not logo_path or not os.path.exists(logo_path):
-            # Try placeholder before minipass fallback
-            from utils import generate_placeholder_logo_image
-            org_name = get_setting('ORG_NAME', 'Minipass')
-            try:
-                placeholder_buf = generate_placeholder_logo_image(org_name)
-                inline_images['logo'] = placeholder_buf.read()
-                logo_path = None  # Skip file-based loading below
-                print(f"   Added placeholder logo for '{org_name}'")
-            except Exception:
-                logo_path = 'static/minipass_logo.png'
-        if logo_path and os.path.exists(logo_path):
-            with open(logo_path, 'rb') as f:
-                logo_data = f.read()
-                inline_images['logo'] = logo_data
-                print(f"   Added logo: {logo_path} ({len(logo_data)} bytes)")
-        
-        # Add custom hero image if it exists
-        if has_custom_hero:
-            expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
-            inline_images[expected_hero_cid] = hero_data
-            print(f"TEST EMAIL: Added custom hero image for CID '{expected_hero_cid}' ({len(hero_data)} bytes)")
 
         # Generate QR code for test email
         qr_code_data = generate_qr_code_image('TEST123')
@@ -11086,14 +10967,15 @@ def test_email_template(activity_id):
 
         print("\n🚀 CALLING send_email() with compiled template...")
         sys.stdout.flush()
-        
-        # Send using compiled template
+
+        # Send using compiled template (Phase 3: hosted images — hero/logo served via HTTP)
         result = send_email(
             subject=subject,
             to_email=test_email,
             template_name=template_path,
             context=context,
-            inline_images=inline_images if inline_images else None
+            inline_images=inline_images if inline_images else None,
+            use_hosted_images=True
         )
         
         print(f"\n✅ send_email() RETURNED: {result}")
