@@ -2847,11 +2847,11 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     from email.mime.image import MIMEImage
-    from email.utils import formataddr
+    from email.utils import formataddr, formatdate
     from premailer import transform
     import logging
     from utils import get_setting, safe_template
-    from datetime import datetime
+    from datetime import datetime, timezone
     import sys
 
     def clean_mime_headers(msg):
@@ -3034,7 +3034,8 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     from_email = get_setting("MAIL_DEFAULT_SENDER") or "noreply@minipass.me"
     sender_name = get_setting("MAIL_SENDER_NAME") or "Minipass"
     msg["From"] = formataddr((sender_name, from_email))
-    
+    msg["Return-Path"] = from_email
+
     # ✅ Add deliverability headers
     reply_to_email = from_email
     msg["Reply-To"] = reply_to_email
@@ -3052,10 +3053,12 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         msg["Precedence"] = "bulk"  # Bulk/newsletter emails
 
     msg["X-Mailer"] = "Minipass/1.0"
-    
+    msg["Auto-Submitted"] = "auto-generated"
+
     # Generate unique Message-ID
     timestamp = int(datetime.now(timezone.utc).timestamp() * 1000000)  # microsecond precision
     msg["Message-ID"] = f"<{timestamp}@minipass.me>"
+    msg["Date"] = formatdate(localtime=True)
 
     # Add organization tracking if available
     if hasattr(context, 'get') and context.get('organization_id'):
@@ -3100,8 +3103,8 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         if context.get('body_text'):
             plain_text = f"{plain_text}\n\n{context.get('body_text')}"
     
-    alt_part.attach(MIMEText(plain_text, "plain"))
-    alt_part.attach(MIMEText(final_html, "html"))
+    alt_part.attach(MIMEText(plain_text, "plain", "utf-8"))
+    alt_part.attach(MIMEText(final_html, "html", "utf-8"))
     msg.attach(alt_part)
 
     for cid, img_data in inline_images.items():
