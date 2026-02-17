@@ -3218,6 +3218,7 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                 html_body = kwargs.get("html_body")
                 timestamp_override = kwargs.get("timestamp_override")
                 organization_id = kwargs.get("organization_id")
+                use_hosted_images = kwargs.get("use_hosted_images", False)
 
                 # ✅ FINAL SAFETY: If html_body exists, force clear template_name/context
                 if html_body:
@@ -3271,8 +3272,8 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                 if context and '_skip_email_context' in context:
                     del context['_skip_email_context']
 
-                # Load inline images for compiled templates
-                if template_name and not html_body:
+                # Load inline images for compiled templates (skip if Phase 3 hosted images)
+                if template_name and not html_body and not use_hosted_images:
                     # Normalize template name to get base name
                     base_template = template_name.replace('email_templates/', '').replace('/index.html', '').replace('.html', '')
                     compiled_folder = os.path.join("templates/email_templates", f"{base_template}_compiled")
@@ -3334,7 +3335,8 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                     html_body=html_body,
                     timestamp_override=timestamp_override,
                     user=user,
-                    activity=activity_in_thread
+                    activity=activity_in_thread,
+                    use_hosted_images=use_hosted_images
                 )
 
                 # --- Save EmailLog after successful send ---
@@ -3525,37 +3527,9 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     inline_images = {}
 
     if use_compiled:
-        with open(index_path, "r", encoding="utf-8") as f:
-            raw_html = f.read()
-        html_body = render_template_string(raw_html, **context)
-
-        with open(json_path, "r", encoding="utf-8") as f:
-            cid_map = json.load(f)
-        for cid, img_base64 in cid_map.items():
-            inline_images[cid] = base64.b64decode(img_base64)
-
-        # 🚫 DO NOT add logo attachments to signup emails
-        # Signup emails should not have logo attachments - they're meant to be clean celebration emails
-        # Logo is already embedded in the compiled template if needed
-
-        # Add Interac logo for payment_first signup emails (referenced in conclusion_text as cid:interac_logo)
-        if is_payment_first:
-            interac_logo_path = os.path.join("templates/email_templates/signup_payment_first/interac_logo.jpg")
-            if os.path.exists(interac_logo_path):
-                with open(interac_logo_path, "rb") as img_file:
-                    inline_images["interac_logo"] = img_file.read()
-                print(f"✅ Interac logo embedded for signup_payment_first email")
-
-        # Load custom hero image for signup emails (if activity has one)
-        from utils import get_activity_hero_image
-        hero_data, is_custom, is_template_default = get_activity_hero_image(activity, template_type)
-        if hero_data and not is_template_default:
-            # Replace template default with custom uploaded hero or activity fallback
-            hero_cid = HERO_CID_MAP.get(template_type)
-            if hero_cid:
-                inline_images[hero_cid] = hero_data
-                hero_type = "custom" if is_custom else "activity fallback"
-                print(f"✅ {hero_type} hero image applied for {template_type}: cid={hero_cid}, size={len(hero_data)} bytes")
+        # Phase 3: images are served via hosted URLs — no CID attachments needed
+        # inline_images stays empty; send_email_async handles any QR code if needed
+        print(f"✅ Phase 3: signup email using hosted images for {template_type}")
 
         send_email_async(
             app=app,
