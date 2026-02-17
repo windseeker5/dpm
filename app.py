@@ -10573,6 +10573,7 @@ def email_preview_live(activity_id):
         print(f"PREVIEW: Added pass_data to context for {template_type}")
 
         # Phase 3: Compute owner_logo_url for hosted images
+        # In browser preview, relative URLs work. If no file found, fall back to placeholder data URI.
         _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
         _activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
         if os.path.exists(_activity_logo_path):
@@ -10580,7 +10581,18 @@ def email_preview_live(activity_id):
         else:
             _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
             _org_logo_path = os.path.join('static', 'uploads', _org_logo_filename)
-            _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if os.path.exists(_org_logo_path) else None
+            if os.path.exists(_org_logo_path):
+                _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}"
+            else:
+                # No logo file found — generate placeholder data URI for browser preview
+                from utils import generate_placeholder_logo_image
+                _org_name = get_setting('ORG_NAME', 'Minipass')
+                try:
+                    _placeholder_buf = generate_placeholder_logo_image(_org_name)
+                    _logo_b64 = base64.b64encode(_placeholder_buf.read()).decode('utf-8')
+                    _owner_logo_url = f'data:image/png;base64,{_logo_b64}'
+                except Exception:
+                    _owner_logo_url = None
 
         # Render email blocks
         base_context['owner_html'] = render_template(
@@ -10955,15 +10967,18 @@ def test_email_template(activity_id):
         template_path = safe_template(template_type)
         print(f"   Template path: {template_path}")
         
-        # Phase 3: Only attach QR code as CID — all other images served via HTTP URLs
+        # Phase 3: Only attach QR code as CID — only for templates that use it
         import base64
         inline_images = {}
 
-        # Generate QR code for test email
-        qr_code_data = generate_qr_code_image('TEST123')
-        if qr_code_data:
-            inline_images['qr_code'] = qr_code_data.read()
-            print(f"   Added QR code: {len(inline_images['qr_code'])} bytes")
+        QR_TEMPLATES = {'newPass', 'paymentReceived', 'redeemPass', 'latePayment'}
+        if template_type in QR_TEMPLATES:
+            qr_code_data = generate_qr_code_image('TEST123')
+            if qr_code_data:
+                inline_images['qr_code'] = qr_code_data.read()
+                print(f"   Added QR code: {len(inline_images['qr_code'])} bytes")
+        else:
+            print(f"   No QR code for template type: {template_type}")
 
         print("\n🚀 CALLING send_email() with compiled template...")
         sys.stdout.flush()
