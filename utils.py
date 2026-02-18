@@ -3503,6 +3503,11 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
     context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
 
+    # Phase 3: copy hosted image URLs from email_context (get_email_context already computed them)
+    context['hero_image_url'] = email_context.get('hero_image_url', '')
+    context['owner_logo_url'] = email_context.get('owner_logo_url')
+    context['site_url'] = email_context.get('site_url', '')
+
     # Add payment-first variables if applicable (for signup_payment_first template)
     if is_payment_first:
         context['payment_email'] = base_context['payment_email']
