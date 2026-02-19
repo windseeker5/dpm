@@ -1,7 +1,7 @@
 # Minipass Email Template System - Complete Guide
 
-**Version:** 2.0 (Unified)
-**Last Updated:** 2025-11-02
+**Version:** 3.0 (Hybrid URL Model)
+**Last Updated:** 2026-02-19
 **Purpose:** Comprehensive developer guide for the complete email template system (backend + frontend)
 
 ---
@@ -309,9 +309,9 @@ done
    - Auto-crops to content (removes white borders)
    - NO padding added (clean crop only)
 4. Converts images to base64 encoded strings
-5. Replaces image paths with CID references (e.g., `cid:hero_new_pass`)
+5. Replaces hero/logo image paths with Jinja2 URL variables (`{{ hero_image_url }}`, `{{ owner_logo_url }}`) — images are served from hosted Flask routes when the email is opened, not embedded as MIME attachments
 6. Writes compiled HTML to `{templateName}_compiled/index.html`
-7. Writes image data to `{templateName}_compiled/inline_images.json`
+7. Writes base64 image data to `{templateName}_compiled/inline_images.json` — used by the `/hero-image/` Flask route for Priority 2 (default hero) fallback; not used for MIME email attachments
 8. If `--update-original` used: ALSO updates `{templateName}_original/` folder
 
 **Hero Image Preprocessing:**
@@ -803,6 +803,10 @@ Reason: Reset deleted custom hero file AND database customizations
 
 This is the complete flow when an email is triggered in production.
 
+**Image delivery model:** Hybrid. QR code is embedded as CID (must always display — functional
+element). Hero image and owner logo are served via hosted Flask URLs (decorative — loaded when
+the email client opens the email). This reduces email size from ~30–50 KB to ~8–10 KB.
+
 ### Trigger Event
 
 Examples:
@@ -836,24 +840,14 @@ context = get_email_context(
 2. Loads defaults from `config/email_defaults.json`
 3. Overlays activity customizations from `activity.email_templates` JSON
 4. Preserves protected blocks (`owner_html`, `history_html`)
-5. Returns merged context for template rendering
+5. Sets `hero_image_url` → `https://{site_url}/activity/{activity.id}/hero-image/{template_type}`
+6. Sets `owner_logo_url` → `https://{site_url}/owner-logo?activity_id={activity.id}`
+7. Returns merged context for template rendering
 
-### Step 2: Resolve Hero Image
+**Image URL resolution:** Hero and logo URLs point to Flask routes that apply the 3-tier priority
+system when the email client fetches the image at open time (not at send time).
 
-**Function:** `utils.py:123-189` (`get_activity_hero_image()`)
-
-```python
-from utils import get_activity_hero_image
-
-hero_data, is_custom, is_template_default = get_activity_hero_image(
-    activity=passport.activity,
-    template_type='newPass'
-)
-```
-
-**Returns:** `(image_data, is_custom, is_template_default)` based on 3-tier priority
-
-### Step 3: Render Compiled Template
+### Step 2: Render Compiled Template
 
 ```python
 from flask import render_template
@@ -866,13 +860,12 @@ html = render_template(
 
 **Template location:** Uses `_compiled` folder (not master)
 
-### Step 4: Embed Hero Image
+**Image rendering in template:**
+- `{{ hero_image_url }}` → resolved to hosted `/hero-image/` route URL
+- `{{ owner_logo_url }}` → resolved to hosted `/owner-logo` route URL
+- `cid:qr_code` → remains as CID reference (resolved at MIME build time)
 
-- Hero image embedded as inline CID attachment
-- Ensures image displays in email clients
-- Uses data from Priority 1, 2, or 3
-
-### Step 5: Send Email
+### Step 3: Send Email
 
 **Function:** `utils.py:2090+` (`send_email()`)
 
@@ -883,9 +876,14 @@ send_email(
     subject=context['subject'],
     to_email=user.email,
     html_body=html,
-    inline_images={'hero_image': hero_data}
+    inline_images={'qr_code': qr_data},
+    use_hosted_images=True
 )
 ```
+
+**Hybrid delivery via `use_hosted_images=True`:**
+- Hero and logo are **not** attached as MIME parts — they load from hosted URLs when email opens
+- QR code is **still** attached as CID inline (functional element — must always display)
 
 ### Complete Flow Diagram
 
@@ -904,37 +902,35 @@ send_email(
 │  get_email_context()                                           │
 │  - Load defaults from config/email_defaults.json               │
 │  - Overlay activity customizations from DB                     │
-│  - Merge with base context                                     │
-└────────────────────────┬───────────────────────────────────────┘
-                         │
-                         ▼
-┌────────────────────────────────────────────────────────────────┐
-│  get_activity_hero_image()                                     │
-│  - Check Priority 1: Custom uploaded hero                      │
-│  - Check Priority 2: Original template default                 │
-│  - Check Priority 3: Activity image (if customized)            │
+│  - Set hero_image_url → /activity/{id}/hero-image/{type}       │
+│  - Set owner_logo_url → /owner-logo?activity_id={id}           │
 └────────────────────────┬───────────────────────────────────────┘
                          │
                          ▼
 ┌────────────────────────────────────────────────────────────────┐
 │  Render Compiled Template                                      │
 │  - Use {template}_compiled/index.html                          │
-│  - Apply merged context (Jinja2 rendering)                     │
+│  - Jinja2 resolves {{ hero_image_url }}, {{ owner_logo_url }}  │
+│  - cid:qr_code remains as CID reference                        │
 └────────────────────────┬───────────────────────────────────────┘
                          │
                          ▼
 ┌────────────────────────────────────────────────────────────────┐
-│  Embed Hero Image (inline CID attachment)                      │
-└────────────────────────┬───────────────────────────────────────┘
-                         │
-                         ▼
-┌────────────────────────────────────────────────────────────────┐
-│  Send Email (SMTP)                                             │
+│  Send Email (SMTP) — use_hosted_images=True                    │
 │  - Subject from context                                        │
 │  - HTML body from rendered template                            │
-│  - Inline images embedded                                      │
+│  - QR code attached as CID (only MIME image attachment)        │
+│  - Hero/logo load from hosted URLs when email is opened        │
 └────────────────────────────────────────────────────────────────┘
 ```
+
+### Image Delivery Summary
+
+| Image | Method | Reason |
+|-------|--------|--------|
+| QR code | CID inline attachment | Functional — must display in all clients |
+| Hero image | Hosted URL (`/activity/{id}/hero-image/{type}`) | Decorative — 3-tier priority resolved at fetch time |
+| Owner logo | Hosted URL (`/owner-logo?activity_id={id}`) | Decorative — letter fallback if no logo uploaded |
 
 ---
 
@@ -1026,6 +1022,11 @@ db.session.commit()  # Now it saves!
   ...
 }
 ```
+
+**Current role:** Used exclusively by the `/activity/{id}/hero-image/{type}` Flask route for
+**Priority 2 fallback** — when no custom hero has been uploaded, the route reads this file and
+serves the default hero image. These files are **not** read during email sending; hero images
+load from the hosted route URL when the email client opens the message.
 
 ---
 

@@ -1,3 +1,4 @@
+{% set logo_url = 'cid:logo_image' %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -89,7 +90,7 @@
           <!-- Hero Image Section -->
           <tr>
             <td class="hero-container" align="center" style="padding: 40px 0 20px; line-height: 0;">
-              <img class="hero-image" src="{{ hero_image_url }}" alt="Good News" width="152" style="display: block; width: 152px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
+              <img class="hero-image" src="cid:good-news" alt="Good News" width="152" style="display: block; width: 152px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
             </td>
           </tr>
 
@@ -123,7 +124,7 @@
                     <table cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td style="vertical-align: middle; padding-right: 16px;">
-                          <img src="{{ site_url }}/static/images/email/interac-logo.jpg" alt="Interac" width="40" style="display: block; border-radius: 6px;">
+                          <img src="cid:interac_logo" alt="Interac" width="40" style="display: block; border-radius: 6px;">
                         </td>
                         <td style="vertical-align: middle; color: #475569;">
                           <div style="margin-bottom: 4px;">Montant à transférer : <strong style="color: #1e293b;">{{ requested_amount }}</strong></div>

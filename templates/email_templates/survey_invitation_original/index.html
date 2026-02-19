@@ -1,3 +1,4 @@
+{% set logo_url = 'cid:logo_image' %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -17,12 +18,12 @@
   <![endif]-->
 
   <style type="text/css">
-    /* Mobile-first CSS with fallbacks - IDENTICAL to newPass */
+    /* V5: Mobile-first CSS with improved margins */
     @media only screen and (max-width: 600px) {
       .main-table {
         width: 100% !important;
         min-width: 320px !important;
-        margin: 20px auto !important;
+        margin: 16px auto !important;
       }
       .container {
         width: 100% !important;
@@ -32,37 +33,40 @@
       .hero-image {
         width: 100% !important;
         height: auto !important;
-        max-width: 100% !important;
+        max-width: 156px !important;
       }
+      /* V5: Reduced mobile margins from 75px to 16px */
       .content-padding {
-        padding: 20px 20px 24px 20px !important;
+        padding: 0 16px 20px 16px !important;
       }
       .intro-padding {
-        padding: 20px 20px 24px 20px !important;
+        padding: 16px 16px 20px 16px !important;
       }
       .conclusion-padding {
-        padding: 0 20px 30px 20px !important;
+        padding: 0 16px 24px 16px !important;
       }
       .footer-table {
         width: 100% !important;
-        padding: 0 20px !important;
+        padding: 0 16px !important;
       }
       .footer-text {
-        padding: 0 20px 20px 20px !important;
+        padding: 0 16px 16px 16px !important;
         font-size: 12px !important;
       }
+      /* V5: Larger mobile font sizes */
       .mobile-font-size {
         font-size: 16px !important;
+        line-height: 1.6 !important;
       }
       .mobile-title {
-        font-size: 22px !important;
-        padding-bottom: 20px !important;
+        font-size: 24px !important;
+        padding-bottom: 16px !important;
       }
     }
 
     @media only screen and (max-width: 480px) {
       .hero-container {
-        padding: 0 !important;
+        padding: 24px 0 16px 0 !important;
       }
     }
   </style>
@@ -75,7 +79,7 @@
   </style>
   <![endif]-->
 </head>
-<body style="margin:0; padding:0; background-color:#f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #4b5563; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
+<body style="margin:0; padding:0; background-color:#f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; color: #4b5563; -webkit-text-size-adjust: none; -ms-text-size-adjust: none;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f6fa; min-width: 100%;">
     <tr>
       <td align="center" style="padding: 0;">
@@ -86,7 +90,7 @@
           <!-- Hero Image Section - Uses cid:sondage (centered, medium) -->
           <tr>
             <td class="hero-container" align="center" style="padding: 40px 0 20px;">
-              <img class="hero-image" src="{{ hero_image_url }}" alt="Invitation sondage" width="90" style="display: block; width: 90px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
+              <img class="hero-image" src="cid:sondage" alt="Invitation sondage" width="152" style="display: block; width: 152px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
             </td>
           </tr>
 
@@ -99,10 +103,10 @@
           </tr>
           {% endif %}
 
-          <!-- Intro Text - Uses activity_name and question_count variables -->
+          <!-- Intro Text - V5: Updated padding and font size -->
           {% if intro_text %}
           <tr>
-            <td class="intro-padding mobile-font-size" style="padding: 30px 75px 32px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
+            <td class="intro-padding mobile-font-size" style="padding: 16px 40px 24px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">
               {{ intro_text | safe }}
             </td>
           </tr>
@@ -123,10 +127,10 @@
             </td>
           </tr>
 
-          <!-- Conclusion Text -->
+          <!-- Conclusion Text - V5: Updated padding and font size -->
           {% if conclusion_text %}
           <tr>
-            <td class="conclusion-padding mobile-font-size" style="padding: 0 75px 50px; font-size: 14px; color: #475569; text-align: left; line-height: 1.6;">
+            <td class="conclusion-padding mobile-font-size" style="padding: 0 40px 40px; font-size: 16px; color: #475569; text-align: left; line-height: 1.6;">
               {{ conclusion_text | safe }}
             </td>
           </tr>
