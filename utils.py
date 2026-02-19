@@ -4001,14 +4001,7 @@ def get_email_context(activity, template_type, base_context=None):
         context['hero_image_url'] = f"{_BASE_URL}/activity/{activity.id}/hero-image/{template_type}"
 
     if activity and 'owner_logo_url' not in context:
-        _activity_logo_path = os.path.join("static/uploads", f"{activity.id}_owner_logo.png")
-        if os.path.exists(_activity_logo_path):
-            context['owner_logo_url'] = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
-        else:
-            _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-            _org_logo_path = os.path.join("static/uploads", _org_logo_filename)
-            if os.path.exists(_org_logo_path):
-                context['owner_logo_url'] = f"{_BASE_URL}/static/uploads/{_org_logo_filename}"
+        context['owner_logo_url'] = f"{_BASE_URL}/owner-logo?activity_id={activity.id}"
 
     return context
 

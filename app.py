@@ -10572,27 +10572,27 @@ def email_preview_live(activity_id):
         base_context['pass_data'] = pass_data
         print(f"PREVIEW: Added pass_data to context for {template_type}")
 
-        # Phase 3: Compute owner_logo_url for hosted images
-        # In browser preview, relative URLs work. If no file found, fall back to placeholder data URI.
-        _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
+        # Phase 3: Compute owner_logo_url — embed as data URI so it works in any browser (local or remote)
         _activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
+        _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+        _org_logo_path = os.path.join('static', 'uploads', _org_logo_filename)
+
         if os.path.exists(_activity_logo_path):
-            _owner_logo_url = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
+            _logo_bytes = open(_activity_logo_path, 'rb').read()
+            _owner_logo_url = f'data:image/png;base64,{base64.b64encode(_logo_bytes).decode()}'
+        elif os.path.exists(_org_logo_path):
+            _logo_bytes = open(_org_logo_path, 'rb').read()
+            _owner_logo_url = f'data:image/png;base64,{base64.b64encode(_logo_bytes).decode()}'
         else:
-            _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-            _org_logo_path = os.path.join('static', 'uploads', _org_logo_filename)
-            if os.path.exists(_org_logo_path):
-                _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}"
-            else:
-                # No logo file found — generate placeholder data URI for browser preview
-                from utils import generate_placeholder_logo_image
-                _org_name = get_setting('ORG_NAME', 'Minipass')
-                try:
-                    _placeholder_buf = generate_placeholder_logo_image(_org_name)
-                    _logo_b64 = base64.b64encode(_placeholder_buf.read()).decode('utf-8')
-                    _owner_logo_url = f'data:image/png;base64,{_logo_b64}'
-                except Exception:
-                    _owner_logo_url = None
+            # No logo file found — generate placeholder data URI for browser preview
+            from utils import generate_placeholder_logo_image
+            _org_name = get_setting('ORG_NAME', 'Minipass')
+            try:
+                _placeholder_buf = generate_placeholder_logo_image(_org_name)
+                _logo_b64 = base64.b64encode(_placeholder_buf.read()).decode('utf-8')
+                _owner_logo_url = f'data:image/png;base64,{_logo_b64}'
+            except Exception:
+                _owner_logo_url = None
 
         # Render email blocks
         base_context['owner_html'] = render_template(
@@ -10697,6 +10697,14 @@ def email_preview_live(activity_id):
                     print(f"EMAIL LIVE PREVIEW: Using UPLOADED HERO as data URI in context")
                 except Exception as e:
                     print(f"Error reading uploaded hero file: {e}")
+
+        # If hero_image_url is still a remote URL (not a data URI), load it locally for preview
+        if context.get('hero_image_url') and not context['hero_image_url'].startswith('data:'):
+            from utils import get_activity_hero_image
+            hero_data, _, _ = get_activity_hero_image(activity, template_type)
+            if hero_data:
+                hero_base64 = base64.b64encode(hero_data).decode('utf-8')
+                context['hero_image_url'] = f'data:image/png;base64,{hero_base64}'
 
         # Get the compiled template path
         template_path = safe_template(template_type)
@@ -10816,6 +10824,34 @@ def get_hero_image(activity_id, template_type):
             )
 
 
+@app.route('/owner-logo')
+def serve_owner_logo():
+    """Serve org logo for emails; generates letter-placeholder if no logo uploaded."""
+    from utils import generate_placeholder_logo_image, get_setting
+    from flask import Response, request as freq
+    import io
+
+    activity_id = freq.args.get('activity_id', type=int)
+
+    # Priority 1: activity-specific logo
+    if activity_id:
+        path = os.path.join(app.config['UPLOAD_FOLDER'], f"{activity_id}_owner_logo.png")
+        if os.path.exists(path):
+            return send_from_directory(app.config['UPLOAD_FOLDER'], f"{activity_id}_owner_logo.png")
+
+    # Priority 2: org-level logo
+    org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+    org_logo_path = os.path.join(app.config['UPLOAD_FOLDER'], org_logo_filename)
+    if os.path.exists(org_logo_path):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], org_logo_filename)
+
+    # Priority 3: generated letter placeholder
+    org_name = get_setting('ORG_NAME', 'Minipass')
+    buf = generate_placeholder_logo_image(org_name)
+    return Response(buf.read(), mimetype='image/png',
+                    headers={'Cache-Control': 'public, max-age=3600'})
+
+
 @app.route("/activity/<int:activity_id>/email-test", methods=["POST"])
 def test_email_template(activity_id):
     """Send test email to kdresdell@gmail.com using compiled template with email blocks"""
@@ -10907,15 +10943,9 @@ def test_email_template(activity_id):
             base_context['pass_data'] = pass_data
             print(f"TEST EMAIL: Added pass_data to context for {template_type}")
 
-            # Phase 3: Compute owner_logo_url for hosted images
+            # Phase 3: owner_logo_url — always use /owner-logo route (handles fallback server-side)
             _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
-            _activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
-            if os.path.exists(_activity_logo_path):
-                _owner_logo_url = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
-            else:
-                _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-                _org_logo_path = os.path.join('static', 'uploads', _org_logo_filename)
-                _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if os.path.exists(_org_logo_path) else None
+            _owner_logo_url = f"{_BASE_URL}/owner-logo?activity_id={activity.id}"
 
             # Render email blocks
             base_context['owner_html'] = render_template(
