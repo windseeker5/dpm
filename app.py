@@ -3373,9 +3373,9 @@ def setup():
         os.makedirs(avatar_dir, exist_ok=True)
 
         # Process admins with names and avatar support
-        for i, (email, password) in enumerate(zip(admin_emails, admin_passwords)):
+        for i, email in enumerate(admin_emails):
             email = email.strip()
-            password = password.strip()
+            password = admin_passwords[i].strip() if i < len(admin_passwords) else ""
             first_name = admin_first_names[i].strip() if i < len(admin_first_names) else ""
             last_name = admin_last_names[i].strip() if i < len(admin_last_names) else ""
             
@@ -3913,7 +3913,7 @@ def erase_app_data():
 
         # 🧨 Dynamically delete data from all tables except Admin and Setting
         from models import db
-        for table in db.metadata.sorted_tables:
+        for table in reversed(db.metadata.sorted_tables):
             if table.name not in [t.lower() for t in protected_tables]:
                 db.session.execute(table.delete())
 
