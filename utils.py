@@ -4009,78 +4009,108 @@ def get_email_context(activity, template_type, base_context=None):
 def get_template_hero_dimensions(template_type):
     """
     Get the expected dimensions for hero images based on template type.
-    Returns (width, height) tuple or None if template doesn't use hero images.
+    Returns (width, height) tuple. All templates use the standard 400x400 square canvas.
     """
-    # Template-specific hero image dimensions based on original template assets
-    hero_dimensions = {
-        'newPass': (1408, 768),      # Wide banner format
-        'signup': (1600, 1200),      # Large hero format
-        'welcome': (1408, 768),      # Same as newPass
-        'renewal': (1408, 768),      # Same as newPass
-        # Note: other templates (latePayment, paymentReceived, redeemPass) use small icons (128x128), not heroes
+    # All templates use a 400x400 square RGBA canvas for consistent display
+    # at width="152" height="auto" (2.6x retina oversampling, ~152x152px rendered)
+    all_templates = {
+        'newPass', 'signup', 'signup_payment_first', 'paymentReceived',
+        'latePayment', 'redeemPass', 'survey_invitation', 'welcome', 'renewal'
     }
-    
-    return hero_dimensions.get(template_type)
+    if template_type in all_templates:
+        return (400, 400)
+    return None
 
 def resize_hero_image(image_data, template_type, max_file_size_mb=2):
     """
-    Resize uploaded hero image to match the original template dimensions.
-    
+    Resize uploaded hero image to a standard 400x400 RGBA square canvas.
+
+    Strategy:
+    - PNG with alpha channel: scale-to-fit within 400x400, centered, transparent padding
+    - JPEG or opaque PNG: center-crop to square, then resize to 400x400 (fills frame)
+
+    Always outputs RGBA PNG (transparent background, no white box in dark mode).
+
     Args:
         image_data: Raw image bytes
         template_type: Template type (e.g., 'newPass', 'signup')
         max_file_size_mb: Maximum file size in MB
-    
+
     Returns:
         tuple: (resized_image_bytes, success_message) or (None, error_message)
     """
     try:
         from PIL import Image
         import io
-        
+
         # Check file size
         if len(image_data) > max_file_size_mb * 1024 * 1024:
             return None, f"Image file too large. Maximum size is {max_file_size_mb}MB"
-        
+
         # Get expected dimensions for this template type
         target_dimensions = get_template_hero_dimensions(template_type)
         if not target_dimensions:
             return None, f"Template type '{template_type}' does not support custom hero images"
-        
-        target_width, target_height = target_dimensions
-        
+
+        target_size = 400  # Standard 400x400 square canvas
+
         # Open and validate the image
         try:
             image = Image.open(io.BytesIO(image_data))
         except Exception as e:
             return None, f"Invalid image file: {str(e)}"
-        
-        # Convert to RGB if needed (removes alpha channel for consistency)
-        if image.mode in ('RGBA', 'LA', 'P'):
-            background = Image.new('RGB', image.size, (255, 255, 255))
+
+        original_width, original_height = image.size
+        print(f"🖼️ Resizing hero image: {original_width}x{original_height} → {target_size}x{target_size} RGBA")
+
+        # Determine if the image has a meaningful alpha channel
+        has_alpha = image.mode in ('RGBA', 'LA') or (image.mode == 'P' and 'transparency' in image.info)
+
+        # Create the 400x400 RGBA output canvas (transparent)
+        canvas = Image.new('RGBA', (target_size, target_size), (0, 0, 0, 0))
+
+        if has_alpha:
+            # PNG with alpha: scale-to-fit, preserve full artwork, transparent padding
             if image.mode == 'P':
                 image = image.convert('RGBA')
-            background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
-            image = background
-        elif image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        original_width, original_height = image.size
-        print(f"🖼️ Resizing hero image: {original_width}x{original_height} → {target_width}x{target_height}")
-        
-        # Resize image to exact template dimensions
-        # Use LANCZOS for high-quality resizing
-        resized_image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
-        
-        # Save to bytes
+            elif image.mode != 'RGBA':
+                image = image.convert('RGBA')
+
+            # Scale to fit within 400x400 maintaining aspect ratio
+            image.thumbnail((target_size, target_size), Image.Resampling.LANCZOS)
+            fitted_width, fitted_height = image.size
+
+            # Center on canvas
+            offset_x = (target_size - fitted_width) // 2
+            offset_y = (target_size - fitted_height) // 2
+            canvas.paste(image, (offset_x, offset_y), mask=image)
+            print(f"🖼️ Transparent PNG: scale-to-fit → {fitted_width}x{fitted_height}, centered on {target_size}x{target_size} canvas")
+        else:
+            # JPEG or opaque PNG: center-crop to square, then resize to fill frame
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+
+            # Center-crop to square
+            min_side = min(original_width, original_height)
+            left = (original_width - min_side) // 2
+            top = (original_height - min_side) // 2
+            image = image.crop((left, top, left + min_side, top + min_side))
+            print(f"🖼️ Opaque image: center-cropped to {min_side}x{min_side}")
+
+            # Resize to target_size
+            image = image.resize((target_size, target_size), Image.Resampling.LANCZOS)
+            image = image.convert('RGBA')
+            canvas.paste(image, (0, 0))
+
+        # Save to bytes as PNG
         output_buffer = io.BytesIO()
-        resized_image.save(output_buffer, format='PNG', optimize=True)
+        canvas.save(output_buffer, format='PNG', optimize=True)
         resized_bytes = output_buffer.getvalue()
-        
-        print(f"🖼️ Hero image resized successfully: {len(image_data)} → {len(resized_bytes)} bytes")
-        
-        return resized_bytes, f"Image resized to {target_width}x{target_height} pixels"
-        
+
+        print(f"🖼️ Hero image resized successfully: {len(image_data)} → {len(resized_bytes)} bytes (RGBA)")
+
+        return resized_bytes, f"Image resized to {target_size}x{target_size} RGBA PNG"
+
     except ImportError:
         return None, "PIL (Pillow) library not available for image processing"
     except Exception as e:
