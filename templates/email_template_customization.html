@@ -4,6 +4,203 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/email-template-customization.css') }}">
+<style>
+
+/* Preview Modal Styles */
+.preview-container {
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.iframe-wrapper {
+  transition: all 0.3s ease;
+  max-width: 100%;
+}
+
+/* Desktop View (Default) */
+.iframe-wrapper.desktop {
+  width: 100%;
+}
+
+/* Mobile View */
+.iframe-wrapper.mobile {
+  width: 375px;
+  max-width: 100%;
+}
+
+/* Device toggle button states */
+.btn-group .btn.active {
+  background-color: #206bc4;
+  border-color: #206bc4;
+  color: white;
+}
+
+/* Template navigation button states */
+.template-nav-btn.active {
+  background-color: #206bc4;
+  border-color: #206bc4;
+  color: white;
+}
+
+/* Mobile responsive modal */
+@media (max-width: 767.98px) {
+  .modal-xl {
+    max-width: 95%;
+  }
+
+  .preview-container {
+    padding: 1rem;
+  }
+
+  .iframe-wrapper {
+    width: 100% !important;
+  }
+
+  .modal-header .btn-group {
+    display: none;
+  }
+
+  .modal-footer .btn-group {
+    flex-wrap: wrap;
+  }
+
+  .modal-footer .btn-group .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Improve modal header spacing on mobile */
+  .modal-header {
+    padding: 0.5rem 1rem;
+  }
+
+  /* Hide modal title on mobile - users already know which template from previous screen */
+  .modal-header .modal-title {
+    display: none;
+  }
+
+  .modal-header .btn-close {
+    padding: 0.5rem;
+    margin: 0;
+  }
+}
+
+/* Email Template Hybrid Preview Styling */
+.email-preview-placeholder {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 18px 30px;
+  height: 280px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+
+.email-preview-placeholder:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+  border-color: #206bc4;
+}
+
+.email-preview-placeholder .placeholder {
+  background: #dee2e6 !important; /* Static light gray - no animation */
+  border-radius: 1px;
+  height: 4px !important; /* Double the height */
+  min-height: 4px !important; /* Override Tabler's min-height: 1em */
+}
+
+@keyframes placeholder-glow {
+  0% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* Mini Hero Image - small centered illustration */
+.mini-hero {
+  height: 52px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+  background: #ffffff;
+  border-radius: 4px;
+}
+
+.mini-hero-img {
+  width: auto;
+  height: 100%;
+  max-width: 58%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* Mini Logo */
+.mini-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 2px;
+  background: white;
+  border: 1px solid #e9ecef;
+}
+
+/* Mini Owner Card */
+.mini-owner-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 6px;
+  overflow: hidden;
+}
+
+/* Mini History Table */
+.mini-history-table {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 3px;
+}
+
+.mini-table-row {
+  margin-bottom: 1px;
+}
+
+/* Mini QR Code */
+.mini-qr {
+  display: flex;
+  justify-content: center;
+}
+
+/* Button placeholder colors */
+.placeholder-button {
+  height: 10px !important;
+}
+
+.placeholder-button-green {
+  background: #4CAF50 !important;
+}
+
+.placeholder-button-blue {
+  background: #2196F3 !important;
+}
+
+.placeholder-button-orange {
+  background: #FF9800 !important;
+}
+
+.placeholder-button-purple {
+  background: #9C27B0 !important;
+}
+
+.placeholder-qr {
+  height: 30px !important;
+  width: 30px !important;
+  margin: 0 auto;
+  background: #f1f3f4 !important;
+  border: 1px dashed #d1d5db !important;
+}
+
+</style>
 {% endblock %}
 
 {% block content %}
@@ -54,6 +251,8 @@
                 <img src="{{ url_for('get_hero_image', activity_id=activity.id, template_type=template_key) }}"
                      alt="Hero"
                      class="mini-hero-img"
+                     width="1"
+                     height="52"
                      onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}';">
               </div>
 
@@ -73,26 +272,12 @@
                 <!-- Mini Owner/Passport Card with colored header -->
                 <div class="mini-owner-card mb-1">
                   <div class="d-flex align-items-center gap-1">
-                    {% if has_custom_owner_logo %}
-                    <img src="{{ url_for('static', filename='uploads/' + activity.id|string + '_owner_logo.png') }}"
-                         alt="Logo"
-                         class="mini-logo"
-                         onerror="this.src='{{ url_for('static', filename='uploads/' + org_logo_filename) }}';">
-                    {% elif org_logo_exists %}
-                    <img src="{{ url_for('static', filename='uploads/' + org_logo_filename) }}"
-                         alt="Logo"
-                         class="mini-logo">
-                    {% elif placeholder_logo_data_uri %}
-                    <img src="{{ placeholder_logo_data_uri }}" alt="Logo" class="mini-logo">
-                    {% else %}
-                    <div style="width: 16px; height: 16px; border-radius: 2px; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700; font-size: 0.5rem; display: inline-flex; align-items: center; justify-content: center;">{{ placeholder_letter(activity.name) }}</div>
-                    {% endif %}
                     <div class="flex-grow-1">
                       <div class="placeholder col-12 mb-0"></div>
                       <div class="placeholder col-8 mb-0"></div>
                       <div class="placeholder col-6 mb-0"></div>
                     </div>
-                    <div style="width: 18px; height: 18px; border-radius: 4px; background: #e9ecef; flex-shrink: 0;"></div>
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #e9ecef; flex-shrink: 0;"></div>
                   </div>
                 </div>
 
@@ -502,13 +687,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Fixed email template interface loaded');
 
-    // Add cache-busting to all template card hero images on page load
-    document.querySelectorAll('.mini-hero-img').forEach(img => {
-        if (!img.src.includes('?t=')) {
-            img.src = img.src + `?t=${Date.now()}`;
-        }
-    });
-
     // Handle customize button clicks
     document.addEventListener('click', function(e) {
         const btn = e.target.closest('.action-btn');
@@ -880,204 +1058,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style>
-
-/* Preview Modal Styles */
-.preview-container {
-  padding: 2rem;
-  transition: all 0.3s ease;
-}
-
-.iframe-wrapper {
-  transition: all 0.3s ease;
-  max-width: 100%;
-}
-
-/* Desktop View (Default) */
-.iframe-wrapper.desktop {
-  width: 100%;
-}
-
-/* Mobile View */
-.iframe-wrapper.mobile {
-  width: 375px;
-  max-width: 100%;
-}
-
-/* Device toggle button states */
-.btn-group .btn.active {
-  background-color: #206bc4;
-  border-color: #206bc4;
-  color: white;
-}
-
-/* Template navigation button states */
-.template-nav-btn.active {
-  background-color: #206bc4;
-  border-color: #206bc4;
-  color: white;
-}
-
-/* Mobile responsive modal */
-@media (max-width: 767.98px) {
-  .modal-xl {
-    max-width: 95%;
-  }
-
-  .preview-container {
-    padding: 1rem;
-  }
-
-  .iframe-wrapper {
-    width: 100% !important;
-  }
-
-  .modal-header .btn-group {
-    display: none;
-  }
-
-  .modal-footer .btn-group {
-    flex-wrap: wrap;
-  }
-
-  .modal-footer .btn-group .btn {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-  }
-
-  /* Improve modal header spacing on mobile */
-  .modal-header {
-    padding: 0.5rem 1rem;
-  }
-
-  /* Hide modal title on mobile - users already know which template from previous screen */
-  .modal-header .modal-title {
-    display: none;
-  }
-
-  .modal-header .btn-close {
-    padding: 0.5rem;
-    margin: 0;
-  }
-}
-
-/* Email Template Hybrid Preview Styling */
-.email-preview-placeholder {
-  background: #ffffff;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 18px 30px;
-  height: 280px;
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-  transition: all 0.2s ease;
-}
-
-.email-preview-placeholder:hover {
-  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
-  border-color: #206bc4;
-}
-
-.email-preview-placeholder .placeholder {
-  background: #dee2e6 !important; /* Static light gray - no animation */
-  border-radius: 1px;
-  height: 4px !important; /* Double the height */
-  min-height: 4px !important; /* Override Tabler's min-height: 1em */
-}
-
-@keyframes placeholder-glow {
-  0% { opacity: 1; }
-  100% { opacity: 0.6; }
-}
-
-/* Mini Hero Image - small centered illustration */
-.mini-hero {
-  height: 52px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 4px 0;
-  background: #ffffff;
-  border-radius: 4px;
-}
-
-.mini-hero-img {
-  width: auto;
-  height: 100%;
-  max-width: 58%;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-/* Mini Logo */
-.mini-logo {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  border-radius: 2px;
-  background: white;
-  border: 1px solid #e9ecef;
-}
-
-/* Mini Owner Card */
-.mini-owner-card {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 4px;
-  padding: 6px;
-  overflow: hidden;
-}
-
-/* Mini History Table */
-.mini-history-table {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 4px;
-  padding: 3px;
-}
-
-.mini-table-row {
-  margin-bottom: 1px;
-}
-
-/* Mini QR Code */
-.mini-qr {
-  display: flex;
-  justify-content: center;
-}
-
-/* Button placeholder colors */
-.placeholder-button {
-  height: 10px !important;
-}
-
-.placeholder-button-green {
-  background: #4CAF50 !important;
-}
-
-.placeholder-button-blue {
-  background: #2196F3 !important;
-}
-
-.placeholder-button-orange {
-  background: #FF9800 !important;
-}
-
-.placeholder-button-purple {
-  background: #9C27B0 !important;
-}
-
-.placeholder-qr {
-  height: 30px !important;
-  width: 30px !important;
-  margin: 0 auto;
-  background: #f1f3f4 !important;
-  border: 1px dashed #d1d5db !important;
-}
-
-
-
-</style>
 
 {% endblock %}
