@@ -728,10 +728,10 @@ def generate_placeholder_logo_image(name, size=200):
 
     letter = get_placeholder_letter(name)
     try:
-        font = ImageFont.truetype('/usr/share/fonts/TTF/Inter-Bold.ttf', int(size * 0.5))
+        font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', int(size * 0.5))
     except (IOError, OSError):
         try:
-            font = ImageFont.truetype('/usr/share/fonts/noto/NotoSans-Bold.ttf', int(size * 0.5))
+            font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', int(size * 0.5))
         except (IOError, OSError):
             font = ImageFont.load_default()
 
@@ -3719,7 +3719,20 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     else:
         _org_logo_filename = get_setting('LOGO_FILENAME', '')
         _org_logo_path = os.path.join("static/uploads", _org_logo_filename) if _org_logo_filename else None
-        _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if _org_logo_filename and _org_logo_path and os.path.exists(_org_logo_path) else None
+        if _org_logo_filename and _org_logo_path and os.path.exists(_org_logo_path):
+            _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}"
+        else:
+            # No logo file → use /owner-logo endpoint which generates placeholder correctly
+            _act_id = activity.id if activity else None
+            import time
+            # Add cache busting to force Gmail to reload the image
+            _cache_bust = str(int(time.time()))
+            _base_url = f"{_BASE_URL}/owner-logo"
+            _params = []
+            if _act_id:
+                _params.append(f"activity_id={_act_id}")
+            _params.append(f"v={_cache_bust}")
+            _owner_logo_url = f"{_base_url}?{'&'.join(_params)}"
 
     context = {
         "pass_data": {
