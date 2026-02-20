@@ -3717,9 +3717,9 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     if _activity_logo_path and os.path.exists(_activity_logo_path):
         _owner_logo_url = f"{_BASE_URL}/static/uploads/{activity.id}_owner_logo.png"
     else:
-        _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-        _org_logo_path = os.path.join("static/uploads", _org_logo_filename)
-        _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if os.path.exists(_org_logo_path) else None
+        _org_logo_filename = get_setting('LOGO_FILENAME', '')
+        _org_logo_path = os.path.join("static/uploads", _org_logo_filename) if _org_logo_filename else None
+        _owner_logo_url = f"{_BASE_URL}/static/uploads/{_org_logo_filename}" if _org_logo_filename and _org_logo_path and os.path.exists(_org_logo_path) else None
 
     context = {
         "pass_data": {
@@ -3805,10 +3805,10 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     # Fallback to organization logo if no activity-specific logo
     if not logo_used:
         from utils import get_setting
-        org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-        org_logo_path = os.path.join("static/uploads", org_logo_filename)
-        
-        if os.path.exists(org_logo_path):
+        org_logo_filename = get_setting('LOGO_FILENAME', '')
+        org_logo_path = os.path.join("static/uploads", org_logo_filename) if org_logo_filename else None
+
+        if org_logo_filename and org_logo_path and os.path.exists(org_logo_path):
             logo_data = open(org_logo_path, "rb").read()
             inline_images['logo'] = logo_data  # For owner_card_inline.html
             print(f"Using organization logo: {org_logo_filename}")
