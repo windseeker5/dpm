@@ -4428,6 +4428,12 @@ def redeem_passport_qr(pass_code):
         flash("Passport not found!", "error")
         return redirect(url_for("dashboard"))
 
+    # Validate activity context if provided
+    expected_activity_id = request.form.get('activity_id', type=int)
+    if expected_activity_id and passport.activity_id != expected_activity_id:
+        flash("This passport does not belong to this activity.", "error")
+        return redirect(url_for("activity_dashboard", activity_id=expected_activity_id))
+
     # 🛡️ Prevent duplicate redemptions (double-click protection)
     global recent_redemptions
     admin_id = session.get("admin", "unknown")
@@ -4597,7 +4603,10 @@ def edit_passport(passport_id):
 
 @app.route("/scan-qr")
 def scan_qr():
-    return render_template("scan_qr.html")
+    from models import Activity
+    activity_id = request.args.get('activity_id', type=int)
+    activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
+    return render_template("scan_qr.html", activity_id=activity_id, activities=activities)
 
 
 

@@ -679,7 +679,7 @@ div.dropdown-divider {
               <!-- Desktop Action Buttons -->
               <div class="activity-actions d-none d-md-flex">
                 <!-- Standalone Green Scan Button -->
-                <a href="{{ url_for('scan_qr') }}" class="btn btn-sm btn-success">
+                <a href="{{ url_for('scan_qr', activity_id=activity.id) }}" class="btn btn-sm btn-success">
                   <i class="ti ti-scan"></i> Scan
                 </a>
 
@@ -720,7 +720,7 @@ div.dropdown-divider {
                     Actions
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{{ url_for('scan_qr') }}">
+                    <li><a class="dropdown-item" href="{{ url_for('scan_qr', activity_id=activity.id) }}">
                       <i class="ti ti-scan me-2"></i>Scan QR
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
