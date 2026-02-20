@@ -10574,13 +10574,13 @@ def email_preview_live(activity_id):
 
         # Phase 3: Compute owner_logo_url — embed as data URI so it works in any browser (local or remote)
         _activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
-        _org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-        _org_logo_path = os.path.join('static', 'uploads', _org_logo_filename)
+        _org_logo_filename = get_setting('LOGO_FILENAME', '')
+        _org_logo_path = os.path.join('static', 'uploads', _org_logo_filename) if _org_logo_filename else None
 
         if os.path.exists(_activity_logo_path):
             _logo_bytes = open(_activity_logo_path, 'rb').read()
             _owner_logo_url = f'data:image/png;base64,{base64.b64encode(_logo_bytes).decode()}'
-        elif os.path.exists(_org_logo_path):
+        elif _org_logo_filename and _org_logo_path and os.path.exists(_org_logo_path):
             _logo_bytes = open(_org_logo_path, 'rb').read()
             _owner_logo_url = f'data:image/png;base64,{base64.b64encode(_logo_bytes).decode()}'
         else:
@@ -10840,10 +10840,11 @@ def serve_owner_logo():
             return send_from_directory(app.config['UPLOAD_FOLDER'], f"{activity_id}_owner_logo.png")
 
     # Priority 2: org-level logo
-    org_logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-    org_logo_path = os.path.join(app.config['UPLOAD_FOLDER'], org_logo_filename)
-    if os.path.exists(org_logo_path):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], org_logo_filename)
+    org_logo_filename = get_setting('LOGO_FILENAME', '')
+    if org_logo_filename:
+        org_logo_path = os.path.join(app.config['UPLOAD_FOLDER'], org_logo_filename)
+        if os.path.exists(org_logo_path):
+            return send_from_directory(app.config['UPLOAD_FOLDER'], org_logo_filename)
 
     # Priority 3: generated letter placeholder
     org_name = get_setting('ORG_NAME', 'Minipass')
