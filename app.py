@@ -361,7 +361,7 @@ def get_subscription_metadata():
             'tier_display': 'Beta Tester - Thank You!',
             'tier_price': 'Complimentary',
             'tier_activities': 100,  # Unlimited
-            'activity_count': get_activity_count(),
+            'activity_count': count_active_activities(),
             'activity_usage_display': 'Unlimited',
             'next_billing_date': None,
             'formatted_next_billing': 'N/A',
