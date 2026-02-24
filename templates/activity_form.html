@@ -126,6 +126,10 @@
     width: 100%;
     justify-content: center;
   }
+
+  .section-divider {
+    margin-top: 1.5rem !important;
+  }
 }
 </style>
 {% endblock %}
@@ -207,44 +211,43 @@
               <div class="mb-3">
                 <label class="form-label">Cover Photo</label>
 
-                <!-- Thumbnail (100x100 square) -->
-                <div class="position-relative d-inline-block" style="cursor: pointer;" id="coverPhotoWrapper">
-                  {% if activity and activity.image_filename %}
-                    <!-- Has image -->
-                    <img id="coverThumbnail"
-                         src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
-                         class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
-                    <!-- Bigger red badge with white X -->
-                    <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
-                          style="cursor: pointer;"
-                          id="deleteImageBtn">
-                      <i class="ti ti-x text-white" style="font-size: 14px;"></i>
-                    </span>
-                  {% else %}
-                    <!-- No image placeholder -->
-                    <div id="coverThumbnail" class="rounded bg-secondary-lt d-flex flex-column align-items-center justify-content-center"
-                         style="width: 100px; height: 100px;">
-                      <i class="ti ti-photo text-muted fs-2"></i>
-                      <small class="text-muted">Add photo</small>
-                    </div>
-                  {% endif %}
-                </div>
+                <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
+                     style="border: 1px solid rgba(98,105,118,0.2); width: fit-content; max-width: 100%;">
 
-                <!-- Options Panel BELOW (GitHub-style filter buttons) -->
-                <div class="collapse mt-3" id="imageOptions">
-                  <div class="card card-body" style="background: #fdfdfe;">
-                    <!-- GitHub Filter Buttons -->
-                    <div class="d-flex justify-content-center mb-3">
-                      <div class="github-filter-group" role="group" aria-label="Image source" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-                        <a href="#" id="filterSearchWeb" class="github-filter-btn active"
-                           style="background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                          <i class="ti ti-world-search" style="font-size: 16px; margin-right: 4px;"></i>Search Web
-                        </a>
-                        <a href="#" id="filterUpload" class="github-filter-btn"
-                           style="background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                          <i class="ti ti-upload" style="font-size: 16px; margin-right: 4px;"></i>Upload
-                        </a>
+                  <!-- Left: Thumbnail — always visible -->
+                  <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
+                       style="width: 100px; min-height: 100px; cursor: pointer;" id="coverPhotoWrapper">
+                    {% if activity and activity.image_filename %}
+                      <img id="coverThumbnail"
+                           src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+                           class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
+                      <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
+                            style="cursor: pointer;" id="deleteImageBtn">
+                        <i class="ti ti-x text-white" style="font-size: 14px;"></i>
+                      </span>
+                    {% else %}
+                      <div id="coverThumbnail" class="d-flex flex-column align-items-center justify-content-center"
+                           style="width: 100px; height: 100px;">
+                        <i class="ti ti-photo text-muted fs-2"></i>
+                        <small class="text-muted">Add photo</small>
                       </div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Right: Panel — border-left as divider, no extra inner wrapper -->
+                  <div id="imageOptions" class="flex-grow-1 p-2"
+                       style="display: none; border-left: 1px solid rgba(98,105,118,0.2);">
+                    <!-- Source toggle: Search ↔ Upload -->
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                      <small class="text-muted fw-medium">
+                        <i class="ti ti-world-search" style="font-size:13px;"></i> Search
+                      </small>
+                      <label class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="sourceToggle" role="switch">
+                      </label>
+                      <small class="text-muted">
+                        <i class="ti ti-upload" style="font-size:13px;"></i> Upload
+                      </small>
                     </div>
 
                     <!-- Search Web Content -->
@@ -252,7 +255,7 @@
                       <div class="input-group">
                         <input type="text" id="imageDescription" class="form-control" placeholder="e.g., Hockey, Yoga">
                         <button type="button" id="searchImagesBtn" class="btn btn-primary">
-                          <i class="ti ti-search"></i> Search
+                          <i class="ti ti-search"></i>
                         </button>
                       </div>
                     </div>
@@ -260,9 +263,9 @@
                     <!-- Upload Content -->
                     <div id="uploadContent" style="display: none;">
                       <input type="file" name="upload_image" class="form-control" id="uploadInput">
-                      <small class="text-muted">Max 10MB</small>
                     </div>
                   </div>
+
                 </div>
 
                 <input type="hidden" name="selected_image_filename" id="selectedImageFilename" value="{{ activity.image_filename if activity else '' }}">
@@ -1205,8 +1208,9 @@
       if (!wrapper) return;
       // Don't trigger if clicking the delete X badge
       if (e.target.closest('#deleteImageBtn')) return;
-      // Toggle the options collapse
-      var bsCollapse = new bootstrap.Collapse(imageOptionsCollapse, {toggle: true});
+      // Toggle the right-side options panel
+      const panel = document.getElementById('imageOptions');
+      panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
     });
 
     // Delete image immediately (no confirmation modal)
@@ -1221,7 +1225,7 @@
           // Reset thumbnail to placeholder (100x100 square)
           const wrapper = document.getElementById('coverPhotoWrapper');
           wrapper.innerHTML = `
-            <div id="coverThumbnail" class="rounded bg-secondary-lt d-flex flex-column align-items-center justify-content-center"
+            <div id="coverThumbnail" class="d-flex flex-column align-items-center justify-content-center"
                  style="width: 100px; height: 100px;">
               <i class="ti ti-photo text-muted fs-2"></i>
               <small class="text-muted">Add photo</small>
@@ -1231,32 +1235,15 @@
     }
     setupDeleteButton();
 
-    // GitHub-style filter buttons for image source
-    const filterSearchWeb = document.getElementById('filterSearchWeb');
-    const filterUpload = document.getElementById('filterUpload');
+    // Source toggle: unchecked = Search Web, checked = Upload
+    const sourceToggle = document.getElementById('sourceToggle');
     const searchWebContent = document.getElementById('searchWebContent');
     const uploadContent = document.getElementById('uploadContent');
 
-    const activeStyle = 'background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04); padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;';
-    const inactiveStyle = 'background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat; padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;';
-
-    if (filterSearchWeb) {
-      filterSearchWeb.addEventListener('click', function(e) {
-        e.preventDefault();
-        filterSearchWeb.style.cssText = activeStyle;
-        filterUpload.style.cssText = inactiveStyle;
-        searchWebContent.style.display = 'block';
-        uploadContent.style.display = 'none';
-      });
-    }
-
-    if (filterUpload) {
-      filterUpload.addEventListener('click', function(e) {
-        e.preventDefault();
-        filterUpload.style.cssText = activeStyle;
-        filterSearchWeb.style.cssText = inactiveStyle;
-        uploadContent.style.display = 'block';
-        searchWebContent.style.display = 'none';
+    if (sourceToggle) {
+      sourceToggle.addEventListener('change', function() {
+        searchWebContent.style.display = this.checked ? 'none' : 'block';
+        uploadContent.style.display = this.checked ? 'block' : 'none';
       });
     }
 
