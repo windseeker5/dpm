@@ -2009,6 +2009,8 @@ def edit_activity(activity_id):
                 activity.image_filename = filename
         elif selected_image_filename:
             activity.image_filename = selected_image_filename
+        else:
+            activity.image_filename = None
 
         # Handle passport types - preserve existing ones and update/create as needed
         existing_passport_types = PassportType.query.filter_by(activity_id=activity.id, status='active').all()
