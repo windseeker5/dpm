@@ -1,41 +1,65 @@
 {% extends "base.html" %}
 {% block title %}Scan QR Code | Minipass{% endblock %}
 
+{% block head %}
+<style>
+  #scan-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+  .scan-corner { position: absolute; width: 28px; height: 28px; border-color: #2fb344; border-style: solid; }
+  .scan-corner.tl { top: 15%; left: 15%; border-width: 3px 0 0 3px; }
+  .scan-corner.tr { top: 15%; right: 15%; border-width: 3px 3px 0 0; }
+  .scan-corner.bl { bottom: 15%; left: 15%; border-width: 0 0 3px 3px; }
+  .scan-corner.br { bottom: 15%; right: 15%; border-width: 0 3px 3px 0; }
+  #scan-beam {
+    position: absolute; left: 15%; right: 15%; height: 2px;
+    background: #2fb344; opacity: 0.8;
+    animation: scan-beam 2.5s ease-in-out infinite;
+  }
+  @keyframes scan-beam { 0%, 100% { top: 15%; } 50% { top: 85%; } }
+  #rec-indicator {
+    position: absolute; top: 10px; left: 10px;
+    display: flex; align-items: center; gap: 5px;
+    background: rgba(0,0,0,0.45); border-radius: 4px;
+    padding: 3px 7px;
+  }
+  #rec-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #d63939; flex-shrink: 0;
+    animation: rec-pulse 1.5s ease-in-out infinite;
+  }
+  #rec-label { color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; }
+  @keyframes rec-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-xl mt-4">
+<div class="container-xl mt-3">
   <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
       <div class="card">
-        <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-header">
           <h3 class="card-title mb-0">
             <i class="ti ti-scan me-2"></i>Scan Pass QR Code
           </h3>
-          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="ti ti-arrow-left me-1"></i>Back
-          </a>
         </div>
 
-        <div class="card-body">
+        <div class="card-body p-2 p-md-3">
           <!-- Hidden CSRF token -->
           <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
 
-          <!-- Activity context selector -->
-          <div class="mb-3">
+          <!-- Activity context -->
+          <div class="mb-2">
             {% if activity_id %}
-              {# Pre-selected from activity dashboard — show as read-only info #}
               <input type="hidden" id="scan_activity_id" value="{{ activity_id }}">
               {% for a in activities %}
                 {% if a.id == activity_id %}
-                  <p class="text-muted text-center small mb-0">
-                    Scanning for: <strong>{{ a.name }}</strong>
-                  </p>
+                  <span class="badge bg-success-lt text-success fs-4 px-3 py-2">
+                    <i class="ti ti-activity me-1"></i>{{ a.name }}
+                  </span>
                 {% endif %}
               {% endfor %}
             {% else %}
-              {# Generic scan — require activity selection before submission #}
-              <label class="form-label" for="activity_selector">Select activity to scan for</label>
               <select class="form-select" id="activity_selector">
-                <option value="">— Select an activity —</option>
+                <option value="">— Select activity to scan for —</option>
                 {% for a in activities %}
                   <option value="{{ a.id }}">{{ a.name }}</option>
                 {% endfor %}
@@ -45,19 +69,35 @@
           </div>
 
           <!-- Camera Select -->
-          <div class="mb-3">
-            <label for="camera-select" class="form-label">Select Camera</label>
+          <div class="mb-2">
             <select id="camera-select" class="form-select"></select>
           </div>
 
-          <!-- QR Video -->
-          <div class="ratio ratio-4x3 border rounded overflow-hidden mb-3">
+          <!-- QR Video with scan overlay -->
+          <div class="ratio ratio-4x3 border rounded overflow-hidden">
             <video id="qr-video" autoplay playsinline class="w-100 h-100 object-fit-cover"></video>
+            <div id="scan-overlay">
+              <div id="rec-indicator">
+                <span id="rec-dot"></span>
+                <span id="rec-label">LIVE</span>
+              </div>
+              <div class="scan-corner tl"></div>
+              <div class="scan-corner tr"></div>
+              <div class="scan-corner bl"></div>
+              <div class="scan-corner br"></div>
+              <div id="scan-beam"></div>
+            </div>
           </div>
 
-          <!-- QR Result -->
-          <div id="qr-result" class="alert alert-secondary text-center" role="alert">
-            <i class="ti ti-clock-hour-4 me-2"></i>Waiting for scan...
+          <!-- Error message (hidden by default) -->
+          <div id="scan-error" class="small text-danger mt-1" style="display:none"></div>
+
+          <p class="text-muted small text-center mt-2 mb-0">Point your camera at the QR code on the pass</p>
+
+          <div class="mt-3">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-success w-100">
+              <i class="ti ti-arrow-left me-2"></i>Back to Dashboard
+            </a>
           </div>
 
           <audio id="beep-sound" src="{{ url_for('static', filename='beep.wav') }}"></audio>
@@ -73,19 +113,21 @@
   const video = document.getElementById("qr-video");
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
-  const resultDisplay = document.getElementById("qr-result");
+  const scanError = document.getElementById("scan-error");
   const cameraSelect = document.getElementById("camera-select");
   const beepSound = document.getElementById("beep-sound");
   const activityIdInput = document.getElementById("scan_activity_id");
   const activitySelector = document.getElementById("activity_selector");
+  const scanOverlay = document.getElementById("scan-overlay");
 
   let lastScanned = "";
   let scanning = false;
+  let currentStream = null;
 
-  // Wire up activity selector for generic (no pre-selected) scan
   if (activitySelector) {
     activitySelector.addEventListener('change', function() {
       activityIdInput.value = this.value;
+      scanError.style.display = "none";
     });
   }
 
@@ -101,24 +143,32 @@
       cameraSelect.appendChild(option);
     });
 
-    if (videoDevices.length > 0) {
-      startScanner(videoDevices[0].deviceId);
-    }
+    startScanner();
   }
 
   async function startScanner(deviceId = null) {
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+      currentStream = null;
+    }
+
     try {
       const constraints = deviceId
         ? { video: { deviceId: { exact: deviceId } } }
-        : { video: { facingMode: "environment" } };
+        : { video: { facingMode: { ideal: "environment" } } };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      currentStream = stream;
       video.srcObject = stream;
+
+      const activeDeviceId = stream.getVideoTracks()[0]?.getSettings()?.deviceId;
+      if (activeDeviceId) cameraSelect.value = activeDeviceId;
+
       scanning = true;
       requestAnimationFrame(scanLoop);
     } catch (err) {
-      resultDisplay.className = "alert alert-danger text-center";
-      resultDisplay.innerHTML = `<i class="ti ti-alert-triangle me-2"></i>Camera access denied`;
+      scanError.textContent = "Camera access denied.";
+      scanError.style.display = "";
     }
   }
 
@@ -136,36 +186,28 @@
       if (code && lastScanned !== code.data) {
         lastScanned = code.data;
 
-        // Block submission if no activity selected
         const activityIdValue = activityIdInput ? activityIdInput.value : '';
         if (!activityIdValue) {
-          resultDisplay.className = "alert alert-warning text-center";
-          resultDisplay.innerHTML = '<i class="ti ti-alert-triangle me-2"></i>Please select an activity before scanning.';
+          scanError.textContent = "Please select an activity before scanning.";
+          scanError.style.display = "";
           return;
         }
 
         beepSound.play();
-        resultDisplay.className = "alert alert-success text-center";
-        resultDisplay.innerHTML = `<i class="ti ti-check me-2"></i>Pass Scanned: ${code.data}`;
-
+        if (scanOverlay) scanOverlay.style.display = "none";
         scanning = false;
-
-        // Show loading
-        resultDisplay.innerHTML += "<br><small>Processing...</small>";
 
         setTimeout(() => {
           const form = document.createElement('form');
           form.method = 'POST';
           form.action = `/redeem-qr/${code.data}`;
 
-          // Add CSRF token
           const csrfInput = document.createElement('input');
           csrfInput.type = 'hidden';
           csrfInput.name = 'csrf_token';
           csrfInput.value = document.getElementById('csrf_token').value;
           form.appendChild(csrfInput);
 
-          // Add activity_id
           const activityInput = document.createElement('input');
           activityInput.type = 'hidden';
           activityInput.name = 'activity_id';
@@ -181,8 +223,11 @@
   }
 
   cameraSelect.addEventListener("change", () => {
-    const selected = cameraSelect.value;
-    startScanner(selected);
+    lastScanned = "";
+    scanning = false;
+    if (scanOverlay) scanOverlay.style.display = "";
+    scanError.style.display = "none";
+    startScanner(cameraSelect.value);
   });
 
   document.addEventListener("DOMContentLoaded", listCameras);
