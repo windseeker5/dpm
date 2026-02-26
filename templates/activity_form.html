@@ -4,6 +4,7 @@
 {% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
 <style>
 .form-label.required::after {
   content: " *";
@@ -632,6 +633,41 @@
 </div>
 
 
+<!-- Cover Photo Crop Modal -->
+<div class="modal modal-blur fade" id="cropModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-crop me-2"></i>Adjust Cover Photo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0" style="background:#1a1a2e;">
+        <div style="max-height:60vh; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+          <img id="cropImage" src="" alt="Crop preview"
+               style="display:block; max-width:100%; max-height:60vh;">
+        </div>
+        <div class="p-3 text-center">
+          <small class="text-muted">
+            <i class="ti ti-arrows-move me-1"></i>Drag to reposition
+            <span class="mx-2">|</span>
+            <i class="ti ti-zoom-in me-1"></i>Pinch or scroll to zoom
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="ti ti-x me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="cropConfirmBtn">
+          <i class="ti ti-check me-1"></i>Use Photo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal for Unsplash Images -->
 <div class="modal modal-blur fade" id="unsplashModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -983,6 +1019,8 @@
 
 {% block scripts %}
 
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+
 {% if google_maps_api_key %}
 <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initLocationAutocomplete" async defer></script>
 {% endif %}
@@ -1263,18 +1301,58 @@
       setupDeleteButton();
     }
 
+    // Crop tool state
+    let cropperInstance = null;
+    const cropModalEl = document.getElementById('cropModal');
+    const cropModal = cropModalEl ? new bootstrap.Modal(cropModalEl) : null;
+    const cropImage = document.getElementById('cropImage');
+    const cropConfirmBtn = document.getElementById('cropConfirmBtn');
+
     if (uploadInput) {
       uploadInput.addEventListener('change', function (event) {
         const file = event.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = function (e) {
-            selectedImageFilename.value = "";
-            // Update thumbnail with the uploaded image
-            updateThumbnailWithImage(e.target.result);
-          }
-          reader.readAsDataURL(file);
-        }
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          cropImage.src = e.target.result;
+          cropModal.show();
+        };
+        reader.readAsDataURL(file);
+        this.value = ''; // reset so same file triggers change again if re-selected
+      });
+    }
+
+    if (cropModalEl) {
+      cropModalEl.addEventListener('shown.bs.modal', function () {
+        if (cropperInstance) cropperInstance.destroy();
+        cropperInstance = new Cropper(cropImage, {
+          aspectRatio: 16 / 9,
+          viewMode: 1,
+          autoCropArea: 0.9,
+          movable: true,
+          zoomable: true,
+          rotatable: false,
+          scalable: false,
+          responsive: true
+        });
+      });
+      cropModalEl.addEventListener('hidden.bs.modal', function () {
+        if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+      });
+    }
+
+    if (cropConfirmBtn) {
+      cropConfirmBtn.addEventListener('click', function () {
+        if (!cropperInstance) return;
+        cropperInstance.getCroppedCanvas({ maxWidth: 1200, maxHeight: 675, imageSmoothingQuality: 'high' })
+          .toBlob(function (blob) {
+            const dt = new DataTransfer();
+            dt.items.add(new File([blob], 'cover.jpg', { type: 'image/jpeg' }));
+            uploadInput.files = dt.files;
+            selectedImageFilename.value = '';
+            updateThumbnailWithImage(URL.createObjectURL(blob));
+            cropModal.hide();
+          }, 'image/jpeg', 0.92);
       });
     }
 
