@@ -2151,6 +2151,84 @@ def task24_add_workflow_quantity_fields(cursor):
     return True
 
 
+def task29_optimize_existing_activity_images(cursor):
+    """Retroactively compress and resize existing activity cover photos."""
+    from PIL import Image
+
+    log("🖼️ ", "TASK 29: Optimizing existing activity images", Colors.BLUE)
+
+    upload_dir = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads', 'activity_images')
+    )
+    if not os.path.isdir(upload_dir):
+        log("⏭️ ", f"  Upload dir not found: {upload_dir}", Colors.YELLOW)
+        return True
+
+    cursor.execute("SELECT id, image_filename FROM activity WHERE image_filename IS NOT NULL")
+    activities = cursor.fetchall()
+
+    processed = skipped = failed = 0
+    total_saved_kb = 0
+
+    for activity_id, image_filename in activities:
+        if image_filename.startswith('unsplash_'):
+            skipped += 1
+            continue
+
+        filepath = os.path.join(upload_dir, image_filename)
+        if not os.path.isfile(filepath):
+            log("⚠️ ", f"  Missing file: {image_filename}", Colors.YELLOW)
+            continue
+
+        original_kb = os.path.getsize(filepath) / 1024
+        is_png = image_filename.lower().endswith('.png')
+
+        # Skip small JPEGs (PNGs always processed — converting to JPEG saves space)
+        if original_kb < 300 and not is_png:
+            skipped += 1
+            continue
+
+        try:
+            with Image.open(filepath) as img:
+                if img.mode in ('RGBA', 'P'):
+                    bg = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'P':
+                        img = img.convert('RGBA')
+                    bg.paste(img, mask=img.split()[3])
+                    img = bg
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+
+                img.thumbnail((1200, 800), Image.Resampling.LANCZOS)
+
+                base = os.path.splitext(image_filename)[0]
+                new_filename = base + '.jpg'
+                new_filepath = os.path.join(upload_dir, new_filename)
+                img.save(new_filepath, 'JPEG', quality=85, optimize=True)
+
+            new_kb = os.path.getsize(new_filepath) / 1024
+            total_saved_kb += original_kb - new_kb
+            log("✅", f"  {image_filename}: {original_kb:.0f}KB → {new_kb:.0f}KB", Colors.GREEN)
+
+            if new_filename != image_filename:
+                cursor.execute(
+                    "UPDATE activity SET image_filename = ? WHERE id = ?",
+                    (new_filename, activity_id)
+                )
+                log("🔄", f"  DB updated: {image_filename} → {new_filename}", Colors.BLUE)
+                # NOTE: old .png file intentionally kept as backup on disk
+
+            processed += 1
+
+        except Exception as e:
+            log("❌", f"  Failed {image_filename}: {e}", Colors.RED)
+            failed += 1
+
+    log("📊", f"  Processed: {processed}, Skipped: {skipped}, Failed: {failed}")
+    log("💾", f"  Freed: {total_saved_kb/1024:.1f}MB", Colors.GREEN)
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -2199,6 +2277,7 @@ def main():
         ("Stripe Payment Fields", task26_add_stripe_payment_fields),
         ("Reply-To Email Field", task27_add_reply_to_email_field),
         ("Stripe Transaction Table", task28_add_stripe_transaction_table),
+        ("Optimize Activity Images", task29_optimize_existing_activity_images),
     ]
 
     completed = 0

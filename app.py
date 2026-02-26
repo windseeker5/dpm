@@ -121,7 +121,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config.from_object(Config)
 
 # Set after Config loading to ensure these take precedence
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB limit
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024   # 10MB limit
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.jpeg', '.png', '.gif']
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads', 'activity_images')
 
@@ -138,6 +138,11 @@ def enable_foreign_keys():
 # 📁 Register API blueprints
 app.register_blueprint(backup_api)
 app.register_blueprint(geocode_api)
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    flash("Image file is too large. Maximum size is 10MB.", "error")
+    return redirect(request.referrer or url_for('dashboard')), 413
 
 
 
@@ -894,6 +899,31 @@ def download_unsplash_image():
     except Exception as e:
         print(f"Image download error: {e}")
         return jsonify({'success': False, 'error': 'Download failed'}), 500
+
+
+def _save_optimized_image(file_stream, dest_folder, prefix="upload"):
+    """Save uploaded image: resize to max 1200×800, convert to JPEG quality=85."""
+    from PIL import Image
+    import io
+
+    img = Image.open(file_stream)
+
+    # Flatten transparency to white background
+    if img.mode in ('RGBA', 'P'):
+        bg = Image.new('RGB', img.size, (255, 255, 255))
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        bg.paste(img, mask=img.split()[3])
+        img = bg
+    elif img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    img.thumbnail((1200, 800), Image.Resampling.LANCZOS)
+
+    filename = f"{prefix}_{uuid.uuid4().hex[:10]}.jpg"
+    os.makedirs(dest_folder, exist_ok=True)
+    img.save(os.path.join(dest_folder, filename), 'JPEG', quality=85, optimize=True)
+    return filename
 
 
 ##
@@ -1763,14 +1793,20 @@ def create_activity():
 
         if uploaded_file and uploaded_file.filename != '':
             ext = os.path.splitext(uploaded_file.filename)[1].lower()
-            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif']
-            if ext in allowed_extensions:
-                filename = f"upload_{uuid.uuid4().hex[:10]}{ext}"
+            if ext in ['.jpg', '.jpeg', '.png', '.gif']:
                 upload_folder = os.path.join("static", "uploads", "activity_images")
-                os.makedirs(upload_folder, exist_ok=True)
-                filepath = os.path.join(upload_folder, filename)
-                uploaded_file.save(filepath)
-                image_filename = filename
+                try:
+                    image_filename = _save_optimized_image(
+                        uploaded_file.stream, upload_folder, prefix="upload"
+                    )
+                except Exception as e:
+                    app.logger.error(f"Image optimization failed: {e}")
+                    # Fallback: save raw
+                    filename = f"upload_{uuid.uuid4().hex[:10]}{ext}"
+                    filepath = os.path.join(upload_folder, filename)
+                    os.makedirs(upload_folder, exist_ok=True)
+                    uploaded_file.save(filepath)
+                    image_filename = filename
         elif selected_image_filename:
             image_filename = selected_image_filename
 
@@ -2000,14 +2036,20 @@ def edit_activity(activity_id):
 
         if uploaded_file and uploaded_file.filename != '':
             ext = os.path.splitext(uploaded_file.filename)[1].lower()
-            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif']
-            if ext in allowed_extensions:
-                filename = f"upload_{uuid.uuid4().hex[:10]}{ext}"
+            if ext in ['.jpg', '.jpeg', '.png', '.gif']:
                 upload_folder = os.path.join("static", "uploads", "activity_images")
-                os.makedirs(upload_folder, exist_ok=True)
-                filepath = os.path.join(upload_folder, filename)
-                uploaded_file.save(filepath)
-                activity.image_filename = filename
+                try:
+                    activity.image_filename = _save_optimized_image(
+                        uploaded_file.stream, upload_folder, prefix="upload"
+                    )
+                except Exception as e:
+                    app.logger.error(f"Image optimization failed: {e}")
+                    # Fallback: save raw
+                    filename = f"upload_{uuid.uuid4().hex[:10]}{ext}"
+                    filepath = os.path.join(upload_folder, filename)
+                    os.makedirs(upload_folder, exist_ok=True)
+                    uploaded_file.save(filepath)
+                    activity.image_filename = filename
         elif selected_image_filename:
             activity.image_filename = selected_image_filename
         else:
