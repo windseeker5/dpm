@@ -2063,6 +2063,40 @@ def task27_add_reply_to_email_field(cursor):
         raise
 
 
+def task28_add_stripe_transaction_table(cursor):
+    """Create stripe_transaction table for clearing account accounting"""
+    log("💳", "TASK 28: Creating stripe_transaction table", Colors.BLUE)
+
+    if check_table_exists(cursor, "stripe_transaction"):
+        log("⏭️ ", "  stripe_transaction table already exists, skipping", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("""
+            CREATE TABLE stripe_transaction (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id   TEXT UNIQUE,
+                charge_id    TEXT,
+                payout_id    TEXT,
+                gross_amount REAL NOT NULL,
+                stripe_fee   REAL,
+                net_amount   REAL,
+                charge_date  DATETIME NOT NULL,
+                payout_date  DATETIME,
+                status       TEXT DEFAULT 'pending',
+                created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+                signup_id    INTEGER REFERENCES signup(id) ON DELETE SET NULL,
+                passport_id  INTEGER REFERENCES passport(id) ON DELETE SET NULL,
+                income_id    INTEGER REFERENCES income(id) ON DELETE SET NULL
+            )
+        """)
+        log("✅", "  stripe_transaction table created", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed: {e}", Colors.RED)
+        raise
+
+
 def task24_add_workflow_quantity_fields(cursor):
     """Add workflow type and quantity limit fields to Activity and Signup tables"""
     log("🔄", "TASK 24: Adding workflow type and quantity limit fields", Colors.BLUE)
@@ -2164,6 +2198,7 @@ def main():
         ("Signup Code for Payment Matching", task25_add_signup_code_column),
         ("Stripe Payment Fields", task26_add_stripe_payment_fields),
         ("Reply-To Email Field", task27_add_reply_to_email_field),
+        ("Stripe Transaction Table", task28_add_stripe_transaction_table),
     ]
 
     completed = 0

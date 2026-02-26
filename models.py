@@ -200,6 +200,27 @@ class Income(db.Model):
 
 
 
+class StripeTransaction(db.Model):
+    __tablename__ = "stripe_transaction"
+    id           = db.Column(db.Integer, primary_key=True)
+    session_id   = db.Column(db.String(100), unique=True, nullable=True)   # Checkout session
+    charge_id    = db.Column(db.String(100), nullable=True)                 # Stripe charge ID
+    payout_id    = db.Column(db.String(100), nullable=True)                 # Stripe payout ID
+    gross_amount = db.Column(db.Float, nullable=False)                      # Full customer charge
+    stripe_fee   = db.Column(db.Float, nullable=True)                       # 2.9% + $0.30
+    net_amount   = db.Column(db.Float, nullable=True)                       # Deposited to bank
+    charge_date  = db.Column(db.DateTime, nullable=False)
+    payout_date  = db.Column(db.DateTime, nullable=True)
+    status       = db.Column(db.String(20), default="pending")              # pending | paid_out | refunded
+    created_at   = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # Links
+    signup_id    = db.Column(db.Integer, db.ForeignKey("signup.id"),   nullable=True)
+    passport_id  = db.Column(db.Integer, db.ForeignKey("passport.id"), nullable=True)
+    income_id    = db.Column(db.Integer, db.ForeignKey("income.id"),   nullable=True)  # Income to update on payout
+    signup   = db.relationship("Signup",   backref="stripe_transactions")
+    passport = db.relationship("Passport", backref="stripe_transactions")
+
+
 class Signup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)

@@ -54,6 +54,7 @@ from models import db, Admin, Redemption, Setting, EbankPayment, ReminderLog, Em
 from models import Activity, User, Signup, Passport, PassportType, AdminActionLog
 from models import SurveyTemplate, Survey, SurveyResponse
 from models import QueryLog
+from models import StripeTransaction
 
 
 # ⚙️ Config
@@ -2391,8 +2392,96 @@ def stripe_webhook():
                 notify_signup_event(app, signup=signup_record, activity=activity)
             except Exception as e:
                 print(f"[Stripe Webhook] Admin notification failed: {e}")
+            # --- Clearing Account: record income (pending) + StripeTransaction ---
+            gross = signup_record.requested_amount or 0.0
+            calculated_fee = round((gross * 0.029) + 0.30, 2)
+
+            income = Income(
+                activity_id    = signup_record.activity_id,
+                amount         = gross,
+                category       = "Passport Sales",
+                date           = datetime.now(timezone.utc),
+                payment_status = "pending",
+                payment_method = "credit_card",
+                note           = f"Stripe Checkout - Session: {session_data.get('id')}",
+                created_by     = "stripe-webhook",
+            )
+            db.session.add(income)
+            db.session.flush()   # get income.id
+
+            stripe_tx = StripeTransaction(
+                session_id   = session_data.get("id"),
+                charge_id    = session_data.get("payment_intent"),
+                gross_amount = gross,
+                stripe_fee   = calculated_fee,
+                net_amount   = round(gross - calculated_fee, 2),
+                charge_date  = datetime.now(timezone.utc),
+                status       = "pending",
+                signup_id    = signup_record.id,
+                passport_id  = passport.id,
+                income_id    = income.id,
+            )
+            db.session.add(stripe_tx)
+            db.session.commit()
+            print(f"[Stripe Webhook] Income (pending) and StripeTransaction recorded for signup {signup_id}")
         else:
             print(f"[Stripe Webhook] Failed to create passport for signup {signup_id}")
+
+    elif event['type'] == 'payout.paid':
+        payout_obj  = event['data']['object']
+        payout_id   = payout_obj.get('id')
+        payout_date = datetime.fromtimestamp(payout_obj.get('arrival_date', 0), tz=timezone.utc)
+
+        try:
+            balance_txns = stripe.BalanceTransaction.list(payout=payout_id, limit=100)
+        except Exception as e:
+            print(f"[Stripe Webhook] Could not list balance transactions for payout {payout_id}: {e}")
+            return jsonify({"status": "ok"}), 200
+
+        for bt in balance_txns.auto_paging_iter():
+            if bt.type != "charge":
+                continue
+            charge_id = bt.source
+
+            stripe_tx = StripeTransaction.query.filter_by(charge_id=charge_id).first()
+            if not stripe_tx:
+                continue
+            if stripe_tx.status == "paid_out":
+                continue
+
+            actual_fee = round(abs(bt.fee) / 100.0, 2)
+            net        = round(bt.net / 100.0, 2)
+
+            stripe_tx.payout_id   = payout_id
+            stripe_tx.payout_date = payout_date
+            stripe_tx.stripe_fee  = actual_fee
+            stripe_tx.net_amount  = net
+            stripe_tx.status      = "paid_out"
+
+            # Promote Income from pending → received
+            if stripe_tx.income_id:
+                income_rec = db.session.get(Income, stripe_tx.income_id)
+                if income_rec:
+                    income_rec.payment_status = "received"
+                    income_rec.payment_date   = payout_date
+
+            # Record processing fee as Expense
+            activity_id = stripe_tx.signup.activity_id if stripe_tx.signup else None
+            expense = Expense(
+                activity_id    = activity_id,
+                amount         = actual_fee,
+                category       = "Payment Processing Fees",
+                date           = payout_date,
+                payment_status = "paid",
+                payment_date   = payout_date,
+                payment_method = "stripe",
+                description    = f"Stripe fee for charge {charge_id} / payout {payout_id}",
+                created_by     = "stripe-webhook",
+            )
+            db.session.add(expense)
+
+        db.session.commit()
+        print(f"[Stripe Webhook] Payout {payout_id} reconciled")
 
     return jsonify({"status": "ok"}), 200
 
