@@ -70,10 +70,12 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Last Name</label>
-              <input type="text" name="admin_last_name[]" value="{{ admin.last_name or '' }}" 
+              <input type="text" name="admin_last_name[]" value="{{ admin.last_name or '' }}"
                      class="form-control admin-last-name" placeholder="Doe">
               <div class="form-hint">Used for display name and avatar initials</div>
             </div>
+            <!-- Password placeholder to keep array alignment with new admin entries -->
+            <input type="hidden" name="admin_password[]" value="********">
             <div class="col-12">
               {% if admin.email == session.get('admin') %}
               <!-- Self-service Change Password -->
@@ -220,11 +222,45 @@
 {% endif %}
 {% endfor %}
 
-<!-- Add Admin Button -->
-<div class="d-flex justify-content-end">
-  <button type="button" class="btn btn-primary" id="add-admin-btn">
-    <i class="ti ti-plus me-2"></i>
-    Add New Admin
+<!-- Avatar Crop Modal -->
+<div class="modal modal-blur fade" id="avatarCropModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-crop me-2"></i>Adjust Profile Photo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0" style="background:#1a1a2e;">
+        <div style="max-height:60vh; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+          <img id="avatarCropImage" src="" alt="Crop preview"
+               style="display:block; max-width:100%; max-height:60vh;">
+        </div>
+        <div class="p-3 text-center">
+          <small class="text-muted">
+            <i class="ti ti-arrows-move me-1"></i>Drag to reposition
+            <span class="mx-2">|</span>
+            <i class="ti ti-zoom-in me-1"></i>Pinch or scroll to zoom
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="ti ti-x me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="avatarCropConfirmBtn">
+          <i class="ti ti-check me-1"></i>Use Photo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save Settings Button -->
+<div class="d-flex justify-content-start mt-3">
+  <button type="submit" class="btn btn-success" form="settings-form">
+    <i class="ti ti-device-floppy me-2"></i>Save Settings
   </button>
 </div>
 
@@ -541,34 +577,79 @@ document.addEventListener("DOMContentLoaded", function () {
   // Initial load of avatars
   loadAvatars();
 
-  // Handle avatar file uploads
+  // Avatar crop tool state
+  let activeAvatarInput = null;
+  let avatarCropperInstance = null;
+  const avatarCropModalEl = document.getElementById('avatarCropModal');
+  const avatarCropModal = avatarCropModalEl ? new bootstrap.Modal(avatarCropModalEl) : null;
+  const avatarCropImage = document.getElementById('avatarCropImage');
+  const avatarCropConfirmBtn = document.getElementById('avatarCropConfirmBtn');
+
+  // Handle avatar file uploads — open crop modal
   document.addEventListener('change', function(e) {
     if (e.target.classList.contains('avatar-upload-input')) {
       const file = e.target.files[0];
-      const adminBlock = e.target.closest('.admin-block');
-      const avatarDiv = adminBlock.querySelector('[id^="avatar-"]');
-      const previewSection = adminBlock.querySelector('.avatar-preview');
-      const previewImg = previewSection?.querySelector('img');
-      
-      if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          // Update avatar display
+      if (!file || !file.type.startsWith('image/')) return;
+
+      activeAvatarInput = e.target;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        avatarCropImage.src = ev.target.result;
+        avatarCropModal.show();
+      };
+      reader.readAsDataURL(file);
+      e.target.value = ''; // reset so same file can be re-selected
+    }
+  });
+
+  if (avatarCropModalEl) {
+    avatarCropModalEl.addEventListener('shown.bs.modal', function() {
+      if (avatarCropperInstance) avatarCropperInstance.destroy();
+      avatarCropperInstance = new Cropper(avatarCropImage, {
+        aspectRatio: 1,
+        viewMode: 1,
+        autoCropArea: 0.9,
+        movable: true,
+        zoomable: true,
+        rotatable: false,
+        scalable: false,
+        responsive: true
+      });
+    });
+    avatarCropModalEl.addEventListener('hidden.bs.modal', function() {
+      if (avatarCropperInstance) { avatarCropperInstance.destroy(); avatarCropperInstance = null; }
+    });
+  }
+
+  if (avatarCropConfirmBtn) {
+    avatarCropConfirmBtn.addEventListener('click', function() {
+      if (!avatarCropperInstance || !activeAvatarInput) return;
+      avatarCropperInstance.getCroppedCanvas({ maxWidth: 400, maxHeight: 400, imageSmoothingQuality: 'high' })
+        .toBlob(function(blob) {
+          const dt = new DataTransfer();
+          dt.items.add(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+          activeAvatarInput.files = dt.files;
+
+          // Update avatar display and preview for this admin block
+          const adminBlock = activeAvatarInput.closest('.admin-block');
+          const avatarDiv = adminBlock ? adminBlock.querySelector('[id^="avatar-"]') : null;
+          const previewSection = adminBlock ? adminBlock.querySelector('.avatar-preview') : null;
+          const previewImg = previewSection?.querySelector('img');
+          const objectUrl = URL.createObjectURL(blob);
+
           if (avatarDiv) {
-            avatarDiv.style.backgroundImage = `url(${e.target.result})`;
+            avatarDiv.style.backgroundImage = `url(${objectUrl})`;
             avatarDiv.textContent = '';
             avatarDiv.classList.remove('avatar-initials');
           }
-          // Show preview
           if (previewImg) {
-            previewImg.src = e.target.result;
+            previewImg.src = objectUrl;
             previewSection.classList.remove('d-none');
           }
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  });
+          avatarCropModal.hide();
+        }, 'image/jpeg', 0.92);
+    });
+  }
   
   // Update avatar and display name on input changes
   document.addEventListener('input', function(e) {

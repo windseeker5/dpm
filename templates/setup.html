@@ -32,7 +32,12 @@
             <div class="tab-content">
               <!-- Admins Tab -->
               <div class="tab-pane fade show active" id="tab-admins">
-                <h2 class="mb-4">Admin Accounts</h2>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                  <h2 class="mb-0">Admin Accounts</h2>
+                  <button type="button" class="btn btn-primary" id="add-admin-btn">
+                    <i class="ti ti-plus me-1"></i>Admin
+                  </button>
+                </div>
                 {% include 'partials/settings_admins.html' %}
 
                 <!-- Fiscal Year Settings Card -->
@@ -496,6 +501,8 @@
 {% block head %}
 <!-- Admin Settings Enhanced CSS -->
 <link href="{{ url_for('static', filename='css/admin-settings.css') }}" rel="stylesheet">
+<!-- Cropper.js for avatar crop tool -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
 
 <!-- Settings page uses dashboard-container for consistent alignment -->
 <style>
@@ -547,6 +554,8 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Cropper.js for avatar crop tool -->
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 <!-- Email Settings JavaScript -->
 <script src="{{ url_for('static', filename='js/email-settings.js') }}"></script>
 
