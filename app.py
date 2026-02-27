@@ -901,8 +901,8 @@ def download_unsplash_image():
         return jsonify({'success': False, 'error': 'Download failed'}), 500
 
 
-def _save_optimized_image(file_stream, dest_folder, prefix="upload"):
-    """Save uploaded image: resize to max 1200×800, convert to JPEG quality=85."""
+def _save_optimized_image(file_stream, dest_folder, prefix="upload", max_size=(1200, 800)):
+    """Save uploaded image: resize to max dimensions, convert to JPEG quality=85."""
     from PIL import Image
     import io
 
@@ -918,7 +918,7 @@ def _save_optimized_image(file_stream, dest_folder, prefix="upload"):
     elif img.mode != 'RGB':
         img = img.convert('RGB')
 
-    img.thumbnail((1200, 800), Image.Resampling.LANCZOS)
+    img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
     filename = f"{prefix}_{uuid.uuid4().hex[:10]}.jpg"
     os.makedirs(dest_folder, exist_ok=True)
@@ -3521,11 +3521,17 @@ def setup():
             if avatar_file_key in request.files:
                 avatar_file = request.files[avatar_file_key]
                 if avatar_file and avatar_file.filename:
-                    # Generate unique filename
-                    ext = os.path.splitext(avatar_file.filename)[1]
-                    avatar_filename = f"admin_{email.replace('@', '_').replace('.', '_')}_{int(time.time())}{ext}"
-                    avatar_path = os.path.join(avatar_dir, avatar_filename)
-                    avatar_file.save(avatar_path)
+                    try:
+                        prefix = f"admin_{email.replace('@', '_').replace('.', '_')}_{int(time.time())}"
+                        avatar_filename = _save_optimized_image(
+                            avatar_file.stream, avatar_dir, prefix=prefix, max_size=(400, 400)
+                        )
+                    except Exception as e:
+                        app.logger.error(f"Avatar optimization failed: {e}")
+                        ext = os.path.splitext(avatar_file.filename)[1]
+                        avatar_filename = f"admin_{email.replace('@', '_').replace('.', '_')}_{int(time.time())}{ext}"
+                        avatar_path = os.path.join(avatar_dir, avatar_filename)
+                        avatar_file.save(avatar_path)
 
             existing = Admin.query.filter_by(email=email).first()
             if existing:
