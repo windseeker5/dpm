@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize components
     initializeLogoPreview();
     initializePaymentBotToggle();
+    initializeStripeToggle();
     initializeFuzzyThreshold();
 
     console.log('Unified Settings JS initialized');
@@ -63,6 +64,20 @@ function initializePaymentBotToggle() {
     if (toggle && config) {
         toggle.addEventListener('change', function() {
             config.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+}
+
+/**
+ * Stripe Payments Toggle
+ */
+function initializeStripeToggle() {
+    const toggle = document.getElementById('stripe_payments_enabled');
+    const keyFields = document.getElementById('stripe-key-fields');
+
+    if (toggle && keyFields) {
+        toggle.addEventListener('change', function() {
+            keyFields.style.display = this.checked ? 'block' : 'none';
         });
     }
 }

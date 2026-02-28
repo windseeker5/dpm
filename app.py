@@ -1952,7 +1952,10 @@ def create_activity():
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
-    stripe_configured = bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
+    stripe_configured = (
+        get_setting("STRIPE_PAYMENTS_ENABLED", "False") == "True"
+        and bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
+    )
 
     return render_template("activity_form.html",
                           activity=None,
@@ -2210,7 +2213,10 @@ def edit_activity(activity_id):
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
-    stripe_configured = bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
+    stripe_configured = (
+        get_setting("STRIPE_PAYMENTS_ENABLED", "False") == "True"
+        and bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
+    )
 
     return render_template("activity_form.html",
                           activity=activity,
@@ -3939,6 +3945,14 @@ def unified_settings():
                     db.session.add(Setting(key=key, value=str(value)))
 
             # Step 4b: Stripe Credit Card Payment Settings (skip blank to preserve existing)
+            # Save enabled toggle (always write — False when checkbox is absent from POST)
+            stripe_enabled_value = str("stripe_payments_enabled" in request.form)
+            existing_enabled = Setting.query.filter_by(key="STRIPE_PAYMENTS_ENABLED").first()
+            if existing_enabled:
+                existing_enabled.value = stripe_enabled_value
+            else:
+                db.session.add(Setting(key="STRIPE_PAYMENTS_ENABLED", value=stripe_enabled_value))
+
             stripe_fields = {
                 "STRIPE_PAYMENTS_SECRET_KEY": request.form.get("stripe_payments_secret_key", "").strip(),
                 "STRIPE_WEBHOOK_SECRET": request.form.get("stripe_webhook_secret", "").strip(),
@@ -3983,7 +3997,11 @@ def unified_settings():
         # Development (localhost/127.0.0.1): use fallback
         webhook_url = f"https://minipass_app.minipass.me/stripe/webhook"
 
-    return render_template("unified_settings.html", settings=settings, webhook_url=webhook_url)
+    stripe_payments_enabled = settings.get("STRIPE_PAYMENTS_ENABLED", "False") == "True"
+    return render_template("unified_settings.html",
+                           settings=settings,
+                           webhook_url=webhook_url,
+                           stripe_payments_enabled=stripe_payments_enabled)
 
 
 # Alternative route name to match template url_for reference

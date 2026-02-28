@@ -235,48 +235,75 @@
               </button>
               <div id="collapseStripe" class="collapse">
                 <div class="border-top p-3">
-                  <div class="alert alert-info mb-3">
-                    <div class="d-flex">
-                      <div>
-                        <i class="ti ti-brand-stripe alert-icon me-2"></i>
-                      </div>
-                      <div>
-                        <h4 class="alert-title">Accept Credit Cards via Stripe</h4>
-                        <div class="text-secondary">
-                          Let customers pay by credit card for your activities. Requires a <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Stripe account</a>.
-                          Once configured, you can enable credit card payments per activity.
+
+                  <!-- Enable toggle (always visible when section is expanded) -->
+                  <div class="mb-3">
+                    <label class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox"
+                             name="stripe_payments_enabled"
+                             id="stripe_payments_enabled"
+                             {% if stripe_payments_enabled %}checked{% endif %}>
+                      <span class="form-check-label">Enable Credit Card Payments</span>
+                    </label>
+                    <div class="form-text">When enabled, activities can accept payment by credit card via Stripe Checkout.</div>
+                  </div>
+
+                  <!-- Key fields: only shown when toggle is ON -->
+                  <div id="stripe-key-fields"
+                       style="display: {% if stripe_payments_enabled %}block{% else %}none{% endif %};">
+
+                    {% if stripe_payments_enabled and not settings.STRIPE_PAYMENTS_SECRET_KEY %}
+                    <div class="alert alert-warning mb-3">
+                      <div class="d-flex">
+                        <div><i class="ti ti-alert-triangle alert-icon me-2"></i></div>
+                        <div>
+                          <h4 class="alert-title">Secret Key Required</h4>
+                          <div class="text-secondary">Credit card payments are enabled but no Stripe Secret Key is saved yet. Enter your key below to activate payments in activities.</div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                    {% endif %}
 
-                  <!-- Webhook URL (Read-only with copy button) -->
-                  <div class="mb-3">
-                    <label class="form-label">Webhook URL</label>
-                    <div class="input-group">
-                      <input type="text" class="form-control" id="stripeWebhookUrl" value="{{ webhook_url }}" readonly>
-                      <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('stripeWebhookUrl').value); this.innerHTML='<i class=\'ti ti-check\'></i>'; setTimeout(() => this.innerHTML='<i class=\'ti ti-copy\'></i>', 2000)">
-                        <i class="ti ti-copy"></i>
-                      </button>
+                    <div class="alert alert-info mb-3">
+                      <div class="d-flex">
+                        <div><i class="ti ti-brand-stripe alert-icon me-2"></i></div>
+                        <div>
+                          <h4 class="alert-title">Accept Credit Cards via Stripe</h4>
+                          <div class="text-secondary">Let customers pay by credit card for your activities. Requires a <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Stripe account</a>. Once configured, you can enable credit card payments per activity.</div>
+                        </div>
+                      </div>
                     </div>
-                    <div class="form-text">Copy this URL into your Stripe webhook endpoint settings. Configure it to send <code>checkout.session.completed</code> and <code>payout.paid</code> events. See the <a href="https://minipass.me/docs/how-to-setup-stripe" target="_blank" rel="noopener">setup guide</a> for step-by-step instructions.</div>
-                  </div>
 
-                  <div class="mb-3">
-                    <label class="form-label">Secret Key</label>
-                    <input type="text" class="form-control" name="stripe_payments_secret_key"
-                           value="{{ settings.STRIPE_PAYMENTS_SECRET_KEY or '' }}"
-                           placeholder="sk_test_... or sk_live_...">
-                    <div class="form-text">Your Stripe Secret Key from the API keys page. Leave blank to keep existing value.</div>
-                  </div>
+                    <!-- Webhook URL (Read-only with copy button) -->
+                    <div class="mb-3">
+                      <label class="form-label">Webhook URL</label>
+                      <div class="input-group">
+                        <input type="text" class="form-control" id="stripeWebhookUrl" value="{{ webhook_url }}" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('stripeWebhookUrl').value); this.innerHTML='<i class=\'ti ti-check\'></i>'; setTimeout(() => this.innerHTML='<i class=\'ti ti-copy\'></i>', 2000)">
+                          <i class="ti ti-copy"></i>
+                        </button>
+                      </div>
+                      <div class="form-text">Copy this URL into your Stripe webhook endpoint settings. Configure it to send <code>checkout.session.completed</code> and <code>payout.paid</code> events. See the <a href="https://minipass.me/docs/how-to-setup-stripe" target="_blank" rel="noopener">setup guide</a> for step-by-step instructions.</div>
+                    </div>
 
-                  <div class="mb-3">
-                    <label class="form-label">Webhook Secret</label>
-                    <input type="text" class="form-control" name="stripe_webhook_secret"
-                           value="{{ settings.STRIPE_WEBHOOK_SECRET or '' }}"
-                           placeholder="whsec_...">
-                    <div class="form-text">Your Stripe Webhook Signing Secret. Leave blank to keep existing value.</div>
-                  </div>
+                    <div class="mb-3">
+                      <label class="form-label">Secret Key</label>
+                      <input type="text" class="form-control" name="stripe_payments_secret_key"
+                             value="{{ settings.STRIPE_PAYMENTS_SECRET_KEY or '' }}"
+                             placeholder="sk_test_... or sk_live_...">
+                      <div class="form-text">Your Stripe Secret Key from the API keys page. Leave blank to keep existing value.</div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-label">Webhook Secret</label>
+                      <input type="text" class="form-control" name="stripe_webhook_secret"
+                             value="{{ settings.STRIPE_WEBHOOK_SECRET or '' }}"
+                             placeholder="whsec_...">
+                      <div class="form-text">Your Stripe Webhook Signing Secret. Leave blank to keep existing value.</div>
+                    </div>
+
+                  </div><!-- /#stripe-key-fields -->
+
                 </div>
               </div>
             </div>
