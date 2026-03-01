@@ -1018,6 +1018,11 @@
     }
   </script>
 
+  <!-- Photo Normalization Tool (Cropper.js + shared utility) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+  <script src="{{ url_for('static', filename='js/photo-normalizer.js') }}"></script>
+
   {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -2585,6 +2585,8 @@ def get_all_activity_logs():
                 log_type = "Signup Rejected"
             elif "cancelled" in action_text and "signup" in action_text:
                 log_type = "Signup Cancelled"  # ✅ NEW detection for cancelled
+            elif "announcement sent" in action_text:
+                log_type = "Announcement Sent"
             elif "activity created" in action_text:
                 log_type = "Activity Created"
             elif "added income" in action_text:
@@ -2841,7 +2843,7 @@ def render_and_send_email(
         )
 
 
-def send_email(subject, to_email, template_name=None, context=None, inline_images=None, html_body=None, timestamp_override=None, email_config=None, use_hosted_images=False, user=None, activity=None):
+def send_email(subject, to_email, template_name=None, context=None, inline_images=None, html_body=None, timestamp_override=None, email_config=None, use_hosted_images=False, user=None, activity=None, operational=False):
     from flask import render_template
     import smtplib
     from email.mime.multipart import MIMEMultipart
@@ -3035,21 +3037,28 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     # ✅ Add deliverability headers
     reply_to_email = from_email
     msg["Reply-To"] = reply_to_email
-    msg["List-Unsubscribe"] = f"<{context['unsubscribe_url']}>"
-    msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+
+    if not operational:
+        msg["List-Unsubscribe"] = f"<{context['unsubscribe_url']}>"
+        msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 
     # Set email priority based on template type (transactional vs bulk)
-    # Survey invitations are relationship emails, not bulk marketing
-    is_transactional = template_name and ('survey' in template_name or 'Pass' in template_name or 'payment' in template_name or 'signup' in template_name)
-    if is_transactional:
-        msg["Precedence"] = "normal"  # Transactional email
-        msg["X-Priority"] = "3"  # Normal priority (1=high, 3=normal, 5=low)
-        msg["Importance"] = "normal"
+    if operational:
+        msg["Precedence"] = "normal"
+        msg["X-Priority"] = "1"
+        msg["Importance"] = "high"
     else:
-        msg["Precedence"] = "bulk"  # Bulk/newsletter emails
+        is_transactional = template_name and ('survey' in template_name or 'Pass' in template_name or 'payment' in template_name or 'signup' in template_name or 'announcement' in template_name)
+        if is_transactional:
+            msg["Precedence"] = "normal"  # Transactional email
+            msg["X-Priority"] = "3"  # Normal priority (1=high, 3=normal, 5=low)
+            msg["Importance"] = "normal"
+        else:
+            msg["Precedence"] = "bulk"  # Bulk/newsletter emails
 
     msg["X-Mailer"] = "Minipass/1.0"
-    msg["Auto-Submitted"] = "auto-generated"
+    if not operational:
+        msg["Auto-Submitted"] = "auto-generated"
 
     # Generate unique Message-ID
     timestamp = int(datetime.now(timezone.utc).timestamp() * 1000000)  # microsecond precision
@@ -3194,6 +3203,8 @@ def send_email_async(app, user=None, activity=None, **kwargs):
 
     # Extract activity ID before thread starts (avoid detached instance error)
     activity_id = activity.id if activity and hasattr(activity, 'id') else None
+    # Extract operational flag before thread starts (closure capture)
+    operational = kwargs.get("operational", False)
 
     def send_in_thread():
         with app.app_context():
@@ -3336,7 +3347,8 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                     timestamp_override=timestamp_override,
                     user=user,
                     activity=activity_in_thread,
-                    use_hosted_images=use_hosted_images
+                    use_hosted_images=use_hosted_images,
+                    operational=operational,
                 )
 
                 # --- Save EmailLog after successful send ---

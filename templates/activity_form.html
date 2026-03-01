@@ -4,7 +4,6 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
 <style>
 .form-label.required::after {
   content: " *";
@@ -218,21 +217,6 @@
                   <!-- Left: Thumbnail — always visible -->
                   <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
                        style="width: 100px; min-height: 100px; cursor: pointer;" id="coverPhotoWrapper">
-                    {% if activity and activity.image_filename %}
-                      <img id="coverThumbnail"
-                           src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
-                           class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
-                      <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
-                            style="cursor: pointer;" id="deleteImageBtn">
-                        <i class="ti ti-x text-white" style="font-size: 14px;"></i>
-                      </span>
-                    {% else %}
-                      <div id="coverThumbnail" class="d-flex flex-column align-items-center justify-content-center"
-                           style="width: 100px; height: 100px;">
-                        <i class="ti ti-photo text-muted fs-2"></i>
-                        <small class="text-muted">Add photo</small>
-                      </div>
-                    {% endif %}
                   </div>
 
                   <!-- Right: Panel — border-left as divider, no extra inner wrapper -->
@@ -1229,269 +1213,31 @@
     let passportTypeCounter = 0;
     let passportTypes = [];
 
-    const searchBtn = document.getElementById('searchImagesBtn');
-    const imageDescInput = document.getElementById('imageDescription');
-    const unsplashModal = new bootstrap.Modal(document.getElementById('unsplashModal'));
-    const unsplashImagesDiv = document.getElementById('unsplashImages');
-    const paginationControls = document.getElementById('unsplashPagination');
-    const prevPageBtn = document.getElementById('prevPageBtn');
-    const nextPageBtn = document.getElementById('nextPageBtn');
-
-    let currentPage = 1;
-    let currentQuery = "";
-
-    // Click on thumbnail to toggle options panel (using event delegation for dynamic content)
-    document.addEventListener('click', function(e) {
-      const wrapper = e.target.closest('#coverPhotoWrapper');
-      if (!wrapper) return;
-      // Don't trigger if clicking the delete X badge
-      if (e.target.closest('#deleteImageBtn')) return;
-      // Toggle the right-side options panel
-      const panel = document.getElementById('imageOptions');
-      panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+    // Photo Normalization Tool — cover photo (see DESIGN_SYSTEM.md §15)
+    var coverPhotoNormalizer = initPhotoNormalizer({
+      wrapperId:      'coverPhotoWrapper',
+      uploadInputId:  'uploadInput',
+      cropModalId:    'cropModal',
+      cropImageId:    'cropImage',
+      confirmBtnId:   'cropConfirmBtn',
+      optionsPanelId: 'imageOptions',
+      hiddenInputId:  'selectedImageFilename',
+      sourceToggleId: 'sourceToggle',
+      searchPanelId:  'searchWebContent',
+      uploadPanelId:  'uploadContent',
+      aspectRatio:    16 / 9,
+      maxWidth:       1200,
+      maxHeight:      675,
+      objectFit:      'cover',
+      placeholderLabel: 'Add photo',
+      src: {% if activity and activity.image_filename %}'{{ url_for("static", filename="uploads/activity_images/" + activity.image_filename) }}'{% else %}null{% endif %},
+      searchInputId:    'imageDescription',
+      searchBtnId:      'searchImagesBtn',
+      unsplashModalId:  'unsplashModal',
+      unsplashImagesId: 'unsplashImages',
+      prevPageBtnId:    'prevPageBtn',
+      nextPageBtnId:    'nextPageBtn',
     });
-
-    // Delete image immediately (no confirmation modal)
-    function setupDeleteButton() {
-      const deleteBtn = document.getElementById('deleteImageBtn');
-      if (deleteBtn) {
-        deleteBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          // Clear the image filename
-          selectedImageFilename.value = '';
-          if (uploadInput) uploadInput.value = '';
-          // Reset thumbnail to placeholder (100x100 square)
-          const wrapper = document.getElementById('coverPhotoWrapper');
-          wrapper.innerHTML = `
-            <div id="coverThumbnail" class="d-flex flex-column align-items-center justify-content-center"
-                 style="width: 100px; height: 100px;">
-              <i class="ti ti-photo text-muted fs-2"></i>
-              <small class="text-muted">Add photo</small>
-            </div>`;
-        });
-      }
-    }
-    setupDeleteButton();
-
-    // Source toggle: unchecked = Search Web, checked = Upload
-    const sourceToggle = document.getElementById('sourceToggle');
-    const searchWebContent = document.getElementById('searchWebContent');
-    const uploadContent = document.getElementById('uploadContent');
-
-    if (sourceToggle) {
-      sourceToggle.addEventListener('change', function() {
-        searchWebContent.style.display = this.checked ? 'none' : 'block';
-        uploadContent.style.display = this.checked ? 'block' : 'none';
-      });
-    }
-
-    // Helper function to update thumbnail with image and delete badge (100x100 square)
-    function updateThumbnailWithImage(imgSrc) {
-      const wrapper = document.getElementById('coverPhotoWrapper');
-      wrapper.innerHTML = `
-        <img id="coverThumbnail"
-             src="${imgSrc}"
-             class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
-        <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
-              style="cursor: pointer;"
-              id="deleteImageBtn">
-          <i class="ti ti-x text-white" style="font-size: 14px;"></i>
-        </span>`;
-      // Re-setup delete button event listener
-      setupDeleteButton();
-    }
-
-    // Crop tool state
-    let cropperInstance = null;
-    const cropModalEl = document.getElementById('cropModal');
-    const cropModal = cropModalEl ? new bootstrap.Modal(cropModalEl) : null;
-    const cropImage = document.getElementById('cropImage');
-    const cropConfirmBtn = document.getElementById('cropConfirmBtn');
-
-    if (uploadInput) {
-      uploadInput.addEventListener('change', function (event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          cropImage.src = e.target.result;
-          cropModal.show();
-        };
-        reader.readAsDataURL(file);
-        this.value = ''; // reset so same file triggers change again if re-selected
-      });
-    }
-
-    if (cropModalEl) {
-      cropModalEl.addEventListener('shown.bs.modal', function () {
-        if (cropperInstance) cropperInstance.destroy();
-        cropperInstance = new Cropper(cropImage, {
-          aspectRatio: 16 / 9,
-          viewMode: 1,
-          autoCropArea: 0.9,
-          movable: true,
-          zoomable: true,
-          rotatable: false,
-          scalable: false,
-          responsive: true
-        });
-      });
-      cropModalEl.addEventListener('hidden.bs.modal', function () {
-        if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
-      });
-    }
-
-    if (cropConfirmBtn) {
-      cropConfirmBtn.addEventListener('click', function () {
-        if (!cropperInstance) return;
-        cropperInstance.getCroppedCanvas({ maxWidth: 1200, maxHeight: 675, imageSmoothingQuality: 'high' })
-          .toBlob(function (blob) {
-            const dt = new DataTransfer();
-            dt.items.add(new File([blob], 'cover.jpg', { type: 'image/jpeg' }));
-            uploadInput.files = dt.files;
-            selectedImageFilename.value = '';
-            updateThumbnailWithImage(URL.createObjectURL(blob));
-            cropModal.hide();
-          }, 'image/jpeg', 0.92);
-      });
-    }
-
-    if (imageDescInput) {
-      imageDescInput.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          searchBtn.click();
-        }
-      });
-    }
-
-    if (searchBtn) {
-      searchBtn.addEventListener('click', function () {
-        const query = imageDescInput.value.trim();
-        if (!query) {
-          alert("Please enter a description first.");
-          return;
-        }
-        currentQuery = query;
-        currentPage = 1;
-        loadUnsplashImages(currentPage);
-        unsplashModal.show();
-      });
-    }
-
-    if (prevPageBtn) {
-      prevPageBtn.addEventListener('click', function () {
-        if (currentPage > 1) {
-          currentPage--;
-          loadUnsplashImages(currentPage);
-        }
-      });
-    }
-
-    if (nextPageBtn) {
-      nextPageBtn.addEventListener('click', function () {
-        currentPage++;
-        loadUnsplashImages(currentPage);
-      });
-    }
-
-    function loadUnsplashImages(page = 1) {
-      if (!currentQuery) return;
-
-      unsplashImagesDiv.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-
-      fetch(`/unsplash-search?q=${encodeURIComponent(currentQuery)}&page=${page}`)
-        .then(response => {
-          if (!response.ok) {
-            return response.json().then(errorData => {
-              throw new Error(errorData.error || 'Search failed');
-            });
-          }
-          return response.json();
-        })
-        .then(data => {
-          unsplashImagesDiv.innerHTML = '';
-          if (data.length === 0) {
-            unsplashImagesDiv.innerHTML = '<div class="text-center p-4"><p class="text-muted">No images found for this search.</p></div>';
-            paginationControls.style.display = 'none';
-            return;
-          }
-
-          data.forEach(image => {
-            const col = document.createElement('div');
-            col.className = 'col-md-4 mb-3';
-            col.innerHTML = `
-              <div class="card card-link card-border shadow-sm h-100">
-                <img src="${image.thumb}" class="card-img-top" style="cursor:pointer; height: 200px; object-fit: cover;" alt="Unsplash Image">
-              </div>
-            `;
-            col.querySelector('img').addEventListener('click', function () {
-              this.style.opacity = '0.5';
-              this.style.cursor = 'wait';
-
-              fetch(`/download-unsplash-image?url=${encodeURIComponent(image.full)}`)
-                .then(response => response.json())
-                .then(result => {
-                  if (result.success) {
-                    const imgUrl = `/static/uploads/activity_images/${result.filename}`;
-                    selectedImageFilename.value = result.filename;
-                    if (uploadInput) uploadInput.value = "";
-
-                    // Update thumbnail with the downloaded image
-                    updateThumbnailWithImage(imgUrl);
-
-                    unsplashModal.hide();
-                  } else {
-                    alert("Failed to download image. Please try again.");
-                    this.style.opacity = '1';
-                    this.style.cursor = 'pointer';
-                  }
-                })
-                .catch(error => {
-                  console.error('Error downloading image:', error);
-                  alert("Error downloading image. Please try again.");
-                  this.style.opacity = '1';
-                  this.style.cursor = 'pointer';
-                });
-            });
-            unsplashImagesDiv.appendChild(col);
-          });
-
-          paginationControls.style.display = 'flex';
-          prevPageBtn.disabled = page === 1;
-        })
-        .catch(error => {
-          console.error('Error loading images:', error);
-          let errorMessage = 'Error loading images. Please try again.';
-
-          if (error.message.includes('API key')) {
-            errorMessage = 'Image search is not available. The API key needs to be configured by an administrator.';
-          } else if (error.message.includes('temporarily unavailable')) {
-            errorMessage = 'Image search service is temporarily unavailable. Please try again later.';
-          }
-
-          unsplashImagesDiv.innerHTML = `
-            <div class="text-center p-4">
-              <div class="alert alert-warning border-warning mb-3">
-                <div class="d-flex align-items-center">
-                  <i class="ti ti-alert-triangle me-2"></i>
-                  <strong>Image Search Unavailable</strong>
-                </div>
-                <p class="mb-0 mt-2">${errorMessage}</p>
-              </div>
-              <div class="text-muted small">
-                <p class="mb-2"><strong>Alternative options:</strong></p>
-                <ul class="list-unstyled">
-                  <li>Use the "Upload your own image" option instead</li>
-                  <li>Contact your administrator to configure image search</li>
-                  <li>Proceed without an image for now</li>
-                </ul>
-              </div>
-            </div>
-          `;
-          paginationControls.style.display = 'none';
-        });
-    }
 
     // Passport Type Management Functions
     function createPassportTypeTableRow(passportType) {
