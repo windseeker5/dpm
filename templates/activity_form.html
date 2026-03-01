@@ -136,7 +136,7 @@
 
 {% block content %}
 <div class="container-xl">
-  <form method="POST" enctype="multipart/form-data" id="activityForm">
+  <form method="POST" enctype="multipart/form-data" id="activityForm" data-activity-id="{{ activity.id if activity else '' }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="row justify-content-center">
@@ -374,6 +374,47 @@
                       <small class="form-hint">Customers can pay by credit card via Stripe Checkout</small>
                     </div>
                     {% endif %}
+
+                    <!-- Discord Integration -->
+                    <div class="mb-3 mt-3">
+                      <label class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="discordToggle"
+                               onchange="toggleDiscordSection()"
+                               {{ 'checked' if activity and activity.discord_webhook_url else '' }}>
+                        <span class="form-check-label">
+                          <i class="ti ti-brand-discord me-1"></i>
+                          This activity has a Discord server
+                        </span>
+                      </label>
+                    </div>
+                    <div id="discordSection" style="display:{{ 'block' if activity and activity.discord_webhook_url else 'none' }};">
+                      <div class="mb-3">
+                        <label class="form-label">Webhook URL</label>
+                        <div class="input-group">
+                          <input type="url" class="form-control" name="discord_webhook_url"
+                                 id="discordWebhookUrl"
+                                 placeholder="https://discord.com/api/webhooks/..."
+                                 value="{{ activity.discord_webhook_url if activity and activity.discord_webhook_url else '' }}">
+                          <button type="button" class="btn btn-outline-secondary" id="discordTestBtn"
+                                  onclick="testDiscordWebhook()">
+                            <i class="ti ti-brand-discord me-1"></i>Test
+                          </button>
+                        </div>
+                        <small class="form-hint">
+                          Discord server → Settings → Integrations → Webhooks → New Webhook → Copy URL.
+                        </small>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Discord invite link <span class="text-muted">(optional)</span></label>
+                        <input type="url" class="form-control" name="discord_invite_url"
+                               id="discordInviteUrl"
+                               placeholder="https://discord.gg/..."
+                               value="{{ activity.discord_invite_url if activity and activity.discord_invite_url else '' }}">
+                        <small class="form-hint">
+                          Invite link for participants to join your Discord server. Discord server → Invite People → Copy Link.
+                        </small>
+                      </div>
+                    </div>
 
               </div>
             </div>
@@ -1738,6 +1779,7 @@
     // Make functions global
     window.copySignupLink = copySignupLink;
     window.copySignupLinkFromDropdown = copySignupLinkFromDropdown;
+    window.showFlashMessage = showFlashMessage;
 
     // Event Listeners for modals
     document.getElementById('saveNewPassportType').addEventListener('click', addNewPassportType);
@@ -1892,5 +1934,54 @@
     });
 
   });
+
+  function toggleDiscordSection() {
+    var toggle = document.getElementById('discordToggle');
+    var section = document.getElementById('discordSection');
+    if (toggle.checked) {
+      section.style.display = 'block';
+    } else {
+      section.style.display = 'none';
+      document.getElementById('discordWebhookUrl').value = '';
+      document.getElementById('discordInviteUrl').value = '';
+    }
+  }
+
+  function testDiscordWebhook() {
+    var webhookUrl = document.getElementById('discordWebhookUrl').value.trim();
+    if (!webhookUrl) {
+      showFlashMessage('Paste a webhook URL first.', 'warning');
+      return;
+    }
+    var btn = document.getElementById('discordTestBtn');
+    var origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testing…';
+
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    var formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    formData.append('webhook_url', webhookUrl);
+
+    fetch('/test-discord-webhook', {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+      if (data.success) {
+        showFlashMessage('Test message sent to Discord!', 'success');
+      } else {
+        showFlashMessage(data.error || 'Webhook test failed.', 'error');
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+      showFlashMessage('Network error. Please try again.', 'error');
+    });
+  }
 </script>
 {% endblock %}

@@ -122,6 +122,10 @@ class Activity(db.Model):
     # Stripe credit card payments
     accept_credit_card = db.Column(db.Boolean, default=False)
 
+    # Discord integration
+    discord_webhook_url = db.Column(db.String(500), nullable=True)
+    discord_invite_url = db.Column(db.String(500), nullable=True)
+
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 

@@ -1843,6 +1843,8 @@ def create_activity():
             goal_revenue=goal_revenue,
             offer_passport_renewal=("offer_passport_renewal" in request.form),
             accept_credit_card=("accept_credit_card" in request.form),
+            discord_webhook_url=request.form.get("discord_webhook_url", "").strip() or None,
+            discord_invite_url=request.form.get("discord_invite_url", "").strip() or None,
             workflow_type=workflow_type,
             allow_quantity_selection=allow_quantity_selection,
             is_quantity_limited=is_quantity_limited,
@@ -2019,6 +2021,8 @@ def edit_activity(activity_id):
         # Update passport renewal setting
         activity.offer_passport_renewal = ("offer_passport_renewal" in request.form)
         activity.accept_credit_card = ("accept_credit_card" in request.form)
+        activity.discord_webhook_url = request.form.get("discord_webhook_url", "").strip() or None
+        activity.discord_invite_url = request.form.get("discord_invite_url", "").strip() or None
 
         # Update workflow and quantity limit fields
         activity.workflow_type = request.form.get("workflow_type", "approval_first")
@@ -7059,11 +7063,46 @@ def send_announcement(activity_id):
             print(f"❌ Failed to send announcement to {passport.user.email}: {e}")
             failed_count += 1
 
+    # Discord notification
+    discord_sent = False
+    if activity.discord_webhook_url and request.form.get('send_to_discord') == 'on':
+        from utils import send_discord_announcement
+        discord_sent = send_discord_announcement(
+            subject=subject,
+            message_html=message,
+            activity_name=activity.name,
+            webhook_url=activity.discord_webhook_url
+        )
+
     log_admin_action(
         f"Announcement sent: \"{subject}\" to {sent_count} participants in {activity.name}"
     )
 
-    return jsonify({"success": True, "sent": sent_count, "failed": failed_count})
+    return jsonify({"success": True, "sent": sent_count, "failed": failed_count, "discord_sent": discord_sent})
+
+
+@app.route("/test-discord-webhook", methods=["POST"])
+def test_discord_webhook():
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    from utils import send_discord_announcement
+
+    webhook_url = request.form.get("webhook_url", "").strip()
+    if not webhook_url:
+        return jsonify({"success": False, "error": "No webhook URL provided"}), 400
+
+    ok = send_discord_announcement(
+        subject="Test message from Minipass",
+        message_html="<p>Your Discord integration is working! Announcements will appear here.</p>",
+        activity_name="Minipass",
+        webhook_url=webhook_url
+    )
+
+    if ok:
+        return jsonify({"success": True})
+    else:
+        return jsonify({"success": False, "error": "Webhook delivery failed. Check the URL and try again."}), 502
 
 
 @app.route("/api/activity-kpis/<int:activity_id>")
