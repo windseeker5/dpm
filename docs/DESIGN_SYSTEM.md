@@ -19,6 +19,7 @@
 12. [Complete Page Template](#complete-page-template)
 13. [Form Action Buttons](#form-action-buttons)
 14. [Pagination Component](#pagination-component)
+15. [Photo Normalization Tool](#section-15--photo-normalization-tool)
 
 ---
 
@@ -3120,6 +3121,291 @@ The `render_pagination` macro accepts:
 
 ---
 
+---
+
+## Section 15 — Photo Normalization Tool
+
+**Reference implementation:** `templates/activity_form.html` (Cover Photo field)
+
+This is the standard image picker used everywhere you need a user to provide a photo. It combines:
+- 100×100 thumbnail preview with red-X remove button
+- Click to expand a side panel with Search (Unsplash) / Upload toggle
+- On upload: automatic crop modal (Cropper.js, drag/zoom, 16:9 aspect)
+- On confirm: client-side JPEG compression (92% quality, max 1200×675)
+- On save (server-side): PIL resize + JPEG 85% via `_save_optimized_image()`
+
+**Never use a plain `<input type="file">` for image fields. Always use this tool.**
+
+---
+
+### 15.1 — Dependencies (already global — nothing to add)
+
+**Cropper.js CSS/JS and `photo-normalizer.js` are loaded globally in `base.html`.**
+No per-page imports needed. The `initPhotoNormalizer()` function is available on every page.
+
+---
+
+### 15.2 — Widget HTML (inline in your form)
+
+Adapt `FIELD_NAME`, `DEST_FOLDER`, `EXISTING_FILENAME` to your context.
+
+```html
+<!-- Photo Normalization Tool Widget -->
+<div class="mb-3">
+  <label class="form-label">Cover Photo</label>
+
+  <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
+       style="border: 1px solid rgba(98,105,118,0.2); width: fit-content; max-width: 100%;">
+
+    <!-- Left: Thumbnail — always visible, click to open options panel -->
+    <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
+         style="width: 100px; min-height: 100px; cursor: pointer;" id="coverPhotoWrapper">
+      {% if existing_filename %}
+        <img id="coverThumbnail"
+             src="{{ url_for('static', filename='uploads/DEST_FOLDER/' + existing_filename) }}"
+             class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
+        <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
+              style="cursor: pointer;" id="deleteImageBtn">
+          <i class="ti ti-x text-white" style="font-size: 14px;"></i>
+        </span>
+      {% else %}
+        <div id="coverThumbnail" class="d-flex flex-column align-items-center justify-content-center"
+             style="width: 100px; height: 100px;">
+          <i class="ti ti-photo text-muted fs-2"></i>
+          <small class="text-muted">Add photo</small>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: Options panel — hidden by default, toggled on thumbnail click -->
+    <div id="imageOptions" class="flex-grow-1 p-2"
+         style="display: none; border-left: 1px solid rgba(98,105,118,0.2);">
+      <!-- Source toggle: Search ↔ Upload -->
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <small class="text-muted fw-medium">
+          <i class="ti ti-world-search" style="font-size:13px;"></i> Search
+        </small>
+        <label class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="sourceToggle" role="switch">
+        </label>
+        <small class="text-muted">
+          <i class="ti ti-upload" style="font-size:13px;"></i> Upload
+        </small>
+      </div>
+
+      <!-- Search tab -->
+      <div id="searchWebContent">
+        <div class="input-group">
+          <input type="text" id="imageDescription" class="form-control" placeholder="e.g., Hockey, Yoga">
+          <button type="button" id="searchImagesBtn" class="btn btn-primary">
+            <i class="ti ti-search"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Upload tab -->
+      <div id="uploadContent" style="display: none;">
+        <input type="file" name="upload_image" class="form-control" id="uploadInput" accept="image/*">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Hidden: tracks which already-saved file is selected (cleared on new upload) -->
+  <input type="hidden" name="selected_image_filename" id="selectedImageFilename"
+         value="{{ existing_filename or '' }}">
+</div>
+```
+
+---
+
+### 15.3 — Crop Modal HTML (place in `{% block modals %}`)
+
+```html
+<!-- Photo Normalization — Crop Modal -->
+<div class="modal modal-blur fade" id="cropModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ti ti-crop me-2"></i>Adjust Cover Photo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0" style="background:#1a1a2e;">
+        <div style="max-height:60vh; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+          <img id="cropImage" src="" alt="Crop preview"
+               style="display:block; max-width:100%; max-height:60vh;">
+        </div>
+        <div class="p-3 text-center">
+          <small class="text-muted">
+            <i class="ti ti-arrows-move me-1"></i>Drag to reposition
+            <span class="mx-2">|</span>
+            <i class="ti ti-zoom-in me-1"></i>Pinch or scroll to zoom
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="ti ti-x me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="cropConfirmBtn">
+          <i class="ti ti-check me-1"></i>Use Photo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Unsplash image picker modal (required — the tool handles all JS internally) -->
+<div class="modal modal-blur fade" id="unsplashModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select an Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="unsplashImages" class="row g-3"></div>
+        <div class="d-flex justify-content-between mt-3" style="display:none!important;">
+          <button type="button" id="prevPageBtn" class="btn btn-outline-secondary" disabled>
+            <i class="ti ti-chevron-left me-1"></i>Previous
+          </button>
+          <button type="button" id="nextPageBtn" class="btn btn-outline-secondary">
+            Next<i class="ti ti-chevron-right ms-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+---
+
+### 15.4 — JavaScript: call `initPhotoNormalizer()` (in `{% block scripts %}`)
+
+The shared factory is in `static/js/photo-normalizer.js` (loaded globally via `base.html`).
+**Never copy-paste the old IIFE.** Call the factory instead:
+
+```javascript
+// Cover photo — 16:9 crop, Unsplash search enabled
+var coverPhotoNormalizer = initPhotoNormalizer({
+  // Required — upload/crop
+  wrapperId:      'coverPhotoWrapper',
+  uploadInputId:  'uploadInput',
+  cropModalId:    'cropModal',
+  cropImageId:    'cropImage',
+  confirmBtnId:   'cropConfirmBtn',
+  // Optional — options panel + toggle
+  optionsPanelId: 'imageOptions',
+  hiddenInputId:  'selectedImageFilename',   // set to filename on Unsplash pick; cleared on upload
+  sourceToggleId: 'sourceToggle',
+  searchPanelId:  'searchWebContent',
+  uploadPanelId:  'uploadContent',
+  // Optional — Unsplash search (tool handles all JS internally)
+  searchInputId:    'imageDescription',
+  searchBtnId:      'searchImagesBtn',
+  unsplashModalId:  'unsplashModal',
+  unsplashImagesId: 'unsplashImages',
+  prevPageBtnId:    'prevPageBtn',
+  nextPageBtnId:    'nextPageBtn',
+  // Crop/compression
+  aspectRatio:    16 / 9,   // NaN for free crop
+  maxWidth:       1200,
+  maxHeight:      675,
+  objectFit:      'cover',
+  placeholderLabel: 'Add photo',
+});
+```
+
+**Config reference:**
+
+| Option | Type | Default | Purpose |
+|--------|------|---------|---------|
+| `wrapperId` | string | required | Thumbnail `<div>` element ID |
+| `uploadInputId` | string | required | `<input type="file">` element ID |
+| `cropModalId` | string | required | Crop modal element ID |
+| `cropImageId` | string | required | `<img>` inside crop modal |
+| `confirmBtnId` | string | required | "Use Photo" button ID |
+| `optionsPanelId` | string | null | Side options panel (shown/hidden on thumbnail click) |
+| `hiddenInputId` | string | null | Set to filename on Unsplash pick; cleared on new upload |
+| `sourceToggleId` | string | null | Search↔Upload checkbox toggle |
+| `searchPanelId` | string | null | Search panel element ID |
+| `uploadPanelId` | string | null | Upload panel element ID |
+| `searchInputId` | string | null | Unsplash: text input for the search query |
+| `searchBtnId` | string | null | Unsplash: button that triggers the search |
+| `unsplashModalId` | string | null | Unsplash: modal showing the image grid |
+| `unsplashImagesId` | string | null | Unsplash: `<div>` container for the image grid |
+| `prevPageBtnId` | string | null | Unsplash: Previous page button ID |
+| `nextPageBtnId` | string | null | Unsplash: Next page button ID |
+| `aspectRatio` | number | NaN | Cropper aspect ratio (NaN = free) |
+| `maxWidth` | number | 1200 | Max canvas width for compression |
+| `maxHeight` | number | 800 | Max canvas height for compression |
+| `quality` | number | 0.92 | JPEG quality (0–1) |
+| `objectFit` | string | 'cover' | CSS object-fit for thumbnail |
+| `placeholderLabel` | string | 'Add photo' | Text shown in empty state |
+| `src` | string | null | Pre-populate thumbnail on init |
+| `onConfirm` | function | null | Called with `(blob, objectUrl)` after crop confirmed **or** Unsplash pick |
+| `onDelete` | function | null | Called when red-X delete badge is clicked |
+
+**Public API returned:**
+
+```javascript
+coverPhotoNormalizer.setThumbnail(src);   // show image src as thumbnail
+coverPhotoNormalizer.reset(src);          // reset: if src → thumbnail, else → placeholder
+```
+
+---
+
+### 15.5 — Server-side: reuse `_save_optimized_image()` (`app.py:904`)
+
+This helper handles all uploads. Call it in your route instead of saving raw bytes:
+
+```python
+# app.py:904
+def _save_optimized_image(file_stream, dest_folder, prefix="upload", max_size=(1200, 800)):
+    """Save uploaded image: resize to max dimensions, convert to JPEG quality=85.
+    - Converts RGBA/palette to RGB with white background
+    - Resizes with LANCZOS resampling (no upscaling)
+    - Saves as JPEG quality=85, optimize=True
+    Returns: filename (str)
+    """
+```
+
+**Usage in a route:**
+
+```python
+upload_file = request.files.get('upload_image')
+if upload_file and upload_file.filename:
+    dest = os.path.join(current_app.root_path, 'static', 'uploads', 'activity_images')
+    filename = _save_optimized_image(upload_file.stream, dest, prefix="activity")
+    # filename is now e.g. "activity_a3f9b12c4d.jpg"
+```
+
+---
+
+### 15.6 — Compression summary
+
+| Stage | Tool | Format | Quality | Max size |
+|-------|------|--------|---------|----------|
+| Browser crop | Cropper.js → `canvas.toBlob()` | JPEG | 92% | 1200 × 675 |
+| Server save | PIL `img.thumbnail()` + `img.save()` | JPEG | 85% | 1200 × 800 |
+| Unsplash download | PIL (same as above) | JPEG | 85% | 1200 × 800 |
+
+**Rule:** A 5 MB photo uploaded by a user will exit the pipeline as a ≤ 200 KB JPEG. This protects VPS performance and prevents page load slowness.
+
+---
+
+### 15.7 — Checklist when adding this tool to a new page
+
+- [ ] Add widget HTML (§15.2) — update IDs, `DEST_FOLDER`, and `existing_filename`
+- [ ] Add crop modal + Unsplash modal HTML (§15.3) into `{% block modals %}`
+- [ ] Call `initPhotoNormalizer({...})` in `{% block scripts %}` (§15.4) with all element IDs — **no Unsplash JS to write**
+- [ ] In your Flask route: use `_save_optimized_image()` instead of saving raw bytes; handle both `upload_image` (file upload) and `selected_image_filename` (Unsplash pick)
+
+---
+
 ## Version History
 
 **v1.0 - October 27, 2025**
@@ -3128,6 +3414,27 @@ The `render_pagination` macro accepts:
 - Includes search, filters, and table components
 - Mobile responsiveness patterns documented
 - Complete code examples provided
+
+**v1.4 - February 28, 2026**
+- Moved Unsplash search/render/pagination logic fully into `photo-normalizer.js`
+- Added 6 new config options: `searchInputId`, `searchBtnId`, `unsplashModalId`, `unsplashImagesId`, `prevPageBtnId`, `nextPageBtnId`
+- `onConfirm` callback now fires on both crop confirmation and Unsplash image selection
+- Removed all page-specific Unsplash JS from `activity_form.html` and `activity_dashboard.html`
+- §15.3 updated: Unsplash modal is now standard (not optional)
+- §15.4 updated: full config table with all 6 new Unsplash options
+- §15.7 updated: checklist — no Unsplash JS to write, just pass IDs
+
+**v1.3 - February 28, 2026**
+- Refactored Photo Normalization Tool JS into shared `static/js/photo-normalizer.js`
+- Cropper.js + photo-normalizer.js now loaded globally via `base.html`
+- §15.1 updated: no per-page imports needed
+- §15.4 updated: documents `initPhotoNormalizer()` API instead of copy-paste IIFE
+- §15.7 updated: checklist simplified (3 steps instead of 5)
+
+**v1.2 - February 28, 2026**
+- Added Section 15: Photo Normalization Tool
+- Documents the cover photo crop/compress/search component from `activity_form.html`
+- Includes full HTML, JS, server-side helper, and reuse checklist
 
 ---
 

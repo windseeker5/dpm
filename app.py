@@ -6901,6 +6901,11 @@ def activity_dashboard(activity_id):
     # Determine if showing all (explicitly requested)
     show_all = show_all_param == "true"
 
+    from utils import get_setting
+    _site_url = get_setting('SITE_URL', '').rstrip('/')
+    _logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
+    org_logo_url = f"{_site_url}/static/uploads/{_logo_filename}"
+
     return render_template(
         "activity_dashboard.html",
         activity=activity,
@@ -6938,8 +6943,127 @@ def activity_dashboard(activity_id):
         },
         # Add pagination objects
         passport_pagination=passport_pagination,
-        signup_pagination=signup_pagination
+        signup_pagination=signup_pagination,
+        org_logo_url=org_logo_url,
     )
+
+
+def _build_announcement_html(message_html, logo_src):
+    """Build announcement email HTML. message_html is the verbatim content from the editor
+    (variables already substituted). No auto-injected greeting or signature."""
+    logo_block = (
+        f'<div style="text-align:center;margin-bottom:28px;">'
+        f'<img src="{logo_src}" style="max-height:64px;max-width:220px;object-fit:contain;border:0;">'
+        f'</div>'
+    ) if logo_src else ''
+    return (
+        f'<!DOCTYPE html>'
+        f'<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
+        f'<body style="margin:0;padding:24px;background:#f5f6fa;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Arial,sans-serif;">'
+        f'<div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;padding:40px 40px 32px;">'
+        f'{logo_block}'
+        f'<div style="color:#374151;font-size:15px;line-height:1.7;">{message_html}</div>'
+        f'</div></body></html>'
+    )
+
+
+@app.route("/send-announcement/<int:activity_id>", methods=["POST"])
+def send_announcement(activity_id):
+    if "admin" not in session:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+    from models import Activity, Passport
+    from sqlalchemy.orm import joinedload
+    from utils import get_setting, log_admin_action
+    import bleach
+
+    activity = db.session.get(Activity, activity_id)
+    if not activity:
+        return jsonify({"success": False, "error": "Activity not found"}), 404
+
+    subject = request.form.get("subject", "").strip()
+    message = request.form.get("message", "").strip()
+    recipient_filter = request.form.get("recipient_filter", "all")
+    passport_type_id = request.form.get("passport_type_id", type=int)
+    include_logo = request.form.get("include_logo", "1")
+
+    if not subject or not message:
+        return jsonify({"success": False, "error": "Subject and message are required"}), 400
+
+    # Sanitize the rich-text HTML from TinyMCE
+    allowed_tags = ['p', 'br', 'strong', 'em', 'b', 'i', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'span']
+    allowed_attrs = {'a': ['href', 'title'], 'span': ['style'], 'p': ['style']}
+    message = bleach.clean(message, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+
+    # Resolve logo — hosted URL only (CID inline images increase spam/phishing risk)
+    org_name = get_setting("ORG_NAME", "Fondation LHGI")
+    logo_src = None
+
+    if include_logo == "1":
+        import os
+        site_url = get_setting("SITE_URL", "").rstrip("/")
+        custom_logo_file = request.files.get("custom_logo")
+        if custom_logo_file and custom_logo_file.filename:
+            dest = os.path.join(current_app.root_path, "static", "uploads")
+            logo_filename = _save_optimized_image(custom_logo_file.stream, dest, prefix="announcement_logo", max_size=(400, 400))
+            logo_src = f"{site_url}/static/uploads/{logo_filename}"
+        else:
+            logo_filename = get_setting("LOGO_FILENAME", "logo.png")
+            logo_src = f"{site_url}/static/uploads/{logo_filename}"
+
+    passports_query = Passport.query.options(
+        joinedload(Passport.user)
+    ).filter_by(activity_id=activity_id)
+
+    if recipient_filter == "paid":
+        passports_query = passports_query.filter_by(paid=True)
+    elif recipient_filter == "unpaid":
+        passports_query = passports_query.filter_by(paid=False)
+    elif recipient_filter == "type" and passport_type_id:
+        passports_query = passports_query.filter_by(passport_type_id=passport_type_id)
+
+    passports = passports_query.all()
+
+    # Deduplicate by email so each user only gets one email
+    seen_emails = set()
+    unique_passports = []
+    for p in passports:
+        if p.user and p.user.email and p.user.email not in seen_emails:
+            seen_emails.add(p.user.email)
+            unique_passports.append(p)
+
+    if not unique_passports:
+        return jsonify({"success": False, "error": "No participants found for this filter"}), 400
+
+    sent_count = 0
+    failed_count = 0
+
+    for passport in unique_passports:
+        try:
+            user_name = passport.user.name or ""
+            # Substitute template variables the user typed in the editor
+            personalized = message.replace("{{ user_name }}", user_name).replace("{{ org_name }}", org_name)
+            html_body = _build_announcement_html(personalized, logo_src)
+
+            send_email_async(
+                app=current_app._get_current_object(),
+                user=passport.user,
+                activity=activity,
+                subject=subject,
+                to_email=passport.user.email,
+                html_body=html_body,
+                operational=True,
+            )
+            sent_count += 1
+        except Exception as e:
+            print(f"❌ Failed to send announcement to {passport.user.email}: {e}")
+            failed_count += 1
+
+    log_admin_action(
+        f"Announcement sent: \"{subject}\" to {sent_count} participants in {activity.name}"
+    )
+
+    return jsonify({"success": True, "sent": sent_count, "failed": failed_count})
 
 
 @app.route("/api/activity-kpis/<int:activity_id>")
