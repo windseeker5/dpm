@@ -271,13 +271,13 @@
                 const formContent = document.getElementById(`form-template-${template}`);
                 if (formContent) {
                     document.getElementById('customizeFormContent').innerHTML = formContent.innerHTML;
-                    
+
                     // Update modal title
                     const modalTitle = document.getElementById('modalTemplateName');
                     if (modalTitle) {
                         modalTitle.textContent = templateName;
                     }
-                    
+
                     // Initialize TinyMCE after a short delay
                     setTimeout(() => {
                         initEnhancedTinyMCE();

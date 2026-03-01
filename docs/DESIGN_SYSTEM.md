@@ -3138,6 +3138,65 @@ This is the standard image picker used everywhere you need a user to provide a p
 
 ---
 
+### ⛔ CRITICAL — COPY THE RECIPE EXACTLY. DO NOT MODIFY ANY CLASS.
+
+The HTML in §15.2 is the **canonical recipe**. Every class, every attribute, every style must be copied verbatim. One wrong class breaks the entire visual.
+
+**The most common mistake that WILL break the layout:**
+
+```html
+<!-- ❌ WRONG — -sm breaks the input-group flex row, button drops to next line -->
+<input type="text" class="form-control form-control-sm" ...>
+<button type="button" class="btn btn-primary btn-sm">
+
+<!-- ✅ CORRECT — exact classes from §15.2, no size variants ever -->
+<input type="text" class="form-control" ...>
+<button type="button" class="btn btn-primary">
+```
+
+**Rule: The search panel input-group requires ALL children to use the same size variant. The correct variant is the DEFAULT (no `-sm`, no `-lg`). Never deviate.**
+
+---
+
+### ⛔ CRITICAL — CSS SPECIFICITY: never add a page-level `.form-control { width: 100% }` rule in a modal container
+
+If your modal container has a CSS class with a rule like:
+
+```css
+/* ❌ This kills input-group layout — width:1% override from Bootstrap is defeated */
+.my-modal-content .form-control { width: 100%; }
+```
+
+This has the **same specificity** as Bootstrap's `.input-group > .form-control { width: 1% }`. Since it appears later in the stylesheet, it wins — forcing the input to full width and pushing the button to the next line.
+
+**Fix: add a restoration rule immediately after your `.form-control` rule:**
+
+```css
+.my-modal-content .form-control { width: 100%; }       /* general rule */
+.my-modal-content .input-group > .form-control { width: 1%; }  /* restore input-group */
+```
+
+This was the cause of the search button appearing below the input in the email template modals (`email-template-customization.css`, `template-form-single-column`). The fix was adding the second line.
+
+---
+
+### ⛔ CRITICAL — TIMING: always call `initPhotoNormalizer()` AFTER the HTML is in the live DOM
+
+If the widget HTML is **cloned into a modal** via `innerHTML =` (e.g. a dynamic template system), `initPhotoNormalizer()` must be called **after** the clone, not at `DOMContentLoaded`. The function captures element references at call time — calling it before the clone means it captures the hidden originals, not the visible copies.
+
+```javascript
+// ❌ WRONG — called at DOMContentLoaded before the clone
+document.addEventListener('DOMContentLoaded', () => {
+  initPhotoNormalizer({ wrapperId: 'myWrapper', ... });
+});
+
+// ✅ CORRECT — called immediately after innerHTML is set
+container.innerHTML = templateHTML;   // clone first
+initPhotoNormalizer({ wrapperId: 'myWrapper', ... });  // then init
+```
+
+---
+
 ### 15.1 — Dependencies (already global — nothing to add)
 
 **Cropper.js CSS/JS and `photo-normalizer.js` are loaded globally in `base.html`.**
@@ -3414,6 +3473,12 @@ if upload_file and upload_file.filename:
 - Includes search, filters, and table components
 - Mobile responsiveness patterns documented
 - Complete code examples provided
+
+**v1.5 - February 28, 2026**
+- Added §15 critical warnings: NO `-sm` size classes in the search panel (breaks `input-group` flex row)
+- Added §15 critical timing rule: `initPhotoNormalizer()` must be called AFTER `innerHTML =` clone, not at DOMContentLoaded
+- Added §15 CSS specificity rule: page-level `.form-control { width:100% }` defeats Bootstrap's `input-group > .form-control { width:1% }` — must add restoration rule for `input-group` children
+- These rules discovered while implementing email template hero images
 
 **v1.4 - February 28, 2026**
 - Moved Unsplash search/render/pagination logic fully into `photo-normalizer.js`

@@ -553,34 +553,53 @@
                placeholder="Leave empty to use system default">
       </div>
       
-      <!-- Hero Image -->
+      <!-- Hero Image — Photo Normalization Tool (see DESIGN_SYSTEM.md §15) -->
       <div class="mb-3">
         <label class="form-label">Hero Image</label>
-        <div class="hero-image-section">
-          <div class="d-flex align-items-start gap-3">
-            <div class="hero-image-preview">
-              <img id="modal-hero-img-preview-{{ template_key }}" 
-                   src="{{ url_for('get_hero_image', activity_id=activity.id, template_type=template_key) }}" 
-                   alt="Current hero image" 
-                   class="hero-preview-img"
-                   onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}';">
-            </div>
-            <div class="hero-upload-controls">
-              <input type="file" 
-                     name="{{ template_key }}_hero_image" 
-                     id="modal_{{ template_key }}_hero_image"
-                     class="hero-file-input" 
-                     accept="image/*"
-                     onchange="previewImage(this, 'modal-hero-img-preview-{{ template_key }}')">
-              <label for="modal_{{ template_key }}_hero_image" class="btn btn-outline-primary btn-sm hero-upload-btn">
-                <i class="ti ti-upload me-1"></i>
-                Choose Image
+        <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
+             style="border:1px solid rgba(98,105,118,0.2);width:fit-content;max-width:100%;">
+          <!-- Thumbnail: click to open options, red-X to reset to default -->
+          <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
+               style="width:100px;min-height:100px;cursor:pointer;"
+               id="{{ template_key }}HeroWrapper">
+          </div>
+          <!-- Options panel -->
+          <div id="{{ template_key }}HeroOptions" class="flex-grow-1 p-2"
+               style="display:none;border-left:1px solid rgba(98,105,118,0.2);">
+            <!-- Source toggle: Search ↔ Upload -->
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <small class="text-muted fw-medium">
+                <i class="ti ti-world-search" style="font-size:13px;"></i> Search
+              </small>
+              <label class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="{{ template_key }}HeroSourceToggle" role="switch">
               </label>
+              <small class="text-muted">
+                <i class="ti ti-upload" style="font-size:13px;"></i> Upload
+              </small>
             </div>
+            <!-- Search panel -->
+            <div id="{{ template_key }}HeroSearchPanel">
+              <div class="input-group">
+                <input type="text" id="{{ template_key }}HeroSearchInput"
+                       class="form-control" placeholder="e.g., Hockey, Yoga">
+                <button type="button" id="{{ template_key }}HeroSearchBtn" class="btn btn-primary">
+                  <i class="ti ti-search"></i>
+                </button>
+              </div>
+            </div>
+            <!-- Upload panel -->
+            <div id="{{ template_key }}HeroUploadPanel" style="display:none;">
+              <input type="file" name="{{ template_key }}_hero_image"
+                     id="modal_{{ template_key }}_hero_image"
+                     class="form-control" accept="image/*">
+            </div>
+            <!-- Hidden: stores filename when image is selected from Unsplash (web search) -->
+            <input type="hidden" id="{{ template_key }}HeroFilename" value="">
           </div>
         </div>
       </div>
-      
+
       <!-- Email Title -->
       <div class="mb-3">
         <label for="modal_{{ template_key }}_title" class="form-label">Email Title</label>
@@ -701,7 +720,32 @@ document.addEventListener('DOMContentLoaded', function() {
             const formContent = document.getElementById(`form-template-${template}`);
             if (formContent) {
                 document.getElementById('customizeFormContent').innerHTML = formContent.innerHTML;
-                
+
+                // Initialize photo normalizer AFTER clone — must run after innerHTML is set
+                initPhotoNormalizer({
+                    wrapperId:       `${template}HeroWrapper`,
+                    uploadInputId:   `modal_${template}_hero_image`,
+                    hiddenInputId:   `${template}HeroFilename`,
+                    cropModalId:     `${template}HeroCropModal`,
+                    cropImageId:     `${template}HeroCropImage`,
+                    confirmBtnId:    `${template}HeroCropConfirmBtn`,
+                    optionsPanelId:  `${template}HeroOptions`,
+                    sourceToggleId:  `${template}HeroSourceToggle`,
+                    searchPanelId:   `${template}HeroSearchPanel`,
+                    uploadPanelId:   `${template}HeroUploadPanel`,
+                    searchInputId:   `${template}HeroSearchInput`,
+                    searchBtnId:     `${template}HeroSearchBtn`,
+                    unsplashModalId: `${template}HeroUnsplashModal`,
+                    unsplashImagesId:`${template}HeroUnsplashImages`,
+                    prevPageBtnId:   `${template}HeroPrevPageBtn`,
+                    nextPageBtnId:   `${template}HeroNextPageBtn`,
+                    aspectRatio:     1,
+                    maxWidth:        400,
+                    maxHeight:       400,
+                    objectFit:       'contain',
+                    src: `/activity/{{ activity.id }}/hero-image/${template}`,
+                });
+
                 // Update modal title with template name
                 const modalTitleElement = document.getElementById('modalTemplateName');
                 if (modalTitleElement) {
@@ -972,9 +1016,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get file inputs for images
             const heroImageInput = document.querySelector(`#modal_${templateType}_hero_image`);
             const ownerLogoInput = document.querySelector(`#modal_${templateType}_owner_logo`);
+            const heroFilenameInput = document.querySelector(`#${templateType}HeroFilename`);
 
             if (heroImageInput && heroImageInput.files[0]) {
+                // Local file upload or crop-confirmed file
                 formData.append(`${templateType}_hero_image`, heroImageInput.files[0]);
+            } else if (heroFilenameInput && heroFilenameInput.value) {
+                // Unsplash image already downloaded to server — send filename so backend can use it
+                formData.append(`${templateType}_hero_image_filename`, heroFilenameInput.value);
             }
             if (ownerLogoInput && ownerLogoInput.files[0]) {
                 formData.append(`${templateType}_owner_logo`, ownerLogoInput.files[0]);
@@ -1058,5 +1107,61 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+
+{% for template_key, template_name in template_types.items() %}
+<div class="modal modal-blur fade" id="{{ template_key }}HeroCropModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-crop me-2"></i>Adjust Hero Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0" style="background:#1a1a2e;">
+        <div style="max-height:60vh;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+          <img id="{{ template_key }}HeroCropImage" src="" alt="Crop preview"
+               style="display:block;max-width:100%;max-height:60vh;">
+        </div>
+        <div class="p-3 text-center">
+          <small class="text-muted">
+            <i class="ti ti-arrows-move me-1"></i>Drag to reposition
+            <span class="mx-2">|</span>
+            <i class="ti ti-zoom-in me-1"></i>Scroll to zoom
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="ti ti-x me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="{{ template_key }}HeroCropConfirmBtn">
+          <i class="ti ti-check me-1"></i>Use Photo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Unsplash image picker modal -->
+<div class="modal modal-blur fade" id="{{ template_key }}HeroUnsplashModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-photo-search me-2"></i>Select an Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="{{ template_key }}HeroUnsplashImages" class="row g-3"></div>
+        <div class="d-flex justify-content-between align-items-center pt-3" style="display:none!important;">
+          <button class="btn btn-outline-secondary" id="{{ template_key }}HeroPrevPageBtn">Previous</button>
+          <button class="btn btn-outline-primary" id="{{ template_key }}HeroNextPageBtn">Next</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
 
 {% endblock %}

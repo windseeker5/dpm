@@ -1915,6 +1915,11 @@ textarea.form-control {
   width: 100%;
 }
 
+/* Restore input-group flex layout inside the modal — width:100% above breaks it */
+.template-form-single-column .input-group > .form-control {
+  width: 1%;
+}
+
 /* More spacious rich text editors in modal */
 .template-form-single-column .tox-tinymce {
   min-height: 250px !important;

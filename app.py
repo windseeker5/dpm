@@ -10257,22 +10257,35 @@ def save_email_templates(activity_id):
         # Process hero image uploads for each template type
         for template_type in templates_to_process:
             hero_file = request.files.get(f'{template_type}_hero_image')
+            hero_image_filename = request.form.get(f'{template_type}_hero_image_filename', '').strip()
+
+            # Resolve image data: either a direct upload or an already-downloaded Unsplash file
+            hero_file_data = None
             if hero_file and hero_file.filename:
+                hero_file_data = hero_file.read()
+            elif hero_image_filename:
+                # Image was selected from Unsplash web search — file already on server
+                unsplash_path = os.path.join('static', 'uploads', 'activity_images', hero_image_filename)
+                if os.path.exists(unsplash_path):
+                    with open(unsplash_path, 'rb') as f:
+                        hero_file_data = f.read()
+                    print(f"Using Unsplash-downloaded image for {template_type}: {hero_image_filename}")
+                else:
+                    print(f"Unsplash image not found on disk for {template_type}: {unsplash_path}")
+
+            if hero_file_data:
                 try:
                     # Use template-specific filename
                     hero_filename = f"{activity_id}_{template_type}_hero.png"
                     upload_path = os.path.join('static', 'uploads', hero_filename)
-                    
+
                     # Ensure uploads directory exists
                     os.makedirs(os.path.dirname(upload_path), exist_ok=True)
-                    
-                    # Read the uploaded image data
-                    hero_file_data = hero_file.read()
-                    
+
                     # Resize the image to match template dimensions
                     from utils import resize_hero_image
                     resized_image_data, resize_message = resize_hero_image(hero_file_data, template_type)
-                    
+
                     if resized_image_data:
                         # Save the resized image
                         with open(upload_path, 'wb') as f:
@@ -10281,11 +10294,11 @@ def save_email_templates(activity_id):
                         print(f"Hero image resized and saved for {template_type}: {hero_filename} - {resize_message}")
                     else:
                         # Fall back to original if resize fails
-                        hero_file.seek(0)  # Reset file pointer
-                        hero_file.save(upload_path)
+                        with open(upload_path, 'wb') as f:
+                            f.write(hero_file_data)
                         hero_files_uploaded.append((template_type, hero_filename))
                         print(f"Hero image saved without resizing for {template_type}: {hero_filename} - {resize_message}")
-                    
+
                 except Exception as e:
                     flash(f"Error uploading hero image for {template_type}: {str(e)}", "error")
         
@@ -10920,9 +10933,11 @@ def email_preview_live(activity_id):
     # Handle show_qr_code toggle from form data (for templates that have QR codes)
     if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
         show_qr_form_key = f'{template_type}_show_qr_code'
-        # Checkbox: 'on' if checked, empty/missing if unchecked
-        show_qr_code = request.form.get(show_qr_form_key) == 'on'
-        live_customizations['show_qr_code'] = show_qr_code
+        qr_form_val = request.form.get(show_qr_form_key)
+        if qr_form_val is not None:
+            # Field was explicitly sent — respect its value ('on' = True, '' = False)
+            live_customizations['show_qr_code'] = (qr_form_val == 'on')
+        # If field is absent, don't override — merged_template will use the saved DB value
 
     # Extract and sanitize customizations from form data for current template type
     form_fields = ['subject', 'title', 'intro_text', 'conclusion_text', 'cta_text', 'cta_url', 'custom_message']
