@@ -450,10 +450,11 @@ def get_setting(key, default=""):
 
     Priority order:
     1. Environment variable (from docker-compose)
-    2. Database setting table
+    2. Database setting table (cached in flask.g for the lifetime of the request)
     3. Default value
     """
     import os
+    from flask import g
 
     # First check environment variables (from docker-compose)
     env_value = os.environ.get(key)
@@ -461,14 +462,22 @@ def get_setting(key, default=""):
         return env_value
 
     with current_app.app_context():
+        # Cache all settings in flask.g so Setting.query.all() runs at most once per request
+        if not hasattr(g, '_settings_cache'):
+            try:
+                g._settings_cache = {s.key: s.value for s in Setting.query.all()}
+            except Exception:
+                g._settings_cache = {}
+
+        cached = g._settings_cache.get(key)
+        if cached not in [None, ""]:
+            return cached
+
+        # Fall back to SettingsManager for any key not in the simple setting table
         try:
             from models.settings import SettingsManager
             return SettingsManager.get(key, default)
         except ImportError:
-            # Fallback to old method if new settings system not available
-            setting = Setting.query.filter_by(key=key).first()
-            if setting and setting.value not in [None, ""]:
-                return setting.value
             return default
 
 
@@ -747,6 +756,33 @@ def generate_placeholder_logo_image(name, size=200):
     return buf
 
 
+def save_optimized_image(file_stream, dest_folder, prefix="upload", max_size=(1200, 800)):
+    """Save uploaded image: resize to max dimensions, convert to JPEG quality=85.
+
+    Returns the saved filename. For PDF/SVG files, callers should skip this function.
+    """
+    from PIL import Image as _Image
+
+    img = _Image.open(file_stream)
+
+    # Flatten transparency to white background
+    if img.mode in ('RGBA', 'P'):
+        bg = _Image.new('RGB', img.size, (255, 255, 255))
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        bg.paste(img, mask=img.split()[3])
+        img = bg
+    elif img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    img.thumbnail(max_size, _Image.Resampling.LANCZOS)
+
+    filename = f"{prefix}_{uuid.uuid4().hex[:10]}.jpg"
+    os.makedirs(dest_folder, exist_ok=True)
+    img.save(os.path.join(dest_folder, filename), 'JPEG', quality=85, optimize=True)
+    return filename
+
+
 def generate_qr_code(pass_code):
     qr = qrcode.make(pass_code)
     img_bytes = io.BytesIO()
@@ -756,12 +792,13 @@ def generate_qr_code(pass_code):
 
 
 
-def generate_qr_code_image(pass_code):
+@lru_cache(maxsize=512)
+def generate_qr_code_image(pass_code: str) -> bytes:
+    """Return PNG bytes for the given pass_code QR. Result is cached — same code always returns same bytes."""
     qr = qrcode.make(pass_code)
     img_bytes = io.BytesIO()
     qr.save(img_bytes, format="PNG")
-    img_bytes.seek(0)
-    return img_bytes
+    return img_bytes.getvalue()
 
 
 def auto_create_passport_from_signup(signup, payment_record=None, marked_paid_by="minipass-bot@system"):
@@ -3662,7 +3699,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         # Build inline_images - only include QR code if enabled
         inline_images = {}
         if show_qr_code:
-            inline_images["qr_code"] = generate_qr_code_image(pass_data.pass_code).read()
+            inline_images["qr_code"] = generate_qr_code_image(pass_data.pass_code)
 
         # Use the standard send_email function with compiled template
         send_email_async(
@@ -3709,7 +3746,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     print("🔔 Email debug - intro:", intro[:80])
 
     # Only generate QR code if enabled
-    qr_data = generate_qr_code_image(pass_data.pass_code).read() if show_qr_code else None
+    qr_data = generate_qr_code_image(pass_data.pass_code) if show_qr_code else None
     history = get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)
 
     # Map event type to template directory - Use compiled template paths
