@@ -457,14 +457,17 @@ def upload_organization_logo():
         if not file.filename.lower().endswith(tuple(allowed_extensions)):
             return jsonify({'success': False, 'error': 'Invalid file type'}), 400
         
-        # Save file
-        filename = secure_filename(file.filename)
         upload_folder = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
         os.makedirs(upload_folder, exist_ok=True)
-        
-        file_path = os.path.join(upload_folder, filename)
-        file.save(file_path)
-        
+
+        # SVG is not PIL-compatible — save raw; compress all other image types
+        if file.filename.lower().endswith('.svg'):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(upload_folder, filename))
+        else:
+            from utils import save_optimized_image
+            filename = save_optimized_image(file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
+
         # Update setting
         save_setting('LOGO_FILENAME', filename)
         log_admin_action(f"Uploaded organization logo: {filename}")

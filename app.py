@@ -595,6 +595,39 @@ def get_git_version():
     except:
         return 'unknown'
 
+# TTL cache for sidebar badge counts — keyed by admin email, expires after 45s
+_ctx_cache = {}  # {admin_email: ({'pending': N, 'active': N, 'unmatched': N, 'admin': obj}, expire_at)}
+
+def _get_sidebar_counts(admin_email):
+    """Return sidebar badge counts, refreshed at most once every 45 seconds per admin."""
+    entry = _ctx_cache.get(admin_email)
+    if entry and time.time() < entry[1]:
+        return entry[0]
+    try:
+        counts = {
+            'pending_signups_count': Signup.query.filter_by(status='pending').count(),
+            'active_passport_count': Passport.query.filter(
+                db.or_(Passport.uses_remaining > 0, Passport.paid == False)
+            ).count(),
+            'unmatched_payment_count': db.session.query(EbankPayment.id).filter(
+                EbankPayment.result == 'NO_MATCH',
+                EbankPayment.id.in_(
+                    db.session.query(db.func.max(EbankPayment.id))
+                    .group_by(EbankPayment.bank_info_name, EbankPayment.bank_info_amt, EbankPayment.from_email)
+                )
+            ).count(),
+            'current_admin': Admin.query.filter_by(email=admin_email).first(),
+        }
+    except Exception:
+        counts = {
+            'pending_signups_count': 0,
+            'active_passport_count': 0,
+            'unmatched_payment_count': 0,
+            'current_admin': None,
+        }
+    _ctx_cache[admin_email] = (counts, time.time() + 45)
+    return counts
+
 @app.context_processor
 def inject_globals_and_csrf():
     from flask_wtf.csrf import generate_csrf
@@ -608,24 +641,11 @@ def inject_globals_and_csrf():
 
     try:
         if has_request_context() and "admin" in session:  # Only calculate if admin is logged in
-            pending_signups_count = Signup.query.filter_by(status='pending').count()
-            # Calculate active passports (uses_remaining > 0 OR unpaid) - matches Active filter logic
-            active_passport_count = Passport.query.filter(
-                db.or_(
-                    Passport.uses_remaining > 0,
-                    Passport.paid == False
-                )
-            ).count()
-            # Calculate unmatched payments (deduplicated count of NO_MATCH)
-            unmatched_payment_count = db.session.query(EbankPayment.id).filter(
-                EbankPayment.result == 'NO_MATCH',
-                EbankPayment.id.in_(
-                    db.session.query(db.func.max(EbankPayment.id))
-                    .group_by(EbankPayment.bank_info_name, EbankPayment.bank_info_amt, EbankPayment.from_email)
-                )
-            ).count()
-            # Get current admin info for personalization
-            current_admin = Admin.query.filter_by(email=session.get("admin")).first()
+            sidebar = _get_sidebar_counts(session.get("admin"))
+            pending_signups_count = sidebar['pending_signups_count']
+            active_passport_count = sidebar['active_passport_count']
+            unmatched_payment_count = sidebar['unmatched_payment_count']
+            current_admin = sidebar['current_admin']
     except Exception:
         # If there's any database error, default to 0
         pending_signups_count = 0
@@ -3672,9 +3692,9 @@ def setup():
         logo_file = request.files.get("ORG_LOGO_FILE")
 
         if logo_file and logo_file.filename:
-            filename = secure_filename(logo_file.filename)
-            logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            logo_file.save(logo_path)
+            upload_folder = app.config["UPLOAD_FOLDER"]
+            filename = _save_optimized_image(logo_file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
+            logo_path = os.path.join(upload_folder, filename)
 
             setting = Setting.query.filter_by(key="LOGO_FILENAME").first()
             if setting:
@@ -3893,10 +3913,9 @@ def unified_settings():
 
             logo_file = request.files.get("ORG_LOGO_FILE")
             if logo_file and logo_file.filename and not delete_logo:
-                os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-                filename = secure_filename(logo_file.filename)
-                logo_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-                logo_file.save(logo_path)
+                upload_folder = app.config["UPLOAD_FOLDER"]
+                filename = _save_optimized_image(logo_file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
+                logo_path = os.path.join(upload_folder, filename)
                 logo_filename = filename  # Store for JSON response
                 
                 setting = Setting.query.filter_by(key="LOGO_FILENAME").first()
@@ -4541,8 +4560,7 @@ def show_pass(pass_code):
         return "Pass not found", 404
 
     # ✅ Generate QR code
-    qr_image_io = generate_qr_code_image(pass_code)
-    qr_data = base64.b64encode(qr_image_io.read()).decode()
+    qr_data = base64.b64encode(generate_qr_code_image(pass_code)).decode()
 
     # ✅ Pass fallback admin email for correct "Par" display
     history = get_pass_history_data(pass_code, fallback_admin_email=session.get("admin"))
@@ -6125,12 +6143,14 @@ def activity_income(activity_id, income_id=None):
                 if os.path.exists(old_receipt_path):
                     os.remove(old_receipt_path)
 
-            ext = os.path.splitext(receipt_file.filename)[1]
-            filename = f"income_{uuid.uuid4().hex}{ext}"
             receipts_dir = os.path.join(app.static_folder, "uploads/receipts")
-            os.makedirs(receipts_dir, exist_ok=True)
-            path = os.path.join(receipts_dir, filename)
-            receipt_file.save(path)
+            ext = os.path.splitext(receipt_file.filename)[1].lower()
+            if ext == '.pdf':
+                filename = f"income_{uuid.uuid4().hex}{ext}"
+                os.makedirs(receipts_dir, exist_ok=True)
+                receipt_file.save(os.path.join(receipts_dir, filename))
+            else:
+                filename = _save_optimized_image(receipt_file.stream, receipts_dir, prefix="income", max_size=(1200, 1600))
             income.receipt_filename = filename
 
         # Log the income operation
@@ -6253,12 +6273,14 @@ def activity_expenses(activity_id, expense_id=None):
                 if os.path.exists(old_receipt_path):
                     os.remove(old_receipt_path)
 
-            ext = os.path.splitext(receipt_file.filename)[1]
-            filename = f"expense_{uuid.uuid4().hex}{ext}"
             receipts_dir = os.path.join(app.static_folder, "uploads/receipts")
-            os.makedirs(receipts_dir, exist_ok=True)
-            path = os.path.join(receipts_dir, filename)
-            receipt_file.save(path)
+            ext = os.path.splitext(receipt_file.filename)[1].lower()
+            if ext == '.pdf':
+                filename = f"expense_{uuid.uuid4().hex}{ext}"
+                os.makedirs(receipts_dir, exist_ok=True)
+                receipt_file.save(os.path.join(receipts_dir, filename))
+            else:
+                filename = _save_optimized_image(receipt_file.stream, receipts_dir, prefix="expense", max_size=(1200, 1600))
             expense.receipt_filename = filename
 
         # Log the expense operation
@@ -10794,10 +10816,8 @@ def email_preview(activity_id):
         if activity.email_templates and template_type in activity.email_templates:
             preview_show_qr = activity.email_templates[template_type].get('show_qr_code', True)
         if preview_show_qr:
-            qr_code_data = generate_qr_code_image('SAMPLE123')
-            if qr_code_data:
-                qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
-                rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
+            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123')).decode('utf-8')
+            rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
 
         # Add a preview banner to distinguish from actual emails
         preview_banner = """
@@ -11059,10 +11079,8 @@ def email_preview_live(activity_id):
 
         # Generate sample QR code for preview (only if enabled)
         if show_qr_code:
-            qr_code_data = generate_qr_code_image('SAMPLE123')
-            if qr_code_data:
-                qr_base64 = base64.b64encode(qr_code_data.read()).decode('utf-8')
-                rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
+            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123')).decode('utf-8')
+            rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
 
         # Add a live preview banner to distinguish from saved templates
         preview_banner = """
@@ -11348,10 +11366,8 @@ def test_email_template(activity_id):
 
         QR_TEMPLATES = {'newPass', 'paymentReceived', 'redeemPass', 'latePayment'}
         if template_type in QR_TEMPLATES:
-            qr_code_data = generate_qr_code_image('TEST123')
-            if qr_code_data:
-                inline_images['qr_code'] = qr_code_data.read()
-                print(f"   Added QR code: {len(inline_images['qr_code'])} bytes")
+            inline_images['qr_code'] = generate_qr_code_image('TEST123')
+            print(f"   Added QR code: {len(inline_images['qr_code'])} bytes")
         else:
             print(f"   No QR code for template type: {template_type}")
 
@@ -11437,28 +11453,18 @@ def upload_activity_logo(activity_id):
         logos_dir = os.path.join('static', 'uploads', 'logos')
         os.makedirs(logos_dir, exist_ok=True)
         
-        # Generate unique filename to avoid conflicts
-        filename = secure_filename(logo_file.filename)
-        name, ext = os.path.splitext(filename)
-        unique_filename = f"activity_{activity_id}_{name}_{uuid.uuid4().hex[:8]}{ext}"
-        
-        logo_path = os.path.join(logos_dir, unique_filename)
-        
         # Delete old logo if exists
         if activity.logo_filename:
             old_logo_path = os.path.join(logos_dir, activity.logo_filename)
             if os.path.exists(old_logo_path):
                 os.remove(old_logo_path)
                 print(f"Deleted old logo: {old_logo_path}")
-        
-        # Save new logo
-        logo_file.save(logo_path)
-        
-        # Validate file size (max 5MB)
-        if os.path.getsize(logo_path) > 5 * 1024 * 1024:  # 5MB limit
-            os.remove(logo_path)
-            return jsonify({"success": False, "error": "File too large. Maximum size is 5MB."}), 400
-        
+
+        # Save and compress logo (compression handles size reduction automatically)
+        unique_filename = _save_optimized_image(
+            logo_file.stream, logos_dir, prefix=f"activity_{activity_id}_logo", max_size=(400, 400)
+        )
+
         # Update activity with new logo filename
         activity.logo_filename = unique_filename
         db.session.commit()

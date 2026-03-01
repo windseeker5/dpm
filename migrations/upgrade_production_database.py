@@ -2232,6 +2232,30 @@ def task29_optimize_existing_activity_images(cursor):
 # ============================================================================
 # TASK 30: Add Discord Webhook URL to Activity Table
 # ============================================================================
+def task31_add_performance_indexes(cursor):
+    """Add missing indexes on foreign key columns used in frequent queries"""
+    log("⚡", "TASK 31: Adding performance indexes", Colors.BLUE)
+
+    indexes = [
+        ("ix_signup_activity",      "CREATE INDEX IF NOT EXISTS ix_signup_activity ON signup (activity_id)"),
+        ("ix_signup_user",          "CREATE INDEX IF NOT EXISTS ix_signup_user ON signup (user_id)"),
+        ("ix_signup_passport_type", "CREATE INDEX IF NOT EXISTS ix_signup_passport_type ON signup (passport_type_id)"),
+        ("ix_passport_activity",    "CREATE INDEX IF NOT EXISTS ix_passport_activity ON passport (activity_id)"),
+        ("ix_passport_user",        "CREATE INDEX IF NOT EXISTS ix_passport_user ON passport (user_id)"),
+        ("ix_passport_type",        "CREATE INDEX IF NOT EXISTS ix_passport_type ON passport (passport_type_id)"),
+        ("ix_passport_created_by",  "CREATE INDEX IF NOT EXISTS ix_passport_created_by ON passport (created_by)"),
+        ("ix_ebank_matched_pass",   "CREATE INDEX IF NOT EXISTS ix_ebank_matched_pass ON ebank_payment (matched_pass_id)"),
+        ("ix_reminder_passport",    "CREATE INDEX IF NOT EXISTS ix_reminder_passport ON reminder_log (passport_id)"),
+        ("ix_activity_created_by",  "CREATE INDEX IF NOT EXISTS ix_activity_created_by ON activity (created_by)"),
+    ]
+
+    for name, sql in indexes:
+        cursor.execute(sql)
+        log("✅", f"  Index {name} created (or already existed)", Colors.GREEN)
+
+    return True
+
+
 def task30_add_discord_webhook(cursor):
     """Add Discord webhook URL and invite URL fields to Activity table"""
     log("🎮", "TASK 30: Adding Discord fields to Activity table", Colors.BLUE)
@@ -2301,6 +2325,7 @@ def main():
         ("Stripe Transaction Table", task28_add_stripe_transaction_table),
         ("Optimize Activity Images", task29_optimize_existing_activity_images),
         ("Discord Webhook Field", task30_add_discord_webhook),
+        ("Performance Indexes", task31_add_performance_indexes),
     ]
 
     completed = 0
