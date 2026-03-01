@@ -5245,3 +5245,32 @@ def send_push_notification_to_admin(admin_id, title, body, url=None, tag=None):
     return success_count
 
 
+def send_discord_announcement(subject, message_html, activity_name, webhook_url):
+    """Post an announcement to a Discord channel via webhook."""
+    import re
+    import requests
+
+    # HTML → Discord markdown (basic conversion)
+    text = message_html
+    text = re.sub(r'<strong>(.*?)</strong>', r'**\1**', text, flags=re.DOTALL)
+    text = re.sub(r'<b>(.*?)</b>', r'**\1**', text, flags=re.DOTALL)
+    text = re.sub(r'<em>(.*?)</em>', r'*\1*', text, flags=re.DOTALL)
+    text = re.sub(r'<i>(.*?)</i>', r'*\1*', text, flags=re.DOTALL)
+    text = re.sub(r'<li>(.*?)</li>', r'• \1\n', text, flags=re.DOTALL)
+    text = re.sub(r'<[^>]+>', '', text)   # strip remaining tags
+    text = text.strip()
+
+    payload = {
+        "embeds": [{
+            "title": subject,
+            "description": text,
+            "color": 0x206bc4,  # Tabler blue
+            "footer": {"text": f"📍 {activity_name}"}
+        }]
+    }
+    try:
+        r = requests.post(webhook_url, json=payload, timeout=5)
+        return r.status_code == 204
+    except Exception as e:
+        print(f"[Discord] Webhook error: {e}")
+        return False

@@ -661,6 +661,15 @@ div.dropdown-divider {
               <span>{{ survey_rating }}<span style="font-size: 0.85em; color: #9ca3af;">({{ survey_count }})</span></span>
             </div>
             {% endif %}
+
+            <!-- Discord Invite Link - Only show if configured -->
+            {% if activity.discord_invite_url %}
+            <div class="stat-minimal stat-clickable"
+                 onclick="copyDiscordInvite(event, '{{ activity.discord_invite_url }}')"
+                 title="Click to copy Discord invite link">
+              <i class="ti ti-brand-discord"></i>
+            </div>
+            {% endif %}
               </div>
 
               <!-- Revenue Progress Bar - Simple thin bar only -->
@@ -1656,6 +1665,17 @@ function copyLocationToClipboard(event, location) {
     const btn = event.currentTarget;
     const originalHTML = btn.innerHTML;
     btn.innerHTML = '<i class="ti ti-check"></i><span>Copied!</span>';
+    setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+  });
+}
+
+// Copy Discord invite link to clipboard with feedback
+function copyDiscordInvite(event, url) {
+  event.preventDefault();
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.currentTarget;
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-check"></i>';
     setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
   });
 }
@@ -3349,6 +3369,18 @@ function confirmSignupDelete(signupId, signupUser) {
             {% endfor %}
           </select>
         </div>
+        {% if activity.discord_webhook_url %}
+        <div class="mb-3">
+          <label class="form-check form-switch">
+            <input class="form-check-input" type="checkbox"
+                   name="send_to_discord" id="send_to_discord" checked>
+            <span class="form-check-label">
+              <i class="ti ti-brand-discord me-1 text-indigo"></i>
+              Also post to Discord channel
+            </span>
+          </label>
+        </div>
+        {% endif %}
         <div class="mb-3">
           <label class="form-label">Subject</label>
           <input type="text" class="form-control" id="announcementSubject" placeholder="Update about {{ activity.name }}" maxlength="150">
@@ -3978,6 +4010,11 @@ function sendAnnouncement(activityId) {
   var logoUploadInput = document.getElementById('logoUploadInput');
   if (logoUploadInput && logoUploadInput.files.length > 0) {
     formData.append('custom_logo', logoUploadInput.files[0]);
+  }
+  // Discord checkbox
+  var discordCheck = document.getElementById('send_to_discord');
+  if (discordCheck && discordCheck.checked) {
+    formData.append('send_to_discord', 'on');
   }
 
   sendBtn.disabled = true;

@@ -2230,6 +2230,28 @@ def task29_optimize_existing_activity_images(cursor):
 
 
 # ============================================================================
+# TASK 30: Add Discord Webhook URL to Activity Table
+# ============================================================================
+def task30_add_discord_webhook(cursor):
+    """Add Discord webhook URL and invite URL fields to Activity table"""
+    log("🎮", "TASK 30: Adding Discord fields to Activity table", Colors.BLUE)
+
+    if check_column_exists(cursor, 'activity', 'discord_webhook_url'):
+        log("⏭️ ", "  Activity.discord_webhook_url already exists", Colors.YELLOW)
+    else:
+        cursor.execute("ALTER TABLE activity ADD COLUMN discord_webhook_url VARCHAR(500)")
+        log("✅", "  Added Activity.discord_webhook_url", Colors.GREEN)
+
+    if check_column_exists(cursor, 'activity', 'discord_invite_url'):
+        log("⏭️ ", "  Activity.discord_invite_url already exists", Colors.YELLOW)
+    else:
+        cursor.execute("ALTER TABLE activity ADD COLUMN discord_invite_url VARCHAR(500)")
+        log("✅", "  Added Activity.discord_invite_url", Colors.GREEN)
+
+    return True
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -2278,6 +2300,7 @@ def main():
         ("Reply-To Email Field", task27_add_reply_to_email_field),
         ("Stripe Transaction Table", task28_add_stripe_transaction_table),
         ("Optimize Activity Images", task29_optimize_existing_activity_images),
+        ("Discord Webhook Field", task30_add_discord_webhook),
     ]
 
     completed = 0
