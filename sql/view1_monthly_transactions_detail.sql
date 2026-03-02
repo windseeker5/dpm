@@ -23,6 +23,7 @@ SELECT
 FROM passport p
 JOIN activity a ON p.activity_id = a.id
 LEFT JOIN user u ON p.user_id = u.id
+WHERE (p.marked_paid_by IS NULL OR p.marked_paid_by NOT LIKE 'stripe%')
 
 UNION ALL
 
