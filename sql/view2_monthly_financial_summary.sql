@@ -14,6 +14,7 @@ WITH monthly_passports_cash AS (
         SUM(sold_amt) as passport_sales_cash
     FROM passport
     WHERE paid = 1 AND paid_date IS NOT NULL
+      AND (marked_paid_by IS NULL OR marked_paid_by NOT LIKE 'stripe%')
     GROUP BY month, activity_id
 ),
 monthly_passports_ar AS (
