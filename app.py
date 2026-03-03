@@ -2161,14 +2161,25 @@ def edit_activity(activity_id):
                 pt.status = 'archived'
                 pt.archived_at = datetime.now(timezone.utc)
                 pt.archived_by = session.get("admin", "system")
-                
+
                 # Preserve passport type names in existing passports
                 passports_to_preserve = Passport.query.filter_by(passport_type_id=pt_id).all()
                 for passport in passports_to_preserve:
                     if not passport.passport_type_name:  # Only update if not already preserved
                         passport.passport_type_name = pt.name
-                
+
                 passport_types_archived += 1
+
+        # Gate: if archiving an activity that has active passports, ask for confirmation first
+        if new_status == 'inactive' and old_status != 'inactive':
+            active_count = Passport.query.filter_by(activity_id=activity_id)\
+                                         .filter(Passport.uses_remaining > 0).count()
+            if active_count > 0:
+                activity.status = old_status  # Revert status; save all other form changes
+                db.session.commit()
+                return redirect(url_for("confirm_archive_activity",
+                                        activity_id=activity_id,
+                                        next="edit_activity"))
 
         db.session.commit()
 
@@ -4996,6 +5007,13 @@ def archive_activity_from_limit(activity_id):
         flash("Activity not found.", "error")
         return redirect(url_for("tier_limit_exceeded"))
 
+    active_count = Passport.query.filter_by(activity_id=activity_id)\
+                                 .filter(Passport.uses_remaining > 0).count()
+    if active_count > 0:
+        return redirect(url_for("confirm_archive_activity",
+                                activity_id=activity_id,
+                                next="tier_limit_exceeded"))
+
     # Archive the activity
     activity.status = 'inactive'
     db.session.commit()
@@ -7069,6 +7087,65 @@ def activity_dashboard(activity_id):
         signup_pagination=signup_pagination,
         org_logo_url=org_logo_url,
     )
+
+
+@app.route("/confirm-archive-activity/<int:activity_id>")
+def confirm_archive_activity(activity_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    activity = db.session.get(Activity, activity_id)
+    if not activity:
+        flash("Activity not found.", "error")
+        return redirect(url_for("list_activities"))
+    active_count = Passport.query.filter_by(activity_id=activity_id)\
+                                 .filter(Passport.uses_remaining > 0).count()
+    next_page = request.args.get("next", "list_activities")
+    return render_template("confirm_archive_activity.html",
+                           activity=activity,
+                           active_count=active_count,
+                           next_page=next_page)
+
+
+@app.route("/execute-archive-activity/<int:activity_id>", methods=["POST"])
+def execute_archive_activity(activity_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    activity = db.session.get(Activity, activity_id)
+    if not activity:
+        flash("Activity not found.", "error")
+        return redirect(url_for("list_activities"))
+    passport_action = request.form.get("passport_action", "archive_only")
+    next_page = request.form.get("next_page", "list_activities")
+
+    if passport_action == "close_and_archive":
+        Passport.query.filter_by(activity_id=activity_id)\
+                      .filter(Passport.uses_remaining > 0)\
+                      .update({"uses_remaining": 0})
+
+    activity.status = 'inactive'
+    db.session.commit()
+    flash(f'Activity "{activity.name}" archived.', 'success')
+
+    if next_page == "edit_activity":
+        return redirect(url_for("edit_activity", activity_id=activity_id))
+    return redirect(url_for(next_page))
+
+
+@app.route("/bulk-close-passports/<int:activity_id>", methods=["POST"])
+def bulk_close_passports(activity_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+    activity = db.session.get(Activity, activity_id)
+    if not activity or activity.status != 'inactive':
+        flash("Activity not found or not archived.", "error")
+        return redirect(url_for("list_activities"))
+
+    count = Passport.query.filter_by(activity_id=activity_id)\
+                          .filter(Passport.uses_remaining > 0)\
+                          .update({"uses_remaining": 0})
+    db.session.commit()
+    flash(f"{count} passport(s) closed successfully.", "success")
+    return redirect(url_for("activity_dashboard", activity_id=activity_id))
 
 
 def _build_announcement_html(message_html, logo_src):

@@ -1110,6 +1110,29 @@ div.dropdown-divider {
 
 
 
+    <!-- Archived activity: bulk-close callout -->
+    {% if activity.status == 'inactive' %}
+      {% set open_count = all_passports | selectattr('uses_remaining', 'gt', 0) | list | length %}
+      {% if open_count > 0 %}
+      <div class="alert alert-warning" role="alert" style="margin-top: 1rem;">
+        <div class="d-flex align-items-center">
+          <div>
+            <h4 class="alert-title">{{ open_count }} passport(s) still have remaining uses</h4>
+            <div class="text-secondary">This activity is archived. Close all passports to remove them from active KPIs.</div>
+          </div>
+          <div class="ms-auto">
+            <form method="POST" action="{{ url_for('bulk_close_passports', activity_id=activity.id) }}">
+              <button type="submit" class="btn btn-warning"
+                onclick="return confirm('Mark {{ open_count }} passport(s) as fully used?')">
+                Close all passports
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+
     <!-- Main Table -->
     <!-- Anchor for scroll position preservation -->
     <div id="passport-filters" class="scroll-anchor"></div>
