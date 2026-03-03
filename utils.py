@@ -2638,6 +2638,10 @@ def get_all_activity_logs():
                 log_type = "Expense Updated"
             elif "deleted expense" in action_text:
                 log_type = "Expense Deleted"
+            elif "stripe payment received" in action_text:
+                log_type = "Stripe Payment Received"
+            elif "stripe payout received" in action_text:
+                log_type = "Stripe Payout Received"
             else:
                 log_type = "Admin Action"
 
@@ -2667,7 +2671,7 @@ def get_all_activity_logs():
         # 🔵 Payments
         for p in EbankPayment.query.all():
             if p.result == "MATCHED":
-                log_type = "Payment Matched"
+                log_type = "Interac Payment Matched"
                 # NEW: Show bank name and match score for transparency
                 bank_name = p.bank_info_name or "Unknown"
                 match_score = f"{p.name_score:.1f}" if p.name_score else "N/A"

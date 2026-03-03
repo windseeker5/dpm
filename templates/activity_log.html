@@ -29,7 +29,9 @@
               <option value="Passport Created" {% if current_filters.type == 'Passport Created' %}selected{% endif %}>Passport Created</option>
               <option value="Passport Redeemed" {% if current_filters.type == 'Passport Redeemed' %}selected{% endif %}>Passport Redeemed</option>
               <option value="Email Sent" {% if current_filters.type == 'Email Sent' %}selected{% endif %}>Email Sent</option>
-              <option value="Payment Matched" {% if current_filters.type == 'Payment Matched' %}selected{% endif %}>Payment Matched</option>
+              <option value="Interac Payment Matched" {% if current_filters.type == 'Interac Payment Matched' %}selected{% endif %}>Interac Payment Matched</option>
+              <option value="Stripe Payment Received" {% if current_filters.type == 'Stripe Payment Received' %}selected{% endif %}>Stripe Payment Received</option>
+              <option value="Stripe Payout Received" {% if current_filters.type == 'Stripe Payout Received' %}selected{% endif %}>Stripe Payout Received</option>
               <option value="Marked Paid" {% if current_filters.type == 'Marked Paid' %}selected{% endif %}>Marked Paid</option>
               <option value="Reminder Sent" {% if current_filters.type == 'Reminder Sent' %}selected{% endif %}>Reminder Sent</option>
               <option value="Signup Submitted" {% if current_filters.type == 'Signup Submitted' %}selected{% endif %}>Signup Submitted</option>

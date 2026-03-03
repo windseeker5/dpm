@@ -2513,6 +2513,14 @@ def stripe_webhook():
                 income_id    = income.id,
             )
             db.session.add(stripe_tx)
+
+            customer_name = signup_record.user.name if signup_record.user else "Unknown"
+            activity_name = signup_record.activity.name if signup_record.activity else "Unknown"
+            db.session.add(AdminActionLog(
+                admin_email="stripe-bot@system",
+                action=f"Stripe Payment Received: ${gross:.2f} from {customer_name} for Activity '{activity_name}', Passport #{passport.id} (pending payout to bank)"
+            ))
+
             db.session.commit()
             print(f"[Stripe Webhook] Income (pending) and StripeTransaction recorded for signup {signup_id}")
         else:
@@ -2572,6 +2580,11 @@ def stripe_webhook():
             )
             db.session.add(expense)
 
+            db.session.add(AdminActionLog(
+                admin_email="stripe-bot@system",
+                action=f"Stripe Payout Received: ${net:.2f} deposited to bank (gross: ${stripe_tx.gross_amount:.2f}, Stripe fee: ${actual_fee:.2f})"
+            ))
+
         db.session.commit()
         print(f"[Stripe Webhook] Payout {payout_id} reconciled")
 
@@ -2622,6 +2635,11 @@ def dev_simulate_payout():
 
         stripe_tx.payout_date = payout_date
         stripe_tx.status      = "paid_out"
+
+        db.session.add(AdminActionLog(
+            admin_email="stripe-bot@system",
+            action=f"Stripe Payout Received: ${stripe_tx.net_amount:.2f} deposited to bank (gross: ${stripe_tx.gross_amount:.2f}, Stripe fee: ${stripe_tx.stripe_fee:.2f})"
+        ))
 
         processed.append({
             "charge_id":   stripe_tx.charge_id,
@@ -8079,7 +8097,9 @@ def log_type_color(log_type):
         'Passport Redeemed': 'red',
         'Email Sent': 'blue',
         'Passport Created': 'green',
-        'Payment Matched': 'teal',
+        'Interac Payment Matched': 'teal',
+        'Stripe Payment Received': 'yellow',
+        'Stripe Payout Received': 'green',
         'Marked Paid': 'green',
         'Signup Submitted': 'yellow',
         'Signup Approved': 'green',
