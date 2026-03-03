@@ -121,7 +121,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config.from_object(Config)
 
 # Set after Config loading to ensure these take precedence
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024   # 10MB limit
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB limit (needed for backup uploads)
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.jpeg', '.png', '.gif']
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads', 'activity_images')
 
@@ -141,7 +141,7 @@ app.register_blueprint(geocode_api)
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
-    flash("Image file is too large. Maximum size is 10MB.", "error")
+    flash("File is too large. Please use a smaller file.", "error")
     return redirect(request.referrer or url_for('dashboard')), 413
 
 
@@ -599,10 +599,11 @@ def get_git_version():
 _ctx_cache = {}  # {admin_email: ({'pending': N, 'active': N, 'unmatched': N, 'admin': obj}, expire_at)}
 
 def _get_sidebar_counts(admin_email):
-    """Return sidebar badge counts, refreshed at most once every 45 seconds per admin."""
-    entry = _ctx_cache.get(admin_email)
-    if entry and time.time() < entry[1]:
-        return entry[0]
+    """Return sidebar badge counts, refreshed at most once every 45 seconds per admin (prod only)."""
+    if not app.debug:
+        entry = _ctx_cache.get(admin_email)
+        if entry and time.time() < entry[1]:
+            return entry[0]
     try:
         counts = {
             'pending_signups_count': Signup.query.filter_by(status='pending').count(),
@@ -1814,6 +1815,11 @@ def create_activity():
         if uploaded_file and uploaded_file.filename != '':
             ext = os.path.splitext(uploaded_file.filename)[1].lower()
             if ext in ['.jpg', '.jpeg', '.png', '.gif']:
+                uploaded_file.stream.seek(0, 2)
+                if uploaded_file.stream.tell() > 10 * 1024 * 1024:
+                    flash("Image file is too large. Maximum size is 10MB.", "error")
+                    return redirect(request.referrer or url_for('dashboard'))
+                uploaded_file.stream.seek(0)
                 upload_folder = os.path.join("static", "uploads", "activity_images")
                 try:
                     image_filename = _save_optimized_image(
@@ -2064,6 +2070,11 @@ def edit_activity(activity_id):
         if uploaded_file and uploaded_file.filename != '':
             ext = os.path.splitext(uploaded_file.filename)[1].lower()
             if ext in ['.jpg', '.jpeg', '.png', '.gif']:
+                uploaded_file.stream.seek(0, 2)
+                if uploaded_file.stream.tell() > 10 * 1024 * 1024:
+                    flash("Image file is too large. Maximum size is 10MB.", "error")
+                    return redirect(request.referrer or url_for('dashboard'))
+                uploaded_file.stream.seek(0)
                 upload_folder = os.path.join("static", "uploads", "activity_images")
                 try:
                     activity.image_filename = _save_optimized_image(
@@ -2327,7 +2338,10 @@ def signup(activity_id):
             form_data="",
             requested_sessions=requested_sessions,
             requested_amount=requested_amount,
-            payment_method=payment_method
+            payment_method=payment_method,
+            # Stripe signups start as 'awaiting_payment' so they don't trigger the
+            # pending badge or approval flow before payment is confirmed.
+            status='stripe_processing' if payment_method == 'stripe' else 'pending'
         )
         db.session.add(signup_record)
         db.session.flush()  # Get the ID before commit
@@ -2458,12 +2472,6 @@ def stripe_webhook():
             except Exception as e:
                 print(f"[Stripe Webhook] Email notification failed: {e}")
 
-            # Send signup notification to admin
-            try:
-                from utils import notify_signup_event
-                notify_signup_event(app, signup=signup_record, activity=activity)
-            except Exception as e:
-                print(f"[Stripe Webhook] Admin notification failed: {e}")
             # --- Clearing Account: record income (pending) + StripeTransaction ---
             gross = signup_record.requested_amount or 0.0
             calculated_fee = round((gross * 0.029) + 0.30, 2)
@@ -2540,15 +2548,16 @@ def stripe_webhook():
             # Record processing fee as Expense
             activity_id = stripe_tx.signup.activity_id if stripe_tx.signup else None
             expense = Expense(
-                activity_id    = activity_id,
-                amount         = actual_fee,
-                category       = "Payment Processing Fees",
-                date           = payout_date,
-                payment_status = "paid",
-                payment_date   = payout_date,
-                payment_method = "stripe",
-                description    = f"Stripe fee for charge {charge_id} / payout {payout_id}",
-                created_by     = "stripe-webhook",
+                activity_id          = activity_id,
+                amount               = actual_fee,
+                category             = "Payment Processing Fees",
+                date                 = payout_date,
+                payment_status       = "paid",
+                payment_date         = payout_date,
+                payment_method       = "stripe",
+                description          = f"Stripe fee for charge {charge_id} / payout {payout_id}",
+                created_by           = "stripe-webhook",
+                stripe_transaction_id = stripe_tx.id,
             )
             db.session.add(expense)
 
@@ -2556,6 +2565,63 @@ def stripe_webhook():
         print(f"[Stripe Webhook] Payout {payout_id} reconciled")
 
     return jsonify({"status": "ok"}), 200
+
+
+@app.route("/dev/simulate-payout", methods=["POST"])
+def dev_simulate_payout():
+    """DEV ONLY — simulate a Stripe payout.paid event using pending StripeTransactions.
+    Only works when Flask is running in debug mode."""
+    if not app.debug:
+        return jsonify({"error": "Not available in production"}), 403
+
+    if 'admin' not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    from datetime import datetime, timezone
+    payout_date = datetime.now(timezone.utc)
+    processed = []
+
+    pending_txns = StripeTransaction.query.filter_by(status="pending").all()
+    if not pending_txns:
+        return jsonify({"status": "nothing_to_process", "message": "No pending Stripe transactions found"})
+
+    for stripe_tx in pending_txns:
+        # Promote Income pending → received
+        if stripe_tx.income_id:
+            income_rec = db.session.get(Income, stripe_tx.income_id)
+            if income_rec:
+                income_rec.payment_status = "received"
+                income_rec.payment_date   = payout_date
+
+        # Create Stripe fee expense
+        activity_id = stripe_tx.signup.activity_id if stripe_tx.signup else None
+        expense = Expense(
+            activity_id          = activity_id,
+            amount               = stripe_tx.stripe_fee,
+            category             = "Payment Processing Fees",
+            date                 = payout_date,
+            payment_status       = "paid",
+            payment_date         = payout_date,
+            payment_method       = "stripe",
+            description          = f"Stripe fee for charge {stripe_tx.charge_id} (simulated payout)",
+            created_by           = "stripe-webhook",
+            stripe_transaction_id = stripe_tx.id,
+        )
+        db.session.add(expense)
+
+        stripe_tx.payout_date = payout_date
+        stripe_tx.status      = "paid_out"
+
+        processed.append({
+            "charge_id":   stripe_tx.charge_id,
+            "gross":       stripe_tx.gross_amount,
+            "fee":         stripe_tx.stripe_fee,
+            "net":         stripe_tx.net_amount,
+        })
+
+    db.session.commit()
+    print(f"[DEV] Simulated payout — processed {len(processed)} transaction(s)")
+    return jsonify({"status": "ok", "processed": processed})
 
 
 @app.route("/signup/stripe-success")
@@ -3692,6 +3758,11 @@ def setup():
         logo_file = request.files.get("ORG_LOGO_FILE")
 
         if logo_file and logo_file.filename:
+            logo_file.stream.seek(0, 2)
+            if logo_file.stream.tell() > 10 * 1024 * 1024:
+                flash("Image file is too large. Maximum size is 10MB.", "error")
+                return redirect(request.referrer or url_for('setup'))
+            logo_file.stream.seek(0)
             upload_folder = app.config["UPLOAD_FOLDER"]
             filename = _save_optimized_image(logo_file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
             logo_path = os.path.join(upload_folder, filename)
@@ -3913,6 +3984,11 @@ def unified_settings():
 
             logo_file = request.files.get("ORG_LOGO_FILE")
             if logo_file and logo_file.filename and not delete_logo:
+                logo_file.stream.seek(0, 2)
+                if logo_file.stream.tell() > 10 * 1024 * 1024:
+                    flash("Image file is too large. Maximum size is 10MB.", "error")
+                    return redirect(request.referrer or url_for('setup'))
+                logo_file.stream.seek(0)
                 upload_folder = app.config["UPLOAD_FOLDER"]
                 filename = _save_optimized_image(logo_file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
                 logo_path = os.path.join(upload_folder, filename)
@@ -5558,8 +5634,12 @@ def financial_report_export():
                 a.name as project,
                 'Income' as transaction_type,
                 i.date as transaction_date,
-                NULL as customer,
-                i.note as memo,
+                u_stripe.name as customer,
+                CASE
+                    WHEN st.id IS NOT NULL
+                    THEN 'Stripe Credit Card' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
+                    ELSE i.note
+                END as memo,
                 i.amount,
                 CASE WHEN i.payment_status = 'received' THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
                 COALESCE(i.created_by, 'System') as entered_by,
@@ -5568,6 +5648,10 @@ def financial_report_export():
                 i.receipt_filename
             FROM income i
             JOIN activity a ON i.activity_id = a.id
+            LEFT JOIN stripe_transaction st ON st.income_id = i.id
+            LEFT JOIN signup sg ON sg.id = st.signup_id
+            LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
+            LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
 
             UNION ALL
 
@@ -5576,8 +5660,12 @@ def financial_report_export():
                 a.name as project,
                 'Expense' as transaction_type,
                 e.date as transaction_date,
-                NULL as customer,
-                e.description as memo,
+                u_stripe.name as customer,
+                CASE
+                    WHEN st.id IS NOT NULL
+                    THEN 'Stripe processing fee' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
+                    ELSE e.description
+                END as memo,
                 e.amount,
                 CASE WHEN e.payment_status = 'paid' THEN 'Paid' ELSE 'Unpaid (AP)' END as payment_status,
                 COALESCE(e.created_by, 'System') as entered_by,
@@ -5586,6 +5674,10 @@ def financial_report_export():
                 e.receipt_filename
             FROM expense e
             JOIN activity a ON e.activity_id = a.id
+            LEFT JOIN stripe_transaction st ON st.id = e.stripe_transaction_id
+            LEFT JOIN signup sg ON sg.id = st.signup_id
+            LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
+            LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
 
             ORDER BY transaction_date DESC
         """
@@ -6493,6 +6585,11 @@ def activity_form(activity_id=None):
         # Handle image upload
         upload_file = request.files.get("upload_image")
         if upload_file and upload_file.filename:
+            upload_file.seek(0, 2)
+            if upload_file.tell() > 10 * 1024 * 1024:
+                flash("Image file is too large. Maximum size is 10MB.", "error")
+                return redirect(request.referrer or url_for('dashboard'))
+            upload_file.seek(0)
             ext = os.path.splitext(upload_file.filename)[1]
             filename = f"activity_{uuid.uuid4().hex}{ext}"
             path = os.path.join(app.static_folder, "uploads/activity_images", filename)

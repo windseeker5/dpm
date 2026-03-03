@@ -171,6 +171,8 @@ class Expense(db.Model):
     payment_method = db.Column(db.String(50), nullable=True)
     # Values: "e-transfer", "cash", "cheque", "credit_card", "other"
 
+    stripe_transaction_id = db.Column(db.Integer, db.ForeignKey('stripe_transaction.id'), nullable=True)
+
     activity = db.relationship("Activity", backref="expenses")
 
 
