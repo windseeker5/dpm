@@ -36,8 +36,8 @@
         "cta_url": "https://minipass.me/my-signups"
     },
     "signup_payment_first": {
-        "subject": "Pré-inscription reçue — Paiement requis",
-        "title": "Pré-inscription reçue — Paiement requis",
+        "subject": "Pré-inscription reçue — Prochaine étape",
+        "title": "Pré-inscription reçue — Prochaine étape",
         "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p>\n<p>Nous avons bien reçu votre pré-inscription à <strong>{{ activity_name }}</strong>.</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}\n<p>Pour <strong>confirmer votre place</strong>, veuillez effectuer un virement Interac.</p>",
         "conclusion_text": "<p><strong>Dès réception de votre paiement</strong>, vous recevrez votre passeport numérique par courriel.</p><p><em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
         "custom_message": "",
