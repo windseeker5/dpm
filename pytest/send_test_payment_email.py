@@ -23,7 +23,7 @@ SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 587
 SMTP_USER = 'kdresdell@gmail.com'
 SMTP_PASSWORD = 'nvyd dtgy vohn zkuu'
-DEFAULT_RECIPIENT = 'lhgi@minipass.me'
+DEFAULT_RECIPIENT = 'kdc_app@minipass.me'
 
 
 def format_amount(amount):

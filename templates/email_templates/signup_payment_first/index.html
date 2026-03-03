@@ -124,7 +124,7 @@
                     <table cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td style="vertical-align: middle; padding-right: 16px;">
-                          <img src="cid:interac_logo" alt="Interac" width="40" style="display: block; border-radius: 6px;">
+                          <img src="{{ base_url }}/static/images/email/interac-logo.jpg" alt="Interac" width="40" style="display: block; border-radius: 6px;">
                         </td>
                         <td style="vertical-align: middle; color: #475569;">
                           <div style="margin-bottom: 4px;">Montant à transférer : <strong style="color: #1e293b;">{{ requested_amount }}</strong></div>
@@ -145,8 +145,6 @@
                 <p style="margin: 0; padding: 10px; background: #ffe69c; border-radius: 4px; font-size: 14px; color: #664d03;">⚠️ <strong>Ce n'est PAS la question de sécurité Interac.</strong><br>C'est le champ optionnel « Message au destinataire ».</p>
                 <p style="margin: 15px 0 0 0; font-size: 13px; color: #856404;"><em>Pourquoi ce code ? Une autre inscription avec le même nom et montant existe.</em></p>
               </div>
-              {% else %}
-              <p style="color: #666; font-size: 14px; font-style: italic; margin: 0 0 20px 0;">Votre nom sera automatiquement associé à votre paiement.</p>
               {% endif %}
             </td>
           </tr>
