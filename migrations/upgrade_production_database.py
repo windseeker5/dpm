@@ -2533,6 +2533,256 @@ def task32_fix_stripe_cash_received(cursor):
 
 
 # ============================================================================
+def task33_add_stripe_customer_to_views(cursor):
+    """Add customer name and clean memo to Stripe Income/Expense rows.
+
+    1. Add stripe_transaction_id FK to expense table (links expense → stripe_transaction).
+    2. Rebuild monthly_transactions_detail view so Income and Expense rows
+       originating from Stripe show the customer name (via stripe_transaction →
+       signup → user) and a human-readable memo instead of raw IDs.
+    """
+    log("💳", "TASK 33: Adding Stripe customer name to financial views", Colors.BLUE)
+
+    # Step 1: Add stripe_transaction_id column to expense if it doesn't exist
+    try:
+        cursor.execute("""
+            ALTER TABLE expense
+            ADD COLUMN stripe_transaction_id INTEGER REFERENCES stripe_transaction(id)
+        """)
+        log("✅", "  Added stripe_transaction_id column to expense", Colors.GREEN)
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e).lower():
+            log("⏭️", "  stripe_transaction_id column already exists, skipping", Colors.BLUE)
+        else:
+            raise
+
+    # Step 2: Drop old views
+    try:
+        cursor.execute("DROP VIEW IF EXISTS monthly_transactions_detail")
+        cursor.execute("DROP VIEW IF EXISTS monthly_financial_summary")
+        log("🔄", "  Dropped existing views", Colors.BLUE)
+    except Exception:
+        pass
+
+    # Step 3: Recreate monthly_transactions_detail with Stripe customer JOINs
+    try:
+        cursor.execute("""
+            CREATE VIEW monthly_transactions_detail AS
+            SELECT
+                strftime('%Y-%m', COALESCE(p.paid_date, p.created_dt)) as month,
+                a.name as project,
+                'Income' as transaction_type,
+                COALESCE(p.paid_date, p.created_dt) as transaction_date,
+                'Passport Sales' as account,
+                u.name as customer,
+                NULL as vendor,
+                p.notes as memo,
+                p.sold_amt as amount,
+                CASE WHEN p.paid = 1 THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
+                'Passport System' as entered_by
+            FROM passport p
+            JOIN activity a ON p.activity_id = a.id
+            LEFT JOIN user u ON p.user_id = u.id
+            WHERE (p.marked_paid_by IS NULL OR p.marked_paid_by NOT LIKE 'stripe%')
+
+            UNION ALL
+
+            SELECT
+                strftime('%Y-%m', i.date) as month,
+                a.name as project,
+                'Income' as transaction_type,
+                i.date as transaction_date,
+                i.category as account,
+                u_stripe.name as customer,
+                NULL as vendor,
+                CASE
+                    WHEN st.id IS NOT NULL
+                    THEN 'Stripe Credit Card' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
+                    ELSE i.note
+                END as memo,
+                i.amount,
+                CASE
+                    WHEN i.payment_status = 'received' THEN 'Paid'
+                    WHEN i.payment_status = 'pending' THEN 'Unpaid (AR)'
+                    ELSE 'Unpaid (AR)'
+                END as payment_status,
+                COALESCE(i.created_by, 'System') as entered_by
+            FROM income i
+            JOIN activity a ON i.activity_id = a.id
+            LEFT JOIN stripe_transaction st ON st.income_id = i.id
+            LEFT JOIN signup sg ON sg.id = st.signup_id
+            LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
+            LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
+
+            UNION ALL
+
+            -- FIX: For unpaid expenses, use effective date (payment_date > due_date > date)
+            SELECT
+                strftime('%Y-%m', CASE
+                    WHEN e.payment_status = 'unpaid'
+                    THEN COALESCE(e.payment_date, e.due_date, e.date)
+                    ELSE e.date
+                END) as month,
+                a.name as project,
+                'Expense' as transaction_type,
+                CASE
+                    WHEN e.payment_status = 'unpaid'
+                    THEN COALESCE(e.payment_date, e.due_date, e.date)
+                    ELSE e.date
+                END as transaction_date,
+                e.category as account,
+                u_stripe.name as customer,
+                NULL as vendor,
+                CASE
+                    WHEN st.id IS NOT NULL
+                    THEN 'Stripe processing fee' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
+                    ELSE e.description
+                END as memo,
+                e.amount,
+                CASE
+                    WHEN e.payment_status = 'paid' THEN 'Paid'
+                    WHEN e.payment_status = 'unpaid' THEN 'Unpaid (AP)'
+                    ELSE 'Unpaid (AP)'
+                END as payment_status,
+                COALESCE(e.created_by, 'System') as entered_by
+            FROM expense e
+            JOIN activity a ON e.activity_id = a.id
+            LEFT JOIN stripe_transaction st ON st.id = e.stripe_transaction_id
+            LEFT JOIN signup sg ON sg.id = st.signup_id
+            LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
+            LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
+
+            ORDER BY month DESC, transaction_date DESC
+        """)
+        log("✅", "  Created monthly_transactions_detail view (with Stripe customer names)", Colors.GREEN)
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to create transactions detail view: {e}", Colors.RED)
+        raise
+
+    # Step 4: Recreate monthly_financial_summary (same as task32 — no changes needed here)
+    try:
+        cursor.execute("""
+            CREATE VIEW monthly_financial_summary AS
+            WITH
+            -- Get ALL distinct month+activity combinations from ALL transaction sources
+            all_month_activity AS (
+                -- passport cash months (exclude Stripe — tracked via Income instead)
+                SELECT DISTINCT
+                    strftime('%Y-%m', paid_date) as month,
+                    activity_id
+                FROM passport
+                WHERE paid = 1 AND paid_date IS NOT NULL
+                  AND (marked_paid_by IS NULL OR marked_paid_by NOT LIKE 'stripe%')
+
+                UNION
+
+                SELECT DISTINCT strftime('%Y-%m', date) as month, activity_id FROM income
+                UNION
+                SELECT DISTINCT strftime('%Y-%m', date) as month, activity_id FROM expense
+                UNION
+                SELECT DISTINCT
+                    strftime('%Y-%m', COALESCE(payment_date, due_date, date)) as month,
+                    activity_id
+                FROM expense
+                WHERE payment_status = 'unpaid'
+            ),
+            monthly_passports_cash AS (
+                SELECT
+                    strftime('%Y-%m', paid_date) as month,
+                    activity_id,
+                    SUM(sold_amt) as passport_sales_cash
+                FROM passport
+                WHERE paid = 1 AND paid_date IS NOT NULL
+                  AND (marked_paid_by IS NULL OR marked_paid_by NOT LIKE 'stripe%')
+                GROUP BY month, activity_id
+            ),
+            monthly_passports_ar AS (
+                SELECT
+                    strftime('%Y-%m', created_dt) as month,
+                    activity_id,
+                    SUM(sold_amt) as passport_sales_ar
+                FROM passport
+                WHERE paid = 0
+                GROUP BY month, activity_id
+            ),
+            monthly_income_cash AS (
+                SELECT
+                    strftime('%Y-%m', date) as month,
+                    activity_id,
+                    SUM(amount) as other_income_cash
+                FROM income
+                WHERE payment_status = 'received'
+                GROUP BY month, activity_id
+            ),
+            monthly_income_ar AS (
+                SELECT
+                    strftime('%Y-%m', date) as month,
+                    activity_id,
+                    SUM(amount) as other_income_ar
+                FROM income
+                WHERE payment_status = 'pending'
+                GROUP BY month, activity_id
+            ),
+            monthly_expenses_cash AS (
+                SELECT
+                    strftime('%Y-%m', date) as month,
+                    activity_id,
+                    SUM(amount) as expenses_cash
+                FROM expense
+                WHERE payment_status = 'paid'
+                GROUP BY month, activity_id
+            ),
+            -- FIX: For unpaid expenses, use effective date (payment_date > due_date > date)
+            monthly_expenses_ap AS (
+                SELECT
+                    strftime('%Y-%m', COALESCE(payment_date, due_date, date)) as month,
+                    activity_id,
+                    SUM(amount) as expenses_ap
+                FROM expense
+                WHERE payment_status = 'unpaid'
+                GROUP BY strftime('%Y-%m', COALESCE(payment_date, due_date, date)), activity_id
+            )
+            SELECT
+                ma.month,
+                ma.activity_id,
+                a.name as account,
+
+                COALESCE(pc.passport_sales_cash, 0) as passport_sales,
+                COALESCE(ic.other_income_cash, 0) as other_income,
+                COALESCE(pc.passport_sales_cash, 0) + COALESCE(ic.other_income_cash, 0) as cash_received,
+                COALESCE(ec.expenses_cash, 0) as cash_paid,
+                (COALESCE(pc.passport_sales_cash, 0) + COALESCE(ic.other_income_cash, 0) - COALESCE(ec.expenses_cash, 0)) as net_cash_flow,
+
+                COALESCE(par.passport_sales_ar, 0) as passport_ar,
+                COALESCE(iar.other_income_ar, 0) as other_income_ar,
+                COALESCE(par.passport_sales_ar, 0) + COALESCE(iar.other_income_ar, 0) as accounts_receivable,
+                COALESCE(eap.expenses_ap, 0) as accounts_payable,
+
+                (COALESCE(pc.passport_sales_cash, 0) + COALESCE(par.passport_sales_ar, 0) +
+                 COALESCE(ic.other_income_cash, 0) + COALESCE(iar.other_income_ar, 0)) as total_revenue,
+                (COALESCE(ec.expenses_cash, 0) + COALESCE(eap.expenses_ap, 0)) as total_expenses,
+                ((COALESCE(pc.passport_sales_cash, 0) + COALESCE(par.passport_sales_ar, 0) +
+                  COALESCE(ic.other_income_cash, 0) + COALESCE(iar.other_income_ar, 0)) -
+                 (COALESCE(ec.expenses_cash, 0) + COALESCE(eap.expenses_ap, 0))) as net_income
+
+            FROM all_month_activity ma
+            JOIN activity a ON ma.activity_id = a.id
+            LEFT JOIN monthly_passports_cash pc ON ma.month = pc.month AND ma.activity_id = pc.activity_id
+            LEFT JOIN monthly_passports_ar par ON ma.month = par.month AND ma.activity_id = par.activity_id
+            LEFT JOIN monthly_income_cash ic ON ma.month = ic.month AND ma.activity_id = ic.activity_id
+            LEFT JOIN monthly_income_ar iar ON ma.month = iar.month AND ma.activity_id = iar.activity_id
+            LEFT JOIN monthly_expenses_cash ec ON ma.month = ec.month AND ma.activity_id = ec.activity_id
+            LEFT JOIN monthly_expenses_ap eap ON ma.month = eap.month AND ma.activity_id = eap.activity_id
+            ORDER BY ma.month DESC, a.name
+        """)
+        log("✅", "  Created monthly_financial_summary view", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to create financial summary view: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -2584,6 +2834,7 @@ def main():
         ("Discord Webhook Field", task30_add_discord_webhook),
         ("Performance Indexes", task31_add_performance_indexes),
         ("Fix Stripe Cash Received", task32_fix_stripe_cash_received),
+        ("Stripe Customer Names in Views", task33_add_stripe_customer_to_views),
     ]
 
     completed = 0
