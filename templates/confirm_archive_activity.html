@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Archive {{ activity.name }}{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <h2 class="page-title">Archive "{{ activity.name }}"</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3 text-warning">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="24" height="24"
+              viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <path d="M12 9v4"/>
+              <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/>
+              <path d="M12 16h.01"/>
+            </svg>
+          </div>
+          <h3 class="card-title">{{ active_count }} passport(s) still have unused sessions</h3>
+          <p class="text-secondary">
+            Archiving this activity will hide it from your active list, but passports with
+            remaining uses will still appear in your active KPIs and sidebar count.
+            Choose how to handle them:
+          </p>
+
+          <form method="POST" action="{{ url_for('execute_archive_activity', activity_id=activity.id) }}">
+            <input type="hidden" name="next_page" value="{{ next_page }}">
+
+            <div class="mb-3">
+              <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column gap-2">
+                <label class="form-selectgroup-item flex-fill">
+                  <input type="radio" name="passport_action" value="close_and_archive"
+                    class="form-selectgroup-input" checked>
+                  <div class="form-selectgroup-label d-flex align-items-center p-3">
+                    <div class="me-3">
+                      <span class="form-selectgroup-check"></span>
+                    </div>
+                    <div>
+                      <strong>Event completed — close all passports</strong>
+                      <div class="text-secondary small">
+                        Set all {{ active_count }} passport(s) to 0 remaining uses.
+                        They will no longer appear in active KPIs.
+                      </div>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="form-selectgroup-item flex-fill">
+                  <input type="radio" name="passport_action" value="archive_only"
+                    class="form-selectgroup-input">
+                  <div class="form-selectgroup-label d-flex align-items-center p-3">
+                    <div class="me-3">
+                      <span class="form-selectgroup-check"></span>
+                    </div>
+                    <div>
+                      <strong>Archive only — leave passports unchanged</strong>
+                      <div class="text-secondary small">
+                        Passports keep their remaining uses. Active KPIs will still include them.
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">Archive activity</button>
+              <a href="{{ url_for('list_activities') }}" class="btn btn-ghost-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
