@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Inbox Payments{% endblock %}
+{% block title %}Interac Inbox{% endblock %}
 
 {% block content %}
 <!-- CSS Imports -->
@@ -12,13 +12,18 @@
     <div class="dashboard-container">
 
       <!-- Page Title -->
-      <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
-        <h2 class="mb-0">
-          <i class="ti ti-mail-down me-2" style="color: #ffc107;"></i>Payments
-        </h2>
-        <a href="/admin/unified-settings?test_payment_bot=1" class="btn btn-primary">
-          Refresh
-        </a>
+      <div class="mt-4 mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="mb-0">
+            <i class="ti ti-mail-dollar me-2" style="color: #ffc107;"></i>Interac Inbox
+          </h2>
+          <a href="/admin/unified-settings?test_payment_bot=1" class="btn btn-primary btn-icon" title="Refresh">
+            <i class="ti ti-refresh"></i>
+          </a>
+        </div>
+        <p class="text-muted small mb-0 mt-1">
+          Interac e-transfers received by email — auto-matched to your passports.{% if stripe_configured %} Stripe payments are verified automatically — see <a href="{{ url_for('financial_report') }}">Financial</a> for full payment history.{% endif %}
+        </p>
       </div>
 
       <!-- Enhanced Dynamic Search -->
@@ -56,7 +61,7 @@
               <a href="{{ url_for('payment_bot_matches', status='no_match') }}"
                  class="github-filter-btn {% if current_filters.status == 'no_match' and not current_filters.show_all %}active{% endif %}"
                  style="{% if current_filters.status == 'no_match' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                No Match <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.no_match_count|default(0) }})</span>
+                Unmatched <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.no_match_count|default(0) }})</span>
               </a>
               <a href="{{ url_for('payment_bot_matches', status='matched') }}"
                  class="github-filter-btn {% if current_filters.status == 'matched' %}active{% endif %}"
