@@ -496,7 +496,7 @@
             {% endif %}
             {% if unmatched_payment_count and unmatched_payment_count > 0 %}
             <a href="{{ url_for('payment_bot_matches') }}" class="dropdown-item text-danger">
-              <i class="ti ti-mail-dollar me-2"></i>Payments ({{ unmatched_payment_count }})
+              <i class="ti ti-mail-dollar me-2"></i>Interac Inbox ({{ unmatched_payment_count }})
             </a>
             <div class="dropdown-divider"></div>
             {% endif %}
@@ -597,6 +597,19 @@
               </a>
             </li>
             {% endif %}
+            <li class="nav-item">
+              <a href="{{ url_for('payment_bot_matches') }}"
+                 class="nav-link {{ 'active' if request.endpoint == 'payment_bot_matches' }}">
+                <i class="nav-icon ti ti-mail-dollar"></i>
+                <span class="nav-text">Interac Inbox</span>
+                {% if unmatched_payment_count and unmatched_payment_count > 0 %}
+                <span class="nav-badge">{{ unmatched_payment_count }}</span>
+                {% endif %}
+                {% if request.endpoint == 'payment_bot_matches' %}
+                <span class="nav-indicator"></span>
+                {% endif %}
+              </a>
+            </li>
           </ul>
         </div>
 
@@ -605,31 +618,19 @@
           <ul class="nav-list">
             <li class="nav-item nav-item-expandable">
               <a href="#"
-                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['payment_bot_matches', 'activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint }}"
+                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint }}"
                  data-bs-toggle="collapse"
                  data-bs-target="#reports-submenu"
-                 aria-expanded="{{ 'true' if request.endpoint in ['payment_bot_matches', 'activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint else 'false' }}">
+                 aria-expanded="{{ 'true' if request.endpoint in ['activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint else 'false' }}">
                 <i class="nav-icon ti ti-chart-bar"></i>
                 <span class="nav-text">Reports</span>
                 <i class="nav-chevron ti ti-chevron-right"></i>
-                {% if request.endpoint in ['payment_bot_matches', 'activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint %}
+                {% if request.endpoint in ['activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint %}
                 <span class="nav-indicator"></span>
                 {% endif %}
               </a>
-              <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['payment_bot_matches', 'activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint }}" id="reports-submenu">
+              <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint }}" id="reports-submenu">
                 <ul class="nav-list">
-                  <li class="nav-item">
-                    <a href="{{ url_for('payment_bot_matches') }}" class="nav-link {{ 'active' if request.endpoint == 'payment_bot_matches' }}">
-                      <i class="nav-icon ti ti-mail-dollar"></i>
-                      <span class="nav-text">Payments</span>
-                      {% if unmatched_payment_count and unmatched_payment_count > 0 %}
-                      <span class="nav-badge">{{ unmatched_payment_count }}</span>
-                      {% endif %}
-                      {% if request.endpoint == 'payment_bot_matches' %}
-                      <span class="nav-indicator"></span>
-                      {% endif %}
-                    </a>
-                  </li>
                   <li class="nav-item">
                     <a href="{{ url_for('financial_report') }}" class="nav-link {{ 'active' if request.endpoint == 'financial_report' }}">
                       <i class="nav-icon ti ti-report-money"></i>
@@ -779,7 +780,7 @@
       <a href="{{ url_for('payment_bot_matches') }}"
          class="mobile-nav-item {{ 'active' if request.endpoint == 'payment_bot_matches' }}">
         <i class="ti ti-mail-dollar"></i>
-        <span>Payments</span>
+        <span>Interac Inbox</span>
         {% if unmatched_payment_count and unmatched_payment_count > 0 %}
         <span class="mobile-nav-badge">{{ unmatched_payment_count }}</span>
         {% endif %}

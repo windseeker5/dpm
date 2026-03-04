@@ -21,7 +21,7 @@ from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # 📁 API Blueprints
 from api.backup import backup_api
@@ -256,9 +256,9 @@ def get_tier_info():
     """Get complete tier information for current subscription."""
     tier = get_subscription_tier()
     tier_data = {
-        1: {"name": "Starter", "price": "$10/month", "activities": 1},
-        2: {"name": "Professional", "price": "$25/month", "activities": 15},
-        3: {"name": "Enterprise", "price": "$60/month", "activities": 100}
+        1: {"tier": 1, "name": "Starter", "price": "$10/month", "activities": 1},
+        2: {"tier": 2, "name": "Professional", "price": "$25/month", "activities": 15},
+        3: {"tier": 3, "name": "Enterprise", "price": "$60/month", "activities": 100}
     }
     return tier_data.get(tier, tier_data[1])
 
@@ -296,8 +296,8 @@ def check_activity_limit(exclude_activity_id=None):
         # Suggest upgrade if not on highest tier
         if tier < 3:
             next_tier_data = {
-                2: {"name": "Professional", "price": "$25/month", "activities": 15},
-                3: {"name": "Enterprise", "price": "$60/month", "activities": 100}
+                2: {"tier": 2, "name": "Professional", "price": "$25/month", "activities": 15},
+                3: {"tier": 3, "name": "Enterprise", "price": "$60/month", "activities": 100}
             }
             next_tier = next_tier_data[tier + 1]
             msg += f"Upgrade to {next_tier['name']} ({next_tier['price']}) "
@@ -480,15 +480,124 @@ def get_subscription_details():
 
         stripe.api_key = api_key
         sub = stripe.Subscription.retrieve(subscription_id)
+        sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
+
+        items = sub_dict.get('items', {}).get('data', [])
+        current_price_id = items[0]['price']['id'] if items else None
 
         return {
-            'id': sub.id,
-            'status': sub.status,
-            'cancel_at_period_end': getattr(sub, 'cancel_at_period_end', False)
+            'id': sub_dict.get('id'),
+            'status': sub_dict.get('status'),
+            'cancel_at_period_end': sub_dict.get('cancel_at_period_end', False),
+            'current_price_id': current_price_id,
+            'cancel_at': sub_dict.get('cancel_at'),
         }
     except Exception as e:
         logger.error(f"[GET_SUB_DETAILS] Error: {e}")
         return None
+
+
+def reactivate_subscription(subscription_id):
+    """Re-enable auto-renewal by clearing cancel_at_period_end.
+
+    Args:
+        subscription_id: Stripe subscription ID
+
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    logger.info(f"[REACTIVATE_SUB] Starting reactivation for: {subscription_id}")
+    try:
+        api_key = os.getenv('STRIPE_SECRET_KEY')
+        if not api_key:
+            logger.error("[REACTIVATE_SUB] STRIPE_SECRET_KEY not found")
+            return False, "Stripe API key not configured"
+
+        stripe.api_key = api_key
+        updated = stripe.Subscription.modify(subscription_id, cancel_at_period_end=False)
+        logger.info(f"[REACTIVATE_SUB] SUCCESS - cancel_at_period_end: {updated.cancel_at_period_end}")
+        return True, "Auto-renewal reactivated. Your subscription will renew automatically."
+
+    except stripe.error.InvalidRequestError as e:
+        logger.error(f"[REACTIVATE_SUB] Invalid request: {e}")
+        return False, f"Error: {str(e)}"
+    except stripe.error.AuthenticationError as e:
+        logger.error(f"[REACTIVATE_SUB] Auth failed: {e}")
+        return False, "Stripe authentication failed"
+    except stripe.error.StripeError as e:
+        logger.error(f"[REACTIVATE_SUB] Stripe error: {e}")
+        return False, f"Stripe error: {str(e)}"
+    except Exception as e:
+        logger.error(f"[REACTIVATE_SUB] Unexpected error: {type(e).__name__}: {e}", exc_info=True)
+        return False, f"Error: {str(e)}"
+
+
+def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
+    """Switch to a different plan or billing frequency.
+
+    Args:
+        subscription_id: Stripe subscription ID
+        new_plan: Plan key ('basic', 'pro', 'ultimate')
+        new_billing_frequency: 'monthly' or 'annual'
+
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    logger.info(f"[CHANGE_PLAN] {subscription_id} → {new_plan}/{new_billing_frequency}")
+
+    valid_plans = {'basic', 'pro', 'ultimate'}
+    valid_freqs = {'monthly', 'annual'}
+    if new_plan not in valid_plans or new_billing_frequency not in valid_freqs:
+        return False, "Invalid plan selection."
+
+    try:
+        api_key = os.getenv('STRIPE_SECRET_KEY')
+        if not api_key:
+            return False, "Stripe API key not configured"
+
+        price_key = f"STRIPE_PRICE_{new_plan.upper()}_{new_billing_frequency.upper()}"
+        new_price_id = os.getenv(price_key)
+        if not new_price_id:
+            logger.error(f"[CHANGE_PLAN] Missing env var: {price_key}")
+            return False, "Plan configuration missing. Please contact support."
+
+        stripe.api_key = api_key
+        sub = stripe.Subscription.retrieve(subscription_id)
+        sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
+        items = sub_dict.get('items', {}).get('data', [])
+
+        # No-op guard: already on this plan
+        current_price_id = items[0]['price']['id'] if items else None
+        if current_price_id == new_price_id:
+            return False, "You're already on this plan."
+
+        item_id = items[0]['id'] if items else None
+        if not item_id:
+            return False, "Could not retrieve subscription item. Please contact support."
+
+        stripe.Subscription.modify(
+            subscription_id,
+            items=[{'id': item_id, 'price': new_price_id}],
+            proration_behavior='create_prorations',
+            cancel_at_period_end=False,
+        )
+
+        plan_names = {'basic': 'Starter', 'pro': 'Professional', 'ultimate': 'Enterprise'}
+        logger.info(f"[CHANGE_PLAN] SUCCESS → {new_plan}/{new_billing_frequency}")
+        return True, f"Plan changed to {plan_names.get(new_plan, new_plan)} ({new_billing_frequency}). Proration will appear on your next invoice."
+
+    except stripe.error.InvalidRequestError as e:
+        logger.error(f"[CHANGE_PLAN] Invalid request: {e}")
+        return False, f"Error: {str(e)}"
+    except stripe.error.AuthenticationError as e:
+        logger.error(f"[CHANGE_PLAN] Auth failed: {e}")
+        return False, "Stripe authentication failed"
+    except stripe.error.StripeError as e:
+        logger.error(f"[CHANGE_PLAN] Stripe error: {e}")
+        return False, f"Stripe error: {str(e)}"
+    except Exception as e:
+        logger.error(f"[CHANGE_PLAN] Unexpected error: {type(e).__name__}: {e}", exc_info=True)
+        return False, f"Error: {str(e)}"
 
 
 ##
@@ -4159,7 +4268,13 @@ def current_plan():
     subscription_details = get_subscription_details()
     logger.info(f"[CURRENT_PLAN] Live details from Stripe: {subscription_details}")
 
-    # Handle unsubscribe POST request
+    all_plans = [
+        {'key': 'basic',    'tier': 1, 'name': 'Starter',      'activities': 1},
+        {'key': 'pro',      'tier': 2, 'name': 'Professional', 'activities': 15},
+        {'key': 'ultimate', 'tier': 3, 'name': 'Enterprise',   'activities': 100},
+    ]
+
+    # Handle POST actions
     if request.method == 'POST':
         action = request.form.get('action')
         logger.info(f"[CURRENT_PLAN] POST action received: '{action}'")
@@ -4167,23 +4282,52 @@ def current_plan():
         if action == 'cancel' and subscription_meta['is_paid_subscriber']:
             logger.info(f"[CURRENT_PLAN] ✓ Condition passed - calling cancel_subscription")
             success, message = cancel_subscription(subscription_meta['subscription_id'])
-
-            logger.info(f"[CURRENT_PLAN] Cancel result - success: {success}, message: {message}")
-            if success:
-                flash(message, 'success')
-            else:
-                flash(message, 'error')
-
+            flash(message, 'success' if success else 'error')
             return redirect(url_for('current_plan'))
+
+        elif action == 'reactivate' and subscription_meta['is_paid_subscriber']:
+            logger.info(f"[CURRENT_PLAN] Reactivating subscription")
+            success, message = reactivate_subscription(subscription_meta['subscription_id'])
+            flash(message, 'success' if success else 'error')
+            return redirect(url_for('current_plan'))
+
+        elif action == 'change_plan' and subscription_meta['is_paid_subscriber']:
+            new_plan = request.form.get('new_plan', '').strip().lower()
+            new_freq = request.form.get('new_billing_frequency', '').strip().lower()
+            logger.info(f"[CURRENT_PLAN] Change plan → {new_plan}/{new_freq}")
+
+            valid_plans = {'basic', 'pro', 'ultimate'}
+            valid_freqs = {'monthly', 'annual'}
+            if new_plan not in valid_plans or new_freq not in valid_freqs:
+                flash("Invalid plan selection.", 'error')
+            else:
+                success, message = change_subscription_plan(
+                    subscription_meta['subscription_id'], new_plan, new_freq
+                )
+                flash(message, 'success' if success else 'error')
+            return redirect(url_for('current_plan'))
+
         else:
-            logger.warning(f"[CURRENT_PLAN] ✗ Cancel condition FAILED - action: '{action}', is_paid: {subscription_meta['is_paid_subscriber']}")
+            logger.warning(f"[CURRENT_PLAN] ✗ Action condition FAILED - action: '{action}', is_paid: {subscription_meta['is_paid_subscriber']}")
+
+    # Build price-ID lookup so the template can identify the current plan card
+    plan_price_ids = {}
+    for plan_item in all_plans:
+        for freq in ('monthly', 'annual'):
+            env_key = f"STRIPE_PRICE_{plan_item['key'].upper()}_{freq.upper()}"
+            price_id = os.getenv(env_key)
+            if price_id:
+                plan_price_ids[f"{plan_item['key']}_{freq}"] = price_id
 
     return render_template(
         "current_plan.html",
         tier_info=tier_info,
         usage_info=usage_info,
         subscription_meta=subscription_meta,
-        subscription_details=subscription_details
+        subscription_details=subscription_details,
+        all_plans=all_plans,
+        current_billing_freq=subscription_meta.get('billing_frequency', 'monthly'),
+        plan_price_ids=plan_price_ids,
     )
 
 
@@ -6008,6 +6152,11 @@ def payment_bot_matches():
     # Get active activities for the Create Passport modal
     activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
 
+    stripe_configured = (
+        get_setting("STRIPE_PAYMENTS_ENABLED", "False") == "True"
+        and bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
+    )
+
     return render_template("payment_bot_matches.html",
                          payments=payments,
                          pagination=pagination,
@@ -6015,6 +6164,7 @@ def payment_bot_matches():
                          is_first_time_empty=is_first_time_empty,
                          is_zero_results=is_zero_results,
                          activities=activities,
+                         stripe_configured=stripe_configured,
                          current_filters={
                              'q': q,
                              'status': status_filter,
