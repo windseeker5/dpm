@@ -2416,7 +2416,7 @@ def signup_thank_you(signup_id):
     activity = signup.activity
     settings = {s.key: s.value for s in Setting.query.all()}
     
-    return render_template("signup_thank_you.html",
+    return render_template("signup_confirmation.html",
                           signup=signup,
                           activity=activity,
                           settings=settings)
@@ -2667,7 +2667,7 @@ def stripe_success():
     activity = signup.activity
     settings = {s.key: s.value for s in Setting.query.all()}
 
-    return render_template("stripe_success.html",
+    return render_template("signup_confirmation.html",
                           signup=signup,
                           activity=activity,
                           settings=settings)

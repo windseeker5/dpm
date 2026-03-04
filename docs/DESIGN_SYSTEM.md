@@ -20,6 +20,7 @@
 13. [Form Action Buttons](#form-action-buttons)
 14. [Pagination Component](#pagination-component)
 15. [Photo Normalization Tool](#section-15--photo-normalization-tool)
+16. [Organization Avatar with Success Badge](#section-16--organization-avatar-with-success-badge)
 
 ---
 
@@ -3500,6 +3501,137 @@ if upload_file and upload_file.filename:
 - Added Section 15: Photo Normalization Tool
 - Documents the cover photo crop/compress/search component from `activity_form.html`
 - Includes full HTML, JS, server-side helper, and reuse checklist
+
+---
+
+## Section 16 — Organization Avatar with Success Badge
+
+**Template:** `templates/signup_confirmation.html`
+**Use when:** Post-signup or post-payment confirmation screens — any "you're all set" page.
+
+### What it looks like
+
+A 100×100px square with rounded corners (the org logo or a colored fallback letter), with a small green circle badge overlapping the bottom-right corner. The badge animates in with a scale+fade after a short delay.
+
+### HTML Structure
+
+```html
+<div class="logo-container">
+  {% if settings.get('LOGO_FILENAME') %}
+  <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+       alt="{{ settings.get('ORG_NAME', 'Organization') }}"
+       class="organization-logo">
+  {% else %}
+  <div class="organization-logo-fallback"
+       style="background: {{ placeholder_color(settings.get('ORG_NAME', activity.name)) }};">
+    {{ placeholder_letter(settings.get('ORG_NAME', activity.name)) }}
+  </div>
+  {% endif %}
+
+  <div class="success-badge">
+    <i class="ti ti-check"></i>
+  </div>
+</div>
+```
+
+### Required CSS
+
+```css
+.logo-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 2rem;
+}
+
+.organization-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.organization-logo-fallback {
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-badge {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  width: 35px;
+  height: 35px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: badgeFadeIn 0.3s ease 0.4s backwards;
+}
+
+.success-badge i {
+  font-size: 1.25rem;
+  color: white;
+}
+
+@keyframes badgeFadeIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .success-badge { animation: none; }
+}
+```
+
+### Jinja2 Helpers
+
+- `placeholder_color(name)` — deterministic background color from org/activity name
+- `placeholder_letter(name)` — first letter of the name, uppercased
+
+Both are registered as Jinja2 globals in `app.py`.
+
+### Conditional Message Pattern (signup_confirmation.html)
+
+```html
+{% if signup.payment_method == 'stripe' and signup.paid %}
+  <h1 class="thank-you-title">Paiement reçu!</h1>
+  <p class="thank-you-message">Votre passeport a été envoyé à<br>
+    <strong>{{ signup.user.email }}</strong></p>
+{% elif signup.payment_method == 'stripe' and not signup.paid %}
+  <h1 class="thank-you-title">Merci!</h1>
+  <p class="thank-you-message">Votre paiement est en cours de traitement.<br>
+    Vous recevrez un courriel de confirmation à<br>
+    <strong>{{ signup.user.email }}</strong></p>
+{% else %}
+  <h1 class="thank-you-title">Merci!</h1>
+  <p class="thank-you-message">Les prochaines étapes ont été envoyées à<br>
+    <strong>{{ signup.user.email }}</strong></p>
+{% endif %}
+```
+
+### Routes that use this template
+
+| Route | Function |
+|-------|----------|
+| `/signup/thank-you/<id>` | `signup_thank_you` (Interac flow) |
+| `/signup/stripe-success` | `stripe_success` (Stripe flow) |
+
+---
+
+**v1.4 - March 3, 2026**
+- Added Section 16: Organization Avatar with Success Badge
+- Documents the unified confirmation page pattern (`signup_confirmation.html`)
+- Replaces two separate templates (`signup_thank_you.html`, `stripe_success.html`)
 
 ---
 

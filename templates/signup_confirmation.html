@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if signup.payment_method == 'stripe' and signup.paid %}
+  <title>Paiement reçu - {{ activity.name }}</title>
+  {% else %}
   <title>Merci - {{ activity.name }}</title>
+  {% endif %}
 
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
@@ -92,7 +96,6 @@
       }
     }
 
-    /* Respect user preference for reduced motion */
     @media (prefers-reduced-motion: reduce) {
       .success-badge {
         animation: none;
@@ -191,14 +194,29 @@
     </div>
   </div>
 
-  <!-- Title -->
+  {% if signup.payment_method == 'stripe' and signup.paid %}
+  <!-- Stripe: payment confirmed -->
+  <h1 class="thank-you-title">Paiement reçu!</h1>
+  <p class="thank-you-message">
+    Votre passeport a été envoyé à<br>
+    <strong>{{ signup.user.email }}</strong>
+  </p>
+  {% elif signup.payment_method == 'stripe' and not signup.paid %}
+  <!-- Stripe: payment processing -->
   <h1 class="thank-you-title">Merci!</h1>
-
-  <!-- Message -->
+  <p class="thank-you-message">
+    Votre paiement est en cours de traitement.<br>
+    Vous recevrez un courriel de confirmation à<br>
+    <strong>{{ signup.user.email }}</strong>
+  </p>
+  {% else %}
+  <!-- Interac e-transfer -->
+  <h1 class="thank-you-title">Merci!</h1>
   <p class="thank-you-message">
     Les prochaines étapes ont été envoyées à<br>
     <strong>{{ signup.user.email }}</strong>
   </p>
+  {% endif %}
 
   <!-- Button -->
   <a href="https://minipass.me" class="btn-home">
