@@ -5652,7 +5652,16 @@ def financial_report_export():
                 'Income' as transaction_type,
                 COALESCE(p.paid_date, p.created_dt) as transaction_date,
                 u.name as customer,
-                p.notes as memo,
+                CASE
+                    WHEN p.payment_method IN ('cash', 'pos', 'cheque')
+                    THEN CASE WHEN p.notes IS NOT NULL AND p.notes != '' THEN p.notes || ' | ' ELSE '' END
+                         || CASE p.payment_method
+                                WHEN 'cash' THEN 'Cash'
+                                WHEN 'pos' THEN 'POS/TPV'
+                                WHEN 'cheque' THEN 'Cheque'
+                            END
+                    ELSE p.notes
+                END as memo,
                 p.sold_amt as amount,
                 CASE WHEN p.paid = 1 THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
                 'Passport System' as entered_by,
@@ -8101,6 +8110,9 @@ def log_type_color(log_type):
         'Stripe Payment Received': 'yellow',
         'Stripe Payout Received': 'green',
         'Marked Paid': 'green',
+        'Marked Paid (Cash)': 'azure',
+        'Marked Paid (POS/TPV)': 'purple',
+        'Marked Paid (Cheque)': 'orange',
         'Signup Submitted': 'yellow',
         'Signup Approved': 'green',
         'Signup Rejected': 'red',
@@ -8454,17 +8466,21 @@ def mark_passport_paid(passport_id):
         return redirect(url_for("dashboard2"))
 
     now_utc = datetime.now(timezone.utc)
+    payment_method = request.form.get("payment_method", "cash")
 
     # ✅ Step 1: Mark Passport as Paid
     passport.paid = True
     passport.paid_date = now_utc
     passport.marked_paid_by = session.get("admin", "unknown")
+    passport.payment_method = payment_method
     db.session.commit()
 
     # ✅ Step 2: Log Admin Action
+    name = passport.user.name if passport.user else 'Unknown'
+    admin = session.get('admin', 'unknown')
     db.session.add(AdminActionLog(
-        admin_email=session.get("admin", "unknown"),
-        action=f"Passport for {passport.user.name if passport.user else 'Unknown'} ({passport.pass_code}) marked as PAID by {session.get('admin', 'unknown')}"
+        admin_email=admin,
+        action=f"Passport for {name} ({passport.pass_code}) marked as PAID ({payment_method}) by {admin}"
     ))
     db.session.commit()
 

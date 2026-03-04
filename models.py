@@ -269,6 +269,9 @@ class Passport(db.Model):
     paid_date = db.Column(db.DateTime)
     marked_paid_by = db.Column(db.String(120))
     notes = db.Column(db.Text)
+    payment_method = db.Column(db.String(50), nullable=True)
+    # Values: "stripe", "interac", "cash", "pos", "cheque"
+    # NULL = legacy/unknown (historical passports)
 
     # Relationships (user and activity are defined via backrefs on User and Activity models)
     signups = db.relationship("Signup", backref="passport", lazy=True)

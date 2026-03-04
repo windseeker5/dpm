@@ -2783,6 +2783,152 @@ def task33_add_stripe_customer_to_views(cursor):
 
 
 # ============================================================================
+# TASK 34: Add payment_method to Passport table
+# ============================================================================
+def task34_add_passport_payment_method(cursor):
+    """Add payment_method column to passport and backfill from linked signups."""
+    log("💳", "TASK 34: Adding payment_method to passport table", Colors.BLUE)
+
+    # Step 1: Add column
+    try:
+        cursor.execute("ALTER TABLE passport ADD COLUMN payment_method VARCHAR(50)")
+        log("✅", "  Added payment_method column to passport", Colors.GREEN)
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e).lower():
+            log("⏭️", "  payment_method column already exists, skipping", Colors.BLUE)
+        else:
+            raise
+
+    # Step 2: Backfill from linked signups
+    cursor.execute("""
+        UPDATE passport
+        SET payment_method = (
+            SELECT s.payment_method
+            FROM signup s
+            WHERE s.passport_id = passport.id
+            LIMIT 1
+        )
+        WHERE EXISTS (
+            SELECT 1 FROM signup s WHERE s.passport_id = passport.id
+        )
+    """)
+    log("✅", "  Backfilled payment_method from signup records", Colors.GREEN)
+    return True
+
+
+# ============================================================================
+# TASK 35: Show payment_method in monthly_transactions_detail memo
+# ============================================================================
+def task35_payment_method_in_view(cursor):
+    """Rebuild monthly_transactions_detail so manual payments show Cash/POS/Cheque in memo."""
+    log("💳", "TASK 35: Rebuilding monthly_transactions_detail with payment method in memo", Colors.BLUE)
+
+    try:
+        cursor.execute("DROP VIEW IF EXISTS monthly_transactions_detail")
+        cursor.execute("""
+            CREATE VIEW monthly_transactions_detail AS
+            SELECT
+                strftime('%Y-%m', COALESCE(p.paid_date, p.created_dt)) as month,
+                a.name as project,
+                'Income' as transaction_type,
+                COALESCE(p.paid_date, p.created_dt) as transaction_date,
+                'Passport Sales' as account,
+                u.name as customer,
+                NULL as vendor,
+                CASE
+                    WHEN p.payment_method IN ('cash', 'pos', 'cheque')
+                    THEN CASE WHEN p.notes IS NOT NULL AND p.notes != '' THEN p.notes || ' | ' ELSE '' END
+                         || CASE p.payment_method
+                                WHEN 'cash' THEN 'Cash'
+                                WHEN 'pos' THEN 'POS/TPV'
+                                WHEN 'cheque' THEN 'Cheque'
+                            END
+                    ELSE p.notes
+                END as memo,
+                p.sold_amt as amount,
+                CASE WHEN p.paid = 1 THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
+                'Passport System' as entered_by
+            FROM passport p
+            JOIN activity a ON p.activity_id = a.id
+            LEFT JOIN user u ON p.user_id = u.id
+            WHERE (p.marked_paid_by IS NULL OR p.marked_paid_by NOT LIKE 'stripe%')
+
+            UNION ALL
+
+            SELECT
+                strftime('%Y-%m', i.date) as month,
+                a.name as project,
+                'Income' as transaction_type,
+                i.date as transaction_date,
+                i.category as account,
+                u_stripe.name as customer,
+                NULL as vendor,
+                CASE
+                    WHEN st.id IS NOT NULL
+                    THEN 'Stripe Credit Card' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
+                    ELSE i.note
+                END as memo,
+                i.amount,
+                CASE
+                    WHEN i.payment_status = 'received' THEN 'Paid'
+                    WHEN i.payment_status = 'pending' THEN 'Unpaid (AR)'
+                    ELSE 'Unpaid (AR)'
+                END as payment_status,
+                COALESCE(i.created_by, 'System') as entered_by
+            FROM income i
+            JOIN activity a ON i.activity_id = a.id
+            LEFT JOIN stripe_transaction st ON st.income_id = i.id
+            LEFT JOIN signup sg ON sg.id = st.signup_id
+            LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
+            LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
+
+            UNION ALL
+
+            SELECT
+                strftime('%Y-%m', CASE
+                    WHEN e.payment_status = 'unpaid'
+                    THEN COALESCE(e.payment_date, e.due_date, e.date)
+                    ELSE e.date
+                END) as month,
+                a.name as project,
+                'Expense' as transaction_type,
+                CASE
+                    WHEN e.payment_status = 'unpaid'
+                    THEN COALESCE(e.payment_date, e.due_date, e.date)
+                    ELSE e.date
+                END as transaction_date,
+                e.category as account,
+                u_stripe.name as customer,
+                NULL as vendor,
+                CASE
+                    WHEN st.id IS NOT NULL
+                    THEN 'Stripe processing fee' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
+                    ELSE e.description
+                END as memo,
+                e.amount,
+                CASE
+                    WHEN e.payment_status = 'paid' THEN 'Paid'
+                    WHEN e.payment_status = 'unpaid' THEN 'Unpaid (AP)'
+                    ELSE 'Unpaid (AP)'
+                END as payment_status,
+                COALESCE(e.created_by, 'System') as entered_by
+            FROM expense e
+            JOIN activity a ON e.activity_id = a.id
+            LEFT JOIN stripe_transaction st ON st.id = e.stripe_transaction_id
+            LEFT JOIN signup sg ON sg.id = st.signup_id
+            LEFT JOIN user u_stripe ON u_stripe.id = sg.user_id
+            LEFT JOIN passport p_stripe ON p_stripe.id = st.passport_id
+
+            ORDER BY month DESC, transaction_date DESC
+        """)
+        log("✅", "  Rebuilt monthly_transactions_detail with payment method in memo", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to rebuild view: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -2835,6 +2981,8 @@ def main():
         ("Performance Indexes", task31_add_performance_indexes),
         ("Fix Stripe Cash Received", task32_fix_stripe_cash_received),
         ("Stripe Customer Names in Views", task33_add_stripe_customer_to_views),
+        ("Passport Payment Method", task34_add_passport_payment_method),
+        ("Payment Method in Financial View", task35_payment_method_in_view),
     ]
 
     completed = 0

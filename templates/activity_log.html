@@ -33,6 +33,9 @@
               <option value="Stripe Payment Received" {% if current_filters.type == 'Stripe Payment Received' %}selected{% endif %}>Stripe Payment Received</option>
               <option value="Stripe Payout Received" {% if current_filters.type == 'Stripe Payout Received' %}selected{% endif %}>Stripe Payout Received</option>
               <option value="Marked Paid" {% if current_filters.type == 'Marked Paid' %}selected{% endif %}>Marked Paid</option>
+              <option value="Marked Paid (Cash)" {% if current_filters.type == 'Marked Paid (Cash)' %}selected{% endif %}>Marked Paid — Cash</option>
+              <option value="Marked Paid (POS/TPV)" {% if current_filters.type == 'Marked Paid (POS/TPV)' %}selected{% endif %}>Marked Paid — POS/TPV</option>
+              <option value="Marked Paid (Cheque)" {% if current_filters.type == 'Marked Paid (Cheque)' %}selected{% endif %}>Marked Paid — Cheque</option>
               <option value="Reminder Sent" {% if current_filters.type == 'Reminder Sent' %}selected{% endif %}>Reminder Sent</option>
               <option value="Signup Submitted" {% if current_filters.type == 'Signup Submitted' %}selected{% endif %}>Signup Submitted</option>
               <option value="Signup Approved" {% if current_filters.type == 'Signup Approved' %}selected{% endif %}>Signup Approved</option>

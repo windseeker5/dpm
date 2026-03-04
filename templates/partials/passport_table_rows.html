@@ -1,3 +1,4 @@
+{% from 'partials/mark_paid_modal.html' import mark_paid_modal %}
 {% for passport in passes %}
 <tr data-paid="{{ 'true' if passport.paid else 'false' }}" data-active="{{ 'true' if passport.uses_remaining > 0 else 'false' }}">
   <td style="vertical-align: middle;">
@@ -96,4 +97,7 @@
     </form>
   </td>
 </tr>
+{% if not passport.paid %}
+{{ mark_paid_modal(passport) }}
+{% endif %}
 {% endfor %}

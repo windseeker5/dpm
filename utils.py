@@ -2615,7 +2615,15 @@ def get_all_activity_logs():
             elif "passport" in action_text and "redeemed" in action_text:
                 log_type = "Passport Redeemed"
             elif "marked" in action_text and "paid" in action_text:
-                log_type = "Marked Paid"
+                import re
+                m = re.search(r'marked as PAID \((\w+)\)', action_text, re.IGNORECASE)
+                if m:
+                    method_labels = {"cash": "Cash", "pos": "POS/TPV", "cheque": "Cheque",
+                                     "stripe": "Stripe", "interac": "Interac"}
+                    method = method_labels.get(m.group(1).lower(), m.group(1).title())
+                    log_type = f"Marked Paid ({method})"
+                else:
+                    log_type = "Marked Paid"  # backward-compatible for old entries
             elif "approved" in action_text and "signup" in action_text:
                 log_type = "Signup Approved"
             elif "rejected" in action_text and "signup" in action_text:
