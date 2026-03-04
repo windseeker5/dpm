@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'partials/mark_paid_modal.html' import mark_paid_modal %}
 {% block title %}Passports{% endblock %}
 
 {% block content %}
@@ -311,25 +312,7 @@
 <!-- Mark as Paid Modals -->
 {% for passport in passports %}
 {% if not passport.paid %}
-<div class="modal modal-blur fade" id="mark-paid-modal-{{ passport.id }}" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-status bg-success"></div>
-      <div class="modal-body text-center py-4">
-        <i class="ti ti-currency-dollar icon mb-2 text-success" style="font-size: 2rem;"></i>
-        <h3>Confirm Payment</h3>
-        <div class="text-muted">Mark {{ passport.user.name }}'s passport as paid?</div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
-        <form method="POST" action="{{ url_for('mark_passport_paid', passport_id=passport.id) }}" class="w-100">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-success w-100">Yes, mark as paid</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
+{{ mark_paid_modal(passport) }}
 {% endif %}
 {% endfor %}
 

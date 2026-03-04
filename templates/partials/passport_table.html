@@ -1,3 +1,4 @@
+{% from 'partials/mark_paid_modal.html' import mark_paid_modal %}
 <div class="card mb-5">
   <div class="card-header">
     <h3 class="card-title">Active Passports</h3>
@@ -44,12 +45,9 @@
                     <i class="ti ti-pencil me-2"></i>Edit Passport
                   </a>
                   {% if not passport.paid %}
-                  <form action="{{ url_for('mark_passport_paid', passport_id=passport.id) }}" method="POST" onsubmit="return confirm('Mark this passport as paid?');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="dropdown-item text-success" type="submit">
-                      <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-                    </button>
-                  </form>
+                  <button type="button" class="dropdown-item text-success" data-bs-toggle="modal" data-bs-target="#mark-paid-modal-{{ passport.id }}">
+                    <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
+                  </button>
                   {% endif %}
                 </div>
               </div>
@@ -63,3 +61,9 @@
     <p class="m-0 text-muted">Showing <span id="showingCount">{{ passports|length }}</span> of {{ passports|length }}</p>
   </div>
 </div>
+
+{% for passport in passports %}
+{% if not passport.paid %}
+{{ mark_paid_modal(passport) }}
+{% endif %}
+{% endfor %}
