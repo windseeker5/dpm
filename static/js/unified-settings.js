@@ -59,8 +59,8 @@ function initializeLogoPreview() {
  */
 function initializePaymentBotToggle() {
     const toggle = document.getElementById('enable_email_payment_bot');
-    const config = document.getElementById('email-bot-config');
-    
+    const config = document.getElementById('bot-enabled-content');
+
     if (toggle && config) {
         toggle.addEventListener('change', function() {
             config.style.display = this.checked ? 'block' : 'none';
@@ -73,7 +73,7 @@ function initializePaymentBotToggle() {
  */
 function initializeStripeToggle() {
     const toggle = document.getElementById('stripe_payments_enabled');
-    const keyFields = document.getElementById('stripe-key-fields');
+    const keyFields = document.getElementById('stripe-enabled-content');
 
     if (toggle && keyFields) {
         toggle.addEventListener('change', function() {
