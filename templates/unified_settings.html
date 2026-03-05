@@ -29,14 +29,14 @@
         <!-- Organization Settings Card -->
         <div class="card bg-white mb-3">
           <div class="card-body">
-            <h2 class="mb-4">Organization Settings</h2>
+            <h2 class="mb-4">Organization</h2>
             <div class="mb-3">
               <label class="form-label">Organization Name</label>
               <input type="text" name="ORG_NAME" class="form-control" value="{{ settings.get('ORG_NAME', '') }}" required>
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Call-Back Delay (days) if unpaid</label>
+              <label class="form-label">Late Payment Reminder (days)</label>
               <input type="number" name="CALL_BACK_DAYS" class="form-control" min="0" value="{{ settings.get('CALL_BACK_DAYS', '15') }}">
               <div class="form-text">
                 Test late payment reminders for unpaid passports beyond this delay
@@ -72,7 +72,7 @@
         <!-- Email Configuration Card -->
         <div class="card bg-white mb-3">
           <div class="card-body">
-            <h2 class="mb-4">Email Configuration</h2>
+            <h2 class="mb-4">Email</h2>
             
             <div class="mb-3">
               <label class="form-label">Default Sender Email</label>
@@ -97,7 +97,7 @@
                         aria-controls="collapseAdvanced">
                   <span class="fw-medium">
                     <i class="ti ti-server me-2"></i>
-                    Advanced Server Settings
+                    Advanced Settings
                   </span>
                   <i class="ti ti-chevron-down" id="chevron-icon"></i>
                 </button>
@@ -137,7 +137,7 @@
         <!-- Payment Bot Configuration Card -->
         <div class="card bg-white mb-3">
           <div class="card-body">
-            <h2 class="mb-4">Payment Bot Configuration</h2>
+            <h2 class="mb-4">Payment Bot</h2>
             
             <div class="form-check form-switch mb-3">
               <input class="form-check-input" type="checkbox" name="enable_email_payment_bot" id="enable_email_payment_bot" {% if settings.ENABLE_EMAIL_PAYMENT_BOT == 'True' %}checked{% endif %}>
@@ -229,7 +229,7 @@
                       aria-controls="collapseStripe">
                 <h2 class="mb-0">
                   <i class="ti ti-credit-card me-2"></i>
-                  Credit Card Settings (Stripe)
+                  Stripe Payments
                 </h2>
                 <i class="ti ti-chevron-down" id="stripe-chevron-icon"></i>
               </button>

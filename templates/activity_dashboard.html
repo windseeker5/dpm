@@ -1150,17 +1150,17 @@ div.dropdown-divider {
             <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='active') }}"
                class="github-filter-btn {% if current_filters.passport_filter == 'active' and not current_filters.show_all %}active{% endif %}"
                style="{% if current_filters.passport_filter == 'active' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-activity" style="font-size: 16px; margin-right: 4px;"></i>Active <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.active_passports|default(0) }})</span>
+              Active <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.active_passports|default(0) }})</span>
             </a>
             <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='unpaid') }}"
                class="github-filter-btn {% if current_filters.passport_filter == 'unpaid' %}active{% endif %}"
                style="{% if current_filters.passport_filter == 'unpaid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-clock" style="font-size: 16px; margin-right: 4px;"></i>Unpaid <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.unpaid_passports|default(0) }})</span>
+              Unpaid <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.unpaid_passports|default(0) }})</span>
             </a>
             <a href="{{ url_for('activity_dashboard', activity_id=activity.id, show_all='true') }}"
                class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
                style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.total_passports|default(0) }})</span>
+              All <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.total_passports|default(0) }})</span>
             </a>
           </div>
         </div>
@@ -1256,7 +1256,7 @@ div.dropdown-divider {
                   </button>
                   {% endif %}
                   <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
-                    <i class="ti ti-pencil me-2"></i>Edit Details
+                    <i class="ti ti-pencil me-2"></i>Edit
                   </a>
                   {% if not passport.paid %}
                   <button type="button" class="dropdown-item text-success" data-bs-toggle="modal" data-bs-target="#mark-paid-modal-{{ passport.id }}">
@@ -1264,7 +1264,7 @@ div.dropdown-divider {
                   </button>
                   {% endif %}
                   <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
-                    <i class="ti ti-qrcode me-2"></i>View QR Code
+                    <i class="ti ti-qrcode me-2"></i>View
                   </a>
                   {% if not passport.paid %}
                   <button type="button" class="dropdown-item text-warning" data-bs-toggle="modal" data-bs-target="#send-reminder-modal-{{ passport.id }}">
@@ -1483,17 +1483,17 @@ div.dropdown-divider {
               <a href="#" onclick="filterSignups('pending'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending"
                  style="{% if request.args.get('signup_filter') == 'pending' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                <i class="ti ti-alert-circle" style="font-size: 16px; margin-right: 4px;"></i>Pending <span style="opacity: 0.6; margin-left: 4px;">({{ activity_pending_signups_count }})</span>
+                Pending <span style="opacity: 0.6; margin-left: 4px;">({{ activity_pending_signups_count }})</span>
               </a>
               <a href="#" onclick="filterSignups('approved'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved"
                  style="{% if request.args.get('signup_filter') == 'approved' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                <i class="ti ti-check-circle" style="font-size: 16px; margin-right: 4px;"></i>Approved <span style="opacity: 0.6; margin-left: 4px;">({{ all_signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
+                Approved <span style="opacity: 0.6; margin-left: 4px;">({{ all_signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
               </a>
               <a href="#" onclick="filterSignups('all'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter', 'pending') == 'all' %}active{% endif %}" id="signup-filter-all"
                  style="{% if request.args.get('signup_filter', 'pending') == 'all' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                <i class="ti ti-list" style="font-size: 16px; margin-right: 4px;"></i>All <span style="opacity: 0.6; margin-left: 4px;">({{ all_signups|length }})</span>
+                All <span style="opacity: 0.6; margin-left: 4px;">({{ all_signups|length }})</span>
               </a>
             </div>
           </div>
