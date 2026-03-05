@@ -44,27 +44,65 @@
               </div>
             </div>
 
+            <!-- Organization Logo — Photo Normalization Tool (§15) -->
             <div class="mb-3">
               <label class="form-label">Organization Logo</label>
-              <div class="position-relative d-inline-block mb-2" id="logoWrapper">
-                {% if settings.get('LOGO_FILENAME') %}
-                  <img id="logo-preview"
-                       src="{{ url_for('static', filename='uploads/' ~ settings.LOGO_FILENAME) }}"
-                       class="rounded" style="width: 80px; height: 80px; object-fit: contain; background: #f8f9fa;">
-                  <span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-2"
-                        style="cursor: pointer;" id="deleteLogoBtn">
-                    <i class="ti ti-x text-white" style="font-size: 14px;"></i>
-                  </span>
-                {% else %}
-                  <div id="logo-preview" class="rounded bg-secondary-lt d-flex flex-column align-items-center justify-content-center"
-                       style="width: 80px; height: 80px;">
-                    <i class="ti ti-photo text-muted fs-2"></i>
-                    <small class="text-muted">No logo</small>
+
+              <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
+                   style="border: 1px solid rgba(98,105,118,0.2); width: fit-content; max-width: 100%;">
+
+                <!-- Left: Thumbnail -->
+                <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
+                     style="width: 100px; min-height: 100px; cursor: pointer;" id="orgLogoWrapper">
+                  {% if settings.get('LOGO_FILENAME') %}
+                    <img src="{{ url_for('static', filename='uploads/' ~ settings.LOGO_FILENAME) }}"
+                         class="rounded" style="width:100%;height:100%;object-fit:contain;">
+                  {% else %}
+                    <div class="d-flex flex-column align-items-center justify-content-center"
+                         style="width:100%;height:100%;">
+                      <i class="ti ti-photo text-muted fs-2"></i>
+                      <small class="text-muted">Add logo</small>
+                    </div>
+                  {% endif %}
+                </div>
+
+                <!-- Right: Options panel — hidden by default, toggled on thumbnail click -->
+                <div id="orgLogoOptions" class="flex-grow-1 p-2"
+                     style="display: none; border-left: 1px solid rgba(98,105,118,0.2);">
+                  <!-- Source toggle: default to Upload for logos -->
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <small class="text-muted fw-medium">
+                      <i class="ti ti-world-search" style="font-size:13px;"></i> Search
+                    </small>
+                    <label class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="orgLogoSourceToggle" role="switch" checked>
+                    </label>
+                    <small class="text-muted">
+                      <i class="ti ti-upload" style="font-size:13px;"></i> Upload
+                    </small>
                   </div>
-                {% endif %}
+
+                  <!-- Search tab (hidden by default for logos) -->
+                  <div id="orgLogoSearchContent" style="display: none;">
+                    <div class="input-group">
+                      <input type="text" id="orgLogoSearchInput" class="form-control" placeholder="e.g., Company, Sports">
+                      <button type="button" id="orgLogoSearchBtn" class="btn btn-primary">
+                        <i class="ti ti-search"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Upload tab (shown by default for logos) -->
+                  <div id="orgLogoUploadContent">
+                    <input type="file" name="ORG_LOGO_FILE" class="form-control" id="orgLogoInput" accept="image/*">
+                  </div>
+                </div>
+
               </div>
+
               <input type="hidden" name="delete_logo" id="deleteLogoFlag" value="">
-              <input type="file" name="ORG_LOGO_FILE" class="form-control" accept="image/*" id="logo-file-input">
+              <input type="hidden" name="selected_logo_filename" id="orgLogoFilename"
+                     value="{{ settings.get('LOGO_FILENAME', '') }}">
             </div>
           </div>
         </div>
@@ -366,12 +404,103 @@
 
 {% endblock %}
 
+{% block modals %}
+<!-- Org Logo — Crop Modal -->
+<div class="modal modal-blur fade" id="orgLogoCropModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-crop me-2"></i>Adjust Logo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0" style="background:#1a1a2e;">
+        <div style="max-height:60vh; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+          <img id="orgLogoCropImage" src="" alt="Crop preview"
+               style="display:block; max-width:100%; max-height:60vh;">
+        </div>
+        <div class="p-3 text-center">
+          <small class="text-muted">
+            <i class="ti ti-arrows-move me-1"></i>Drag to reposition
+            <span class="mx-2">|</span>
+            <i class="ti ti-zoom-in me-1"></i>Pinch or scroll to zoom
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="ti ti-x me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="orgLogoCropConfirmBtn">
+          <i class="ti ti-check me-1"></i>Use Logo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Org Logo — Unsplash Modal -->
+<div class="modal modal-blur fade" id="orgLogoUnsplashModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select an Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="orgLogoUnsplashImages" class="row g-3"></div>
+        <div class="d-flex justify-content-between mt-3" style="display:none!important;">
+          <button type="button" id="orgLogoPrevPageBtn" class="btn btn-outline-secondary" disabled>
+            <i class="ti ti-chevron-left me-1"></i>Previous
+          </button>
+          <button type="button" id="orgLogoNextPageBtn" class="btn btn-outline-secondary">
+            Next<i class="ti ti-chevron-right ms-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
 {% block scripts %}
 <!-- Unified Settings JavaScript -->
 <script src="{{ url_for('static', filename='js/unified-settings.js') }}?v=3.0"></script>
 <!-- Push Notifications Module -->
 <script src="{{ url_for('static', filename='js/push-notifications.js') }}?v=1.0"></script>
 <script>
+// Org Logo Photo Normalizer — defaults to Upload mode
+var orgLogoNormalizer = initPhotoNormalizer({
+  wrapperId:        'orgLogoWrapper',
+  uploadInputId:    'orgLogoInput',
+  cropModalId:      'orgLogoCropModal',
+  cropImageId:      'orgLogoCropImage',
+  confirmBtnId:     'orgLogoCropConfirmBtn',
+  optionsPanelId:   'orgLogoOptions',
+  hiddenInputId:    'orgLogoFilename',
+  sourceToggleId:   'orgLogoSourceToggle',
+  searchPanelId:    'orgLogoSearchContent',
+  uploadPanelId:    'orgLogoUploadContent',
+  searchInputId:    'orgLogoSearchInput',
+  searchBtnId:      'orgLogoSearchBtn',
+  unsplashModalId:  'orgLogoUnsplashModal',
+  unsplashImagesId: 'orgLogoUnsplashImages',
+  prevPageBtnId:    'orgLogoPrevPageBtn',
+  nextPageBtnId:    'orgLogoNextPageBtn',
+  aspectRatio:      NaN,
+  maxWidth:         400,
+  maxHeight:        400,
+  objectFit:        'contain',
+  placeholderLabel: 'Add logo',
+  onDelete: function() {
+    document.getElementById('deleteLogoFlag').value = '1';
+  },
+  {% if settings.get('LOGO_FILENAME') %}
+  src: "{{ url_for('static', filename='uploads/' ~ settings.LOGO_FILENAME) }}",
+  {% endif %}
+});
+// Reset any spurious onDelete fired during init (when no logo exists)
+document.getElementById('deleteLogoFlag').value = '';
+
 document.addEventListener('DOMContentLoaded', function() {
     // Chevron rotation for Advanced Server Settings
     const collapseElement = document.getElementById('collapseAdvanced');
