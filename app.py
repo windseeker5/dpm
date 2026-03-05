@@ -1186,6 +1186,7 @@ def dashboard():
         activity_cards.append({
             "id": a.id,
             "name": a.name,
+            "passport_types": [{"id": pt.id, "name": pt.name} for pt in passport_types],
             "passport_types_count": len(passport_types),
             "total_sessions": total_sessions,
             "signups": len(all_signups),
@@ -1198,7 +1199,8 @@ def dashboard():
             "unpaid_amount": unpaid_amount,
             "goal_revenue": a.goal_revenue or 0.0,
             "image_filename": a.image_filename,
-            "days_left": days_left
+            "days_left": days_left,
+            "workflow_type": a.workflow_type or "approval_first"
         })
 
     # ✅ Calculate global passport statistics

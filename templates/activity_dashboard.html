@@ -619,6 +619,11 @@ div.dropdown-divider {
             <!-- Content Section (60% - White background) -->
             <div class="activity-content-section">
               <h2 class="activity-title">{{ activity.name }}</h2>
+              {% if activity.workflow_type == 'payment_first' %}
+              <span class="badge bg-blue-lt mb-2" style="align-self: flex-start;"><i class="ti ti-credit-card me-1"></i>Pay First</span>
+              {% else %}
+              <span class="badge bg-azure-lt mb-2" style="align-self: flex-start;"><i class="ti ti-clipboard-check me-1"></i>Review First</span>
+              {% endif %}
               <p class="activity-description text-muted">
                 {{ activity.description or "Transform your game with professional coaching and structured training sessions." }}
               </p>
@@ -642,7 +647,7 @@ div.dropdown-divider {
 
             <!-- Passport Types - Clickable dropdown -->
             <div class="stat-minimal stat-dropdown">
-              <i class="ti ti-clipboard"></i>
+              <i class="ti ti-link"></i>
               <span>{{ passport_types|length }}</span>
               <div class="stat-dropdown-menu" style="display: none;">
                 {% for pt in passport_types %}
@@ -3564,14 +3569,26 @@ function checkAndDeleteActivity(activityId, activityName) {
 // Share signup links functionality
 function copyToClipboard(event, element) {
   event.preventDefault();
+  event.stopPropagation();
   const url = element.dataset.url;
+  const dropdownMenu = element.closest('.stat-dropdown-menu');
+
   navigator.clipboard.writeText(url).then(() => {
-    // Visual feedback
-    const originalText = element.textContent;
-    element.textContent += ' ✓';
-    setTimeout(() => {
-      element.textContent = originalText;
-    }, 2000);
+    // Close dropdown
+    if (dropdownMenu) dropdownMenu.style.display = 'none';
+
+    // Green check on the stat icon
+    const statEl = element.closest('.stat-dropdown');
+    const statIcon = statEl ? statEl.querySelector(':scope > i') : null;
+    if (statIcon) {
+      const originalClass = statIcon.className;
+      statIcon.className = 'ti ti-check';
+      statIcon.style.color = '#2fb344';
+      setTimeout(() => {
+        statIcon.className = originalClass;
+        statIcon.style.color = '';
+      }, 2000);
+    }
   });
 }
 
