@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Survey Management{% endblock %}
+{% block title %}Surveys{% endblock %}
 
 {% block head %}
 <!-- Note: Search component styles loaded via base.html -->
@@ -134,15 +134,15 @@
           <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
             <a href="{{ url_for('list_surveys', status='active') }}"
                class="github-filter-btn {% if current_filters.status == 'active' and not current_filters.show_all %}active{% endif %}">
-              <i class="ti ti-activity"></i>Active <span class="filter-count">({{ statistics.active_surveys }})</span>
+              Active <span class="filter-count">({{ statistics.active_surveys }})</span>
             </a>
             <a href="{{ url_for('list_surveys', status='closed') }}"
                class="github-filter-btn {% if current_filters.status == 'closed' %}active{% endif %}">
-              <i class="ti ti-pause"></i>Closed <span class="filter-count">({{ statistics.closed_surveys|default(0) }})</span>
+              Closed <span class="filter-count">({{ statistics.closed_surveys|default(0) }})</span>
             </a>
             <a href="{{ url_for('list_surveys', show_all='true') }}"
                class="github-filter-btn {% if current_filters.show_all %}active{% endif %}">
-              <i class="ti ti-list"></i>All <span class="filter-count">({{ statistics.total_surveys }})</span>
+              All <span class="filter-count">({{ statistics.total_surveys }})</span>
             </a>
           </div>
         </div>

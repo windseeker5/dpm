@@ -16,7 +16,7 @@
             {% endif %}
           </h1>
           <p class="text-muted mb-0 text-center text-md-start">
-            Here's what's happening with your activities today.
+            Your overview for today.
           </p>
         </div>
       </div>
@@ -85,7 +85,7 @@
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active_passports" data-kpi-id="{{ active_passports_card.id if active_passports_card else 'active-passports-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">ACTIVE PASSPORTS</div>
+                <div class="text-muted small text-uppercase">ACTIVE PASSES</div>
                 <div class="dropdown">
                   <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="active_passports">
                     Last 7 days
@@ -132,7 +132,7 @@
           </div>
         </div>
 
-        <!-- Passports Created Card - REPLACED WITH PASSPORTS REDEEMED -->
+        <!-- Passports Created Card - REPLACED WITH REDEEMED -->
         <!--
         <div class="col-md-3 mb-3">
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_created" data-kpi-id="{{ passports_created_card.id if passports_created_card else 'passports-created-default' }}">
@@ -191,7 +191,7 @@
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_redeemed" data-kpi-id="passports-redeemed-default">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">PASSPORTS REDEEMED</div>
+                <div class="text-muted small text-uppercase">REDEEMED</div>
                 <div class="dropdown">
                   <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports_redeemed">
                     Last 7 days
@@ -235,7 +235,7 @@
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending_signups" data-kpi-id="{{ pending_signups_card.id if pending_signups_card else 'pending-signups-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
+                <div class="text-muted small text-uppercase">UNPAID</div>
                 <div class="dropdown">
                   <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="pending_signups">
                     Last 7 days
@@ -304,7 +304,7 @@
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">ACTIVE PASSPORTS</div>
+                <div class="text-muted small text-uppercase mb-2">ACTIVE PASSES</div>
                 <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['active_users']['current'] }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-calendar me-1"></i>Fiscal Year
@@ -317,7 +317,7 @@
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">PASSPORTS REDEEMED</div>
+                <div class="text-muted small text-uppercase mb-2">REDEEMED</div>
                 <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ mobile_kpi_data['passports_redeemed']['current'] if mobile_kpi_data['passports_redeemed'] else 0 }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-calendar me-1"></i>Fiscal Year
@@ -330,7 +330,7 @@
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">UNPAID PASSPORTS</div>
+                <div class="text-muted small text-uppercase mb-2">UNPAID</div>
                 <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">{{ mobile_kpi_data['unpaid_passports']['current'] }}</div>
                 <div class="text-muted small">
                   <i class="ti ti-calendar me-1"></i>Fiscal Year
@@ -357,7 +357,7 @@
             <div class="d-flex align-items-center justify-content-between">
               <div>
                 <h2 class="section-title-large mb-1 d-flex align-items-center" style="font-size: 2rem; font-weight: 700;">
-                  <i class="ti ti-activity-heartbeat text-danger me-3"></i>Active Activities
+                  <i class="ti ti-activity-heartbeat text-danger me-3"></i>Activities
                 </h2>
          
               </div>
@@ -585,7 +585,7 @@
       <div class="activity-log-section mb-5">
         <div class="row mb-3">
           <div class="col">
-            <h2 class="section-title mb-0"><i class="ti ti-file-description text-blue me-2"></i>Recent events</h2>
+            <h2 class="section-title mb-0"><i class="ti ti-file-description text-blue me-2"></i>History</h2>
           </div>
         </div>
 

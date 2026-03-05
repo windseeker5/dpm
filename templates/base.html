@@ -652,7 +652,7 @@
                   <li class="nav-item">
                     <a href="{{ url_for('user_contacts_report') }}" class="nav-link {{ 'active' if request.endpoint == 'user_contacts_report' }}">
                       <i class="nav-icon ti ti-users"></i>
-                      <span class="nav-text">Users</span>
+                      <span class="nav-text">Contacts</span>
                       {% if request.endpoint == 'user_contacts_report' %}
                       <span class="nav-indicator"></span>
                       {% endif %}
@@ -663,7 +663,7 @@
                     <a href="/chatbot/"
                        class="nav-link {{ 'active' if 'chatbot' in request.endpoint }}">
                       <i class="nav-icon ti ti-message-chatbot"></i>
-                      <span class="nav-text">AI Analytics</span>
+                      <span class="nav-text">AI Assistant</span>
                       <span class="nav-tag">Beta</span>
                       {% if 'chatbot' in request.endpoint %}
                       <span class="nav-indicator"></span>
@@ -704,7 +704,7 @@
                   <li class="nav-item">
                     <a href="{{ url_for('unified_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'unified_settings' }}">
                       <i class="nav-icon ti ti-mail-cog"></i>
-                      <span class="nav-text">Email Settings</span>
+                      <span class="nav-text">Email</span>
                       {% if request.endpoint == 'unified_settings' %}
                       <span class="nav-indicator"></span>
                       {% endif %}
@@ -713,7 +713,7 @@
                   <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="data">
                       <i class="nav-icon ti ti-database"></i>
-                      <span class="nav-text">Your Data</span>
+                      <span class="nav-text">Data</span>
                     </a>
                   </li>
                   <li class="nav-item">
@@ -725,7 +725,7 @@
                   <li class="nav-item">
                     <a href="{{ url_for('current_plan') }}" class="nav-link {{ 'active' if request.endpoint == 'current_plan' }}">
                       <i class="nav-icon ti ti-credit-card"></i>
-                      <span class="nav-text">Current Plan</span>
+                      <span class="nav-text">Plan</span>
                       {% if request.endpoint == 'current_plan' %}
                       <span class="nav-indicator"></span>
                       {% endif %}
