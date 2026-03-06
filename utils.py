@@ -1269,11 +1269,22 @@ def get_kpi_data(activity_id=None, period='7d'):
         ).count()
         
         if period != 'all':
-            # For active users, we need a snapshot comparison, not creation-based
-            # This is complex to calculate historically, so we'll skip the comparison
-            # Alternative: Track this in a separate daily snapshot table for accurate trends
-            prev_active_users = None
-            active_users_change = None
+            # Approximate: compare passes created in current vs previous period as a proxy
+            current_created = get_base_passport_query().filter(
+                Passport.created_dt >= current_start,
+                Passport.created_dt <= current_end
+            ).count()
+            prev_created = get_base_passport_query().filter(
+                Passport.created_dt >= prev_start,
+                Passport.created_dt <= prev_end
+            ).count()
+            prev_active_users = prev_created
+            if prev_created > 0:
+                active_users_change = ((current_created - prev_created) / prev_created * 100)
+            elif current_created > 0:
+                active_users_change = 100.0
+            else:
+                active_users_change = 0
         else:
             prev_active_users = None
             active_users_change = None
@@ -1447,7 +1458,7 @@ def get_kpi_data(activity_id=None, period='7d'):
                 trend.append(count_dict.get(day_str, 0))
             return trend
         
-        active_users_trend = build_count_trend(Passport, Passport.uses_remaining > 0, trend_days)
+        active_users_trend = build_count_trend(Passport, None, trend_days)
         passports_created_trend = build_count_trend(Passport, None, trend_days)
         unpaid_trend = build_count_trend(Passport, Passport.paid == False, trend_days)
 
