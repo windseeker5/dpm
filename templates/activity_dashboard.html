@@ -1844,7 +1844,7 @@ function attachDropdownHandlers() {
         return;
       }
       
-      const kpiType = determineKPIType(cardElement);
+      const kpiType = this.getAttribute('data-card-type') || determineKPIType(cardElement);
       
       // Update button text with loading state
       const button = this.closest('.dropdown')?.querySelector('.dropdown-toggle');
@@ -1913,13 +1913,16 @@ function determineKPIType(cardElement) {
     return 'revenue'; // fallback
   }
   
-  // Determine KPI type based on card content - use FRONTEND keys consistently
+  // Prefer data-kpi-card attribute (reliable, rename-proof)
+  const dataAttr = cardElement.getAttribute('data-kpi-card');
+  if (dataAttr) return dataAttr;
+  // Fallback to text matching
   const cardText = cardElement.textContent.toLowerCase();
   if (cardText.includes('revenue')) return 'revenue';
-  if (cardText.includes('active passports') || cardText.includes('active users')) return 'active_passports';
-  if (cardText.includes('passports redeemed')) return 'passports_redeemed';
-  if (cardText.includes('passports created')) return 'passports_created';
-  if (cardText.includes('unpaid passports') || cardText.includes('pending sign ups')) return 'pending_signups';
+  if (cardText.includes('active')) return 'active_passports';
+  if (cardText.includes('redeemed')) return 'passports_redeemed';
+  if (cardText.includes('created')) return 'passports_created';
+  if (cardText.includes('unpaid') || cardText.includes('pending')) return 'pending_signups';
   return 'revenue'; // fallback
 }
 
@@ -2035,7 +2038,7 @@ async function updateKPICard(period, kpiType, cardElement) {
       let trendClass = 'text-muted me-2';
       let icon = 'ti-minus';
       let changeText = '--';
-      
+
       if (kpiData.change > 0) {
         trendClass = 'text-success me-2';
         icon = 'ti-trending-up';
@@ -2047,11 +2050,14 @@ async function updateKPICard(period, kpiType, cardElement) {
       } else if (kpiData.change === 0) {
         changeText = '0%';
       }
-      
+
+      trendElement.style.visibility = 'visible';
       trendElement.className = trendClass;
       trendElement.innerHTML = `${changeText} <i class="ti ${icon}"></i>`;
+    } else if (trendElement) {
+      trendElement.style.visibility = 'hidden';
     }
-    
+
     // Update chart with new trend data
     updateSingleChart(cardElement, kpiData, kpiType);
     
