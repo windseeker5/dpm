@@ -557,7 +557,7 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
             return False, "Stripe API key not configured"
 
         price_key = f"STRIPE_PRICE_{new_plan.upper()}_{new_billing_frequency.upper()}"
-        new_price_id = os.getenv(price_key)
+        new_price_id = get_setting(price_key)
         if not new_price_id:
             logger.error(f"[CHANGE_PLAN] Missing env var: {price_key}")
             return False, "Plan configuration missing. Please contact support."
@@ -4412,7 +4412,7 @@ def current_plan():
     for plan_item in all_plans:
         for freq in ('monthly', 'annual'):
             env_key = f"STRIPE_PRICE_{plan_item['key'].upper()}_{freq.upper()}"
-            price_id = os.getenv(env_key)
+            price_id = get_setting(env_key)
             if price_id:
                 plan_price_ids[f"{plan_item['key']}_{freq}"] = price_id
 
