@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
-from models import Setting, db, Passport, Redemption, Admin, EbankPayment, ReminderLog
+from models import Setting, db, Passport, Redemption, Admin, EbankPayment, ReminderLog, Activity
 
 
 
@@ -1138,6 +1138,20 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
 
 
 
+def get_active_passports_query(activity_id=None):
+    """
+    Single source of truth for 'active passport' definition.
+    An active passport: has uses remaining AND belongs to a non-archived activity.
+    """
+    query = Passport.query.join(Activity).filter(
+        Activity.status != 'archived',
+        Passport.uses_remaining > 0
+    )
+    if activity_id:
+        query = query.filter(Passport.activity_id == activity_id)
+    return query
+
+
 # OBSOLETE - Use get_kpi_data() instead. This function will be removed in future version.
 
 def get_kpi_data(activity_id=None, period='7d'):
@@ -1263,10 +1277,8 @@ def get_kpi_data(activity_id=None, period='7d'):
             prev_revenue = None
             revenue_change = None
         
-        # KPI 2: Active Users (passports with uses_remaining > 0)
-        current_active_users = get_base_passport_query().filter(
-            Passport.uses_remaining > 0
-        ).count()
+        # KPI 2: Active Users (passports with uses_remaining > 0, non-archived activity)
+        current_active_users = get_active_passports_query(activity_id=activity_id).count()
         
         if period != 'all':
             # Approximate: compare passes created in current vs previous period as a proxy
