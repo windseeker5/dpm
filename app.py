@@ -79,6 +79,7 @@ from utils import (
     utc_to_local,
     send_unpaid_reminders,
     get_kpi_data,
+    get_active_passports_query,
     notify_pass_event,
     notify_signup_event,
     generate_pass_code,
@@ -716,9 +717,7 @@ def _get_sidebar_counts(admin_email):
     try:
         counts = {
             'pending_signups_count': Signup.query.filter_by(status='pending').count(),
-            'active_passport_count': Passport.query.filter(
-                db.or_(Passport.uses_remaining > 0, Passport.paid == False)
-            ).count(),
+            'active_passport_count': get_active_passports_query().count(),
             'unmatched_payment_count': db.session.query(EbankPayment.id).filter(
                 EbankPayment.result == 'NO_MATCH',
                 EbankPayment.id.in_(
@@ -1209,7 +1208,7 @@ def dashboard():
         'total_passports': len(all_passports),
         'paid_passports': len([p for p in all_passports if p.paid]),
         'unpaid_passports': len([p for p in all_passports if not p.paid]),
-        'active_passports': len([p for p in all_passports if p.uses_remaining > 0]),
+        'active_passports': get_active_passports_query().count(),
         'total_revenue': sum(p.sold_amt for p in all_passports if p.paid),
         'pending_revenue': sum(p.sold_amt for p in all_passports if not p.paid),
     }
@@ -5485,13 +5484,11 @@ def list_passports():
     if activity_id:
         query = query.filter(Passport.activity_id == activity_id)
 
-    # Status filter for "active" (has remaining uses OR unpaid)
+    # Status filter for "active" (has remaining uses AND non-archived activity)
     if status == "active":
-        query = query.filter(
-            db.or_(
-                Passport.uses_remaining > 0,
-                Passport.paid == False
-            )
+        query = query.join(Activity, Passport.activity_id == Activity.id).filter(
+            Activity.status != 'archived',
+            Passport.uses_remaining > 0
         )
     elif payment_status == "paid":
         query = query.filter(Passport.paid == True)
@@ -5539,8 +5536,8 @@ def list_passports():
     # Calculate statistics using ALL passports (not filtered results)
     paid_passports = len([p for p in all_passports if p.paid])
     unpaid_passports = len([p for p in all_passports if not p.paid])
-    # Active = has remaining uses OR unpaid
-    active_passports = len([p for p in all_passports if p.uses_remaining > 0 or not p.paid])
+    # Active = has remaining uses AND belongs to a non-archived activity
+    active_passports = get_active_passports_query().count()
     total_revenue = sum(p.sold_amt for p in all_passports if p.paid)
     pending_revenue = sum(p.sold_amt for p in all_passports if not p.paid)
 
