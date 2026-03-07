@@ -120,7 +120,17 @@
                 {% endif %}
                 {{ log.type }}
               </td>
-              <td class="log-description">{{ log.details }}</td>
+              <td class="log-description">
+                {{ log.details }}
+                {% if log.type == 'Email Sent' and log.email_log_id %}
+                <form method="POST" action="{{ url_for('resend_email', log_id=log.email_log_id) }}" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-sm btn-ghost-secondary ms-2" title="Resend this email">
+                    <i class="ti ti-send"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -136,7 +146,17 @@
           <span class="badge badge-sm bg-gray-lt me-2">{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d') }}</span>
           <span class="badge badge-sm bg-{{ log.type | log_type_color }}-lt">{{ log.type }}</span>
         </div>
-        <div class="log-card-description">{{ log.details }}</div>
+        <div class="log-card-description">
+          {{ log.details }}
+          {% if log.type == 'Email Sent' and log.email_log_id %}
+          <form method="POST" action="{{ url_for('resend_email', log_id=log.email_log_id) }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-ghost-secondary ms-2" title="Resend this email">
+              <i class="ti ti-send"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
       </div>
       {% endfor %}
     </div>
