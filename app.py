@@ -709,17 +709,21 @@ def _get_sidebar_counts(admin_email):
     """Return sidebar badge counts and admin data. Fresh query every request."""
     try:
         admin_obj = Admin.query.filter_by(email=admin_email).first()
+        pending = Signup.query.filter_by(status='pending').count()
+        unmatched = db.session.query(EbankPayment.id).filter(
+            EbankPayment.result == 'NO_MATCH',
+            EbankPayment.id.in_(
+                db.session.query(db.func.max(EbankPayment.id))
+                .group_by(EbankPayment.bank_info_name, EbankPayment.bank_info_amt, EbankPayment.from_email)
+            )
+        ).count()
+        failed = EmailLog.query.filter_by(result="FAILED").count()
         return {
-            'pending_signups_count': Signup.query.filter_by(status='pending').count(),
+            'pending_signups_count': pending,
             'active_passport_count': get_active_passports_query().count(),
-            'unmatched_payment_count': db.session.query(EbankPayment.id).filter(
-                EbankPayment.result == 'NO_MATCH',
-                EbankPayment.id.in_(
-                    db.session.query(db.func.max(EbankPayment.id))
-                    .group_by(EbankPayment.bank_info_name, EbankPayment.bank_info_amt, EbankPayment.from_email)
-                )
-            ).count(),
-            'failed_email_count': EmailLog.query.filter_by(result="FAILED").count(),
+            'unmatched_payment_count': unmatched,
+            'failed_email_count': failed,
+            'total_notifications': pending + unmatched + failed,
             'current_admin': {
                 'avatar_filename': admin_obj.avatar_filename,
                 'display_name': admin_obj.display_name,
@@ -732,6 +736,7 @@ def _get_sidebar_counts(admin_email):
             'active_passport_count': 0,
             'unmatched_payment_count': 0,
             'failed_email_count': 0,
+            'total_notifications': 0,
             'current_admin': None,
         }
 
@@ -745,6 +750,7 @@ def inject_globals_and_csrf():
     active_passport_count = 0
     unmatched_payment_count = 0
     failed_email_count = 0
+    total_notifications = 0
     current_admin = None
 
     try:
@@ -754,6 +760,7 @@ def inject_globals_and_csrf():
             active_passport_count = sidebar['active_passport_count']
             unmatched_payment_count = sidebar['unmatched_payment_count']
             failed_email_count = sidebar.get('failed_email_count', 0)
+            total_notifications = sidebar.get('total_notifications', 0)
             current_admin = sidebar['current_admin']
     except Exception:
         # If there's any database error, default to 0
@@ -761,6 +768,7 @@ def inject_globals_and_csrf():
         active_passport_count = 0
         unmatched_payment_count = 0
         failed_email_count = 0
+        total_notifications = 0
         current_admin = None
 
     # Get subscription tier info for templates
@@ -786,6 +794,7 @@ def inject_globals_and_csrf():
         'active_passport_count': active_passport_count,
         'unmatched_payment_count': unmatched_payment_count,
         'failed_email_count': failed_email_count,
+        'total_notifications': total_notifications,
         'current_admin': current_admin,  # Add current admin for template personalization
         'subscription': subscription_info,  # Subscription tier info
         'payment_email': payment_email,  # For displaying payment instructions (uses display email if set)
@@ -1332,6 +1341,8 @@ def dashboard():
     passports_created_card = render_passports_created_card()
     passports_unpaid_card = render_passports_unpaid_card()
 
+    activity_indicator_count = min(len(activity_cards) + 1, 4)  # +1 for placeholder card, capped at 4
+
     return render_template(
         "dashboard.html",
         activities=activity_cards,
@@ -1345,7 +1356,8 @@ def dashboard():
         revenue_card=revenue_card,
         active_users_card=active_users_card,
         passports_created_card=passports_created_card,
-        passports_unpaid_card=passports_unpaid_card
+        passports_unpaid_card=passports_unpaid_card,
+        activity_indicator_count=activity_indicator_count,
     )
 
 
@@ -7240,6 +7252,13 @@ def activity_dashboard(activity_id):
 
     has_pending_signups = len(pending_signups) > 0
     activity_pending_signups_count = len(pending_signups)
+    activity_approved_signups_count = len([s for s in all_signups if s.status == 'approved'])
+    open_passports_count = len([p for p in all_passports if p.uses_remaining > 0])
+
+    # Revenue progress percentage for the progress bar (capped at 100)
+    _target = float(activity.goal_revenue or 0)
+    _actual = float(total_paid_revenue or 0)
+    revenue_progress_pct = min(round((_actual / _target * 100) if _target > 0 else 0), 100)
     
     # Activity log entries (recent activity)
     # Use get_all_activity_logs to get properly formatted logs like dashboard does
@@ -7337,6 +7356,9 @@ def activity_dashboard(activity_id):
         passports_unpaid_card=passports_unpaid_card,
         has_pending_signups=has_pending_signups,
         activity_pending_signups_count=activity_pending_signups_count,
+        activity_approved_signups_count=activity_approved_signups_count,
+        open_passports_count=open_passports_count,
+        revenue_progress_pct=revenue_progress_pct,
         survey_rating=survey_rating,
         survey_count=survey_count,
         total_paid_revenue=total_paid_revenue,
@@ -9569,9 +9591,7 @@ def list_survey_templates():
         'used_templates': used_templates,
     }
 
-    # Set default filter if no parameters - "used" is now the default
-    if not usage_filter and show_all_param != "true":
-        usage_filter = "used"
+    # Default: show all templates
 
     # Base query for filtered results
     query = SurveyTemplate.query.order_by(SurveyTemplate.created_dt.desc())
@@ -9911,21 +9931,45 @@ def survey_results(survey_id):
                 except (json.JSONDecodeError, TypeError):
                     continue  # Skip malformed responses
         
-        # Generate summary based on question type
+        # Generate summary and pre-compute percentages based on question type
+        total = len(analysis[question_id]['responses'])
+        analysis[question_id]['total_responses'] = total
         if question['type'] == 'multiple_choice':
             summary = {}
             for resp in analysis[question_id]['responses']:
                 summary[resp] = summary.get(resp, 0) + 1
             analysis[question_id]['summary'] = summary
+            analysis[question_id]['percentages'] = {
+                option: round(count / total * 100, 1) if total > 0 else 0
+                for option, count in summary.items()
+            }
+        elif question['type'] == 'rating':
+            rating_counts = {}
+            for resp in analysis[question_id]['responses']:
+                key = str(resp)
+                rating_counts[key] = rating_counts.get(key, 0) + 1
+            analysis[question_id]['rating_counts'] = dict(sorted(rating_counts.items()))
+            analysis[question_id]['rating_percentages'] = {
+                k: round(v / total * 100, 1) if total > 0 else 0
+                for k, v in rating_counts.items()
+            }
+            analysis[question_id]['summary'] = {'count': total}
         else:
-            analysis[question_id]['summary'] = {'count': len(analysis[question_id]['responses'])}
+            analysis[question_id]['summary'] = {'count': total}
     
+    completed_count = sum(1 for r in all_responses if r.completed)
+    in_progress_count = len(all_responses) - completed_count
+    completion_rate = round((completed_count / len(all_responses) * 100) if all_responses else 0, 1)
+
     return render_template("survey_results.html",
                          survey=survey,
                          responses=responses,
                          all_responses=all_responses,
                          analysis=analysis,
                          pagination=response_pagination,
+                         completed_count=completed_count,
+                         in_progress_count=in_progress_count,
+                         completion_rate=completion_rate,
                          current_filters={})
 
 

@@ -258,7 +258,7 @@
           <div class="card" style="border-radius: 12px; min-height: 130px;">
             <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
               <div class="text-muted small text-uppercase mb-2">COMPLETED</div>
-              <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ responses|selectattr('completed', 'equalto', True)|list|length }}</div>
+              <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ completed_count }}</div>
               <div class="text-muted small">
                 Finished surveys
               </div>
@@ -270,9 +270,8 @@
         <div class="mobile-kpi-card">
           <div class="card" style="border-radius: 12px; min-height: 130px;">
             <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-              {% set completion_rate = ((responses|selectattr('completed', 'equalto', True)|list|length / responses|length) * 100) if responses|length > 0 else 0 %}
               <div class="text-muted small text-uppercase mb-2">COMPLETION RATE</div>
-              <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ "%.1f"|format(completion_rate) }}%</div>
+              <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ completion_rate }}%</div>
               <div class="text-muted small">
                 Success rate
               </div>
@@ -332,7 +331,7 @@
         <div class="card" style="border-radius: 12px; min-height: 130px;">
           <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
             <div class="text-muted small text-uppercase mb-2">COMPLETED</div>
-            <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ responses|selectattr('completed', 'equalto', True)|list|length }}</div>
+            <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ completed_count }}</div>
             <div class="text-muted small">
               Finished surveys
             </div>
@@ -344,9 +343,8 @@
       <div class="col-md-3">
         <div class="card" style="border-radius: 12px; min-height: 130px;">
           <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-            {% set completion_rate = ((responses|selectattr('completed', 'equalto', True)|list|length / responses|length) * 100) if responses|length > 0 else 0 %}
             <div class="text-muted small text-uppercase mb-2">COMPLETION RATE</div>
-            <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ "%.1f"|format(completion_rate) }}%</div>
+            <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">{{ completion_rate }}%</div>
             <div class="text-muted small">
               Success rate
             </div>
@@ -426,24 +424,13 @@
     <!-- Multiple Choice and Rating Results -->
     <div class="mb-3">
       <h5 class="mb-3">Response Distribution</h5>
-      {% set total_responses = analysis_data.responses|length %}
-
       {% if analysis_data.question.type == 'rating' %}
-        {# For rating questions, count occurrences of each rating value #}
-        {% set rating_counts = {} %}
-        {% for response in analysis_data.responses %}
-          {% set rating_str = response|string %}
-          {% if rating_counts.update({rating_str: rating_counts.get(rating_str, 0) + 1}) %}{% endif %}
-        {% endfor %}
-
-        {# Display rating distribution sorted by rating value #}
-        {% for rating in rating_counts.keys()|sort %}
-          {% set count = rating_counts[rating] %}
-          {% set percentage = (count / total_responses * 100) if total_responses > 0 else 0 %}
+        {% for rating, count in analysis_data.rating_counts.items() %}
+          {% set percentage = analysis_data.rating_percentages[rating] %}
           <div class="mb-2">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="small fw-medium">Rating: {{ rating }}</span>
-              <span class="badge bg-green-lt text-green">{{ count }} ({{ "%.1f"|format(percentage) }}%)</span>
+              <span class="badge bg-green-lt text-green">{{ count }} ({{ percentage }}%)</span>
             </div>
             <div class="progress progress-sm">
               <div class="progress-bar bg-success" style="width: {{ percentage }}%"></div>
@@ -453,11 +440,11 @@
       {% else %}
         {# Multiple choice distribution #}
         {% for option, count in analysis_data.summary.items() %}
-        {% set percentage = (count / total_responses * 100) if total_responses > 0 else 0 %}
+        {% set percentage = analysis_data.percentages[option] %}
         <div class="mb-2">
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="small fw-medium">{{ option }}</span>
-            <span class="badge bg-green-lt text-green">{{ count }} ({{ "%.1f"|format(percentage) }}%)</span>
+            <span class="badge bg-green-lt text-green">{{ count }} ({{ percentage }}%)</span>
           </div>
           <div class="progress progress-sm">
             <div class="progress-bar bg-success" style="width: {{ percentage }}%"></div>
@@ -496,12 +483,12 @@
           <a href="javascript:void(0)"
              class="github-filter-btn active"
              data-filter="completed">
-            Completed <span class="filter-count">({{ all_responses|selectattr('completed', 'equalto', True)|list|length }})</span>
+            Completed <span class="filter-count">({{ completed_count }})</span>
           </a>
           <a href="javascript:void(0)"
              class="github-filter-btn"
              data-filter="in_progress">
-            In Progress <span class="filter-count">({{ all_responses|selectattr('completed', 'equalto', False)|list|length }})</span>
+            In Progress <span class="filter-count">({{ in_progress_count }})</span>
           </a>
           <a href="javascript:void(0)"
              class="github-filter-btn"
