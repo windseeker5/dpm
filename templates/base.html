@@ -481,7 +481,7 @@
           <a href="#" class="header-user-link d-flex align-items-center" data-bs-toggle="dropdown">
             <span class="avatar avatar-sm"
                   style="background-image: url('{% if current_admin and current_admin.avatar_filename %}{{ url_for('static', filename='uploads/avatars/' ~ current_admin.avatar_filename) }}{% else %}https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon{% endif %}')">
-              {% set total_notifications = (unmatched_payment_count or 0) + (pending_signups_count or 0) %}
+              {% set total_notifications = (unmatched_payment_count or 0) + (pending_signups_count or 0) + (failed_email_count or 0) %}
               {% if total_notifications > 0 %}
               <span class="avatar-badge">{{ total_notifications }}</span>
               {% endif %}
@@ -500,8 +500,8 @@
             </a>
             <div class="dropdown-divider"></div>
             {% endif %}
-            <a href="{{ url_for('activity_log') }}" class="dropdown-item">
-              <i class="ti ti-history me-2"></i>Activity Log
+            <a href="{{ url_for('activity_log') }}{% if failed_email_count and failed_email_count > 0 %}?type=Email+Failed{% endif %}" class="dropdown-item {% if failed_email_count and failed_email_count > 0 %}text-danger{% endif %}">
+              <i class="ti ti-history me-2"></i>Activity Log{% if failed_email_count and failed_email_count > 0 %} ({{ failed_email_count }} failed){% endif %}
             </a>
             <a href="{{ url_for('setup') }}" class="dropdown-item">
               <i class="ti ti-settings me-2"></i>Settings
@@ -644,7 +644,9 @@
                     <a href="{{ url_for('activity_log') }}" class="nav-link {{ 'active' if request.endpoint == 'activity_log' }}">
                       <i class="nav-icon ti ti-history"></i>
                       <span class="nav-text">Activity Log</span>
-                      {% if request.endpoint == 'activity_log' %}
+                      {% if failed_email_count and failed_email_count > 0 %}
+                      <span class="nav-badge bg-red">{{ failed_email_count }}</span>
+                      {% elif request.endpoint == 'activity_log' %}
                       <span class="nav-indicator"></span>
                       {% endif %}
                     </a>
