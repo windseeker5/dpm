@@ -2689,16 +2689,34 @@ def get_all_activity_logs():
                 "details": details
             })
 
-        # 🟠 Email Sent
+        # 🟠 Email Sent / Email Failed / Email Dismissed
         for e in EmailLog.query.all():
             pass_code_display = e.pass_code if e.pass_code else "App-Sent"
-            logs.append({
-                "timestamp": e.timestamp,
-                "type": "Email Sent",
-                "user": e.to_email,
-                "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display})",
-                "email_log_id": e.id
-            })
+            if e.result == "FAILED":
+                error_hint = f" — Error: {e.error_message[:60]}" if e.error_message else ""
+                logs.append({
+                    "timestamp": e.timestamp,
+                    "type": "Email Failed",
+                    "user": e.to_email,
+                    "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display}){error_hint}",
+                    "email_log_id": e.id
+                })
+            elif e.result == "DISMISSED":
+                logs.append({
+                    "timestamp": e.timestamp,
+                    "type": "Email Dismissed",
+                    "user": e.to_email,
+                    "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display})",
+                    "email_log_id": None
+                })
+            else:
+                logs.append({
+                    "timestamp": e.timestamp,
+                    "type": "Email Sent",
+                    "user": e.to_email,
+                    "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display})",
+                    "email_log_id": e.id
+                })
 
         # 🔵 Payments
         for p in EbankPayment.query.all():
@@ -3424,7 +3442,7 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                     context['organization_id'] = org_id
 
                 # --- Send the email ---
-                send_email(
+                send_result = send_email(
                     subject=subject,
                     to_email=to_email,
                     template_name=template_name,
@@ -3437,6 +3455,9 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                     use_hosted_images=use_hosted_images,
                     operational=operational,
                 )
+
+                if send_result is False:
+                    raise RuntimeError("SMTP delivery failed — send_email() returned False")
 
                 # --- Save EmailLog after successful send ---
                 def format_dt(dt):
@@ -3482,21 +3503,36 @@ def send_email_async(app, user=None, activity=None, **kwargs):
 
                 from models import EmailLog
 
-                # Try to extract pass_code safely for error log
+                # Try to extract pass_code and context safely for error log
                 error_pass_code = None
+                error_user_name = None
+                error_activity_name = None
                 error_context = kwargs.get("context", {})
                 if error_context:
                     if "hockey_pass" in error_context:
                         error_pass_code = error_context.get("hockey_pass", {}).get("pass_code")
+                        error_user_name = error_context.get("hockey_pass", {}).get("user_name")
                     elif "pass_code" in error_context:
                         error_pass_code = error_context.get("pass_code")
-                
+                        error_user_name = error_context.get("user_name")
+                    elif "pass_data" in error_context:
+                        pd = error_context.get("pass_data")
+                        error_pass_code = getattr(pd, "pass_code", None)
+                        error_user_name = getattr(getattr(pd, "user", None), "name", None)
+                    error_activity_name = error_context.get("activity_name")
+
                 db.session.add(EmailLog(
                     to_email=kwargs.get("to_email"),
-                    subject=kwargs.get("subject"),
+                    subject=subject,
                     pass_code=error_pass_code,
                     template_name=kwargs.get("template_name") or "",
-                    context_json=json.dumps({"error": str(e)}),
+                    context_json=json.dumps({
+                        "user_name": error_user_name,
+                        "activity_name": error_activity_name,
+                        "template_type": kwargs.get("template_name"),
+                        "special_message": error_context.get("special_message", "") if error_context else "",
+                        "error": str(e),
+                    }),
                     result="FAILED",
                     error_message=str(e),
                     timestamp=kwargs.get("timestamp_override") or datetime.now(timezone.utc)

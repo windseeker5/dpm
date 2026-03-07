@@ -725,6 +725,7 @@ def _get_sidebar_counts(admin_email):
                     .group_by(EbankPayment.bank_info_name, EbankPayment.bank_info_amt, EbankPayment.from_email)
                 )
             ).count(),
+            'failed_email_count': EmailLog.query.filter_by(result="FAILED").count(),
             'current_admin': Admin.query.filter_by(email=admin_email).first(),
         }
     except Exception:
@@ -732,6 +733,7 @@ def _get_sidebar_counts(admin_email):
             'pending_signups_count': 0,
             'active_passport_count': 0,
             'unmatched_payment_count': 0,
+            'failed_email_count': 0,
             'current_admin': None,
         }
     _ctx_cache[admin_email] = (counts, time.time() + 45)
@@ -746,6 +748,7 @@ def inject_globals_and_csrf():
     pending_signups_count = 0
     active_passport_count = 0
     unmatched_payment_count = 0
+    failed_email_count = 0
     current_admin = None
 
     try:
@@ -754,12 +757,14 @@ def inject_globals_and_csrf():
             pending_signups_count = sidebar['pending_signups_count']
             active_passport_count = sidebar['active_passport_count']
             unmatched_payment_count = sidebar['unmatched_payment_count']
+            failed_email_count = sidebar.get('failed_email_count', 0)
             current_admin = sidebar['current_admin']
     except Exception:
         # If there's any database error, default to 0
         pending_signups_count = 0
         active_passport_count = 0
         unmatched_payment_count = 0
+        failed_email_count = 0
         current_admin = None
 
     # Get subscription tier info for templates
@@ -784,6 +789,7 @@ def inject_globals_and_csrf():
         'pending_signups_count': pending_signups_count,
         'active_passport_count': active_passport_count,
         'unmatched_payment_count': unmatched_payment_count,
+        'failed_email_count': failed_email_count,
         'current_admin': current_admin,  # Add current admin for template personalization
         'subscription': subscription_info,  # Subscription tier info
         'payment_email': payment_email,  # For displaying payment instructions (uses display email if set)
@@ -958,7 +964,25 @@ def resend_email(log_id):
         admin_email=session.get("admin")
     )
 
+    # Mark original as dismissed so it no longer counts toward the failed badge
+    log.result = "DISMISSED"
+    db.session.commit()
+
     flash(f"Email resent to {log.to_email}.", "success")
+    return redirect(request.referrer or url_for("activity_log"))
+
+
+@app.route("/dismiss-email/<int:log_id>", methods=["POST"])
+def dismiss_email(log_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import EmailLog
+    log = EmailLog.query.get_or_404(log_id)
+    log.result = "DISMISSED"
+    db.session.commit()
+
+    flash("Failed email cleared from notifications.", "info")
     return redirect(request.referrer or url_for("activity_log"))
 
 
@@ -1927,7 +1951,7 @@ def approve_and_create_pass(signup_id):
         timestamp=now_utc
     )
 
-    flash("Signup approved and passport created! Email sent to user.", "success")
+    flash("Signup approved and passport created! Confirmation email queued for delivery.", "success")
     return redirect(url_for("activity_dashboard", activity_id=signup.activity_id))
 
 
@@ -8326,6 +8350,8 @@ def log_type_color(log_type):
     colors = {
         'Passport Redeemed': 'red',
         'Email Sent': 'blue',
+        'Email Failed': 'red',
+        'Email Dismissed': 'gray',
         'Passport Created': 'green',
         'Interac Payment Matched': 'teal',
         'Stripe Payment Received': 'yellow',
@@ -8449,7 +8475,7 @@ def create_passport():
             timestamp=now_utc
         )
 
-        flash("Passport created and confirmation email sent.", "success")
+        flash("Passport created. Confirmation email queued for delivery.", "success")
         if activity_id and activity_id > 0:
             return redirect(url_for("activity_dashboard", activity_id=activity_id))
         else:
@@ -8723,7 +8749,7 @@ def mark_passport_paid(passport_id):
     
     # SSE notifications removed for leaner performance
 
-    flash(f" Passport {passport.pass_code} marked as paid. Email sent.", "success")
+    flash(f"Passport {passport.pass_code} marked as paid. Email queued for delivery.", "success")
     return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
 
 
@@ -8762,7 +8788,7 @@ def send_passport_reminder(passport_id):
         ))
         db.session.commit()
 
-        flash(f"Payment reminder sent to {passport.user.name if passport.user else 'Unknown'}!", "success")
+        flash(f"Payment reminder queued for delivery to {passport.user.name if passport.user else 'Unknown'}.", "success")
     except Exception as e:
         flash(f"Failed to send reminder: {str(e)}", "error")
 

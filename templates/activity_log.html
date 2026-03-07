@@ -29,6 +29,8 @@
               <option value="Passport Created" {% if current_filters.type == 'Passport Created' %}selected{% endif %}>Passport Created</option>
               <option value="Passport Redeemed" {% if current_filters.type == 'Passport Redeemed' %}selected{% endif %}>Passport Redeemed</option>
               <option value="Email Sent" {% if current_filters.type == 'Email Sent' %}selected{% endif %}>Email Sent</option>
+              <option value="Email Failed" {% if current_filters.type == 'Email Failed' %}selected{% endif %}>Email Failed</option>
+              <option value="Email Dismissed" {% if current_filters.type == 'Email Dismissed' %}selected{% endif %}>Email Dismissed</option>
               <option value="Interac Payment Matched" {% if current_filters.type == 'Interac Payment Matched' %}selected{% endif %}>Interac Payment Matched</option>
               <option value="Stripe Payment Received" {% if current_filters.type == 'Stripe Payment Received' %}selected{% endif %}>Stripe Payment Received</option>
               <option value="Stripe Payout Received" {% if current_filters.type == 'Stripe Payout Received' %}selected{% endif %}>Stripe Payout Received</option>
@@ -95,6 +97,10 @@
                   <i class="ti ti-ticket text-danger"></i>
                 {% elif log.type == 'Email Sent' %}
                   <i class="ti ti-mail text-info"></i>
+                {% elif log.type == 'Email Failed' %}
+                  <i class="ti ti-mail-x text-danger"></i>
+                {% elif log.type == 'Email Dismissed' %}
+                  <i class="ti ti-mail-off text-muted"></i>
                 {% elif log.type == 'Passport Created' %}
                   <i class="ti ti-id text-lime"></i>
                 {% elif log.type == 'Interact Payment' %}
@@ -122,11 +128,19 @@
               </td>
               <td class="log-description">
                 {{ log.details }}
-                {% if log.type == 'Email Sent' and log.email_log_id %}
+                {% if log.type in ('Email Sent', 'Email Failed') and log.email_log_id %}
                 <form method="POST" action="{{ url_for('resend_email', log_id=log.email_log_id) }}" style="display:inline">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="btn btn-sm btn-ghost-secondary ms-2" title="Resend this email">
                     <i class="ti ti-send"></i>
+                  </button>
+                </form>
+                {% endif %}
+                {% if log.type == 'Email Failed' and log.email_log_id %}
+                <form method="POST" action="{{ url_for('dismiss_email', log_id=log.email_log_id) }}" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-sm btn-ghost-danger ms-1" title="Clear this failure (no resend)">
+                    <i class="ti ti-x"></i>
                   </button>
                 </form>
                 {% endif %}
@@ -148,11 +162,19 @@
         </div>
         <div class="log-card-description">
           {{ log.details }}
-          {% if log.type == 'Email Sent' and log.email_log_id %}
+          {% if log.type in ('Email Sent', 'Email Failed') and log.email_log_id %}
           <form method="POST" action="{{ url_for('resend_email', log_id=log.email_log_id) }}" style="display:inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-sm btn-ghost-secondary ms-2" title="Resend this email">
               <i class="ti ti-send"></i>
+            </button>
+          </form>
+          {% endif %}
+          {% if log.type == 'Email Failed' and log.email_log_id %}
+          <form method="POST" action="{{ url_for('dismiss_email', log_id=log.email_log_id) }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-ghost-danger ms-1" title="Clear this failure (no resend)">
+              <i class="ti ti-x"></i>
             </button>
           </form>
           {% endif %}
