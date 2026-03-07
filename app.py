@@ -888,6 +888,78 @@ def retry_failed_emails():
     return redirect(url_for("dashboard"))
 
 
+@app.route("/resend-email/<int:log_id>", methods=["POST"])
+def resend_email(log_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from models import EmailLog, Passport
+    from utils import notify_pass_event
+
+    log = EmailLog.query.get_or_404(log_id)
+
+    try:
+        context = json.loads(log.context_json) if log.context_json else {}
+    except Exception:
+        context = {}
+
+    from models import Activity
+
+    # Find passport: by pass_code first, then fall back via email + activity_name
+    passport = None
+    activity = None
+    if log.pass_code:
+        passport = Passport.query.filter_by(pass_code=log.pass_code).first()
+    if passport is None:
+        activity_name = context.get("activity_name")
+        if log.to_email and activity_name:
+            from models import User
+            act = Activity.query.filter_by(name=activity_name).first()
+            if act:
+                users = User.query.filter_by(email=log.to_email).all()
+                for user in users:
+                    passport = Passport.query.filter_by(
+                        user_id=user.id, activity_id=act.id
+                    ).order_by(Passport.id.desc()).first()
+                    if passport:
+                        break
+
+    if not passport:
+        flash("Cannot resend — no passport found for this email.", "warning")
+        return redirect(request.referrer or url_for("activity_log"))
+
+    activity = activity or Activity.query.get(passport.activity_id)
+    if not activity:
+        flash("Cannot resend — activity not found.", "warning")
+        return redirect(request.referrer or url_for("activity_log"))
+
+    # Map template name back to event type
+    template_to_event = {
+        "newPass": "pass_created",
+        "newPass_compiled": "pass_created",
+        "paymentReceived": "payment_received",
+        "paymentReceived_compiled": "payment_received",
+        "latePayment": "payment_late",
+        "latePayment_compiled": "payment_late",
+        "redeemPass": "pass_redeemed",
+        "redeemPass_compiled": "pass_redeemed",
+    }
+    base = log.template_name.split("/")[0] if log.template_name else ""
+    event_type = template_to_event.get(base)
+    if not event_type:
+        flash(f"Cannot resend — unknown template type '{base}'.", "warning")
+        return redirect(request.referrer or url_for("activity_log"))
+
+    notify_pass_event(
+        current_app._get_current_object(),
+        event_type=event_type,
+        pass_data=passport,
+        activity=activity,
+        admin_email=session.get("admin")
+    )
+
+    flash(f"Email resent to {log.to_email}.", "success")
+    return redirect(request.referrer or url_for("activity_log"))
 
 
 

@@ -2696,7 +2696,8 @@ def get_all_activity_logs():
                 "timestamp": e.timestamp,
                 "type": "Email Sent",
                 "user": e.to_email,
-                "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display})"
+                "details": f"To {e.to_email} — \"{e.subject}\" (Code: {pass_code_display})",
+                "email_log_id": e.id
             })
 
         # 🔵 Payments
@@ -3198,7 +3199,21 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
 
     try:
         # Use provided email config or fall back to system settings
-        if email_config:
+        # 🛠️ DEV MODE: use .env MAIL_SERVER/MAIL_USERNAME/MAIL_PASSWORD (Gmail)
+        # All emails are redirected to the dev address — never reaches real users.
+        from flask import current_app
+        import os
+        if current_app.debug:
+            original_to = to_email
+            to_email = os.environ.get("MAIL_USERNAME", to_email)
+            smtp_host = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+            smtp_port = int(os.environ.get("MAIL_PORT", 587))
+            smtp_user = os.environ.get("MAIL_USERNAME")
+            smtp_pass = os.environ.get("MAIL_PASSWORD")
+            use_tls = True
+            use_ssl = False
+            print(f"🛠️ DEV MODE: redirecting email from {original_to} → {to_email} via {smtp_host}:{smtp_port}")
+        elif email_config:
             smtp_host = email_config['MAIL_SERVER']
             smtp_port = email_config['MAIL_PORT']
             smtp_user = email_config['MAIL_USERNAME']
@@ -3206,7 +3221,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             use_tls = email_config.get('MAIL_USE_TLS', True)
             use_ssl = email_config.get('MAIL_USE_SSL', False)
             sender_name = email_config.get('SENDER_NAME', 'Minipass')
-            
+
             # Update the From header with organization-specific sender
             from_email = email_config['MAIL_DEFAULT_SENDER']
             msg['From'] = formataddr((sender_name, from_email))
@@ -3439,6 +3454,11 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                     elif "pass_code" in context:
                         pass_code = context.get("pass_code")
                         user_name = context.get("user_name")
+                    # notify_pass_event passes passport as pass_data object
+                    elif "pass_data" in context:
+                        pd = context["pass_data"]
+                        pass_code = getattr(pd, "pass_code", None)
+                        user_name = getattr(getattr(pd, "user", None), "name", None)
                 
                 db.session.add(EmailLog(
                     to_email=to_email,
