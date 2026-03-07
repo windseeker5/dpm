@@ -705,17 +705,11 @@ def get_git_version():
     except:
         return 'unknown'
 
-# TTL cache for sidebar badge counts — keyed by admin email, expires after 45s
-_ctx_cache = {}  # {admin_email: ({'pending': N, 'active': N, 'unmatched': N, 'admin': obj}, expire_at)}
-
 def _get_sidebar_counts(admin_email):
-    """Return sidebar badge counts, refreshed at most once every 45 seconds per admin (prod only)."""
-    if not app.debug:
-        entry = _ctx_cache.get(admin_email)
-        if entry and time.time() < entry[1]:
-            return entry[0]
+    """Return sidebar badge counts and admin data. Fresh query every request."""
     try:
-        counts = {
+        admin_obj = Admin.query.filter_by(email=admin_email).first()
+        return {
             'pending_signups_count': Signup.query.filter_by(status='pending').count(),
             'active_passport_count': get_active_passports_query().count(),
             'unmatched_payment_count': db.session.query(EbankPayment.id).filter(
@@ -726,18 +720,20 @@ def _get_sidebar_counts(admin_email):
                 )
             ).count(),
             'failed_email_count': EmailLog.query.filter_by(result="FAILED").count(),
-            'current_admin': Admin.query.filter_by(email=admin_email).first(),
+            'current_admin': {
+                'avatar_filename': admin_obj.avatar_filename,
+                'display_name': admin_obj.display_name,
+                'email': admin_obj.email,
+            } if admin_obj else None,
         }
     except Exception:
-        counts = {
+        return {
             'pending_signups_count': 0,
             'active_passport_count': 0,
             'unmatched_payment_count': 0,
             'failed_email_count': 0,
             'current_admin': None,
         }
-    _ctx_cache[admin_email] = (counts, time.time() + 45)
-    return counts
 
 @app.context_processor
 def inject_globals_and_csrf():
