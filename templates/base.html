@@ -481,7 +481,6 @@
           <a href="#" class="header-user-link d-flex align-items-center" data-bs-toggle="dropdown">
             <span class="avatar avatar-sm"
                   style="background-image: url('{% if current_admin and current_admin.avatar_filename %}{{ url_for('static', filename='uploads/avatars/' ~ current_admin.avatar_filename) }}{% else %}https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon{% endif %}')">
-              {% set total_notifications = (unmatched_payment_count or 0) + (pending_signups_count or 0) + (failed_email_count or 0) %}
               {% if total_notifications > 0 %}
               <span class="avatar-badge">{{ total_notifications }}</span>
               {% endif %}

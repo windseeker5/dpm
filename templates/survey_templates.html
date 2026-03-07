@@ -91,7 +91,7 @@
                 Used <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.used_templates|default(0) }})</span>
               </a>
               <a href="{{ url_for('list_survey_templates', show_all='true') }}"
-                 class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
+                 class="github-filter-btn {% if current_filters.show_all or not current_filters.usage_filter %}active{% endif %}"
                  style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
                 All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_templates|default(0) }})</span>
               </a>
@@ -156,7 +156,10 @@
                       </a>
                       <div class="dropdown-divider"></div>
                       {% if template.usage_count == 0 %}
-                      <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ template.id }}, '{{ template.name }}'); return false;">
+                      <a class="dropdown-item text-danger" href="#"
+                         data-template-id="{{ template.id }}"
+                         data-template-name="{{ template.name }}"
+                         onclick="confirmDelete(this.dataset.templateId, this.dataset.templateName); return false;">
                         <i class="ti ti-trash me-2"></i>Delete Template
                       </a>
                       {% else %}

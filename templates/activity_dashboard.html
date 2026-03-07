@@ -620,9 +620,9 @@ div.dropdown-divider {
             <div class="activity-content-section">
               <h2 class="activity-title">{{ activity.name }}</h2>
               {% if activity.workflow_type == 'payment_first' %}
-              <span class="badge bg-blue-lt mb-2" style="align-self: flex-start;"><i class="ti ti-credit-card me-1"></i>Pay First</span>
+              <span class="badge bg-blue-lt mb-2" style="align-self: flex-start;">Pay First</span>
               {% else %}
-              <span class="badge bg-azure-lt mb-2" style="align-self: flex-start;"><i class="ti ti-clipboard-check me-1"></i>Review First</span>
+              <span class="badge bg-azure-lt mb-2" style="align-self: flex-start;">Review First</span>
               {% endif %}
               <p class="activity-description text-muted">
                 {{ activity.description or "Transform your game with professional coaching and structured training sessions." }}
@@ -680,13 +680,10 @@ div.dropdown-divider {
 
               <!-- Revenue Progress Bar - Simple thin bar only -->
               {% if activity.goal_revenue and activity.goal_revenue > 0 %}
-              {% set actual_revenue = total_paid_revenue|float if total_paid_revenue else 0 %}
-              {% set target_revenue = activity.goal_revenue|float %}
-              {% set progress_percentage = ((actual_revenue / target_revenue * 100) if target_revenue > 0 else 0)|round %}
-              <div class="revenue-progress-minimal" title="Revenue: ${{ '%.2f'|format(actual_revenue) }} collected / ${{ '%.2f'|format(target_revenue) }} goal ({{ progress_percentage }}%)">
+              <div class="revenue-progress-minimal" title="Revenue: ${{ '%.2f'|format(total_paid_revenue) }} collected / ${{ '%.2f'|format(activity.goal_revenue) }} goal ({{ revenue_progress_pct }}%)">
                 <div class="progress progress-minimal">
-                  <div class="progress-bar" role="progressbar" style="width: {{ [progress_percentage, 100]|min }}%"
-                       aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                  <div class="progress-bar" role="progressbar" style="width: {{ revenue_progress_pct }}%"
+                       aria-valuenow="{{ revenue_progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
               </div>
               {% endif %}
@@ -843,7 +840,7 @@ div.dropdown-divider {
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active_passports" data-kpi-id="{{ active_passports_card.id if active_passports_card else 'active-passports-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">ACTIVE PASSPORTS</div>
+                <div class="text-muted small text-uppercase">ACTIVE PASSES</div>
                 <div class="dropdown">
                   <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="active_passports">
                     Last 7 days
@@ -895,7 +892,7 @@ div.dropdown-divider {
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_redeemed" data-kpi-id="passports-redeemed-default">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">PASSPORTS REDEEMED</div>
+                <div class="text-muted small text-uppercase">REDEEMED</div>
                 <div class="dropdown">
                   <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports_redeemed">
                     Last 7 days
@@ -939,7 +936,7 @@ div.dropdown-divider {
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending_signups" data-kpi-id="{{ pending_signups_card.id if pending_signups_card else 'pending-signups-default' }}">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">UNPAID PASSPORTS</div>
+                <div class="text-muted small text-uppercase">UNPAID</div>
                 <div class="dropdown">
                   <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="pending_signups">
                     Last 7 days
@@ -1013,7 +1010,7 @@ div.dropdown-divider {
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">ACTIVE PASSPORTS</div>
+                <div class="text-muted small text-uppercase mb-2">ACTIVE PASSES</div>
                 <div class="h1 mb-2" id="mobile-active-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
                   {% if mobile_kpi_data and mobile_kpi_data['active_users'] %}
                     {{ "{:,.0f}".format(mobile_kpi_data['active_users']['current']) }}
@@ -1032,7 +1029,7 @@ div.dropdown-divider {
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">PASSPORTS REDEEMED</div>
+                <div class="text-muted small text-uppercase mb-2">REDEEMED</div>
                 <div class="h1 mb-2" id="mobile-redeemed-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
                   {% if mobile_kpi_data and mobile_kpi_data['passports_redeemed'] %}
                     {{ "{:,.0f}".format(mobile_kpi_data['passports_redeemed']['current']) }}
@@ -1051,7 +1048,7 @@ div.dropdown-divider {
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">UNPAID PASSPORTS</div>
+                <div class="text-muted small text-uppercase mb-2">UNPAID</div>
                 <div class="h1 mb-2" id="mobile-pending-value" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">
                   {% if mobile_kpi_data and mobile_kpi_data['unpaid_passports'] %}
                     {{ "{:,.0f}".format(mobile_kpi_data['unpaid_passports']['current']) }}
@@ -1118,18 +1115,17 @@ div.dropdown-divider {
 
     <!-- Archived activity: bulk-close callout -->
     {% if activity.status == 'inactive' %}
-      {% set open_count = all_passports | selectattr('uses_remaining', 'gt', 0) | list | length %}
-      {% if open_count > 0 %}
+      {% if open_passports_count > 0 %}
       <div class="alert alert-warning" role="alert" style="margin-top: 1rem;">
         <div class="d-flex align-items-center">
           <div>
-            <h4 class="alert-title">{{ open_count }} passport(s) still have remaining uses</h4>
+            <h4 class="alert-title">{{ open_passports_count }} passport(s) still have remaining uses</h4>
             <div class="text-secondary">This activity is archived. Close all passports to remove them from active KPIs.</div>
           </div>
           <div class="ms-auto">
             <form method="POST" action="{{ url_for('bulk_close_passports', activity_id=activity.id) }}">
               <button type="submit" class="btn btn-warning"
-                onclick="return confirm('Mark {{ open_count }} passport(s) as fully used?')">
+                onclick="return confirm('Mark {{ open_passports_count }} passport(s) as fully used?')">
                 Close all passports
               </button>
             </form>
@@ -1252,7 +1248,7 @@ div.dropdown-divider {
                 <div class="dropdown-menu dropdown-menu-end">
                   {% if passport.uses_remaining > 0 %}
                   <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-modal-{{ passport.id }}">
-                    <i class="ti ti-check me-2"></i>Redeem
+                    <i class="ti ti-login me-2"></i>Check In
                   </button>
                   {% endif %}
                   <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
@@ -1488,7 +1484,7 @@ div.dropdown-divider {
               <a href="#" onclick="filterSignups('approved'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved"
                  style="{% if request.args.get('signup_filter') == 'approved' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                Approved <span style="opacity: 0.6; margin-left: 4px;">({{ all_signups|selectattr('status', 'equalto', 'approved')|list|length }})</span>
+                Approved <span style="opacity: 0.6; margin-left: 4px;">({{ activity_approved_signups_count }})</span>
               </a>
               <a href="#" onclick="filterSignups('all'); return false;"
                  class="github-filter-btn {% if request.args.get('signup_filter', 'pending') == 'all' %}active{% endif %}" id="signup-filter-all"
@@ -3662,242 +3658,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endif %}
 
-{% endblock %}
-
-{% block styles %}
-<style>
-/* Component styles loaded via base.html */
-@keyframes pinkGlowPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
-                0 0 0 0 rgba(255, 105, 180, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
-                0 0 10px rgba(255, 105, 180, 0.35),
-                0 0 18px rgba(255, 105, 180, 0.15);
-  }
-  100% {
-    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
-                0 0 8px rgba(255, 105, 180, 0.35),
-                0 0 15px rgba(255, 105, 180, 0.15);
-  }
-}
-
-/* Disable Bootstrap validation styling completely */
-#enhancedSearchInput.is-valid,
-#enhancedSearchInput.is-invalid {
-  border-color: #ced4da !important;
-  background-image: none !important;
-  padding-right: 100px !important;
-}
-
-#enhancedSearchInput.is-valid:focus,
-#enhancedSearchInput.is-invalid:focus {
-  border-color: #86b7fe !important;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
-  background-image: none !important;
-}
-
-/* Force remove validation feedback icons */
-#enhancedSearchInput {
-  background-image: none !important;
-}
-
-/* Subtle glow on regular focus */
-#enhancedSearchInput.search-focus-glow {
-  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
-              0 0 15px rgba(255, 105, 180, 0.15);
-}
-
-/* Enhanced loading animation */
-.searching-pulse {
-  animation: blueSearchPulse 1.5s ease-in-out infinite;
-  border-color: #0d6efd !important;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
-              0 0 15px rgba(13, 110, 253, 0.4) !important;
-}
-
-@keyframes blueSearchPulse {
-  0%, 100% { 
-    opacity: 1;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
-                0 0 15px rgba(13, 110, 253, 0.4);
-  }
-  50% { 
-    opacity: 0.85;
-    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
-                0 0 25px rgba(13, 110, 253, 0.5);
-  }
-}
-
-/* Clear button styling */
-#searchClearBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-#searchClearBtn:hover {
-  opacity: 1;
-  transform: rotate(90deg);
-}
-
-#searchClearBtn:active {
-  transform: rotate(90deg) scale(0.9);
-}
-
-/* Smooth transitions for kbd hint and clear button */
-#searchKbdHint, #searchClearBtn {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-#searchCharCounter {
-  transition: all 0.2s ease;
-  font-weight: 500;
-  min-width: 80px;
-  text-align: right;
-  font-size: 0.75rem;
-}
-
-#searchCharCounter.fw-bold {
-  font-weight: 600;
-}
-
-/* Search loading indicator */
-#searchLoadingIndicator {
-  border-radius: inherit;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-#searchLoadingIndicator .spinner-border-sm {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-/* GitHub-style filter buttons - styles now loaded from filter-component.css */
-
-/* Duplicate CSS removed - using the first definition above */
-
-/* User avatar styling */
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-}
-
-/* Enhanced search styling */
-#enhancedSearchInput {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-#enhancedSearchInput:focus {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15), 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-}
-
-/* Form improvements */
-.form-check-input {
-  margin-top: 0;
-}
-
-/* Smooth transitions for search feedback */
-.input-icon {
-  transition: all 0.2s ease;
-}
-
-.input-icon:has(#enhancedSearchInput:focus) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Filter Button Group Styling - More specific selector to avoid conflicts */
-.main-table-card .card-header .d-flex {
-  justify-content: center !important;
-  align-items: center !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Table improvements */
-.table {
-  background-color: transparent !important;
-}
-
-.table th {
-  border-bottom: 2px solid #e2e8f0;
-  font-weight: 600;
-  color: #475569;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 1rem;
-}
-
-.table td {
-  border-bottom: 1px solid #f1f5f9;
-  padding: 1rem;
-  color: #334155;
-  vertical-align: middle;
-}
-
-.table tbody tr:hover {
-  background-color: rgba(13, 110, 253, 0.04);
-}
-
-
-/* GitHub filter styles moved to main style block at top of file */
-
-/* Table improvements */
-.table {
-  background-color: transparent !important;
-}
-
-.table th {
-  border-bottom: 2px solid #e2e8f0;
-  font-weight: 600;
-  color: #475569;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 1rem;
-}
-
-.table td {
-  border-bottom: 1px solid #f1f5f9;
-  padding: 1rem;
-  color: #334155;
-  vertical-align: middle;
-}
-
-.table tbody tr:hover {
-  background-color: rgba(13, 110, 253, 0.04);
-}
-
-/* Form improvements */
-.form-check-input {
-  margin-top: 0;
-}
-
-/* User avatar styling */
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-}
-
-/* Card container margins */
-.main-table-card {
-  margin-top: 0 !important;
-}
-
-</style>
 {% endblock %}
 
 {% block scripts %}
