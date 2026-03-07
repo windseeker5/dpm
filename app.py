@@ -10157,6 +10157,8 @@ def send_survey_invitations(survey_id):
                     'title': rendered_title,
                     'intro_text': rendered_intro,
                     'conclusion_text': rendered_conclusion,
+                    # Hero image URL for hosted images
+                    'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
                     # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
                     '_skip_email_context': True
                 }
@@ -10277,6 +10279,8 @@ def send_survey_invitations(survey_id):
                     'title': rendered_title,
                     'intro_text': rendered_intro,
                     'conclusion_text': rendered_conclusion,
+                    # Hero image URL for hosted images
+                    'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
                     # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
                     '_skip_email_context': True
                 }
