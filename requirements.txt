@@ -2,7 +2,6 @@
 Flask
 Flask-SQLAlchemy
 flask-migrate
-flask-mail
 
 flask-wtf
 bcrypt
