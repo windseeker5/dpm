@@ -147,7 +147,11 @@
               </div>
             </td>
             <td class="d-md-none text-center" style="vertical-align: middle;">
-              <span class="fw-bold" style="color: #6c757d;">{{ passport.uses_remaining or 0 }}</span>
+              {% if passport.paid %}
+                <span class="badge bg-green-lt text-green-lt-fg">{{ passport.uses_remaining or 0 }}</span>
+              {% else %}
+                <span class="badge bg-yellow-lt text-yellow-lt-fg">{{ passport.uses_remaining or 0 }}</span>
+              {% endif %}
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
               <div>
