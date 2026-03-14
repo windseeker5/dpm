@@ -176,7 +176,7 @@
 
               <!-- Activity Name (Own Row - Second) -->
               <div class="mb-3">
-                <label class="form-label required">Activity Name</label>
+                <label class="form-label required">Name</label>
                 <input type="text" class="form-control" name="name"
                        value="{{ activity.name if activity else '' }}"
                        placeholder="Enter activity name (e.g., Hockey Training, Yoga Classes)"
@@ -267,7 +267,7 @@
             <!-- SIGNUP SETTINGS SECTION                      -->
             <!-- ============================================ -->
             <div class="mb-4">
-              <h3 class="mb-3">Signup Settings</h3>
+              <h3 class="mb-3">Signup Workflow</h3>
               <div class="ps-0">
 
                     <!-- Signup Workflow -->
@@ -288,8 +288,8 @@
                             <div class="flex-fill">
                               <strong>Review First</strong>
                               <div class="text-secondary mt-1">
-                                You decide who gets in. Approved signups receive a passport with payment instructions.
-                                <br><em>Ideal for: tryouts, limited spots, skill-based groups</em>
+                                You approve who gets in. Accepted signups receive payment instructions.
+                                <br><em><strong class="text-dark">Best for:</strong> Tryouts, limited spots, selective groups</em>
                               </div>
                             </div>
                           </div>
@@ -311,8 +311,8 @@
                             <div class="flex-fill">
                               <strong>Pay First</strong>
                               <div class="text-secondary mt-1">
-                                Signups immediately receive payment instructions by email. Once they pay, their passport is delivered automatically — nothing for you to approve.
-                                <br><em>Ideal for: open events, concerts, classes, large groups</em>
+                                Payment is requested automatically on signup. Passport delivered once paid — nothing to approve.
+                                <br><em><strong class="text-dark">Best for:</strong> Open events, classes, large groups</em>
                               </div>
                             </div>
                           </div>
@@ -350,18 +350,16 @@
                       <label class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="allow_quantity_selection" id="allowQuantitySelection"
                                {{ 'checked' if activity and activity.allow_quantity_selection else '' }}>
-                        <span class="form-check-label">Allow users to select quantity during signup</span>
+                        <span class="form-check-label">Allow multiple passports per signup</span>
                       </label>
-                      <small class="form-hint">Users can choose how many passports to purchase at once</small>
                     </div>
 
                     <div class="mb-3">
                       <label class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="offer_passport_renewal"
                                {{ 'checked' if activity and activity.offer_passport_renewal else '' }}>
-                        <span class="form-check-label">Offer passport renewal when all sessions are used</span>
+                        <span class="form-check-label">Prompt renewal when passport runs out</span>
                       </label>
-                      <small class="form-hint">When a passport runs out, prompt to renew at the scan screen</small>
                     </div>
 
                     {% if stripe_configured %}
@@ -369,9 +367,8 @@
                       <label class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="accept_credit_card"
                                {{ 'checked' if activity and activity.accept_credit_card else '' }}>
-                        <span class="form-check-label">Accept credit card payments (Stripe)</span>
+                        <span class="form-check-label">Accept credit card via Stripe</span>
                       </label>
-                      <small class="form-hint">Customers can pay by credit card via Stripe Checkout</small>
                     </div>
                     {% endif %}
 
