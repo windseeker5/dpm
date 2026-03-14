@@ -3373,6 +3373,10 @@ def api_create_passport_from_payment():
                     mail_server = get_setting("MAIL_SERVER")
                     imap_server = mail_server if mail_server else "imap.gmail.com"
 
+                # Check for IMAP-specific credentials (used in local dev)
+                mail_user = get_setting("IMAP_USERNAME") or mail_user
+                mail_pwd = get_setting("IMAP_PASSWORD") or mail_pwd
+
                 try:
                     mail = imaplib.IMAP4_SSL(imap_server)
                 except:
