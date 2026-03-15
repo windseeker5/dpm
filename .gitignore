@@ -23,6 +23,9 @@ flask.log
 playwright-mcp-config.json
 playwright-wrapper.sh
 
+.playwright-mcp/
+
+
 # SQLite database
 *.db
 instance/*.db
