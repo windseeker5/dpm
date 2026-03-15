@@ -796,7 +796,7 @@ document.getElementById('confirmCreatePassportBtn').addEventListener('click', as
         activity_id: parseInt(activityId),
         passport_type_id: parseInt(passportTypeId),
         amount: parseFloat(document.getElementById('cpAmount').value) || null,
-        sessions: parseInt(document.getElementById('cpSessions').value) || null
+        sessions: document.getElementById('cpSessions').value !== '' ? parseInt(document.getElementById('cpSessions').value) : null
       })
     });
 

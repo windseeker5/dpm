@@ -4,9 +4,9 @@
 {# Macro for formatting currency with negative values in parentheses #}
 {% macro format_currency(amount) %}
   {% if amount < 0 %}
-    (${{ "%.2f"|format(amount|abs) }})
+    (${{ "{:,.2f}".format(amount|abs) }})
   {% else %}
-    ${{ "%.2f"|format(amount) }}
+    ${{ "{:,.2f}".format(amount) }}
   {% endif %}
 {% endmacro %}
 
@@ -173,25 +173,13 @@
                     {% endif %}
                   </td>
                   <td class="text-center text-muted p-2" style="font-size: 0.85rem;">
-                    {% if activity.total_revenue >= 1000 %}
-                      ${{ "%.1f"|format(activity.total_revenue / 1000) }}K
-                    {% else %}
-                      ${{ "%.0f"|format(activity.total_revenue) }}
-                    {% endif %}
+                    ${{ "{:,.0f}".format(activity.total_revenue) }}
                   </td>
                   <td class="text-center text-muted p-2" style="font-size: 0.85rem;">
-                    {% if activity.total_expenses >= 1000 %}
-                      ${{ "%.1f"|format(activity.total_expenses / 1000) }}K
-                    {% else %}
-                      ${{ "%.0f"|format(activity.total_expenses) }}
-                    {% endif %}
+                    ${{ "{:,.0f}".format(activity.total_expenses) }}
                   </td>
                   <td class="text-center text-muted p-2" style="font-size: 0.85rem; padding-right: 1rem;">
-                    {% if activity.net_income >= 1000 or activity.net_income <= -1000 %}
-                      ${{ "%.1f"|format(activity.net_income / 1000) }}K
-                    {% else %}
-                      ${{ "%.0f"|format(activity.net_income) }}
-                    {% endif %}
+                    ${{ "{:,.0f}".format(activity.net_income) }}
                   </td>
                 </tr>
                 {% endfor %}
@@ -212,7 +200,7 @@
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">CASH RECEIVED</div>
-                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.cash_received) }}</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.2f}".format(financial_data.summary.cash_received) }}</div>
                 <div class="text-muted small">Actual deposits</div>
               </div>
             </div>
@@ -223,7 +211,7 @@
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">CASH PAID</div>
-                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.cash_paid) }}</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.2f}".format(financial_data.summary.cash_paid) }}</div>
                 <div class="text-muted small">Actual payments</div>
               </div>
             </div>
@@ -234,7 +222,7 @@
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">NET CASH FLOW</div>
-                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.net_cash_flow) }}</div>
+                <div class="h1 mb-2" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">${{ "{:,.2f}".format(financial_data.summary.net_cash_flow) }}</div>
                 <div class="text-muted small">Bank reconciliation</div>
               </div>
             </div>
@@ -248,7 +236,7 @@
             <div class="card" style="border-radius: 12px; min-height: 110px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">ACCOUNTS RECEIVABLE (AR)</div>
-                <div class="h2 mb-2" style="font-weight: 600; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.accounts_receivable) }}</div>
+                <div class="h2 mb-2" style="font-weight: 600; color: #0f172a;">${{ "{:,.2f}".format(financial_data.summary.accounts_receivable) }}</div>
                 <div class="text-muted small">Unpaid invoices</div>
               </div>
             </div>
@@ -259,7 +247,7 @@
             <div class="card" style="border-radius: 12px; min-height: 110px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
                 <div class="text-muted small text-uppercase mb-2">ACCOUNTS PAYABLE (AP)</div>
-                <div class="h2 mb-2" style="font-weight: 600; color: #0f172a;">${{ "{:,.0f}".format(financial_data.summary.accounts_payable) }}</div>
+                <div class="h2 mb-2" style="font-weight: 600; color: #0f172a;">${{ "{:,.2f}".format(financial_data.summary.accounts_payable) }}</div>
                 <div class="text-muted small">Unpaid bills</div>
               </div>
             </div>
