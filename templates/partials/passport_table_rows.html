@@ -73,7 +73,7 @@
       <div class="dropdown-menu dropdown-menu-end">
         {% if passport.uses_remaining > 0 %}
         <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-modal-{{ passport.id }}">
-          <i class="ti ti-check me-2"></i>Redeem
+          <i class="ti ti-login me-2"></i>Check In
         </button>
         {% endif %}
         <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
