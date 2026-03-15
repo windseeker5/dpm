@@ -41,6 +41,7 @@ templates/email_templates_backup_*/
 templates/email_templates/*_original_old_oct9/
 
 #Lean And Clean
+pytest/
 tests/
 test/
 tools/
