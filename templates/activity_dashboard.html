@@ -1311,15 +1311,15 @@ div.dropdown-divider {
           <div class="modal-content">
             <div class="modal-status bg-primary"></div>
             <div class="modal-body text-center py-4">
-              <i class="ti ti-check icon mb-2 text-primary" style="font-size: 2rem;"></i>
-              <h3>Redeem Session</h3>
-              <div class="text-muted">Redeem 1 session from {{ p.user.name }}'s passport?</div>
+              <i class="ti ti-login icon mb-2 text-primary" style="font-size: 2rem;"></i>
+              <h3>Check In</h3>
+              <div class="text-muted">Check in 1 session for {{ p.user.name }}'s passport?</div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
               <form method="POST" action="{{ url_for('redeem_passport', pass_code=p.pass_code) }}" class="w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-primary w-100">Yes, Redeem</button>
+                <button type="submit" class="btn btn-primary w-100">Yes, Check In</button>
               </form>
             </div>
           </div>
