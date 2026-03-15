@@ -979,12 +979,16 @@ def extract_interac_transfers(gmail_user, gmail_password, mail=None):
                 else:
                     imap_server = "imap.gmail.com"
             
+            # Check for IMAP-specific credentials (used in local dev)
+            gmail_user = get_setting("IMAP_USERNAME") or gmail_user
+            gmail_password = get_setting("IMAP_PASSWORD") or gmail_password
+
             try:
                 mail = imaplib.IMAP4_SSL(imap_server)
             except:
                 mail = imaplib.IMAP4(imap_server, 143)
                 mail.starttls()
-            
+
             mail.login(gmail_user, gmail_password)
             mail.select("inbox")
 
@@ -1679,8 +1683,12 @@ def match_gmail_payments_to_passes():
                 # Fallback to Gmail for backward compatibility
                 imap_server = "imap.gmail.com"
         
+        # Check for IMAP-specific credentials (used in local dev)
+        user = get_setting("IMAP_USERNAME") or user
+        pwd = get_setting("IMAP_PASSWORD") or pwd
+
         print(f"🔌 Connecting to IMAP server: {imap_server}")
-        
+
         try:
             # Try SSL connection first (port 993)
             mail = imaplib.IMAP4_SSL(imap_server)
@@ -1689,7 +1697,7 @@ def match_gmail_payments_to_passes():
             print(f"⚠️ SSL connection failed, trying TLS...")
             mail = imaplib.IMAP4(imap_server, 143)
             mail.starttls()
-        
+
         mail.login(user, pwd)
         mail.select("inbox")
 
@@ -1886,7 +1894,9 @@ def match_gmail_payments_to_passes():
                 unmatched_signups = db.session.query(Signup).join(Activity).filter(
                     Signup.passport_id == None,
                     Signup.requested_amount == payment_amount,
-                    Activity.workflow_type == "payment_first"
+                    Activity.workflow_type == "payment_first",
+                    Signup.payment_method == "interac",
+                    Signup.status == "pending"
                 ).all()
 
                 print(f"   Found {len(unmatched_signups)} unmatched payment-first signups for ${payment_amount:.2f}")
@@ -2302,6 +2312,19 @@ def match_gmail_payments_to_passes():
                             if example_names:
                                 note_parts.append(f"Available names: {', '.join(example_names[:3])}")
 
+                    # Check for pending interac signups that matched by name but were ambiguous
+                    from models import Signup as SignupModel, Activity as ActivityModel
+                    pending_interac = db.session.query(SignupModel).join(ActivityModel).filter(
+                        SignupModel.passport_id == None,
+                        SignupModel.requested_amount == payment_amount,
+                        ActivityModel.workflow_type == "payment_first",
+                        SignupModel.payment_method == "interac",
+                        SignupModel.status == "pending"
+                    ).all()
+                    if pending_interac:
+                        ambiguous_names = [s.user.name for s in pending_interac if s.user]
+                        note_parts.append(f"Note: {len(pending_interac)} pending Interac signup(s) exist for this amount but were ambiguous (could not auto-match): {', '.join(ambiguous_names)}. Manual review required.")
+
                     note_text = " ".join(note_parts)
                 
                 if update_existing_record and existing_payment:
@@ -2400,6 +2423,10 @@ def move_payment_email_by_criteria(bank_info_name, bank_info_amt, from_email, cu
     if not imap_server:
         mail_server = get_setting("MAIL_SERVER")
         imap_server = mail_server if mail_server else "imap.gmail.com"
+
+    # Check for IMAP-specific credentials (used in local dev)
+    user = get_setting("IMAP_USERNAME") or user
+    pwd = get_setting("IMAP_PASSWORD") or pwd
 
     try:
         # Connect to IMAP
