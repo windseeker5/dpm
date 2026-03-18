@@ -30,6 +30,7 @@ function initPhotoNormalizer(config) {
     maxWidth:         config.maxWidth          || 1200,
     maxHeight:        config.maxHeight         || 800,
     quality:          config.quality           || 0.92,
+    outputFormat:     config.outputFormat      || 'image/jpeg',
     objectFit:        config.objectFit         || 'cover',
     placeholderLabel: config.placeholderLabel  || 'Add photo',
     onConfirm:        config.onConfirm         || null,
@@ -245,19 +246,21 @@ function initPhotoNormalizer(config) {
   if (confirmBtn) {
     confirmBtn.addEventListener('click', function() {
       if (!cropperInstance) return;
+      var fmt = opts.outputFormat;
+      var ext = fmt === 'image/png' ? 'png' : 'jpg';
       cropperInstance.getCroppedCanvas({
         maxWidth: opts.maxWidth, maxHeight: opts.maxHeight,
         imageSmoothingQuality: 'high',
       }).toBlob(function(blob) {
         var objectUrl = URL.createObjectURL(blob);
         var dt = new DataTransfer();
-        dt.items.add(new File([blob], 'photo.jpg', { type: 'image/jpeg' }));
+        dt.items.add(new File([blob], 'photo.' + ext, { type: fmt }));
         if (uploadInput) uploadInput.files = dt.files;
         if (hiddenInput) hiddenInput.value = '';
         setThumbnail(objectUrl);
         if (cropModal) cropModal.hide();
         if (opts.onConfirm) opts.onConfirm(blob, objectUrl);
-      }, 'image/jpeg', opts.quality);
+      }, fmt, fmt === 'image/png' ? undefined : opts.quality);
     });
   }
 
