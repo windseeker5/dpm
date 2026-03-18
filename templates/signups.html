@@ -214,11 +214,21 @@
                     <span class="dropdown-item text-muted" style="cursor: default;">
                       <i class="ti ti-clock me-2"></i>Awaiting Payment
                     </span>
-                    <button type="button" class="dropdown-item text-azure" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+                    <button type="button" class="dropdown-item text-azure"
+                            data-bs-toggle="modal"
+                            data-bs-target="#approveSignupModal"
+                            data-user-name="{{ signup.user.name or 'this user' }}"
+                            data-approve-url="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
+                            data-workflow-type="payment_first">
                       <i class="ti ti-cash me-2"></i>Mark Paid & Create Passport
                     </button>
                     {% else %}
-                    <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#approveSignupModal-{{ signup.id }}">
+                    <button type="button" class="dropdown-item text-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#approveSignupModal"
+                            data-user-name="{{ signup.user.name or 'this user' }}"
+                            data-approve-url="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
+                            data-workflow-type="standard">
                       <i class="ti ti-check me-2"></i>Approve & Create Passport
                     </button>
                     {% endif %}
@@ -254,41 +264,28 @@
   </div>
 </div>
 
-<!-- Approve Signup Modals -->
-{% for signup in signups %}
-{% if signup.status == 'pending' %}
-{% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
-<div class="modal modal-blur fade" id="approveSignupModal-{{ signup.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+<!-- Shared Approve Signup Modal -->
+<div class="modal modal-blur fade" id="approveSignupModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
-      <div class="modal-status {{ 'bg-azure' if is_payment_first else 'bg-primary' }}"></div>
+      <div class="modal-status" id="approveSignupModalStatus"></div>
       <div class="modal-body text-center py-4">
-        {% if is_payment_first %}
-        <i class="ti ti-cash icon mb-2 text-azure" style="font-size: 2rem;"></i>
-        <h3>Mark Paid & Create Passport</h3>
-        <div class="text-muted">Manually mark payment received and create passport for {{ signup.user.name or 'this user' }}?</div>
-        <div class="alert alert-info mt-3 text-start small">
+        <i id="approveSignupModalIcon" class="ti icon mb-2" style="font-size: 2rem;"></i>
+        <h3 id="approveSignupModalTitle"></h3>
+        <div class="text-muted" id="approveSignupModalBody"></div>
+        <div id="approveSignupModalNote" class="alert alert-info mt-3 text-start small" style="display:none;">
           <strong>Note:</strong> This is usually done automatically by the payment bot when an Interac payment is detected.
         </div>
-        {% else %}
-        <i class="ti ti-check icon mb-2 text-primary" style="font-size: 2rem;"></i>
-        <h3>Approve & Create Passport</h3>
-        <div class="text-muted">Approve signup and create passport for {{ signup.user.name or 'this user' }}?</div>
-        {% endif %}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
-        <form method="GET" action="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}" class="w-100">
-          <button type="submit" class="btn {{ 'btn-azure' if is_payment_first else 'btn-primary' }} w-100">
-            {% if is_payment_first %}Yes, Mark Paid & Create{% else %}Yes, Approve & Create{% endif %}
-          </button>
+        <form method="GET" id="approveSignupModalForm" action="" class="w-100">
+          <button type="submit" id="approveSignupModalBtn" class="btn w-100"></button>
         </form>
       </div>
     </div>
   </div>
 </div>
-{% endif %}
-{% endfor %}
 
 <!-- Delete Signup Confirmation Modal -->
 <div class="modal modal-blur fade" id="signupDeleteModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -361,6 +358,24 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('Bootstrap is loaded. Dropdown functionality should work.');
     }
+});
+
+// Populate shared approve signup modal
+document.getElementById('approveSignupModal').addEventListener('show.bs.modal', function(event) {
+  const btn = event.relatedTarget;
+  const isPaymentFirst = btn.getAttribute('data-workflow-type') === 'payment_first';
+  const userName = btn.getAttribute('data-user-name');
+  document.getElementById('approveSignupModalForm').action = btn.getAttribute('data-approve-url');
+  document.getElementById('approveSignupModalStatus').className = 'modal-status ' + (isPaymentFirst ? 'bg-azure' : 'bg-primary');
+  document.getElementById('approveSignupModalIcon').className = 'ti icon mb-2 ' + (isPaymentFirst ? 'ti-cash text-azure' : 'ti-check text-primary');
+  document.getElementById('approveSignupModalTitle').textContent = isPaymentFirst ? 'Mark Paid & Create Passport' : 'Approve & Create Passport';
+  document.getElementById('approveSignupModalBody').textContent = isPaymentFirst
+    ? 'Manually mark payment received and create passport for ' + userName + '?'
+    : 'Approve signup and create passport for ' + userName + '?';
+  document.getElementById('approveSignupModalNote').style.display = isPaymentFirst ? 'block' : 'none';
+  const submitBtn = document.getElementById('approveSignupModalBtn');
+  submitBtn.className = 'btn w-100 ' + (isPaymentFirst ? 'btn-azure' : 'btn-primary');
+  submitBtn.textContent = isPaymentFirst ? 'Yes, Mark Paid & Create' : 'Yes, Approve & Create';
 });
 
 // Signup delete confirmation

@@ -1156,6 +1156,26 @@ def _save_optimized_image(file_stream, dest_folder, prefix="upload", max_size=(1
     return filename
 
 
+def _save_logo_image(file_stream, dest_folder, prefix="logo", max_size=(400, 400)):
+    """Save org logo: resize to max dimensions, save as PNG preserving transparency."""
+    from PIL import Image
+
+    img = Image.open(file_stream)
+
+    # Normalize mode for PNG output
+    if img.mode == 'P':
+        img = img.convert('RGBA')
+    elif img.mode not in ('RGBA', 'RGB'):
+        img = img.convert('RGBA')
+
+    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+    filename = f"{prefix}_{uuid.uuid4().hex[:10]}.png"
+    os.makedirs(dest_folder, exist_ok=True)
+    img.save(os.path.join(dest_folder, filename), 'PNG', optimize=True)
+    return filename
+
+
 ##
 ## - = - = - = - = - = - = - = - = - = - = - = - = - =
 ##
@@ -4011,7 +4031,7 @@ def setup():
                 return redirect(request.referrer or url_for('setup'))
             logo_file.stream.seek(0)
             upload_folder = app.config["UPLOAD_FOLDER"]
-            filename = _save_optimized_image(logo_file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
+            filename = _save_logo_image(logo_file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
             logo_path = os.path.join(upload_folder, filename)
 
             setting = Setting.query.filter_by(key="LOGO_FILENAME").first()
@@ -4237,7 +4257,7 @@ def unified_settings():
                     return redirect(request.referrer or url_for('setup'))
                 logo_file.stream.seek(0)
                 upload_folder = app.config["UPLOAD_FOLDER"]
-                filename = _save_optimized_image(logo_file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
+                filename = _save_logo_image(logo_file.stream, upload_folder, prefix="org_logo", max_size=(400, 400))
                 logo_path = os.path.join(upload_folder, filename)
                 logo_filename = filename  # Store for JSON response
                 
