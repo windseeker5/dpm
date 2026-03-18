@@ -1,3 +1,49 @@
+{% macro mark_paid_modal_shared() %}
+<div class="modal modal-blur fade" id="mark-paid-modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-currency-dollar icon mb-2 text-success" style="font-size: 2rem;"></i>
+        <h3>Confirm Payment</h3>
+        <div class="text-muted mb-3" id="mark-paid-modal-body"></div>
+        <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column gap-1">
+          <label class="form-selectgroup-item flex-fill">
+            <input type="radio" name="payment_method_radio" value="cash" class="form-selectgroup-input" checked
+                   onchange="document.getElementById('mark-paid-payment-method').value=this.value">
+            <span class="form-selectgroup-label d-flex align-items-center p-2">
+              <i class="ti ti-cash me-2"></i>Cash
+            </span>
+          </label>
+          <label class="form-selectgroup-item flex-fill">
+            <input type="radio" name="payment_method_radio" value="pos" class="form-selectgroup-input"
+                   onchange="document.getElementById('mark-paid-payment-method').value=this.value">
+            <span class="form-selectgroup-label d-flex align-items-center p-2">
+              <i class="ti ti-device-desktop me-2"></i>POS / TPV
+            </span>
+          </label>
+          <label class="form-selectgroup-item flex-fill">
+            <input type="radio" name="payment_method_radio" value="cheque" class="form-selectgroup-input"
+                   onchange="document.getElementById('mark-paid-payment-method').value=this.value">
+            <span class="form-selectgroup-label d-flex align-items-center p-2">
+              <i class="ti ti-writing me-2"></i>Cheque
+            </span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" id="mark-paid-modal-form" action="" class="w-100">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="payment_method" value="cash" id="mark-paid-payment-method">
+          <button type="submit" class="btn btn-success w-100">Yes, mark as paid</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
 {% macro mark_paid_modal(passport) %}
 <div class="modal modal-blur fade" id="mark-paid-modal-{{ passport.id }}" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
