@@ -4928,6 +4928,151 @@ def login():
 
 
 
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    from utils import get_setting, get_placeholder_color, get_placeholder_letter
+    org_logo = get_setting('LOGO_FILENAME', '')
+    org_name = get_setting('ORG_NAME', 'Minipass')
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        admin = Admin.query.filter_by(email=email).first()
+        if admin:
+            token = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+            admin.reset_token = token_hash
+            admin.reset_token_expiry = expiry
+            db.session.commit()
+
+            reset_url = url_for("reset_password", token=token, _external=True)
+            from utils import send_email
+            try:
+                send_email(
+                    subject="Reset your Minipass password",
+                    to_email=email,
+                    template_name="email_templates/password_reset.html",
+                    context={
+                        "admin_name": admin.display_name,
+                        "reset_url": reset_url,
+                        "expires_in": "1 hour",
+                        "admin_email": email,
+                    },
+                    operational=True,
+                )
+            except Exception as e:
+                print(f"⚠️ Password reset email failed: {e}")
+
+        # Redirect to confirmation state — show the email entered (not a security risk,
+        # we're reflecting what the user typed, not confirming it exists in our DB)
+        return redirect(url_for("forgot_password", sent="1", email=email))
+
+    return render_template(
+        "forgot_password.html",
+        org_logo=org_logo,
+        org_name=org_name,
+        placeholder_color=get_placeholder_color,
+        placeholder_letter=get_placeholder_letter,
+    )
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    from utils import get_setting, get_placeholder_color, get_placeholder_letter
+    org_logo = get_setting('LOGO_FILENAME', '')
+    org_name = get_setting('ORG_NAME', 'Minipass')
+
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    now = datetime.now(timezone.utc)
+
+    def find_admin():
+        admin = Admin.query.filter_by(reset_token=token_hash).first()
+        if not admin or not admin.reset_token_expiry:
+            return None
+        # Make expiry timezone-aware if stored naive
+        expiry = admin.reset_token_expiry
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        if expiry < now:
+            return None
+        return admin
+
+    if request.method == "POST":
+        admin = find_admin()
+        if not admin:
+            flash("This reset link is invalid or has expired.", "error")
+            return redirect(url_for("forgot_password"))
+
+        new_password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters.", "error")
+            return render_template(
+                "reset_password.html",
+                token=token,
+                org_logo=org_logo,
+                org_name=org_name,
+                placeholder_color=get_placeholder_color,
+                placeholder_letter=get_placeholder_letter,
+            )
+
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template(
+                "reset_password.html",
+                token=token,
+                org_logo=org_logo,
+                org_name=org_name,
+                placeholder_color=get_placeholder_color,
+                placeholder_letter=get_placeholder_letter,
+            )
+
+        admin.password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+        admin.reset_token = None
+        admin.reset_token_expiry = None
+        db.session.commit()
+
+        # Fire-and-forget sync to MinipassWebSite
+        minipass_site_url = os.environ.get("MINIPASS_SITE_URL", "")
+        internal_secret = os.environ.get("INTERNAL_API_SECRET", "")
+        subdomain = os.environ.get("APP_SUBDOMAIN") or request.host.split(".")[0]
+        if minipass_site_url and internal_secret:
+            def _notify():
+                try:
+                    requests.post(
+                        f"{minipass_site_url}/internal/notify-password-reset",
+                        json={
+                            "subdomain": subdomain,
+                            "email": admin.email,
+                            "new_password": new_password,
+                            "secret": internal_secret,
+                        },
+                        timeout=5,
+                    )
+                except Exception:
+                    pass
+            import threading
+            threading.Thread(target=_notify, daemon=True).start()
+
+        flash("Password updated. Please log in.", "success")
+        return redirect(url_for("login"))
+
+    admin = find_admin()
+    if not admin:
+        flash("This reset link is invalid or has expired.", "error")
+        return redirect(url_for("forgot_password"))
+
+    return render_template(
+        "reset_password.html",
+        token=token,
+        org_logo=org_logo,
+        org_name=org_name,
+        placeholder_color=get_placeholder_color,
+        placeholder_letter=get_placeholder_letter,
+    )
+
+
 @app.route("/pass/<pass_code>")
 def show_pass(pass_code):
     from models import Passport
