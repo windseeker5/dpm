@@ -441,6 +441,14 @@
           <p class="login-subtitle">Welcome back! Please sign in to your account.</p>
         </div>
 
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category == 'success' else ('warning' if category == 'info' else 'danger') }} mb-3" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endwith %}
+
         <!-- PRESERVE EXACT FORM STRUCTURE -->
         <form method="POST" autocomplete="on" class="form-card">
           <div class="card-body">
