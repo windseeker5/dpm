@@ -2928,6 +2928,24 @@ def task35_payment_method_in_view(cursor):
         raise
 
 
+# TASK 36: Add password reset token fields to Admin table
+# ============================================================================
+def task36_add_password_reset_token(cursor):
+    """Add reset_token and reset_token_expiry columns to admin table"""
+    log("🔑", "TASK 36: Adding password reset token fields to admin table", Colors.BLUE)
+
+    for col, col_type in [("reset_token", "VARCHAR(255)"), ("reset_token_expiry", "DATETIME")]:
+        try:
+            cursor.execute(f"ALTER TABLE admin ADD COLUMN {col} {col_type}")
+            log("✅", f"  Added admin.{col}", Colors.GREEN)
+        except sqlite3.OperationalError as e:
+            if "duplicate column" in str(e).lower():
+                log("⏭️ ", f"  admin.{col} already exists — skipping", Colors.YELLOW)
+            else:
+                raise
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -2983,6 +3001,7 @@ def main():
         ("Stripe Customer Names in Views", task33_add_stripe_customer_to_views),
         ("Passport Payment Method", task34_add_passport_payment_method),
         ("Payment Method in Financial View", task35_payment_method_in_view),
+        ("Password Reset Token Fields", task36_add_password_reset_token),
     ]
 
     completed = 0

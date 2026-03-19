@@ -16,6 +16,8 @@ class Admin(db.Model):
     first_name = db.Column(db.String(50), nullable=True)  # Added for personalization
     last_name = db.Column(db.String(50), nullable=True)   # Added for personalization
     avatar_filename = db.Column(db.String(255), nullable=True)  # For custom avatar uploads
+    reset_token = db.Column(db.String(255), nullable=True)
+    reset_token_expiry = db.Column(db.DateTime, nullable=True)
     
     @property
     def full_name(self):
