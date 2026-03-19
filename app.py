@@ -5055,7 +5055,7 @@ def reset_password(token):
             import threading
             threading.Thread(target=_notify, daemon=True).start()
 
-        flash("Password updated. Please log in.", "success")
+        flash("Password updated successfully.", "success")
         return redirect(url_for("login"))
 
     admin = find_admin()
