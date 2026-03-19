@@ -5040,7 +5040,8 @@ def reset_password(token):
         if minipass_site_url and internal_secret:
             def _notify():
                 try:
-                    requests.post(
+                    print(f"🔄 Password reset sync: subdomain={subdomain} url={minipass_site_url}")
+                    resp = requests.post(
                         f"{minipass_site_url}/internal/notify-password-reset",
                         json={
                             "subdomain": subdomain,
@@ -5050,12 +5051,15 @@ def reset_password(token):
                         },
                         timeout=5,
                     )
-                except Exception:
-                    pass
+                    print(f"✅ Password reset sync response: {resp.status_code} {resp.text}")
+                except Exception as e:
+                    print(f"❌ Password reset sync failed: {e}")
             import threading
             threading.Thread(target=_notify, daemon=True).start()
+        else:
+            print(f"⚠️  Password reset sync skipped — MINIPASS_SITE_URL={repr(minipass_site_url)} INTERNAL_API_SECRET set={bool(internal_secret)}")
 
-        flash("Password updated. Please log in.", "success")
+        flash("Password updated successfully.", "success")
         return redirect(url_for("login"))
 
     admin = find_admin()
