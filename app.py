@@ -5038,22 +5038,25 @@ def reset_password(token):
         internal_secret = os.environ.get("INTERNAL_API_SECRET", "")
         subdomain = os.environ.get("APP_SUBDOMAIN") or request.host.split(".")[0]
         if minipass_site_url and internal_secret:
+            _app = current_app._get_current_object()
+            _email = admin.email
             def _notify():
-                try:
-                    print(f"🔄 Password reset sync: subdomain={subdomain} url={minipass_site_url}")
-                    resp = requests.post(
-                        f"{minipass_site_url}/internal/notify-password-reset",
-                        json={
-                            "subdomain": subdomain,
-                            "email": admin.email,
-                            "new_password": new_password,
-                            "secret": internal_secret,
-                        },
-                        timeout=5,
-                    )
-                    print(f"✅ Password reset sync response: {resp.status_code} {resp.text}")
-                except Exception as e:
-                    print(f"❌ Password reset sync failed: {e}")
+                with _app.app_context():
+                    try:
+                        print(f"🔄 Password reset sync: subdomain={subdomain} url={minipass_site_url}")
+                        resp = requests.post(
+                            f"{minipass_site_url}/internal/notify-password-reset",
+                            json={
+                                "subdomain": subdomain,
+                                "email": _email,
+                                "new_password": new_password,
+                                "secret": internal_secret,
+                            },
+                            timeout=5,
+                        )
+                        print(f"✅ Password reset sync response: {resp.status_code} {resp.text}")
+                    except Exception as e:
+                        print(f"❌ Password reset sync failed: {e}")
             import threading
             threading.Thread(target=_notify, daemon=True).start()
         else:
