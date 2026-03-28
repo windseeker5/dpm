@@ -72,7 +72,11 @@
       </a>
       <div class="dropdown-menu dropdown-menu-end">
         {% if passport.uses_remaining > 0 %}
-        <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-modal-{{ passport.id }}">
+        <button type="button" class="dropdown-item text-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#redeem-modal"
+                data-user-name="{{ passport.user.name if passport.user else 'Unknown' }}"
+                data-redeem-url="{{ url_for('redeem_passport', pass_code=passport.pass_code) }}">
           <i class="ti ti-login me-2"></i>Check In
         </button>
         {% endif %}
