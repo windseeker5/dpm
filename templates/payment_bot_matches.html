@@ -187,7 +187,11 @@
               <!-- Status: Desktop only -->
               <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
                 {% if payment.result == 'MATCHED' %}
-                  <span class="badge bg-green-lt text-green-lt-fg">Matched</span>
+                  {% if payment.name_score == 0 %}
+                    <span class="badge bg-purple-lt text-purple-lt-fg">Manual</span>
+                  {% else %}
+                    <span class="badge bg-green-lt text-green-lt-fg">Matched</span>
+                  {% endif %}
                 {% elif payment.result == 'NO_MATCH' %}
                   <span class="badge bg-orange-lt text-orange-lt-fg">No Match</span>
                 {% elif payment.result == 'MANUAL_PROCESSED' %}
@@ -244,6 +248,11 @@
                          data-amount="{{ payment.bank_info_amt }}"
                          data-reply-to-email="{{ payment.reply_to_email or '' }}">
                         <i class="ti ti-ticket me-2"></i>Create Passport
+                      </a>
+                      <a href="#" class="dropdown-item"
+                         data-bs-toggle="modal"
+                         data-bs-target="#linkPassportModal-{{ payment.id }}">
+                        <i class="ti ti-link me-2"></i>Link to Existing Passport
                       </a>
                       <div class="dropdown-divider"></div>
                       <a href="#" class="dropdown-item archive-payment-btn"
@@ -452,6 +461,91 @@
     </div>
   </div>
 </div>
+
+
+<!-- Link to Existing Passport Modals (one per NO_MATCH payment, server-rendered) -->
+{% for payment in payments %}
+{% if payment.result == 'NO_MATCH' %}
+{% set link_passports = unpaid_passports_by_amount.get(payment.bank_info_amt, []) %}
+{% set display_date = (payment.email_received_date or payment.timestamp)|utc_to_local %}
+<div class="modal modal-blur fade" id="linkPassportModal-{{ payment.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-link me-2"></i>Link Payment to Existing Passport</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('link_payment_to_passport_form') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="payment_id" value="{{ payment.id }}">
+        <div class="modal-body">
+          <!-- Payment info banner — Interac yellow -->
+          <div class="d-flex align-items-center gap-2 rounded p-2 mb-3" style="background-color: #fffbea; border: 1px solid #ffe066;">
+            <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" style="height: 28px; width: auto; flex-shrink: 0;">
+            <div style="min-width: 0;">
+              <div class="fw-semibold text-truncate">{{ payment.bank_info_name }}</div>
+              <div class="text-muted small">${{ "%.2f"|format(payment.bank_info_amt) }}{% if display_date %} &nbsp;·&nbsp; {{ display_date.strftime('%Y-%m-%d') }}{% endif %}</div>
+            </div>
+          </div>
+
+          {% if not link_passports %}
+            <p class="text-muted text-center py-3">No unpaid passports found at this amount.</p>
+          {% else %}
+            <!-- Search -->
+            <div class="input-group mb-3">
+              <span class="input-group-text"><i class="ti ti-search"></i></span>
+              <input type="text" class="form-control link-search" placeholder="Search by name…">
+            </div>
+
+            <!-- Passport list — single column, compact -->
+            <div class="link-passport-list mb-3" style="max-height: 35vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem;">
+              {% for p in link_passports %}
+              <div class="link-passport-row">
+                <input type="radio" name="passport_id" value="{{ p.id }}" id="passport_{{ p.id }}" class="link-passport-input" required>
+                <label for="passport_{{ p.id }}" class="link-passport-card">
+                  <div class="link-passport-card-text">
+                    <div class="d-flex align-items-baseline gap-1 flex-wrap">
+                      <span class="fw-bold link-holder-name">{{ p.user.name if p.user else 'Unknown' }}</span>
+                      <span class="text-muted" style="font-size: 0.75rem;">{{ p.created_dt.strftime('%Y-%m-%d') if p.created_dt else '—' }}</span>
+                    </div>
+                    <div class="text-muted" style="font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.activity.name if p.activity else '—' }} · ${{ "%.2f"|format(p.sold_amt) }}</div>
+                  </div>
+                  <span class="link-passport-checkmark"><i class="ti ti-check"></i></span>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Reason -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Reason for manual link <span class="text-danger">*</span></label>
+              <select name="reason" class="form-select reason-select" required>
+                <option value="">— Select a reason —</option>
+                <option value="Payment by a family member">Payment by a family member</option>
+                <option value="Payment by a third party">Payment by a third party</option>
+                <option value="Same person, different bank account">Same person, different bank account</option>
+                <option value="Other">Other (specify below)</option>
+              </select>
+            </div>
+            <div class="reason-other-wrap mb-0" style="display: none;">
+              <input type="text" name="reason_other" class="form-control" placeholder="Please specify…" maxlength="200">
+            </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-bs-dismiss="modal">Cancel</button>
+          {% if link_passports %}
+          <button type="submit" class="btn btn-primary">
+            <i class="ti ti-link me-2"></i>Link Payment
+          </button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
 
 
 <script>
@@ -1017,6 +1111,25 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// Link passport modal: show/hide "Other" text input when dropdown changes
+document.addEventListener('change', function(e) {
+  if (e.target.matches('.reason-select')) {
+    var wrap = e.target.closest('form').querySelector('.reason-other-wrap');
+    wrap.style.display = e.target.value === 'Other' ? 'block' : 'none';
+  }
+});
+
+// Link passport modal: filter rows by name
+document.addEventListener('input', function(e) {
+  if (e.target.matches('.link-search')) {
+    var q = e.target.value.toLowerCase();
+    e.target.closest('.modal-body').querySelectorAll('.link-passport-row').forEach(function(row) {
+      row.style.display = row.querySelector('.link-holder-name').textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+});
+
 </script>
 
 <style>
@@ -1031,6 +1144,44 @@ function escapeHtml(text) {
 /* NO HOVER EFFECTS on table rows - per CLAUDE.md constraints */
 .table-hover tbody tr:hover {
   background-color: transparent !important;
+}
+
+/* Link passport modal — custom card rows */
+.link-passport-input {
+  display: none;
+}
+.link-passport-card {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--tblr-border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  gap: 0.5rem;
+  height: 100%;
+}
+.link-passport-card-text {
+  flex: 1;
+  min-width: 0;
+}
+.link-passport-checkmark {
+  display: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  background-color: var(--tblr-primary);
+  border-radius: 3px;
+  color: #fff;
+  font-size: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.link-passport-input:checked + .link-passport-card {
+  border-color: var(--tblr-primary);
+  background-color: var(--tblr-primary-lt);
+}
+.link-passport-input:checked + .link-passport-card .link-passport-checkmark {
+  display: flex;
 }
 
 /* Autocomplete suggestions for Create Passport modal */

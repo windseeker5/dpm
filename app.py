@@ -3750,6 +3750,325 @@ def api_create_passport_from_payment():
         return jsonify({"error": f"Failed to create passport: {str(e)}"}), 500
 
 
+@app.route("/link-payment-to-passport", methods=["POST"])
+def link_payment_to_passport_form():
+    """Form-based POST: link a NO_MATCH payment to an existing unpaid passport, then redirect."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        from models import User, Passport, Activity, EbankPayment, AdminActionLog
+        from utils import notify_pass_event
+
+        payment_id = request.form.get("payment_id", type=int)
+        passport_id = request.form.get("passport_id", type=int)
+        reason = request.form.get("reason", "").strip()
+        if reason == "Other":
+            reason = request.form.get("reason_other", "").strip()
+
+        if not payment_id or not passport_id:
+            flash("Invalid form submission.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+        if not reason:
+            flash("Please select a reason for the manual link.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+
+        payment = db.session.get(EbankPayment, payment_id)
+        if not payment or payment.result != "NO_MATCH":
+            flash("Payment not found or not in NO_MATCH status.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+
+        passport = db.session.get(Passport, passport_id)
+        if not passport or passport.paid:
+            flash("Passport not found or already paid.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+
+        admin_email = session.get("admin", "unknown")
+        now_utc = datetime.now(timezone.utc)
+        date_str = now_utc.strftime("%Y-%m-%d")
+
+        user = db.session.get(User, passport.user_id)
+        holder_name = user.name if user else "Unknown"
+        payer_name = payment.bank_info_name or "Unknown"
+        payer_amt = payment.bank_info_amt or 0
+
+        # Mark passport as paid
+        passport.paid = True
+        passport.paid_date = now_utc
+        passport.marked_paid_by = admin_email
+        passport.payment_method = "interac"
+        passport.notes = (
+            f"Interac manual match — Payer: {payer_name} (${payer_amt:.2f})."
+            f" Note: {reason}."
+            f" Linked by {admin_email} on {date_str}."
+        )
+
+        # Update EbankPayment
+        pass_code = passport.pass_code or f"#{passport.id}"
+        payment.result = "MATCHED"
+        payment.matched_pass_id = passport.id
+        payment.matched_name = holder_name
+        payment.matched_amt = passport.sold_amt
+        payment.name_score = 0  # 0 = manual (auto-match scores are 85–100)
+        payment.mark_as_paid = True
+        payment.note = (
+            f"Manually linked by {admin_email} on {date_str}."
+            f" Payer: {payer_name} (${payer_amt:.2f})."
+            f" Passport holder: {holder_name}."
+            f" Reason: {reason}."
+        )
+
+        # Audit log — text contains "marked as PAID (interac)" for activity log classification
+        db.session.add(AdminActionLog(
+            admin_email=admin_email,
+            action=(
+                f"Passport for {holder_name} ({pass_code}) marked as PAID (interac) by {admin_email}."
+                f" Manual Interac match — Payer: {payer_name} (${payer_amt:.2f})."
+                f" Note: {reason}."
+            )
+        ))
+
+        db.session.commit()
+        db.session.expire_all()
+
+        # Move payment email to processed folder
+        email_moved = False
+        try:
+            from utils import get_setting
+            import imaplib
+            import socket as _socket
+
+            mail_user = get_setting("IMAP_USERNAME") or get_setting("MAIL_USERNAME")
+            mail_pwd = get_setting("IMAP_PASSWORD") or get_setting("MAIL_PASSWORD")
+            processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
+
+            print(f"LINK-PAYMENT EMAIL MOVE: server={get_setting('IMAP_SERVER') or get_setting('MAIL_SERVER')}, user={mail_user}, uid={payment.email_uid}")
+
+            if not mail_user or not mail_pwd:
+                print("LINK-PAYMENT EMAIL MOVE: no credentials — skipping")
+            elif not payment.email_uid:
+                print("LINK-PAYMENT EMAIL MOVE: no email_uid stored — skipping")
+            else:
+                imap_server = get_setting("IMAP_SERVER") or get_setting("MAIL_SERVER") or "imap.gmail.com"
+                _socket.setdefaulttimeout(15)
+                try:
+                    print(f"LINK-PAYMENT EMAIL MOVE: connecting SSL to {imap_server}")
+                    mail = imaplib.IMAP4_SSL(imap_server)
+                except Exception as conn_err:
+                    print(f"LINK-PAYMENT EMAIL MOVE: SSL failed ({conn_err}), trying STARTTLS")
+                    mail = imaplib.IMAP4(imap_server, 143)
+                    mail.starttls()
+
+                mail.login(mail_user, mail_pwd)
+                print("LINK-PAYMENT EMAIL MOVE: logged in")
+                mail.select("inbox")
+                uid = payment.email_uid
+                folder_status, _ = mail.select(processed_folder)
+                if folder_status != 'OK':
+                    try:
+                        mail.create(processed_folder)
+                    except Exception:
+                        pass
+                mail.select("inbox")
+                copy_result = mail.uid("COPY", uid, processed_folder)
+                if copy_result[0] == 'OK':
+                    mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                    email_moved = True
+                    print("LINK-PAYMENT EMAIL MOVE: success")
+                else:
+                    print(f"LINK-PAYMENT EMAIL MOVE: copy failed: {copy_result}")
+                mail.expunge()
+                mail.logout()
+        except Exception as e:
+            print(f"LINK-PAYMENT EMAIL MOVE: error — {e}")
+        finally:
+            _socket.setdefaulttimeout(None)
+
+        # Send confirmation email (non-critical — don't let it block the redirect)
+        try:
+            activity = db.session.get(Activity, passport.activity_id)
+            notify_pass_event(
+                app=current_app._get_current_object(),
+                event_type="payment_received",
+                pass_data=passport,
+                activity=activity,
+                admin_email=admin_email,
+                timestamp=now_utc
+            )
+        except Exception as e:
+            print(f"Could not send confirmation email (non-critical): {e}")
+
+        msg = f"Payment linked to passport for {holder_name} ({pass_code})."
+        if not email_moved:
+            msg += " Warning: payment email could not be moved from inbox."
+        flash(msg, "success" if email_moved else "warning")
+
+    except Exception as e:
+        import traceback
+        print(f"Error linking payment to passport: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        flash(f"Failed to link payment: {str(e)}", "error")
+
+    return redirect(url_for("payment_bot_matches", status="no_match"))
+
+
+@app.route("/api/link-payment-to-passport", methods=["POST"])
+@csrf.exempt
+def api_link_payment_to_passport():
+    """Manually link a NO_MATCH Interac payment to an existing unpaid passport (e.g. parent paying for child)"""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        from models import User, Passport, Activity, EbankPayment, AdminActionLog
+        from utils import notify_pass_event
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        payment_id = data.get("payment_id")
+        passport_id = data.get("passport_id")
+        reason = (data.get("reason") or "").strip()
+
+        if not payment_id:
+            return jsonify({"error": "Payment ID is required"}), 400
+        if not passport_id:
+            return jsonify({"error": "Passport ID is required"}), 400
+        if not reason:
+            return jsonify({"error": "Reason is required"}), 400
+
+        payment = db.session.get(EbankPayment, payment_id)
+        if not payment:
+            return jsonify({"error": "Payment not found"}), 404
+        if payment.result != "NO_MATCH":
+            return jsonify({"error": "Payment is not in NO_MATCH status"}), 400
+
+        passport = db.session.get(Passport, passport_id)
+        if not passport:
+            return jsonify({"error": "Passport not found"}), 404
+        if passport.paid:
+            return jsonify({"error": "Passport is already paid"}), 400
+
+        admin_email = session.get("admin", "unknown")
+        now_utc = datetime.now(timezone.utc)
+        date_str = now_utc.strftime("%Y-%m-%d")
+
+        user = db.session.get(User, passport.user_id)
+        holder_name = user.name if user else "Unknown"
+
+        payer_name = payment.bank_info_name or "Unknown"
+        payer_amt = payment.bank_info_amt or 0
+
+        # Mark passport as paid
+        passport.paid = True
+        passport.paid_date = now_utc
+        passport.marked_paid_by = admin_email
+        passport.payment_method = "interac"
+        passport_note = (
+            f"Interac manual match — Payer: {payer_name} (${payer_amt:.2f})."
+            f" Note: {reason}."
+            f" Linked by {admin_email} on {date_str}."
+        )
+        passport.notes = passport_note
+
+        # Update EbankPayment
+        payment.result = "MATCHED"
+        payment.matched_pass_id = passport.id
+        payment.matched_name = holder_name
+        payment.matched_amt = passport.sold_amt
+        payment.name_score = 0  # 0 = manual match (auto-match scores are 85–100)
+        payment.mark_as_paid = True
+        payment.note = (
+            f"Manually linked by {admin_email} on {date_str}."
+            f" Payer: {payer_name} (${payer_amt:.2f})."
+            f" Passport holder: {holder_name}."
+            f" Reason: {reason}."
+        )
+
+        # Log audit trail — text contains "marked as PAID (interac)" so get_all_activity_logs()
+        # classifies it correctly as "Marked Paid (Interac)" in the activity log view
+        pass_code = passport.pass_code or f"#{passport.id}"
+        db.session.add(AdminActionLog(
+            admin_email=admin_email,
+            action=(
+                f"Passport for {holder_name} ({pass_code}) marked as PAID (interac) by {admin_email}."
+                f" Manual Interac match — Payer: {payer_name} (${payer_amt:.2f})."
+                f" Note: {reason}."
+            )
+        ))
+
+        db.session.commit()
+        db.session.expire_all()
+
+        # Move payment email to processed folder
+        email_moved = False
+        try:
+            from utils import get_setting
+            import imaplib
+
+            mail_user = get_setting("IMAP_USERNAME") or get_setting("MAIL_USERNAME")
+            mail_pwd = get_setting("IMAP_PASSWORD") or get_setting("MAIL_PASSWORD")
+            processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
+
+            if mail_user and mail_pwd and payment.email_uid:
+                imap_server = get_setting("IMAP_SERVER") or get_setting("MAIL_SERVER") or "imap.gmail.com"
+
+                try:
+                    mail = imaplib.IMAP4_SSL(imap_server)
+                except Exception:
+                    mail = imaplib.IMAP4(imap_server, 143)
+                    mail.starttls()
+
+                mail.login(mail_user, mail_pwd)
+                mail.select("inbox")
+
+                uid = payment.email_uid
+                folder_status, _ = mail.select(processed_folder)
+                if folder_status != 'OK':
+                    try:
+                        mail.create(processed_folder)
+                    except Exception:
+                        pass
+
+                mail.select("inbox")
+                copy_result = mail.uid("COPY", uid, processed_folder)
+                if copy_result[0] == 'OK':
+                    mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                    email_moved = True
+                mail.expunge()
+                mail.logout()
+
+        except Exception as e:
+            print(f"Could not move payment email (non-critical): {e}")
+
+        # Send confirmation email via notify_pass_event
+        activity = db.session.get(Activity, passport.activity_id)
+        notify_pass_event(
+            app=current_app._get_current_object(),
+            event_type="payment_received",
+            pass_data=passport,
+            activity=activity,
+            admin_email=admin_email,
+            timestamp=now_utc
+        )
+
+        msg = f"Payment linked to passport for {holder_name} ({pass_code})."
+        if not email_moved:
+            msg += " Warning: payment email could not be moved from inbox."
+        flash(msg, "success" if email_moved else "warning")
+
+        return jsonify({"success": True, "message": msg}), 200
+
+    except Exception as e:
+        import traceback
+        print(f"Error linking payment to passport: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        return jsonify({"error": f"Failed to link payment: {str(e)}"}), 500
+
+
 @app.route("/api/unpaid-passports-by-amount/<float:amount>")
 def api_get_unpaid_passports_by_amount(amount):
     """Get list of unpaid passports at a specific amount for the Check Unpaid Passports modal"""
@@ -3767,6 +4086,7 @@ def api_get_unpaid_passports_by_amount(amount):
         'user_email': p.user.email if p.user else '',
         'activity_name': p.activity.name if p.activity else 'Unknown',
         'passport_type': p.passport_type.name if p.passport_type else (p.passport_type_name or 'N/A'),
+        'sold_amt': float(p.sold_amt) if p.sold_amt is not None else 0,
         'created_dt': p.created_dt.strftime('%Y-%m-%d') if p.created_dt else ''
     } for p in passports])
 
@@ -6499,6 +6819,7 @@ def financial_report_export():
                 transaction_date,
                 customer,
                 memo,
+                passport_number,
                 amount,
                 payment_status,
                 entered_by
@@ -6541,6 +6862,7 @@ def financial_report_export():
             'transaction_date',
             'customer',
             'memo',
+            'passport_number',
             'amount',
             'payment_status',
             'entered_by'
@@ -6555,6 +6877,7 @@ def financial_report_export():
                 row.transaction_date,
                 row.customer or '',
                 row.memo or '',
+                row.passport_number or '',
                 f"{row.amount:.2f}",
                 row.payment_status,
                 row.entered_by or ''
@@ -6589,8 +6912,11 @@ def financial_report_export():
                                 WHEN 'pos' THEN 'POS/TPV'
                                 WHEN 'cheque' THEN 'Cheque'
                             END
+                    WHEN p.payment_method = 'interac'
+                    THEN CASE WHEN p.notes IS NOT NULL AND p.notes != '' THEN p.notes || ' | ' ELSE '' END || 'E-Transfer'
                     ELSE p.notes
                 END as memo,
+                p.pass_code AS passport_number,
                 p.sold_amt as amount,
                 CASE WHEN p.paid = 1 THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
                 'Passport System' as entered_by,
@@ -6614,6 +6940,7 @@ def financial_report_export():
                     THEN 'Stripe Credit Card' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
                     ELSE i.note
                 END as memo,
+                p_stripe.pass_code AS passport_number,
                 i.amount,
                 CASE WHEN i.payment_status = 'received' THEN 'Paid' ELSE 'Unpaid (AR)' END as payment_status,
                 COALESCE(i.created_by, 'System') as entered_by,
@@ -6640,6 +6967,7 @@ def financial_report_export():
                     THEN 'Stripe processing fee' || CASE WHEN p_stripe.pass_code IS NOT NULL THEN ' | ' || p_stripe.pass_code ELSE '' END
                     ELSE e.description
                 END as memo,
+                p_stripe.pass_code AS passport_number,
                 e.amount,
                 CASE WHEN e.payment_status = 'paid' THEN 'Paid' ELSE 'Unpaid (AP)' END as payment_status,
                 COALESCE(e.created_by, 'System') as entered_by,
@@ -6674,6 +7002,7 @@ def financial_report_export():
                 'transaction_date',
                 'customer',
                 'memo',
+                'passport_number',
                 'amount',
                 'payment_status',
                 'entered_by',
@@ -6716,6 +7045,7 @@ def financial_report_export():
                     row.transaction_date,
                     row.customer or '',
                     row.memo or '',
+                    row.passport_number or '',
                     f"{row.amount:.2f}",
                     row.payment_status,
                     row.entered_by or '',
@@ -6906,6 +7236,19 @@ def payment_bot_matches():
         else:
             payment.unpaid_count = 0
 
+    # Fetch unpaid passport objects grouped by amount (for link-passport modal, server-rendered)
+    unpaid_passports_by_amount = {}
+    if no_match_amounts:
+        unpaid_passports = db.session.query(Passport).join(User).join(Activity).filter(
+            Passport.paid == False,
+            Passport.sold_amt.in_(no_match_amounts)
+        ).order_by(Passport.created_dt.desc()).all()
+        for p in unpaid_passports:
+            key = p.sold_amt
+            if key not in unpaid_passports_by_amount:
+                unpaid_passports_by_amount[key] = []
+            unpaid_passports_by_amount[key].append(p)
+
     # Calculate statistics from ALL records (not filtered)
     total_payments = db.session.query(EbankPayment.id).filter(
         EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id))
@@ -6950,6 +7293,7 @@ def payment_bot_matches():
                          is_zero_results=is_zero_results,
                          activities=activities,
                          stripe_configured=stripe_configured,
+                         unpaid_passports_by_amount=unpaid_passports_by_amount,
                          current_filters={
                              'q': q,
                              'status': status_filter,
