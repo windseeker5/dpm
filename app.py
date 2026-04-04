@@ -257,9 +257,9 @@ def get_tier_info():
     """Get complete tier information for current subscription."""
     tier = get_subscription_tier()
     tier_data = {
-        1: {"tier": 1, "name": "Starter", "price": "$10/month", "activities": 1},
-        2: {"tier": 2, "name": "Professional", "price": "$25/month", "activities": 15},
-        3: {"tier": 3, "name": "Enterprise", "price": "$60/month", "activities": 100}
+        1: {"tier": 1, "name": "Solo",         "price": "$10/month", "activities": 1},
+        2: {"tier": 2, "name": "Club",         "price": "$25/month", "activities": 15},
+        3: {"tier": 3, "name": "Organisation", "price": "$60/month", "activities": 100}
     }
     return tier_data.get(tier, tier_data[1])
 
@@ -297,8 +297,8 @@ def check_activity_limit(exclude_activity_id=None):
         # Suggest upgrade if not on highest tier
         if tier < 3:
             next_tier_data = {
-                2: {"tier": 2, "name": "Professional", "price": "$25/month", "activities": 15},
-                3: {"tier": 3, "name": "Enterprise", "price": "$60/month", "activities": 100}
+                2: {"tier": 2, "name": "Club",         "price": "$50/month", "activities": 15},
+                3: {"tier": 3, "name": "Organisation", "price": "$120/month", "activities": 100}
             }
             next_tier = next_tier_data[tier + 1]
             msg += f"Upgrade to {next_tier['name']} ({next_tier['price']}) "
@@ -397,20 +397,25 @@ def get_subscription_metadata():
     # Convert payment amount from cents to dollars
     payment_amount_raw = get_setting('PAYMENT_AMOUNT')
     payment_amount_formatted = None
+    payment_amount_monthly_equiv = None
+    billing_freq = get_setting('BILLING_FREQUENCY', 'monthly')
     if payment_amount_raw:
         try:
             amount_cents = int(payment_amount_raw)
             payment_amount_formatted = f"{amount_cents / 100:.2f}"
+            if billing_freq == 'annual':
+                payment_amount_monthly_equiv = f"{amount_cents / 100 / 12:.2f}"
         except (ValueError, TypeError):
-            payment_amount_formatted = payment_amount_raw  # Fallback to raw if conversion fails
+            payment_amount_formatted = payment_amount_raw
 
     return {
         'is_beta_tester': False,
         'subscription_id': stripe_sub_id,
         'customer_id': get_setting('STRIPE_CUSTOMER_ID'),
-        'billing_frequency': get_setting('BILLING_FREQUENCY', 'monthly'),
+        'billing_frequency': billing_freq,
         'renewal_date': renewal_date_formatted,
         'payment_amount': payment_amount_formatted,
+        'payment_amount_monthly_equiv': payment_amount_monthly_equiv,
         'is_paid_subscriber': bool(stripe_sub_id)
     }
 
@@ -486,12 +491,25 @@ def get_subscription_details():
         items = sub_dict.get('items', {}).get('data', [])
         current_price_id = items[0]['price']['id'] if items else None
 
+        # Check for pending downgrade
+        pending_plan = get_setting('PENDING_DOWNGRADE_PLAN')
+        pending_downgrade = None
+        if pending_plan:
+            plan_names = {'basic': 'Solo', 'pro': 'Club', 'ultimate': 'Organisation'}
+            pending_downgrade = {
+                'plan': pending_plan,
+                'plan_name': plan_names.get(pending_plan, pending_plan),
+                'freq': get_setting('PENDING_DOWNGRADE_FREQ', ''),
+                'date': get_setting('PENDING_DOWNGRADE_DATE', ''),
+            }
+
         return {
             'id': sub_dict.get('id'),
             'status': sub_dict.get('status'),
             'cancel_at_period_end': sub_dict.get('cancel_at_period_end', False),
             'current_price_id': current_price_id,
             'cancel_at': sub_dict.get('cancel_at'),
+            'pending_downgrade': pending_downgrade,
         }
     except Exception as e:
         logger.error(f"[GET_SUB_DETAILS] Error: {e}")
@@ -533,13 +551,185 @@ def reactivate_subscription(subscription_id):
         return False, f"Error: {str(e)}"
 
 
+def _price_id_to_plan(price_id):
+    """Reverse-lookup: given a Stripe price ID, return (plan_key, freq) or (None, None).
+
+    First checks local Settings; if not found, queries Stripe for the price amount/interval
+    and maps it back to a plan.
+    """
+    from utils import get_setting
+    for plan in ('basic', 'pro', 'ultimate'):
+        for freq in ('monthly', 'annual'):
+            key = f"STRIPE_PRICE_{plan.upper()}_{freq.upper()}"
+            if get_setting(key) == price_id:
+                return plan, freq
+    # Fallback: query Stripe for the price details and match by amount/interval
+    try:
+        price = stripe.Price.retrieve(price_id)
+        price_dict = price.to_dict() if hasattr(price, 'to_dict') else dict(price)
+        amount = price_dict.get('unit_amount', 0)
+        interval = (price_dict.get('recurring') or {}).get('interval', '')
+        freq = 'annual' if interval == 'year' else 'monthly'
+        amount_to_plan = {
+            (2000, 'monthly'): 'basic', (12000, 'annual'): 'basic',
+            (5000, 'monthly'): 'pro', (30000, 'annual'): 'pro',
+            (12000, 'monthly'): 'ultimate', (72000, 'annual'): 'ultimate',
+        }
+        plan = amount_to_plan.get((amount, freq))
+        if plan:
+            logger.info(f"[PRICE_LOOKUP] Matched {price_id} via Stripe -> {plan}/{freq}")
+            return plan, freq
+    except Exception as e:
+        logger.warning(f"[PRICE_LOOKUP] Could not query Stripe for {price_id}: {e}")
+    return None, None
+
+
+def _is_plan_upgrade(current_plan, current_freq, new_plan, new_freq):
+    """Determine if a plan change is an upgrade (immediate) or downgrade (scheduled).
+
+    Upgrades: higher tier, or same tier monthly->annual.
+    Downgrades: lower tier, or same tier annual->monthly.
+    """
+    tier_map = {'basic': 1, 'pro': 2, 'ultimate': 3}
+    cur_tier = tier_map.get(current_plan, 0)
+    new_tier = tier_map.get(new_plan, 0)
+
+    if new_tier > cur_tier:
+        return True
+    elif new_tier < cur_tier:
+        return False
+    else:
+        # Same tier: monthly->annual is upgrade, annual->monthly is downgrade
+        if current_freq == new_freq:
+            return True  # Same plan, no real change
+        return new_freq == 'annual'
+
+
+def _get_period_end(sub_dict):
+    """Get the current billing period end from a subscription dict.
+
+    Stripe may set current_period_end to None when a schedule is (or was) attached.
+    Fallback chain: current_period_end -> schedule phase end_date -> billing_cycle_anchor + interval.
+    """
+    period_end = sub_dict.get('current_period_end')
+    if period_end:
+        return period_end
+
+    # Try the attached schedule's last phase end_date
+    sched_id = sub_dict.get('schedule')
+    if sched_id:
+        try:
+            sched = stripe.SubscriptionSchedule.retrieve(sched_id)
+            sched_dict = sched.to_dict() if hasattr(sched, 'to_dict') else dict(sched)
+            phases = sched_dict.get('phases', [])
+            if phases:
+                end = phases[-1].get('end_date') or phases[0].get('end_date')
+                if end:
+                    return end
+        except Exception:
+            pass
+
+    # Last resort: compute from billing_cycle_anchor + subscription interval
+    anchor = sub_dict.get('billing_cycle_anchor')
+    if anchor:
+        items = sub_dict.get('items', {}).get('data', [])
+        interval = 'year'  # default for annual
+        if items:
+            interval = (items[0].get('price', {}).get('recurring') or {}).get('interval', 'year')
+        from datetime import datetime, timezone, timedelta
+        anchor_dt = datetime.fromtimestamp(anchor, tz=timezone.utc)
+        now = datetime.now(tz=timezone.utc)
+        # Walk forward from anchor by interval until we pass today
+        period_dt = anchor_dt
+        if interval == 'year':
+            while period_dt <= now:
+                period_dt = period_dt.replace(year=period_dt.year + 1)
+        else:
+            while period_dt <= now:
+                # Add one month
+                month = period_dt.month % 12 + 1
+                year = period_dt.year + (1 if period_dt.month == 12 else 0)
+                day = min(period_dt.day, [31,29 if year%4==0 else 28,31,30,31,30,31,31,30,31,30,31][month-1])
+                period_dt = period_dt.replace(year=year, month=month, day=day)
+        return int(period_dt.timestamp())
+
+    return None
+
+
+def _cancel_existing_schedule(subscription_id):
+    """Release any active Stripe subscription schedule and clear local pending-downgrade settings."""
+    try:
+        # Read the schedule ID directly from the subscription object
+        sub = stripe.Subscription.retrieve(subscription_id)
+        sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
+        schedule_id = sub_dict.get('schedule')
+        if schedule_id:
+            try:
+                sched = stripe.SubscriptionSchedule.retrieve(schedule_id)
+                sched_dict = sched.to_dict() if hasattr(sched, 'to_dict') else dict(sched)
+                if sched_dict.get('status') in ('active', 'not_started'):
+                    stripe.SubscriptionSchedule.release(schedule_id)
+                    logger.info(f"[CHANGE_PLAN] Released schedule: {schedule_id}")
+            except stripe.error.InvalidRequestError as e:
+                logger.info(f"[CHANGE_PLAN] Could not release {schedule_id}: {e}")
+        from models import Setting, db
+        for key in ('PENDING_DOWNGRADE_PLAN', 'PENDING_DOWNGRADE_FREQ',
+                     'PENDING_DOWNGRADE_DATE', 'PENDING_DOWNGRADE_SCHEDULE_ID'):
+            s = Setting.query.filter_by(key=key).first()
+            if s:
+                db.session.delete(s)
+        db.session.commit()
+    except Exception as e:
+        logger.warning(f"[CHANGE_PLAN] Could not release existing schedule: {e}")
+
+
+def _apply_pending_downgrade():
+    """Apply a pending downgrade to local settings after the scheduled date has passed."""
+    from utils import get_setting
+    from models import Setting, db
+
+    pending_plan = get_setting('PENDING_DOWNGRADE_PLAN')
+    pending_freq = get_setting('PENDING_DOWNGRADE_FREQ')
+    if not pending_plan:
+        return
+
+    tier_map = {'basic': 1, 'pro': 2, 'ultimate': 3}
+    amount_map = {
+        ('basic',    'monthly'): '2000',
+        ('basic',    'annual'):  '12000',
+        ('pro',      'monthly'): '5000',
+        ('pro',      'annual'):  '30000',
+        ('ultimate', 'monthly'): '12000',
+        ('ultimate', 'annual'):  '72000',
+    }
+
+    updates = {
+        'MINIPASS_TIER': str(tier_map.get(pending_plan, 1)),
+        'BILLING_FREQUENCY': pending_freq or 'monthly',
+        'PAYMENT_AMOUNT': amount_map.get((pending_plan, pending_freq or 'monthly'), '2000'),
+    }
+    for k, v in updates.items():
+        s = Setting.query.filter_by(key=k).first()
+        if s:
+            s.value = v
+        else:
+            db.session.add(Setting(key=k, value=v))
+
+    # Clear pending downgrade settings
+    for key in ('PENDING_DOWNGRADE_PLAN', 'PENDING_DOWNGRADE_FREQ',
+                 'PENDING_DOWNGRADE_DATE', 'PENDING_DOWNGRADE_SCHEDULE_ID'):
+        s = Setting.query.filter_by(key=key).first()
+        if s:
+            db.session.delete(s)
+    db.session.commit()
+    logger.info(f"[PENDING_DOWNGRADE] Applied: {pending_plan}/{pending_freq}")
+
+
 def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
     """Switch to a different plan or billing frequency.
 
-    Args:
-        subscription_id: Stripe subscription ID
-        new_plan: Plan key ('basic', 'pro', 'ultimate')
-        new_billing_frequency: 'monthly' or 'annual'
+    Upgrades apply immediately with proration.
+    Downgrades are scheduled for the end of the current billing period.
 
     Returns:
         tuple: (success: bool, message: str)
@@ -559,7 +749,7 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
         price_key = f"STRIPE_PRICE_{new_plan.upper()}_{new_billing_frequency.upper()}"
         new_price_id = get_setting(price_key)
         if not new_price_id:
-            logger.error(f"[CHANGE_PLAN] Missing env var: {price_key}")
+            logger.error(f"[CHANGE_PLAN] Missing setting: {price_key}")
             return False, "Plan configuration missing. Please contact support."
 
         stripe.api_key = api_key
@@ -567,7 +757,6 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
         sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
         items = sub_dict.get('items', {}).get('data', [])
 
-        # No-op guard: already on this plan
         current_price_id = items[0]['price']['id'] if items else None
         if current_price_id == new_price_id:
             return False, "You're already on this plan."
@@ -576,16 +765,74 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
         if not item_id:
             return False, "Could not retrieve subscription item. Please contact support."
 
-        stripe.Subscription.modify(
-            subscription_id,
-            items=[{'id': item_id, 'price': new_price_id}],
-            proration_behavior='create_prorations',
-            cancel_at_period_end=False,
-        )
+        current_plan, current_freq = _price_id_to_plan(current_price_id)
+        is_upgrade = _is_plan_upgrade(current_plan, current_freq, new_plan, new_billing_frequency)
+        plan_names = {'basic': 'Solo', 'pro': 'Club', 'ultimate': 'Organisation'}
 
-        plan_names = {'basic': 'Starter', 'pro': 'Professional', 'ultimate': 'Enterprise'}
-        logger.info(f"[CHANGE_PLAN] SUCCESS → {new_plan}/{new_billing_frequency}")
-        return True, f"Plan changed to {plan_names.get(new_plan, new_plan)} ({new_billing_frequency}). Proration will appear on your next invoice."
+        # Release any existing pending-downgrade schedule first
+        _cancel_existing_schedule(subscription_id)
+
+        if is_upgrade:
+            stripe.Subscription.modify(
+                subscription_id,
+                items=[{'id': item_id, 'price': new_price_id}],
+                proration_behavior='always_invoice',
+                cancel_at_period_end=False,
+            )
+            logger.info(f"[CHANGE_PLAN] UPGRADE SUCCESS -> {new_plan}/{new_billing_frequency}")
+            return True, f"Plan upgraded to {plan_names.get(new_plan, new_plan)} ({new_billing_frequency}). Proration will appear on your next invoice."
+        else:
+            # Downgrade: schedule the change at end of current billing period.
+            # Re-fetch the subscription after _cancel_existing_schedule released
+            # any prior schedule, so sub_dict is clean.
+            sub = stripe.Subscription.retrieve(subscription_id)
+            sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
+
+            # Create a schedule from the subscription — Stripe auto-sets the current phase
+            schedule = stripe.SubscriptionSchedule.create(from_subscription=subscription_id)
+            schedule_dict = schedule.to_dict() if hasattr(schedule, 'to_dict') else dict(schedule)
+            existing_phases = schedule_dict.get('phases', [])
+
+            # Build phases: keep existing phase(s) exactly as-is, then append the downgrade
+            new_phases = []
+            for phase in existing_phases:
+                new_phases.append({
+                    'items': [{'price': item.get('price'), 'quantity': item.get('quantity', 1)}
+                              for item in phase.get('items', [])],
+                    'start_date': phase.get('start_date'),
+                    'end_date': phase.get('end_date'),
+                })
+            period_end = existing_phases[-1].get('end_date') if existing_phases else _get_period_end(sub_dict)
+            new_phases.append({
+                'items': [{'price': new_price_id, 'quantity': 1}],
+                'start_date': period_end,
+            })
+
+            stripe.SubscriptionSchedule.modify(
+                schedule.id,
+                end_behavior='release',
+                phases=new_phases,
+            )
+            schedule_id = schedule.id
+
+            from models import Setting, db
+            from datetime import datetime, timezone
+            effective_date = datetime.fromtimestamp(period_end, tz=timezone.utc).strftime('%Y-%m-%d')
+            for _key, _val in [
+                ('PENDING_DOWNGRADE_PLAN', new_plan),
+                ('PENDING_DOWNGRADE_FREQ', new_billing_frequency),
+                ('PENDING_DOWNGRADE_DATE', effective_date),
+                ('PENDING_DOWNGRADE_SCHEDULE_ID', schedule_id),
+            ]:
+                _s = Setting.query.filter_by(key=_key).first()
+                if _s:
+                    _s.value = _val
+                else:
+                    db.session.add(Setting(key=_key, value=_val))
+            db.session.commit()
+
+            logger.info(f"[CHANGE_PLAN] DOWNGRADE SCHEDULED -> {new_plan}/{new_billing_frequency} on {effective_date}")
+            return True, f"Downgrade to {plan_names.get(new_plan, new_plan)} ({new_billing_frequency}) scheduled for {effective_date}. Your current plan remains active until then."
 
     except stripe.error.InvalidRequestError as e:
         logger.error(f"[CHANGE_PLAN] Invalid request: {e}")
@@ -4377,6 +4624,125 @@ def save_unified_settings():
     return unified_settings()
 
 
+@app.route("/current-plan/proration-preview", methods=['GET'])
+def proration_preview():
+    """Return the prorated amount for a plan change before committing it."""
+    if "admin" not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    from utils import get_setting
+    new_plan = request.args.get('plan', '').strip().lower()
+    new_freq  = request.args.get('freq', '').strip().lower()
+
+    valid_plans = {'basic', 'pro', 'ultimate'}
+    valid_freqs  = {'monthly', 'annual'}
+    if new_plan not in valid_plans or new_freq not in valid_freqs:
+        return jsonify({'error': 'Invalid plan'}), 400
+
+    try:
+        api_key = os.getenv('STRIPE_SECRET_KEY')
+        subscription_id = get_setting('STRIPE_SUBSCRIPTION_ID')
+        if not api_key or not subscription_id:
+            return jsonify({'error': 'Not configured'}), 400
+
+        price_key  = f"STRIPE_PRICE_{new_plan.upper()}_{new_freq.upper()}"
+        new_price_id = get_setting(price_key)
+        if not new_price_id:
+            return jsonify({'error': 'Price not found'}), 400
+
+        stripe.api_key = api_key
+        sub  = stripe.Subscription.retrieve(subscription_id)
+        sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
+        items = sub_dict.get('items', {}).get('data', [])
+        item_id = items[0]['id'] if items else None
+        if not item_id:
+            return jsonify({'error': 'No subscription item'}), 400
+
+        # Determine if this is an upgrade or downgrade
+        current_price_id = items[0]['price']['id'] if items else None
+        current_plan_key, current_freq_key = _price_id_to_plan(current_price_id)
+        is_upgrade = _is_plan_upgrade(current_plan_key, current_freq_key, new_plan, new_freq)
+        logger.info(f"[PRORATION_PREVIEW] current={current_plan_key}/{current_freq_key} -> new={new_plan}/{new_freq}, is_upgrade={is_upgrade}, period_end={sub_dict.get('current_period_end')}")
+
+        plan_names = {'basic': 'Solo', 'pro': 'Club', 'ultimate': 'Organisation'}
+        price_display = {
+            ('basic',    'monthly'): '$20/month',
+            ('basic',    'annual'):  '$120/year ($10/month)',
+            ('pro',      'monthly'): '$50/month',
+            ('pro',      'annual'):  '$300/year ($25/month)',
+            ('ultimate', 'monthly'): '$120/month',
+            ('ultimate', 'annual'):  '$720/year ($60/month)',
+        }
+
+        if not is_upgrade:
+            # Downgrade: no proration — scheduled at period end
+            from datetime import datetime, timezone
+            period_end = _get_period_end(sub_dict)
+            effective_date = datetime.fromtimestamp(period_end, tz=timezone.utc).strftime('%Y-%m-%d') if period_end else 'your next billing date'
+            return jsonify({
+                'is_downgrade':     True,
+                'effective_date':   effective_date,
+                'new_plan_name':    plan_names.get(new_plan, new_plan),
+                'new_freq':         new_freq,
+                'new_price_display': price_display.get((new_plan, new_freq), ''),
+                'amount_due':       0,
+            })
+
+        # Upgrade: calculate proration
+        import time
+        proration_date = int(time.time())
+
+        upcoming = stripe.Invoice.create_preview(
+            customer=sub_dict['customer'],
+            subscription=subscription_id,
+            subscription_details={
+                'items': [{'id': item_id, 'price': new_price_id}],
+                'proration_date': proration_date,
+            },
+        )
+        upcoming_dict = upcoming.to_dict() if hasattr(upcoming, 'to_dict') else dict(upcoming)
+
+        currency = upcoming_dict.get('currency', 'cad').upper()
+
+        lines = upcoming_dict.get('lines', {}).get('data', [])
+        proration_lines = [
+            line for line in lines
+            if line.get('proration', False)
+            or (line.get('parent', {}) or {})
+               .get('subscription_item_details', {}).get('proration', False)
+        ]
+
+        amount_due = sum(line.get('amount', 0) for line in proration_lines)
+        credit_amount = sum(
+            abs(line.get('amount', 0))
+            for line in proration_lines
+            if line.get('amount', 0) < 0
+        )
+        new_charge_amount = sum(
+            line.get('amount', 0)
+            for line in proration_lines
+            if line.get('amount', 0) > 0
+        )
+
+        return jsonify({
+            'is_downgrade':         False,
+            'amount_due':           amount_due,
+            'credit_amount':        credit_amount,
+            'new_charge_amount':    new_charge_amount,
+            'currency':             currency,
+            'formatted_due':        f"${amount_due / 100:.2f} {currency}",
+            'formatted_credit':     f"${credit_amount / 100:.2f} {currency}",
+            'formatted_new_charge': f"${new_charge_amount / 100:.2f} {currency}",
+        })
+
+    except stripe.error.StripeError as e:
+        logger.error(f"[PRORATION_PREVIEW] Stripe error: {e}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"[PRORATION_PREVIEW] Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route("/current-plan", methods=['GET', 'POST'])
 def current_plan():
     """Display current subscription plan and manage subscription."""
@@ -4384,6 +4750,19 @@ def current_plan():
         return redirect(url_for("login"))
 
     logger.info(f"[CURRENT_PLAN] === Request: {request.method} ===")
+
+    # Check if a pending downgrade has already taken effect
+    from utils import get_setting as _gs
+    _pending_date_str = _gs('PENDING_DOWNGRADE_DATE', '')
+    if _pending_date_str:
+        from datetime import date as _date_cls
+        try:
+            _parts = _pending_date_str.split('-')
+            _pending_date = _date_cls(int(_parts[0]), int(_parts[1]), int(_parts[2]))
+            if _date_cls.today() >= _pending_date:
+                _apply_pending_downgrade()
+        except (ValueError, IndexError):
+            pass
 
     # Get tier information (existing logic)
     tier_info = get_tier_info()
@@ -4398,9 +4777,9 @@ def current_plan():
     logger.info(f"[CURRENT_PLAN] Live details from Stripe: {subscription_details}")
 
     all_plans = [
-        {'key': 'basic',    'tier': 1, 'name': 'Starter',      'activities': 1},
-        {'key': 'pro',      'tier': 2, 'name': 'Professional', 'activities': 15},
-        {'key': 'ultimate', 'tier': 3, 'name': 'Enterprise',   'activities': 100},
+        {'key': 'basic',    'tier': 1, 'name': 'Solo',         'activities': 1,   'monthly_price': 20,  'annual_price': 10},
+        {'key': 'pro',      'tier': 2, 'name': 'Club',         'activities': 15,  'monthly_price': 50,  'annual_price': 25},
+        {'key': 'ultimate', 'tier': 3, 'name': 'Organisation', 'activities': 100, 'monthly_price': 120, 'annual_price': 60},
     ]
 
     # Handle POST actions
@@ -4412,6 +4791,39 @@ def current_plan():
             logger.info(f"[CURRENT_PLAN] ✓ Condition passed - calling cancel_subscription")
             success, message = cancel_subscription(subscription_meta['subscription_id'])
             flash(message, 'success' if success else 'error')
+            if success:
+                try:
+                    from utils import send_email_async
+                    from models import Admin
+                    renewal = subscription_meta.get('renewal_date', 'your billing period end date')
+                    settings_url = url_for('current_plan', _external=True)
+                    _body = (
+                        f"<p style='margin:0 0 12px 0;'>Auto-renewal for your minipass subscription has been cancelled.</p>"
+                        f"<p style='margin:0 0 12px 0;'>You will continue to have full access until <strong>{renewal}</strong>.</p>"
+                        f"<p style='margin:0;'>To reactivate, visit your subscription settings at any time.</p>"
+                    )
+                    _seen_emails = set()
+                    for _admin in Admin.query.all():
+                        if _admin.email.lower() in _seen_emails:
+                            continue
+                        _seen_emails.add(_admin.email.lower())
+                        _name = f"{_admin.first_name or ''} {_admin.last_name or ''}".strip() or _admin.email
+                        send_email_async(
+                            current_app._get_current_object(),
+                            subject="Auto-renewal cancelled — minipass",
+                            to_email=_admin.email,
+                            template_name="email_templates/subscription_notification.html",
+                            context={
+                                "notification_title": "Auto-renewal Cancelled",
+                                "notification_body": _body,
+                                "admin_name": _name,
+                                "admin_email": _admin.email,
+                                "settings_url": settings_url,
+                            },
+                            operational=True,
+                        )
+                except Exception:
+                    pass
             return redirect(url_for('current_plan'))
 
         elif action == 'reactivate' and subscription_meta['is_paid_subscriber']:
@@ -4420,10 +4832,16 @@ def current_plan():
             flash(message, 'success' if success else 'error')
             return redirect(url_for('current_plan'))
 
+        elif action == 'cancel_downgrade' and subscription_meta['is_paid_subscriber']:
+            logger.info(f"[CURRENT_PLAN] Cancelling pending downgrade")
+            _cancel_existing_schedule(subscription_meta['subscription_id'])
+            flash("Scheduled downgrade cancelled. Your current plan will continue.", 'success')
+            return redirect(url_for('current_plan'))
+
         elif action == 'change_plan' and subscription_meta['is_paid_subscriber']:
             new_plan = request.form.get('new_plan', '').strip().lower()
             new_freq = request.form.get('new_billing_frequency', '').strip().lower()
-            logger.info(f"[CURRENT_PLAN] Change plan → {new_plan}/{new_freq}")
+            logger.info(f"[CURRENT_PLAN] Change plan -> {new_plan}/{new_freq}")
 
             valid_plans = {'basic', 'pro', 'ultimate'}
             valid_freqs = {'monthly', 'annual'}
@@ -4434,6 +4852,94 @@ def current_plan():
                     subscription_meta['subscription_id'], new_plan, new_freq
                 )
                 flash(message, 'success' if success else 'error')
+                if success:
+                    # Only update local settings for upgrades (immediate changes).
+                    # Downgrades are scheduled — local settings stay unchanged until the date arrives.
+                    is_scheduled_downgrade = bool(get_setting('PENDING_DOWNGRADE_PLAN'))
+                    if not is_scheduled_downgrade:
+                        try:
+                            from models import Setting, db
+                            tier_map = {'basic': 1, 'pro': 2, 'ultimate': 3}
+                            amount_map = {
+                                ('basic',    'monthly'): '2000',
+                                ('basic',    'annual'):  '12000',
+                                ('pro',      'monthly'): '5000',
+                                ('pro',      'annual'):  '30000',
+                                ('ultimate', 'monthly'): '12000',
+                                ('ultimate', 'annual'):  '72000',
+                            }
+                            _new_renewal = None
+                            try:
+                                import stripe as _stripe
+                                _stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+                                _updated_sub = _stripe.Subscription.retrieve(subscription_meta['subscription_id'])
+                                _period_end = _updated_sub.to_dict().get('current_period_end')
+                                if _period_end:
+                                    from datetime import datetime, timezone
+                                    _new_renewal = datetime.fromtimestamp(_period_end, tz=timezone.utc).isoformat()
+                            except Exception:
+                                pass
+                            _settings_to_write = [
+                                ('MINIPASS_TIER', str(tier_map.get(new_plan, 1))),
+                                ('BILLING_FREQUENCY', new_freq),
+                                ('PAYMENT_AMOUNT', amount_map.get((new_plan, new_freq), '2000')),
+                            ]
+                            if _new_renewal:
+                                _settings_to_write.append(('SUBSCRIPTION_RENEWAL_DATE', _new_renewal))
+                            for _key, _val in _settings_to_write:
+                                _s = Setting.query.filter_by(key=_key).first()
+                                if _s:
+                                    _s.value = _val
+                                else:
+                                    db.session.add(Setting(key=_key, value=_val))
+                            db.session.commit()
+                        except Exception as _e:
+                            logger.warning(f"[CURRENT_PLAN] Could not update Setting table locally: {_e}")
+                    # Send confirmation email
+                    try:
+                        from utils import send_email_async
+                        from models import Admin
+                        _plan_display = {'basic': 'Solo', 'pro': 'Club', 'ultimate': 'Organisation'}
+                        settings_url = url_for('current_plan', _external=True)
+                        if is_scheduled_downgrade:
+                            _date = get_setting('PENDING_DOWNGRADE_DATE')
+                            _body = (
+                                f"<p style='margin:0 0 12px 0;'>A downgrade to "
+                                f"<strong>{_plan_display.get(new_plan)} ({new_freq})</strong> has been scheduled.</p>"
+                                f"<p style='margin:0;'>Your current plan remains active until <strong>{_date}</strong>.</p>"
+                            )
+                            _subject = "Downgrade scheduled — minipass"
+                            _title = "Downgrade Scheduled"
+                        else:
+                            _body = (
+                                f"<p style='margin:0 0 12px 0;'>Your minipass subscription has been upgraded to "
+                                f"<strong>{_plan_display.get(new_plan)} ({new_freq})</strong>.</p>"
+                                f"<p style='margin:0;'>The change takes effect immediately. Any proration will appear on your next invoice.</p>"
+                            )
+                            _subject = "Subscription upgraded — minipass"
+                            _title = "Subscription Upgraded"
+                        _seen_emails = set()
+                        for _admin in Admin.query.all():
+                            if _admin.email.lower() in _seen_emails:
+                                continue
+                            _seen_emails.add(_admin.email.lower())
+                            _name = f"{_admin.first_name or ''} {_admin.last_name or ''}".strip() or _admin.email
+                            send_email_async(
+                                current_app._get_current_object(),
+                                subject=_subject,
+                                to_email=_admin.email,
+                                template_name="email_templates/subscription_notification.html",
+                                context={
+                                    "notification_title": _title,
+                                    "notification_body": _body,
+                                    "admin_name": _name,
+                                    "admin_email": _admin.email,
+                                    "settings_url": settings_url,
+                                },
+                                operational=True,
+                            )
+                    except Exception:
+                        pass
             return redirect(url_for('current_plan'))
 
         else:
