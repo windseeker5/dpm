@@ -461,6 +461,11 @@ def cancel_subscription(subscription_id):
 
         # Set Stripe API key
         stripe.api_key = api_key
+
+        # Release any attached subscription schedule first — Stripe blocks
+        # direct modifications when a schedule is managing the subscription.
+        _cancel_existing_schedule(subscription_id)
+
         logger.info(f"[CANCEL_SUB] Calling Stripe API")
 
         # Cancel subscription at period end
@@ -553,6 +558,8 @@ def reactivate_subscription(subscription_id):
             return False, "Stripe API key not configured"
 
         stripe.api_key = api_key
+        # Release any attached subscription schedule first
+        _cancel_existing_schedule(subscription_id)
         updated = stripe.Subscription.modify(subscription_id, cancel_at_period_end=False)
         logger.info(f"[REACTIVATE_SUB] SUCCESS - cancel_at_period_end: {updated.cancel_at_period_end}")
         return True, "Auto-renewal reactivated. Your subscription will renew automatically."
