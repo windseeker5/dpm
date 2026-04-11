@@ -449,17 +449,34 @@ def get_setting(key, default=""):
     New code should use SettingsManager.get() instead.
 
     Priority order:
-    1. Environment variable (from docker-compose)
+    1. Environment variable (from docker-compose) — EXCEPT for DB-only keys
     2. Database setting table (cached in flask.g for the lifetime of the request)
     3. Default value
     """
     import os
     from flask import g
 
-    # First check environment variables (from docker-compose)
-    env_value = os.environ.get(key)
-    if env_value is not None and env_value != "":
-        return env_value
+    # Keys that must ONLY come from the database, never from environment variables.
+    # These are per-customer values that differ between deployed instances.
+    # Allowing env vars to override them causes silent mismatches (e.g. wrong
+    # Stripe account credentials) that break subscription management.
+    _DB_ONLY_KEYS = {
+        'STRIPE_SUBSCRIPTION_ID', 'STRIPE_CUSTOMER_ID',
+        'STRIPE_PAYMENTS_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET',
+        'STRIPE_PAYMENTS_ENABLED',
+        'BILLING_FREQUENCY', 'MINIPASS_TIER', 'PAYMENT_AMOUNT',
+        'SUBSCRIPTION_RENEWAL_DATE',
+        'PENDING_DOWNGRADE_PLAN', 'PENDING_DOWNGRADE_FREQ',
+        'PENDING_DOWNGRADE_DATE', 'PENDING_DOWNGRADE_SCHEDULE_ID',
+    }
+    _DB_ONLY_PREFIXES = ('STRIPE_PRICE_',)
+
+    # First check environment variables (from docker-compose) — skip for DB-only keys
+    is_db_only = key in _DB_ONLY_KEYS or any(key.startswith(p) for p in _DB_ONLY_PREFIXES)
+    if not is_db_only:
+        env_value = os.environ.get(key)
+        if env_value is not None and env_value != "":
+            return env_value
 
     with current_app.app_context():
         # Cache all settings in flask.g so Setting.query.all() runs at most once per request
