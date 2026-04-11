@@ -219,7 +219,27 @@ with app.app_context():
     app.config["MAIL_PASSWORD"] = Config.get_setting(app, "MAIL_PASSWORD", "")
     app.config["MAIL_DEFAULT_SENDER"] = Config.get_setting(app, "MAIL_DEFAULT_SENDER", "")
 
-
+    # Stripe health check: verify the API key can access the subscription
+    try:
+        from utils import get_setting as _startup_get_setting
+        _sub_id = _startup_get_setting('STRIPE_SUBSCRIPTION_ID', '')
+        _api_key = os.getenv('STRIPE_SECRET_KEY', '')
+        if _sub_id and _api_key:
+            import stripe as _startup_stripe
+            _startup_stripe.api_key = _api_key
+            try:
+                _startup_stripe.Subscription.retrieve(_sub_id)
+                print(f"[STRIPE_HEALTH] API key can access subscription {_sub_id[:20]}...")
+            except _startup_stripe.error.AuthenticationError:
+                print(f"[STRIPE_HEALTH] STRIPE_SECRET_KEY cannot authenticate — wrong key for this account!")
+            except _startup_stripe.error.InvalidRequestError:
+                print(f"[STRIPE_HEALTH] Subscription {_sub_id} not found — key may be for wrong account or mode (test vs live)")
+            except Exception as _e:
+                print(f"[STRIPE_HEALTH] Could not verify: {_e}")
+        elif _sub_id and not _api_key:
+            print("[STRIPE_HEALTH] STRIPE_SECRET_KEY is missing from .env!")
+    except Exception:
+        pass
 
 
 
