@@ -537,6 +537,17 @@ def get_subscription_details():
             from datetime import datetime, timezone
             period_end_formatted = datetime.fromtimestamp(period_end, tz=timezone.utc).strftime('%Y-%m-%d')
 
+        # Derive plan/freq from Stripe's current price so the page always
+        # reflects reality, not a potentially-stale local database.
+        stripe_plan, stripe_freq = _price_id_to_plan(current_price_id) if current_price_id else (None, None)
+        tier_map = {'basic': 1, 'pro': 2, 'ultimate': 3}
+        plan_names = {'basic': 'Solo', 'pro': 'Club', 'ultimate': 'Organisation'}
+        amount_map = {
+            ('basic', 'monthly'): 2000, ('basic', 'annual'): 12000,
+            ('pro', 'monthly'): 5000, ('pro', 'annual'): 30000,
+            ('ultimate', 'monthly'): 12000, ('ultimate', 'annual'): 72000,
+        }
+
         return {
             'id': sub_dict.get('id'),
             'status': sub_dict.get('status'),
@@ -545,6 +556,12 @@ def get_subscription_details():
             'cancel_at': sub_dict.get('cancel_at'),
             'current_period_end': period_end_formatted,
             'pending_downgrade': pending_downgrade,
+            # Plan info derived from Stripe (source of truth)
+            'stripe_plan_key': stripe_plan,
+            'stripe_plan_name': plan_names.get(stripe_plan, ''),
+            'stripe_freq': stripe_freq,
+            'stripe_tier': tier_map.get(stripe_plan, 0),
+            'stripe_amount_cents': amount_map.get((stripe_plan, stripe_freq), 0),
         }
     except Exception as e:
         logger.error(f"[GET_SUB_DETAILS] Error: {e}")
@@ -5133,17 +5150,55 @@ def current_plan():
         except (ValueError, IndexError):
             pass
 
-    # Get tier information (existing logic)
+    # Get live subscription details from Stripe API first (source of truth)
+    subscription_details = get_subscription_details()
+    logger.info(f"[CURRENT_PLAN] Live details from Stripe: {subscription_details}")
+
+    # Sync local database to match Stripe if they've drifted apart
+    if subscription_details and subscription_details.get('stripe_plan_key'):
+        from utils import get_setting as _gs2
+        local_tier = _gs2('MINIPASS_TIER', '')
+        local_freq = _gs2('BILLING_FREQUENCY', '')
+        stripe_tier = str(subscription_details['stripe_tier'])
+        stripe_freq = subscription_details['stripe_freq'] or ''
+        stripe_amount = str(subscription_details['stripe_amount_cents'])
+
+        if local_tier != stripe_tier or local_freq != stripe_freq:
+            logger.warning(
+                f"[CURRENT_PLAN] LOCAL/STRIPE MISMATCH — local tier={local_tier}/{local_freq}, "
+                f"stripe tier={stripe_tier}/{stripe_freq}. Syncing local DB to Stripe."
+            )
+            try:
+                from models import Setting, db
+                for _key, _val in [
+                    ('MINIPASS_TIER', stripe_tier),
+                    ('BILLING_FREQUENCY', stripe_freq),
+                    ('PAYMENT_AMOUNT', stripe_amount),
+                ]:
+                    _s = Setting.query.filter_by(key=_key).first()
+                    if _s:
+                        _s.value = _val
+                    else:
+                        db.session.add(Setting(key=_key, value=_val))
+                # Also sync renewal date from Stripe
+                if subscription_details.get('current_period_end'):
+                    _s = Setting.query.filter_by(key='SUBSCRIPTION_RENEWAL_DATE').first()
+                    if _s:
+                        _s.value = subscription_details['current_period_end']
+                    else:
+                        db.session.add(Setting(key='SUBSCRIPTION_RENEWAL_DATE', value=subscription_details['current_period_end']))
+                db.session.commit()
+                logger.info("[CURRENT_PLAN] Local DB synced to Stripe successfully.")
+            except Exception as _e:
+                logger.error(f"[CURRENT_PLAN] Failed to sync local DB: {_e}")
+
+    # Get tier information (now reflects synced data)
     tier_info = get_tier_info()
     usage_info = get_activity_usage_display()
 
-    # Get subscription metadata from .env - renamed to avoid conflict with context processor
+    # Get subscription metadata from database
     subscription_meta = get_subscription_metadata()
     logger.info(f"[CURRENT_PLAN] Subscription meta - is_paid: {subscription_meta['is_paid_subscriber']}, ID: {subscription_meta.get('subscription_id')}")
-
-    # Get live subscription details from Stripe API
-    subscription_details = get_subscription_details()
-    logger.info(f"[CURRENT_PLAN] Live details from Stripe: {subscription_details}")
 
     all_plans = [
         {'key': 'basic',    'tier': 1, 'name': 'Solo',         'activities': 1,   'monthly_price': 20,  'annual_price': 10},
