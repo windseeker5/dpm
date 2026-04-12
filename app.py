@@ -5062,12 +5062,24 @@ def proration_preview():
         currency = upcoming_dict.get('currency', 'cad').upper()
 
         lines = upcoming_dict.get('lines', {}).get('data', [])
-        proration_lines = [
-            line for line in lines
-            if line.get('proration', False)
-            or (line.get('parent', {}) or {})
-               .get('subscription_item_details', {}).get('proration', False)
-        ]
+
+        # Filter to proration lines only.  Stripe's invoice preview includes
+        # both proration adjustments AND the next regular billing charge.
+        # The newer Stripe API puts the proration flag under
+        # parent.subscription_item_details.proration (not top-level).
+        def _is_proration(line):
+            if line.get('proration'):
+                return True
+            parent = line.get('parent') or {}
+            if parent.get('subscription_item_details', {}).get('proration'):
+                return True
+            return False
+
+        proration_lines = [line for line in lines if _is_proration(line)]
+        # For interval changes (monthly→annual), the new plan charge is NOT
+        # a proration line.  If we only found credits, fall back to all lines.
+        if not proration_lines or all(l.get('amount', 0) <= 0 for l in proration_lines):
+            proration_lines = lines
 
         amount_due = sum(line.get('amount', 0) for line in proration_lines)
         credit_amount = sum(
