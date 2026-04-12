@@ -528,12 +528,22 @@ def get_subscription_details():
                 'date': get_setting('PENDING_DOWNGRADE_DATE', ''),
             }
 
+        # Get the live billing period end from Stripe
+        # current_period_end can be None after a schedule was released — use
+        # _get_period_end() which has fallback logic (schedule phases, billing anchor)
+        period_end = _get_period_end(sub_dict)
+        period_end_formatted = None
+        if period_end:
+            from datetime import datetime, timezone
+            period_end_formatted = datetime.fromtimestamp(period_end, tz=timezone.utc).strftime('%Y-%m-%d')
+
         return {
             'id': sub_dict.get('id'),
             'status': sub_dict.get('status'),
             'cancel_at_period_end': sub_dict.get('cancel_at_period_end', False),
             'current_price_id': current_price_id,
             'cancel_at': sub_dict.get('cancel_at'),
+            'current_period_end': period_end_formatted,
             'pending_downgrade': pending_downgrade,
         }
     except Exception as e:
