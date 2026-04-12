@@ -59,13 +59,14 @@
 
           {% if is_paid %}
 
-          <!-- Next billing / end date -->
+          <!-- Next billing / end date (live from Stripe, fallback to DB) -->
+          {% set billing_date = (subscription_details.current_period_end if subscription_details and subscription_details.current_period_end) or subscription_meta.renewal_date %}
           <div class="row mb-2 align-items-center">
             <div class="col-sm-3 text-muted">
               <i class="ti ti-calendar me-1" style="color: #667085;"></i>
               {% if cancelling %}Ends{% else %}Next billing{% endif %}
             </div>
-            <div class="col-sm-9">{{ subscription_meta.renewal_date or 'N/A' }}</div>
+            <div class="col-sm-9">{{ billing_date or 'N/A' }}</div>
           </div>
 
           <!-- Amount -->
@@ -90,7 +91,7 @@
                 <a href="https://minipass.me" class="btn btn-sm btn-outline-primary ms-2">View Plans</a>
               {% elif cancelling %}
                 <span class="badge bg-warning-lt">Cancelled</span>
-                <span class="text-muted ms-2 small">Access until {{ subscription_meta.renewal_date }}</span>
+                <span class="text-muted ms-2 small">Access until {{ billing_date }}</span>
               {% else %}
                 <span class="badge bg-success-lt">Active</span>
               {% endif %}
