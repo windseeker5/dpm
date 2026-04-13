@@ -669,15 +669,23 @@ def _get_period_end(sub_dict):
     if period_end:
         return period_end
 
-    # Try the attached schedule's last phase end_date
+    # Try the attached schedule's current phase end_date
     sched_id = sub_dict.get('schedule')
     if sched_id:
         try:
+            import time
+            now_ts = int(time.time())
             sched = stripe.SubscriptionSchedule.retrieve(sched_id)
             sched_dict = sched.to_dict() if hasattr(sched, 'to_dict') else dict(sched)
             phases = sched_dict.get('phases', [])
+            # Find the current phase (start <= now < end)
+            for phase in phases:
+                phase_end = phase.get('end_date')
+                if phase_end and phase_end > now_ts:
+                    return phase_end
+            # Fallback to first phase if none matched
             if phases:
-                end = phases[-1].get('end_date') or phases[0].get('end_date')
+                end = phases[0].get('end_date')
                 if end:
                     return end
         except Exception:
@@ -8616,7 +8624,7 @@ def send_announcement(activity_id):
     message = bleach.clean(message, tags=allowed_tags, attributes=allowed_attrs, strip=True)
 
     # Resolve logo — hosted URL only (CID inline images increase spam/phishing risk)
-    org_name = get_setting("ORG_NAME", "Fondation LHGI")
+    org_name = get_setting("ORG_NAME", "minipass")
     logo_src = None
 
     if include_logo == "1":
@@ -11231,7 +11239,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
+                    'organization_name': get_setting('ORG_NAME', 'minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'activity_logo_url': activity_logo_url  # Add logo URL to base context
@@ -11252,7 +11260,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
+                    'organization_name': get_setting('ORG_NAME', 'minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                 }
@@ -11278,7 +11286,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
+                    'organization_name': get_setting('ORG_NAME', 'minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
@@ -11353,7 +11361,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
+                    'organization_name': get_setting('ORG_NAME', 'minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'activity_logo_url': activity_logo_url  # Add logo URL to base context
@@ -11374,7 +11382,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
+                    'organization_name': get_setting('ORG_NAME', 'minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                 }
@@ -11400,7 +11408,7 @@ def send_survey_invitations(survey_id):
                     'survey_name': survey.name,
                     'survey_url': survey_url,
                     'question_count': question_count,
-                    'organization_name': get_setting('ORG_NAME', 'Fondation LHGI'),
+                    'organization_name': get_setting('ORG_NAME', 'minipass'),
                     'organization_address': get_setting('ORG_ADDRESS', ''),
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                     'unsubscribe_url': f"https://minipass.me/unsubscribe?email={passport.user.email}",
@@ -12286,7 +12294,7 @@ def email_preview(activity_id):
         base_context['survey_name'] = 'Customer Satisfaction Survey'
         base_context['survey_url'] = 'https://example.com/survey/sample'
         base_context['question_count'] = 8
-        base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+        base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
         base_context['organization_address'] = get_setting('ORG_ADDRESS', '')
         base_context['support_email'] = get_setting('SUPPORT_EMAIL', 'support@minipass.me')
         # These will be overridden by get_email_context if customized
@@ -12301,7 +12309,7 @@ def email_preview(activity_id):
         base_context['requested_amount'] = '$50.00'
         display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
         base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
-        base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+        base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
         # Activity object for location display
         base_context['activity'] = activity
 
@@ -12615,7 +12623,7 @@ def email_preview_live(activity_id):
         base_context['requested_amount'] = '$50.00'
         display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
         base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
-        base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+        base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
 
     # Create temporary customizations from form data without saving to database
     live_customizations = {}
@@ -12896,7 +12904,7 @@ def test_email_template(activity_id):
             base_context['survey_name'] = 'Test Satisfaction Survey'
             base_context['survey_url'] = 'https://example.com/survey/test123'
             base_context['question_count'] = 8
-            base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+            base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
             base_context['organization_address'] = get_setting('ORG_ADDRESS', '')
             base_context['support_email'] = get_setting('SUPPORT_EMAIL', 'support@minipass.me')
             # These will be overridden by get_email_context if customized
@@ -12972,7 +12980,7 @@ def test_email_template(activity_id):
             base_context['requested_amount'] = '$25.00'
             display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
             base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
-            base_context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+            base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
 
         # Get merged context with customizations (preserves email blocks)
         context = get_email_context(activity, template_type, base_context)
