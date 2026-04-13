@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy - {{ org_name }}{% endblock %}
+
+{% block content %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-body">
+            <h1 class="card-title mb-3">Privacy Policy</h1>
+            <p><strong>{{ org_name }}</strong> is committed to protecting your privacy.</p>
+
+            <h2 class="mt-4">Information We Collect</h2>
+            <p>We collect information you provide when you:</p>
+            <ul>
+              <li>Sign up for activities</li>
+              <li>Create an account</li>
+              <li>Make payments</li>
+              <li>Contact us for support</li>
+            </ul>
+
+            <h2 class="mt-4">How We Use Your Information</h2>
+            <p>We use your information to:</p>
+            <ul>
+              <li>Process registrations and payments</li>
+              <li>Send activity confirmations and updates</li>
+              <li>Provide customer support</li>
+              <li>Improve our services</li>
+            </ul>
+
+            <h2 class="mt-4">Email Communications</h2>
+            <p>We may send you emails related to:</p>
+            <ul>
+              <li>Activity confirmations</li>
+              <li>Payment receipts</li>
+              <li>Account updates</li>
+              <li>Service announcements</li>
+            </ul>
+            <p>You can unsubscribe from promotional emails at any time using the unsubscribe link in our emails.</p>
+
+            <h2 class="mt-4">Data Security</h2>
+            <p>We implement appropriate security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
+
+            {% if support_email or org_address %}
+            <div class="card bg-azure-lt mt-4">
+              <div class="card-body">
+                <h2 class="card-title">Contact Us</h2>
+                <p>If you have questions about this privacy policy, please contact us at:</p>
+                {% if support_email %}
+                <p><strong>Email:</strong> {{ support_email }}</p>
+                {% endif %}
+                {% if org_address %}
+                <p><strong>Address:</strong> {{ org_address }}</p>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+            <p class="text-secondary mt-3"><small>Last updated: April 2026</small></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
