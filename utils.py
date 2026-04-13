@@ -3030,7 +3030,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
 
     # Set organization name if not already in context
     if 'organization_name' not in context:
-        context['organization_name'] = "Fondation LHGI"
+        context['organization_name'] = get_setting('ORG_NAME', 'minipass')
 
     # Set payment email from settings if not in context
     if 'payment_email' not in context:
@@ -3648,7 +3648,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         "user_name": signup.user.name,
         "activity_name": activity.name,
         "activity": activity,
-        "organization_name": get_setting('ORG_NAME', 'Fondation LHGI')
+        "organization_name": get_setting('ORG_NAME', 'minipass')
     }
     # Add payment-first variables if applicable
     if is_payment_first:
@@ -3684,7 +3684,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     }
     
     # Add organization variables for footer (from Settings table)
-    context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+    context['organization_name'] = get_setting('ORG_NAME', 'minipass')
     context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
 
     # Phase 3: copy hosted image URLs from email_context (get_email_context already computed them)
@@ -3949,7 +3949,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     }
 
     # Add organization variables for footer (from Settings table)
-    context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+    context['organization_name'] = get_setting('ORG_NAME', 'minipass')
     context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
 
     # Load compiled inline_images.json
@@ -4131,7 +4131,7 @@ def get_email_context(activity, template_type, base_context=None):
     # Add organization_name and payment_email BEFORE Jinja2 rendering
     if 'organization_name' not in context:
         # Get from Settings table (organization table removed)
-        context['organization_name'] = get_setting('ORG_NAME', 'Fondation LHGI')
+        context['organization_name'] = get_setting('ORG_NAME', 'minipass')
         print(f"✅ Set organization_name from settings: {context['organization_name']}")
 
     if 'payment_email' not in context:
