@@ -1314,8 +1314,15 @@ div.dropdown-divider {
         </tbody>
       </table>
       </div>
-      
-      <!-- Shared modal dialogs for passport actions -->
+
+      <!-- Pagination -->
+      {% from 'macros/pagination.html' import render_pagination %}
+      {% set passport_filters = current_filters.copy() %}
+      {% set _ = passport_filters.update({'signup_page': request.args.get('signup_page', 1)}) %}
+      {{ render_pagination(passport_pagination, passport_filters, passes, page_param='passport_page') }}
+      </div>
+
+      <!-- Shared modal dialogs for passport actions (outside main-table-card so search doesn't destroy them) -->
 
       <!-- Shared Redeem (Check In) Modal -->
       <div class="modal modal-blur fade" id="redeem-modal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -1400,13 +1407,6 @@ div.dropdown-divider {
             </div>
           </div>
         </div>
-      </div>
-      
-      <!-- Pagination -->
-      {% from 'macros/pagination.html' import render_pagination %}
-      {% set passport_filters = current_filters.copy() %}
-      {% set _ = passport_filters.update({'signup_page': request.args.get('signup_page', 1)}) %}
-      {{ render_pagination(passport_pagination, passport_filters, passes, page_param='passport_page') }}
       </div>
 
       <!-- Shared Approve Signup Modal -->

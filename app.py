@@ -23,6 +23,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv(override=True)
 
+# Set Stripe API key once at startup — never reassign in individual functions
+stripe.api_key = os.getenv('STRIPE_SECRET_KEY', '')
+
 # 📁 API Blueprints
 from api.backup import backup_api
 from api.geocode import geocode_api
@@ -439,6 +442,13 @@ def get_subscription_metadata():
         'is_paid_subscriber': bool(stripe_sub_id)
     }
 
+def _stripe_idempotency_key(operation, *parts):
+    """Generate a deterministic idempotency key for Stripe API mutations.
+    Keys are scoped to a 60-second window to allow safe retries."""
+    raw = f"{operation}-{'-'.join(str(p) for p in parts)}-{int(time.time() // 60)}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
 def cancel_subscription(subscription_id):
     """Cancel Stripe subscription at period end.
 
@@ -459,9 +469,6 @@ def cancel_subscription(subscription_id):
             logger.error("[CANCEL_SUB] STRIPE_SECRET_KEY not found")
             return False, "Stripe API key not configured"
 
-        # Set Stripe API key
-        stripe.api_key = api_key
-
         # Release any attached subscription schedule first — Stripe blocks
         # direct modifications when a schedule is managing the subscription.
         _cancel_existing_schedule(subscription_id)
@@ -471,7 +478,8 @@ def cancel_subscription(subscription_id):
         # Cancel subscription at period end
         updated_subscription = stripe.Subscription.modify(
             subscription_id,
-            cancel_at_period_end=True
+            cancel_at_period_end=True,
+            idempotency_key=_stripe_idempotency_key('cancel', subscription_id),
         )
 
         logger.info(f"[CANCEL_SUB] SUCCESS - Status: {updated_subscription.status}, cancel_at_period_end: {updated_subscription.cancel_at_period_end}")
@@ -509,7 +517,6 @@ def get_subscription_details():
             logger.error("[GET_SUB_DETAILS] No Stripe API key")
             return None
 
-        stripe.api_key = api_key
         sub = stripe.Subscription.retrieve(subscription_id)
         sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
 
@@ -584,10 +591,13 @@ def reactivate_subscription(subscription_id):
             logger.error("[REACTIVATE_SUB] STRIPE_SECRET_KEY not found")
             return False, "Stripe API key not configured"
 
-        stripe.api_key = api_key
         # Release any attached subscription schedule first
         _cancel_existing_schedule(subscription_id)
-        updated = stripe.Subscription.modify(subscription_id, cancel_at_period_end=False)
+        updated = stripe.Subscription.modify(
+            subscription_id,
+            cancel_at_period_end=False,
+            idempotency_key=_stripe_idempotency_key('reactivate', subscription_id),
+        )
         logger.info(f"[REACTIVATE_SUB] SUCCESS - cancel_at_period_end: {updated.cancel_at_period_end}")
         return True, "Auto-renewal reactivated. Your subscription will renew automatically."
 
@@ -711,7 +721,8 @@ def _get_period_end(sub_dict):
                 # Add one month
                 month = period_dt.month % 12 + 1
                 year = period_dt.year + (1 if period_dt.month == 12 else 0)
-                day = min(period_dt.day, [31,29 if year%4==0 else 28,31,30,31,30,31,31,30,31,30,31][month-1])
+                import calendar
+                day = min(period_dt.day, calendar.monthrange(year, month)[1])
                 period_dt = period_dt.replace(year=year, month=month, day=day)
         return int(period_dt.timestamp())
 
@@ -814,7 +825,6 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
             logger.error(f"[CHANGE_PLAN] Missing setting: {price_key}")
             return False, "Plan configuration missing. Please contact support."
 
-        stripe.api_key = api_key
         sub = stripe.Subscription.retrieve(subscription_id)
         sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
         items = sub_dict.get('items', {}).get('data', [])
@@ -840,6 +850,7 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
                 items=[{'id': item_id, 'price': new_price_id}],
                 proration_behavior='always_invoice',
                 cancel_at_period_end=False,
+                idempotency_key=_stripe_idempotency_key('upgrade', subscription_id, new_price_id),
             )
             logger.info(f"[CHANGE_PLAN] UPGRADE SUCCESS -> {new_plan}/{new_billing_frequency}")
             return True, f"Plan upgraded to {plan_names.get(new_plan, new_plan)} ({new_billing_frequency}). Proration will appear on your next invoice."
@@ -851,19 +862,26 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
             sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
 
             # Create a schedule from the subscription — Stripe auto-sets the current phase
-            schedule = stripe.SubscriptionSchedule.create(from_subscription=subscription_id)
+            schedule = stripe.SubscriptionSchedule.create(
+                from_subscription=subscription_id,
+                idempotency_key=_stripe_idempotency_key('schedule-create', subscription_id, new_price_id),
+            )
             schedule_dict = schedule.to_dict() if hasattr(schedule, 'to_dict') else dict(schedule)
             existing_phases = schedule_dict.get('phases', [])
 
             # Build phases: keep existing phase(s) exactly as-is, then append the downgrade
+            # Omit start_date for the first phase -- Stripe treats it as read-only
+            # after creation and resubmitting it can cause InvalidRequestError.
             new_phases = []
-            for phase in existing_phases:
-                new_phases.append({
+            for i, phase in enumerate(existing_phases):
+                phase_data = {
                     'items': [{'price': item.get('price'), 'quantity': item.get('quantity', 1)}
                               for item in phase.get('items', [])],
-                    'start_date': phase.get('start_date'),
                     'end_date': phase.get('end_date'),
-                })
+                }
+                if i > 0:
+                    phase_data['start_date'] = phase.get('start_date')
+                new_phases.append(phase_data)
             period_end = existing_phases[-1].get('end_date') if existing_phases else _get_period_end(sub_dict)
             new_phases.append({
                 'items': [{'price': new_price_id, 'quantity': 1}],
@@ -874,6 +892,7 @@ def change_subscription_plan(subscription_id, new_plan, new_billing_frequency):
                 schedule.id,
                 end_behavior='release',
                 phases=new_phases,
+                idempotency_key=_stripe_idempotency_key('schedule-modify', schedule.id, new_price_id),
             )
             schedule_id = schedule.id
 
@@ -1096,7 +1115,7 @@ def inject_globals_and_csrf():
 
     return {
         'now': datetime.now(timezone.utc),
-        'ORG_NAME': get_setting("ORG_NAME", "Ligue hockey Gagnon Image"),
+        'ORG_NAME': get_setting("ORG_NAME", "Your Organization"),
         'git_version': get_git_version(),
         'csrf_token': generate_csrf,  # returns the raw CSRF token
         'pending_signups_count': pending_signups_count,
@@ -5032,7 +5051,6 @@ def proration_preview():
         if not new_price_id:
             return jsonify({'error': 'Price not found'}), 400
 
-        stripe.api_key = api_key
         sub  = stripe.Subscription.retrieve(subscription_id)
         sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
         items = sub_dict.get('items', {}).get('data', [])
@@ -5147,58 +5165,85 @@ def current_plan():
 
     # Check if a pending downgrade has already taken effect
     from utils import get_setting as _gs
-    _pending_date_str = _gs('PENDING_DOWNGRADE_DATE', '')
-    if _pending_date_str:
-        from datetime import date as _date_cls
-        try:
-            _parts = _pending_date_str.split('-')
-            _pending_date = _date_cls(int(_parts[0]), int(_parts[1]), int(_parts[2]))
-            if _date_cls.today() >= _pending_date:
-                _apply_pending_downgrade()
-        except (ValueError, IndexError):
-            pass
+    _pending_plan = _gs('PENDING_DOWNGRADE_PLAN', '')
+    if _pending_plan:
+        _applied = False
+        # Primary check: compare Stripe's current price to the pending plan's price
+        _pre_details = get_subscription_details()
+        if _pre_details:
+            _pending_freq = _gs('PENDING_DOWNGRADE_FREQ', 'monthly')
+            _expected_price_key = f"STRIPE_PRICE_{_pending_plan.upper()}_{_pending_freq.upper()}"
+            _expected_price_id = _gs(_expected_price_key, '')
+            if _expected_price_id and _pre_details.get('current_price_id') == _expected_price_id:
+                _applied = True
+        # Fallback: date comparison
+        if not _applied:
+            _pending_date_str = _gs('PENDING_DOWNGRADE_DATE', '')
+            if _pending_date_str:
+                from datetime import date as _date_cls
+                try:
+                    _pending_date = _date_cls.fromisoformat(_pending_date_str)
+                    if _date_cls.today() >= _pending_date:
+                        _applied = True
+                except ValueError:
+                    pass
+        if _applied:
+            _apply_pending_downgrade()
 
     # Get live subscription details from Stripe API first (source of truth)
     subscription_details = get_subscription_details()
     logger.info(f"[CURRENT_PLAN] Live details from Stripe: {subscription_details}")
 
-    # Sync local database to match Stripe if they've drifted apart
-    if subscription_details and subscription_details.get('stripe_plan_key'):
-        from utils import get_setting as _gs2
-        local_tier = _gs2('MINIPASS_TIER', '')
-        local_freq = _gs2('BILLING_FREQUENCY', '')
-        stripe_tier = str(subscription_details['stripe_tier'])
-        stripe_freq = subscription_details['stripe_freq'] or ''
-        stripe_amount = str(subscription_details['stripe_amount_cents'])
+    # Sync local database to match Stripe — always sync renewal date,
+    # and sync plan/tier/amount if they've drifted.
+    if subscription_details:
+        try:
+            from models import Setting, db
+            _changed = False
 
-        if local_tier != stripe_tier or local_freq != stripe_freq:
-            logger.warning(
-                f"[CURRENT_PLAN] LOCAL/STRIPE MISMATCH — local tier={local_tier}/{local_freq}, "
-                f"stripe tier={stripe_tier}/{stripe_freq}. Syncing local DB to Stripe."
-            )
-            try:
-                from models import Setting, db
-                for _key, _val in [
-                    ('MINIPASS_TIER', stripe_tier),
-                    ('BILLING_FREQUENCY', stripe_freq),
-                    ('PAYMENT_AMOUNT', stripe_amount),
-                ]:
-                    _s = Setting.query.filter_by(key=_key).first()
-                    if _s:
-                        _s.value = _val
-                    else:
-                        db.session.add(Setting(key=_key, value=_val))
-                # Also sync renewal date from Stripe
-                if subscription_details.get('current_period_end'):
-                    _s = Setting.query.filter_by(key='SUBSCRIPTION_RENEWAL_DATE').first()
-                    if _s:
-                        _s.value = subscription_details['current_period_end']
-                    else:
-                        db.session.add(Setting(key='SUBSCRIPTION_RENEWAL_DATE', value=subscription_details['current_period_end']))
+            # Always sync renewal date from Stripe
+            if subscription_details.get('current_period_end'):
+                _s = Setting.query.filter_by(key='SUBSCRIPTION_RENEWAL_DATE').first()
+                _new_val = subscription_details['current_period_end']
+                if _s:
+                    if _s.value != _new_val:
+                        _s.value = _new_val
+                        _changed = True
+                else:
+                    db.session.add(Setting(key='SUBSCRIPTION_RENEWAL_DATE', value=_new_val))
+                    _changed = True
+
+            # Sync plan/tier/amount if they've drifted
+            if subscription_details.get('stripe_plan_key'):
+                from utils import get_setting as _gs2
+                local_tier = _gs2('MINIPASS_TIER', '')
+                local_freq = _gs2('BILLING_FREQUENCY', '')
+                stripe_tier = str(subscription_details['stripe_tier'])
+                stripe_freq = subscription_details['stripe_freq'] or ''
+                stripe_amount = str(subscription_details['stripe_amount_cents'])
+
+                if local_tier != stripe_tier or local_freq != stripe_freq:
+                    logger.warning(
+                        f"[CURRENT_PLAN] LOCAL/STRIPE MISMATCH — local tier={local_tier}/{local_freq}, "
+                        f"stripe tier={stripe_tier}/{stripe_freq}. Syncing local DB to Stripe."
+                    )
+                    for _key, _val in [
+                        ('MINIPASS_TIER', stripe_tier),
+                        ('BILLING_FREQUENCY', stripe_freq),
+                        ('PAYMENT_AMOUNT', stripe_amount),
+                    ]:
+                        _s = Setting.query.filter_by(key=_key).first()
+                        if _s:
+                            _s.value = _val
+                        else:
+                            db.session.add(Setting(key=_key, value=_val))
+                    _changed = True
+
+            if _changed:
                 db.session.commit()
                 logger.info("[CURRENT_PLAN] Local DB synced to Stripe successfully.")
-            except Exception as _e:
-                logger.error(f"[CURRENT_PLAN] Failed to sync local DB: {_e}")
+        except Exception as _e:
+            logger.error(f"[CURRENT_PLAN] Failed to sync local DB: {_e}")
 
     # Get tier information (now reflects synced data)
     tier_info = get_tier_info()
@@ -5227,7 +5272,7 @@ def current_plan():
                 try:
                     from utils import send_email_async
                     from models import Admin
-                    renewal = subscription_meta.get('renewal_date', 'your billing period end date')
+                    renewal = (subscription_details or {}).get('current_period_end') or subscription_meta.get('renewal_date', 'your billing period end date')
                     settings_url = url_for('current_plan', _external=True)
                     _body = (
                         f"<p style='margin:0 0 12px 0;'>Auto-renewal for your minipass subscription has been cancelled.</p>"
@@ -5303,7 +5348,6 @@ def current_plan():
                             _new_renewal = None
                             try:
                                 import stripe as _stripe
-                                _stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
                                 _updated_sub = _stripe.Subscription.retrieve(subscription_meta['subscription_id'])
                                 _period_end = _updated_sub.to_dict().get('current_period_end')
                                 if _period_end:
@@ -13275,36 +13319,23 @@ def admin_subscription():
         action = request.form.get('action')
 
         if action == 'cancel':
-            try:
-                stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
-                subscription_id = subscription_info.get('stripe_subscription_id')
+            subscription_id = subscription_info.get('stripe_subscription_id')
 
-                if not subscription_id:
-                    flash("Subscription ID not found. Unable to cancel.", "error")
-                    return redirect(url_for('admin_subscription'))
+            if not subscription_id:
+                flash("Subscription ID not found. Unable to cancel.", "error")
+                return redirect(url_for('admin_subscription'))
 
-                # Cancel subscription at period end
-                updated_subscription = stripe.Subscription.modify(
-                    subscription_id,
-                    cancel_at_period_end=True
-                )
+            # Use the canonical cancel_subscription() which also releases schedules
+            success, message = cancel_subscription(subscription_id)
 
-                # Update the JSON file to reflect cancellation
+            if success:
                 subscription_info['cancel_at_period_end'] = True
-                subscription_info['cancelled_at'] = datetime.now().isoformat()
-
+                subscription_info['cancelled_at'] = datetime.now(timezone.utc).isoformat()
                 with open(subscription_file, 'w') as f:
                     json.dump(subscription_info, f, indent=2)
 
-                flash("Subscription cancelled successfully. Access will continue until the end of your billing period.", "success")
-                return redirect(url_for('admin_subscription'))
-
-            except stripe.error.StripeError as e:
-                flash(f"Stripe error: {str(e)}", "error")
-                return redirect(url_for('admin_subscription'))
-            except Exception as e:
-                flash(f"Error cancelling subscription: {str(e)}", "error")
-                return redirect(url_for('admin_subscription'))
+            flash(message, "success" if success else "error")
+            return redirect(url_for('admin_subscription'))
 
     # Render subscription management page
     return render_template('admin/subscription.html',
@@ -13316,75 +13347,11 @@ def admin_subscription():
 @app.route('/privacy', methods=['GET'])
 def privacy():
     """Privacy Policy page"""
-    return '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Privacy Policy - Foundation LHGI</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body { 
-                font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-                max-width: 800px; 
-                margin: 40px auto; 
-                padding: 20px; 
-                line-height: 1.6;
-                color: #333;
-            }
-            h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-            h2 { color: #34495e; margin-top: 30px; }
-            .container { background: #f8f9fa; padding: 30px; border-radius: 8px; }
-            .contact { background: #e3f2fd; padding: 20px; border-radius: 6px; margin-top: 20px; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>Privacy Policy</h1>
-            <p><strong>Foundation LHGI</strong> is committed to protecting your privacy.</p>
-            
-            <h2>Information We Collect</h2>
-            <p>We collect information you provide when you:</p>
-            <ul>
-                <li>Sign up for activities</li>
-                <li>Create an account</li>
-                <li>Make payments</li>
-                <li>Contact us for support</li>
-            </ul>
-            
-            <h2>How We Use Your Information</h2>
-            <p>We use your information to:</p>
-            <ul>
-                <li>Process registrations and payments</li>
-                <li>Send activity confirmations and updates</li>
-                <li>Provide customer support</li>
-                <li>Improve our services</li>
-            </ul>
-            
-            <h2>Email Communications</h2>
-            <p>We may send you emails related to:</p>
-            <ul>
-                <li>Activity confirmations</li>
-                <li>Payment receipts</li>
-                <li>Account updates</li>
-                <li>Service announcements</li>
-            </ul>
-            <p>You can unsubscribe from promotional emails at any time using the unsubscribe link in our emails.</p>
-            
-            <h2>Data Security</h2>
-            <p>We implement appropriate security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
-            
-            <div class="contact">
-                <h2>Contact Us</h2>
-                <p>If you have questions about this privacy policy, please contact us at:</p>
-                <p><strong>Email:</strong> lhgi@minipass.me</p>
-                <p><strong>Address:</strong> 821 rue des Sables, Rimouski, QC G5L 6Y7</p>
-            </div>
-            
-            <p><small>Last updated: September 2025</small></p>
-        </div>
-    </body>
-    </html>
-    '''
+    return render_template('privacy.html',
+        org_name=get_setting('ORG_NAME', 'Your Organization'),
+        support_email=get_setting('MAIL_DEFAULT_SENDER', ''),
+        org_address=get_setting('ORG_ADDRESS', ''),
+    )
 
 
 if __name__ == "__main__":

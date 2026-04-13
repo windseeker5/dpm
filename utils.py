@@ -3039,15 +3039,15 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             context['payment_email'] = payment_email_setting
 
     # Use ORG_ADDRESS setting for address
-    context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
+    context['organization_address'] = get_setting('ORG_ADDRESS', '')
 
     # Always set these URLs and support email
     context['unsubscribe_url'] = f"{base_url}/unsubscribe?email={to_email}"
     context['privacy_url'] = f"{base_url}/privacy"
     context['base_url'] = base_url
-    
+
     # Add support_email using MAIL_DEFAULT_SENDER setting
-    context['support_email'] = get_setting("MAIL_DEFAULT_SENDER") or "lhgi@minipass.me"
+    context['support_email'] = get_setting("MAIL_DEFAULT_SENDER") or ""
     
     # Debug: Print context variables for ALL emails
     print(f"📧 SEND_EMAIL DEBUG - Template: {template_name}")
@@ -3685,7 +3685,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     
     # Add organization variables for footer (from Settings table)
     context['organization_name'] = get_setting('ORG_NAME', 'minipass')
-    context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
+    context['organization_address'] = get_setting('ORG_ADDRESS', '')
 
     # Phase 3: copy hosted image URLs from email_context (get_email_context already computed them)
     context['hero_image_url'] = email_context.get('hero_image_url', '')
@@ -3950,7 +3950,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
 
     # Add organization variables for footer (from Settings table)
     context['organization_name'] = get_setting('ORG_NAME', 'minipass')
-    context['organization_address'] = get_setting('ORG_ADDRESS', '821 rue des Sables, Rimouski, QC G5L 6Y7')
+    context['organization_address'] = get_setting('ORG_ADDRESS', '')
 
     # Load compiled inline_images.json
     import json
