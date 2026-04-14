@@ -1754,52 +1754,59 @@ def match_gmail_payments_to_passes():
             if existing_payment:
                 if existing_payment.result == "MATCHED":
                     # Check if this is truly the SAME email or a DIFFERENT payment
-                    # Same person can pay same amount multiple times - compare email dates
-                    is_same_email = False
-                    if email_received_date and existing_payment.email_received_date:
-                        # Ensure both datetimes are timezone-aware for comparison
-                        new_date = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=timezone.utc)
-                        existing_date = existing_payment.email_received_date
-                        if existing_date.tzinfo is None:
-                            existing_date = existing_date.replace(tzinfo=timezone.utc)
-                        time_diff = abs((new_date - existing_date).total_seconds())
-                        is_same_email = time_diff < 300  # 5 minutes tolerance
+                    # First: compare IMAP UIDs - definitive differentiator
+                    # Different UIDs = different emails. One has UID and other is NULL = also different.
+                    # Both NULL = can't tell, fall back to time-based check.
+                    if uid and (not existing_payment.email_uid or str(uid) != str(existing_payment.email_uid)):
+                        print(f"🆕 DIFFERENT EMAIL UID ({uid} vs {existing_payment.email_uid}): processing as new payment")
+                        # Fall through to process as new payment
+                    else:
+                        # Fallback: use time-based comparison when UIDs unavailable
+                        is_same_email = False
+                        if email_received_date and existing_payment.email_received_date:
+                            # Ensure both datetimes are timezone-aware for comparison
+                            new_date = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=timezone.utc)
+                            existing_date = existing_payment.email_received_date
+                            if existing_date.tzinfo is None:
+                                existing_date = existing_date.replace(tzinfo=timezone.utc)
+                            time_diff = abs((new_date - existing_date).total_seconds())
+                            is_same_email = time_diff < 300  # 5 minutes tolerance
 
-                    if is_same_email:
-                        # Check if this email has a DIFFERENT signup code - means it's a different payment
-                        code_match = None
-                        if transfer_message:
-                            code_match = re.search(r'MP-INS-(\d{7})', transfer_message)
-                        # FALLBACK: Search entire email body for signup code
-                        if not code_match and email_body:
-                            code_match = re.search(r'MP-INS-(\d{7})', email_body)
+                        if is_same_email:
+                            # Check if this email has a DIFFERENT signup code - means it's a different payment
+                            code_match = None
+                            if transfer_message:
+                                code_match = re.search(r'MP-INS-(\d{7})', transfer_message)
+                            # FALLBACK: Search entire email body for signup code
+                            if not code_match and email_body:
+                                code_match = re.search(r'MP-INS-(\d{7})', email_body)
 
-                        if code_match:
-                            new_signup_code = f"MP-INS-{code_match.group(1)}"
-                            # Check if we already matched THIS specific signup code
-                            existing_for_code = EbankPayment.query.join(Passport).join(Signup).filter(
-                                Signup.signup_code == new_signup_code,
-                                EbankPayment.result == "MATCHED"
-                            ).first()
-                            if not existing_for_code:
-                                print(f"🆕 DIFFERENT SIGNUP CODE: {new_signup_code} - processing as new payment")
-                                # Don't skip - this is a different signup, fall through to process
+                            if code_match:
+                                new_signup_code = f"MP-INS-{code_match.group(1)}"
+                                # Check if we already matched THIS specific signup code
+                                existing_for_code = EbankPayment.query.join(Passport).join(Signup).filter(
+                                    Signup.signup_code == new_signup_code,
+                                    EbankPayment.result == "MATCHED"
+                                ).first()
+                                if not existing_for_code:
+                                    print(f"🆕 DIFFERENT SIGNUP CODE: {new_signup_code} - processing as new payment")
+                                    # Don't skip - this is a different signup, fall through to process
+                                else:
+                                    print(f"✅ ALREADY MATCHED THIS CODE: {new_signup_code}")
+                                    results["skipped"] += 1
+                                    continue
                             else:
-                                print(f"✅ ALREADY MATCHED THIS CODE: {new_signup_code}")
+                                # No signup code found anywhere - use normal duplicate logic
+                                print(f"✅ ALREADY SUCCESSFULLY MATCHED: {name} - ${amt} from {from_email}")
+                                print(f"   Processed on: {existing_payment.timestamp}")
+                                print(f"   Matched to passport ID: {existing_payment.matched_pass_id}")
                                 results["skipped"] += 1
                                 continue
                         else:
-                            # No signup code found anywhere - use normal duplicate logic
-                            print(f"✅ ALREADY SUCCESSFULLY MATCHED: {name} - ${amt} from {from_email}")
-                            print(f"   Processed on: {existing_payment.timestamp}")
-                            print(f"   Matched to passport ID: {existing_payment.matched_pass_id}")
-                            results["skipped"] += 1
-                            continue
-                    else:
-                        print(f"🆕 NEW PAYMENT (different date): {name} - ${amt} from {from_email}")
-                        print(f"   Existing payment date: {existing_payment.email_received_date}")
-                        print(f"   New email date: {email_received_date}")
-                        # Continue processing - this is a NEW payment from same person
+                            print(f"🆕 NEW PAYMENT (different date): {name} - ${amt} from {from_email}")
+                            print(f"   Existing payment date: {existing_payment.email_received_date}")
+                            print(f"   New email date: {email_received_date}")
+                            # Continue processing - this is a NEW payment from same person
                 elif existing_payment.result == "NO_MATCH":
                     print(f"🔄 RETRYING PREVIOUSLY FAILED MATCH: {name} - ${amt} from {from_email}")
                     print(f"   Previous attempt on: {existing_payment.timestamp}")
@@ -2153,6 +2160,8 @@ def match_gmail_payments_to_passes():
                         existing_payment.subject = subject
                         if email_received_date:
                             existing_payment.email_received_date = email_received_date
+                        if uid:
+                            existing_payment.email_uid = uid
                         print(f"   📝 Updated existing EbankPayment record to MATCHED")
                     else:
                         # Create new record
@@ -2170,7 +2179,8 @@ def match_gmail_payments_to_passes():
                             result="MATCHED",
                             mark_as_paid=True,
                             note="Matched by Minipass Bot.",
-                            email_received_date=email_received_date
+                            email_received_date=email_received_date,
+                            email_uid=uid
                         ))
 
                     print(f"🔍 PRE-FLUSH")
