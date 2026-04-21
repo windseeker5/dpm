@@ -8734,7 +8734,7 @@ def send_announcement(activity_id):
         email_jobs=email_jobs,
         subject=subject,
         activity=activity,
-        operational=True,
+        operational=False,
     )
 
     sent_count = len(email_jobs)
