@@ -3053,7 +3053,8 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     context['organization_address'] = get_setting('ORG_ADDRESS', '')
 
     # Always set these URLs and support email
-    context['unsubscribe_url'] = f"{base_url}/unsubscribe?email={to_email}"
+    from urllib.parse import quote
+    context['unsubscribe_url'] = f"{base_url}/unsubscribe?email={quote(to_email)}"
     context['privacy_url'] = f"{base_url}/privacy"
     context['base_url'] = base_url
 
@@ -3178,15 +3179,12 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     from_email = get_setting("MAIL_DEFAULT_SENDER") or "noreply@minipass.me"
     sender_name = get_setting("MAIL_SENDER_NAME") or "Minipass"
     msg["From"] = formataddr((sender_name, from_email))
-    msg["Return-Path"] = from_email
-
-    # ✅ Add deliverability headers
-    reply_to_email = from_email
-    msg["Reply-To"] = reply_to_email
+    msg["Reply-To"] = from_email
 
     if not operational:
-        msg["List-Unsubscribe"] = f"<{context['unsubscribe_url']}>"
-        msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+        if context.get('unsubscribe_url'):
+            msg["List-Unsubscribe"] = f"<{context['unsubscribe_url']}>"
+            msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 
     # Set email priority based on template type (transactional vs bulk)
     if operational:
@@ -3207,8 +3205,9 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
         msg["Auto-Submitted"] = "auto-generated"
 
     # Generate unique Message-ID
-    timestamp = int(datetime.now(timezone.utc).timestamp() * 1000000)  # microsecond precision
-    msg["Message-ID"] = f"<{timestamp}@minipass.me>"
+    import uuid
+    timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)
+    msg["Message-ID"] = f"<{timestamp}.{uuid.uuid4().hex}@minipass.me>"
     msg["Date"] = formatdate(localtime=True)
 
     # Add organization tracking if available
@@ -3273,7 +3272,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
     try:
         # Use provided email config or fall back to system settings
         # 🛠️ DEV MODE: use .env MAIL_SERVER/MAIL_USERNAME/MAIL_PASSWORD (Gmail)
-        # All emails are redirected to the dev address — never reaches real users.
+        # Dev mode always wins — emails never reach real users regardless of email_config
         from flask import current_app
         import os
         if current_app.debug:
@@ -3295,9 +3294,12 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             use_ssl = email_config.get('MAIL_USE_SSL', False)
             sender_name = email_config.get('SENDER_NAME', 'Minipass')
 
-            # Update the From header with organization-specific sender
+            # Replace From and Reply-To with org-specific sender (del first — MIME appends, not overwrites)
             from_email = email_config['MAIL_DEFAULT_SENDER']
+            del msg['From']
             msg['From'] = formataddr((sender_name, from_email))
+            del msg['Reply-To']
+            msg['Reply-To'] = from_email
             print(f"📧 Using organization config: {smtp_host}:{smtp_port}")
         else:
             # Fall back to system settings
@@ -3718,7 +3720,7 @@ def send_bulk_sequential(app, email_jobs, subject, activity=None, operational=Fa
                     except Exception as notify_err:
                         logging.error(f"❌ Could not send failure notification: {notify_err}")
 
-    thread = threading.Thread(target=_run, daemon=True)
+    thread = threading.Thread(target=_run)
     thread.start()
 
 
