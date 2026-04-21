@@ -483,7 +483,8 @@ def get_setting(key, default=""):
         if not hasattr(g, '_settings_cache'):
             try:
                 g._settings_cache = {s.key: s.value for s in Setting.query.all()}
-            except Exception:
+            except Exception as e:
+                logging.error(f"❌ get_setting() DB pool exhausted — settings cache empty: {e}")
                 g._settings_cache = {}
 
         cached = g._settings_cache.get(key)
@@ -3594,6 +3595,130 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                 db.session.commit()
 
     thread = threading.Thread(target=send_in_thread)
+    thread.start()
+
+
+def send_bulk_sequential(app, email_jobs, subject, activity=None, operational=False, delay=0.3):
+    """
+    Send multiple emails in a single background thread, sequentially.
+
+    Reads SMTP config once, then sends one-by-one — no DB pool pressure,
+    no simultaneous SMTP connections. Designed to replace N-thread bulk sends.
+
+    Args:
+        email_jobs: list of dicts with keys: to_email (str), html_body (str)
+        subject: email subject (same for all)
+        activity: Activity object (optional, for logging)
+        operational: if True, bypasses unsubscribe checks
+        delay: seconds between sends (default 0.3)
+    """
+    import time
+
+    activity_id = activity.id if activity and hasattr(activity, 'id') else None
+
+    def _run():
+        with app.app_context():
+            from utils import send_email, get_setting
+            from models import EmailLog
+            import json
+            from datetime import datetime, timezone
+
+            smtp_config = {
+                'MAIL_SERVER':         get_setting('MAIL_SERVER'),
+                'MAIL_PORT':           int(get_setting('MAIL_PORT', '587') or 587),
+                'MAIL_USERNAME':       get_setting('MAIL_USERNAME'),
+                'MAIL_PASSWORD':       get_setting('MAIL_PASSWORD'),
+                'MAIL_USE_TLS':        True,
+                'MAIL_USE_SSL':        False,
+                'MAIL_DEFAULT_SENDER': get_setting('MAIL_DEFAULT_SENDER') or get_setting('MAIL_USERNAME'),
+                'SENDER_NAME':         get_setting('SENDER_NAME', 'Minipass'),
+            }
+
+            if not smtp_config['MAIL_SERVER']:
+                logging.error("❌ send_bulk_sequential: MAIL_SERVER is empty — aborting bulk send")
+                return
+
+            sent = 0
+            failed = 0
+
+            for job in email_jobs:
+                to_email = job.get('to_email')
+                html_body = job.get('html_body')
+
+                try:
+                    result = send_email(
+                        subject=subject,
+                        to_email=to_email,
+                        html_body=html_body,
+                        email_config=smtp_config,
+                        operational=operational,
+                    )
+
+                    log_entry = EmailLog(
+                        timestamp=datetime.now(timezone.utc),
+                        to_email=to_email,
+                        subject=subject,
+                        template_name='',
+                        pass_code=None,
+                        result='SENT' if result else 'FAILED',
+                        context_json=json.dumps({'activity_id': activity_id}),
+                        error_message=None if result else 'send_email() returned False',
+                    )
+                    db.session.add(log_entry)
+                    db.session.commit()
+
+                    if result:
+                        sent += 1
+                    else:
+                        failed += 1
+                        logging.error(f"❌ Bulk send failed for {to_email}")
+
+                except Exception as e:
+                    failed += 1
+                    logging.exception(f"❌ Bulk send exception for {to_email}: {e}")
+                    db.session.rollback()
+                    try:
+                        log_entry = EmailLog(
+                            timestamp=datetime.now(timezone.utc),
+                            to_email=to_email,
+                            subject=subject,
+                            template_name='',
+                            result='FAILED',
+                            context_json=json.dumps({'error': str(e)}),
+                            error_message=str(e),
+                        )
+                        db.session.add(log_entry)
+                        db.session.commit()
+                    except Exception:
+                        pass
+
+                if delay > 0:
+                    time.sleep(delay)
+
+            logging.info(f"✅ Bulk send complete — {sent} sent, {failed} failed (subject: {subject})")
+
+            if failed > 0:
+                admin_email = get_setting('ADMIN_EMAIL') or get_setting('MAIL_USERNAME')
+                if admin_email:
+                    try:
+                        body = (
+                            f"<p>⚠️ Bulk announcement completed with <strong>{failed} failure(s)</strong>.</p>"
+                            f"<p><strong>Subject:</strong> {subject}<br>"
+                            f"<strong>Sent:</strong> {sent}<br>"
+                            f"<strong>Failed:</strong> {failed}</p>"
+                            f"<p>Check the Email Log in your dashboard for details on which recipients failed.</p>"
+                        )
+                        send_email(
+                            subject=f"⚠️ Announcement partially failed — {failed} email(s) not delivered",
+                            to_email=admin_email,
+                            html_body=body,
+                            operational=True,
+                        )
+                        logging.info(f"📧 Failure notification sent to {admin_email}")
+                    except Exception as notify_err:
+                        logging.error(f"❌ Could not send failure notification: {notify_err}")
+
+    thread = threading.Thread(target=_run, daemon=True)
     thread.start()
 
 

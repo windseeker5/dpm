@@ -3174,6 +3174,32 @@ def task38_add_passport_number_to_financial_view(cursor):
         raise
 
 
+def task39_add_announcement_log(cursor):
+    """Create announcement_log table for storing sent announcements per activity."""
+    log("📋", "Task 39: announcement_log table", Colors.BLUE)
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS announcement_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                activity_id INTEGER NOT NULL REFERENCES activity(id),
+                sent_at DATETIME NOT NULL,
+                subject VARCHAR(150) NOT NULL,
+                message TEXT NOT NULL,
+                sent_by VARCHAR(200),
+                recipient_count INTEGER DEFAULT 0
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_announcement_log_activity
+            ON announcement_log(activity_id, sent_at)
+        """)
+        log("✅", "  announcement_log table created (or already existed)", Colors.GREEN)
+        return True
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Task 39 failed: {e}", Colors.RED)
+        raise
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -3232,6 +3258,7 @@ def main():
         ("Password Reset Token Fields", task36_add_password_reset_token),
         ("Fix entered_by in Financial View", task37_fix_entered_by_in_view),
         ("Passport Number in Financial View", task38_add_passport_number_to_financial_view),
+        ("Announcement Log Table", task39_add_announcement_log),
     ]
 
     completed = 0

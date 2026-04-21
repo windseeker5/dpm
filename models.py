@@ -332,6 +332,17 @@ class EmailLog(db.Model):
     error_message = db.Column(db.Text, nullable=True)
 
 
+class AnnouncementLog(db.Model):
+    __tablename__ = 'announcement_log'
+    id              = db.Column(db.Integer, primary_key=True)
+    activity_id     = db.Column(db.Integer, db.ForeignKey('activity.id'), nullable=False)
+    sent_at         = db.Column(db.DateTime(timezone=True), nullable=False)
+    subject         = db.Column(db.String(150), nullable=False)
+    message         = db.Column(db.Text, nullable=False)
+    sent_by         = db.Column(db.String(200))
+    recipient_count = db.Column(db.Integer, default=0)
+
+
 # ✅ Place index right after the model class
 db.Index('ix_signup_status', Signup.status)
 

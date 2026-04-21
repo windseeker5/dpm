@@ -3381,88 +3381,140 @@ function confirmSignupDelete(signupId, signupUser) {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <!-- Logo — Photo Normalization Tool (see DESIGN_SYSTEM.md §15) -->
+        <!-- Tab switcher -->
         <div class="mb-3">
-          <label class="form-label">Logo</label>
-          <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
-               style="border: 1px solid rgba(98,105,118,0.2); width: fit-content; max-width: 100%;">
-            <!-- Thumbnail -->
-            <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
-                 style="width: 100px; min-height: 80px; cursor: pointer;" id="logoPhotoWrapper">
-            </div>
-            <!-- Options panel (hidden until thumbnail clicked) -->
-            <div id="logoOptions" class="flex-grow-1 p-2"
-                 style="display: none; border-left: 1px solid rgba(98,105,118,0.2);">
-              <!-- Source toggle: Search ↔ Upload -->
-              <div class="d-flex align-items-center gap-2 mb-2">
-                <small class="text-muted fw-medium">
-                  <i class="ti ti-world-search" style="font-size:13px;"></i> Search
-                </small>
-                <label class="form-check form-switch mb-0">
-                  <input class="form-check-input" type="checkbox" id="logoSourceToggle" role="switch">
-                </label>
-                <small class="text-muted">
-                  <i class="ti ti-upload" style="font-size:13px;"></i> Upload
-                </small>
+          <div class="github-filter-group" role="group" style="display:inline-flex;align-items:center;background:#f6f8fa;border:1px solid #d1d5da;border-radius:6px;padding:0;">
+            <a href="#" id="ann-btn-new" onclick="switchAnnouncement('new');return false;" style="background:#fff;color:#24292e;font-weight:600;border:1px solid #d1d5da;margin:-1px;z-index:1;border-radius:6px;box-shadow:0 1px 0 rgba(27,31,35,.04);padding:5px 12px;font-size:14px;line-height:20px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;position:relative;">New</a>
+            <a href="#" id="ann-btn-sent" onclick="switchAnnouncement('sent');return false;" style="background:rgba(0,0,0,.03);color:#586069;padding:5px 12px;font-size:14px;line-height:20px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;position:relative;">Sent{% if announcement_history %} <span style="opacity:.6;margin-left:4px;">({{ announcement_history|length }})</span>{% endif %}</a>
+          </div>
+        </div>
+        <!-- NEW panel -->
+        <div id="ann-panel-new">
+          <!-- Logo — Photo Normalization Tool (see DESIGN_SYSTEM.md §15) -->
+          <div class="mb-3">
+            <label class="form-label">Logo</label>
+            <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
+                 style="border: 1px solid rgba(98,105,118,0.2); width: fit-content; max-width: 100%;">
+              <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
+                   style="width: 100px; min-height: 80px; cursor: pointer;" id="logoPhotoWrapper">
               </div>
-              <!-- Search tab -->
-              <div id="logoSearchContent">
-                <div class="input-group">
-                  <input type="text" id="logoImageDescription" class="form-control" placeholder="e.g., Logo, Brand">
-                  <button type="button" id="logoSearchBtn" class="btn btn-primary">
-                    <i class="ti ti-search"></i>
-                  </button>
+              <div id="logoOptions" class="flex-grow-1 p-2"
+                   style="display: none; border-left: 1px solid rgba(98,105,118,0.2);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <small class="text-muted fw-medium">
+                    <i class="ti ti-world-search" style="font-size:13px;"></i> Search
+                  </small>
+                  <label class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="logoSourceToggle" role="switch">
+                  </label>
+                  <small class="text-muted">
+                    <i class="ti ti-upload" style="font-size:13px;"></i> Upload
+                  </small>
+                </div>
+                <div id="logoSearchContent">
+                  <div class="input-group">
+                    <input type="text" id="logoImageDescription" class="form-control" placeholder="e.g., Logo, Brand">
+                    <button type="button" id="logoSearchBtn" class="btn btn-primary">
+                      <i class="ti ti-search"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="logoUploadContent" style="display: none;">
+                  <input type="file" class="form-control" id="logoUploadInput" accept="image/*">
                 </div>
               </div>
-              <!-- Upload tab -->
-              <div id="logoUploadContent" style="display: none;">
-                <input type="file" class="form-control" id="logoUploadInput" accept="image/*">
-              </div>
             </div>
+            <input type="hidden" id="announcementIncludeLogo" value="1">
           </div>
-          <input type="hidden" id="announcementIncludeLogo" value="1">
+          <div class="mb-3">
+            <label class="form-label">Recipients</label>
+            <select class="form-select" id="announcementFilter" onchange="togglePassportTypeSelect()">
+              <option value="all">All participants ({{ passport_statistics.total_passports }})</option>
+              <option value="paid">Paid only ({{ passport_statistics.paid_passports }})</option>
+              <option value="unpaid">Unpaid only ({{ passport_statistics.unpaid_passports }})</option>
+              {% if passport_types %}
+              <option value="type">By passport type&hellip;</option>
+              {% endif %}
+            </select>
+          </div>
+          <div class="mb-3 d-none" id="passportTypeSelectWrap">
+            <label class="form-label">Passport type</label>
+            <select class="form-select" id="announcementPassportTypeId">
+              {% for pt in passport_types %}
+              <option value="{{ pt.id }}">{{ pt.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if activity.discord_webhook_url %}
+          <div class="mb-3">
+            <label class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="send_to_discord" id="send_to_discord" checked>
+              <span class="form-check-label">
+                <i class="ti ti-brand-discord me-1 text-indigo"></i>
+                Also post to Discord channel
+              </span>
+            </label>
+          </div>
+          {% endif %}
+          <div class="mb-3">
+            <label class="form-label">Subject</label>
+            <input type="text" class="form-control" id="announcementSubject" placeholder="Update about {{ activity.name }}" maxlength="150">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Message</label>
+            <textarea id="announcementMessage" rows="6"></textarea>
+          </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label">Recipients</label>
-          <select class="form-select" id="announcementFilter" onchange="togglePassportTypeSelect()">
-            <option value="all">All participants ({{ passport_statistics.total_passports }})</option>
-            <option value="paid">Paid only ({{ passport_statistics.paid_passports }})</option>
-            <option value="unpaid">Unpaid only ({{ passport_statistics.unpaid_passports }})</option>
-            {% if passport_types %}
-            <option value="type">By passport type&hellip;</option>
-            {% endif %}
-          </select>
-        </div>
-        <div class="mb-3 d-none" id="passportTypeSelectWrap">
-          <label class="form-label">Passport type</label>
-          <select class="form-select" id="announcementPassportTypeId">
-            {% for pt in passport_types %}
-            <option value="{{ pt.id }}">{{ pt.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        {% if activity.discord_webhook_url %}
-        <div class="mb-3">
-          <label class="form-check form-switch">
-            <input class="form-check-input" type="checkbox"
-                   name="send_to_discord" id="send_to_discord" checked>
-            <span class="form-check-label">
-              <i class="ti ti-brand-discord me-1 text-indigo"></i>
-              Also post to Discord channel
-            </span>
-          </label>
-        </div>
-        {% endif %}
-        <div class="mb-3">
-          <label class="form-label">Subject</label>
-          <input type="text" class="form-control" id="announcementSubject" placeholder="Update about {{ activity.name }}" maxlength="150">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Message</label>
-          <textarea id="announcementMessage" rows="6"></textarea>
+        <!-- SENT panel — server-rendered -->
+        <div id="ann-panel-sent" style="display:none;">
+          {% for ann in announcement_history %}
+          <div class="d-none" id="ann-msg-{{ ann.id }}">{{ ann.message | safe }}</div>
+          <input type="hidden" id="ann-subj-{{ ann.id }}" value="{{ ann.subject | e }}">
+          {% endfor %}
+          {% if announcement_history %}
+          <div class="input-icon mb-3">
+            <span class="input-icon-addon"><i class="ti ti-search"></i></span>
+            <input type="text" class="form-control" placeholder="Search by subject…" oninput="filterAnnouncements(this.value)">
+          </div>
+          <div class="table-responsive">
+            <table class="table table-vcenter table-hover card-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Subject</th>
+                  <th class="text-center">Recipients</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="ann-tbody">
+                {% for ann in announcement_history %}
+                <tr data-subject="{{ ann.subject | lower | e }}">
+                  <td class="text-muted text-nowrap">{{ ann.sent_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                  <td>{{ ann.subject }}</td>
+                  <td class="text-center text-muted">{{ ann.recipient_count }}</td>
+                  <td class="text-end">
+                    <a href="#" class="btn btn-outline-secondary btn-sm" onclick="useAnnouncement({{ ann.id }});return false;">
+                      <i class="ti ti-arrow-back-up me-1"></i>Use
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if announcement_history|length >= 20 %}
+          <p class="text-center text-muted small mt-1">Showing most recent 20 announcements</p>
+          {% endif %}
+          {% else %}
+          <div class="empty">
+            <div class="empty-icon"><i class="ti ti-speakerphone"></i></div>
+            <p class="empty-title">No announcements yet</p>
+            <p class="empty-subtitle text-muted">Announcements you send will appear here.</p>
+          </div>
+          {% endif %}
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" id="ann-footer">
         <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" id="announcementSendBtn" onclick="sendAnnouncement({{ activity.id }})">
           <i class="ti ti-send me-1"></i>Send
@@ -3814,8 +3866,8 @@ if (announcementModal) {
       tinymce.init({
         selector: '#announcementMessage',
         height: 260, menubar: false,
-        plugins: 'lists link',
-        toolbar: 'bold italic | bullist numlist | link | removeformat',
+        plugins: 'lists',
+        toolbar: 'bold italic | bullist numlist | removeformat',
         license_key: 'gpl', branding: false,
       });
     }
@@ -3828,6 +3880,30 @@ if (announcementModal) {
     announcementLogoNormalizer.reset(orgLogoUrl);
     document.getElementById('announcementIncludeLogo').value = '1';
   });
+}
+
+var ANN_ACTIVE_STYLE   = 'background:#fff;color:#24292e;font-weight:600;border:1px solid #d1d5da;margin:-1px;z-index:1;border-radius:6px;box-shadow:0 1px 0 rgba(27,31,35,.04);padding:5px 12px;font-size:14px;line-height:20px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;position:relative;';
+var ANN_INACTIVE_STYLE = 'background:rgba(0,0,0,.03);color:#586069;padding:5px 12px;font-size:14px;line-height:20px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;position:relative;';
+
+function switchAnnouncement(tab) {
+  document.getElementById('ann-panel-new').style.display  = tab === 'new'  ? '' : 'none';
+  document.getElementById('ann-panel-sent').style.display = tab === 'sent' ? '' : 'none';
+  document.getElementById('ann-footer').style.display     = tab === 'new'  ? '' : 'none';
+  document.getElementById('ann-btn-new').style.cssText  = tab === 'new'  ? ANN_ACTIVE_STYLE  : ANN_INACTIVE_STYLE;
+  document.getElementById('ann-btn-sent').style.cssText = tab === 'sent' ? ANN_ACTIVE_STYLE : ANN_INACTIVE_STYLE;
+}
+
+function filterAnnouncements(q) {
+  var rows = document.querySelectorAll('#ann-tbody tr');
+  rows.forEach(function(r) { r.style.display = r.dataset.subject.includes(q.toLowerCase()) ? '' : 'none'; });
+}
+
+function useAnnouncement(id) {
+  document.getElementById('announcementSubject').value = document.getElementById('ann-subj-' + id).value;
+  var msg = document.getElementById('ann-msg-' + id).innerHTML;
+  var ed = (typeof tinymce !== 'undefined') ? tinymce.get('announcementMessage') : null;
+  if (ed) { ed.setContent(msg); } else { document.getElementById('announcementMessage').value = msg; }
+  switchAnnouncement('new');
 }
 
 function sendAnnouncement(activityId) {
