@@ -3290,7 +3290,7 @@ def send_email(subject, to_email, template_name=None, context=None, inline_image
             smtp_host = email_config['MAIL_SERVER']
             smtp_port = email_config['MAIL_PORT']
             smtp_user = email_config['MAIL_USERNAME']
-            smtp_pass = decrypt_password(email_config['MAIL_PASSWORD']) if email_config['MAIL_PASSWORD'] else None
+            smtp_pass = email_config['MAIL_PASSWORD'] if email_config['MAIL_PASSWORD'] else None
             use_tls = email_config.get('MAIL_USE_TLS', True)
             use_ssl = email_config.get('MAIL_USE_SSL', False)
             sender_name = email_config.get('SENDER_NAME', 'Minipass')

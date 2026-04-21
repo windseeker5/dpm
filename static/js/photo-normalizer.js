@@ -33,6 +33,7 @@ function initPhotoNormalizer(config) {
     outputFormat:     config.outputFormat      || 'image/jpeg',
     objectFit:        config.objectFit         || 'cover',
     placeholderLabel: config.placeholderLabel  || 'Add photo',
+    fallbackHtml:     config.fallbackHtml      || null,
     onConfirm:        config.onConfirm         || null,
     onDelete:         config.onDelete          || null,
     src:              config.src               || null,
@@ -52,6 +53,7 @@ function initPhotoNormalizer(config) {
   }
 
   function placeholderHtml() {
+    if (opts.fallbackHtml) return opts.fallbackHtml;
     return '<div class="d-flex flex-column align-items-center justify-content-center"' +
            ' style="width:100%;height:100%;">' +
            '<i class="ti ti-photo text-muted fs-2"></i>' +

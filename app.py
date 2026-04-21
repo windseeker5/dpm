@@ -8513,8 +8513,9 @@ def activity_dashboard(activity_id):
 
     from utils import get_setting
     _site_url = get_setting('SITE_URL', '').rstrip('/')
-    _logo_filename = get_setting('LOGO_FILENAME', 'logo.png')
-    org_logo_url = f"{_site_url}/static/uploads/{_logo_filename}"
+    _logo_filename = get_setting('LOGO_FILENAME')
+    org_logo_url = f"{_site_url}/static/uploads/{_logo_filename}" if _logo_filename else ""
+    org_name = get_setting('ORG_NAME', '')
 
     return render_template(
         "activity_dashboard.html",
@@ -8558,6 +8559,7 @@ def activity_dashboard(activity_id):
         passport_pagination=passport_pagination,
         signup_pagination=signup_pagination,
         org_logo_url=org_logo_url,
+        org_name=org_name,
         announcement_history=(AnnouncementLog.query
             .filter_by(activity_id=activity_id)
             .order_by(AnnouncementLog.sent_at.desc())
@@ -8689,13 +8691,8 @@ def send_announcement(activity_id):
     if include_logo == "1":
         import os
         site_url = get_setting("SITE_URL", "").rstrip("/")
-        custom_logo_file = request.files.get("custom_logo")
-        if custom_logo_file and custom_logo_file.filename:
-            dest = os.path.join(current_app.root_path, "static", "uploads")
-            logo_filename = _save_optimized_image(custom_logo_file.stream, dest, prefix="announcement_logo", max_size=(400, 400))
-            logo_src = f"{site_url}/static/uploads/{logo_filename}"
-        else:
-            logo_filename = get_setting("LOGO_FILENAME", "logo.png")
+        logo_filename = get_setting("LOGO_FILENAME")
+        if logo_filename:
             logo_src = f"{site_url}/static/uploads/{logo_filename}"
 
     passports_query = Passport.query.options(
