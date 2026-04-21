@@ -8253,7 +8253,7 @@ def activity_dashboard(activity_id):
     if "admin" not in session:
         return redirect(url_for("login"))
 
-    from models import Activity, Signup, Passport, Survey, SurveyResponse, AdminActionLog, Expense, Income
+    from models import Activity, Signup, Passport, Survey, SurveyResponse, AdminActionLog, Expense, Income, AnnouncementLog
     from sqlalchemy.orm import joinedload
     from sqlalchemy import or_, func
     from datetime import datetime, timezone, timedelta
@@ -8558,6 +8558,11 @@ def activity_dashboard(activity_id):
         passport_pagination=passport_pagination,
         signup_pagination=signup_pagination,
         org_logo_url=org_logo_url,
+        announcement_history=(AnnouncementLog.query
+            .filter_by(activity_id=activity_id)
+            .order_by(AnnouncementLog.sent_at.desc())
+            .limit(20)
+            .all()),
     )
 
 
@@ -8644,14 +8649,24 @@ def send_announcement(activity_id):
     if "admin" not in session:
         return jsonify({"success": False, "error": "Not authenticated"}), 401
 
-    from models import Activity, Passport
+    from models import Activity, Passport, AnnouncementLog
     from sqlalchemy.orm import joinedload
     from utils import get_setting, log_admin_action
+    from datetime import datetime, timezone, timedelta
     import bleach
 
     activity = db.session.get(Activity, activity_id)
     if not activity:
         return jsonify({"success": False, "error": "Activity not found"}), 404
+
+    # Idempotency guard — reject duplicate sends within 30 seconds
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=30)
+    recent = AnnouncementLog.query.filter(
+        AnnouncementLog.activity_id == activity_id,
+        AnnouncementLog.sent_at >= cutoff
+    ).first()
+    if recent:
+        return jsonify({"success": False, "error": "An announcement was just sent. Please wait 30 seconds before sending again."}), 429
 
     subject = request.form.get("subject", "").strip()
     message = request.form.get("message", "").strip()
@@ -8665,7 +8680,7 @@ def send_announcement(activity_id):
     # Sanitize the rich-text HTML from TinyMCE
     allowed_tags = ['p', 'br', 'strong', 'em', 'b', 'i', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'span']
     allowed_attrs = {'a': ['href', 'title'], 'span': ['style'], 'p': ['style']}
-    message = bleach.clean(message, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+    message = bleach.clean(message, tags=allowed_tags, attributes=allowed_attrs, protocols=['http', 'https', 'mailto'], strip=True)
 
     # Resolve logo — hosted URL only (CID inline images increase spam/phishing risk)
     org_name = get_setting("ORG_NAME", "minipass")
@@ -8707,29 +8722,26 @@ def send_announcement(activity_id):
     if not unique_passports:
         return jsonify({"success": False, "error": "No participants found for this filter"}), 400
 
-    sent_count = 0
-    failed_count = 0
-
+    email_jobs = []
     for passport in unique_passports:
-        try:
-            user_name = passport.user.name or ""
-            # Substitute template variables the user typed in the editor
-            personalized = message.replace("{{ user_name }}", user_name).replace("{{ org_name }}", org_name)
-            html_body = _build_announcement_html(personalized, logo_src)
+        user_name = passport.user.name or ""
+        personalized = message.replace("{{ user_name }}", user_name).replace("{{ org_name }}", org_name)
+        email_jobs.append({
+            'to_email': passport.user.email,
+            'html_body': _build_announcement_html(personalized, logo_src),
+        })
 
-            send_email_async(
-                app=current_app._get_current_object(),
-                user=passport.user,
-                activity=activity,
-                subject=subject,
-                to_email=passport.user.email,
-                html_body=html_body,
-                operational=True,
-            )
-            sent_count += 1
-        except Exception as e:
-            print(f"❌ Failed to send announcement to {passport.user.email}: {e}")
-            failed_count += 1
+    from utils import send_bulk_sequential
+    send_bulk_sequential(
+        app=current_app._get_current_object(),
+        email_jobs=email_jobs,
+        subject=subject,
+        activity=activity,
+        operational=True,
+    )
+
+    sent_count = len(email_jobs)
+    failed_count = 0
 
     # Discord notification
     discord_sent = False
@@ -8741,6 +8753,18 @@ def send_announcement(activity_id):
             activity_name=activity.name,
             webhook_url=activity.discord_webhook_url
         )
+
+    from models import AnnouncementLog
+    from datetime import datetime, timezone
+    db.session.add(AnnouncementLog(
+        activity_id=activity_id,
+        sent_at=datetime.now(timezone.utc),
+        subject=subject,
+        message=message,
+        sent_by=session.get("admin"),
+        recipient_count=sent_count,
+    ))
+    db.session.commit()
 
     log_admin_action(
         f"Announcement sent: \"{subject}\" to {sent_count} participants in {activity.name}"
