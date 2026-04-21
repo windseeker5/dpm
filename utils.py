@@ -3633,7 +3633,7 @@ def send_bulk_sequential(app, email_jobs, subject, activity=None, operational=Fa
                 'MAIL_USE_TLS':        True,
                 'MAIL_USE_SSL':        False,
                 'MAIL_DEFAULT_SENDER': get_setting('MAIL_DEFAULT_SENDER') or get_setting('MAIL_USERNAME'),
-                'SENDER_NAME':         get_setting('SENDER_NAME', 'Minipass'),
+                'SENDER_NAME':         get_setting('SENDER_NAME') or get_setting('ORG_NAME') or 'Minipass',
             }
 
             if not smtp_config['MAIL_SERVER']:
