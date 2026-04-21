@@ -8632,7 +8632,7 @@ def _build_announcement_html(message_html, logo_src):
     (variables already substituted). No auto-injected greeting or signature."""
     logo_block = (
         f'<div style="text-align:center;margin-bottom:28px;">'
-        f'<img src="{logo_src}" style="max-height:64px;max-width:220px;object-fit:contain;border:0;">'
+        f'<img src="{logo_src}" style="max-height:80px;max-width:275px;object-fit:contain;border:0;">'
         f'</div>'
     ) if logo_src else ''
     return (
