@@ -1759,6 +1759,29 @@ def match_gmail_payments_to_passes():
                     # Different UIDs = different emails. One has UID and other is NULL = also different.
                     # Both NULL = can't tell, fall back to time-based check.
                     if uid and (not existing_payment.email_uid or str(uid) != str(existing_payment.email_uid)):
+                        # Before treating as new payment: check if received date is identical.
+                        # Interac sometimes sends duplicate notification emails for the same payment
+                        # (same Date header, different IMAP UID). Don't process these as new payments.
+                        is_duplicate_notification = False
+                        if email_received_date and existing_payment.email_received_date:
+                            nd = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=timezone.utc)
+                            ed = existing_payment.email_received_date
+                            if ed.tzinfo is None:
+                                ed = ed.replace(tzinfo=timezone.utc)
+                            if abs((nd - ed).total_seconds()) < 60:
+                                is_duplicate_notification = True
+
+                        if is_duplicate_notification:
+                            print(f"⚠️ DUPLICATE INTERAC NOTIFICATION: same received date, different UID ({uid} vs {existing_payment.email_uid}) - archiving and skipping")
+                            if uid:
+                                try:
+                                    mail.uid("COPY", uid, processed_folder)
+                                    mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                                except Exception as dup_e:
+                                    print(f"   Could not archive duplicate: {dup_e}")
+                            results["skipped"] += 1
+                            continue
+
                         print(f"🆕 DIFFERENT EMAIL UID ({uid} vs {existing_payment.email_uid}): processing as new payment")
                         # Fall through to process as new payment
                     else:
@@ -1809,6 +1832,29 @@ def match_gmail_payments_to_passes():
                             print(f"   New email date: {email_received_date}")
                             # Continue processing - this is a NEW payment from same person
                 elif existing_payment.result == "NO_MATCH":
+                    # Before retrying: check if this is a duplicate Interac notification (same received
+                    # date, different UID). If so, archive this email and keep the existing record
+                    # pointing to the original UID — prevents orphaned emails in inbox.
+                    if uid and existing_payment.email_uid and str(uid) != str(existing_payment.email_uid):
+                        is_duplicate_notification = False
+                        if email_received_date and existing_payment.email_received_date:
+                            nd = email_received_date if email_received_date.tzinfo else email_received_date.replace(tzinfo=timezone.utc)
+                            ed = existing_payment.email_received_date
+                            if ed.tzinfo is None:
+                                ed = ed.replace(tzinfo=timezone.utc)
+                            if abs((nd - ed).total_seconds()) < 60:
+                                is_duplicate_notification = True
+
+                        if is_duplicate_notification:
+                            print(f"⚠️ DUPLICATE INTERAC NOTIFICATION (NO_MATCH): same received date, different UID ({uid} vs {existing_payment.email_uid}) - archiving duplicate and keeping original")
+                            try:
+                                mail.uid("COPY", uid, processed_folder)
+                                mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                            except Exception as dup_e:
+                                print(f"   Could not archive duplicate: {dup_e}")
+                            results["skipped"] += 1
+                            continue
+
                     print(f"🔄 RETRYING PREVIOUSLY FAILED MATCH: {name} - ${amt} from {from_email}")
                     print(f"   Previous attempt on: {existing_payment.timestamp}")
                     print(f"   Will update existing record if successful")
