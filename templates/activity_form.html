@@ -527,6 +527,49 @@
             <div class="section-divider mt-5 mb-3"></div>
 
             <!-- ============================================ -->
+            <!-- PASSPORT INHERITANCE SECTION                 -->
+            <!-- ============================================ -->
+            {% set inherited_ids = activity.get_inherited_activity_ids() if activity else [] %}
+            <div class="mb-4">
+              <h3 class="mb-3">Inherit Passports from Other Activities</h3>
+              <p class="text-muted mb-2">
+                Manage passports from other activities here too, like last season.
+              </p>
+              <div class="mb-3">
+                <label class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="inheritPassportsToggle"
+                         onchange="toggleInheritedActivitiesSection()"
+                         {{ 'checked' if inherited_ids else '' }}>
+                  <span class="form-check-label">Inherit passports from other activities</span>
+                </label>
+              </div>
+              <div id="inheritedActivitiesSection" class="ms-5" style="display:{{ 'block' if inherited_ids else 'none' }};">
+                {% if other_activities %}
+                <div id="inheritedActivitiesList" style="max-height: 260px; overflow-y: auto;">
+                  {% for other in other_activities %}
+                  <div class="rounded mb-1 {{ 'bg-blue-lt' if other.id in inherited_ids else '' }}">
+                    <label class="form-check d-flex align-items-center py-2 px-3 mb-0" style="cursor: pointer;">
+                      <input class="form-check-input m-0" type="checkbox"
+                             name="inherited_activity_ids" value="{{ other.id }}"
+                             {{ 'checked' if other.id in inherited_ids else '' }}
+                             onchange="this.closest('.rounded').classList.toggle('bg-blue-lt', this.checked)">
+                      <span class="form-check-label ms-2 min-w-0">
+                        {{ other.name }}
+                        {% if other.status in ['inactive', 'archived'] %}<span class="badge bg-secondary-lt ms-1">Archived</span>{% endif %}
+                      </span>
+                    </label>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No other activities exist yet.</p>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="section-divider mt-5 mb-3"></div>
+
+            <!-- ============================================ -->
             <!-- FINANCIAL MANAGEMENT SECTION (Edit Only)     -->
             <!-- ============================================ -->
             {% if activity %}
@@ -1932,6 +1975,17 @@ Add Type
       section.style.display = 'none';
       document.getElementById('discordWebhookUrl').value = '';
       document.getElementById('discordInviteUrl').value = '';
+    }
+  }
+
+  function toggleInheritedActivitiesSection() {
+    var toggle = document.getElementById('inheritPassportsToggle');
+    var section = document.getElementById('inheritedActivitiesSection');
+    section.style.display = toggle.checked ? 'block' : 'none';
+    if (!toggle.checked) {
+      document.querySelectorAll('#inheritedActivitiesList input[type=checkbox]').forEach(function(cb) {
+        cb.checked = false;
+      });
     }
   }
 

@@ -1209,7 +1209,12 @@ div.dropdown-divider {
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
               <div>
-                <div class="fw-bold">{{ activity.name }}</div>
+                <div class="fw-bold">
+                  {{ passport.activity.name if passport.activity else activity.name }}
+                  {% if passport.activity_id != activity.id %}
+                  <span class="badge bg-blue-lt" title="Inherited from another activity">Inherited</span>
+                  {% endif %}
+                </div>
                 <div class="text-muted small">{{ passport.pass_code or 'No code' }}</div>
               </div>
             </td>
@@ -1338,6 +1343,7 @@ div.dropdown-divider {
               <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
               <form method="POST" id="redeem-modal-form" action="" class="w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="return_activity_id" value="{{ activity.id }}">
                 <button type="submit" class="btn btn-primary w-100">Yes, Check In</button>
               </form>
             </div>
@@ -1346,7 +1352,7 @@ div.dropdown-divider {
       </div>
 
       <!-- Shared Mark as Paid Modal -->
-      {{ mark_paid_modal_shared() }}
+      {{ mark_paid_modal_shared(return_activity_id=activity.id) }}
 
       <!-- Shared Send Reminder Modal -->
       <div class="modal modal-blur fade" id="send-reminder-modal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -1362,6 +1368,7 @@ div.dropdown-divider {
               <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
               <form method="POST" id="send-reminder-modal-form" action="" class="w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="return_activity_id" value="{{ activity.id }}">
                 <button type="submit" class="btn btn-warning w-100">Yes, Send Reminder</button>
               </form>
             </div>
@@ -3676,6 +3683,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">No Thanks</button>
         <form method="POST" action="{{ url_for('renew_passport', pass_code=renewal.pass_code) }}" class="w-100">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="return_activity_id" value="{{ activity.id }}">
           <button type="submit" class="btn btn-info w-100">Create New Passport</button>
         </form>
       </div>
