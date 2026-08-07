@@ -3201,6 +3201,71 @@ def task39_add_announcement_log(cursor):
 
 
 # ============================================================================
+# TASK 40: Add Activity Passport Inheritance Table
+# ============================================================================
+def task40_add_activity_passport_inheritance_table(cursor):
+    """Add activity_passport_inheritance table for cross-activity passport visibility"""
+    log("🔗", "TASK 40: Adding activity_passport_inheritance table", Colors.BLUE)
+
+    if check_table_exists(cursor, 'activity_passport_inheritance'):
+        log("⏭️ ", "  activity_passport_inheritance table already exists", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("""
+            CREATE TABLE activity_passport_inheritance (
+                id INTEGER NOT NULL PRIMARY KEY,
+                activity_id INTEGER NOT NULL,
+                source_activity_id INTEGER NOT NULL,
+                created_dt DATETIME,
+                created_by INTEGER,
+                FOREIGN KEY(activity_id) REFERENCES activity (id) ON DELETE CASCADE,
+                FOREIGN KEY(source_activity_id) REFERENCES activity (id) ON DELETE CASCADE,
+                FOREIGN KEY(created_by) REFERENCES admin (id),
+                UNIQUE(activity_id, source_activity_id)
+            )
+        """)
+        log("✅", "  Created activity_passport_inheritance table", Colors.GREEN)
+
+        cursor.execute("CREATE INDEX ix_api_activity ON activity_passport_inheritance (activity_id)")
+        log("✅", "  Created index ix_api_activity", Colors.GREEN)
+
+        cursor.execute("CREATE INDEX ix_api_source_activity ON activity_passport_inheritance (source_activity_id)")
+        log("✅", "  Created index ix_api_source_activity", Colors.GREEN)
+
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to create activity_passport_inheritance table: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
+# TASK 41: Add Redemption Context Activity Column
+# ============================================================================
+def task41_add_redemption_context_activity(cursor):
+    """Add context_activity_id column to redemption table (cross-activity redemption tracking)"""
+    log("📍", "TASK 41: Adding context_activity_id to redemption table", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'redemption'):
+        log("⏭️ ", "  redemption table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'redemption', 'context_activity_id'):
+        log("⏭️ ", "  Column 'context_activity_id' already exists", Colors.YELLOW)
+        return True
+
+    try:
+        cursor.execute("ALTER TABLE redemption ADD COLUMN context_activity_id INTEGER")
+        log("✅", "  Added column 'context_activity_id' to redemption", Colors.GREEN)
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to add context_activity_id column: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -3259,6 +3324,8 @@ def main():
         ("Fix entered_by in Financial View", task37_fix_entered_by_in_view),
         ("Passport Number in Financial View", task38_add_passport_number_to_financial_view),
         ("Announcement Log Table", task39_add_announcement_log),
+        ("Activity Passport Inheritance Table", task40_add_activity_passport_inheritance_table),
+        ("Redemption Context Activity Column", task41_add_redemption_context_activity),
     ]
 
     completed = 0

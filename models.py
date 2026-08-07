@@ -131,6 +131,38 @@ class Activity(db.Model):
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 
+    def get_inherited_activity_ids(self):
+        """IDs of activities whose passports this activity's dashboard may view/act on. One hop only."""
+        return [link.source_activity_id for link in self.inherited_links]
+
+
+class ActivityPassportInheritance(db.Model):
+    """
+    Directed link: `activity` (the dashboard being viewed) may act on passports
+    that natively belong to `source_activity`. Non-transitive (one hop only —
+    if A inherits from B and B inherits from C, A does NOT get C's passports).
+    No passport/user/redemption rows are ever created by this table; it only
+    expands query scope in activity_dashboard and preserves redirect context
+    in the passport action endpoints.
+    """
+    __tablename__ = "activity_passport_inheritance"
+
+    id = db.Column(db.Integer, primary_key=True)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id", ondelete="CASCADE"), nullable=False)
+    source_activity_id = db.Column(db.Integer, db.ForeignKey("activity.id", ondelete="CASCADE"), nullable=False)
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("activity_id", "source_activity_id", name="uq_activity_inheritance_pair"),
+    )
+
+    activity = db.relationship(
+        "Activity", foreign_keys=[activity_id],
+        backref=db.backref("inherited_links", cascade="all, delete-orphan"),
+    )
+    source_activity = db.relationship("Activity", foreign_keys=[source_activity_id])
+
 
 class PassportType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -286,6 +318,10 @@ class Redemption(db.Model):
     passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="CASCADE"), nullable=False)
     date_used = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     redeemed_by = db.Column(db.String(100), nullable=True)
+    # Soft reference (not a FK, same convention as EmailLog.pass_code) to the activity whose
+    # dashboard this redemption was performed from, only set when it differs from the passport's
+    # native activity_id (i.e. redeemed via cross-activity passport inheritance).
+    context_activity_id = db.Column(db.Integer, nullable=True)
 
 
 

@@ -2442,7 +2442,23 @@ def create_activity():
 
         db.session.add(new_activity)
         db.session.flush()  # Get the activity ID
-        
+
+        # Handle passport inheritance links (view/act on other activities' passports -
+        # no data is copied, see ActivityPassportInheritance)
+        from models import ActivityPassportInheritance
+        for raw_id in request.form.getlist("inherited_activity_ids"):
+            try:
+                source_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if source_id == new_activity.id:
+                continue  # guard against self-reference
+            db.session.add(ActivityPassportInheritance(
+                activity_id=new_activity.id,
+                source_activity_id=source_id,
+                created_by=admin_id,
+            ))
+
         # Copy default images for the new activity
         try:
             # Define source paths for default images
@@ -2547,6 +2563,9 @@ def create_activity():
         and bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
     )
 
+    from models import Activity as ActivityModel
+    other_activities = ActivityModel.query.order_by(ActivityModel.start_date.desc().nullslast()).all()
+
     return render_template("activity_form.html",
                           activity=None,
                           has_workflow_data=False,
@@ -2555,7 +2574,8 @@ def create_activity():
                           has_advanced_data=False,
                           google_maps_api_key=google_maps_api_key,
                           payment_email=payment_email,
-                          stripe_configured=stripe_configured)
+                          stripe_configured=stripe_configured,
+                          other_activities=other_activities)
 
 
 @app.route("/edit-activity/<int:activity_id>", methods=["GET", "POST"])
@@ -2732,6 +2752,25 @@ def edit_activity(activity_id):
 
                 passport_types_archived += 1
 
+        # Handle passport inheritance links (view/act on other activities' passports -
+        # no data is copied, see ActivityPassportInheritance). Simple replace: remove all
+        # existing links for this activity and re-insert from the submitted list.
+        from models import ActivityPassportInheritance
+        ActivityPassportInheritance.query.filter_by(activity_id=activity.id).delete()
+        admin_obj = Admin.query.filter_by(email=session.get("admin")).first()
+        for raw_id in request.form.getlist("inherited_activity_ids"):
+            try:
+                source_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if source_id == activity.id:
+                continue  # guard against self-reference
+            db.session.add(ActivityPassportInheritance(
+                activity_id=activity.id,
+                source_activity_id=source_id,
+                created_by=admin_obj.id if admin_obj else None,
+            ))
+
         # Gate: if archiving an activity that has active passports, ask for confirmation first
         if new_status == 'inactive' and old_status != 'inactive':
             active_count = Passport.query.filter_by(activity_id=activity_id)\
@@ -2826,6 +2865,9 @@ def edit_activity(activity_id):
         and bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
     )
 
+    other_activities = Activity.query.filter(Activity.id != activity.id) \
+                                      .order_by(Activity.start_date.desc().nullslast()).all()
+
     return render_template("activity_form.html",
                           activity=activity,
                           passport_types=passport_types,
@@ -2838,7 +2880,8 @@ def edit_activity(activity_id):
                           has_advanced_data=has_advanced_data,
                           google_maps_api_key=google_maps_api_key,
                           payment_email=payment_email,
-                          stripe_configured=stripe_configured)
+                          stripe_configured=stripe_configured,
+                          other_activities=other_activities)
 
 
 
@@ -6119,11 +6162,17 @@ def redeem_passport_qr(pass_code):
         flash("Passport not found!", "error")
         return redirect(url_for("dashboard"))
 
-    # Validate activity context if provided
+    # Validate activity context if provided - allow the passport if it belongs to the
+    # scanning activity OR one it's configured to inherit passports from
     expected_activity_id = request.form.get('activity_id', type=int)
     if expected_activity_id and passport.activity_id != expected_activity_id:
-        flash("This passport does not belong to this activity.", "error")
-        return redirect(url_for("activity_dashboard", activity_id=expected_activity_id))
+        scanning_activity = db.session.get(Activity, expected_activity_id)
+        allowed_ids = [expected_activity_id] + (scanning_activity.get_inherited_activity_ids() if scanning_activity else [])
+        if passport.activity_id not in allowed_ids:
+            flash("This passport does not belong to this activity.", "error")
+            return redirect(url_for("activity_dashboard", activity_id=expected_activity_id))
+
+    return_activity_id = expected_activity_id or passport.activity_id
 
     # 🛡️ Prevent duplicate redemptions (double-click protection)
     global recent_redemptions
@@ -6135,7 +6184,7 @@ def redeem_passport_qr(pass_code):
         last_redemption_time = recent_redemptions[throttle_key]
         if (now_utc - last_redemption_time).total_seconds() < 5:
             flash("Redemption already in progress. Please wait.", "warning")
-            return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+            return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
     # Check database for recent redemptions (last 10 seconds) for persistent protection
     five_seconds_ago = now_utc - timedelta(seconds=10)
@@ -6147,7 +6196,7 @@ def redeem_passport_qr(pass_code):
 
     if recent_db_redemption:
         flash("This passport was recently redeemed. Please refresh the page.", "warning")
-        return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+        return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
     # Record this redemption attempt in memory cache
     recent_redemptions[throttle_key] = now_utc
@@ -6164,7 +6213,8 @@ def redeem_passport_qr(pass_code):
         redemption = Redemption(
             passport_id=passport.id,
             date_used=now_utc,
-            redeemed_by=session.get("admin", "unknown")
+            redeemed_by=session.get("admin", "unknown"),
+            context_activity_id=return_activity_id if return_activity_id != passport.activity_id else None
         )
         db.session.add(redemption)
         db.session.commit()
@@ -6212,7 +6262,7 @@ def redeem_passport_qr(pass_code):
     else:
         flash("No uses left on this passport!", "error")
 
-    return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+    return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
 
 
@@ -8151,6 +8201,12 @@ def activity_form(activity_id=None):
         has_schedule_data = False
         has_advanced_data = False
 
+    if activity:
+        other_activities = Activity.query.filter(Activity.id != activity.id) \
+                                          .order_by(Activity.start_date.desc().nullslast()).all()
+    else:
+        other_activities = Activity.query.order_by(Activity.start_date.desc().nullslast()).all()
+
     return render_template("activity_form.html",
                            activity=activity,
                            passport_types=passport_types,
@@ -8160,7 +8216,8 @@ def activity_form(activity_id=None):
                            has_workflow_data=has_workflow_data,
                            has_capacity_data=has_capacity_data,
                            has_schedule_data=has_schedule_data,
-                           has_advanced_data=has_advanced_data)
+                           has_advanced_data=has_advanced_data,
+                           other_activities=other_activities)
 
 
 
@@ -8175,7 +8232,8 @@ def delete_activity(activity_id):
         return redirect(url_for("login"))
 
     # Import models at the beginning
-    from models import PassportType, Expense, Income, Signup, Passport, Survey, AdminActionLog
+    from models import PassportType, Expense, Income, Signup, Passport, Survey, AdminActionLog, ActivityPassportInheritance
+    from sqlalchemy import or_
 
     activity = db.session.get(Activity, activity_id)
     if not activity:
@@ -8202,6 +8260,15 @@ def delete_activity(activity_id):
     passport_ids = [p.id for p in Passport.query.filter_by(activity_id=activity_id).all()]
     if passport_ids:
         Redemption.query.filter(Redemption.passport_id.in_(passport_ids)).delete(synchronize_session=False)
+
+    # Delete passport inheritance links in both directions: this activity may have
+    # links to other activities (activity_id), and other activities may have a link
+    # pointing at this one (source_activity_id, e.g. deleting an old season that a
+    # newer one still inherits passports from).
+    ActivityPassportInheritance.query.filter(
+        or_(ActivityPassportInheritance.activity_id == activity_id,
+            ActivityPassportInheritance.source_activity_id == activity_id)
+    ).delete(synchronize_session=False)
 
     PassportType.query.filter_by(activity_id=activity_id).delete()
     Expense.query.filter_by(activity_id=activity_id).delete()
@@ -8264,6 +8331,10 @@ def activity_dashboard(activity_id):
         flash("Activity not found", "error")
         return redirect(url_for("dashboard2"))
 
+    # Activities this one is configured to inherit passports from (view/act on, not copy)
+    inherited_activity_ids = activity.get_inherited_activity_ids()
+    visible_activity_ids = [activity_id] + inherited_activity_ids
+
     # Get filter and search parameters from request
     passport_filter = request.args.get('passport_filter', '')
     signup_filter = request.args.get('signup_filter', 'pending')
@@ -8304,11 +8375,11 @@ def activity_dashboard(activity_id):
     )
     signups = signup_pagination.items
 
-    # Load passports with filtering
+    # Load passports with filtering (native + inherited activities)
     passports_query = (
         Passport.query
         .options(joinedload(Passport.user), joinedload(Passport.activity), joinedload(Passport.passport_type))
-        .filter(Passport.activity_id == activity_id)
+        .filter(Passport.activity_id.in_(visible_activity_ids))
     )
     
     # Apply passport filters
@@ -8378,20 +8449,27 @@ def activity_dashboard(activity_id):
     now = datetime.now(timezone.utc)
     three_days_ago = now - timedelta(days=3)
     
-    # Get all passports and signups for this activity for additional calculations and counts
-    all_passports = Passport.query.filter_by(activity_id=activity_id).all()
+    # Get all passports (native + inherited, so filter-button counts match the table below)
+    # and signups (native only - signups are not part of passport inheritance) for this activity
+    all_passports = Passport.query.filter(Passport.activity_id.in_(visible_activity_ids)).all()
     all_signups = Signup.query.filter_by(activity_id=activity_id).all()
 
-    # Calculate statistics using ALL passports (not filtered results) - for filter button counts
+    # Calculate statistics using ALL visible passports (not filtered results) - for filter button counts
     total_passports_count = len(all_passports)
     paid_passports_count = len([p for p in all_passports if p.paid])
     unpaid_passports_count = len([p for p in all_passports if not p.paid])
     # Active = has remaining uses OR unpaid
     active_passports_count = len([p for p in all_passports if p.uses_remaining > 0 or not p.paid])
 
-    # Calculate total redemptions (sessions consumed) for this activity
+    # Calculate total redemptions (sessions consumed) for this activity: counts a redemption
+    # if the passport natively belongs here, OR it was redeemed from this activity's dashboard
+    # via inheritance (context_activity_id) - attendance reflects where the check-in happened,
+    # independent of where the passport's revenue is attributed.
     total_redemptions_count = db.session.query(Redemption).join(Passport).filter(
-        Passport.activity_id == activity_id
+        or_(
+            Passport.activity_id == activity_id,
+            Redemption.context_activity_id == activity_id
+        )
     ).count()
 
     # Statistics dict for template (used in filter button counts)
@@ -9759,6 +9837,10 @@ def redeem_passport(pass_code):
         flash("Passport not found!", "error")
         return redirect(url_for("dashboard"))
 
+    # Which activity's dashboard to return to - defaults to the passport's own activity
+    # for backward compatibility with callers that don't send this (e.g. list_passports.html)
+    return_activity_id = request.form.get("return_activity_id", type=int) or passport.activity_id
+
     # 🛡️ Prevent duplicate redemptions (double-click protection)
     global recent_redemptions
     admin_id = session.get("admin", "unknown")
@@ -9769,7 +9851,7 @@ def redeem_passport(pass_code):
         last_redemption_time = recent_redemptions[throttle_key]
         if (now_utc - last_redemption_time).total_seconds() < 5:
             flash("Redemption already in progress. Please wait.", "warning")
-            return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+            return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
     # Check database for recent redemptions (last 10 seconds) for persistent protection
     five_seconds_ago = now_utc - timedelta(seconds=10)
@@ -9781,7 +9863,7 @@ def redeem_passport(pass_code):
 
     if recent_db_redemption:
         flash("This passport was recently redeemed. Please refresh the page.", "warning")
-        return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+        return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
     # Record this redemption attempt in memory cache
     recent_redemptions[throttle_key] = now_utc
@@ -9798,7 +9880,8 @@ def redeem_passport(pass_code):
         redemption = Redemption(
             passport_id=passport.id,
             date_used=now_utc,
-            redeemed_by=session.get("admin", "unknown")
+            redeemed_by=session.get("admin", "unknown"),
+            context_activity_id=return_activity_id if return_activity_id != passport.activity_id else None
         )
         db.session.add(redemption)
 
@@ -9847,7 +9930,7 @@ def redeem_passport(pass_code):
     else:
         flash("No uses left on this passport!", "error")
 
-    return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+    return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
 
 @app.route("/renew-passport/<pass_code>", methods=["POST"])
@@ -9866,11 +9949,13 @@ def renew_passport(pass_code):
         flash("Passport not found.", "error")
         return redirect(url_for("dashboard"))
 
+    return_activity_id = request.form.get("return_activity_id", type=int) or expired_passport.activity_id
+
     # Validate: passport type must still be active
     passport_type = expired_passport.passport_type
     if not passport_type or passport_type.status != 'active':
         flash("Passport type is no longer active. Cannot renew.", "warning")
-        return redirect(url_for("activity_dashboard", activity_id=expired_passport.activity_id))
+        return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
     # Reuse the existing user
     user = expired_passport.user
@@ -9916,7 +10001,7 @@ def renew_passport(pass_code):
     )
 
     flash(f"New passport created for {user.name}!", "success")
-    return redirect(url_for("activity_dashboard", activity_id=expired_passport.activity_id))
+    return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
 
 @app.route("/mark-passport-paid/<int:passport_id>", methods=["POST"])
@@ -9932,6 +10017,8 @@ def mark_passport_paid(passport_id):
     if not passport:
         flash("Passport not found!", "error")
         return redirect(url_for("dashboard2"))
+
+    return_activity_id = request.form.get("return_activity_id", type=int) or passport.activity_id
 
     now_utc = datetime.now(timezone.utc)
     payment_method = request.form.get("payment_method", "cash")
@@ -9971,7 +10058,7 @@ def mark_passport_paid(passport_id):
     # SSE notifications removed for leaner performance
 
     flash(f"Passport {passport.pass_code} marked as paid. Email queued for delivery.", "success")
-    return redirect(url_for("activity_dashboard", activity_id=passport.activity_id))
+    return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
 
 @app.route("/passport/<int:passport_id>/send-reminder", methods=["POST"])
