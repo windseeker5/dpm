@@ -254,6 +254,13 @@
                          data-bs-target="#linkPassportModal-{{ payment.id }}">
                         <i class="ti ti-link me-2"></i>Link to Existing Passport
                       </a>
+                      {% if pending_signups_by_amount.get(payment.bank_info_amt) %}
+                      <a href="#" class="dropdown-item"
+                         data-bs-toggle="modal"
+                         data-bs-target="#linkSignupModal-{{ payment.id }}">
+                        <i class="ti ti-link me-2"></i>Link to Pending Signup
+                      </a>
+                      {% endif %}
                       <div class="dropdown-divider"></div>
                       <a href="#" class="dropdown-item archive-payment-btn"
                          data-name="{{ payment.bank_info_name }}"
@@ -544,6 +551,87 @@
     </div>
   </div>
 </div>
+{% endif %}
+{% endfor %}
+
+
+<!-- Link to Pending Signup Modals (one per NO_MATCH payment, server-rendered) -->
+{% for payment in payments %}
+{% if payment.result == 'NO_MATCH' %}
+{% set link_signups = pending_signups_by_amount.get(payment.bank_info_amt, []) %}
+{% if link_signups %}
+{% set display_date = (payment.email_received_date or payment.timestamp)|utc_to_local %}
+<div class="modal modal-blur fade" id="linkSignupModal-{{ payment.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-link me-2"></i>Link Payment to Pending Signup</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('link_payment_to_signup_form') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="payment_id" value="{{ payment.id }}">
+        <div class="modal-body">
+          <!-- Payment info banner — Interac yellow -->
+          <div class="d-flex align-items-center gap-2 rounded p-2 mb-3" style="background-color: #fffbea; border: 1px solid #ffe066;">
+            <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" style="height: 28px; width: auto; flex-shrink: 0;">
+            <div style="min-width: 0;">
+              <div class="fw-semibold text-truncate">{{ payment.bank_info_name }}</div>
+              <div class="text-muted small">${{ "%.2f"|format(payment.bank_info_amt) }}{% if display_date %} &nbsp;·&nbsp; {{ display_date.strftime('%Y-%m-%d') }}{% endif %}</div>
+            </div>
+          </div>
+
+          <!-- Search -->
+          <div class="input-group mb-3">
+            <span class="input-group-text"><i class="ti ti-search"></i></span>
+            <input type="text" class="form-control link-search" placeholder="Search by name…">
+          </div>
+
+          <!-- Signup list — single column, compact -->
+          <div class="link-passport-list mb-3" style="max-height: 35vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem;">
+            {% for s in link_signups %}
+            <div class="link-passport-row">
+              <input type="radio" name="signup_id" value="{{ s.id }}" id="signup_{{ s.id }}" class="link-passport-input" required>
+              <label for="signup_{{ s.id }}" class="link-passport-card">
+                <div class="link-passport-card-text">
+                  <div class="d-flex align-items-baseline gap-1 flex-wrap">
+                    <span class="fw-bold link-holder-name">{{ s.user.name if s.user else 'Unknown' }}</span>
+                    <span class="text-muted" style="font-size: 0.75rem;">{{ s.signed_up_at.strftime('%Y-%m-%d') if s.signed_up_at else '—' }}</span>
+                  </div>
+                  <div class="text-muted" style="font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.activity.name if s.activity else '—' }} · ${{ "%.2f"|format(s.requested_amount) }} · {{ s.signup_code }}</div>
+                </div>
+                <span class="link-passport-checkmark"><i class="ti ti-check"></i></span>
+              </label>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Reason -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Reason for manual link <span class="text-danger">*</span></label>
+            <select name="reason" class="form-select reason-select" required>
+              <option value="">— Select a reason —</option>
+              <option value="Payment by a family member">Payment by a family member</option>
+              <option value="Payment by a third party">Payment by a third party</option>
+              <option value="Same person, different bank account">Same person, different bank account</option>
+              <option value="Other">Other (specify below)</option>
+            </select>
+          </div>
+          <div class="reason-other-wrap mb-0" style="display: none;">
+            <input type="text" name="reason_other" class="form-control" placeholder="Please specify…" maxlength="200">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="ti ti-link me-2"></i>Link Payment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endif %}
 {% endfor %}
 
