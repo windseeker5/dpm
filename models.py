@@ -121,6 +121,12 @@ class Activity(db.Model):
     max_sessions = db.Column(db.Integer, nullable=True)                 # Total capacity
     show_remaining_quantity = db.Column(db.Boolean, default=False)      # Display "X left" on form
 
+    # Session scheduling (dated slots with per-slot seats). Gates ALL scheduling behaviour:
+    # when False the activity behaves exactly as it did before the feature existed.
+    # When True, ActivitySlot.capacity governs availability and max_sessions is ignored
+    # (see utils.get_remaining_capacity).
+    uses_scheduling = db.Column(db.Boolean, default=False, nullable=False, server_default="0")
+
     # Stripe credit card payments
     accept_credit_card = db.Column(db.Boolean, default=False)
 
@@ -287,6 +293,11 @@ class Signup(db.Model):
     payment_method = db.Column(db.String(20), default="interac")  # "interac" or "stripe"
     stripe_checkout_session_id = db.Column(db.String(255), nullable=True)
 
+    # Session scheduling: the held/confirmed seat for this signup, if the activity uses
+    # scheduling. One-to-one (enforced by UNIQUE(signup_id) on slot_booking). Deliberately
+    # NOT a Signup.slot_id column — a second source of truth would drift on cancel/rebook.
+    slot_booking = db.relationship("SlotBooking", backref="signup", uselist=False, lazy=True)
+
 
 class Passport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -323,6 +334,140 @@ class Redemption(db.Model):
     # native activity_id (i.e. redeemed via cross-activity passport inheritance).
     context_activity_id = db.Column(db.Integer, nullable=True)
 
+
+# ================================
+# 📅 SESSION SCHEDULING MODELS
+# ================================
+# Naming note: these are called "Sessions" in the UI, but NEVER `Session` in code —
+# that name collides with Flask's `session` object and with the credit fields
+# `sessions_included` / `requested_sessions` / `max_sessions`, which all mean CREDITS.
+# Here, a "slot" is a dated occurrence with seats; a "credit" is still a credit.
+
+class ActivitySlot(db.Model):
+    """One dated occurrence of an activity, with a hard seat limit.
+
+    Only meaningful when the parent Activity has uses_scheduling=True.
+    """
+    __tablename__ = "activity_slot"
+
+    id = db.Column(db.Integer, primary_key=True)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id", ondelete="CASCADE"),
+                            nullable=False, index=True)
+
+    # ⚠️ NAIVE LOCAL WALL-CLOCK — same convention as Activity.start_date/end_date and the
+    # <input type="datetime-local"> fields in activity_form.html. NEVER compare these to
+    # datetime.now(timezone.utc); use datetime.now() (naive) for "is this slot in the future".
+    # Every other datetime on this model is UTC-aware. Do not mix them.
+    starts_at = db.Column(db.DateTime, nullable=False)
+    ends_at = db.Column(db.DateTime, nullable=True)
+
+    capacity = db.Column(db.Integer, nullable=False, default=1)
+    # ⚠️ seats_taken is the ADMISSION CONTROL variable, not a cache of COUNT(bookings).
+    # It is only ever mutated by conditional UPDATE statements (see utils.claim_slot_seat).
+    # Never do `slot.seats_taken += 1` through the ORM — that is a lost-update race.
+    seats_taken = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+
+    label = db.Column(db.String(120), nullable=True)   # Optional admin override of the display name
+    status = db.Column(db.String(20), nullable=False, default="active", server_default="active")
+    # Values: "active" | "cancelled". Never hard-delete a slot that has bookings.
+
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # UTC-aware
+    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"), nullable=True)
+
+    # passive_deletes=True stops SQLAlchemy trying to NULL out activity_id when the parent
+    # Activity is deleted (which fails, since the column is NOT NULL). Deletion is handled
+    # explicitly in delete_activity, with the DB-level ON DELETE CASCADE as the backstop.
+    activity = db.relationship(
+        "Activity",
+        backref=db.backref("slots", passive_deletes=True),
+        passive_deletes=True,
+    )
+
+    __table_args__ = (
+        # Makes slot generation idempotent: a double-clicked "Generate" or a re-submitted
+        # form cannot create duplicate slots. Also forbids parallel tracks at the same
+        # time, which is an accepted and deliberate limitation.
+        db.UniqueConstraint("activity_id", "starts_at", name="uq_activity_slot_start"),
+        db.Index("ix_activity_slot_activity_status_start", "activity_id", "status", "starts_at"),
+        # Last line of defence against a counter bug silently overselling.
+        db.CheckConstraint("seats_taken >= 0", name="ck_activity_slot_seats_nonneg"),
+        db.CheckConstraint("seats_taken <= capacity", name="ck_activity_slot_seats_le_cap"),
+    )
+
+    @property
+    def seats_left(self):
+        return max(0, (self.capacity or 0) - (self.seats_taken or 0))
+
+    @property
+    def is_full(self):
+        return self.seats_left <= 0
+
+
+class SlotBooking(db.Model):
+    """A seat reserved in an ActivitySlot — the ledger behind ActivitySlot.seats_taken.
+
+    Lifecycle:  held ──► confirmed ──► cancelled
+                     └─► expired ───► cancelled
+
+    The row IS the seat hold. It is created in the same transaction as the Signup,
+    BEFORE any Passport exists (a passport may not appear for days on the Interac +
+    admin-approval path), which is why passport_id is nullable.
+    """
+    __tablename__ = "slot_booking"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slot_id = db.Column(db.Integer, db.ForeignKey("activity_slot.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    # Denormalised so admin lists can filter by activity without joining through activity_slot.
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id", ondelete="CASCADE"),
+                            nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    # The seat is held by the signup first; the passport is bound later, on creation.
+    signup_id = db.Column(db.Integer, db.ForeignKey("signup.id", ondelete="SET NULL"), nullable=True)
+    passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"), nullable=True)
+
+    status = db.Column(db.String(20), nullable=False, default="held", server_default="held")
+    # Values: "held" | "confirmed" | "expired" | "cancelled".
+    # "expired" is recoverable (a late e-transfer can re-claim the seat); "cancelled" is terminal.
+
+    # Makes refunds idempotent — without this a double-cancel would refund two credits.
+    credit_consumed = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    held_until = db.Column(db.DateTime, nullable=True)  # UTC-aware; NULL once confirmed
+
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    confirmed_dt = db.Column(db.DateTime, nullable=True)
+    cancelled_dt = db.Column(db.DateTime, nullable=True)
+    cancelled_reason = db.Column(db.String(50), nullable=True)
+
+    # Set when the admin checks this person in for this session (UTC, naive as stored).
+    # NULL = booked but not yet attended. This is what makes check-in idempotent: a scan
+    # fulfils an unattended booking (no credit taken, it was paid at booking time), whereas
+    # a scan with no unattended booking is a walk-in and DOES cost a credit.
+    attended_dt = db.Column(db.DateTime, nullable=True)
+
+    # Same reasoning as ActivitySlot.activity: slot_id is NOT NULL, so the ORM must not
+    # try to nullify it when a slot is deleted.
+    slot = db.relationship(
+        "ActivitySlot",
+        backref=db.backref("bookings", passive_deletes=True),
+        lazy=True,
+        passive_deletes=True,
+    )
+    user = db.relationship("User", backref="slot_bookings")
+    passport = db.relationship("Passport", backref="slot_bookings")
+
+    __table_args__ = (
+        db.Index("ix_slot_booking_slot_status", "slot_id", "status"),
+        db.Index("ix_slot_booking_expiry", "status", "held_until"),   # drives the expiry sweeper
+        db.Index("ix_slot_booking_passport", "passport_id"),
+        # One slot per signup, enforced at the DB level. SQLite treats NULLs as distinct,
+        # so admin-created bookings (signup_id IS NULL) are unaffected.
+        db.UniqueConstraint("signup_id", name="uq_slot_booking_signup"),
+        # One passport cannot hold two live seats in the same slot.
+        db.Index("uq_slot_booking_passport_slot", "passport_id", "slot_id", unique=True,
+                 sqlite_where=db.text("passport_id IS NOT NULL AND status IN ('held','confirmed')")),
+    )
 
 
 class Setting(db.Model):

@@ -233,6 +233,83 @@
       justify-content: space-between;
     }
 
+    /* Session picker (activity.uses_scheduling) */
+    .slot-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .slot-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      background: #ffffff;
+      cursor: pointer;
+      text-align: left;
+      font-size: 0.95rem;
+      min-height: 44px;                  /* comfortable touch target */
+      touch-action: manipulation;        /* no 300ms double-tap zoom delay */
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slot-option { transition: none; }
+    }
+
+    .slot-option:hover:not(:disabled) {
+      border-color: #0054a6;
+      background: #f6f9fd;
+    }
+
+    .slot-option:focus-visible {
+      outline: 2px solid #0054a6;
+      outline-offset: 2px;
+    }
+
+    .slot-option.selected {
+      border-color: #0054a6;
+      border-width: 2px;
+      background: #f6f9fd;
+    }
+
+    /* Full sessions stay visible but unusable — hiding them makes people email to ask
+       whether the session was cancelled, and visible scarcity encourages booking. */
+    .slot-option.slot-full {
+      opacity: 0.55;
+      cursor: not-allowed;
+      background: #f8f9fa;
+    }
+
+    .slot-when {
+      font-weight: 600;
+      color: #212529;
+      text-transform: capitalize;
+    }
+
+    .slot-left {
+      font-size: 0.85rem;
+      color: #6c757d;
+      white-space: nowrap;
+      margin-left: 1rem;
+    }
+
+    .slot-option.selected .slot-left {
+      color: #0054a6;
+      font-weight: 600;
+    }
+
+    .slot-error {
+      color: #d63939;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
     .quantity-label {
       font-weight: 600;
       font-size: 0.95rem;
@@ -548,6 +625,25 @@
     }
 
     /* Remaining capacity alert */
+    /* Flash messages. This page is standalone so it never inherited base.html's flash
+       block — every rejection (session full, already past, sold out, payment not
+       configured) used to bounce the user back here with no explanation at all. */
+    .signup-flash {
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+    .signup-flash i { flex-shrink: 0; font-size: 1.1rem; margin-top: 1px; }
+    .signup-flash-error   { background: #fbe1e1; color: #a11c1c; }
+    .signup-flash-warning { background: #fdf3d8; color: #8a6100; }
+    .signup-flash-success { background: #d8f3e0; color: #14653a; }
+    .signup-flash-info    { background: #d1ecf1; color: #0c5460; }
+
     .capacity-alert {
       background: #d1ecf1;
       border-radius: 8px;
@@ -829,6 +925,24 @@
         </div>
         {% endif %}
 
+        {# Flash messages. Without this every rejection (session full, session already
+           passed, sold out, payment misconfigured) silently redirected back here and the
+           user had no idea why. #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+            <div class="signup-flash signup-flash-{{ 'error' if category == 'error' else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }}"
+                 role="alert" aria-live="polite">
+              {% if category == 'error' %}<i class="ti ti-alert-circle" aria-hidden="true"></i>
+              {% elif category == 'warning' %}<i class="ti ti-alert-triangle" aria-hidden="true"></i>
+              {% elif category == 'success' %}<i class="ti ti-circle-check" aria-hidden="true"></i>
+              {% else %}<i class="ti ti-info-circle" aria-hidden="true"></i>{% endif %}
+              <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         {% if is_sold_out %}
         <!-- SOLD OUT State -->
         <div class="signup-progress">
@@ -1021,8 +1135,39 @@
           </div>
           {% endif %}
 
+          <!-- Session Selection (only when the activity uses scheduling) -->
+          {% if activity.uses_scheduling and available_slots %}
+          <div class="quantity-section">
+            <div class="quantity-row" style="display:block;">
+              <span class="quantity-label">Choisissez votre séance</span>
+              <div class="slot-list" id="slot-list" role="group" aria-label="Séances disponibles">
+                {% for slot in available_slots %}
+                <button type="button"
+                        class="slot-option{% if slot.is_full %} slot-full{% endif %}"
+                        data-slot-id="{{ slot.id }}"
+                        aria-pressed="false"
+                        {% if slot.is_full %}disabled aria-disabled="true"{% endif %}
+                        onclick="selectSlot(this)">
+                  <span class="slot-when">{{ format_slot_label(slot) }}</span>
+                  <span class="slot-left">
+                    {% if slot.is_full %}
+                      Complet
+                    {% else %}
+                      {{ slot.seats_left }} {{ "place" if slot.seats_left == 1 else "places" }}
+                    {% endif %}
+                  </span>
+                </button>
+                {% endfor %}
+              </div>
+              <div id="slot-error" class="slot-error" role="alert" style="display:none;">
+                Veuillez choisir une séance pour continuer.
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
           <!-- Quantity Selection -->
-          {% if activity.allow_quantity_selection %}
+          {% if activity.allow_quantity_selection and not activity.uses_scheduling %}
           <div class="quantity-section">
             <div class="quantity-row">
               <span class="quantity-label">Quantite</span>
@@ -1072,6 +1217,11 @@
 
             <!-- Hidden quantity (updated by JS) -->
             <input type="hidden" name="requested_sessions" id="hidden-qty" value="1">
+
+            <!-- Hidden chosen session (set by selectSlot in step 1) -->
+            {% if activity.uses_scheduling %}
+            <input type="hidden" name="slot_id" id="hidden-slot" value="">
+            {% endif %}
 
             <!-- Order Summary -->
             <div class="order-summary">
@@ -1190,8 +1340,38 @@ var unitPrice = {{ (selected_passport_type.price_per_user or 0) if selected_pass
 var maxQty = {{ remaining_capacity if remaining_capacity is not none else 10 }};
 var currentQty = 1;
 
+// Session picker (only present when the activity uses scheduling)
+var usesScheduling = {{ 'true' if activity.uses_scheduling else 'false' }};
+
+function selectSlot(btn) {
+  if (btn.disabled) return;
+  document.querySelectorAll('.slot-option').forEach(function(o) {
+    o.classList.remove('selected');
+    o.setAttribute('aria-pressed', 'false');
+  });
+  btn.classList.add('selected');
+  btn.setAttribute('aria-pressed', 'true');
+  document.getElementById('hidden-slot').value = btn.dataset.slotId;
+  var err = document.getElementById('slot-error');
+  if (err) err.style.display = 'none';
+}
+
 // Step navigation
 function goToStep(step) {
+  // A scheduled activity must have a session chosen before the details step, otherwise
+  // the server would reject the submission after the user filled everything in.
+  if (step === 2 && usesScheduling) {
+    var slotInput = document.getElementById('hidden-slot');
+    if (!slotInput || !slotInput.value) {
+      var err = document.getElementById('slot-error');
+      if (err) {
+        err.style.display = 'block';
+        err.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+  }
+
   document.querySelectorAll('.signup-step').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById('step-' + step).classList.add('active');
 

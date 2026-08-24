@@ -451,6 +451,8 @@
   {% endwith %}
 
   <!-- Gradient Header - Fixed at Top (OUTSIDE minipass-app) -->
+  {# Admin-only: contains the sidebar toggle and a link to the admin dashboard. #}
+  {% if session.get("admin") %}
   <header class="gradient-header-fixed">
     <div class="gradient-header-content">
       <!-- LEFT: Logo (260px area) + Mobile Hamburger -->
@@ -520,11 +522,16 @@
       <path d="M0,8 C240,3 480,3 720,8 C960,13 1200,13 1440,8 L1440,20 L0,20 Z" fill="#f8f9fa"/>
     </svg>
   </header>
+  {% endif %}
 
   <!-- Main Application Container -->
   <div class="minipass-app">
 
     <!-- Clean Sidebar Navigation (NO LOGO, only menu) -->
+    {# Admin-only. This was previously ungated, which leaked the whole admin menu onto the
+       public passport page. pass.html is now standalone so nothing public reaches here,
+       but the gate stays as a guard against the same mistake returning. #}
+    {% if session.get("admin") %}
     <nav class="minipass-sidebar" id="sidebar">
       <!-- Mobile close button (no logo section) -->
       <div class="minipass-sidebar-brand">
@@ -733,7 +740,8 @@
         </div>
       </div>
     </nav>
-    
+    {% endif %}
+
     <!-- Main Content Area -->
     <div class="minipass-main">
       <!-- Scrollable Main Content with Footer at End -->
@@ -743,6 +751,8 @@
           {% block content %}{% endblock %}
           
           <!-- Footer at END of content (scrollable, not sticky) -->
+          {# Admin-only: exposes the deployed git version, which customers must not see. #}
+          {% if session.get("admin") %}
           <footer class="minipass-footer d-none d-md-block">
             <div class="minipass-footer-content">
               <div class="minipass-footer-text">
@@ -750,6 +760,7 @@
               </div>
             </div>
           </footer>
+          {% endif %}
         </div>
       </main>
     </div>
