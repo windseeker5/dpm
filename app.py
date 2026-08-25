@@ -1268,13 +1268,15 @@ def resend_email(log_id):
             from models import User
             act = Activity.query.filter_by(name=activity_name).first()
             if act:
-                users = User.query.filter_by(email=log.to_email).all()
-                for user in users:
-                    passport = Passport.query.filter_by(
-                        user_id=user.id, activity_id=act.id
+                # Several User rows can share an email (re-signups, test accounts). Pick
+                # the most recently created passport across ALL of them for this activity,
+                # not just the first matching user's — otherwise an older passport can win
+                # by coincidence of User.id ordering.
+                user_ids = [u.id for u in User.query.filter_by(email=log.to_email).all()]
+                if user_ids:
+                    passport = Passport.query.filter(
+                        Passport.user_id.in_(user_ids), Passport.activity_id == act.id
                     ).order_by(Passport.id.desc()).first()
-                    if passport:
-                        break
 
     if not passport:
         flash("Cannot resend — no passport found for this email.", "warning")
@@ -2286,6 +2288,14 @@ def approve_and_create_pass(signup_id):
 
     # ✅ Step 1: Approve the signup
     signup.status = "approved"
+    # For payment-first activities this route IS "Mark Paid & Create Passport" (see the
+    # button label in signups.html / activity_dashboard.html) — an admin only calls it
+    # after confirming payment, so the signup (and the passport created from it below)
+    # must be marked paid. Approval-first activities keep their existing behaviour:
+    # "approve" doesn't imply payment there, tracked separately via the Interac bot.
+    if signup.activity and signup.activity.workflow_type == "payment_first":
+        signup.paid = True
+        signup.paid_at = now_utc
     db.session.commit()
 
     # ✅ Step 2: Get current Admin info
@@ -3097,13 +3107,15 @@ def signup(activity_id):
     is_sold_out = remaining_capacity is not None and remaining_capacity <= 0
 
     # Session scheduling: per-slot seats replace the activity-level capacity entirely
-    # (get_remaining_capacity returns None for these). "Sold out" means every upcoming
-    # session is full, or there are no upcoming sessions at all.
+    # (get_remaining_capacity returns None for these). Slot fullness does NOT set
+    # is_sold_out here — a buyer can still sign up and pick "decide later" even when
+    # every current session is full, since new sessions may open before they book from
+    # their passport page. is_sold_out for these activities is left False (matching a
+    # non-scheduling activity with no quantity limit) unless another gate sets it.
     available_slots = []
     if activity.uses_scheduling:
         from utils import get_available_slots
         available_slots = get_available_slots(activity_id)
-        is_sold_out = (not available_slots) or all(s.is_full for s in available_slots)
 
     if request.method == "POST":
         # Check capacity again on POST to prevent race conditions
@@ -3124,25 +3136,30 @@ def signup(activity_id):
         selected_passport_type_id = request.form.get("passport_type_id")
 
         # Session scheduling: validate the chosen session BEFORE creating any rows, so a
-        # bad pick never leaves an orphaned User/Signup behind.
+        # bad pick never leaves an orphaned User/Signup behind. Choosing a session here is
+        # OPTIONAL — a blank slot_id means "decide later" and is booked from the passport
+        # page after payment. A slot_id that WAS submitted but doesn't resolve to a valid,
+        # future, active slot is still a real error (stale page, tampered form, etc.).
         chosen_slot = None
         if activity.uses_scheduling:
             from models import ActivitySlot
             slot_id_raw = (request.form.get("slot_id") or "").strip()
-            if slot_id_raw.isdigit():
-                chosen_slot = ActivitySlot.query.filter_by(
-                    id=int(slot_id_raw), activity_id=activity.id, status="active"
-                ).first()
+            if slot_id_raw:
+                if slot_id_raw.isdigit():
+                    chosen_slot = ActivitySlot.query.filter_by(
+                        id=int(slot_id_raw), activity_id=activity.id, status="active"
+                    ).first()
 
-            if chosen_slot is None:
-                flash("Veuillez choisir une séance.", "error")
-                return redirect(url_for("signup", activity_id=activity_id))
-            # starts_at is naive LOCAL wall-clock, so compare against naive local now.
-            if chosen_slot.starts_at < datetime.now():
-                flash("Cette séance est déjà passée. Veuillez en choisir une autre.", "error")
-                return redirect(url_for("signup", activity_id=activity_id))
-            # A scheduled signup books exactly one session; extra credits are booked later
-            # from the passport page.
+                if chosen_slot is None:
+                    flash("Veuillez choisir une séance.", "error")
+                    return redirect(url_for("signup", activity_id=activity_id))
+                # starts_at is naive LOCAL wall-clock, so compare against naive local now.
+                if chosen_slot.starts_at < datetime.now():
+                    flash("Cette séance est déjà passée. Veuillez en choisir une autre.", "error")
+                    return redirect(url_for("signup", activity_id=activity_id))
+
+            # A scheduled signup books at most one session at signup time; extra credits
+            # (and a deferred first session) are booked later from the passport page.
             requested_sessions = 1
 
         user = User(name=name, email=email, phone_number=phone)
@@ -8646,7 +8663,7 @@ def delete_activity(activity_id):
     # Import models at the beginning
     from models import (PassportType, Expense, Income, Signup, Passport, Survey,
                         AdminActionLog, ActivityPassportInheritance,
-                        ActivitySlot, SlotBooking)
+                        ActivitySlot, SlotBooking, AnnouncementLog)
     from sqlalchemy import or_
 
     activity = db.session.get(Activity, activity_id)
@@ -8689,6 +8706,8 @@ def delete_activity(activity_id):
     # child table is handled here.
     SlotBooking.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
     ActivitySlot.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
+
+    AnnouncementLog.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
 
     PassportType.query.filter_by(activity_id=activity_id).delete()
     Expense.query.filter_by(activity_id=activity_id).delete()

@@ -248,6 +248,11 @@
     <div class="reserved-slot-label">Votre séance réservée</div>
     <div class="reserved-slot-when">{{ format_slot_label(signup.slot_booking.slot) }}</div>
   </div>
+  {% elif signup.activity.uses_scheduling %}
+  <div class="reserved-slot">
+    <div class="reserved-slot-label">Vous choisirez votre séance plus tard</div>
+    <div class="reserved-slot-when">Un lien pour réserver vous sera envoyé par courriel.</div>
+  </div>
   {% endif %}
 
   <!-- Button -->

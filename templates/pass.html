@@ -22,7 +22,18 @@
 
   <style>
     /* This is a STANDALONE customer page - it must never inherit the admin shell.
-       Keep the styling minimal and self-contained, like signup_form.html. */
+       Keep the styling minimal and self-contained, like signup_form.html.
+       minipass.css sets `html, body { overflow: hidden }` for the admin dashboard's
+       fixed-shell layout (paired with .minipass-app's own internal scroll region).
+       This page has no such shell, so that rule leaves the whole page unscrollable —
+       override it back to normal document scrolling. minipass.css's `height: 100%` also
+       has to go: paired with overflow-y auto alone it turns body into its own internal
+       scroll box (scrollable via body.scrollTop, but not via normal page/wheel scroll),
+       instead of letting the document grow taller than the viewport as expected here. */
+    html, body {
+      overflow-y: auto;
+      height: auto;
+    }
     body {
       background-color: #f6f8fb;
       min-height: 100vh;
@@ -442,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redeeming...';
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redeeming…';
     });
   });
 });
