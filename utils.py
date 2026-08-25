@@ -4872,23 +4872,31 @@ def get_email_context(activity, template_type, base_context=None):
     else:
         print(f"ℹ️ payment_email already in context: {context['payment_email']}")
 
-    # Render Jinja2 variables in all text fields
-    # (e.g., {{ activity_name }}, {{ question_count }})
-    from jinja2 import Template
+    # Render Jinja2 variables in all text fields (e.g. {{ activity_name }}).
+    #
+    # This text is editable per activity, so it is rendered through the sandboxed helper in
+    # utils_email_text rather than a bare jinja2.Template: an unsandboxed render whose
+    # context holds live SQLAlchemy models lets customized text walk __class__/__mro__ into
+    # application internals. build_email_text_context() also guarantees the documented
+    # variables (payment_email, organization_name, user_name, ...) are always defined, so a
+    # missing name can never silently turn an {% if %} clause off.
+    from utils_email_text import build_email_text_context, render_email_text
+
+    text_context = build_email_text_context(
+        activity=activity,
+        pass_data=context.get('pass_data'),
+        organization_name=context.get('organization_name'),
+        payment_email=context.get('payment_email'),
+        pass_url=context.get('pass_url'),
+        sessions=context.get('booked_slots'),
+        # Everything already assembled here stays available and wins, so existing
+        # customizations that reference the live objects keep rendering unchanged.
+        extra=context,
+    )
+
     for field in ['subject', 'title', 'intro_text', 'conclusion_text']:
         if field in context and context[field]:
-            try:
-                # Check if the field contains Jinja2 syntax (variables or control structures)
-                if ('{{' in context[field] and '}}' in context[field]) or ('{%' in context[field] and '%}' in context[field]):
-                    print(f"🔧 JINJA2 RENDERING: Found template syntax in {field}")
-                    print(f"🔧 Before: {context[field][:100]}")
-                    # Render as Jinja2 template with current context
-                    template = Template(context[field])
-                    context[field] = template.render(**context)
-                    print(f"🔧 After: {context[field][:100]}")
-            except Exception as e:
-                # If rendering fails, keep original value
-                print(f"Warning: Failed to render Jinja2 template in {field}: {e}")
+            context[field] = render_email_text(context[field], text_context)
 
     # Add activity logo URL if not already provided in context
     # (URL should be built in request context before calling get_email_context)

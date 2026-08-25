@@ -13146,6 +13146,13 @@ def email_preview(activity_id):
 
         pass_data = PassData()
 
+        # The sample passport has to go into the context too, not just into the blocks
+        # below. intro_text/conclusion_text are stored as template source referencing
+        # pass_data; without it here the render raised UndefinedError, the fallback kept the
+        # unrendered source, and the preview displayed raw Jinja ("Bonjour {{ pass_data...")
+        # as body text — so the editor never showed what customers actually receive.
+        base_context['pass_data'] = pass_data
+
         # Render email blocks
         base_context['owner_html'] = render_template(
             "email_blocks/owner_card_inline.html",
