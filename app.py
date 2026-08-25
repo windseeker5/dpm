@@ -88,6 +88,7 @@ from utils import (
     generate_pass_code,
     generate_survey_token,
     generate_response_token,
+    format_slot_label,          # Session scheduling: French label for a dated slot
     HERO_CID_MAP  # Shared constant for email template hero image CIDs
 )
 
@@ -138,6 +139,11 @@ def enable_foreign_keys():
     """Enable foreign key constraints for SQLite on every request"""
     if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
         db.session.execute(text('PRAGMA foreign_keys = ON'))
+        # Wait up to 10s for a write lock instead of failing immediately. gunicorn runs
+        # 2 workers x 4 threads (see dockerfile), and session slot claiming puts a write on
+        # the public signup path — without this, two people booking at once surfaces as a
+        # "database is locked" 500. Pairs with WAL mode (set by the migration).
+        db.session.execute(text('PRAGMA busy_timeout = 10000'))
 
 # 📁 Register API blueprints
 app.register_blueprint(backup_api)
@@ -987,7 +993,14 @@ def init_scheduler(app):
 
                 # Unpaid reminders setup
                 scheduler.add_job(func=lambda: send_unpaid_reminders(app), trigger="interval", days=1, id="unpaid_reminders")
-                
+
+                # Session scheduling: release seats whose hold has lapsed (unpaid signup,
+                # abandoned Stripe checkout). The fcntl lock above guarantees only one
+                # worker runs this, so seats can't be double-released.
+                from utils import expire_stale_slot_holds
+                scheduler.add_job(func=lambda: expire_stale_slot_holds(app),
+                                  trigger="interval", minutes=10, id="slot_hold_expiry")
+
                 # Start the scheduler
                 scheduler.start()
                 print("Scheduler initialized and started successfully (master worker).")
@@ -1255,13 +1268,15 @@ def resend_email(log_id):
             from models import User
             act = Activity.query.filter_by(name=activity_name).first()
             if act:
-                users = User.query.filter_by(email=log.to_email).all()
-                for user in users:
-                    passport = Passport.query.filter_by(
-                        user_id=user.id, activity_id=act.id
+                # Several User rows can share an email (re-signups, test accounts). Pick
+                # the most recently created passport across ALL of them for this activity,
+                # not just the first matching user's — otherwise an older passport can win
+                # by coincidence of User.id ordering.
+                user_ids = [u.id for u in User.query.filter_by(email=log.to_email).all()]
+                if user_ids:
+                    passport = Passport.query.filter(
+                        Passport.user_id.in_(user_ids), Passport.activity_id == act.id
                     ).order_by(Passport.id.desc()).first()
-                    if passport:
-                        break
 
     if not passport:
         flash("Cannot resend — no passport found for this email.", "warning")
@@ -1970,7 +1985,23 @@ def bulk_signup_action():
             count = len(signups)
             signup_info = [f"{s.user.name} - {s.activity.name}" for s in signups]
 
+            # Session scheduling: deleting a signup is this app's only "reject" action for
+            # every workflow (see the log message below). Without this, a signup holding a
+            # session seat would leave it orphaned and stuck as taken — the booking survives
+            # with signup_id set to NULL by the FK, still 'held', so the seat stays unusable
+            # until its 72h hold happens to expire on its own.
+            #
+            # Only release a 'held' booking (unpaid, no passport bound yet) — that's the
+            # actual "reject before payment" case. Delete has no status gate in the UI, so
+            # it can also be clicked on an already-paid signup; its booking is 'confirmed'
+            # and belongs to a live passport at that point. That booking must NOT be touched
+            # here, or deleting a signup LOG ROW would silently cancel a paying customer's
+            # session and refund their credit behind their back. Cancelling a confirmed
+            # booking is only ever done through the passport's own "Annuler" action.
+            from utils import release_slot_booking
             for signup in signups:
+                if signup.slot_booking and signup.slot_booking.status == 'held':
+                    release_slot_booking(signup.slot_booking.id, 'signup_deleted', refund_credit=True)
                 db.session.delete(signup)
 
             db.session.commit()
@@ -2211,6 +2242,13 @@ def update_signup_status(signup_id):
 
     if status in ["rejected", "cancelled"]:
         signup.status = status
+
+        # Session scheduling: a rejected signup must give its held seat back immediately
+        # rather than waiting for the hold to lapse.
+        if signup.slot_booking and signup.slot_booking.status in ("held", "confirmed"):
+            from utils import release_slot_booking
+            release_slot_booking(signup.slot_booking.id, f"signup_{status}", refund_credit=True)
+
         db.session.commit()
 
         from utils import log_admin_action
@@ -2250,6 +2288,14 @@ def approve_and_create_pass(signup_id):
 
     # ✅ Step 1: Approve the signup
     signup.status = "approved"
+    # For payment-first activities this route IS "Mark Paid & Create Passport" (see the
+    # button label in signups.html / activity_dashboard.html) — an admin only calls it
+    # after confirming payment, so the signup (and the passport created from it below)
+    # must be marked paid. Approval-first activities keep their existing behaviour:
+    # "approve" doesn't imply payment there, tracked separately via the Interac bot.
+    if signup.activity and signup.activity.workflow_type == "payment_first":
+        signup.paid = True
+        signup.paid_at = now_utc
     db.session.commit()
 
     # ✅ Step 2: Get current Admin info
@@ -2277,8 +2323,21 @@ def approve_and_create_pass(signup_id):
         notes=f"Created automatically from signup {signup.id}"
     )
     db.session.add(passport)
+    db.session.flush()   # need passport.id before binding the held seat
+
+    # Session scheduling: bind the seat this signup has been holding (possibly for days)
+    # to the passport, consuming one credit. Never raises — a slot problem must not stop
+    # a paying customer getting their passport.
+    from utils import attach_slot_booking_to_passport
+    slot_result = attach_slot_booking_to_passport(
+        signup, passport, actor=session.get("admin", "system"))
+
     db.session.commit()
     db.session.expire_all()
+
+    if slot_result == "slot_full":
+        flash("Passport created, but the chosen session is now full — please rebook it manually.",
+              "warning")
 
     # ✅ Step 4: Log admin actions (signup approved + passport created)
     db.session.add(AdminActionLog(
@@ -2311,6 +2370,109 @@ def approve_and_create_pass(signup_id):
     return redirect(url_for("activity_dashboard", activity_id=signup.activity_id))
 
 
+
+
+# NOTE: a "same email already booked this session" guard used to live here. It was removed
+# deliberately — it duplicated protection the app already has and contradicted its design:
+#   * duplicate signups are disambiguated by has_conflicting_unpaid_signup() (utils.py), which
+#     forces the MP-INS-... code into the Interac payment message when name + amount collide;
+#   * one person is allowed to buy several passports for the same activity;
+#   * seats are protected by per-slot capacity, and uq_slot_booking_passport_slot already
+#     stops a single passport double-booking one session.
+# It also blocked legitimate cases (a parent registering two children on one address).
+
+
+def _parse_and_sync_slots(activity, form):
+    """Create/update/cancel ActivitySlot rows from the `slots[<id>][<field>]` form fields.
+
+    Mirrors the passport-types parser: <id> is a real DB id for existing sessions, or
+    `new_N` for ones the admin just added in the browser.
+
+    Sessions dropped from the form are CANCELLED, never deleted — a session with bookings
+    must not vanish. Cancelling releases every seat and refunds the credits.
+
+    Returns (created, updated, cancelled, errors).
+    """
+    from models import ActivitySlot
+    from utils import release_slot_booking, format_slot_label
+
+    slots_data = {}
+    for key, value in form.items():
+        if key.startswith('slots['):
+            parts = key.split('[')
+            if len(parts) == 3:
+                slot_id = parts[1].rstrip(']')
+                field = parts[2].rstrip(']')
+                slots_data.setdefault(slot_id, {})[field] = value
+
+    existing = {s.id: s for s in ActivitySlot.query.filter_by(
+        activity_id=activity.id, status='active').all()}
+
+    created = updated = cancelled = 0
+    errors = []
+    seen_ids = set()
+
+    for raw_id, data in slots_data.items():
+        starts_at_raw = (data.get('starts_at') or '').strip()
+        if not starts_at_raw:
+            continue
+        try:
+            # Naive LOCAL wall-clock, same convention as Activity.start_date.
+            starts_at = datetime.strptime(starts_at_raw, "%Y-%m-%dT%H:%M")
+        except ValueError:
+            errors.append(f"Bad session date/time: {starts_at_raw}")
+            continue
+
+        try:
+            capacity = max(1, int(data.get('capacity', 1)))
+        except (ValueError, TypeError):
+            capacity = 1
+
+        existing_id = int(raw_id) if raw_id.isdigit() else None
+
+        if existing_id and existing_id in existing:
+            slot = existing[existing_id]
+            seen_ids.add(existing_id)
+            # Rescheduling a booked session needs a "your session moved" email that
+            # doesn't exist yet, so it's refused rather than silently surprising people.
+            if slot.starts_at != starts_at and slot.seats_taken > 0:
+                errors.append(
+                    f"'{format_slot_label(slot)}' has {slot.seats_taken} booking(s) "
+                    f"and cannot be moved. Cancel it instead."
+                )
+            elif slot.starts_at != starts_at:
+                slot.starts_at = starts_at
+                updated += 1
+            if capacity != slot.capacity:
+                if capacity < slot.seats_taken:
+                    errors.append(
+                        f"'{format_slot_label(slot)}' already has {slot.seats_taken} "
+                        f"booking(s); spots cannot be set below that."
+                    )
+                else:
+                    slot.capacity = capacity
+                    updated += 1
+        else:
+            db.session.add(ActivitySlot(
+                activity_id=activity.id,
+                starts_at=starts_at,
+                capacity=capacity,
+                seats_taken=0,
+                status='active',
+            ))
+            created += 1
+
+    # Anything removed from the form gets cancelled, with seats freed and credits refunded.
+    for slot_id, slot in existing.items():
+        if slot_id in seen_ids:
+            continue
+        for booking in list(slot.bookings):
+            if booking.status in ('held', 'confirmed'):
+                release_slot_booking(booking.id, 'slot_cancelled', refund_credit=True)
+        slot.status = 'cancelled'
+        cancelled += 1
+
+    return created, updated, cancelled, errors
 
 
 @app.route("/create-activity", methods=["GET", "POST"])
@@ -2414,6 +2576,7 @@ def create_activity():
         max_sessions_str = request.form.get("max_sessions", "").strip()
         max_sessions = int(max_sessions_str) if max_sessions_str else None
         show_remaining_quantity = "show_remaining_quantity" in request.form
+        uses_scheduling = "uses_scheduling" in request.form
 
         new_activity = Activity(
             name=name,
@@ -2437,7 +2600,8 @@ def create_activity():
             allow_quantity_selection=allow_quantity_selection,
             is_quantity_limited=is_quantity_limited,
             max_sessions=max_sessions,
-            show_remaining_quantity=show_remaining_quantity
+            show_remaining_quantity=show_remaining_quantity,
+            uses_scheduling=uses_scheduling
         )
 
         db.session.add(new_activity)
@@ -2515,16 +2679,28 @@ def create_activity():
                 )
                 db.session.add(passport_type)
 
+        # Session scheduling: create the dated slots the admin generated in the browser.
+        slots_created = 0
+        if uses_scheduling:
+            slots_created, _, _, slot_errors = _parse_and_sync_slots(new_activity, request.form)
+            for err in slot_errors:
+                flash(err, "warning")
+
         db.session.commit()
 
         # Log the action
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
             action=f"Activity Created: {new_activity.name} with {len(passport_types_data)} passport types"
+                   + (f" and {slots_created} sessions" if slots_created else "")
         ))
         db.session.commit()
 
-        flash(f"Activity created successfully with {len(passport_types_data)} passport types!", "success")
+        msg = f"Activity created successfully with {len(passport_types_data)} passport types!"
+        if slots_created:
+            msg = (f"Activity created with {len(passport_types_data)} passport types "
+                   f"and {slots_created} session{'s' if slots_created > 1 else ''}!")
+        flash(msg, "success")
         return redirect(url_for("dashboard"))
 
     # ✅ GET request - check tier limit BEFORE showing form
@@ -2639,6 +2815,7 @@ def edit_activity(activity_id):
         max_sessions_str = request.form.get("max_sessions", "").strip()
         activity.max_sessions = int(max_sessions_str) if max_sessions_str else None
         activity.show_remaining_quantity = "show_remaining_quantity" in request.form
+        activity.uses_scheduling = "uses_scheduling" in request.form
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
@@ -2751,6 +2928,25 @@ def edit_activity(activity_id):
                         passport.passport_type_name = pt.name
 
                 passport_types_archived += 1
+
+        # Session scheduling: sync slots. Runs even when scheduling was just turned OFF, so
+        # that leftover sessions get cancelled (and their seats/credits released) rather
+        # than lingering invisibly.
+        slots_created = slots_updated = slots_cancelled = 0
+        if activity.uses_scheduling:
+            slots_created, slots_updated, slots_cancelled, slot_errors = \
+                _parse_and_sync_slots(activity, request.form)
+            for err in slot_errors:
+                flash(err, "warning")
+        else:
+            from models import ActivitySlot as _ActivitySlot
+            from utils import release_slot_booking as _release
+            for slot in _ActivitySlot.query.filter_by(activity_id=activity.id, status='active').all():
+                for booking in list(slot.bookings):
+                    if booking.status in ('held', 'confirmed'):
+                        _release(booking.id, 'scheduling_disabled', refund_credit=True)
+                slot.status = 'cancelled'
+                slots_cancelled += 1
 
         # Handle passport inheritance links (view/act on other activities' passports -
         # no data is copied, see ActivityPassportInheritance). Simple replace: remove all
@@ -2910,6 +3106,17 @@ def signup(activity_id):
     remaining_capacity = get_remaining_capacity(activity_id)
     is_sold_out = remaining_capacity is not None and remaining_capacity <= 0
 
+    # Session scheduling: per-slot seats replace the activity-level capacity entirely
+    # (get_remaining_capacity returns None for these). Slot fullness does NOT set
+    # is_sold_out here — a buyer can still sign up and pick "decide later" even when
+    # every current session is full, since new sessions may open before they book from
+    # their passport page. is_sold_out for these activities is left False (matching a
+    # non-scheduling activity with no quantity limit) unless another gate sets it.
+    available_slots = []
+    if activity.uses_scheduling:
+        from utils import get_available_slots
+        available_slots = get_available_slots(activity_id)
+
     if request.method == "POST":
         # Check capacity again on POST to prevent race conditions
         remaining_capacity = get_remaining_capacity(activity_id)
@@ -2927,6 +3134,33 @@ def signup(activity_id):
         email = request.form.get("email", "").strip()
         phone = request.form.get("phone", "").strip()
         selected_passport_type_id = request.form.get("passport_type_id")
+
+        # Session scheduling: validate the chosen session BEFORE creating any rows, so a
+        # bad pick never leaves an orphaned User/Signup behind. Choosing a session here is
+        # OPTIONAL — a blank slot_id means "decide later" and is booked from the passport
+        # page after payment. A slot_id that WAS submitted but doesn't resolve to a valid,
+        # future, active slot is still a real error (stale page, tampered form, etc.).
+        chosen_slot = None
+        if activity.uses_scheduling:
+            from models import ActivitySlot
+            slot_id_raw = (request.form.get("slot_id") or "").strip()
+            if slot_id_raw:
+                if slot_id_raw.isdigit():
+                    chosen_slot = ActivitySlot.query.filter_by(
+                        id=int(slot_id_raw), activity_id=activity.id, status="active"
+                    ).first()
+
+                if chosen_slot is None:
+                    flash("Veuillez choisir une séance.", "error")
+                    return redirect(url_for("signup", activity_id=activity_id))
+                # starts_at is naive LOCAL wall-clock, so compare against naive local now.
+                if chosen_slot.starts_at < datetime.now():
+                    flash("Cette séance est déjà passée. Veuillez en choisir une autre.", "error")
+                    return redirect(url_for("signup", activity_id=activity_id))
+
+            # A scheduled signup books at most one session at signup time; extra credits
+            # (and a deferred first session) are booked later from the passport page.
+            requested_sessions = 1
 
         user = User(name=name, email=email, phone_number=phone)
         db.session.add(user)
@@ -2962,6 +3196,32 @@ def signup(activity_id):
         db.session.add(signup_record)
         db.session.flush()  # Get the ID before commit
         signup_record.signup_code = f"MP-INS-{signup_record.id:07d}"
+
+        # Session scheduling: claim the seat in the SAME transaction as the Signup, so
+        # there is never a signup without a seat, nor a seat without a signup explaining it.
+        if chosen_slot is not None:
+            from models import SlotBooking
+            from utils import claim_slot_seat, get_slot_hold_hours, SLOT_HOLD_HOURS_STRIPE
+
+            if not claim_slot_seat(chosen_slot.id):
+                # Someone took the last seat between page load and submit. Roll the whole
+                # thing back — the User and Signup disappear too, which is correct.
+                db.session.rollback()
+                flash("Cette séance vient d'être complète. Veuillez en choisir une autre.", "error")
+                return redirect(url_for("signup", activity_id=activity_id))
+
+            hold_hours = (SLOT_HOLD_HOURS_STRIPE if payment_method == "stripe"
+                          else get_slot_hold_hours())
+            db.session.add(SlotBooking(
+                slot_id=chosen_slot.id,
+                activity_id=activity.id,
+                user_id=user.id,
+                signup_id=signup_record.id,
+                status="held",
+                held_until=datetime.now(timezone.utc).replace(tzinfo=None)
+                           + timedelta(hours=hold_hours),
+            ))
+
         db.session.commit()
 
         if payment_method == "stripe":
@@ -3007,7 +3267,8 @@ def signup(activity_id):
 
     return render_template("signup_form.html", activity=activity, settings=settings,
                          passport_types=passport_types, selected_passport_type=selected_passport_type,
-                         remaining_capacity=remaining_capacity, is_sold_out=is_sold_out)
+                         remaining_capacity=remaining_capacity, is_sold_out=is_sold_out,
+                         available_slots=available_slots, format_slot_label=format_slot_label)
 
 
 @app.route("/signup/thank-you/<int:signup_id>")
@@ -3024,7 +3285,8 @@ def signup_thank_you(signup_id):
     return render_template("signup_confirmation.html",
                           signup=signup,
                           activity=activity,
-                          settings=settings)
+                          settings=settings,
+                          format_slot_label=format_slot_label)
 
 
 @app.route("/stripe/webhook", methods=["POST"])
@@ -3275,7 +3537,8 @@ def stripe_success():
     return render_template("signup_confirmation.html",
                           signup=signup,
                           activity=activity,
-                          settings=settings)
+                          settings=settings,
+                          format_slot_label=format_slot_label)
 
 
 @app.route("/payment-bot-settings", methods=["GET", "POST"])
@@ -6288,6 +6551,33 @@ def show_pass(pass_code):
         hockey_pass=hockey_pass
     )
 
+    # ✅ Session scheduling: this passport's bookings + what it can still book.
+    # The pass_code is the credential here — no login required, by design.
+    my_bookings = []
+    bookable_slots = []
+    can_check_in = False
+    if hockey_pass.activity and hockey_pass.activity.uses_scheduling:
+        from models import SlotBooking
+        from utils import get_available_slots, has_booking_today
+
+        # Offer the admin "Check In" action even at 0 credits when a session is booked
+        # today — that person already paid for it at booking time.
+        can_check_in = has_booking_today(hockey_pass)
+
+        now_local = datetime.now()
+        my_bookings = SlotBooking.query.filter(
+            SlotBooking.passport_id == hockey_pass.id,
+            SlotBooking.status.in_(("held", "confirmed")),
+        ).all()
+        my_bookings.sort(key=lambda b: b.slot.starts_at if b.slot else now_local)
+        for b in my_bookings:
+            b.is_past = bool(b.slot and b.slot.starts_at < now_local)
+
+        booked_slot_ids = {b.slot_id for b in my_bookings}
+        bookable_slots = [s for s in get_available_slots(hockey_pass.activity_id,
+                                                        include_full=False)
+                          if s.id not in booked_slot_ids]
+
     return render_template(
         "pass.html",
         hockey_pass=hockey_pass,
@@ -6295,10 +6585,128 @@ def show_pass(pass_code):
         history=history,
         is_admin=is_admin,
         settings=settings_raw,
-        email_info=email_info_rendered
+        email_info=email_info_rendered,
+        my_bookings=my_bookings,
+        bookable_slots=bookable_slots,
+        can_check_in=can_check_in,
+        format_slot_label=format_slot_label
     )
 
 
+@app.route("/pass/<pass_code>/book", methods=["POST"])
+def book_slot_from_pass(pass_code):
+    """Book a session against a passport's remaining credits.
+
+    Public and unauthenticated by design: the pass_code IS the credential (it is
+    unguessable and only the owner has it), which is why this app needs no customer
+    accounts. CSRF still applies — the form carries a token.
+    """
+    from models import Passport, ActivitySlot, SlotBooking
+    from utils import claim_slot_seat
+
+    passport = Passport.query.filter_by(pass_code=pass_code).first()
+    if not passport:
+        return "Pass not found", 404
+
+    activity = passport.activity
+    if not activity or not activity.uses_scheduling:
+        flash("Cette activité n'utilise pas les séances.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    if (passport.uses_remaining or 0) <= 0:
+        flash("Vous n'avez plus de crédits disponibles.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    slot_id_raw = (request.form.get("slot_id") or "").strip()
+    slot = None
+    if slot_id_raw.isdigit():
+        slot = ActivitySlot.query.filter_by(
+            id=int(slot_id_raw), activity_id=activity.id, status="active").first()
+
+    if slot is None:
+        flash("Veuillez choisir une séance.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    # starts_at is naive LOCAL wall-clock — compare against naive local now.
+    if slot.starts_at < datetime.now():
+        flash("Cette séance est déjà passée.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    # Already booked into this session? The partial unique index would reject it anyway.
+    existing = SlotBooking.query.filter(
+        SlotBooking.passport_id == passport.id,
+        SlotBooking.slot_id == slot.id,
+        SlotBooking.status.in_(("held", "confirmed")),
+    ).first()
+    if existing:
+        flash("Vous êtes déjà inscrit à cette séance.", "warning")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    if not claim_slot_seat(slot.id):
+        db.session.rollback()
+        flash("Cette séance vient d'être complète. Veuillez en choisir une autre.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    # Credit is consumed at booking time (industry standard) — cancelling gives it back.
+    rc = db.session.execute(text(
+        "UPDATE passport SET uses_remaining = uses_remaining - 1 "
+        "WHERE id = :pid AND uses_remaining > 0"
+    ), {"pid": passport.id}).rowcount
+
+    if rc != 1:
+        db.session.rollback()
+        flash("Vous n'avez plus de crédits disponibles.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    db.session.add(SlotBooking(
+        slot_id=slot.id,
+        activity_id=activity.id,
+        user_id=passport.user_id,
+        passport_id=passport.id,
+        status="confirmed",
+        credit_consumed=True,
+        confirmed_dt=datetime.now(timezone.utc).replace(tzinfo=None),
+    ))
+    db.session.commit()
+
+    flash(f"Séance réservée: {format_slot_label(slot)}", "success")
+    return redirect(url_for("show_pass", pass_code=pass_code))
+
+
+@app.route("/pass/<pass_code>/cancel-booking/<int:booking_id>", methods=["POST"])
+def cancel_slot_booking(pass_code, booking_id):
+    """Cancel one of this passport's bookings, freeing the seat and refunding the credit."""
+    from models import Passport, SlotBooking
+    from utils import release_slot_booking
+
+    passport = Passport.query.filter_by(pass_code=pass_code).first()
+    if not passport:
+        return "Pass not found", 404
+
+    booking = SlotBooking.query.get(booking_id)
+    # Ownership check: the booking must belong to THIS passport, so a leaked pass_code
+    # can never cancel someone else's seat.
+    if not booking or booking.passport_id != passport.id:
+        flash("Réservation introuvable.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    if booking.slot and booking.slot.starts_at < datetime.now():
+        flash("Cette séance est déjà passée et ne peut pas être annulée.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    # Already checked in: the session was used, so refunding the credit would hand it back
+    # for free. The button is hidden in this case, but the URL is guessable.
+    if booking.attended_dt:
+        flash("Votre présence a déjà été enregistrée pour cette séance.", "error")
+        return redirect(url_for("show_pass", pass_code=pass_code))
+
+    if release_slot_booking(booking.id, "cancelled_by_user", refund_credit=True):
+        db.session.commit()
+        flash("Séance annulée. Votre crédit vous a été remis.", "success")
+    else:
+        flash("Cette réservation a déjà été annulée.", "warning")
+
+    return redirect(url_for("show_pass", pass_code=pass_code))
 
 
 @app.route("/redeem-qr/<pass_code>", methods=["POST"])
@@ -6361,8 +6769,23 @@ def redeem_passport_qr(pass_code):
     cutoff_time = now_utc - timedelta(seconds=30)
     recent_redemptions = {k: v for k, v in recent_redemptions.items() if v > cutoff_time}
 
-    if passport.uses_remaining > 0:
-        passport.uses_remaining -= 1
+    # Session scheduling: a scan either FULFILS a booking or is a walk-in.
+    #   fulfils a booking -> the credit was already taken when they reserved the session,
+    #                        so take nothing; just stamp attendance.
+    #   walk-in           -> no reservation, so deduct one credit exactly as always.
+    # Without this split, everyone on a scheduled activity was checked in for free.
+    from utils import find_booking_to_fulfil
+    scheduling_on = bool(passport.activity and passport.activity.uses_scheduling)
+    fulfilled_booking = find_booking_to_fulfil(passport) if scheduling_on else None
+    deduct_credit = fulfilled_booking is None
+    allowed = (not deduct_credit) or passport.uses_remaining > 0
+
+    if allowed:
+        if deduct_credit:
+            passport.uses_remaining -= 1
+        else:
+            fulfilled_booking.attended_dt = datetime.now(timezone.utc).replace(tzinfo=None)
+            db.session.add(fulfilled_booking)
         db.session.add(passport)
 
         # ✅ Save Redemption
@@ -6398,10 +6821,16 @@ def redeem_passport_qr(pass_code):
             timestamp=now_utc
         )
 
-        flash(f"Passport {passport.pass_code} redeemed via QR scan!", "success")
+        if fulfilled_booking is not None:
+            flash(f"Checked in for {format_slot_label(fulfilled_booking.slot)} — "
+                  f"no credit used (already paid at booking).", "success")
+        else:
+            flash(f"Passport {passport.pass_code} redeemed via QR scan!", "success")
 
-        # Check if passport is now empty and activity offers renewal
-        if passport.uses_remaining == 0:
+        # Offer renewal only when a credit was actually spent and the wallet is now empty.
+        # A scheduled passport can sit at 0 with sessions still booked — nagging then
+        # would be wrong.
+        if deduct_credit and passport.uses_remaining == 0:
             activity = passport.activity
             passport_type = passport.passport_type
             if (activity.offer_passport_renewal
@@ -8405,7 +8834,9 @@ def delete_activity(activity_id):
         return redirect(url_for("login"))
 
     # Import models at the beginning
-    from models import PassportType, Expense, Income, Signup, Passport, Survey, AdminActionLog, ActivityPassportInheritance
+    from models import (PassportType, Expense, Income, Signup, Passport, Survey,
+                        AdminActionLog, ActivityPassportInheritance,
+                        ActivitySlot, SlotBooking, AnnouncementLog)
     from sqlalchemy import or_
 
     activity = db.session.get(Activity, activity_id)
@@ -8442,6 +8873,14 @@ def delete_activity(activity_id):
         or_(ActivityPassportInheritance.activity_id == activity_id,
             ActivityPassportInheritance.source_activity_id == activity_id)
     ).delete(synchronize_session=False)
+
+    # Session scheduling: bookings reference slots, signups and passports, so they must go
+    # before all of them. Deleted explicitly (not left to CASCADE) to match how every other
+    # child table is handled here.
+    SlotBooking.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
+    ActivitySlot.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
+
+    AnnouncementLog.query.filter_by(activity_id=activity_id).delete(synchronize_session=False)
 
     PassportType.query.filter_by(activity_id=activity_id).delete()
     Expense.query.filter_by(activity_id=activity_id).delete()
@@ -10045,8 +10484,20 @@ def redeem_passport(pass_code):
     cutoff_time = now_utc - timedelta(seconds=30)
     recent_redemptions = {k: v for k, v in recent_redemptions.items() if v > cutoff_time}
 
-    if passport.uses_remaining > 0:
-        passport.uses_remaining -= 1
+    # Session scheduling: fulfils a booking (no credit — already paid at booking) or is a
+    # walk-in (deduct one, as always). Mirrors the logic in redeem_passport_qr.
+    from utils import find_booking_to_fulfil
+    scheduling_on = bool(passport.activity and passport.activity.uses_scheduling)
+    fulfilled_booking = find_booking_to_fulfil(passport) if scheduling_on else None
+    deduct_credit = fulfilled_booking is None
+    allowed = (not deduct_credit) or passport.uses_remaining > 0
+
+    if allowed:
+        if deduct_credit:
+            passport.uses_remaining -= 1
+        else:
+            fulfilled_booking.attended_dt = datetime.now(timezone.utc).replace(tzinfo=None)
+            db.session.add(fulfilled_booking)
         db.session.add(passport)
 
         # ✅ Save Redemption for history tracking!
@@ -10083,10 +10534,14 @@ def redeem_passport(pass_code):
             timestamp=now_utc
         )
 
-        flash(f"Session redeemed! {passport.uses_remaining} uses left.", "success")
+        if fulfilled_booking is not None:
+            flash(f"Checked in for {format_slot_label(fulfilled_booking.slot)} — "
+                  f"no credit used (already paid at booking).", "success")
+        else:
+            flash(f"Session redeemed! {passport.uses_remaining} uses left.", "success")
 
-        # Check if passport is now empty and activity offers renewal
-        if passport.uses_remaining == 0:
+        # Renewal prompt only when a credit was actually spent — see redeem_passport_qr.
+        if deduct_credit and passport.uses_remaining == 0:
             activity = passport.activity
             passport_type = passport.passport_type
             if (activity.offer_passport_renewal
@@ -12696,6 +13151,11 @@ def email_preview(activity_id):
             "email_blocks/owner_card_inline.html",
             pass_data=pass_data
         )
+        # Live-passport link shown below the QR. Included here so the preview shows what
+        # the customer actually receives — it was previously missing from all preview paths.
+        from utils import _get_pass_url
+        base_context['pass_url'] = _get_pass_url(pass_data)
+        base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
         # Add history for ALL templates that need it (not just redeemPass)
         history = [
@@ -12953,6 +13413,10 @@ def email_preview_live(activity_id):
             owner_logo_url=_owner_logo_url
         )
         base_context['owner_logo_url'] = _owner_logo_url
+        # Live-passport link shown below the QR (see static preview above).
+        from utils import _get_pass_url
+        base_context['pass_url'] = _get_pass_url(pass_data)
+        base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
         # Add history for ALL templates that need it
         history = [
@@ -13307,6 +13771,10 @@ def test_email_template(activity_id):
                 owner_logo_url=_owner_logo_url
             )
             base_context['owner_logo_url'] = _owner_logo_url
+            # Live-passport link shown below the QR (see static preview above).
+            from utils import _get_pass_url
+            base_context['pass_url'] = _get_pass_url(pass_data)
+            base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
             # Add history for templates that need it
             if template_type in ['redeemPass', 'latePayment']:

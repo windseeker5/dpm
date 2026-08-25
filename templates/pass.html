@@ -1,9 +1,114 @@
-{% extends "base.html" %}
 {% from 'partials/mark_paid_modal.html' import mark_paid_modal %}
-{% block title %}Passport Details{% endblock %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mon passeport - {{ hockey_pass.activity.name if hockey_pass.activity else 'Minipass' }}</title>
 
-{% block content %}
-<div class="container-xl mt-4 px-3">
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Tabler Core CSS -->
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='minipass.css') }}" rel="stylesheet">
+
+  <style>
+    /* This is a STANDALONE customer page - it must never inherit the admin shell.
+       Keep the styling minimal and self-contained, like signup_form.html.
+       minipass.css sets `html, body { overflow: hidden }` for the admin dashboard's
+       fixed-shell layout (paired with .minipass-app's own internal scroll region).
+       This page has no such shell, so that rule leaves the whole page unscrollable —
+       override it back to normal document scrolling. minipass.css's `height: 100%` also
+       has to go: paired with overflow-y auto alone it turns body into its own internal
+       scroll box (scrollable via body.scrollTop, but not via normal page/wheel scroll),
+       instead of letting the document grow taller than the viewport as expected here. */
+    html, body {
+      overflow-y: auto;
+      height: auto;
+    }
+    body {
+      background-color: #f6f8fb;
+      min-height: 100vh;
+    }
+    .pass-page-header {
+      text-align: center;
+      padding: 2rem 1rem 1.5rem;
+    }
+    .pass-org-logo {
+      max-height: 64px;
+      max-width: 200px;
+      object-fit: contain;
+    }
+    .pass-org-logo-fallback {
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 2rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pass-footer {
+      text-align: center;
+      padding: 2rem 1rem 3rem;
+      color: #8a94a6;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Organisation branding -->
+<div class="pass-page-header">
+  {% if settings and settings.get('LOGO_FILENAME') %}
+    <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+         alt="{{ settings.get('ORG_NAME', 'Organisation') }}" class="pass-org-logo">
+  {% else %}
+    <div class="pass-org-logo-fallback"
+         style="background: {{ placeholder_color(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }};">
+      {{ placeholder_letter(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }}
+    </div>
+  {% endif %}
+</div>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="container-xl px-3">
+    <div class="row justify-content-center">
+      <div class="col-11 col-md-10 col-lg-8 mx-auto">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'warning' if category == 'warning' else 'info' }} alert-dismissible"
+             role="alert" aria-live="polite">
+          <div class="d-flex">
+            <div>
+              {% if category == 'success' %}<i class="ti ti-circle-check me-2" aria-hidden="true"></i>
+              {% elif category == 'error' %}<i class="ti ti-alert-circle me-2" aria-hidden="true"></i>
+              {% elif category == 'warning' %}<i class="ti ti-alert-triangle me-2" aria-hidden="true"></i>
+              {% else %}<i class="ti ti-info-circle me-2" aria-hidden="true"></i>{% endif %}
+            </div>
+            <div>{{ message }}</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% endwith %}
+
+<div class="container-xl px-3">
   <div class="row justify-content-center">
 
     <!-- ✅ Owner Info -->
@@ -27,40 +132,44 @@
             <h3 class="card-title mb-0">
               {{ hockey_pass.activity.name if hockey_pass.activity else '-' }}
               {% if hockey_pass.paid %}
-                <span class="badge bg-green-lt ms-2 d-none d-md-inline-block">Paid</span>
+                <span class="badge bg-green-lt ms-2 d-none d-md-inline-block">Payé</span>
               {% else %}
-                <span class="badge bg-red-lt ms-2 d-none d-md-inline-block">Unpaid</span>
+                <span class="badge bg-red-lt ms-2 d-none d-md-inline-block">Non payé</span>
               {% endif %}
             </h3>
           </div>
 
+          {# Admin-only controls. A customer reaching this page from their email must never
+             see these - the routes behind them are admin-gated anyway, but showing them is
+             confusing and looks broken. #}
+          {% if is_admin %}
           <!-- 3-dot Menu -->
           <div class="dropdown flex-shrink-0">
-            <a href="#" class="btn btn-icon fs-4 p-1" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="ti ti-dots-vertical"></i>
+            <a href="#" class="btn btn-icon fs-4 p-1" data-bs-toggle="dropdown"
+               aria-expanded="false" aria-label="Actions">
+              <i class="ti ti-dots-vertical" aria-hidden="true"></i>
             </a>
             <div class="dropdown-menu dropdown-menu-end">
               <a href="{{ url_for('edit_passport', passport_id=hockey_pass.id) }}" class="dropdown-item">
-                <i class="ti ti-pencil me-2"></i> Edit
+                <i class="ti ti-pencil me-2" aria-hidden="true"></i> Edit
               </a>
 
-              {% if hockey_pass.uses_remaining > 0 %}
+              {# Also offer Check In when credits are 0 but a session is booked today -
+                 that person has already paid and is entitled to walk in. #}
+              {% if hockey_pass.uses_remaining > 0 or can_check_in %}
               <button type="button" class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#redeem-confirm-modal">
-                <i class="ti ti-login me-2"></i> Check In
+                <i class="ti ti-login me-2" aria-hidden="true"></i> Check In
               </button>
               {% endif %}
-              
 
               {% if not hockey_pass.paid %}
               <button type="button" class="dropdown-item text-success" data-bs-toggle="modal" data-bs-target="#mark-paid-modal-{{ hockey_pass.id }}">
-                <i class="ti ti-currency-dollar me-2"></i> Mark as Paid
-              </button>              
+                <i class="ti ti-currency-dollar me-2" aria-hidden="true"></i> Mark as Paid
+              </button>
               {% endif %}
-
-
-
             </div>
           </div>
+          {% endif %}
         </div>
 
         <!-- 🔲 Body -->
@@ -68,13 +177,13 @@
           <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-3">
             <div class="text-center order-1 order-md-2">
               <img src="data:image/png;base64,{{ qr_data }}"
-                   alt="QR Code"
+                   alt="Code QR du passeport"
                    class="rounded bg-white d-md-none"
-                   style="width: 120px; height: 120px;" />
+                   width="120" height="120" />
               <img src="data:image/png;base64,{{ qr_data }}"
-                   alt="QR Code"
+                   alt="Code QR du passeport"
                    class="rounded bg-white d-none d-md-inline-block"
-                   style="width: 160px; height: 160px;" />
+                   width="160" height="160" />
             </div>
 
             <div class="flex-grow-1 text-center text-md-start order-2 order-md-1">
@@ -83,15 +192,105 @@
               <div class="text-muted small">{{ hockey_pass.user.phone_number }}</div>
 
               <div class="h4 fw-bold mt-3 mb-1">${{ "%.2f"|format(hockey_pass.sold_amt or 0) }}</div>
-              <div class="text-muted small">
-                Activités restantes: <strong>{{ hockey_pass.uses_remaining }}</strong>
-              </div>
+
+              {# Show BOTH numbers on a scheduling activity. "Activités restantes" alone
+                 reads as "you have almost nothing left" for someone who is fully booked -
+                 their credits are spent, but they still have every session to attend. #}
+              {% if hockey_pass.activity and hockey_pass.activity.uses_scheduling %}
+                {% set upcoming_count = my_bookings | rejectattr('is_past') | list | length %}
+                <div class="text-muted small">
+                  <strong>{{ upcoming_count }}</strong>
+                  {{ "séance réservée" if upcoming_count == 1 else "séances réservées" }}
+                  ·
+                  <strong>{{ hockey_pass.uses_remaining }}</strong>
+                  {{ "crédit disponible" if hockey_pass.uses_remaining == 1 else "crédits disponibles" }}
+                </div>
+              {% else %}
+                <div class="text-muted small">
+                  Activités restantes: <strong>{{ hockey_pass.uses_remaining }}</strong>
+                </div>
+              {% endif %}
             </div>
           </div>
         </div>
 
       </div>
     </div>
+
+    <!-- ✅ Séances (activities that use scheduling) -->
+    {% if hockey_pass.activity and hockey_pass.activity.uses_scheduling %}
+    <div class="col-11 col-md-10 col-lg-8 mx-auto">
+      <div class="card shadow-md mb-4 bg-white">
+        <div class="card-header">
+          <h3 class="card-title">Mes séances</h3>
+        </div>
+        <div class="card-body">
+
+          {% if my_bookings %}
+          <div class="list-group list-group-flush mb-3">
+            {% for booking in my_bookings %}
+            <div class="list-group-item d-flex align-items-center justify-content-between px-0">
+              <div>
+                <div class="fw-bold text-capitalize">{{ format_slot_label(booking.slot) }}</div>
+                {% if booking.attended_dt %}
+                  <span class="badge bg-blue-lt">Présence confirmée</span>
+                {% elif booking.is_past %}
+                  <span class="badge bg-secondary-lt">Terminée</span>
+                {% else %}
+                  <span class="badge bg-green-lt">Réservée</span>
+                {% endif %}
+              </div>
+              {# No cancelling once they've been checked in — the session was used, so
+                 refunding the credit would give it away. #}
+              {% if not booking.is_past and not booking.attended_dt %}
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#cancel-booking-modal-{{ booking.id }}">
+                Annuler
+              </button>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted">Aucune séance réservée pour le moment.</p>
+          {% endif %}
+
+          {% if hockey_pass.uses_remaining > 0 %}
+            {% if bookable_slots %}
+            <form method="POST"
+                  action="{{ url_for('book_slot_from_pass', pass_code=hockey_pass.pass_code) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <label class="form-label" for="slotSelect">
+                Réserver une séance
+                <span class="text-muted">({{ hockey_pass.uses_remaining }}
+                  {{ "crédit restant" if hockey_pass.uses_remaining == 1 else "crédits restants" }})</span>
+              </label>
+              <div class="input-group">
+                <select class="form-select" name="slot_id" id="slotSelect" required>
+                  <option value="">Choisissez une séance…</option>
+                  {% for slot in bookable_slots %}
+                  <option value="{{ slot.id }}">
+                    {{ format_slot_label(slot) }} — {{ slot.seats_left }}
+                    {{ "place" if slot.seats_left == 1 else "places" }}
+                  </option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary">Réserver</button>
+              </div>
+            </form>
+            {% else %}
+            <p class="text-muted mb-0">Aucune séance disponible pour le moment.</p>
+            {% endif %}
+          {% else %}
+          <p class="text-muted mb-0">
+            Vous avez utilisé tous vos crédits. Contactez l'organisateur pour en obtenir d'autres.
+          </p>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     {% if history %}
     <!-- ✅ Historique Table -->
@@ -172,18 +371,58 @@
   </div>
 </div>
 
+<div class="pass-footer">
+  {{ settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass' }}
+</div>
 
+{# Cancel-session confirmation, one per booking. Replaces a native confirm() popup -
+   the rest of the app uses Tabler modals, and a browser alert looks broken next to them. #}
+{% if hockey_pass.activity and hockey_pass.activity.uses_scheduling %}
+  {% for booking in my_bookings %}
+    {% if not booking.is_past and not booking.attended_dt %}
+    <div class="modal modal-blur fade" id="cancel-booking-modal-{{ booking.id }}" tabindex="-1"
+         role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-status bg-danger"></div>
+          <div class="modal-body text-center py-4">
+            <i class="ti ti-calendar-x mb-2 text-danger" style="font-size: 2rem;" aria-hidden="true"></i>
+            <h3>Annuler cette séance?</h3>
+            <div class="text-muted text-capitalize">{{ format_slot_label(booking.slot) }}</div>
+            <div class="text-muted mt-2">Votre crédit vous sera remis.</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Garder</button>
+            <form method="POST"
+                  action="{{ url_for('cancel_slot_booking', pass_code=hockey_pass.pass_code, booking_id=booking.id) }}"
+                  class="w-100">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-danger w-100">Oui, annuler</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
 
-
-<!-- ✅ Redeem Confirmation Modal -->
+{% if is_admin %}
+<!-- ✅ Redeem Confirmation Modal (admin only) -->
 <div class="modal modal-blur fade" id="redeem-confirm-modal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-status bg-primary"></div>
       <div class="modal-body text-center py-4">
-        <i class="ti ti-login icon mb-2 text-primary" style="font-size: 2rem;"></i>
+        <i class="ti ti-login icon mb-2 text-primary" style="font-size: 2rem;" aria-hidden="true"></i>
         <h3>Check In?</h3>
-        <div class="text-muted">This will deduct one session from the passport. Are you sure?</div>
+        <div class="text-muted">
+          {% if can_check_in %}
+            This fulfils a session booked for today — no credit will be used.
+          {% else %}
+            This will deduct one session from the passport. Are you sure?
+          {% endif %}
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
@@ -196,20 +435,13 @@
   </div>
 </div>
 
-
-<!-- ✅ Mark as Paid Modal -->
+<!-- ✅ Mark as Paid Modal (admin only) -->
 {{ mark_paid_modal(hockey_pass) }}
+{% endif %}
 
-
-
-
-
-
-
-
-{% endblock %}
-
-{% block scripts %}
+<!-- Tabler JS - required for the modals and the dropdown above. This page is standalone,
+     so nothing else loads it. -->
+<script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
 <script>
 // Prevent double-clicks on redemption forms
 document.addEventListener('DOMContentLoaded', function() {
@@ -221,9 +453,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redeeming...';
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redeeming…';
     });
   });
 });
 </script>
-{% endblock %}
+</body>
+</html>

@@ -555,6 +555,14 @@ def get_remaining_capacity(activity_id):
     if not activity or not activity.is_quantity_limited or not activity.max_sessions:
         return None
 
+    # Session scheduling: per-slot capacity is the sole admission control, so this
+    # activity-level number is meaningless here — and worse, it would invert. This function
+    # subtracts SUM(uses_remaining), and scheduled activities decrement uses_remaining at
+    # BOOKING time, so every booking would make the activity look like it had one MORE spot
+    # free, silently reopening a sold-out activity. Return None and let the slots govern.
+    if activity.uses_scheduling:
+        return None
+
     # Sum all uses_remaining from active passports for this activity
     # This counts total sessions sold/reserved
     total_sold = db.session.query(func.coalesce(func.sum(Passport.uses_remaining), 0))\
@@ -563,6 +571,502 @@ def get_remaining_capacity(activity_id):
 
     remaining = activity.max_sessions - total_sold
     return max(0, remaining)
+
+
+# ============================================================================
+# 📅 SESSION SCHEDULING (slots + bookings)
+# ============================================================================
+# Called "Sessions" in the UI, "slots" in code — see the naming note in models.py.
+#
+# ⚠️ TIMEZONE CONTRACT (the easiest thing to get wrong here):
+#   ActivitySlot.starts_at / ends_at  -> NAIVE LOCAL wall-clock (matches Activity.start_date
+#                                        and the <input type="datetime-local"> fields)
+#   everything else (*_dt, held_until) -> UTC
+# SQLite has no timezone type, so aware datetimes are persisted with tzinfo dropped and read
+# back naive. Always compare UTC columns against _utc_naive_now(), never datetime.now().
+
+SLOT_HOLD_HOURS_DEFAULT = 72        # Interac + admin approval can genuinely take days
+SLOT_HOLD_HOURS_STRIPE = 2          # Checkout abandonment is near-instant
+
+_FR_MONTHS = {
+    1: "janvier", 2: "février", 3: "mars", 4: "avril", 5: "mai", 6: "juin",
+    7: "juillet", 8: "août", 9: "septembre", 10: "octobre", 11: "novembre", 12: "décembre",
+}
+_FR_DAYS = {
+    0: "lundi", 1: "mardi", 2: "mercredi", 3: "jeudi", 4: "vendredi", 5: "samedi", 6: "dimanche",
+}
+
+
+def _utc_naive_now():
+    """Current UTC time as a naive datetime, matching how SQLite stores our UTC columns."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def format_slot_label(slot, include_weekday=True):
+    """Human label for a slot, e.g. 'samedi 14 juillet, 11:00'.
+
+    Built by hand because there are no locale helpers in this app and babel/locale is not
+    configured — relying on system locale would produce English on some hosts.
+    """
+    if slot is None or slot.starts_at is None:
+        return ""
+    if slot.label:
+        return slot.label
+    dt = slot.starts_at
+    parts = []
+    if include_weekday:
+        parts.append(_FR_DAYS.get(dt.weekday(), ""))
+    parts.append(f"{dt.day} {_FR_MONTHS.get(dt.month, '')}")
+    label = " ".join(p for p in parts if p).strip()
+    return f"{label}, {dt.strftime('%H:%M')}"
+
+
+def get_slot_hold_hours():
+    """How long an unpaid signup holds its seat (Interac path). Tunable without a deploy."""
+    try:
+        setting = Setting.query.filter_by(key="SLOT_HOLD_HOURS").first()
+        if setting and setting.value:
+            hours = int(str(setting.value).strip())
+            if hours > 0:
+                return hours
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return SLOT_HOLD_HOURS_DEFAULT
+
+
+def get_available_slots(activity_id, include_full=True, include_past=False):
+    """Active slots for an activity, soonest first.
+
+    Full slots are included by default so the signup form can render them greyed out —
+    hiding them generates "is it cancelled?" emails, and visible scarcity converts.
+    """
+    from models import ActivitySlot
+
+    query = ActivitySlot.query.filter(
+        ActivitySlot.activity_id == activity_id,
+        ActivitySlot.status == "active",
+    )
+    if not include_past:
+        # starts_at is naive LOCAL, so compare against naive local now.
+        query = query.filter(ActivitySlot.starts_at >= datetime.now())
+
+    slots = query.order_by(ActivitySlot.starts_at.asc()).all()
+    if not include_full:
+        slots = [s for s in slots if not s.is_full]
+    return slots
+
+
+def claim_slot_seat(slot_id):
+    """Atomically reserve one seat. Returns True iff THIS caller got it.
+
+    ⚠️ The single conditional UPDATE is the whole admission control. SQLite serialises
+    writers on a database-level lock, so the read (seats_taken < capacity) and the write
+    (+1) cannot interleave with another worker. gunicorn runs 2 workers x 4 threads, so any
+    Python-level check would be a lost-update race.
+
+    NEVER replace this with `slot.seats_taken += 1` through the ORM, and never re-SELECT
+    afterwards to "verify" — rowcount is the entire answer.
+
+    Must be called inside an open transaction; the caller commits.
+    """
+    from sqlalchemy import text as _sql_text
+
+    result = db.session.execute(_sql_text("""
+        UPDATE activity_slot
+           SET seats_taken = seats_taken + 1
+         WHERE id = :slot_id
+           AND status = 'active'
+           AND seats_taken < capacity
+    """), {"slot_id": slot_id})
+    return result.rowcount == 1
+
+
+def _release_slot_seat(slot_id):
+    """Give one seat back. Guarded so the counter can never go negative."""
+    from sqlalchemy import text as _sql_text
+
+    db.session.execute(_sql_text("""
+        UPDATE activity_slot
+           SET seats_taken = seats_taken - 1
+         WHERE id = :slot_id AND seats_taken > 0
+    """), {"slot_id": slot_id})
+
+
+def release_slot_booking(booking_id, reason, refund_credit=True):
+    """Cancel a booking, free its seat, and refund the credit if one was consumed.
+
+    Safe to call concurrently and repeatedly: the booking's status transition is the mutex,
+    so two simultaneous cancels free exactly one seat and refund exactly one credit.
+
+    A booking already in 'expired' was counter-decremented by the sweeper, so moving it to
+    'cancelled' must NOT decrement again.
+
+    Does not commit; the caller owns the transaction.
+    Returns True if this call performed the cancellation.
+    """
+    from sqlalchemy import text as _sql_text
+    from models import SlotBooking
+
+    booking = SlotBooking.query.get(booking_id)
+    if booking is None or booking.status == "cancelled":
+        return False
+
+    slot_id = booking.slot_id
+    passport_id = booking.passport_id
+    had_credit = bool(booking.credit_consumed)
+    now = _utc_naive_now()
+
+    params = {"bid": booking_id, "now": now, "reason": (reason or "")[:50]}
+
+    # Live booking: win the mutex, then free the seat.
+    rc_live = db.session.execute(_sql_text("""
+        UPDATE slot_booking
+           SET status='cancelled', cancelled_dt=:now, cancelled_reason=:reason,
+               credit_consumed=0
+         WHERE id=:bid AND status IN ('held','confirmed')
+    """), params).rowcount
+
+    if rc_live == 1:
+        _release_slot_seat(slot_id)
+    else:
+        # Already expired (seat previously freed by the sweeper) — terminal-ise it only.
+        rc_expired = db.session.execute(_sql_text("""
+            UPDATE slot_booking
+               SET status='cancelled', cancelled_dt=:now, cancelled_reason=:reason,
+                   credit_consumed=0
+             WHERE id=:bid AND status='expired'
+        """), params).rowcount
+        if rc_expired != 1:
+            return False    # someone else got there first — touch nothing
+
+    # Refund exactly once, and only if a credit was actually taken.
+    if refund_credit and had_credit and passport_id:
+        db.session.execute(_sql_text("""
+            UPDATE passport SET uses_remaining = uses_remaining + 1 WHERE id = :pid
+        """), {"pid": passport_id})
+        _expire_orm(passport_id)
+
+    db.session.expire(booking)
+    return True
+
+
+def _expire_orm(passport_id):
+    """Drop a Passport from the identity map so later reads see raw-SQL changes."""
+    from models import Passport as _Passport
+
+    obj = db.session.identity_map.get((_Passport, (passport_id,)))
+    if obj is not None:
+        db.session.expire(obj)
+
+
+def attach_slot_booking_to_passport(signup, passport, actor="system"):
+    """Bind a held seat to a newly-created passport and consume one credit.
+
+    This is the signup -> passport handoff. The customer chose their session at signup time,
+    but the Passport may not exist for days (Interac e-transfer + admin approval), so the
+    seat is held by a booking row that references only the signup until now.
+
+    Called from BOTH passport-creation entry points:
+      - app.approve_and_create_pass          (admin approval)
+      - utils.auto_create_passport_from_signup (covers Stripe webhook AND the Interac bot)
+
+    Idempotent, and NEVER raises: a slot problem must not stop a paying customer getting
+    their passport. Does not commit; the caller owns the transaction.
+
+    Returns: 'confirmed' | 'reclaimed' | 'slot_full' | 'no_booking' | 'already'
+    """
+    from sqlalchemy import text as _sql_text
+    from models import SlotBooking
+
+    try:
+        if signup is None or passport is None:
+            return "no_booking"
+
+        booking = SlotBooking.query.filter_by(signup_id=signup.id).first()
+        if booking is None:
+            return "no_booking"          # non-scheduled activity, or a pre-feature signup
+        if booking.status == "confirmed":
+            return "already"             # webhook replay / admin double-click
+        if booking.status == "cancelled":
+            return "slot_full"           # deliberately cancelled — never resurrect
+
+        outcome = "confirmed"
+
+        # An expired hold may still be re-claimable if nobody took the seat meanwhile.
+        if booking.status == "expired":
+            if not claim_slot_seat(booking.slot_id):
+                db.session.execute(_sql_text("""
+                    UPDATE slot_booking
+                       SET status='cancelled', cancelled_dt=:now,
+                           cancelled_reason='expired_slot_full'
+                     WHERE id=:bid AND status='expired'
+                """), {"bid": booking.id, "now": _utc_naive_now()})
+                db.session.expire(booking)
+                return "slot_full"       # passport is still created; admin gets flagged
+            outcome = "reclaimed"
+
+        # Conditional confirm is the mutex — only one worker may bind this booking.
+        rc = db.session.execute(_sql_text("""
+            UPDATE slot_booking
+               SET status='confirmed', passport_id=:pid, confirmed_dt=:now, held_until=NULL
+             WHERE id=:bid AND status IN ('held','expired')
+        """), {"bid": booking.id, "pid": passport.id, "now": _utc_naive_now()}).rowcount
+
+        if rc != 1:
+            return "already"
+
+        # Consume the credit, but never below zero. A 0-credit passport type still gets a
+        # confirmed booking — admin intent beats arithmetic — it just records no credit.
+        rc_credit = db.session.execute(_sql_text("""
+            UPDATE passport SET uses_remaining = uses_remaining - 1
+             WHERE id = :pid AND uses_remaining > 0
+        """), {"pid": passport.id}).rowcount
+
+        if rc_credit == 1:
+            db.session.execute(_sql_text("""
+                UPDATE slot_booking SET credit_consumed=1 WHERE id=:bid
+            """), {"bid": booking.id})
+        else:
+            logging.warning(
+                "Slot booking %s confirmed for passport %s but no credit was available "
+                "to consume (uses_remaining=0).", booking.id, passport.id
+            )
+
+        # Raw UPDATEs bypass the ORM — force re-reads to see the new values.
+        db.session.expire(passport)
+        db.session.expire(booking)
+        return outcome
+
+    except Exception as e:
+        # Never let a scheduling problem cost a customer their paid passport.
+        logging.error("attach_slot_booking_to_passport failed for signup %s: %s",
+                      getattr(signup, "id", "?"), e, exc_info=True)
+        return "no_booking"
+
+
+def expire_stale_slot_holds(app=None):
+    """Release seats whose hold has lapsed. Runs on the existing APScheduler.
+
+    'expired' is deliberately distinct from 'cancelled': a late e-transfer can still
+    re-claim an expired seat (see attach_slot_booking_to_passport), whereas cancelled is
+    terminal. Also cancels the orphaned signup so the admin's pending badge stays honest.
+
+    Returns the number of holds expired.
+    """
+    from sqlalchemy import text as _sql_text
+    from models import SlotBooking, Signup
+
+    def _run():
+        now = _utc_naive_now()
+        stale = SlotBooking.query.filter(
+            SlotBooking.status == "held",
+            SlotBooking.held_until.isnot(None),
+            SlotBooking.held_until < now,
+        ).all()
+
+        expired_count = 0
+        for booking in stale:
+            rc = db.session.execute(_sql_text("""
+                UPDATE slot_booking SET status='expired' WHERE id=:bid AND status='held'
+            """), {"bid": booking.id}).rowcount
+            if rc != 1:
+                continue                      # another worker beat us to it
+            _release_slot_seat(booking.slot_id)
+            expired_count += 1
+
+            if booking.signup_id:
+                signup = Signup.query.get(booking.signup_id)
+                if signup and signup.status in ("pending", "stripe_processing"):
+                    signup.status = "cancelled"
+
+        if expired_count:
+            db.session.commit()
+            logging.info("Expired %s stale slot hold(s).", expired_count)
+        return expired_count
+
+    try:
+        if app is not None:
+            with app.app_context():
+                return _run()
+        return _run()
+    except Exception as e:
+        logging.error("expire_stale_slot_holds failed: %s", e, exc_info=True)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return 0
+
+
+def find_booking_to_fulfil(passport):
+    """The booking this check-in is fulfilling, or None if the person is a walk-in.
+
+    Returns the passport's unattended booking whose session falls TODAY, nearest to now.
+    Used by both redeem routes to decide whether the scan costs a credit:
+
+        booking found  -> they reserved this session and already paid the credit at
+                          booking time. Stamp attendance, take nothing.
+        None           -> walk-in (or non-scheduled activity). Deduct one credit, exactly
+                          as Minipass has always behaved.
+
+    ⚠️ slot.starts_at is NAIVE LOCAL wall-clock (see models.py). Compare it with
+    datetime.now(), never datetime.now(timezone.utc) — mixing them shifts every session
+    by the UTC offset and would silently match the wrong day.
+
+    Note bookings with passport_id IS NULL (handoff failed) are invisible here; the admin
+    was already warned at passport-creation time.
+    """
+    from models import SlotBooking, ActivitySlot
+
+    try:
+        if passport is None or not getattr(passport, "id", None):
+            return None
+        activity = getattr(passport, "activity", None)
+        if not activity or not getattr(activity, "uses_scheduling", False):
+            return None
+
+        now_local = datetime.now()
+        day_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+
+        candidates = SlotBooking.query.join(
+            ActivitySlot, ActivitySlot.id == SlotBooking.slot_id
+        ).filter(
+            SlotBooking.passport_id == passport.id,
+            SlotBooking.status.in_(("held", "confirmed")),
+            SlotBooking.attended_dt.is_(None),
+            ActivitySlot.status == "active",
+            ActivitySlot.starts_at >= day_start,
+            ActivitySlot.starts_at < day_end,
+        ).all()
+
+        if not candidates:
+            return None
+
+        # Nearest session to right now — handles an activity running 11:00 and 14:00 on
+        # the same day, where the morning scan should fulfil the morning booking.
+        return min(candidates, key=lambda b: abs((b.slot.starts_at - now_local).total_seconds()))
+
+    except Exception as e:
+        # A lookup problem must never block a check-in. Falling through to None means the
+        # scan is treated as a walk-in (a credit is taken), which is the safe direction:
+        # it under-serves rather than giving away free attendance.
+        logging.error("find_booking_to_fulfil failed for passport %s: %s",
+                      getattr(passport, "id", "?"), e, exc_info=True)
+        return None
+
+
+def has_booking_today(passport):
+    """True if this passport has an unattended booking today — used to decide whether the
+    admin 'Check In' button should be offered even when the credit balance is 0."""
+    return find_booking_to_fulfil(passport) is not None
+
+
+def count_active_bookings(passport):
+    """How many upcoming sessions this passport currently holds (for customer display)."""
+    from models import SlotBooking
+
+    try:
+        if passport is None or not getattr(passport, "id", None):
+            return 0
+        bookings = SlotBooking.query.filter(
+            SlotBooking.passport_id == passport.id,
+            SlotBooking.status.in_(("held", "confirmed")),
+        ).all()
+        now_local = datetime.now()
+        return sum(1 for b in bookings if b.slot and b.slot.starts_at >= now_local)
+    except Exception as e:
+        logging.warning("count_active_bookings failed: %s", e)
+        return 0
+
+
+def _get_pass_url(passport):
+    """Absolute URL to this passport's public page, for the email CTA.
+
+    This is the ONLY way a customer reaches their pass page — they have no account and
+    never visit the platform otherwise. Without this link, booking additional sessions
+    from /pass/<code> is unreachable in practice.
+
+    Uses the SITE_URL setting (same source as every other email URL). Returns "" if
+    SITE_URL isn't configured, so the template simply omits the button.
+    """
+    try:
+        pass_code = getattr(passport, "pass_code", None)
+        if not pass_code:
+            return ""
+        base = (get_setting('SITE_URL', '') or '').rstrip('/')
+        if not base:
+            return ""
+        return f"{base}/pass/{pass_code}"
+    except Exception as e:
+        logging.warning("Could not build pass URL for email: %s", e)
+        return ""
+
+
+def _get_booked_slot_labels(passport):
+    """French labels for a passport's upcoming booked sessions, for the email owner card.
+
+    Returns [] for non-scheduled activities so the email renders exactly as before.
+    Never raises — an email must not fail because of a scheduling lookup.
+    """
+    from models import SlotBooking
+
+    try:
+        activity = getattr(passport, "activity", None)
+        if not activity or not getattr(activity, "uses_scheduling", False):
+            return []
+        passport_id = getattr(passport, "id", None)
+        if not passport_id:
+            return []
+
+        bookings = SlotBooking.query.filter(
+            SlotBooking.passport_id == passport_id,
+            SlotBooking.status.in_(("held", "confirmed")),
+        ).all()
+        upcoming = [b for b in bookings
+                    if b.slot and b.slot.starts_at >= datetime.now()]
+        upcoming.sort(key=lambda b: b.slot.starts_at)
+        return [format_slot_label(b.slot) for b in upcoming]
+    except Exception as e:
+        logging.warning("Could not resolve booked slots for email: %s", e)
+        return []
+
+
+def reconcile_slot_seat_counts(activity_id=None, fix=False):
+    """Compare ActivitySlot.seats_taken against the live booking ledger.
+
+    seats_taken is the admission gate; bookings are the ledger. Any drift is a bug, not an
+    expected state. Read-only unless fix=True.
+
+    Returns a list of {slot_id, activity_id, seats_taken, actual} for drifting slots.
+    """
+    from sqlalchemy import text as _sql_text
+
+    where_activity = "WHERE s.activity_id = :aid" if activity_id else ""
+    rows = db.session.execute(_sql_text(f"""
+        SELECT s.id, s.activity_id, s.seats_taken,
+               COALESCE(COUNT(b.id), 0) AS actual
+          FROM activity_slot s
+          LEFT JOIN slot_booking b
+                 ON b.slot_id = s.id AND b.status IN ('held','confirmed')
+          {where_activity}
+         GROUP BY s.id, s.activity_id, s.seats_taken
+        HAVING s.seats_taken != COALESCE(COUNT(b.id), 0)
+    """), ({"aid": activity_id} if activity_id else {})).fetchall()
+
+    drift = [{"slot_id": r[0], "activity_id": r[1], "seats_taken": r[2], "actual": r[3]}
+             for r in rows]
+
+    if fix and drift:
+        for d in drift:
+            db.session.execute(_sql_text("""
+                UPDATE activity_slot SET seats_taken = :actual WHERE id = :sid
+            """), {"actual": d["actual"], "sid": d["slot_id"]})
+        db.session.commit()
+        logging.warning("Reconciled %s slot(s) with drifting seat counts: %s",
+                        len(drift), drift)
+
+    return drift
 
 
 def get_fiscal_year_range(reference_date=None):
@@ -875,6 +1379,14 @@ def auto_create_passport_from_signup(signup, payment_record=None, marked_paid_by
         signup.paid = True
         signup.paid_at = now_utc
         signup.status = "completed"
+
+        # Session scheduling: bind the held seat to the new passport and consume one
+        # credit. This single call covers BOTH the Stripe webhook and the Interac
+        # email-parser bot, since both funnel through this function.
+        slot_result = attach_slot_booking_to_passport(signup, passport, actor=marked_paid_by)
+        if slot_result == "slot_full":
+            print(f"   [auto_create_passport] WARNING: session for signup {signup.id} "
+                  f"is now full — passport created but needs manual rebooking")
 
         db.session.commit()
 
@@ -4021,11 +4533,15 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         # Build base context with pass data
         base_context = {
             "pass_data": pass_data,
-            "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data, owner_logo_url=_owner_logo_url),
+            "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data, owner_logo_url=_owner_logo_url, booked_slots=_get_booked_slot_labels(pass_data), pass_url=_get_pass_url(pass_data)),
             "history_html": render_template("email_blocks/history_table_inline.html", history=get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)),
             "activity_name": activity.name if activity else "",
             "show_qr_code": show_qr_code,
             "owner_logo_url": _owner_logo_url,
+            # Link to the live passport page, rendered below the QR. The customer has no
+            # account, so this is their only durable way back in.
+            "pass_url": _get_pass_url(pass_data),
+            "uses_scheduling": bool(activity and getattr(activity, "uses_scheduling", False)),
         }
 
         # Use get_email_context to load defaults from email_defaults.json and add variables
@@ -4133,7 +4649,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "title": title,
         "intro_text": intro,
         "conclusion_text": conclusion,
-        "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data, owner_logo_url=_owner_logo_url),
+        "owner_html": render_template("email_blocks/owner_card_inline.html", pass_data=pass_data, owner_logo_url=_owner_logo_url, booked_slots=_get_booked_slot_labels(pass_data), pass_url=_get_pass_url(pass_data)),
         "history_html": render_template("email_blocks/history_table_inline.html", history=history),
         "email_info": "",
         "logo_url": "/static/minipass_logo.png",
@@ -4144,6 +4660,9 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "show_qr_code": show_qr_code,  # For conditional QR display in template
         "hero_image_url": _hero_image_url,
         "owner_logo_url": _owner_logo_url,
+        # Link to the live passport page, rendered below the QR (see §1 of the plan).
+        "pass_url": _get_pass_url(pass_data),
+        "uses_scheduling": bool(activity and getattr(activity, "uses_scheduling", False)),
         # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
         "_skip_email_context": True
     }

@@ -17,6 +17,13 @@
       <div>
         <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
         <div class="text-muted small d-none d-md-block">{{ signup.user.email or 'No email' }}</div>
+        {# Session scheduling: show which session this signup is holding a seat for. #}
+        {% if signup.slot_booking and signup.slot_booking.status in ('held', 'confirmed') and signup.slot_booking.slot %}
+        <div class="small text-blue text-capitalize">
+          <i class="ti ti-calendar-event"></i>
+          {{ signup.slot_booking.slot.starts_at.strftime('%d %b, %H:%M') }}
+        </div>
+        {% endif %}
       </div>
     </div>
   </td>

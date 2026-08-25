@@ -29,6 +29,8 @@ playwright-wrapper.sh
 # SQLite database
 *.db
 instance/*.db
+instance/*.db-shm
+instance/*.db-wal
 
 # Backup files and directories
 static/backups/*.zip

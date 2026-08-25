@@ -166,6 +166,29 @@
           </tr>
           {% endif %}
 
+          <!-- passport-link-row: link to the LIVE passport page. The customer has no account and
+               never visits the platform, so this is their only durable way back in. The QR
+               above is a frozen snapshot; this page shows current status and, when the
+               activity uses sessions, lets them book. Text link only - no image - per
+               docs/EMAIL_DELIVERABILITY.md. -->
+          {% if pass_url %}
+          <tr>
+            <td class="content-padding" align="center" style="padding: 0 40px 24px;">
+              <a href="{{ pass_url }}"
+                 style="display: inline-block; padding: 12px 24px; background-color: #0054a6;
+                        color: #ffffff; font-size: 15px; font-weight: bold;
+                        text-decoration: none; border-radius: 8px;">
+                Voir mon passeport en ligne
+              </a>
+              {% if uses_scheduling %}
+              <p style="margin: 12px 0 0; font-size: 14px; color: #64748b; line-height: 1.5;">
+                Réservez vos prochaines séances au même endroit.
+              </p>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+
           <!-- History Table -->
           <tr>
             <td class="content-padding" style="padding: 0 40px 24px;">

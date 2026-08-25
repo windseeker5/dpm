@@ -116,6 +116,30 @@
       margin-bottom: 2rem;
     }
 
+    /* Reserved session block (activity.uses_scheduling) */
+    .reserved-slot {
+      background: #f6f9fd;
+      border: 1px solid #cfe0f5;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .reserved-slot-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6b7280;
+      margin-bottom: 0.35rem;
+    }
+
+    .reserved-slot-when {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0054a6;
+      text-transform: capitalize;
+    }
+
     .thank-you-message strong {
       color: #374151;
     }
@@ -216,6 +240,19 @@
     Les prochaines étapes ont été envoyées à<br>
     <strong>{{ signup.user.email }}</strong>
   </p>
+  {% endif %}
+
+  <!-- Reserved session (activities that use scheduling) -->
+  {% if signup.slot_booking and signup.slot_booking.status in ('held', 'confirmed') %}
+  <div class="reserved-slot">
+    <div class="reserved-slot-label">Votre séance réservée</div>
+    <div class="reserved-slot-when">{{ format_slot_label(signup.slot_booking.slot) }}</div>
+  </div>
+  {% elif signup.activity.uses_scheduling %}
+  <div class="reserved-slot">
+    <div class="reserved-slot-label">Vous choisirez votre séance plus tard</div>
+    <div class="reserved-slot-when">Un lien pour réserver vous sera envoyé par courriel.</div>
+  </div>
   {% endif %}
 
   <!-- Button -->

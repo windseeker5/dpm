@@ -33,9 +33,33 @@
       <div style="font-size: 15px; color: #555;">
         {{ pass_data.user.phone_number if pass_data.user else pass_data.phone_number }}
       </div>
+      {# On a sessions activity, credits alone are misleading: someone fully booked shows 0
+         while still having every session to attend. Match the wording on the passport page. #}
+      {% if booked_slots %}
+      <div style="font-size: 16px; color: #336699; margin-top: 10px;">
+        {{ booked_slots|length }} {{ "séance réservée" if booked_slots|length == 1 else "séances réservées" }}
+        &middot;
+        {{ pass_data.uses_remaining if pass_data.uses_remaining is not none else pass_data.games_remaining }}
+        {{ "crédit disponible" if (pass_data.uses_remaining or 0) == 1 else "crédits disponibles" }}
+      </div>
+      {% else %}
       <div style="font-size: 16px; color: #336699; margin-top: 10px;">
         Activités restantes: {{ pass_data.uses_remaining if pass_data.uses_remaining is not none else pass_data.games_remaining }}
       </div>
+      {% endif %}
+
+      {# Session scheduling: name the reserved session(s) so the customer knows when to show up. #}
+      {% if booked_slots %}
+      <div style="font-size: 15px; color: #1b3556; margin-top: 12px;">
+        <strong>{{ "Votre séance:" if booked_slots|length == 1 else "Vos séances:" }}</strong>
+        {% for label in booked_slots %}
+        <div style="color: #336699; text-transform: capitalize; margin-top: 3px;">{{ label }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# The link to the live passport lives BELOW the QR code in the parent template,
+         not here — see the passport-link row in *_compiled/index.html. #}
     </td>
 
     <!-- 🖼 Logo + Price stacked -->

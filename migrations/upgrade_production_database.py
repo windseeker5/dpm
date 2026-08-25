@@ -3266,6 +3266,186 @@ def task41_add_redemption_context_activity(cursor):
 
 
 # ============================================================================
+# TASK 42: Add Activity Scheduling Toggle
+# ============================================================================
+def task42_add_activity_uses_scheduling(cursor):
+    """Add uses_scheduling column to activity table (session scheduling feature flag)"""
+    log("📅", "TASK 42: Adding uses_scheduling to activity table", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'activity'):
+        log("⏭️ ", "  activity table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'activity', 'uses_scheduling'):
+        log("⏭️ ", "  Column 'uses_scheduling' already exists", Colors.YELLOW)
+        return True
+
+    try:
+        # Default 0 = OFF, so every existing activity keeps its current behaviour exactly.
+        cursor.execute("ALTER TABLE activity ADD COLUMN uses_scheduling BOOLEAN NOT NULL DEFAULT 0")
+        log("✅", "  Added column 'uses_scheduling' to activity (default OFF)", Colors.GREEN)
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to add uses_scheduling column: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
+# TASK 43: Add Session Scheduling Tables
+# ============================================================================
+def task43_add_session_scheduling_tables(cursor):
+    """Add activity_slot and slot_booking tables (dated sessions with seat limits)"""
+    log("🎟️ ", "TASK 43: Adding session scheduling tables", Colors.BLUE)
+
+    created_any = False
+
+    try:
+        if check_table_exists(cursor, 'activity_slot'):
+            log("⏭️ ", "  activity_slot table already exists", Colors.YELLOW)
+        else:
+            # starts_at/ends_at are NAIVE LOCAL wall-clock (matches activity.start_date).
+            # created_dt and every slot_booking timestamp are UTC-aware. Do not mix.
+            cursor.execute("""
+                CREATE TABLE activity_slot (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    activity_id INTEGER NOT NULL,
+                    starts_at DATETIME NOT NULL,
+                    ends_at DATETIME,
+                    capacity INTEGER NOT NULL DEFAULT 1,
+                    seats_taken INTEGER NOT NULL DEFAULT 0,
+                    label VARCHAR(120),
+                    status VARCHAR(20) NOT NULL DEFAULT 'active',
+                    created_dt DATETIME,
+                    created_by INTEGER,
+                    FOREIGN KEY(activity_id) REFERENCES activity (id) ON DELETE CASCADE,
+                    FOREIGN KEY(created_by) REFERENCES admin (id),
+                    CONSTRAINT uq_activity_slot_start UNIQUE (activity_id, starts_at),
+                    CONSTRAINT ck_activity_slot_seats_nonneg CHECK (seats_taken >= 0),
+                    CONSTRAINT ck_activity_slot_seats_le_cap CHECK (seats_taken <= capacity)
+                )
+            """)
+            log("✅", "  Created activity_slot table", Colors.GREEN)
+
+            cursor.execute("""CREATE INDEX ix_activity_slot_activity_id
+                              ON activity_slot (activity_id)""")
+            cursor.execute("""CREATE INDEX ix_activity_slot_activity_status_start
+                              ON activity_slot (activity_id, status, starts_at)""")
+            log("✅", "  Created activity_slot indexes", Colors.GREEN)
+            created_any = True
+
+        if check_table_exists(cursor, 'slot_booking'):
+            log("⏭️ ", "  slot_booking table already exists", Colors.YELLOW)
+        else:
+            # passport_id is nullable on purpose: the seat is held from the moment of signup,
+            # which can be days before a Passport exists (Interac + admin approval path).
+            cursor.execute("""
+                CREATE TABLE slot_booking (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    slot_id INTEGER NOT NULL,
+                    activity_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    signup_id INTEGER,
+                    passport_id INTEGER,
+                    status VARCHAR(20) NOT NULL DEFAULT 'held',
+                    credit_consumed BOOLEAN NOT NULL DEFAULT 0,
+                    held_until DATETIME,
+                    created_dt DATETIME,
+                    confirmed_dt DATETIME,
+                    cancelled_dt DATETIME,
+                    cancelled_reason VARCHAR(50),
+                    FOREIGN KEY(slot_id) REFERENCES activity_slot (id) ON DELETE CASCADE,
+                    FOREIGN KEY(activity_id) REFERENCES activity (id) ON DELETE CASCADE,
+                    FOREIGN KEY(user_id) REFERENCES user (id),
+                    FOREIGN KEY(signup_id) REFERENCES signup (id) ON DELETE SET NULL,
+                    FOREIGN KEY(passport_id) REFERENCES passport (id) ON DELETE SET NULL,
+                    CONSTRAINT uq_slot_booking_signup UNIQUE (signup_id)
+                )
+            """)
+            log("✅", "  Created slot_booking table", Colors.GREEN)
+
+            cursor.execute("CREATE INDEX ix_slot_booking_slot_id ON slot_booking (slot_id)")
+            cursor.execute("CREATE INDEX ix_slot_booking_activity_id ON slot_booking (activity_id)")
+            cursor.execute("CREATE INDEX ix_slot_booking_slot_status ON slot_booking (slot_id, status)")
+            cursor.execute("CREATE INDEX ix_slot_booking_expiry ON slot_booking (status, held_until)")
+            cursor.execute("CREATE INDEX ix_slot_booking_passport ON slot_booking (passport_id)")
+            # Partial unique index: one passport cannot hold two live seats in the same slot.
+            cursor.execute("""
+                CREATE UNIQUE INDEX uq_slot_booking_passport_slot
+                    ON slot_booking (passport_id, slot_id)
+                 WHERE passport_id IS NOT NULL AND status IN ('held','confirmed')
+            """)
+            log("✅", "  Created slot_booking indexes", Colors.GREEN)
+            created_any = True
+
+        if not created_any:
+            log("⏭️ ", "  Both scheduling tables already present, nothing to do", Colors.YELLOW)
+
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to create session scheduling tables: {e}", Colors.RED)
+        raise
+
+
+# ============================================================================
+# TASK 44: Add Slot Booking Attendance Stamp
+# ============================================================================
+def task44_add_slot_booking_attended(cursor):
+    """Add attended_dt to slot_booking (marks a booking as fulfilled at check-in)"""
+    log("✔️ ", "TASK 44: Adding attended_dt to slot_booking", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'slot_booking'):
+        log("⏭️ ", "  slot_booking table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'slot_booking', 'attended_dt'):
+        log("⏭️ ", "  Column 'attended_dt' already exists", Colors.YELLOW)
+        return True
+
+    try:
+        # NULL = booked but not attended. Nothing to backfill: existing bookings are
+        # simply treated as not-yet-attended, which is the correct starting state.
+        cursor.execute("ALTER TABLE slot_booking ADD COLUMN attended_dt DATETIME")
+        log("✅", "  Added column 'attended_dt' to slot_booking", Colors.GREEN)
+
+        # Drives the "is there an unattended booking for this passport today?" lookup.
+        cursor.execute("""CREATE INDEX IF NOT EXISTS ix_slot_booking_attended
+                          ON slot_booking (passport_id, attended_dt)""")
+        log("✅", "  Created index ix_slot_booking_attended", Colors.GREEN)
+        return True
+
+    except sqlite3.OperationalError as e:
+        log("❌", f"  Failed to add attended_dt column: {e}", Colors.RED)
+        raise
+
+
+def enable_wal_mode(conn):
+    """Enable WAL journal mode — MUST run outside a transaction.
+
+    Slot claiming puts a write on the public signup path. Without WAL (readers block the
+    writer) and without busy_timeout, concurrent bookings surface as 'database is locked'
+    500s. busy_timeout is set per-request in app.py's before_request hook; WAL is persistent
+    once set, so it belongs here.
+    """
+    log("⚡", "POST-TASK: Enabling WAL journal mode", Colors.BLUE)
+    try:
+        current = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        if str(current).lower() == "wal":
+            log("⏭️ ", "  WAL mode already enabled", Colors.YELLOW)
+            return True
+        result = conn.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+        if str(result).lower() == "wal":
+            log("✅", "  Journal mode set to WAL", Colors.GREEN)
+            return True
+        log("⚠️ ", f"  Could not switch to WAL (now '{result}') - not fatal", Colors.YELLOW)
+        return False
+    except sqlite3.Error as e:
+        log("⚠️ ", f"  WAL mode change failed: {e} - not fatal", Colors.YELLOW)
+        return False
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -3326,6 +3506,9 @@ def main():
         ("Announcement Log Table", task39_add_announcement_log),
         ("Activity Passport Inheritance Table", task40_add_activity_passport_inheritance_table),
         ("Redemption Context Activity Column", task41_add_redemption_context_activity),
+        ("Activity Scheduling Toggle", task42_add_activity_uses_scheduling),
+        ("Session Scheduling Tables", task43_add_session_scheduling_tables),
+        ("Slot Booking Attendance Stamp", task44_add_slot_booking_attended),
     ]
 
     completed = 0
@@ -3352,6 +3535,11 @@ def main():
         # Commit transaction
         conn.commit()
         log("✅", "Transaction committed successfully", Colors.GREEN)
+        print()
+
+        # WAL cannot be changed from inside a transaction, so it runs after the commit.
+        # Failure here is non-fatal — the schema changes above are already durable.
+        enable_wal_mode(conn)
         print()
 
         # Final summary
