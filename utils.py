@@ -2882,23 +2882,25 @@ def match_gmail_payments_to_passes():
                     # Build detailed note explaining why no match
                     note_parts = [f"No match found for '{name}' (${amt})."]
 
-                    # Show how many unpaid passports exist for this amount
-                    note_parts.append(f"Found {len(unpaid_passports)} unpaid passport(s) for ${amt}, but")
-
-                    if top_candidates:
+                    if not unpaid_passports:
+                        # Nothing to compare against — say so plainly instead of the
+                        # generic "all names below threshold" wording, which is
+                        # meaningless when there were zero candidates.
+                        note_parts.append(f"No unpaid passport(s) exist for ${amt}.")
+                    elif top_candidates:
                         # Show the closest name matches and their scores
                         candidate_strs = [f"{cname} ({score:.0f}%)" for cname, score in top_candidates]
-                        note_parts.append(f"all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
+                        note_parts.append(f"Found {len(unpaid_passports)} unpaid passport(s) for ${amt}, but all names below {threshold}% threshold. Closest: {', '.join(candidate_strs)}.")
                     else:
-                        # No candidates above diagnostic threshold
-                        note_parts.append(f"all names below {threshold}% threshold (no candidates above {DIAGNOSTIC_MIN}%).")
-                        # Show a few example names for context
-                        if unpaid_passports:
-                            example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
-                            if example_names:
-                                note_parts.append(f"Available names: {', '.join(example_names[:3])}")
+                        # Unpaid passports exist, but none scored above the diagnostic floor
+                        note_parts.append(f"Found {len(unpaid_passports)} unpaid passport(s) for ${amt}, but all names below {threshold}% threshold (no candidates above {DIAGNOSTIC_MIN}%).")
+                        example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
+                        if example_names:
+                            note_parts.append(f"Available names: {', '.join(example_names[:3])}")
 
-                    # Check for pending interac signups that matched by name but were ambiguous
+                    # Check for pending payment-first Interac signups at this amount and
+                    # report the true reason auto-match didn't use them — a real name
+                    # score, not a blanket "ambiguous" label.
                     from models import Signup as SignupModel, Activity as ActivityModel
                     pending_interac = db.session.query(SignupModel).join(ActivityModel).filter(
                         SignupModel.passport_id == None,
@@ -2908,8 +2910,23 @@ def match_gmail_payments_to_passes():
                         SignupModel.status == "pending"
                     ).all()
                     if pending_interac:
-                        ambiguous_names = [s.user.name for s in pending_interac if s.user]
-                        note_parts.append(f"Note: {len(pending_interac)} pending Interac signup(s) exist for this amount but were ambiguous (could not auto-match): {', '.join(ambiguous_names)}. Manual review required.")
+                        signup_scores = []
+                        for s in pending_interac:
+                            if not s.user:
+                                continue
+                            s_score = fuzz.ratio(normalized_payment_name, normalize_name(s.user.name))
+                            signup_scores.append((s.user.name, s_score))
+                        signup_scores.sort(key=lambda x: x[1], reverse=True)
+
+                        if not signup_scores:
+                            pass
+                        elif len(signup_scores) > 1 and (signup_scores[0][1] - signup_scores[1][1]) < 5:
+                            # Genuine tie between multiple candidates — this is actually ambiguous
+                            tie_strs = [f"{cname} ({score:.0f}%)" for cname, score in signup_scores if score >= signup_scores[0][1] - 5]
+                            note_parts.append(f"Note: {len(tie_strs)} pending Interac signup(s) tied for this amount, ambiguous: {', '.join(tie_strs)}. Manual review required.")
+                        else:
+                            cname, score = signup_scores[0]
+                            note_parts.append(f"Note: closest pending Interac signup is '{cname}' ({score:.0f}%) — below the {threshold}% threshold. Review and link manually if correct.")
 
                     note_text = " ".join(note_parts)
                 

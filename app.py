@@ -4300,6 +4300,162 @@ def link_payment_to_passport_form():
     return redirect(url_for("payment_bot_matches", status="no_match"))
 
 
+@app.route("/link-payment-to-signup", methods=["POST"])
+def link_payment_to_signup_form():
+    """Form-based POST: link a NO_MATCH payment to a pending payment-first Signup,
+    auto-creating and paying the passport, then redirect."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        from models import User, Signup, Activity, EbankPayment, AdminActionLog
+        from utils import notify_pass_event, auto_create_passport_from_signup
+
+        payment_id = request.form.get("payment_id", type=int)
+        signup_id = request.form.get("signup_id", type=int)
+        reason = request.form.get("reason", "").strip()
+        if reason == "Other":
+            reason = request.form.get("reason_other", "").strip()
+
+        if not payment_id or not signup_id:
+            flash("Invalid form submission.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+        if not reason:
+            flash("Please select a reason for the manual link.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+
+        payment = db.session.get(EbankPayment, payment_id)
+        if not payment or payment.result != "NO_MATCH":
+            flash("Payment not found or not in NO_MATCH status.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+
+        signup = db.session.get(Signup, signup_id)
+        if not signup or signup.passport_id is not None or signup.status != "pending":
+            flash("Signup not found or no longer pending.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+
+        admin_email = session.get("admin", "unknown")
+        now_utc = datetime.now(timezone.utc)
+        date_str = now_utc.strftime("%Y-%m-%d")
+
+        holder_name = signup.user.name if signup.user else "Unknown"
+        payer_name = payment.bank_info_name or "Unknown"
+        payer_amt = payment.bank_info_amt or 0
+
+        passport = auto_create_passport_from_signup(signup, marked_paid_by=admin_email)
+        if not passport:
+            flash("Failed to create passport from signup.", "error")
+            return redirect(url_for("payment_bot_matches", status="no_match"))
+
+        passport.notes = (
+            f"Interac manual match — Payer: {payer_name} (${payer_amt:.2f})."
+            f" Note: {reason}."
+            f" Linked by {admin_email} on {date_str}."
+        )
+
+        # Update EbankPayment
+        pass_code = passport.pass_code or f"#{passport.id}"
+        payment.result = "MATCHED"
+        payment.matched_pass_id = passport.id
+        payment.matched_name = holder_name
+        payment.matched_amt = passport.sold_amt
+        payment.name_score = 0  # 0 = manual (auto-match scores are 85–100)
+        payment.mark_as_paid = True
+        payment.note = (
+            f"Manually linked to pending signup by {admin_email} on {date_str}."
+            f" Payer: {payer_name} (${payer_amt:.2f})."
+            f" Signup holder: {holder_name}."
+            f" Reason: {reason}."
+        )
+
+        # Audit log — text contains "marked as PAID (interac)" for activity log classification
+        db.session.add(AdminActionLog(
+            admin_email=admin_email,
+            action=(
+                f"Passport for {holder_name} ({pass_code}) marked as PAID (interac) by {admin_email}."
+                f" Manual Interac match to pending signup #{signup.id} — Payer: {payer_name} (${payer_amt:.2f})."
+                f" Note: {reason}."
+            )
+        ))
+
+        db.session.commit()
+        db.session.expire_all()
+
+        # Move payment email to processed folder
+        email_moved = False
+        try:
+            from utils import get_setting
+            import imaplib
+            import socket as _socket
+
+            mail_user = get_setting("IMAP_USERNAME") or get_setting("MAIL_USERNAME")
+            mail_pwd = get_setting("IMAP_PASSWORD") or get_setting("MAIL_PASSWORD")
+            processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
+
+            if not mail_user or not mail_pwd:
+                print("LINK-SIGNUP EMAIL MOVE: no credentials — skipping")
+            elif not payment.email_uid:
+                print("LINK-SIGNUP EMAIL MOVE: no email_uid stored — skipping")
+            else:
+                imap_server = get_setting("IMAP_SERVER") or get_setting("MAIL_SERVER") or "imap.gmail.com"
+                _socket.setdefaulttimeout(15)
+                try:
+                    mail = imaplib.IMAP4_SSL(imap_server)
+                except Exception as conn_err:
+                    print(f"LINK-SIGNUP EMAIL MOVE: SSL failed ({conn_err}), trying STARTTLS")
+                    mail = imaplib.IMAP4(imap_server, 143)
+                    mail.starttls()
+
+                mail.login(mail_user, mail_pwd)
+                mail.select("inbox")
+                uid = payment.email_uid
+                folder_status, _ = mail.select(processed_folder)
+                if folder_status != 'OK':
+                    try:
+                        mail.create(processed_folder)
+                    except Exception:
+                        pass
+                mail.select("inbox")
+                copy_result = mail.uid("COPY", uid, processed_folder)
+                if copy_result[0] == 'OK':
+                    mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                    email_moved = True
+                mail.expunge()
+                mail.logout()
+        except Exception as e:
+            print(f"LINK-SIGNUP EMAIL MOVE: error — {e}")
+        finally:
+            _socket.setdefaulttimeout(None)
+
+        # Send confirmation email (non-critical — don't let it block the redirect)
+        try:
+            activity = db.session.get(Activity, passport.activity_id)
+            notify_pass_event(
+                app=current_app._get_current_object(),
+                event_type="payment_received",
+                pass_data=passport,
+                activity=activity,
+                admin_email=admin_email,
+                timestamp=now_utc
+            )
+        except Exception as e:
+            print(f"Could not send confirmation email (non-critical): {e}")
+
+        msg = f"Payment linked to signup for {holder_name} — passport {pass_code} created."
+        if not email_moved:
+            msg += " Warning: payment email could not be moved from inbox."
+        flash(msg, "success" if email_moved else "warning")
+
+    except Exception as e:
+        import traceback
+        print(f"Error linking payment to signup: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        flash(f"Failed to link payment: {str(e)}", "error")
+
+    return redirect(url_for("payment_bot_matches", status="no_match"))
+
+
 @app.route("/api/link-payment-to-passport", methods=["POST"])
 @csrf.exempt
 def api_link_payment_to_passport():
@@ -7884,6 +8040,22 @@ def payment_bot_matches():
                 unpaid_passports_by_amount[key] = []
             unpaid_passports_by_amount[key].append(p)
 
+    # Fetch pending payment-first signups grouped by amount (for link-signup modal, server-rendered)
+    pending_signups_by_amount = {}
+    if no_match_amounts:
+        pending_signups = db.session.query(Signup).join(User).join(Activity).filter(
+            Signup.passport_id == None,
+            Signup.requested_amount.in_(no_match_amounts),
+            Activity.workflow_type == "payment_first",
+            Signup.payment_method == "interac",
+            Signup.status == "pending"
+        ).order_by(Signup.signed_up_at.desc()).all()
+        for s in pending_signups:
+            key = s.requested_amount
+            if key not in pending_signups_by_amount:
+                pending_signups_by_amount[key] = []
+            pending_signups_by_amount[key].append(s)
+
     # Calculate statistics from ALL records (not filtered)
     total_payments = db.session.query(EbankPayment.id).filter(
         EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id))
@@ -7929,6 +8101,7 @@ def payment_bot_matches():
                          activities=activities,
                          stripe_configured=stripe_configured,
                          unpaid_passports_by_amount=unpaid_passports_by_amount,
+                         pending_signups_by_amount=pending_signups_by_amount,
                          current_filters={
                              'q': q,
                              'status': status_filter,
@@ -12398,6 +12571,32 @@ def update_payment_notes():
                                 example_names = [p.user.name for p in unpaid_passports[:3] if p.user]
                                 if example_names:
                                     note_parts.append(f"Available names: {', '.join(example_names[:3])}")
+
+                        # Check for pending payment-first Interac signups at this amount and
+                        # report the true reason — a real name score, not a blanket label.
+                        pending_interac = db.session.query(Signup).join(Activity).filter(
+                            Signup.passport_id == None,
+                            Signup.requested_amount == payment_amount,
+                            Activity.workflow_type == "payment_first",
+                            Signup.payment_method == "interac",
+                            Signup.status == "pending"
+                        ).all()
+                        if pending_interac:
+                            signup_scores = []
+                            for s in pending_interac:
+                                if not s.user:
+                                    continue
+                                s_score = fuzz.ratio(normalized_payment_name, normalize_name(s.user.name))
+                                signup_scores.append((s.user.name, s_score))
+                            signup_scores.sort(key=lambda x: x[1], reverse=True)
+
+                            if signup_scores:
+                                if len(signup_scores) > 1 and (signup_scores[0][1] - signup_scores[1][1]) < 5:
+                                    tie_strs = [f"{cname} ({score:.0f}%)" for cname, score in signup_scores if score >= signup_scores[0][1] - 5]
+                                    note_parts.append(f"Note: {len(tie_strs)} pending Interac signup(s) tied for this amount, ambiguous: {', '.join(tie_strs)}. Manual review required.")
+                                else:
+                                    cname, score = signup_scores[0]
+                                    note_parts.append(f"Note: closest pending Interac signup is '{cname}' ({score:.0f}%) — below the {threshold}% threshold. Review and link manually if correct.")
 
                         new_note = " ".join(note_parts)
 
