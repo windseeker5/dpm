@@ -988,8 +988,13 @@ def _get_booked_slot_labels(passport):
             SlotBooking.passport_id == passport_id,
             SlotBooking.status.in_(("held", "confirmed")),
         ).all()
+        # Exclude sessions already attended, not just past ones. A session earlier today that
+        # the customer has been checked into is still "upcoming" by start time, and it was
+        # showing as their Prochaine séance in the email while the passport page — which does
+        # reject attended — named the next real one. The two must agree.
         upcoming = [b for b in bookings
-                    if b.slot and b.slot.starts_at >= datetime.now()]
+                    if b.slot and b.slot.starts_at >= datetime.now()
+                    and not b.attended_dt]
         upcoming.sort(key=lambda b: b.slot.starts_at)
         return [format_slot_label(b.slot) for b in upcoming]
     except Exception as e:

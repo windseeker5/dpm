@@ -1,11 +1,21 @@
 {# Attendance recorded. Accent: teal — a receipt for something that already happened. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_block, button, session_list, history_table %}
+{% from "email/components.html" import pass_block, button, session_list, history_table, next_session %}
 
 {% set accent = '#0f7b8a' %}
 {% set preheader = 'Votre présence est enregistrée.' %}
 
 {% block content %}
+
+{# The next session leads: it is what the customer opens this email to find out. Only for
+   scheduling activities — a plain credit pass has no "next" to show. #}
+{% if booked_slots %}
+<tr>
+  <td class="mp-pad" style="padding:20px 32px 0 32px;">
+    {{ next_session(booked_slots[0], accent=accent) }}
+  </td>
+</tr>
+{% endif %}
 
 <tr>
   <td class="mp-pad" style="padding:22px 32px 0 32px;">
@@ -15,10 +25,11 @@
   </td>
 </tr>
 
-{% if booked_slots %}
+{# The first is already the hero above, so list only what follows it. #}
+{% if booked_slots | length > 1 %}
 <tr>
   <td class="mp-pad" style="padding:22px 32px 0 32px;">
-    {{ session_list(booked_slots, accent=accent) }}
+    {{ session_list(booked_slots[1:], accent=accent, title='Autres séances réservées') }}
   </td>
 </tr>
 {% endif %}

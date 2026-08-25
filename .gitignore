@@ -58,7 +58,12 @@ tools/
 !test/test_all_email_templates.py
 !test/test_email_render.py
 !test/test_email_text.py
+!test/render_all.py
 !pytest/send_test_payment_email.py
+
+# Not the output of those tools, only the tools themselves.
+test/render/
+test/baseline/
 #sql/
 docs/
 CLAUDE.md

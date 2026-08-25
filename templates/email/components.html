@@ -34,22 +34,46 @@
 
 
 {#
-  Credit pips — filled for what is left, hollow for what has been used.
+  Credits, in words.
 
-  This is the one deliberate nod to the paper punch card Minipass replaced: the same
-  information the holes carried, without pretending to be paper. It only reads as a quantity
-  while the count is small, so anything above the cap falls back to a plain number.
+  This was a row of pips — filled for remaining, hollow for spent — as a nod to the punch card
+  Minipass replaced. It failed at the one value that matters most: at zero credits it rendered
+  five empty circles, which reads as broken rendering rather than "none left". Words are
+  unambiguous at every value, including zero, and they translate.
 #}
-{% macro credit_pips(remaining, total=None, accent='#206bc4', cap=10) -%}
+{% macro credit_line(remaining, total=None) -%}
   {%- set r = remaining | int -%}
-  {%- set t = (total | int) if total else r -%}
-  {%- if t > cap or t < 1 -%}
-    <span style="font-size:16px; font-weight:600; color:{{ C_INK }};">{{ r }}</span>
+  {%- set t = (total | int) if total else 0 -%}
+  {%- if t > 0 -%}
+    {{ r }} sur {{ t }}
   {%- else -%}
-    <span style="font-size:17px; line-height:1.2; letter-spacing:2px; color:{{ accent }};">
-      {%- for i in range(t) -%}{{ '●' if i < r else '<span style="color:#d7dce6;">○</span>' | safe }}{%- endfor -%}
-    </span>
+    {{ r }} {{ 'crédit' if r == 1 else 'crédits' }}
   {%- endif -%}
+{%- endmacro %}
+
+
+{#
+  The next booked session — what the customer actually opens this email to find out.
+
+  Set in a serif at a size nothing else competes with, with tabular figures so dates align
+  the way a posted schedule does. Georgia is the safe stand-in for the slab face the web
+  passport page uses; the two read as the same treatment.
+#}
+{% macro next_session(label, accent='#206bc4') -%}
+{% if label %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+  <tr>
+    <td style="padding:0 0 4px 0;">
+      <div style="font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:{{ C_LABEL }};">Prochaine séance</div>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0;">
+      <div style="font-family:Georgia,'Times New Roman',serif; font-size:24px; line-height:1.25; font-weight:700; color:{{ C_INK }}; text-transform:capitalize; font-variant-numeric:tabular-nums;">{{ label }}</div>
+    </td>
+  </tr>
+</table>
+{% endif %}
 {%- endmacro %}
 
 
@@ -59,7 +83,7 @@
   Replaces the old gradient "business card". The structure is a pass — holder, credits,
   amount, status — but stated plainly rather than dressed up as a physical object.
 #}
-{% macro pass_block(pass_data, accent='#206bc4', show_qr=True, qr_src='cid:qr_code', pips=True) -%}
+{% macro pass_block(pass_data, accent='#206bc4', show_qr=True, qr_src='cid:qr_code') -%}
 {%- set total = pass_data.passport_type.sessions_included if pass_data.passport_type else None -%}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="width:100%; background-color:{{ C_WELL }}; border:1px solid {{ C_LINE }}; border-radius:12px;">
@@ -82,11 +106,7 @@
         <tr>
           <td valign="top" style="vertical-align:top; padding-bottom:14px;">
             {{ _label('Crédits restants') }}
-            {% if pips %}
-              <div style="padding-top:3px;">{{ credit_pips(pass_data.uses_remaining, total, accent) }}</div>
-            {% else %}
-              {{ _value(pass_data.uses_remaining) }}
-            {% endif %}
+            {{ _value(credit_line(pass_data.uses_remaining, total)) }}
           </td>
         </tr>
         <tr>
@@ -215,13 +235,13 @@
   Credits alone mislead someone who is fully booked — their credits are spent, but every
   session is still ahead of them — so the passport page and this list both name the sessions.
 #}
-{% macro session_list(sessions, accent='#206bc4') -%}
+{% macro session_list(sessions, accent='#206bc4', title=None) -%}
 {% if sessions %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
   <tr>
     <td style="padding-bottom:8px;">
       <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }};">
-        {{ 'Votre séance' if sessions | length == 1 else 'Vos séances' }}
+        {{ title or ('Votre séance' if sessions | length == 1 else 'Vos séances') }}
       </div>
     </td>
   </tr>

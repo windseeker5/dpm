@@ -4,6 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# Matches the page background so the browser chrome doesn't band against it on mobile. #}
+  <meta name="theme-color" content="#f6f8fb">
   <title>Mon passeport - {{ hockey_pass.activity.name if hockey_pass.activity else 'Minipass' }}</title>
 
   <!-- Favicons -->
@@ -64,21 +66,73 @@
       color: #8a94a6;
       font-size: 0.85rem;
     }
+
+    /* The next session leads the page — it is what someone opens their passport to check.
+       Roboto Slab is already loaded above; the email sets the same treatment in Georgia,
+       so the two surfaces read as one. Tabular figures keep dates aligned like a posted
+       schedule rather than ragged prose. */
+    .pass-next-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #8892a4;
+    }
+    .pass-next-date {
+      font-family: 'Roboto Slab', Georgia, serif;
+      font-size: 1.5rem;
+      line-height: 1.25;
+      font-weight: 700;
+      color: #15192c;
+      text-transform: capitalize;
+      font-variant-numeric: tabular-nums;
+      text-wrap: balance;
+    }
+    .pass-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #8892a4;
+    }
+    .pass-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #15192c;
+    }
+
+    /* Guideline floor: visible keyboard focus, no tap delay, motion respected. */
+    .btn:focus-visible,
+    .form-select:focus-visible,
+    a:focus-visible {
+      outline: 2px solid var(--minipass-primary-600, #206bc4);
+      outline-offset: 2px;
+    }
+    .btn, .form-select, a {
+      touch-action: manipulation;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
   </style>
 </head>
 <body>
 
-<!-- Organisation branding -->
+<!-- Organisation branding. The customer signed up with this business, not with Minipass, so
+     their mark leads — same order as the email header. -->
 <div class="pass-page-header">
   {% if settings and settings.get('LOGO_FILENAME') %}
+    {# width/height keep the header from reflowing once the logo loads. #}
     <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-         alt="{{ settings.get('ORG_NAME', 'Organisation') }}" class="pass-org-logo">
+         alt="{{ settings.get('ORG_NAME', 'Organisation') }}" class="pass-org-logo"
+         width="200" height="64">
   {% else %}
     <div class="pass-org-logo-fallback"
          style="background: {{ placeholder_color(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }};">
       {{ placeholder_letter(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }}
     </div>
   {% endif %}
+  <div class="text-muted small mt-2">{{ settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass' }}</div>
 </div>
 
 <!-- Flash messages -->
@@ -129,12 +183,15 @@
             </span>
             {% endif %}
 
+            {# Payment status must show at every width. It was d-none d-md-inline-block, so a
+               customer on a phone — which is most of them — could not see whether they had
+               paid. #}
             <h3 class="card-title mb-0">
               {{ hockey_pass.activity.name if hockey_pass.activity else '-' }}
               {% if hockey_pass.paid %}
-                <span class="badge bg-green-lt ms-2 d-none d-md-inline-block">Payé</span>
+                <span class="badge bg-green-lt ms-2">Payé</span>
               {% else %}
-                <span class="badge bg-red-lt ms-2 d-none d-md-inline-block">Non payé</span>
+                <span class="badge bg-red-lt ms-2">Non payé</span>
               {% endif %}
             </h3>
           </div>
@@ -145,10 +202,11 @@
           {% if is_admin %}
           <!-- 3-dot Menu -->
           <div class="dropdown flex-shrink-0">
-            <a href="#" class="btn btn-icon fs-4 p-1" data-bs-toggle="dropdown"
-               aria-expanded="false" aria-label="Actions">
+            {# <button>, not <a href="#">: this opens a menu, it does not navigate. #}
+            <button type="button" class="btn btn-icon fs-4 p-1" data-bs-toggle="dropdown"
+                    aria-expanded="false" aria-label="Actions">
               <i class="ti ti-dots-vertical" aria-hidden="true"></i>
-            </a>
+            </button>
             <div class="dropdown-menu dropdown-menu-end">
               <a href="{{ url_for('edit_passport', passport_id=hockey_pass.id) }}" class="dropdown-item">
                 <i class="ti ti-pencil me-2" aria-hidden="true"></i> Edit
@@ -174,40 +232,57 @@
 
         <!-- 🔲 Body -->
         <div class="card-body">
+
+          {# The next session leads. It is the thing someone opens their passport to check,
+             and the email now opens the same way, so the two surfaces answer the same
+             question in the same place. #}
+          {% set upcoming = my_bookings | rejectattr('is_past') | rejectattr('attended_dt') | list %}
+          {% if upcoming %}
+          <div class="mb-4">
+            <div class="pass-next-label">Prochaine séance</div>
+            <div class="pass-next-date">{{ format_slot_label(upcoming[0].slot) }}</div>
+          </div>
+          {% endif %}
+
           <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-3">
             <div class="text-center order-1 order-md-2">
+              {# One image, sized by CSS at the breakpoint. Two <img> tags meant the browser
+                 decoded the same QR twice. #}
               <img src="data:image/png;base64,{{ qr_data }}"
                    alt="Code QR du passeport"
-                   class="rounded bg-white d-md-none"
-                   width="120" height="120" />
-              <img src="data:image/png;base64,{{ qr_data }}"
-                   alt="Code QR du passeport"
-                   class="rounded bg-white d-none d-md-inline-block"
-                   width="160" height="160" />
+                   class="rounded bg-white"
+                   width="140" height="140" />
+              <div class="text-muted small mt-2">Présentez ce code à votre arrivée</div>
             </div>
 
             <div class="flex-grow-1 text-center text-md-start order-2 order-md-1">
-              <div class="fw-bold">{{ hockey_pass.user.name }}</div>
+              <div class="pass-label">Titulaire</div>
+              <div class="pass-value">{{ hockey_pass.user.name }}</div>
               <div class="text-muted small">{{ hockey_pass.user.email }}</div>
               <div class="text-muted small">{{ hockey_pass.user.phone_number }}</div>
 
-              <div class="h4 fw-bold mt-3 mb-1">${{ "%.2f"|format(hockey_pass.sold_amt or 0) }}</div>
+              <div class="pass-label mt-3">Montant</div>
+              {# French formatting, matching utils._fr_money and the email's money() macro —
+                 this read "$500.00" while the email said "500,00 $". #}
+              <div class="pass-value">{{ "%.2f"|format(hockey_pass.sold_amt or 0)|replace(".", ",") }}&nbsp;$</div>
 
-              {# Show BOTH numbers on a scheduling activity. "Activités restantes" alone
-                 reads as "you have almost nothing left" for someone who is fully booked -
-                 their credits are spent, but they still have every session to attend. #}
+              <div class="pass-label mt-3">Crédits restants</div>
+              {% set total_credits = hockey_pass.passport_type.sessions_included if hockey_pass.passport_type else None %}
+              <div class="pass-value">
+                {%- if total_credits -%}
+                  {{ hockey_pass.uses_remaining }} sur {{ total_credits }}
+                {%- else -%}
+                  {{ hockey_pass.uses_remaining }}
+                  {{ "crédit" if hockey_pass.uses_remaining == 1 else "crédits" }}
+                {%- endif -%}
+              </div>
+
+              {# Credits alone mislead someone fully booked: their credits are spent, but every
+                 session is still ahead of them. Name both. #}
               {% if hockey_pass.activity and hockey_pass.activity.uses_scheduling %}
-                {% set upcoming_count = my_bookings | rejectattr('is_past') | list | length %}
-                <div class="text-muted small">
-                  <strong>{{ upcoming_count }}</strong>
-                  {{ "séance réservée" if upcoming_count == 1 else "séances réservées" }}
-                  ·
-                  <strong>{{ hockey_pass.uses_remaining }}</strong>
-                  {{ "crédit disponible" if hockey_pass.uses_remaining == 1 else "crédits disponibles" }}
-                </div>
-              {% else %}
-                <div class="text-muted small">
-                  Activités restantes: <strong>{{ hockey_pass.uses_remaining }}</strong>
+                <div class="text-muted small mt-2">
+                  <strong>{{ upcoming | length }}</strong>
+                  {{ "séance réservée" if upcoming | length == 1 else "séances réservées" }}
                 </div>
               {% endif %}
             </div>
@@ -300,69 +375,50 @@
           <h3 class="card-title">Historique</h3>
         </div>
 
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-vcenter card-table">
-              <thead>
-                <tr>
-                  <th>Activité</th>
-                  <th>Date</th>
-                  <th>Par</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% if history.created %}
-                <tr>
-                  <td>Création</td>
-                  <td>
-                    {{ history.created[:10] }}
-                    <span class="d-none d-md-inline">{{ history.created[10:] }}</span>
-                  </td>
-                  <td>{{ history.created_by | trim_email }}</td>
-                </tr>
-                {% endif %}
-
-                {% if history.paid %}
-                <tr>
-                  <td>Paiement</td>
-                  <td>
-                    {{ history.paid[:10] }}
-                    <span class="d-none d-md-inline">{{ history.paid[10:] }}</span>
-                  </td>
-                  <td>{{ history.paid_by | trim_email }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                  <td>Paiement</td>
-                  <td>❌ Non payé</td>
-                  <td>–</td>
-                </tr>
-                {% endif %}
-
-                {% for r in history.redemptions %}
-                <tr>
-                  <td>Activité #{{ loop.index }}</td>
-                  <td>
-                    {{ r.date[:10] }}
-                    <span class="d-none d-md-inline">{{ r.date[10:] }}</span>
-                  </td>
-                  <td>{{ r.by | trim_email }}</td>
-                </tr>
-                {% endfor %}
-
-                {% if history.expired %}
-                <tr>
-                  <td>Expiré</td>
-                  <td>
-                    {{ history.expired[:10] }}
-                    <span class="d-none d-md-inline">{{ history.expired[10:] }}</span>
-                  </td>
-                  <td>-</td>
-                </tr>
-                {% endif %}
-              </tbody>
-            </table>
+        {# Two lines per row, not a three-column table: event and date on one line with the
+           operator beneath. A 3-column table is unreadable at 320px, and this matches the
+           history block the email now renders, so the two never disagree. #}
+        <div class="list-group list-group-flush">
+          {% if history.created %}
+          <div class="list-group-item px-3">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <span class="fw-semibold">Création</span>
+              <span class="text-muted small text-nowrap">{{ history.created }}</span>
+            </div>
+            {% if history.created_by %}<div class="text-muted small">par {{ history.created_by | trim_email }}</div>{% endif %}
           </div>
+          {% endif %}
+
+          <div class="list-group-item px-3">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <span class="fw-semibold">Paiement</span>
+              <span class="text-muted small text-nowrap">
+                {%- if history.paid %}{{ history.paid }}{% else %}En attente{% endif -%}
+              </span>
+            </div>
+            {% if history.paid and history.paid_by %}<div class="text-muted small">par {{ history.paid_by | trim_email }}</div>{% endif %}
+          </div>
+
+          {% for r in history.redemptions %}
+          <div class="list-group-item px-3">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              {# "Participation N", matching the email. "Activité #N" named nothing the
+                 customer recognises. #}
+              <span class="fw-semibold">Participation {{ loop.index }}</span>
+              <span class="text-muted small text-nowrap">{{ r.date }}</span>
+            </div>
+            {% if r.by %}<div class="text-muted small">par {{ r.by | trim_email }}</div>{% endif %}
+          </div>
+          {% endfor %}
+
+          {% if history.expired %}
+          <div class="list-group-item px-3">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <span class="fw-semibold">Expiré</span>
+              <span class="text-muted small text-nowrap">{{ history.expired }}</span>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
