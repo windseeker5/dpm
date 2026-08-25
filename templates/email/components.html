@@ -41,14 +41,12 @@
   five empty circles, which reads as broken rendering rather than "none left". Words are
   unambiguous at every value, including zero, and they translate.
 #}
+{# Returns the quantity only ("1 sur 5", or "1" when the original allotment is unknown).
+   The caller supplies the noun, so it is never doubled. #}
 {% macro credit_line(remaining, total=None) -%}
   {%- set r = remaining | int -%}
   {%- set t = (total | int) if total else 0 -%}
-  {%- if t > 0 -%}
-    {{ r }} sur {{ t }}
-  {%- else -%}
-    {{ r }} {{ 'crédit' if r == 1 else 'crédits' }}
-  {%- endif -%}
+  {%- if t > 0 -%}{{ r }} sur {{ t }}{%- else -%}{{ r }}{%- endif -%}
 {%- endmacro %}
 
 
@@ -78,70 +76,76 @@
 
 
 {#
-  The pass block: labelled columns holding the facts, with the QR beneath them.
+  The pass card.
 
-  Replaces the old gradient "business card". The structure is a pass — holder, credits,
-  amount, status — but stated plainly rather than dressed up as a physical object.
+  Activity photo and QR side by side at the top, holder details beneath. The photo is what
+  makes it recognisably *this* activity rather than a generic receipt, and pairing it with the
+  code makes the block read as a pass you present rather than a table of fields.
+
+  The two images sit in a fixed-width table with no breakpoint: they are images, not text, so
+  they do not need to reflow, and nothing here depends on the <style> block surviving (the
+  Gmail app strips it for non-Gmail accounts).
+
+  Payment status is deliberately absent — the history table below states when it was paid and
+  by whom, which is the same fact with its provenance attached.
 #}
-{% macro pass_block(pass_data, accent='#206bc4', show_qr=True, qr_src='cid:qr_code') -%}
+{% macro pass_card(pass_data, accent='#206bc4', show_qr=True, qr_src='cid:qr_code', base_url='') -%}
 {%- set total = pass_data.passport_type.sessions_included if pass_data.passport_type else None -%}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+{%- set activity = pass_data.activity -%}
+{%- set img = (activity.image_filename or activity.logo_filename) if activity else None -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ C_WELL }}"
        style="width:100%; background-color:{{ C_WELL }}; border:1px solid {{ C_LINE }}; border-radius:12px;">
   <tr>
-    <td style="padding:20px 22px;">
+    <td style="padding:18px;">
 
-      {# One column, always.
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+        <tr>
+          {% if img and base_url %}
+          <td valign="top" width="132" style="width:132px; vertical-align:top; padding-right:12px;">
+            <img src="{{ base_url }}/static/uploads/activity_images/{{ img }}"
+                 width="132" height="132" alt="{{ activity.name }}"
+                 style="display:block; width:132px; height:132px; border:0; border-radius:10px; object-fit:cover;">
+          </td>
+          {% endif %}
+          {% if show_qr %}
+          <td valign="top" width="132" style="width:132px; vertical-align:top;">
+            <img src="{{ qr_src }}" width="132" height="132" alt="Code QR du passeport"
+                 style="display:block; width:132px; height:132px; border:0; background:#ffffff; border-radius:10px;">
+          </td>
+          {% endif %}
+        </tr>
+        {% if show_qr %}
+        <tr>
+          <td colspan="2" align="center" style="padding-top:8px;">
+            <div style="font-size:12px; color:{{ C_LABEL }}; line-height:1.5;">Présentez ce code à votre arrivée</div>
+          </td>
+        </tr>
+        {% endif %}
+      </table>
 
-         This was a 2x2 grid that collapsed at a breakpoint. The Gmail app strips <style>
-         for non-Gmail accounts, so the media query never fired there and the pairs stayed
-         at 2x50% on a 320px screen. A single column needs no breakpoint, reads the same
-         everywhere, and is the leaner look regardless. #}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="width:100%; margin-top:16px; border-top:1px solid {{ C_LINE }};">
         <tr>
-          <td valign="top" style="vertical-align:top; padding-bottom:14px;">
-            {{ _label('Titulaire') }}
-            {{ _value(pass_data.user.name) }}
-          </td>
-        </tr>
-        <tr>
-          <td valign="top" style="vertical-align:top; padding-bottom:14px;">
-            {{ _label('Crédits restants') }}
-            {{ _value(credit_line(pass_data.uses_remaining, total)) }}
-          </td>
-        </tr>
-        <tr>
-          <td valign="top" style="vertical-align:top; padding-bottom:14px;">
-            {{ _label('Montant') }}
-            <div style="font-size:16px; font-weight:600; color:{{ C_INK }}; line-height:1.45;">{{ money(pass_data.sold_amt) }}</div>
-          </td>
-        </tr>
-        <tr>
-          <td valign="top" style="vertical-align:top;">
-            {{ _label('Statut') }}
-            {% if pass_data.paid %}
-              <div style="font-size:16px; font-weight:600; color:#1a7f4b; line-height:1.45;">Payé</div>
-            {% else %}
-              <div style="font-size:16px; font-weight:600; color:#9a6700; line-height:1.45;">En attente de paiement</div>
+          <td style="padding-top:14px;">
+            <div style="font-size:17px; font-weight:700; color:{{ C_INK }}; line-height:1.4;">{{ pass_data.user.name }}</div>
+            {% if pass_data.user.email %}
+            <div style="font-size:14px; color:{{ C_LABEL }}; line-height:1.5;">{{ pass_data.user.email }}</div>
+            {% endif %}
+            {% if pass_data.user.phone_number %}
+            <div style="font-size:14px; color:{{ C_LABEL }}; line-height:1.5;">{{ pass_data.user.phone_number }}</div>
             {% endif %}
           </td>
         </tr>
-      </table>
-
-      {% if show_qr %}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
         <tr>
-          <td style="padding-top:18px; border-top:1px solid {{ C_LINE }};" align="center">
-            {# 150px: large enough to scan off a phone screen, small enough that the message
-               above it still occupies the first view. The old block was 350-400px. #}
-            <img src="{{ qr_src }}" width="150" height="150" alt="Code QR du passeport"
-                 style="display:block; width:150px; height:150px; border:0; background:#ffffff; border-radius:8px;">
-            <div style="padding-top:10px; font-size:13px; color:{{ C_LABEL }}; line-height:1.5;">
-              Présentez ce code à votre arrivée
-            </div>
+          <td style="padding-top:12px;">
+            <span style="font-size:15px; color:{{ C_BODY }};">
+              <strong style="color:{{ C_INK }};">{{ credit_line(pass_data.uses_remaining, total) }}</strong>
+              {{ 'crédit restant' if (pass_data.uses_remaining | int) == 1 else 'crédits restants' }}
+              &nbsp;·&nbsp; {{ money(pass_data.sold_amt) }}
+            </span>
           </td>
         </tr>
       </table>
-      {% endif %}
 
     </td>
   </tr>
@@ -274,29 +278,27 @@
 #}
 {% macro history_table(entries) -%}
 {% if entries %}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+<div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }}; padding-bottom:8px;">Historique</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff"
+       style="width:100%; background-color:#ffffff; border:1px solid {{ C_LINE }}; border-radius:12px;">
   <tr>
-    <td style="padding-bottom:6px;">
-      <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }};">Historique</div>
-    </td>
-  </tr>
-  {% for e in entries %}
-  <tr>
-    <td style="padding:10px 0; border-top:1px solid {{ C_LINE }};">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td align="left" valign="top" style="vertical-align:top; font-size:14px; font-weight:600; color:{{ C_INK }}; line-height:1.4;">{{ e.label }}</td>
-          <td align="right" valign="top" style="vertical-align:top; font-size:13px; color:{{ C_LABEL }}; line-height:1.5; white-space:nowrap; padding-left:10px;">{{ e.date }}</td>
+    <td style="padding:0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; border-collapse:collapse;">
+        <tr bgcolor="{{ C_WELL }}">
+          <th align="left" style="padding:10px 14px; background-color:{{ C_WELL }}; border-bottom:1px solid {{ C_LINE }}; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:{{ C_LABEL }};">Événement</th>
+          <th align="left" style="padding:10px 10px; background-color:{{ C_WELL }}; border-bottom:1px solid {{ C_LINE }}; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:{{ C_LABEL }}; white-space:nowrap;">Date</th>
+          <th align="left" style="padding:10px 14px 10px 10px; background-color:{{ C_WELL }}; border-bottom:1px solid {{ C_LINE }}; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:{{ C_LABEL }};">Par</th>
         </tr>
-        {% if e.by %}
+        {% for e in entries %}
         <tr>
-          <td colspan="2" style="font-size:13px; color:{{ C_LABEL }}; line-height:1.5; padding-top:1px;">par {{ e.by }}</td>
+          <td style="padding:11px 14px; {% if not loop.last %}border-bottom:1px solid {{ C_LINE }};{% endif %} font-size:14px; font-weight:600; color:{{ C_INK }};">{{ e.label }}</td>
+          <td style="padding:11px 10px; {% if not loop.last %}border-bottom:1px solid {{ C_LINE }};{% endif %} font-size:13px; color:{{ C_BODY }}; white-space:nowrap; font-variant-numeric:tabular-nums;">{{ e.date }}</td>
+          <td style="padding:11px 14px 11px 10px; {% if not loop.last %}border-bottom:1px solid {{ C_LINE }};{% endif %} font-size:13px; color:{{ C_LABEL }};">{{ e.by or '—' }}</td>
         </tr>
-        {% endif %}
+        {% endfor %}
       </table>
     </td>
   </tr>
-  {% endfor %}
 </table>
 {% endif %}
 {%- endmacro %}

@@ -118,8 +118,10 @@ class EmailTemplateRenderTests(unittest.TestCase):
         for name in PASS_TEMPLATES:
             with self.subTest(template=name):
                 html = render_template(f"email/{name}.html", **_context())
+                # The holder's name and their credit count both come off the model, so these
+                # two cover the attribute access that used to raise.
                 self.assertIn("Ken Dresdell", html)
-                self.assertIn("Titulaire", html)
+                self.assertIn("3 sur 8", html)
 
     def test_history_table_is_present_and_names_the_operator(self):
         """History was dropped by the rework and explicitly wanted back.

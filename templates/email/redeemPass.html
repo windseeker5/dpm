@@ -1,6 +1,6 @@
 {# Attendance recorded. Accent: teal — a receipt for something that already happened. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_block, button, session_list, history_table, next_session %}
+{% from "email/components.html" import pass_card, button, session_list, history_table, next_session %}
 
 {% set accent = '#0f7b8a' %}
 {% set preheader = 'Votre présence est enregistrée.' %}
@@ -21,7 +21,7 @@
   <td class="mp-pad" style="padding:22px 32px 0 32px;">
     {# The QR still belongs here: this email doubles as the pass for the next visit, and the
        block already shows how many credits are left. #}
-    {{ pass_block(pass_data, accent=accent, show_qr=show_qr_code) }}
+    {{ pass_card(pass_data, accent=accent, show_qr=show_qr_code, base_url=base_url) }}
   </td>
 </tr>
 

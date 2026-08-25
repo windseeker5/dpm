@@ -1017,6 +1017,21 @@ def _build_history_rows(history):
     def _who(value):
         return value.split("@")[0] if value else ""
 
+    def _when(value):
+        """"2026-08-25 09:19" -> "25 août, 09:19".
+
+        The stored format is sortable but long, and three of them stacked in a narrow column
+        read as a log dump. Uses the same French month names as format_slot_label so the dates
+        in the history match the dates in the session list.
+        """
+        if not value:
+            return ""
+        try:
+            dt = datetime.strptime(value[:16], "%Y-%m-%d %H:%M")
+        except (ValueError, TypeError):
+            return value
+        return f"{dt.day} {_FR_MONTHS.get(dt.month, '')}, {dt.strftime('%H:%M')}"
+
     rows = []
     try:
         if not history:
@@ -1024,21 +1039,21 @@ def _build_history_rows(history):
 
         if history.get("created"):
             rows.append({"label": "Création",
-                         "date": history["created"],
+                         "date": _when(history["created"]),
                          "by": _who(history.get("created_by"))})
 
         if history.get("paid"):
             rows.append({"label": "Paiement",
-                         "date": history["paid"],
+                         "date": _when(history["paid"]),
                          "by": _who(history.get("paid_by"))})
 
         for i, r in enumerate(history.get("redemptions") or [], start=1):
             rows.append({"label": f"Participation {i}",
-                         "date": r.get("date", ""),
+                         "date": _when(r.get("date", "")),
                          "by": _who(r.get("by"))})
 
         if history.get("expired"):
-            rows.append({"label": "Expiré", "date": history["expired"], "by": ""})
+            rows.append({"label": "Expiré", "date": _when(history["expired"]), "by": ""})
     except Exception as e:
         logging.warning("Could not build email history rows: %s", e)
         return []

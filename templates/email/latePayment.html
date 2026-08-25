@@ -5,7 +5,7 @@
   with a thumbs-down illustration. A reminder should be easy to act on, not a reprimand.
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_block, button, history_table %}
+{% from "email/components.html" import pass_card, button, history_table %}
 
 {% set accent = '#b26a00' %}
 {% set preheader = 'Votre passeport attend son paiement.' %}
@@ -16,7 +16,7 @@
   <td class="mp-pad" style="padding:22px 32px 0 32px;">
     {# No QR: the pass is not usable until it is paid, so showing a code to present would
        only be confusing. #}
-    {{ pass_block(pass_data, accent=accent, show_qr=False) }}
+    {{ pass_card(pass_data, accent=accent, show_qr=False, base_url=base_url) }}
   </td>
 </tr>
 

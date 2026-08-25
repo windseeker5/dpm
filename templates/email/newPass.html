@@ -1,6 +1,6 @@
 {# Passport issued. Accent: brand blue — something has been granted, not transacted. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_block, button, session_list, history_table, next_session %}
+{% from "email/components.html" import pass_card, button, session_list, history_table, next_session %}
 
 {% set accent = '#206bc4' %}
 {% set preheader = 'Votre passeport est prêt — présentez votre code QR à votre arrivée.' %}
@@ -19,7 +19,7 @@
 
 <tr>
   <td class="mp-pad" style="padding:22px 32px 0 32px;">
-    {{ pass_block(pass_data, accent=accent, show_qr=show_qr_code) }}
+    {{ pass_card(pass_data, accent=accent, show_qr=show_qr_code, base_url=base_url) }}
   </td>
 </tr>
 
