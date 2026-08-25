@@ -1,6 +1,6 @@
 {# Passport issued. Accent: brand blue — something has been granted, not transacted. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_block, button, session_list %}
+{% from "email/components.html" import pass_block, button, session_list, history_table %}
 
 {% set accent = '#206bc4' %}
 {% set preheader = 'Votre passeport est prêt — présentez votre code QR à votre arrivée.' %}
@@ -29,6 +29,14 @@
       {% if uses_scheduling %}Réservez vos prochaines séances au même endroit.
       {% else %}Votre passeport reste à jour à cette adresse.{% endif %}
     </div>
+  </td>
+</tr>
+{% endif %}
+
+{% if history_rows %}
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {{ history_table(history_rows) }}
   </td>
 </tr>
 {% endif %}

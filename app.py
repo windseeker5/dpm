@@ -12046,10 +12046,13 @@ def send_survey_invitations(survey_id):
                 }
 
                 # Render subject, title, intro_text, and conclusion_text if they contain Jinja2 variables
-                subject_template = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
-                title_template = email_context.get('title', 'We\'d Love Your Feedback!')
-                intro_template = email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>')
-                conclusion_template = email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
+                # French fallbacks: these only fire if config/email_defaults.json fails to
+                # load, and an English heading on an otherwise French email is worse than a
+                # plain one.
+                subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
+                title_template = email_context.get('title', 'Votre avis compte')
+                intro_template = email_context.get('intro_text', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p>')
+                conclusion_template = email_context.get('conclusion_text', '<p>Merci du temps que vous y consacrez.</p>')
 
                 subject = JinjaTemplate(subject_template).render(**render_context)
                 rendered_title = JinjaTemplate(title_template).render(**render_context)
@@ -12168,10 +12171,13 @@ def send_survey_invitations(survey_id):
                 }
 
                 # Render subject, title, intro_text, and conclusion_text if they contain Jinja2 variables
-                subject_template = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
-                title_template = email_context.get('title', 'We\'d Love Your Feedback!')
-                intro_template = email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>')
-                conclusion_template = email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
+                # French fallbacks: these only fire if config/email_defaults.json fails to
+                # load, and an English heading on an otherwise French email is worse than a
+                # plain one.
+                subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
+                title_template = email_context.get('title', 'Votre avis compte')
+                intro_template = email_context.get('intro_text', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p>')
+                conclusion_template = email_context.get('conclusion_text', '<p>Merci du temps que vous y consacrez.</p>')
 
                 subject = JinjaTemplate(subject_template).render(**render_context)
                 rendered_title = JinjaTemplate(title_template).render(**render_context)
@@ -12895,24 +12901,11 @@ def save_email_templates(activity_id):
         
         db.session.commit()
 
-        # AUTO-COMPILE survey_invitation template after save
-        if is_individual_save and single_template == 'survey_invitation':
-            try:
-                import subprocess
-                compile_script = os.path.join('templates', 'email_templates', 'compileEmailTemplate.py')
-                result = subprocess.run(
-                    ['python', compile_script, 'survey_invitation'],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    cwd=os.path.dirname(compile_script)
-                )
-                if result.returncode != 0:
-                    print(f"Warning: Survey template compilation failed: {result.stderr}")
-                else:
-                    print(f"Survey invitation template compiled successfully after save")
-            except Exception as e:
-                print(f"Warning: Could not auto-compile survey template: {e}")
+        # The survey_invitation auto-compile subprocess used to run here. It rebuilt
+        # templates/email_templates/survey_invitation_compiled/, which safe_template() no
+        # longer resolves to — so it was a 30s-timeout subprocess doing PIL image work on
+        # every save, for output nothing reads. Customization lives entirely in the JSON
+        # column committed above; there is nothing to compile.
 
         # Return appropriate response based on request type
         if is_individual_save:
@@ -13016,21 +13009,14 @@ def reset_email_template(activity_id):
             except Exception as e:
                 print(f"Could not delete owner logo file {owner_logo_path}: {e}")
         
-        # NEW: Restore original compiled template files 
-        original_dir = f"templates/email_templates/{template_type}_original"
-        compiled_dir = f"templates/email_templates/{template_type}_compiled"
-        
-        if os.path.exists(original_dir):
-            try:
-                # Copy original files back to compiled directory
-                if os.path.exists(compiled_dir):
-                    shutil.rmtree(compiled_dir)
-                shutil.copytree(original_dir, compiled_dir)
-                print(f"Restored original template files: {original_dir} → {compiled_dir}")
-            except Exception as e:
-                print(f"Could not restore original template files: {e}")
-        else:
-            print(f"Original template directory not found: {original_dir}")
+        # A file restore used to happen here: rmtree of
+        # templates/email_templates/<type>_compiled followed by a copytree from <type>_original.
+        #
+        # That directory is global, not per-activity, so one owner clicking "Reset" rewrote
+        # template files shared by every activity in every organization — and did it at request
+        # time on a live server. It never had any per-activity meaning: customization is the
+        # JSON cleared above plus the uploaded files deleted above, and the layout now comes
+        # from templates/email/ which nothing here touches. Clearing the keys is the reset.
         
         # Mark the attribute as modified for SQLAlchemy
         from sqlalchemy.orm.attributes import flag_modified
@@ -13097,22 +13083,22 @@ def email_preview(activity_id):
     
     # Add special context for survey_invitation
     if template_type == 'survey_invitation':
-        base_context['survey_name'] = 'Customer Satisfaction Survey'
+        base_context['survey_name'] = 'Sondage de satisfaction'
         base_context['survey_url'] = 'https://example.com/survey/sample'
         base_context['question_count'] = 8
         base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
         base_context['organization_address'] = get_setting('ORG_ADDRESS', '')
         base_context['support_email'] = get_setting('SUPPORT_EMAIL', 'support@minipass.me')
-        # These will be overridden by get_email_context if customized
-        base_context['title'] = 'We\'d Love Your Feedback!'
-        base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
-        base_context['conclusion'] = 'Thank you for helping us create better experiences!'
+        # No title/intro/conclusion here on purpose. get_email_context only fills keys that are
+        # MISSING, so seeding sample copy pins it and the activity's real (French) text never
+        # applies — which is how an English "We'd Love Your Feedback!" heading ended up on top
+        # of an otherwise French email.
 
     # Add special context for signup_payment_first template
     elif template_type == 'signup_payment_first':
         base_context['needs_signup_code'] = True  # Show the signup code section in preview
         base_context['signup_code'] = 'MP-INS-0000001'
-        base_context['requested_amount'] = '$50.00'
+        base_context['requested_amount'] = '50,00 $'
         display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
         base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
         base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
@@ -13171,19 +13157,17 @@ def email_preview(activity_id):
         base_context['pass_url'] = _get_pass_url(pass_data)
         base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
-        # Add history for ALL templates that need it (not just redeemPass)
-        history = [
-            {'date': '2025-01-09', 'action': 'Pass Created'},
-            {'date': '2025-01-10', 'action': 'Payment Received'}
+        # Sample history, in the {label, date, by} shape utils._build_history_rows() produces
+        # for real sends, so the preview shows the same table customers receive.
+        base_context['history_rows'] = [
+            {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
-            history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
+            base_context['history_rows'].append(
+                {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
+            )
 
-        base_context['history_html'] = render_template(
-            "email_blocks/history_table_inline.html",
-            history=history
-        )
-    
     # Get merged context with activity customizations (preserves email blocks)
     context = get_email_context(activity, template_type, base_context)
 
@@ -13439,24 +13423,21 @@ def email_preview_live(activity_id):
         base_context['pass_url'] = _get_pass_url(pass_data)
         base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
-        # Add history for ALL templates that need it
-        history = [
-            {'date': '2025-01-09', 'action': 'Pass Created'},
-            {'date': '2025-01-10', 'action': 'Payment Received'}
+        # Same {label, date, by} shape as a real send (utils._build_history_rows).
+        base_context['history_rows'] = [
+            {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
-            history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
-
-        base_context['history_html'] = render_template(
-            "email_blocks/history_table_inline.html",
-            history=history
-        )
+            base_context['history_rows'].append(
+                {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
+            )
 
     # Add special context for signup_payment_first template
     elif template_type == 'signup_payment_first':
         base_context['needs_signup_code'] = True  # Show the signup code section in preview
         base_context['signup_code'] = 'MP-INS-0000001'
-        base_context['requested_amount'] = '$50.00'
+        base_context['requested_amount'] = '50,00 $'
         display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
         base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
         base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
@@ -13743,10 +13724,8 @@ def test_email_template(activity_id):
             base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
             base_context['organization_address'] = get_setting('ORG_ADDRESS', '')
             base_context['support_email'] = get_setting('SUPPORT_EMAIL', 'support@minipass.me')
-            # These will be overridden by get_email_context if customized
-            base_context['title'] = 'We\'d Love Your Feedback!'
-            base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
-            base_context['conclusion'] = 'Thank you for helping us create better experiences!'
+            # No title/intro/conclusion here on purpose — see the matching note in
+            # email_preview(). Seeding them pins English copy over the activity's French text.
 
         # Add email blocks for templates that need them
         elif template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
@@ -13797,16 +13776,15 @@ def test_email_template(activity_id):
             base_context['pass_url'] = _get_pass_url(pass_data)
             base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
-            # Add history for templates that need it
-            if template_type in ['redeemPass', 'latePayment']:
-                history = [
-                    {'date': '2025-01-09', 'action': 'Pass Created'},
-                    {'date': '2025-01-10', 'action': 'Payment Received'},
-                    {'date': '2025-01-11', 'action': 'Pass Redeemed'}
-                ]
-                base_context['history_html'] = render_template(
-                    "email_blocks/history_table_inline.html",
-                    history=history
+            # Every pass template carries the history table, in the same {label, date, by}
+            # shape a real send builds (utils._build_history_rows).
+            base_context['history_rows'] = [
+                {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
+                {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
+            ]
+            if template_type == 'redeemPass':
+                base_context['history_rows'].append(
+                    {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
                 )
             
             print(f"Added email blocks for {template_type}")
@@ -13817,7 +13795,7 @@ def test_email_template(activity_id):
         elif template_type == 'signup_payment_first':
             base_context['needs_signup_code'] = True  # Show the signup code section
             base_context['signup_code'] = 'MP-INS-0000001'
-            base_context['requested_amount'] = '$25.00'
+            base_context['requested_amount'] = '25,00 $'
             display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
             base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
             base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')

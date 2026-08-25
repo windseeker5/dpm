@@ -631,8 +631,11 @@
                   placeholder="Closing message for the email">{{ template_data.get('conclusion_text', '') }}</textarea>
       </div>
 
-      <!-- QR Code Toggle (only for templates with QR codes) -->
-      {% if template_key in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment'] %}
+      <!-- QR Code Toggle (only for templates that actually show a QR code).
+           latePayment is excluded: the passport isn't usable until it's paid, so that layout
+           renders no code and the switch would do nothing. Keep in step with
+           utils.NO_QR_TEMPLATES. -->
+      {% if template_key in ['newPass', 'paymentReceived', 'redeemPass'] %}
       <div class="mb-3">
         <label class="form-check">
           <input type="checkbox"

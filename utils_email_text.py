@@ -62,7 +62,7 @@ EMAIL_TEXT_VARIABLES = [
     ("activity_location", "Formatted address of the activity, when set"),
     ("organization_name", "Your organization's name"),
     ("amount", "Amount as a number, e.g. for '%.2f'|format(amount)"),
-    ("amount_display", "Amount preformatted with a currency sign, e.g. $50.00"),
+    ("amount_display", "Amount preformatted for display, e.g. 50,00 $"),
     ("credits_remaining", "Credits left on the passport"),
     ("is_paid", "True when the passport is paid"),
     ("payment_email", "Address the customer should send payment to"),
@@ -155,7 +155,10 @@ def build_email_text_context(
         "activity_location": activity_location,
         "organization_name": organization_name or "",
         "amount": amount,
-        "amount_display": f"${amount:.2f}",
+        # French formatting, matching utils._fr_money and the money() macro in
+        # templates/email/components.html — one email must never show both "$50.00" and
+        # "50,00 $", which it did when this was the only US-formatted value left.
+        "amount_display": f"{amount:.2f}".replace(".", ",") + " $",
         "credits_remaining": credits_remaining,
         "is_paid": is_paid,
         "payment_email": payment_email or "",

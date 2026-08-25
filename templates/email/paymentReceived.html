@@ -1,6 +1,6 @@
 {# Payment cleared. Accent: green — the one unambiguously good outcome in the set. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_block, button, session_list %}
+{% from "email/components.html" import pass_block, button, session_list, history_table %}
 
 {% set accent = '#1a7f4b' %}
 {% set preheader = 'Paiement reçu — votre passeport est actif.' %}
@@ -25,6 +25,14 @@
 <tr>
   <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
     {{ button(pass_url, 'Voir mon passeport', accent=accent) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if history_rows %}
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {{ history_table(history_rows) }}
   </td>
 </tr>
 {% endif %}

@@ -66,13 +66,21 @@
   <tr>
     <td style="padding:20px 22px;">
 
+      {# One column, always.
+
+         This was a 2x2 grid that collapsed at a breakpoint. The Gmail app strips <style>
+         for non-Gmail accounts, so the media query never fired there and the pairs stayed
+         at 2x50% on a 320px screen. A single column needs no breakpoint, reads the same
+         everywhere, and is the leaner look regardless. #}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td class="mp-stack" width="50%" valign="top" style="width:50%; vertical-align:top; padding-bottom:16px;">
+          <td valign="top" style="vertical-align:top; padding-bottom:14px;">
             {{ _label('Titulaire') }}
             {{ _value(pass_data.user.name) }}
           </td>
-          <td class="mp-stack" width="50%" valign="top" style="width:50%; vertical-align:top; padding-bottom:16px; padding-left:12px;">
+        </tr>
+        <tr>
+          <td valign="top" style="vertical-align:top; padding-bottom:14px;">
             {{ _label('Crédits restants') }}
             {% if pips %}
               <div style="padding-top:3px;">{{ credit_pips(pass_data.uses_remaining, total, accent) }}</div>
@@ -82,11 +90,13 @@
           </td>
         </tr>
         <tr>
-          <td class="mp-stack" width="50%" valign="top" style="width:50%; vertical-align:top;">
+          <td valign="top" style="vertical-align:top; padding-bottom:14px;">
             {{ _label('Montant') }}
             <div style="font-size:16px; font-weight:600; color:{{ C_INK }}; line-height:1.45;">{{ money(pass_data.sold_amt) }}</div>
           </td>
-          <td class="mp-stack" width="50%" valign="top" style="width:50%; vertical-align:top; padding-left:12px;">
+        </tr>
+        <tr>
+          <td valign="top" style="vertical-align:top;">
             {{ _label('Statut') }}
             {% if pass_data.paid %}
               <div style="font-size:16px; font-weight:600; color:#1a7f4b; line-height:1.45;">Payé</div>
@@ -128,19 +138,25 @@
        style="width:100%; background-color:{{ C_WELL }}; border:1px solid {{ C_LINE }}; border-radius:12px;">
   <tr>
     <td style="padding:18px 20px;">
+      {# Single column, same reasoning as pass_block: an email address is long enough to wreck
+         a three-across layout on a phone, and no breakpoint is available to rescue it. #}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        {% if base_url %}
         <tr>
-          {% if base_url %}
-          <td valign="middle" width="40" style="width:40px; vertical-align:middle; padding-right:14px;">
+          <td style="padding-bottom:12px;">
             <img src="{{ base_url }}/static/images/email/interac-logo.jpg" width="40" height="40" alt="Interac"
                  style="display:block; width:40px; height:40px; border-radius:7px; border:0;">
           </td>
-          {% endif %}
-          <td valign="middle" style="vertical-align:middle;">
-            {{ _label('Montant') }}
+        </tr>
+        {% endif %}
+        <tr>
+          <td valign="top" style="vertical-align:top; padding-bottom:14px;">
+            {{ _label('Montant à transférer') }}
             {{ _value(requested_amount) }}
           </td>
-          <td valign="middle" style="vertical-align:middle;">
+        </tr>
+        <tr>
+          <td valign="top" style="vertical-align:top;">
             {{ _label('Destinataire') }}
             <div style="font-size:15px; font-weight:600; color:{{ C_INK }}; line-height:1.45; word-break:break-all;">{{ payment_email }}</div>
           </td>
@@ -226,25 +242,37 @@
 
 
 {#
-  History. Takes the same rows the passport page shows, so the two never disagree.
+  History — the passport's life: issued on this date, paid on that one, used here, scanned by
+  them. Built by utils._build_history_rows() from the same data the passport page uses, so the
+  email and /pass/<code> can never tell different stories.
+
   `entries` is a list of {label, date, by} dicts.
+
+  Two lines per row rather than three columns: an event/date/operator table is unreadable at
+  320px, and collapsing columns would need a media query — which the Gmail app strips for
+  non-Gmail accounts. Stacking by construction works everywhere.
 #}
 {% macro history_table(entries) -%}
 {% if entries %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
   <tr>
-    <td style="padding-bottom:8px;">
+    <td style="padding-bottom:6px;">
       <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }};">Historique</div>
     </td>
   </tr>
   {% for e in entries %}
   <tr>
-    <td style="padding:9px 0; border-top:1px solid {{ C_LINE }}; font-size:14px; color:{{ C_BODY }};">
+    <td style="padding:10px 0; border-top:1px solid {{ C_LINE }};">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td align="left" style="font-size:14px; color:{{ C_INK }};">{{ e.label }}</td>
-          <td align="right" style="font-size:13px; color:{{ C_LABEL }}; white-space:nowrap;">{{ e.date }}</td>
+          <td align="left" valign="top" style="vertical-align:top; font-size:14px; font-weight:600; color:{{ C_INK }}; line-height:1.4;">{{ e.label }}</td>
+          <td align="right" valign="top" style="vertical-align:top; font-size:13px; color:{{ C_LABEL }}; line-height:1.5; white-space:nowrap; padding-left:10px;">{{ e.date }}</td>
         </tr>
+        {% if e.by %}
+        <tr>
+          <td colspan="2" style="font-size:13px; color:{{ C_LABEL }}; line-height:1.5; padding-top:1px;">par {{ e.by }}</td>
+        </tr>
+        {% endif %}
       </table>
     </td>
   </tr>

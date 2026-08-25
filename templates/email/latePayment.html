@@ -5,7 +5,7 @@
   with a thumbs-down illustration. A reminder should be easy to act on, not a reprimand.
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_block, button %}
+{% from "email/components.html" import pass_block, button, history_table %}
 
 {% set accent = '#b26a00' %}
 {% set preheader = 'Votre passeport attend son paiement.' %}
@@ -24,6 +24,14 @@
 <tr>
   <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
     {{ button(pass_url, 'Voir mon passeport', accent=accent) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if history_rows %}
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {{ history_table(history_rows) }}
   </td>
 </tr>
 {% endif %}

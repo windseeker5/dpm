@@ -37,6 +37,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="format-detection" content="telephone=no">
   <meta name="x-apple-disable-message-reformatting">
+  {# Declare a light-only design. Without this, Apple Mail and Outlook.com "helpfully" invert
+     colours in dark mode, and they invert backgrounds and text independently — which is how
+     you end up with light grey text on a white card. Opting out is more reliable than trying
+     to author a second palette that four clients each interpret differently. #}
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>{{ title | default(activity_name) | default('Minipass') }}</title>
 
   <!--[if mso]>
@@ -44,23 +50,18 @@
   <![endif]-->
 
   <style type="text/css">
-    /* Only rules that cannot be inlined live here. */
+    /* Everything structural is inlined on the elements themselves. What is left here is
+       refinement only, because this block does not always survive: the Gmail app strips
+       <style> entirely for accounts that aren't Gmail. Nothing below may be load-bearing —
+       if every rule here were dropped, the email must still lay out correctly. That is why
+       the pass block is single-column by construction rather than a grid that has to
+       collapse at a breakpoint. */
     @media only screen and (max-width: 600px) {
       .mp-shell    { width: 100% !important; margin: 12px auto !important; border-radius: 0 !important; }
       .mp-pad      { padding-left: 20px !important; padding-right: 20px !important; }
       .mp-headline { font-size: 23px !important; }
       .mp-hero     { width: 40px !important; height: 40px !important; }
-      /* Two-column field pairs collapse to one column; the even spacing has to come back
-         with them, otherwise the pairs that shared a row read as grouped. */
-      /* Even gap on every stacked cell. Deliberately not :last-child — support for it is
-         patchy across email clients, and it lands on the wrong cells in a 2x2 grid anyway. */
-      .mp-stack    { display: block !important; width: 100% !important; padding-left: 0 !important; padding-bottom: 14px !important; }
       .mp-btn a    { display: block !important; }
-    }
-    /* Dark-mode clients invert the shell; keep the ink readable rather than letting the
-       client pick its own contrast. */
-    @media (prefers-color-scheme: dark) {
-      .mp-shell { background: #ffffff !important; }
     }
     a { text-decoration: none; }
   </style>
@@ -72,11 +73,13 @@
     {{ preheader | default(title) | default('') }}
   </div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:{{ c_page }};">
+  {# bgcolor alongside the CSS: Outlook's Word engine honours the HTML attribute far more
+     reliably than background-color, and a card that loses its ground reads as broken. #}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ c_page }}" style="background-color:{{ c_page }};">
     <tr>
       <td align="center" style="padding:0;">
 
-        <table role="presentation" class="mp-shell" width="600" cellpadding="0" cellspacing="0" border="0"
+        <table role="presentation" class="mp-shell" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff"
                style="width:600px; max-width:600px; margin:32px auto; background-color:#ffffff; border:1px solid {{ c_line }}; border-radius:14px; overflow:hidden;">
 
           {# Accent rule — the per-template identity, and the one signal that survives images off. #}
@@ -93,8 +96,11 @@
                       <tr>
                         {% if owner_logo_url %}
                         <td valign="middle" style="padding-right:10px; vertical-align:middle;">
-                          <img src="{{ owner_logo_url }}" width="32" height="32" alt=""
-                               style="display:block; width:32px; height:32px; border-radius:7px; object-fit:cover; border:0;">
+                          {# Fit, don't crop: object-fit is unsupported in Outlook, and a
+                             square centre-crop cuts the sides off a wordmark logo. Bounding
+                             the height and letting the width follow keeps it whole. #}
+                          <img src="{{ owner_logo_url }}" height="32" alt=""
+                               style="display:block; height:32px; max-width:120px; width:auto; border-radius:6px; border:0;">
                         </td>
                         {% endif %}
                         <td valign="middle" style="vertical-align:middle;">

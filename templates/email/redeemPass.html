@@ -1,6 +1,6 @@
 {# Attendance recorded. Accent: teal — a receipt for something that already happened. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_block, button, session_list %}
+{% from "email/components.html" import pass_block, button, session_list, history_table %}
 
 {% set accent = '#0f7b8a' %}
 {% set preheader = 'Votre présence est enregistrée.' %}
@@ -32,6 +32,14 @@
       Réservez votre prochaine séance au même endroit.
     </div>
     {% endif %}
+  </td>
+</tr>
+{% endif %}
+
+{% if history_rows %}
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {{ history_table(history_rows) }}
   </td>
 </tr>
 {% endif %}
