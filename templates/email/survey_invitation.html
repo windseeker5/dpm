@@ -1,0 +1,26 @@
+{#
+  Post-activity survey. Accent: purple — the one email in the set that asks for something
+  rather than reporting something.
+#}
+{% extends "email/_base.html" %}
+{% from "email/components.html" import button %}
+
+{% set accent = '#6741d9' %}
+{% set preheader = 'Deux minutes pour nous dire comment ça s\'est passé.' %}
+
+{% block content %}
+
+{% if survey_url %}
+<tr>
+  <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
+    {{ button(survey_url, 'Répondre au formulaire', accent=accent) }}
+    {% if question_count %}
+    <div style="padding-top:10px; font-size:13px; color:#8892a4; line-height:1.5;">
+      {{ question_count }} questions · environ deux minutes
+    </div>
+    {% endif %}
+  </td>
+</tr>
+{% endif %}
+
+{% endblock %}

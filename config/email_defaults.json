@@ -38,7 +38,7 @@
   "signup_payment_first": {
     "subject": "Pré-inscription reçue — Prochaine étape",
     "title": "Pré-inscription reçue",
-    "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Nous avons reçu votre pré-inscription à <strong>{{ activity_name }}</strong>. Pour confirmer votre place, faites un virement Interac de <strong>{{ requested_amount }}</strong>{% if payment_email %} à <strong>{{ payment_email }}</strong>{% endif %}.</p>{% if activity_location %}<p style=\"font-size:14px; color:#8892a4;\">{{ activity_location }}</p>{% endif %}",
+    "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Nous avons reçu votre pré-inscription à <strong>{{ activity_name }}</strong>. Pour confirmer votre place, faites un virement Interac avec les informations ci-dessous.</p>{% if activity_location %}<p style=\"font-size:14px; color:#8892a4;\">{{ activity_location }}</p>{% endif %}",
     "conclusion_text": "<p>Vous recevrez votre passeport dès réception du paiement.</p><p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
     "custom_message": "",
     "cta_text": "Retour à l'accueil",

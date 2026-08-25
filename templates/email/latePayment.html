@@ -1,0 +1,31 @@
+{#
+  Payment still outstanding. Accent: amber, deliberately not red.
+
+  Nothing has gone wrong here — someone simply has not paid yet — and the old template led
+  with a thumbs-down illustration. A reminder should be easy to act on, not a reprimand.
+#}
+{% extends "email/_base.html" %}
+{% from "email/components.html" import pass_block, button %}
+
+{% set accent = '#b26a00' %}
+{% set preheader = 'Votre passeport attend son paiement.' %}
+
+{% block content %}
+
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {# No QR: the pass is not usable until it is paid, so showing a code to present would
+       only be confusing. #}
+    {{ pass_block(pass_data, accent=accent, show_qr=False) }}
+  </td>
+</tr>
+
+{% if pass_url %}
+<tr>
+  <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
+    {{ button(pass_url, 'Voir mon passeport', accent=accent) }}
+  </td>
+</tr>
+{% endif %}
+
+{% endblock %}

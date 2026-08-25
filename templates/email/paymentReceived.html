@@ -1,0 +1,32 @@
+{# Payment cleared. Accent: green — the one unambiguously good outcome in the set. #}
+{% extends "email/_base.html" %}
+{% from "email/components.html" import pass_block, button, session_list %}
+
+{% set accent = '#1a7f4b' %}
+{% set preheader = 'Paiement reçu — votre passeport est actif.' %}
+
+{% block content %}
+
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {{ pass_block(pass_data, accent=accent, show_qr=show_qr_code) }}
+  </td>
+</tr>
+
+{% if booked_slots %}
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {{ session_list(booked_slots, accent=accent) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if pass_url %}
+<tr>
+  <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
+    {{ button(pass_url, 'Voir mon passeport', accent=accent) }}
+  </td>
+</tr>
+{% endif %}
+
+{% endblock %}

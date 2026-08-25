@@ -1,0 +1,31 @@
+{#
+  Pre-registration: the place is held once payment arrives. Accent: amber — something is
+  still owed, but nothing has gone wrong.
+
+  No passport exists yet, so this email's job is entirely "here is how to pay".
+#}
+{% extends "email/_base.html" %}
+{% from "email/components.html" import interac_block, signup_code_notice %}
+
+{% set accent = '#b26a00' %}
+{% set preheader = 'Confirmez votre place par virement Interac.' %}
+
+{% block content %}
+
+{% if requested_amount and payment_email %}
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {{ interac_block(requested_amount, payment_email, base_url) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if needs_signup_code and signup_code %}
+<tr>
+  <td class="mp-pad" style="padding:16px 32px 0 32px;">
+    {{ signup_code_notice(signup_code) }}
+  </td>
+</tr>
+{% endif %}
+
+{% endblock %}

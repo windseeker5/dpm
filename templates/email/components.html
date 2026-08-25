@@ -119,6 +119,69 @@
 {%- endmacro %}
 
 
+{#
+  Interac transfer details. The amount and the destination address are the whole point of a
+  payment-first signup email, so they get their own block rather than sitting in prose.
+#}
+{% macro interac_block(requested_amount, payment_email, base_url='') -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="width:100%; background-color:{{ C_WELL }}; border:1px solid {{ C_LINE }}; border-radius:12px;">
+  <tr>
+    <td style="padding:18px 20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          {% if base_url %}
+          <td valign="middle" width="40" style="width:40px; vertical-align:middle; padding-right:14px;">
+            <img src="{{ base_url }}/static/images/email/interac-logo.jpg" width="40" height="40" alt="Interac"
+                 style="display:block; width:40px; height:40px; border-radius:7px; border:0;">
+          </td>
+          {% endif %}
+          <td valign="middle" style="vertical-align:middle;">
+            {{ _label('Montant') }}
+            {{ _value(requested_amount) }}
+          </td>
+          <td valign="middle" style="vertical-align:middle;">
+            {{ _label('Destinataire') }}
+            <div style="font-size:15px; font-weight:600; color:{{ C_INK }}; line-height:1.45; word-break:break-all;">{{ payment_email }}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{%- endmacro %}
+
+
+{#
+  Reference code for a transfer.
+
+  Only shown when another signup shares the same name and amount, which is the case the
+  payment matcher cannot resolve on its own. The wording has to keep saying that this goes in
+  the "Message au destinataire" field and is NOT the Interac security question — people put it
+  in the wrong field otherwise and the transfer stops matching.
+#}
+{% macro signup_code_notice(signup_code) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="width:100%; background-color:#fff8e6; border:1px solid #f0d9a0; border-radius:12px;">
+  <tr>
+    <td style="padding:18px 20px;">
+      <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:#8a6d1f;">
+        Code à inclure au virement
+      </div>
+      <div style="margin:10px 0; padding:12px; background:#ffffff; border:1px solid #ecd9a8; border-radius:8px; text-align:center; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:19px; font-weight:700; letter-spacing:0.04em; color:{{ C_INK }};">
+        {{ signup_code }}
+      </div>
+      <div style="font-size:14px; line-height:1.6; color:#6b5518;">
+        Inscrivez-le dans le champ <strong>« Message au destinataire »</strong> de votre virement —
+        ce n'est pas la question de sécurité. Une autre inscription porte le même nom et le même
+        montant, ce code nous permet de reconnaître le vôtre.
+      </div>
+    </td>
+  </tr>
+</table>
+{%- endmacro %}
+
+
 {% macro button(href, label, accent='#206bc4') -%}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="mp-btn" style="margin:0 auto;">
   <tr>

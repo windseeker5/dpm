@@ -1,0 +1,39 @@
+{# Attendance recorded. Accent: teal — a receipt for something that already happened. #}
+{% extends "email/_base.html" %}
+{% from "email/components.html" import pass_block, button, session_list %}
+
+{% set accent = '#0f7b8a' %}
+{% set preheader = 'Votre présence est enregistrée.' %}
+
+{% block content %}
+
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {# The QR still belongs here: this email doubles as the pass for the next visit, and the
+       block already shows how many credits are left. #}
+    {{ pass_block(pass_data, accent=accent, show_qr=show_qr_code) }}
+  </td>
+</tr>
+
+{% if booked_slots %}
+<tr>
+  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+    {{ session_list(booked_slots, accent=accent) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if pass_url %}
+<tr>
+  <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
+    {{ button(pass_url, 'Voir mon passeport', accent=accent) }}
+    {% if uses_scheduling %}
+    <div style="padding-top:10px; font-size:13px; color:#8892a4; line-height:1.5;">
+      Réservez votre prochaine séance au même endroit.
+    </div>
+    {% endif %}
+  </td>
+</tr>
+{% endif %}
+
+{% endblock %}

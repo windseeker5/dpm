@@ -3433,6 +3433,11 @@ def get_all_activity_logs():
 ## EMAIL STUFF
 ##
 
+# Templates whose layout renders no QR code, so no CID part should be attached for them.
+# Keep in step with show_qr=False in the corresponding templates/email/<name>.html.
+NO_QR_TEMPLATES = {'latePayment'}
+
+
 def safe_template(template_name: str) -> str:
     """
     Corrects template path.
@@ -3444,6 +3449,12 @@ def safe_template(template_name: str) -> str:
 
     template_name = template_name.lstrip("/")
     base_name = template_name.replace(".html", "")
+
+    # Idempotent: some callers resolve the path themselves and hand the result to send_email,
+    # which resolves it again. Without this, a second pass would push an already-good path
+    # ("email/newPass.html") down to the fallback and prefix it into "email_templates/...".
+    if os.path.exists(os.path.join("templates", template_name)):
+        return template_name
 
     # Prefer the reworked layout in templates/email/. Callers name templates inconsistently
     # ("newPass" from the preview, "newPass_compiled/index.html" from the send path), so
@@ -4309,6 +4320,16 @@ def send_bulk_sequential(app, email_jobs, subject, activity=None, operational=Fa
     thread.start()
 
 
+def _fr_money(amount):
+    """Format an amount the way the email templates do: 50,00 $.
+
+    Quebec French puts the sign after the number with a non-breaking space, and uses a comma
+    for the decimal. Kept in step with the `money()` macro in templates/email/components.html
+    so a single email never shows both "$50.00" and "50,00 $".
+    """
+    return f"{amount or 0:.2f}".replace(".", ",") + " $"
+
+
 def notify_signup_event(app, *, signup, activity, timestamp=None):
     from utils import send_email_async, get_email_context, get_setting
     from flask import render_template_string, url_for
@@ -4350,7 +4371,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
 
         base_context["needs_signup_code"] = needs_signup_code
         base_context["signup_code"] = (signup.signup_code or f"MP-INS-{signup.id:07d}") if needs_signup_code else ""
-        base_context["requested_amount"] = f"${signup.requested_amount:.2f}" if signup.requested_amount else "$0.00"
+        base_context["requested_amount"] = _fr_money(signup.requested_amount)
         base_context["payment_email"] = payment_email
 
     # Get email context using activity-specific templates
@@ -4382,7 +4403,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
 
         render_context["needs_signup_code"] = needs_signup_code
         render_context["signup_code"] = (signup.signup_code or f"MP-INS-{signup.id:07d}") if needs_signup_code else ""
-        render_context["requested_amount"] = f"${signup.requested_amount:.2f}" if signup.requested_amount else "$0.00"
+        render_context["requested_amount"] = _fr_money(signup.requested_amount)
         render_context["payment_email"] = payment_email
 
     intro = render_template_string(intro_raw, **render_context)
@@ -4527,8 +4548,11 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         }
         template_name = template_mapping.get(event_type, 'newPass_compiled/index.html')
 
-        # Get show_qr_code setting (default True for non-customized templates)
-        show_qr_code = True
+        # Default on, except where the template deliberately omits the code. latePayment
+        # shows no QR — the pass isn't usable until it's paid — and attaching one anyway
+        # would ship an unreferenced MIME part. Attachment count is exactly what triggered
+        # the Feb 2026 Gmail block, so don't send parts nothing renders.
+        show_qr_code = template_type not in NO_QR_TEMPLATES
 
         # Compute owner_logo_url before rendering owner card (Phase 3 — hosted images)
         _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
@@ -4587,9 +4611,9 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     # Get email context using activity-specific templates
     email_context = get_email_context(activity, template_type, base_context)
 
-    # Get show_qr_code setting from activity's email templates (default True)
-    show_qr_code = True
-    if activity.email_templates and template_type in activity.email_templates:
+    # Owner's toggle wins, but a template that renders no QR never gets a CID part.
+    show_qr_code = template_type not in NO_QR_TEMPLATES
+    if show_qr_code and activity.email_templates and template_type in activity.email_templates:
         show_qr_code = activity.email_templates[template_type].get('show_qr_code', True)
 
     # Extract template values
