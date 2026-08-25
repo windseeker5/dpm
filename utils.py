@@ -3436,6 +3436,7 @@ def get_all_activity_logs():
 def safe_template(template_name: str) -> str:
     """
     Corrects template path.
+    - If a reworked templates/email/<name>.html exists, use it.
     - If a compiled version exists, redirect to compiled/index.html.
     - If a folder with index.html exists, redirect to folder/index.html.
     - Otherwise normal path.
@@ -3443,6 +3444,15 @@ def safe_template(template_name: str) -> str:
 
     template_name = template_name.lstrip("/")
     base_name = template_name.replace(".html", "")
+
+    # Prefer the reworked layout in templates/email/. Callers name templates inconsistently
+    # ("newPass" from the preview, "newPass_compiled/index.html" from the send path), so
+    # reduce whatever arrived to the bare template key first.
+    bare_name = (base_name.split("/")[0]
+                 .replace("_compiled", "")
+                 .replace("_original", ""))
+    if os.path.exists(os.path.join("templates", "email", f"{bare_name}.html")):
+        return f"email/{bare_name}.html"
 
     # Check if compiled version exists
     compiled_folder = os.path.join("templates", "email_templates", f"{base_name}_compiled", "index.html")

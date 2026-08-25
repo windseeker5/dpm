@@ -1,0 +1,191 @@
+{#
+  Shared email components. Import with:
+      {% from "email/components.html" import pass_block, button, session_list, history_table %}
+
+  These are the email-side half of a pair: each one has a Tabler counterpart on the passport
+  page (templates/partials/) built from the same spec, so an email and /pass/<code> read as the
+  same object. Keep the two in step when either changes.
+
+  Everything is table-based with inline styles — no class hooks except the .mp-* ones the base
+  layout's @media block targets.
+#}
+
+{% set C_INK   = '#15192c' %}
+{% set C_BODY  = '#4a5568' %}
+{% set C_LABEL = '#8892a4' %}
+{% set C_LINE  = '#e4e8f0' %}
+{% set C_WELL  = '#f7f9fc' %}
+
+
+{% macro _label(text) -%}
+<div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }}; line-height:1.4;">{{ text }}</div>
+{%- endmacro %}
+
+
+{% macro _value(text) -%}
+<div style="font-size:16px; font-weight:600; color:{{ C_INK }}; line-height:1.45;">{{ text }}</div>
+{%- endmacro %}
+
+
+{# Quebec French money: comma decimal, sign after the amount, non-breaking space between. #}
+{% macro money(amount) -%}
+{{ '%.2f'|format(amount or 0) | replace('.', ',') }}&nbsp;$
+{%- endmacro %}
+
+
+{#
+  Credit pips — filled for what is left, hollow for what has been used.
+
+  This is the one deliberate nod to the paper punch card Minipass replaced: the same
+  information the holes carried, without pretending to be paper. It only reads as a quantity
+  while the count is small, so anything above the cap falls back to a plain number.
+#}
+{% macro credit_pips(remaining, total=None, accent='#206bc4', cap=10) -%}
+  {%- set r = remaining | int -%}
+  {%- set t = (total | int) if total else r -%}
+  {%- if t > cap or t < 1 -%}
+    <span style="font-size:16px; font-weight:600; color:{{ C_INK }};">{{ r }}</span>
+  {%- else -%}
+    <span style="font-size:17px; line-height:1.2; letter-spacing:2px; color:{{ accent }};">
+      {%- for i in range(t) -%}{{ '●' if i < r else '<span style="color:#d7dce6;">○</span>' | safe }}{%- endfor -%}
+    </span>
+  {%- endif -%}
+{%- endmacro %}
+
+
+{#
+  The pass block: labelled columns holding the facts, with the QR beneath them.
+
+  Replaces the old gradient "business card". The structure is a pass — holder, credits,
+  amount, status — but stated plainly rather than dressed up as a physical object.
+#}
+{% macro pass_block(pass_data, accent='#206bc4', show_qr=True, qr_src='cid:qr_code', pips=True) -%}
+{%- set total = pass_data.passport_type.sessions_included if pass_data.passport_type else None -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="width:100%; background-color:{{ C_WELL }}; border:1px solid {{ C_LINE }}; border-radius:12px;">
+  <tr>
+    <td style="padding:20px 22px;">
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td class="mp-stack" width="50%" valign="top" style="width:50%; vertical-align:top; padding-bottom:16px;">
+            {{ _label('Titulaire') }}
+            {{ _value(pass_data.user.name) }}
+          </td>
+          <td class="mp-stack" width="50%" valign="top" style="width:50%; vertical-align:top; padding-bottom:16px; padding-left:12px;">
+            {{ _label('Crédits restants') }}
+            {% if pips %}
+              <div style="padding-top:3px;">{{ credit_pips(pass_data.uses_remaining, total, accent) }}</div>
+            {% else %}
+              {{ _value(pass_data.uses_remaining) }}
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td class="mp-stack" width="50%" valign="top" style="width:50%; vertical-align:top;">
+            {{ _label('Montant') }}
+            <div style="font-size:16px; font-weight:600; color:{{ C_INK }}; line-height:1.45;">{{ money(pass_data.sold_amt) }}</div>
+          </td>
+          <td class="mp-stack" width="50%" valign="top" style="width:50%; vertical-align:top; padding-left:12px;">
+            {{ _label('Statut') }}
+            {% if pass_data.paid %}
+              <div style="font-size:16px; font-weight:600; color:#1a7f4b; line-height:1.45;">Payé</div>
+            {% else %}
+              <div style="font-size:16px; font-weight:600; color:#9a6700; line-height:1.45;">En attente de paiement</div>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
+
+      {% if show_qr %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+        <tr>
+          <td style="padding-top:18px; border-top:1px solid {{ C_LINE }};" align="center">
+            {# 150px: large enough to scan off a phone screen, small enough that the message
+               above it still occupies the first view. The old block was 350-400px. #}
+            <img src="{{ qr_src }}" width="150" height="150" alt="Code QR du passeport"
+                 style="display:block; width:150px; height:150px; border:0; background:#ffffff; border-radius:8px;">
+            <div style="padding-top:10px; font-size:13px; color:{{ C_LABEL }}; line-height:1.5;">
+              Présentez ce code à votre arrivée
+            </div>
+          </td>
+        </tr>
+      </table>
+      {% endif %}
+
+    </td>
+  </tr>
+</table>
+{%- endmacro %}
+
+
+{% macro button(href, label, accent='#206bc4') -%}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" class="mp-btn" style="margin:0 auto;">
+  <tr>
+    <td align="center" style="border-radius:8px; background-color:{{ accent }};">
+      <a href="{{ href }}" style="display:inline-block; padding:13px 26px; font-size:15px; font-weight:600; color:#ffffff; border-radius:8px;">{{ label }}</a>
+    </td>
+  </tr>
+</table>
+{%- endmacro %}
+
+
+{#
+  Booked sessions. Only rendered for activities with scheduling turned on.
+
+  Credits alone mislead someone who is fully booked — their credits are spent, but every
+  session is still ahead of them — so the passport page and this list both name the sessions.
+#}
+{% macro session_list(sessions, accent='#206bc4') -%}
+{% if sessions %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+  <tr>
+    <td style="padding-bottom:8px;">
+      <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }};">
+        {{ 'Votre séance' if sessions | length == 1 else 'Vos séances' }}
+      </div>
+    </td>
+  </tr>
+  {% for label in sessions %}
+  <tr>
+    <td style="padding:9px 0; border-top:1px solid {{ C_LINE }};">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td align="left" style="font-size:15px; font-weight:600; color:{{ C_INK }}; text-transform:capitalize;">{{ label }}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{%- endmacro %}
+
+
+{#
+  History. Takes the same rows the passport page shows, so the two never disagree.
+  `entries` is a list of {label, date, by} dicts.
+#}
+{% macro history_table(entries) -%}
+{% if entries %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+  <tr>
+    <td style="padding-bottom:8px;">
+      <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }};">Historique</div>
+    </td>
+  </tr>
+  {% for e in entries %}
+  <tr>
+    <td style="padding:9px 0; border-top:1px solid {{ C_LINE }}; font-size:14px; color:{{ C_BODY }};">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td align="left" style="font-size:14px; color:{{ C_INK }};">{{ e.label }}</td>
+          <td align="right" style="font-size:13px; color:{{ C_LABEL }}; white-space:nowrap;">{{ e.date }}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{%- endmacro %}

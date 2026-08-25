@@ -13137,6 +13137,13 @@ def email_preview(activity_id):
                     'name': 'Sample Pass',
                     'price': 50.00
                 })()
+                # The pass block draws credits as pips (used vs remaining), which needs the
+                # original allotment. Sample 5-of-8 so the preview shows both states rather
+                # than a misleadingly full row.
+                self.passport_type = type('obj', (object,), {
+                    'name': 'Sample Pass',
+                    'sessions_included': 8
+                })()
                 self.created_dt = datetime.now()
                 self.sold_amt = 50.00
                 self.paid = True
@@ -13377,6 +13384,13 @@ def email_preview_live(activity_id):
                 self.pass_type = type('obj', (object,), {
                     'name': 'Sample Pass',
                     'price': 50.00
+                })()
+                # The pass block draws credits as pips (used vs remaining), which needs the
+                # original allotment. Sample 5-of-8 so the preview shows both states rather
+                # than a misleadingly full row.
+                self.passport_type = type('obj', (object,), {
+                    'name': 'Sample Pass',
+                    'sessions_included': 8
                 })()
                 self.created_dt = datetime.now()
                 self.sold_amt = 50.00

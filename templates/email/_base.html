@@ -1,0 +1,174 @@
+{#
+  Base layout for every Minipass transactional email.
+
+  All seven emails extend this file and fill {% block content %}. A child sets its identity
+  with {% set accent = ... %} and {% set hero = ... %} before the block — top-level `set` in a
+  child template is visible to the parent in Jinja.
+
+  DESIGN NOTES
+  ------------
+  Recognition between the seven email types is carried by the accent colour and the headline,
+  not by the illustration. Outlook desktop and many Gmail configurations block remote images
+  by default, and every image here is a hosted URL (see docs/EMAIL_DELIVERABILITY.md), so an
+  image-blocked reader would lose the signal entirely if it lived in the artwork. Background
+  colours and text always render.
+
+  EMAIL-SAFE CSS
+  --------------
+  Structural styling is written inline on the elements themselves, so the layout does not
+  depend on Premailer having run. The <style> block below carries only @media overrides and
+  a couple of class hooks, which cannot be inlined by anything.
+
+  IMAGES
+  ------
+  Hero and logo are hosted URLs. Only the QR code is a CID attachment (cid:qr_code) — it has
+  to survive forwarding and offline viewing. Never add CID for decorative images.
+#}
+{% set accent = accent | default('#206bc4') %}
+{% set c_ink = '#15192c' %}
+{% set c_body = '#4a5568' %}
+{% set c_label = '#8892a4' %}
+{% set c_line = '#e4e8f0' %}
+{% set c_page = '#f1f4f9' %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>{{ title | default(activity_name) | default('Minipass') }}</title>
+
+  <!--[if mso]>
+  <xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+  <![endif]-->
+
+  <style type="text/css">
+    /* Only rules that cannot be inlined live here. */
+    @media only screen and (max-width: 600px) {
+      .mp-shell    { width: 100% !important; margin: 12px auto !important; border-radius: 0 !important; }
+      .mp-pad      { padding-left: 20px !important; padding-right: 20px !important; }
+      .mp-headline { font-size: 23px !important; }
+      .mp-hero     { width: 40px !important; height: 40px !important; }
+      /* Two-column field pairs collapse to one column; the even spacing has to come back
+         with them, otherwise the pairs that shared a row read as grouped. */
+      /* Even gap on every stacked cell. Deliberately not :last-child — support for it is
+         patchy across email clients, and it lands on the wrong cells in a 2x2 grid anyway. */
+      .mp-stack    { display: block !important; width: 100% !important; padding-left: 0 !important; padding-bottom: 14px !important; }
+      .mp-btn a    { display: block !important; }
+    }
+    /* Dark-mode clients invert the shell; keep the ink readable rather than letting the
+       client pick its own contrast. */
+    @media (prefers-color-scheme: dark) {
+      .mp-shell { background: #ffffff !important; }
+    }
+    a { text-decoration: none; }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:{{ c_page }}; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+  {# Preheader: the grey line the inbox shows next to the subject. Kept out of sight. #}
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">
+    {{ preheader | default(title) | default('') }}
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:{{ c_page }};">
+    <tr>
+      <td align="center" style="padding:0;">
+
+        <table role="presentation" class="mp-shell" width="600" cellpadding="0" cellspacing="0" border="0"
+               style="width:600px; max-width:600px; margin:32px auto; background-color:#ffffff; border:1px solid {{ c_line }}; border-radius:14px; overflow:hidden;">
+
+          {# Accent rule — the per-template identity, and the one signal that survives images off. #}
+          <tr><td style="height:4px; line-height:4px; font-size:0; background-color:{{ accent }};">&nbsp;</td></tr>
+
+          {# Header band: the owner's brand leads. The customer signed up with this business,
+             not with Minipass, so the platform stays in the footer. #}
+          <tr>
+            <td class="mp-pad" style="padding:20px 32px; border-bottom:1px solid {{ c_line }};">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" valign="middle" style="vertical-align:middle;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        {% if owner_logo_url %}
+                        <td valign="middle" style="padding-right:10px; vertical-align:middle;">
+                          <img src="{{ owner_logo_url }}" width="32" height="32" alt=""
+                               style="display:block; width:32px; height:32px; border-radius:7px; object-fit:cover; border:0;">
+                        </td>
+                        {% endif %}
+                        <td valign="middle" style="vertical-align:middle;">
+                          <div style="font-size:15px; font-weight:700; color:{{ c_ink }}; line-height:1.3;">
+                            {{ activity_name | default('') }}
+                          </div>
+                          {% if organization_name %}
+                          <div style="font-size:12px; color:{{ c_label }}; line-height:1.4;">{{ organization_name }}</div>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  {% if hero_image_url %}
+                  <td align="right" valign="middle" width="48" style="vertical-align:middle; width:48px;">
+                    <img src="{{ hero_image_url }}" class="mp-hero" width="48" height="48" alt=""
+                         style="display:block; width:48px; height:48px; border:0;">
+                  </td>
+                  {% endif %}
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {# Message #}
+          <tr>
+            <td class="mp-pad" style="padding:30px 32px 0 32px;">
+              {% if title %}
+              <h1 class="mp-headline" style="margin:0 0 14px 0; font-size:26px; line-height:1.25; font-weight:700; letter-spacing:-0.01em; color:{{ c_ink }};">
+                {{ title }}
+              </h1>
+              {% endif %}
+              {% if intro_text %}
+              <div style="font-size:15px; line-height:1.65; color:{{ c_body }};">{{ intro_text | safe }}</div>
+              {% endif %}
+            </td>
+          </tr>
+
+          {% block content %}{% endblock %}
+
+          {% if conclusion_text %}
+          <tr>
+            <td class="mp-pad" style="padding:8px 32px 0 32px; font-size:15px; line-height:1.65; color:{{ c_body }};">
+              {{ conclusion_text | safe }}
+            </td>
+          </tr>
+          {% endif %}
+
+          <tr><td style="height:32px; line-height:32px; font-size:0;">&nbsp;</td></tr>
+        </table>
+
+        {# Footer — platform attribution and the legal requirements live here. #}
+        <table role="presentation" class="mp-shell" width="600" cellpadding="0" cellspacing="0" border="0"
+               style="width:600px; max-width:600px; margin:0 auto 32px auto; background:transparent; border:0;">
+          <tr>
+            <td class="mp-pad" align="center" style="padding:0 32px; font-size:12px; line-height:1.7; color:{{ c_label }};">
+              {% if support_email %}
+              <div>Une question? <a href="mailto:{{ support_email }}" style="color:{{ accent }};">{{ support_email }}</a></div>
+              {% endif %}
+              <div>{{ organization_name }}{% if organization_address %} · {{ organization_address }}{% endif %}</div>
+              <div style="padding-top:6px;">
+                {% if unsubscribe_url %}<a href="{{ unsubscribe_url }}" style="color:{{ c_label }}; text-decoration:underline;">Se désabonner</a>{% endif %}
+                {% if unsubscribe_url and privacy_url %} · {% endif %}
+                {% if privacy_url %}<a href="{{ privacy_url }}" style="color:{{ c_label }}; text-decoration:underline;">Confidentialité</a>{% endif %}
+              </div>
+              {% if activity_name %}
+              <div style="padding-top:6px; color:#a8b0bf;">Vous recevez ce courriel car vous êtes inscrit à {{ activity_name }}.</div>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
