@@ -516,3 +516,15 @@ send via `test/send_real_email_preview.py --template newPass paymentReceived red
 3 delivered successfully to a real inbox for final visual confirmation, per this project's
 standing rule that a same-origin preview alone never proves an email actually survives a real
 client.
+
+**Gap the user caught by asking, not something I'd already checked**: the admin Email
+Templates page's collapsed-card skeleton (`templates/email_template_customization.html`,
+`.mini-qr-frame`) still had `border: 1px solid #15192c` — stale from before this round, now
+inconsistent with the real borderless `qr_block()`. Fixed: dropped the border (kept the
+existing `#f6f6f7` grey fill — unlike the real QR, this skeleton square has no actual QR image
+to lean on for contrast against the white card background, so unlike `.pass-qr-frame`/
+`qr_block()` it still needs *some* fill to stay visible; going to `background:#fff` here would
+have made it disappear entirely). Also added the missing `.mini-well-title` above it, matching
+`qr_block()`'s new `label` param. Re-verified live against the real Wing Foil activity
+(id 16) — both the collapsed card skeleton and the actual `/email-preview` for
+`paymentReceived` now show "CODE D'ACCÈS" + a clean borderless QR consistently.

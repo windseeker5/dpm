@@ -184,8 +184,7 @@
 .mini-qr-frame {
   width: 26px;
   height: 26px;
-  border: 1px solid #15192c;
-  border-radius: 2px;
+  border-radius: 4px;
   background: #f6f6f7;
 }
 
@@ -302,9 +301,10 @@
                   </div>
 
                   {% if template_key != 'latePayment' %}
-                  <!-- QR — tight frame, mirrors .pass-qr-frame / qr_block(). Skipped for
-                       latePayment: the pass isn't usable until paid, matching
-                       NO_QR_TEMPLATES in utils.py. -->
+                  <!-- QR — title above, tight frame below, mirrors qr_block()'s label param
+                       ("Code d'accès") and .pass-qr-frame. Skipped for latePayment: the pass
+                       isn't usable until paid, matching NO_QR_TEMPLATES in utils.py. -->
+                  <div class="mini-well-title"></div>
                   <div class="mini-qr-frame-wrap mb-1">
                     <div class="mini-qr-frame"></div>
                   </div>
