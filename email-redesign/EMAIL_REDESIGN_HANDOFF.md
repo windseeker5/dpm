@@ -345,3 +345,44 @@ against the real Wing Foil passport (`MP-8bf85bf462a5` — has a real booking, s
 real test of the Séances well and its Annuler button on this rebuilt page), at desktop and a
 simulated 375px width, including actually opening the cancel-booking modal to confirm the
 restyled button still works. `web-design-guidelines` re-run after: clean, no new findings.
+
+## Third item: pass.html layout overhaul + a real payment-metadata bug (2026-08-30, session 4)
+
+The user annotated a screenshot of the Wing Foil passport with explicit, opinionated changes —
+different from the consistency-only pass above, this is a deliberate departure from strict
+email/page parity on two points, confirmed with the user before implementing:
+- **Org logo + name moved onto the hero photo itself** (top-left, logo bumped 56px→72px, name
+  white with a text-shadow for legibility over any photo) — replaces the separate white row
+  below the ink bar. The email can't do this (Gmail has no `position:absolute` support, see
+  `photo_band()`'s docstring in `email/components.html`), but this is a real page, so it's a
+  conscious, page-only divergence, called out inline in both the CSS comment and this doc.
+- **"Prochaine séance" removed entirely** — redundant with Mes séances below; the `{% set
+  upcoming %}` line stays (still feeds the Crédits sub-line) even though its own visual block
+  is gone.
+- **Participant + Facts + QR merged into one grey `.pass-well` card, everything left-aligned**
+  — Facts rows changed from label-left/value-right-on-one-line to label-above-value stacked
+  block (mirrors the Participant name block's existing pattern), and the QR block lost its
+  `text-center` wrapper so it sits flush left instead of centered. This is the second deliberate
+  parity divergence — the email keeps rows_block()'s right-aligned values and qr_block()'s
+  centered QR; only this page changes.
+
+**Real bug found along the way, not a design issue:** the user reported Statut showing "Payé"
+while Historique's "Paiement" row showed "En attente" for a passport they created themselves
+(payment-first workflow: approve the signup + create the passport after confirming payment in
+person). Traced to `approve_and_create_pass()` in `app.py` (~line 2274) — it copies
+`paid=signup.paid` onto the new `Passport` but never sets `paid_date`/`marked_paid_by`/
+`payment_method`, and `get_pass_history_data()` (`utils.py` ~line 1479) only populates the
+Historique "Paiement" row when **both** `paid` and `paid_date` are truthy — so a
+payment-first-created passport was always paid=True with an eternally-empty payment history
+row. Fixed to set `paid_date=now_utc`, `marked_paid_by=session admin`, and
+`payment_method=signup.payment_method` whenever `signup.paid` is true at creation time — same
+fields `mark_passport_paid()` already sets, just applied at creation instead of only at the
+separate "mark paid" action. Backfilled the one real passport this affected
+(`MP-8bf85bf462a5`) directly in the dev DB to match what the fixed code would have produced.
+Note: the unused, unreferenced `create_pass_from_signup()` route (no template links to it) has
+the identical latent bug — left alone since it's unreachable from the UI, not the cause of
+anything.
+
+Verified live: hero overlay legible at desktop and simulated 375px width, Historique now shows
+the real paid date/admin instead of "En attente". `web-design-guidelines` caught one thing:
+the new org-logo `<img>` was missing explicit `width`/`height` — fixed.

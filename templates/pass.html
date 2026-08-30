@@ -40,21 +40,37 @@
       background-color: #f6f8fb;
       min-height: 100vh;
     }
-    /* Org identity — a small logo beside the org name, directly below the hero, no card.
-       Same size/position as the email's org identity row (56px, object-fit: contain). */
-    .pass-org-logo-inline {
-      width: 56px;
-      height: 56px;
+    /* Org identity — overlaid on the hero photo itself (top-left), not a separate row below
+       it. Unlike the email — where Gmail's lack of position:absolute support forces the logo
+       into a plain row under the ink bar (see photo_band() in email/components.html) — this
+       is a real page, so the overlay is safe here. White text + shadow keeps it legible over
+       any photo. */
+    .pass-hero-org {
+      position: absolute;
+      top: 0.875rem;
+      left: 1.25rem;
+      z-index: 2;
+    }
+    .pass-hero-org-logo {
+      width: 72px;
+      height: 72px;
       border-radius: 10px;
       object-fit: contain;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
     }
-    .pass-org-logo-inline--fallback {
-      color: #fff;
-      font-weight: 700;
-      font-size: 1.375rem;
+    .pass-hero-org-logo--fallback {
       display: flex;
       align-items: center;
       justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.75rem;
+    }
+    .pass-hero-org-name {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.125rem;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85), 0 0 10px rgba(0, 0, 0, 0.5);
     }
     .pass-footer {
       text-align: center;
@@ -111,11 +127,15 @@
       color: #15192c;
     }
 
-    /* Photo header band — activity photo, full width, edge to edge with the card. Mirrors
-       photo_band() in email/components.html: a solid ink caption bar below the image, never
-       text overlaid on the photo itself. Email does that for Gmail compatibility
-       (position:absolute is unsupported there); this page keeps the same final look on
-       purpose so the two surfaces read as one, even though the constraint doesn't apply here. */
+    /* Photo header band — activity photo, full width, edge to edge with the card. The ink
+       caption bar (eyebrow + activity name) still sits below the photo, matching
+       photo_band() in email/components.html — but the org identity is now overlaid directly
+       on the photo (see .pass-hero-org above), which the email can't do (Gmail has no
+       position:absolute support), so this is one deliberate divergence from strict
+       email/page parity. */
+    .pass-hero-wrap {
+      position: relative;
+    }
     .pass-hero-photo {
       width: 100%;
       height: 200px;
@@ -178,42 +198,36 @@
       color: #fff;
     }
 
-    /* Facts — single column, label left / value right, divider between rows. Mirrors
-       rows_block() in the email exactly (same font sizes, same tabular-nums so numbers align
-       like a receipt). */
+    /* Facts — left-aligned, label above value, divider between rows. This is a deliberate
+       divergence from the email's rows_block() (label left / value right, same line) — the
+       user asked everything on this page left-aligned; the email keeps its own layout. */
     .pass-rows {
       margin-top: 1.125rem;
       border-bottom: 1px solid #e4e8f0;
     }
     .pass-row {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 0.75rem;
       padding: 0.5rem 0;
     }
     .pass-row + .pass-row {
       border-top: 1px solid #e4e8f0;
     }
     .pass-row-label {
-      font-size: 0.84375rem;
+      display: block;
+      font-size: 0.75rem;
       color: #4a5568;
+      margin-bottom: 2px;
     }
     .pass-row-value {
-      font-size: 0.84375rem;
+      display: block;
+      font-size: 0.9375rem;
       font-weight: 700;
       color: #15192c;
-      text-align: right;
       font-variant-numeric: tabular-nums;
     }
-    /* Stacked value + sub-line (e.g. Crédits + "N séances réservées"), mirrors rows_block()'s
-       item.sub in the email macro — same size/color/margin. */
-    .pass-row-value-group {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-    }
+    /* Value + sub-line (e.g. Crédits + "N séances réservées"), mirrors rows_block()'s item.sub
+       in the email macro — same size/color/margin, just left- instead of right-aligned. */
     .pass-row-sub {
+      display: block;
       font-size: 0.6875rem;
       color: #8892a4;
       margin-top: 2px;
@@ -323,22 +337,40 @@
     <div class="col-11 col-md-10 col-lg-8 mx-auto">
       <div class="card shadow-md mb-4 bg-white overflow-hidden">
 
-        <!-- 🔲 Photo header band — mirrors photo_band() in email/components.html so the
-             email and this page read as the same object. -->
-        {% if activity and activity.image_filename %}
-        <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
-             class="card-img-top pass-hero-photo" alt="" width="800" height="200">
-        {% elif activity and activity.logo_filename %}
-        <div class="pass-hero-contained">
-          <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.logo_filename) }}"
-               alt="" width="120" height="120">
+        <!-- 🔲 Photo header band — org identity overlaid top-left (see .pass-hero-org),
+             activity name in the ink bar below the photo, mirroring photo_band() in
+             email/components.html for the caption-bar part. -->
+        <div class="pass-hero-wrap">
+          {% if activity and activity.image_filename %}
+          <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+               class="pass-hero-photo" alt="" width="800" height="200">
+          {% elif activity and activity.logo_filename %}
+          <div class="pass-hero-contained">
+            <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.logo_filename) }}"
+                 alt="" width="120" height="120">
+          </div>
+          {% else %}
+          <div class="pass-hero-contained"
+               style="background: {{ placeholder_color(activity.name if activity else 'Activity') }};">
+            <span class="pass-hero-letter">{{ placeholder_letter(activity.name if activity else 'Activity') }}</span>
+          </div>
+          {% endif %}
+
+          <div class="pass-hero-org d-flex align-items-center gap-2">
+            {% if settings and settings.get('LOGO_FILENAME') %}
+            <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+                 alt="" class="pass-hero-org-logo flex-shrink-0" width="72" height="72">
+            {% else %}
+            <div class="pass-hero-org-logo pass-hero-org-logo--fallback flex-shrink-0"
+                 style="background: {{ placeholder_color(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }};">
+              {{ placeholder_letter(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }}
+            </div>
+            {% endif %}
+            <div class="pass-hero-org-name">
+              {{ settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass' }}
+            </div>
+          </div>
         </div>
-        {% else %}
-        <div class="pass-hero-contained"
-             style="background: {{ placeholder_color(activity.name if activity else 'Activity') }};">
-          <span class="pass-hero-letter">{{ placeholder_letter(activity.name if activity else 'Activity') }}</span>
-        </div>
-        {% endif %}
 
         <div class="pass-hero-caption d-flex justify-content-between align-items-start gap-2">
           <div style="min-width: 0;">
@@ -380,68 +412,44 @@
           {% endif %}
         </div>
 
-        <!-- Org identity — plain, no card, directly below the hero. The customer signed up
-             with this business, not with Minipass, so the owner's brand leads. Same position
-             and treatment as the email's org identity row (a 56px logo + name, no card). -->
-        <div class="d-flex align-items-center gap-3 px-4 pt-3 pb-3" style="border-bottom: 1px solid #e4e8f0;">
-          {% if settings and settings.get('LOGO_FILENAME') %}
-          <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-               alt="" class="pass-org-logo-inline flex-shrink-0" width="56" height="56">
-          {% else %}
-          <div class="pass-org-logo-inline pass-org-logo-inline--fallback flex-shrink-0"
-               style="background: {{ placeholder_color(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }};">
-            {{ placeholder_letter(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }}
-          </div>
-          {% endif %}
-          <div class="fw-bold" style="font-size: 1rem; color: #15192c;">
-            {{ settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass' }}
-          </div>
-        </div>
-
         <!-- 🔲 Body -->
         <div class="card-body">
 
-          {# The next session leads. It is the thing someone opens their passport to check,
-             and the email now opens the same way, so the two surfaces answer the same
-             question in the same place. #}
+          {# Needed below for the Crédits sub-line ("N séances réservées") — the "Prochaine
+             séance" callout that used to read from this too was removed (redundant with
+             Mes séances below), but the count is still worth surfacing next to Crédits. #}
           {% set upcoming = my_bookings | rejectattr('is_past') | rejectattr('attended_dt') | list %}
-          {% if upcoming %}
-          <div class="mb-4">
-            <div class="pass-next-label">Prochaine séance</div>
-            <div class="pass-next-date">{{ format_slot_label(upcoming[0].slot) }}</div>
-          </div>
-          {% endif %}
 
-          {# Participant identity, then Facts, then QR — same order as identity_block() /
-             rows_block() / qr_block() in the email, so the two surfaces answer the same
-             questions in the same order. #}
+          {# Participant identity, then a grey card holding Facts + QR together — same
+             content and order as identity_block() / rows_block() / qr_block() in the email,
+             laid out left-aligned in one card instead of the email's separate rows. #}
           <h3 class="pass-section-title">Participant</h3>
-          <div class="pass-value" style="font-size: 1.375rem;">{{ hockey_pass.user.name }}</div>
-          {% if hockey_pass.user.email %}<div class="text-muted small">{{ hockey_pass.user.email }}</div>{% endif %}
-          {% if hockey_pass.user.phone_number %}<div class="text-muted small">{{ hockey_pass.user.phone_number }}</div>{% endif %}
+          <div class="pass-well">
+            <div class="pass-value" style="font-size: 1.375rem;">{{ hockey_pass.user.name }}</div>
+            {% if hockey_pass.user.email %}<div class="text-muted small">{{ hockey_pass.user.email }}</div>{% endif %}
+            {% if hockey_pass.user.phone_number %}<div class="text-muted small">{{ hockey_pass.user.phone_number }}</div>{% endif %}
 
-          {% set total_credits = hockey_pass.passport_type.sessions_included if hockey_pass.passport_type else None %}
-          {% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
-          <div class="pass-rows">
-            <div class="pass-row">
-              <span class="pass-row-label">Montant</span>
-              {# French formatting, matching utils._fr_money and the email's money() macro —
-                 this read "$500.00" while the email said "500,00 $". #}
-              <span class="pass-row-value">{{ "%.2f"|format(hockey_pass.sold_amt or 0)|replace(".", ",") }}&nbsp;$</span>
-            </div>
-            <div class="pass-row">
-              <span class="pass-row-label">Statut</span>
-              <span class="pass-row-value">
-                {% if hockey_pass.paid %}
-                <span class="pass-status-pill pass-status-pill--paid">Payé</span>
-                {% else %}
-                <span class="pass-status-pill pass-status-pill--unpaid">Non payé</span>
-                {% endif %}
-              </span>
-            </div>
-            <div class="pass-row">
-              <span class="pass-row-label">Crédits</span>
-              <span class="pass-row-value-group">
+            {% set total_credits = hockey_pass.passport_type.sessions_included if hockey_pass.passport_type else None %}
+            {% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
+            <div class="pass-rows">
+              <div class="pass-row">
+                <span class="pass-row-label">Montant</span>
+                {# French formatting, matching utils._fr_money and the email's money() macro —
+                   this read "$500.00" while the email said "500,00 $". #}
+                <span class="pass-row-value">{{ "%.2f"|format(hockey_pass.sold_amt or 0)|replace(".", ",") }}&nbsp;$</span>
+              </div>
+              <div class="pass-row">
+                <span class="pass-row-label">Statut</span>
+                <span class="pass-row-value">
+                  {% if hockey_pass.paid %}
+                  <span class="pass-status-pill pass-status-pill--paid">Payé</span>
+                  {% else %}
+                  <span class="pass-status-pill pass-status-pill--unpaid">Non payé</span>
+                  {% endif %}
+                </span>
+              </div>
+              <div class="pass-row">
+                <span class="pass-row-label">Crédits</span>
                 <span class="pass-row-value">
                   {# total<=1 is a quantity-purchase passport type (one date, N tickets bought at
                      once), not a multi-session one — showing "1 sur 1" reads as broken math.
@@ -462,26 +470,26 @@
                   {{ upcoming | length }} {{ "séance réservée" if upcoming | length == 1 else "séances réservées" }}
                 </span>
                 {% endif %}
-              </span>
+              </div>
+              {% if location %}
+              <div class="pass-row">
+                <span class="pass-row-label">Lieu</span>
+                <span class="pass-row-value">{{ location }}</span>
+              </div>
+              {% endif %}
             </div>
-            {% if location %}
-            <div class="pass-row">
-              <span class="pass-row-label">Lieu</span>
-              <span class="pass-row-value">{{ location }}</span>
-            </div>
-            {% endif %}
-          </div>
 
-          <div class="text-center mt-4">
-            {# One image, sized by CSS at the breakpoint. Two <img> tags meant the browser
-               decoded the same QR twice. #}
-            <div class="pass-qr-frame">
-              <img src="data:image/png;base64,{{ qr_data }}"
-                   alt="Code QR du passeport"
-                   width="140" height="140" />
+            <div class="mt-4">
+              {# One image, sized by CSS at the breakpoint. Two <img> tags meant the browser
+                 decoded the same QR twice. #}
+              <div class="pass-qr-frame">
+                <img src="data:image/png;base64,{{ qr_data }}"
+                     alt="Code QR du passeport"
+                     width="140" height="140" />
+              </div>
+              <div class="pass-qr-code">{{ hockey_pass.pass_code }}</div>
+              <div class="text-muted small mt-1">Présentez ce code ou la référence à l'accueil</div>
             </div>
-            <div class="pass-qr-code">{{ hockey_pass.pass_code }}</div>
-            <div class="text-muted small mt-1">Présentez ce code ou la référence à l'accueil</div>
           </div>
 
           {# Séances (activities that use scheduling) — nested inside this same continuous

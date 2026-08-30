@@ -2322,6 +2322,15 @@ def approve_and_create_pass(signup_id):
         created_by=current_admin.id if current_admin else None,
         created_dt=now_utc,
         paid=signup.paid,
+        # A passport created already-paid (payment-first: admin already confirmed payment
+        # before calling this route) needs the same paid metadata mark_passport_paid() sets,
+        # not just the boolean — get_pass_history_data() only renders the Historique
+        # "Paiement" row when BOTH paid AND paid_date are set, so leaving paid_date null left
+        # the Statut pill showing "Payé" while Historique showed "En attente" for the same
+        # passport. Found from a real payment-first passport, not by inspection.
+        paid_date=now_utc if signup.paid else None,
+        marked_paid_by=(session.get("admin", "unknown") if signup.paid else None),
+        payment_method=(signup.payment_method if signup.paid else None),
         notes=f"Created automatically from signup {signup.id}"
     )
     db.session.add(passport)
