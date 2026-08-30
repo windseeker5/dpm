@@ -405,3 +405,21 @@ correct since that shape genuinely is a filled rectangle, not a transparent PNG.
 Also bumped the logo 72px→96px, and split the org name one word per line (`{% for word in
 org_name.split() %}`) instead of one flowing line — generalizes to any number of words, not
 hardcoded to two. `web-design-guidelines` re-run after: clean, no new findings.
+
+## Fifth round, same session: vertical-center the hero overlay, revert Facts to two-column
+
+Two more direct tweaks from the user's next look:
+- `.pass-hero-org` was top-anchored (`top: 0.875rem`); changed to `top: 50%; transform:
+  translateY(-50%);` so the logo+name sits vertically centered on the photo, still left-aligned
+  horizontally.
+- **Reverted** the Facts rows (Montant/Statut/Crédits/Lieu) from the stacked left-aligned layout
+  (set two rounds ago) back to the original two-column layout — label left, value right, same
+  line — restoring `.pass-row { display:flex; justify-content:space-between; }` and re-wrapping
+  the Crédits value + "N séances réservées" sub-line in `.pass-row-value-group` (flex column,
+  right-aligned) so the sub-line sits under the value again instead of under a stacked label.
+  The user's own reasoning: Facts was the only section not matching Historique's and Mes
+  séances' label-left/value-right row convention — this makes all three consistent. The grey
+  `.pass-well` card and QR's left alignment are untouched.
+
+Verified live at desktop and simulated 375px width (Lieu's long value wraps to 3 lines but
+stays right-aligned cleanly, no overlap). `web-design-guidelines`: clean, no new findings.
