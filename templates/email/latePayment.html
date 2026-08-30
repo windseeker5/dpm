@@ -1,37 +1,52 @@
 {#
-  Payment still outstanding. Accent: amber, deliberately not red.
-
-  Nothing has gone wrong here — someone simply has not paid yet — and the old template led
-  with a thumbs-down illustration. A reminder should be easy to act on, not a reprimand.
+  Payment still outstanding. No QR: the pass is not usable until it is paid, so showing a
+  code to present would only be confusing.
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_card, button, history_table %}
+{% from "email/components.html" import identity_block, rows_block, status_pill, section_card, button, money, credit_line %}
 
-{% set accent = '#b26a00' %}
 {% set preheader = 'Votre passeport attend son paiement.' %}
+{% set photo_eyebrow = 'Paiement en attente' %}
 
 {% block content %}
 
+{% set activity = pass_data.activity %}
+{% set total = pass_data.passport_type.sessions_included if pass_data.passport_type else None %}
+{% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
+
+{% set facts = [
+  {'label': 'Montant', 'value': money(pass_data.sold_amt)},
+  {'label': 'Statut', 'value': status_pill(pass_data.paid)},
+  {'label': 'Crédits', 'value': credit_line(pass_data.uses_remaining, total)},
+] %}
+{% if location %}{% set _ = facts.append({'label': 'Lieu', 'value': location}) %}{% endif %}
+
 <tr>
-  <td class="mp-pad" style="padding:22px 32px 0 32px;">
-    {# No QR: the pass is not usable until it is paid, so showing a code to present would
-       only be confusing. #}
-    {{ pass_card(pass_data, accent=accent, show_qr=False, base_url=base_url) }}
+  <td class="mp-pad" style="padding:24px 32px 0 32px;">
+    {{ identity_block('Participant', pass_data.user.name, pass_data.user.email) }}
+    {{ rows_block(facts) }}
   </td>
 </tr>
 
-{% if pass_url %}
+{% if history_rows %}
 <tr>
-  <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
-    {{ button(pass_url, 'Voir mon passeport', accent=accent) }}
+  <td class="mp-pad" style="padding:24px 32px 0 32px;">
+    {% set history_items = [] %}
+    {% for e in history_rows %}
+      {% set _ = history_items.append({'label': e.label, 'value': e.date, 'sub': e.by}) %}
+    {% endfor %}
+    {{ section_card('Historique', history_items) }}
   </td>
 </tr>
 {% endif %}
 
-{% if history_rows %}
+{% if pass_url %}
 <tr>
-  <td class="mp-pad" style="padding:22px 32px 0 32px;">
-    {{ history_table(history_rows) }}
+  <td class="mp-pad" style="padding:8px 32px 0 32px;">
+    {# The pass isn't usable until it's paid, so this stays action-oriented ("make the
+       payment"), not "view your passport" like the other three templates — href is still
+       pass_url (not cta_url) since that's where the payment instructions actually live. #}
+    {{ button(pass_url, cta_text or 'Effectuer le paiement') }}
   </td>
 </tr>
 {% endif %}

@@ -182,9 +182,8 @@ def test_newPass():
 
     context = {
         'title': 'Votre nouveau passe est pret!',
-        'intro_text': '<p>Bonjour Jean-Marc,</p><p>Votre inscription a ete confirmee avec succes. Vous trouverez ci-dessous les details de votre passe ainsi que votre code QR personnel.</p>',
+        'admin_message': '<p>Bonjour Jean-Marc,</p><p>Votre inscription a ete confirmee avec succes. Vous trouverez ci-dessous les details de votre passe ainsi que votre code QR personnel.</p><p>Merci de votre confiance et a bientot!</p><p>L\'equipe LHGI</p>',
         **pass_context(base_url),
-        'conclusion_text': '<p>Merci de votre confiance et a bientot!</p><p>L\'equipe LHGI</p>',
         'hero_image_url': f"{base_url}/activity/{TEST_ACTIVITY_ID}/hero-image/newPass",
         'owner_logo_url': get_owner_logo_url(base_url, TEST_ACTIVITY_ID),
         'site_url': base_url,
@@ -211,9 +210,8 @@ def test_redeemPass():
 
     context = {
         'title': 'Activite enregistree!',
-        'intro_text': '<p>Bonjour Jean-Marc,</p><p>Votre participation a ete enregistree avec succes. Voici un resume de votre passe.</p>',
+        'admin_message': '<p>Bonjour Jean-Marc,</p><p>Votre participation a ete enregistree avec succes. Voici un resume de votre passe.</p><p>A la prochaine!</p><p>L\'equipe LHGI</p>',
         **pass_context(base_url),
-        'conclusion_text': '<p>A la prochaine!</p><p>L\'equipe LHGI</p>',
         'hero_image_url': f"{base_url}/activity/{TEST_ACTIVITY_ID}/hero-image/redeemPass",
         'owner_logo_url': get_owner_logo_url(base_url, TEST_ACTIVITY_ID),
         'site_url': base_url,
@@ -240,9 +238,8 @@ def test_paymentReceived():
 
     context = {
         'title': 'Paiement recu!',
-        'intro_text': '<p>Bonjour Jean-Marc,</p><p>Nous avons bien recu votre paiement de <strong>150,00 $</strong>. Merci!</p>',
+        'admin_message': '<p>Bonjour Jean-Marc,</p><p>Nous avons bien recu votre paiement de <strong>150,00 $</strong>. Merci!</p><p>Votre passe est maintenant actif. A bientot sur la glace!</p><p>L\'equipe LHGI</p>',
         **pass_context(base_url),
-        'conclusion_text': '<p>Votre passe est maintenant actif. A bientot sur la glace!</p><p>L\'equipe LHGI</p>',
         'hero_image_url': f"{base_url}/activity/{TEST_ACTIVITY_ID}/hero-image/paymentReceived",
         'owner_logo_url': get_owner_logo_url(base_url, TEST_ACTIVITY_ID),
         'site_url': base_url,
@@ -271,10 +268,9 @@ def test_latePayment():
 
     context = {
         'title': 'Rappel de paiement',
-        'intro_text': '<p>Bonjour Jean-Marc,</p><p>Nous n\'avons pas encore recu votre paiement de <strong>150,00 $</strong> pour votre inscription. Veuillez effectuer le paiement dans les plus brefs delais.</p>',
+        'admin_message': '<p>Bonjour Jean-Marc,</p><p>Nous n\'avons pas encore recu votre paiement de <strong>150,00 $</strong> pour votre inscription. Veuillez effectuer le paiement dans les plus brefs delais.</p><p>Si vous avez des questions, n\'hesitez pas a nous contacter.</p><p>L\'equipe LHGI</p>',
         # Unpaid, and no QR — this is the one template whose pass isn't usable yet.
         **pass_context(base_url, show_qr=False, paid=False),
-        'conclusion_text': '<p>Si vous avez des questions, n\'hesitez pas a nous contacter.</p><p>L\'equipe LHGI</p>',
         'hero_image_url': f"{base_url}/activity/{TEST_ACTIVITY_ID}/hero-image/latePayment",
         'owner_logo_url': get_owner_logo_url(base_url, TEST_ACTIVITY_ID),
         'site_url': base_url,
@@ -301,8 +297,7 @@ def test_signup():
 
     context = {
         'title': 'Inscription confirmee!',
-        'intro_text': '<p>Bonjour Jean-Marc,</p><p>Nous avons bien recu votre inscription pour <strong>Hockey LHGI - Session Hiver 2025</strong>.</p><p>Votre inscription sera completee une fois le paiement recu.</p>',
-        'conclusion_text': '<p>Merci de votre interet!</p><p>L\'equipe LHGI</p>',
+        'admin_message': '<p>Bonjour Jean-Marc,</p><p>Nous avons bien recu votre inscription pour <strong>Hockey LHGI - Session Hiver 2025</strong>.</p><p>Votre inscription sera completee une fois le paiement recu.</p><p>Merci de votre interet!</p><p>L\'equipe LHGI</p>',
         'hero_image_url': f"{base_url}/activity/{TEST_ACTIVITY_ID}/hero-image/signup",
         'site_url': base_url,
         'support_email': 'support@lhgi.minipass.me',
@@ -342,8 +337,7 @@ def test_signup_payment_first():
     context = {
         # From JSON defaults
         'title': template_defaults.get('title', 'Pré-inscription reçue — Paiement requis'),
-        'intro_text': template_defaults.get('intro_text', '').replace('{{ user_name }}', test_user_name).replace('{{ activity_name }}', test_activity_name),
-        'conclusion_text': template_defaults.get('conclusion_text', '').replace('{{ organization_name }}', test_organization_name),
+        'admin_message': template_defaults.get('admin_message', '').replace('{{ user_name }}', test_user_name).replace('{{ activity_name }}', test_activity_name).replace('{{ organization_name }}', test_organization_name),
 
         # Template layout variables
         'requested_amount': '150,00 $',
@@ -383,8 +377,7 @@ def test_survey_invitation():
 
     context = {
         'title': 'Votre avis compte!',
-        'intro_text': '<p>Bonjour Jean-Marc,</p><p>Nous aimerions connaitre votre experience avec <strong>Hockey LHGI - Session Hiver 2025</strong>.</p><p>Votre feedback nous aide a ameliorer nos services.</p>',
-        'conclusion_text': '<p>Le sondage ne prend que 2 minutes. Merci d\'avance!</p><p>L\'equipe LHGI</p>',
+        'admin_message': '<p>Bonjour Jean-Marc,</p><p>Nous aimerions connaitre votre experience avec <strong>Hockey LHGI - Session Hiver 2025</strong>.</p><p>Votre feedback nous aide a ameliorer nos services.</p><p>Le sondage ne prend que 2 minutes. Merci d\'avance!</p><p>L\'equipe LHGI</p>',
         'survey_url': f"{base_url}/survey/abc123",
         'hero_image_url': f"{base_url}/activity/{TEST_ACTIVITY_ID}/hero-image/survey_invitation",
         'site_url': base_url,

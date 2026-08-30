@@ -122,7 +122,7 @@ class EmailTextRenderTests(_SettingsPatchMixin, unittest.TestCase):
 
         ctx = build_email_text_context(pass_data=_Pass())
         for template_name, fields in defaults.items():
-            for field in ("subject", "title", "intro_text", "conclusion_text"):
+            for field in ("subject", "title", "admin_message"):
                 raw = fields.get(field)
                 if not raw:
                     continue

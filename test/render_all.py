@@ -40,15 +40,17 @@ def build_context(app_mod, activity, passport, template_type):
     """The same context a real send builds, so the render is faithful."""
     from utils import (get_email_context, _build_history_rows, _get_pass_url,
                        _get_booked_slot_labels, get_pass_history_data,
-                       get_setting, NO_QR_TEMPLATES)
+                       get_setting, NO_QR_TEMPLATES, get_activity_hero_image)
 
     base_url = get_setting('SITE_URL', '').rstrip('/')
     show_qr = template_type not in NO_QR_TEMPLATES
+    _, hero_is_custom, hero_is_template_default = get_activity_hero_image(activity, template_type)
 
     base = {
         'pass_data': passport,
         'activity_name': activity.name,
         'show_qr_code': show_qr,
+        'hero_is_photo': hero_is_custom or not hero_is_template_default,
         'pass_url': _get_pass_url(passport),
         'uses_scheduling': bool(getattr(activity, 'uses_scheduling', False)),
         'booked_slots': _get_booked_slot_labels(passport),
@@ -72,7 +74,7 @@ def main():
     from flask import render_template
     from premailer import transform
     from models import Activity, Passport
-    from utils import generate_qr_code_image
+    from utils import generate_qr_code_image, EMAIL_QR_BOX_SIZE
 
     os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -85,7 +87,7 @@ def main():
             return 1
 
         qr_uri = 'data:image/png;base64,' + base64.b64encode(
-            generate_qr_code_image(passport.pass_code)).decode()
+            generate_qr_code_image(passport.pass_code, box_size=EMAIL_QR_BOX_SIZE)).decode()
 
         print(f"Activity: {activity.name} (customized: {bool(activity.email_templates)})")
         print(f"Passport: {passport.pass_code}\n")

@@ -1920,6 +1920,28 @@ textarea.form-control {
   width: 1%;
 }
 
+/* Restore the native file input's own sizing — width:100% above stretches it past its
+   options-panel container (width:fit-content, per DESIGN_SYSTEM.md §15.2), which visually
+   overflowed the widget's rounded border on both the Activity Image and Organization Logo
+   pickers on this page (only <input>s inside .input-group get the restoration above; a plain
+   upload <input type="file"> falls through the general rule with nothing to undo it). */
+.template-form-single-column .form-control[type="file"] {
+  width: auto;
+}
+
+/* The real cause of the overflow: the options panel (.flex-grow-1.p-2, per DESIGN_SYSTEM.md
+   §15.2) is a flex child of the widget's d-flex row. Flex children default to
+   min-width: auto, which means the browser refuses to shrink them below their content's
+   natural width — so a wide native file input (button + "No file chosen" text) forces the
+   panel, and the row's rounded/overflow-hidden border with it, wider than the row's own
+   max-width:100% cap, instead of wrapping/clipping within it. This is why the width:auto
+   fix above wasn't enough on its own: the input's own width was already correct, but its
+   flex-item container still refused to shrink to make room for it. Classic flexbox overflow
+   — the standard fix is min-width: 0 on the flex child. */
+.template-form-single-column .flex-grow-1.p-2 {
+  min-width: 0;
+}
+
 /* More spacious rich text editors in modal */
 .template-form-single-column .tox-tinymce {
   min-height: 250px !important;

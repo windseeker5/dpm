@@ -61,8 +61,7 @@ def _context(**overrides):
     ctx = {
         "pass_data": _Passport(),
         "title": "Votre passeport est prêt",
-        "intro_text": "<p>Bonjour,</p>",
-        "conclusion_text": "<p>À bientôt.</p>",
+        "admin_message": "<p>Bonjour,</p><p>À bientôt.</p>",
         "activity_name": "Wing Foil Course",
         "organization_name": "KDC Corporation",
         "show_qr_code": True,

@@ -3567,6 +3567,77 @@ def task45_clear_unmodified_email_copy(cursor):
     return True
 
 
+def task46_consolidate_admin_message(cursor):
+    """Collapse the legacy intro_text/custom_message/conclusion_text trio into one
+    admin_message field, per stored template.
+
+    The email admin editor used to expose three separate fields; they're now one. The app's
+    read path (utils.consolidate_admin_message) already folds the old shape into
+    admin_message at render/edit time, so this isn't required for correctness — but it's the
+    same one-time DB-wide sweep task45 did for the same JSON column, so activities aren't
+    left carrying dead fields indefinitely, waiting on someone to open the editor and save.
+    """
+    log("✔️ ", "TASK 46: Consolidating admin_message field", Colors.BLUE)
+
+    if not check_column_exists(cursor, 'activity', 'email_templates'):
+        log("⏭️ ", "  activity.email_templates doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    cursor.execute(
+        "SELECT id, name, email_templates FROM activity "
+        "WHERE email_templates IS NOT NULL AND email_templates != ''"
+    )
+    rows = cursor.fetchall()
+    if not rows:
+        log("⏭️ ", "  No activities with stored email templates", Colors.YELLOW)
+        return True
+
+    legacy_keys = ('intro_text', 'custom_message', 'conclusion_text')
+    activities_changed = 0
+    templates_changed = 0
+
+    for activity_id, activity_name, raw in rows:
+        try:
+            stored = json.loads(raw)
+        except (ValueError, TypeError):
+            log("⚠️ ", f"  Activity {activity_id} has unreadable email_templates, skipping", Colors.YELLOW)
+            continue
+
+        if not isinstance(stored, dict):
+            continue
+
+        changed = False
+        for template_key, fields in stored.items():
+            if not isinstance(fields, dict):
+                continue
+            if not any(key in fields for key in legacy_keys):
+                continue
+
+            if not fields.get('admin_message'):
+                parts = [fields.get(k) or '' for k in ('intro_text', 'custom_message', 'conclusion_text')]
+                admin_message = ''.join(parts)
+                if admin_message:
+                    fields['admin_message'] = admin_message
+
+            for key in legacy_keys:
+                fields.pop(key, None)
+
+            templates_changed += 1
+            changed = True
+
+        if changed:
+            cursor.execute(
+                "UPDATE activity SET email_templates = ? WHERE id = ?",
+                (json.dumps(stored, ensure_ascii=False), activity_id)
+            )
+            activities_changed += 1
+            log("✅", f"  {activity_name}: consolidated to admin_message", Colors.GREEN)
+
+    log("✅", f"  {activities_changed} activity(ies) updated, "
+              f"{templates_changed} template(s) consolidated", Colors.GREEN)
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -3632,6 +3703,7 @@ def main():
         ("Session Scheduling Tables", task43_add_session_scheduling_tables),
         ("Slot Booking Attendance Stamp", task44_add_slot_booking_attended),
         ("Clear Unmodified Email Copy", task45_clear_unmodified_email_copy),
+        ("Consolidate Admin Message", task46_consolidate_admin_message),
     ]
 
     completed = 0

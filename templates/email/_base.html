@@ -1,17 +1,18 @@
 {#
   Base layout for every Minipass transactional email.
 
-  All seven emails extend this file and fill {% block content %}. A child sets its identity
-  with {% set accent = ... %} and {% set hero = ... %} before the block — top-level `set` in a
-  child template is visible to the parent in Jinja.
+  All seven emails extend this file and fill {% block content %}. `accent` still exists as a
+  child-template `{% set %}` for backward compatibility with templates not yet migrated to the
+  Aug 2026 redesign (see components.html), but the redesigned layout no longer renders it
+  anywhere — see DESIGN NOTES.
 
-  DESIGN NOTES
+  DESIGN NOTES (Aug 2026 redesign — email-redesign/EMAIL_REDESIGN_HANDOFF.md)
   ------------
-  Recognition between the seven email types is carried by the accent colour and the headline,
-  not by the illustration. Outlook desktop and many Gmail configurations block remote images
-  by default, and every image here is a hosted URL (see docs/EMAIL_DELIVERABILITY.md), so an
-  image-blocked reader would lose the signal entirely if it lived in the artwork. Background
-  colours and text always render.
+  No colored accent bar, no per-type CTA color: color is reserved for the one place it is
+  semantically load-bearing (the paid/unpaid status pill in components.html), not used for
+  decoration or type recognition. Recognition between the seven email types is now carried by
+  the photo band's eyebrow + activity name text, which always renders even with images off
+  (Outlook desktop and many Gmail configurations block remote images by default).
 
   EMAIL-SAFE CSS
   --------------
@@ -24,6 +25,7 @@
   Hero and logo are hosted URLs. Only the QR code is a CID attachment (cid:qr_code) — it has
   to survive forwarding and offline viewing. Never add CID for decorative images.
 #}
+{% from "email/components.html" import photo_band %}
 {% set accent = accent | default('#206bc4') %}
 {% set c_ink = '#15192c' %}
 {% set c_body = '#4a5568' %}
@@ -59,11 +61,15 @@
     @media only screen and (max-width: 600px) {
       .mp-shell    { width: 100% !important; margin: 12px auto !important; border-radius: 0 !important; }
       .mp-pad      { padding-left: 20px !important; padding-right: 20px !important; }
-      .mp-headline { font-size: 23px !important; }
-      .mp-hero     { width: 40px !important; height: 40px !important; }
       .mp-btn a    { display: block !important; }
     }
     a { text-decoration: none; }
+    /* Bold-black-on-grey-body, the way the reference emails (OpenRouter) do it: the message
+       text is grey by default, and <strong> (already used throughout the stored intro/
+       conclusion text for names/amounts) pops to near-black instead of just going bold-but-
+       still-grey. Not load-bearing — clients that strip <style> just show bold grey text,
+       which still reads fine. */
+    .mp-message strong { color: {{ c_ink }}; }
   </style>
 </head>
 <body style="margin:0; padding:0; background-color:{{ c_page }}; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
@@ -82,72 +88,46 @@
         <table role="presentation" class="mp-shell" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff"
                style="width:600px; max-width:600px; margin:32px auto; background-color:#ffffff; border:1px solid {{ c_line }}; border-radius:14px; overflow:hidden;">
 
-          {# Accent rule — the per-template identity, and the one signal that survives images off. #}
-          <tr><td style="height:4px; line-height:4px; font-size:0; background-color:{{ accent }};">&nbsp;</td></tr>
+          {# Photo header band — real activity photo, dark gradient scrim behind white text
+             (eyebrow + activity name). The eyebrow is `photo_eyebrow`, a short static label
+             each child template sets (not `title`): `title` is free text an activity owner
+             can customize to anything, including an emoji, which collides with the headline
+             right below it at 11px — a real activity's "Votre passeport pour le 🏒 est prêt !"
+             caught this during testing. #}
+          {{ photo_band(hero_image_url, photo_eyebrow, activity_name, is_photo=hero_is_photo | default(True)) }}
 
-          {# Header band: the owner's brand leads. The customer signed up with this business,
-             not with Minipass, so the platform stays in the footer. #}
+          {# Org identity — plain, no card. The customer signed up with this business, not
+             with Minipass, so the owner's brand leads and the platform stays in the footer. #}
           <tr>
-            <td class="mp-pad" style="padding:20px 32px; border-bottom:1px solid {{ c_line }};">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <td class="mp-pad" style="padding:28px 32px 0 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td align="left" valign="middle" style="vertical-align:middle;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        {% if owner_logo_url %}
-                        <td valign="middle" style="padding-right:10px; vertical-align:middle;">
-                          {# Fit, don't crop: object-fit is unsupported in Outlook, and a
-                             square centre-crop cuts the sides off a wordmark logo. Bounding
-                             the height and letting the width follow keeps it whole. #}
-                          <img src="{{ owner_logo_url }}" height="32" alt=""
-                               style="display:block; height:32px; max-width:120px; width:auto; border-radius:6px; border:0;">
-                        </td>
-                        {% endif %}
-                        <td valign="middle" style="vertical-align:middle;">
-                          <div style="font-size:15px; font-weight:700; color:{{ c_ink }}; line-height:1.3;">
-                            {{ activity_name | default('') }}
-                          </div>
-                          {% if organization_name %}
-                          <div style="font-size:12px; color:{{ c_label }}; line-height:1.4;">{{ organization_name }}</div>
-                          {% endif %}
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  {% if hero_image_url %}
-                  <td align="right" valign="middle" width="48" style="vertical-align:middle; width:48px;">
-                    <img src="{{ hero_image_url }}" class="mp-hero" width="48" height="48" alt=""
-                         style="display:block; width:48px; height:48px; border:0;">
+                  {% if owner_logo_url %}
+                  <td valign="middle" width="56" style="padding-right:12px; vertical-align:middle; width:56px;">
+                    <img src="{{ owner_logo_url }}" width="56" height="56" alt=""
+                         style="display:block; width:56px; height:56px; border-radius:10px; border:0; object-fit:contain;">
                   </td>
                   {% endif %}
+                  <td valign="middle" style="vertical-align:middle;">
+                    <div style="font-size:16px; font-weight:700; color:{{ c_ink }}; line-height:1.35;">{{ organization_name | default('') }}</div>
+                  </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          {# Message #}
+          {# Message — the activity's admin-edited note, as one flowing paragraph. #}
+          {% if admin_message %}
           <tr>
-            <td class="mp-pad" style="padding:30px 32px 0 32px;">
-              {% if title %}
-              <h1 class="mp-headline" style="margin:0 0 14px 0; font-size:26px; line-height:1.25; font-weight:700; letter-spacing:-0.01em; color:{{ c_ink }};">
-                {{ title }}
-              </h1>
-              {% endif %}
-              {% if intro_text %}
-              <div style="font-size:15px; line-height:1.65; color:{{ c_body }};">{{ intro_text | safe }}</div>
-              {% endif %}
-            </td>
-          </tr>
-
-          {% block content %}{% endblock %}
-
-          {% if conclusion_text %}
-          <tr>
-            <td class="mp-pad" style="padding:8px 32px 0 32px; font-size:15px; line-height:1.65; color:{{ c_body }};">
-              {{ conclusion_text | safe }}
+            <td class="mp-pad" style="padding:20px 32px 0 32px;">
+              <div class="mp-message" style="font-size:13.5px; line-height:1.7; color:{{ c_body }}; padding-bottom:24px; border-bottom:1px solid {{ c_line }};">
+                {{ admin_message | safe }}
+              </div>
             </td>
           </tr>
           {% endif %}
+
+          {% block content %}{% endblock %}
 
           <tr><td style="height:32px; line-height:32px; font-size:0;">&nbsp;</td></tr>
         </table>

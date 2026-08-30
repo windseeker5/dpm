@@ -10,21 +10,15 @@
   layout's @media block targets.
 #}
 
-{% set C_INK   = '#15192c' %}
-{% set C_BODY  = '#4a5568' %}
-{% set C_LABEL = '#8892a4' %}
-{% set C_LINE  = '#e4e8f0' %}
-{% set C_WELL  = '#f7f9fc' %}
-
-
-{% macro _label(text) -%}
-<div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }}; line-height:1.4;">{{ text }}</div>
-{%- endmacro %}
-
-
-{% macro _value(text) -%}
-<div style="font-size:16px; font-weight:600; color:{{ C_INK }}; line-height:1.45;">{{ text }}</div>
-{%- endmacro %}
+{% set C_INK      = '#15192c' %}
+{% set C_BODY     = '#4a5568' %}
+{% set C_LABEL    = '#8892a4' %}
+{% set C_LINE     = '#e4e8f0' %}
+{% set C_WELL     = '#f6f6f7' %}
+{% set C_PAID     = '#1a7f4b' %}
+{% set C_PAID_BG  = '#eaf6ef' %}
+{% set C_UNPAID   = '#8a6d1f' %}
+{% set C_UNPAID_BG = '#fff3d6' %}
 
 
 {# Quebec French money: comma decimal, sign after the amount, non-breaking space between. #}
@@ -42,150 +36,41 @@
   unambiguous at every value, including zero, and they translate.
 #}
 {# Returns the quantity only ("1 sur 5", or "1" when the original allotment is unknown).
-   The caller supplies the noun, so it is never doubled. #}
+   The caller supplies the noun, so it is never doubled.
+
+   total<=1 is a quantity-purchase passport type (one date, N tickets bought at once), not a
+   multi-session one — sessions_included=1 with uses_remaining=4 is 4 tickets, not "4 sur 1",
+   which reads as broken math. Only show the "X sur Y" fraction when Y is a real session count. #}
 {% macro credit_line(remaining, total=None) -%}
   {%- set r = remaining | int -%}
   {%- set t = (total | int) if total else 0 -%}
-  {%- if t > 0 -%}{{ r }} sur {{ t }}{%- else -%}{{ r }}{%- endif -%}
+  {%- if t > 1 -%}{{ r }} sur {{ t }}{%- else -%}{{ r }}{%- endif -%}
 {%- endmacro %}
 
 
 {#
-  The next booked session — what the customer actually opens this email to find out.
-
-  Set in a serif at a size nothing else competes with, with tabular figures so dates align
-  the way a posted schedule does. Georgia is the safe stand-in for the slab face the web
-  passport page uses; the two read as the same treatment.
-#}
-{% macro next_session(label, accent='#206bc4') -%}
-{% if label %}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-  <tr>
-    <td style="padding:0 0 4px 0;">
-      <div style="font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:{{ C_LABEL }};">Prochaine séance</div>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:0;">
-      <div style="font-family:Georgia,'Times New Roman',serif; font-size:24px; line-height:1.25; font-weight:700; color:{{ C_INK }}; text-transform:capitalize; font-variant-numeric:tabular-nums;">{{ label }}</div>
-    </td>
-  </tr>
-</table>
-{% endif %}
-{%- endmacro %}
-
-
-{#
-  The pass card.
-
-  Activity photo and QR side by side at the top, holder details beneath. The photo is what
-  makes it recognisably *this* activity rather than a generic receipt, and pairing it with the
-  code makes the block read as a pass you present rather than a table of fields.
-
-  The two images sit in a fixed-width table with no breakpoint: they are images, not text, so
-  they do not need to reflow, and nothing here depends on the <style> block surviving (the
-  Gmail app strips it for non-Gmail accounts).
-
-  Payment status is deliberately absent — the history table below states when it was paid and
-  by whom, which is the same fact with its provenance attached.
-#}
-{% macro pass_card(pass_data, accent='#206bc4', show_qr=True, qr_src='cid:qr_code', base_url='') -%}
-{%- set total = pass_data.passport_type.sessions_included if pass_data.passport_type else None -%}
-{%- set activity = pass_data.activity -%}
-{%- set img = (activity.image_filename or activity.logo_filename) if activity else None -%}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ C_WELL }}"
-       style="width:100%; background-color:{{ C_WELL }}; border:1px solid {{ C_LINE }}; border-radius:12px;">
-  <tr>
-    <td style="padding:18px;">
-
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
-        <tr>
-          {% if img and base_url %}
-          <td valign="top" width="132" style="width:132px; vertical-align:top; padding-right:12px;">
-            <img src="{{ base_url }}/static/uploads/activity_images/{{ img }}"
-                 width="132" height="132" alt="{{ activity.name }}"
-                 style="display:block; width:132px; height:132px; border:0; border-radius:10px; object-fit:cover;">
-          </td>
-          {% endif %}
-          {% if show_qr %}
-          <td valign="top" width="132" style="width:132px; vertical-align:top;">
-            <img src="{{ qr_src }}" width="132" height="132" alt="Code QR du passeport"
-                 style="display:block; width:132px; height:132px; border:0; background:#ffffff; border-radius:10px;">
-          </td>
-          {% endif %}
-        </tr>
-        {% if show_qr %}
-        <tr>
-          <td colspan="2" align="center" style="padding-top:8px;">
-            <div style="font-size:12px; color:{{ C_LABEL }}; line-height:1.5;">Présentez ce code à votre arrivée</div>
-          </td>
-        </tr>
-        {% endif %}
-      </table>
-
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="width:100%; margin-top:16px; border-top:1px solid {{ C_LINE }};">
-        <tr>
-          <td style="padding-top:14px;">
-            <div style="font-size:17px; font-weight:700; color:{{ C_INK }}; line-height:1.4;">{{ pass_data.user.name }}</div>
-            {% if pass_data.user.email %}
-            <div style="font-size:14px; color:{{ C_LABEL }}; line-height:1.5;">{{ pass_data.user.email }}</div>
-            {% endif %}
-            {% if pass_data.user.phone_number %}
-            <div style="font-size:14px; color:{{ C_LABEL }}; line-height:1.5;">{{ pass_data.user.phone_number }}</div>
-            {% endif %}
-          </td>
-        </tr>
-        <tr>
-          <td style="padding-top:12px;">
-            <span style="font-size:15px; color:{{ C_BODY }};">
-              <strong style="color:{{ C_INK }};">{{ credit_line(pass_data.uses_remaining, total) }}</strong>
-              {{ 'crédit restant' if (pass_data.uses_remaining | int) == 1 else 'crédits restants' }}
-              &nbsp;·&nbsp; {{ money(pass_data.sold_amt) }}
-            </span>
-          </td>
-        </tr>
-      </table>
-
-    </td>
-  </tr>
-</table>
-{%- endmacro %}
-
-
-{#
-  Interac transfer details. The amount and the destination address are the whole point of a
-  payment-first signup email, so they get their own block rather than sitting in prose.
+  Payment instructions — a dedicated, self-contained section, same light-grey card and section
+  label convention as section_card() (Séances/Historique): a plain black title above the card,
+  not inside it. The amount and destination are the whole point of a payment-first signup
+  email, so they get their own titled section, not prose.
 #}
 {% macro interac_block(requested_amount, payment_email, base_url='') -%}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="width:100%; background-color:{{ C_WELL }}; border:1px solid {{ C_LINE }}; border-radius:12px;">
+<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_INK }}; margin:16px 0 8px 0;">Instructions de paiement</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ C_WELL }}"
+       style="width:100%; background-color:{{ C_WELL }}; border-radius:8px; margin-bottom:16px;">
   <tr>
-    <td style="padding:18px 20px;">
-      {# Single column, same reasoning as pass_block: an email address is long enough to wreck
-         a three-across layout on a phone, and no breakpoint is available to rescue it. #}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        {% if base_url %}
-        <tr>
-          <td style="padding-bottom:12px;">
-            <img src="{{ base_url }}/static/images/email/interac-logo.jpg" width="40" height="40" alt="Interac"
-                 style="display:block; width:40px; height:40px; border-radius:7px; border:0;">
-          </td>
-        </tr>
-        {% endif %}
-        <tr>
-          <td valign="top" style="vertical-align:top; padding-bottom:14px;">
-            {{ _label('Montant à transférer') }}
-            {{ _value(requested_amount) }}
-          </td>
-        </tr>
-        <tr>
-          <td valign="top" style="vertical-align:top;">
-            {{ _label('Destinataire') }}
-            <div style="font-size:15px; font-weight:600; color:{{ C_INK }}; line-height:1.45; word-break:break-all;">{{ payment_email }}</div>
-          </td>
-        </tr>
-      </table>
+    <td style="padding:16px 20px 20px 20px;">
+      <div style="font-size:13.5px; line-height:1.6; color:{{ C_BODY }}; padding-bottom:12px;">
+        Effectuez un virement Interac avec les détails ci-dessous.
+      </div>
+      {% if base_url %}
+      <img src="{{ base_url }}/static/images/email/interac-logo.jpg" width="40" height="40" alt="Interac"
+           style="display:block; width:40px; height:40px; border-radius:7px; border:0; margin-bottom:12px;">
+      {% endif %}
+      {{ rows_block([
+        {'label': 'Montant à transférer', 'value': requested_amount},
+        {'label': 'Destinataire', 'value': payment_email},
+      ], outer_border=False, top_margin=0) }}
     </td>
   </tr>
 </table>
@@ -202,7 +87,7 @@
 #}
 {% macro signup_code_notice(signup_code) -%}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="width:100%; background-color:#fff8e6; border:1px solid #f0d9a0; border-radius:12px;">
+       style="width:100%; background-color:#fff8e6; border:1px solid #f0d9a0; border-radius:8px; margin-top:16px;">
   <tr>
     <td style="padding:18px 20px;">
       <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:#8a6d1f;">
@@ -222,11 +107,17 @@
 {%- endmacro %}
 
 
-{% macro button(href, label, accent='#206bc4') -%}
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" class="mp-btn" style="margin:0 auto;">
+{#
+  The call to action. Solid ink, full width — established the hard way after several
+  passes that tried per-type accent colours and colored borders: color is reserved for the
+  one place it is semantically load-bearing (the paid/unpaid status pill below), not for
+  decoration. `accent` is accepted and ignored so older call sites keep working unchanged.
+#}
+{% macro button(href, label, accent=None) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="mp-btn" style="width:100%;">
   <tr>
-    <td align="center" style="border-radius:8px; background-color:{{ accent }};">
-      <a href="{{ href }}" style="display:inline-block; padding:13px 26px; font-size:15px; font-weight:600; color:#ffffff; border-radius:8px;">{{ label }}</a>
+    <td align="center" bgcolor="{{ C_INK }}" style="border-radius:8px; background-color:{{ C_INK }};">
+      <a href="{{ href }}" style="display:block; padding:14px 20px; font-size:16px; font-weight:700; color:#ffffff; text-align:center; border-radius:8px;">{{ label }}</a>
     </td>
   </tr>
 </table>
@@ -234,29 +125,102 @@
 
 
 {#
-  Booked sessions. Only rendered for activities with scheduling turned on.
+  ============================================================================
+  Aug 2026 redesign — approved direction (email-redesign/EMAIL_REDESIGN_HANDOFF.md).
 
-  Credits alone mislead someone who is fully booked — their credits are spent, but every
-  session is still ahead of them — so the passport page and this list both name the sessions.
+  One continuous flowing document per email, no boxed "hero" card, no colored accent
+  borders. These macros implement it: a single reusable row component (facts, séances,
+  historique all share it), a tight QR frame instead of a well, and section cards that
+  are white with a 1px border rather than filled grey boxes.
+
+  All four pass-style templates (newPass, redeemPass, latePayment, paymentReceived) now use
+  these. The old pass_card()/session_list()/next_session()/history_table() macros were deleted
+  once paymentReceived.html (the last holdout) migrated to this set.
+  ============================================================================
 #}
-{% macro session_list(sessions, accent='#206bc4', title=None) -%}
-{% if sessions %}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+
+{#
+  The photo header band — real activity photo, caption directly below it.
+  Lives in _base.html, above the org identity row, so every email type gets it uniformly.
+
+  Previously the caption was overlaid on the photo with position:relative/absolute and a
+  gradient scrim, matching the approved static mockup. Real Gmail sends (web, iOS, Android)
+  showed that broken — Gmail does not support position:absolute/relative in HTML email at all,
+  so the caption div either dropped out of place or clipped against the wrong ancestor. A
+  bulletproof-background-image + VML hybrid was considered and rejected: it's fundamentally a
+  CSS background-image, which EMAIL_REDESIGN_HANDOFF.md already tested and rejected for this
+  hero for the same Outlook reason. So there is no supported way to put text over the photo
+  itself in HTML email — the caption now sits in a solid ink bar immediately below the photo
+  instead, the same reliable pattern already used for the non-photo (mascot) branch below,
+  which never used absolute positioning and never broke.
+
+  `is_photo=False` is for the shipped default/mascot artwork (a small icon-style illustration
+  centred on a plain field, not a photo) — real DB testing showed the cover-cropped treatment
+  ghosting the character's own artwork behind the scrim. That case is contained on a neutral
+  field instead of full-bleed. Callers pass `hero_is_photo` (from `get_activity_hero_image()`'s
+  `is_template_default`, negated).
+#}
+{% macro photo_band(hero_image_url, eyebrow, headline, is_photo=True) -%}
+{% if hero_image_url %}
+{% if is_photo %}
+<tr>
+  <td style="padding:0; line-height:0; font-size:0;">
+    <img src="{{ hero_image_url }}" width="600" height="184" alt=""
+         style="display:block; width:100%; max-width:600px; height:184px; object-fit:cover; object-position:center 55%; border:0; background-color:{{ C_WELL }};">
+  </td>
+</tr>
+<tr>
+  <td bgcolor="{{ C_INK }}" style="padding:14px 32px; background-color:{{ C_INK }};">
+    {% if eyebrow %}<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.75); margin:0 0 4px 0; line-height:1.4;">{{ eyebrow }}</div>{% endif %}
+    <div style="font-size:22px; font-weight:700; color:#ffffff; line-height:1.3; letter-spacing:-0.01em; margin:0;">{{ headline }}</div>
+  </td>
+</tr>
+{% else %}
+<tr>
+  <td align="center" bgcolor="{{ C_WELL }}" style="padding:24px 32px 8px 32px; background-color:{{ C_WELL }};">
+    <img src="{{ hero_image_url }}" width="120" height="120" alt="" style="display:block; width:120px; height:120px; border:0;">
+  </td>
+</tr>
+<tr>
+  <td bgcolor="{{ C_INK }}" style="padding:14px 32px; background-color:{{ C_INK }};">
+    {% if eyebrow %}<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.75); margin:0 0 4px 0; line-height:1.4;">{{ eyebrow }}</div>{% endif %}
+    <div style="font-size:18px; font-weight:700; color:#ffffff; line-height:1.3; letter-spacing:-0.01em; margin:0;">{{ headline }}</div>
+  </td>
+</tr>
+{% endif %}
+{% endif %}
+{%- endmacro %}
+
+
+{# Participant identity — the one deliberate hero of the document. #}
+{% macro identity_block(label, name, email=None, phone=None) -%}
+<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_INK }}; margin:0 0 16px 0;">{{ label }}</div>
+<div style="font-size:22px; font-weight:700; color:{{ C_INK }}; letter-spacing:-0.01em; margin:0 0 3px 0;">{{ name }}</div>
+{% if email %}<div style="font-size:13.5px; color:{{ C_BODY }}; line-height:1.5;">{{ email }}</div>{% endif %}
+{% if phone %}<div style="font-size:13.5px; color:{{ C_BODY }}; line-height:1.5;">{{ phone }}</div>{% endif %}
+{%- endmacro %}
+
+
+{#
+  The one row component, reused everywhere: facts, séances, historique — single column
+  throughout, never three-across. `items` is a list of {label, value, sub} dicts; `value`
+  is rendered with |safe so a caller can pass another macro's markup (e.g. status_pill()).
+
+  `outer_border`/`top_margin`: the standalone Facts block draws its own bottom border and
+  top gap to close the group and separate it from Participant above; nested inside a
+  section_card() the white card's own border and padding already do both jobs, so that
+  block passes outer_border=False, top_margin=0.
+#}
+{% macro rows_block(items, outer_border=True, top_margin=18) -%}
+{% if items %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="width:100%; margin-top:{{ top_margin }}px; {% if outer_border %}border-bottom:1px solid {{ C_LINE }};{% endif %}">
+  {% for item in items %}
   <tr>
-    <td style="padding-bottom:8px;">
-      <div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }};">
-        {{ title or ('Votre séance' if sessions | length == 1 else 'Vos séances') }}
-      </div>
-    </td>
-  </tr>
-  {% for label in sessions %}
-  <tr>
-    <td style="padding:9px 0; border-top:1px solid {{ C_LINE }};">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td align="left" style="font-size:15px; font-weight:600; color:{{ C_INK }}; text-transform:capitalize;">{{ label }}</td>
-        </tr>
-      </table>
+    <td style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; color:{{ C_BODY }}; vertical-align:baseline;">{{ item.label }}</td>
+    <td align="right" style="padding:8px 0; {% if not loop.first %}border-top:1px solid {{ C_LINE }};{% endif %} font-size:13.5px; font-weight:700; color:{{ C_INK }}; text-align:right; vertical-align:baseline; font-variant-numeric:tabular-nums;">
+      {{ item.value | safe }}
+      {% if item.sub %}<div style="font-size:11px; font-weight:400; color:{{ C_LABEL }}; margin-top:2px;">{{ item.sub }}</div>{% endif %}
     </td>
   </tr>
   {% endfor %}
@@ -265,38 +229,63 @@
 {%- endmacro %}
 
 
+{# Payment status — the one place colour is semantically load-bearing, not decorative. #}
+{% macro status_pill(paid) -%}
+{% if paid %}
+<span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:4px 12px; border-radius:100px; white-space:nowrap; color:{{ C_PAID }}; background-color:{{ C_PAID_BG }};">Payé</span>
+{% else %}
+<span style="display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:4px 12px; border-radius:100px; white-space:nowrap; color:{{ C_UNPAID }}; background-color:{{ C_UNPAID_BG }};">Non payé</span>
+{% endif %}
+{%- endmacro %}
+
+
 {#
-  History — the passport's life: issued on this date, paid on that one, used here, scanned by
-  them. Built by utils._build_history_rows() from the same data the passport page uses, so the
-  email and /pass/<code> can never tell different stories.
-
-  `entries` is a list of {label, date, by} dicts.
-
-  Two lines per row rather than three columns: an event/date/operator table is unreadable at
-  320px, and collapsing columns would need a media query — which the Gmail app strips for
-  non-Gmail accounts. Stacking by construction works everywhere.
+  QR: a tight frame around only the code itself, not a well around the whole group.
+  qr_src's box_size must stay in step with the frame's display size — see
+  utils.EMAIL_QR_BOX_SIZE — or the browser has to rescale the PNG and it looks muddy.
 #}
-{% macro history_table(entries) -%}
-{% if entries %}
-<div style="font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_LABEL }}; padding-bottom:8px;">Historique</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff"
-       style="width:100%; background-color:#ffffff; border:1px solid {{ C_LINE }}; border-radius:12px;">
+{% macro qr_block(qr_src, ref_code=None, caption=None) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin-top:24px;">
   <tr>
-    <td style="padding:0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; border-collapse:collapse;">
-        <tr bgcolor="{{ C_WELL }}">
-          <th align="left" style="padding:10px 14px; background-color:{{ C_WELL }}; border-bottom:1px solid {{ C_LINE }}; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:{{ C_LABEL }};">Événement</th>
-          <th align="left" style="padding:10px 10px; background-color:{{ C_WELL }}; border-bottom:1px solid {{ C_LINE }}; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:{{ C_LABEL }}; white-space:nowrap;">Date</th>
-          <th align="left" style="padding:10px 14px 10px 10px; background-color:{{ C_WELL }}; border-bottom:1px solid {{ C_LINE }}; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:{{ C_LABEL }};">Par</th>
-        </tr>
-        {% for e in entries %}
+    <td align="center" style="padding-bottom:16px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #000000; border-radius:4px;">
         <tr>
-          <td style="padding:11px 14px; {% if not loop.last %}border-bottom:1px solid {{ C_LINE }};{% endif %} font-size:14px; font-weight:600; color:{{ C_INK }};">{{ e.label }}</td>
-          <td style="padding:11px 10px; {% if not loop.last %}border-bottom:1px solid {{ C_LINE }};{% endif %} font-size:13px; color:{{ C_BODY }}; white-space:nowrap; font-variant-numeric:tabular-nums;">{{ e.date }}</td>
-          <td style="padding:11px 14px 11px 10px; {% if not loop.last %}border-bottom:1px solid {{ C_LINE }};{% endif %} font-size:13px; color:{{ C_LABEL }};">{{ e.by or '—' }}</td>
+          <td style="padding:3px;">
+            <img src="{{ qr_src }}" width="165" height="165" alt="Code QR du passeport" style="display:block; width:165px; height:165px; border:0;">
+          </td>
         </tr>
-        {% endfor %}
       </table>
+    </td>
+  </tr>
+  {% if ref_code %}
+  <tr><td align="center" style="padding-bottom:4px; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:16px; font-weight:700; letter-spacing:0.02em; color:{{ C_INK }};">{{ ref_code }}</td></tr>
+  {% endif %}
+  {% if caption %}
+  <tr><td align="center" style="padding-bottom:32px; font-size:11px; color:{{ C_BODY }};">{{ caption }}</td></tr>
+  {% endif %}
+</table>
+{%- endmacro %}
+
+
+{#
+  A section group — séances, historique. White background, 1px grey border, never a filled
+  grey box, built from the same rows_block() as Facts above.
+
+  The label sits above the card, not inside it — same convention as identity_block()'s
+  "PARTICIPANT", and matches the reference emails (OpenRouter): a plain black section title
+  governs the content below it, the grey box is just where the content happens to live, not
+  where the title lives. The label's own top margin supplies spacing regardless of what
+  precedes it — whether that's the Facts divider (QR turned off) or the QR block (QR on) —
+  the exact same self-sufficiency reasoning the old title-inside-the-card version had.
+#}
+{% macro section_card(label, items) -%}
+{% if items %}
+<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_INK }}; margin:16px 0 8px 0;">{{ label }}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ C_WELL }}"
+       style="width:100%; background-color:{{ C_WELL }}; border-radius:8px; margin-bottom:16px;">
+  <tr>
+    <td style="padding:16px 20px;">
+      {{ rows_block(items, outer_border=False, top_margin=0) }}
     </td>
   </tr>
 </table>

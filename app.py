@@ -12032,19 +12032,17 @@ def send_survey_invitations(survey_id):
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                 }
 
-                # Render subject, title, intro_text, and conclusion_text if they contain Jinja2 variables
+                # Render subject, title, and admin_message if they contain Jinja2 variables
                 # French fallbacks: these only fire if config/email_defaults.json fails to
                 # load, and an English heading on an otherwise French email is worse than a
                 # plain one.
                 subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
                 title_template = email_context.get('title', 'Votre avis compte')
-                intro_template = email_context.get('intro_text', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p>')
-                conclusion_template = email_context.get('conclusion_text', '<p>Merci du temps que vous y consacrez.</p>')
+                admin_message_template = email_context.get('admin_message', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p><p>Merci du temps que vous y consacrez.</p>')
 
                 subject = JinjaTemplate(subject_template).render(**render_context)
                 rendered_title = JinjaTemplate(title_template).render(**render_context)
-                rendered_intro = JinjaTemplate(intro_template).render(**render_context)
-                rendered_conclusion = JinjaTemplate(conclusion_template).render(**render_context)
+                rendered_admin_message = JinjaTemplate(admin_message_template).render(**render_context)
 
                 template_name = 'survey_invitation'  # Match the template folder name
 
@@ -12063,14 +12061,20 @@ def send_survey_invitations(survey_id):
                     'privacy_url': "https://minipass.me/privacy",
                     # Survey email template variables - now RENDERED (Jinja2 variables already processed)
                     'title': rendered_title,
-                    'intro_text': rendered_intro,
-                    'conclusion_text': rendered_conclusion,
+                    'admin_message': rendered_admin_message,
                     # Hero image URL for hosted images
                     'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
+                    # Real bug found during the redesign: this context is built by hand and never
+                    # goes through get_email_context() again (see _skip_email_context below), so
+                    # neither of these were ever set — the org logo silently never rendered, and
+                    # the hero always defaulted to being treated as a real photo even when it's
+                    # the generic mascot icon.
+                    'owner_logo_url': f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo?activity_id={survey.activity.id}",
+                    'hero_is_photo': email_context.get('hero_is_photo', True),
                     # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
                     '_skip_email_context': True
                 }
-                
+
                 print(f"🔵 About to call send_email_async()")
                 print(f"🔵 Template: {template_name}")
                 print(f"🔵 Subject: {subject}")
@@ -12157,19 +12161,17 @@ def send_survey_invitations(survey_id):
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                 }
 
-                # Render subject, title, intro_text, and conclusion_text if they contain Jinja2 variables
+                # Render subject, title, and admin_message if they contain Jinja2 variables
                 # French fallbacks: these only fire if config/email_defaults.json fails to
                 # load, and an English heading on an otherwise French email is worse than a
                 # plain one.
                 subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
                 title_template = email_context.get('title', 'Votre avis compte')
-                intro_template = email_context.get('intro_text', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p>')
-                conclusion_template = email_context.get('conclusion_text', '<p>Merci du temps que vous y consacrez.</p>')
+                admin_message_template = email_context.get('admin_message', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p><p>Merci du temps que vous y consacrez.</p>')
 
                 subject = JinjaTemplate(subject_template).render(**render_context)
                 rendered_title = JinjaTemplate(title_template).render(**render_context)
-                rendered_intro = JinjaTemplate(intro_template).render(**render_context)
-                rendered_conclusion = JinjaTemplate(conclusion_template).render(**render_context)
+                rendered_admin_message = JinjaTemplate(admin_message_template).render(**render_context)
 
                 template_name = 'survey_invitation'  # Match the template folder name
 
@@ -12188,14 +12190,20 @@ def send_survey_invitations(survey_id):
                     'privacy_url': "https://minipass.me/privacy",
                     # Survey email template variables - now RENDERED (Jinja2 variables already processed)
                     'title': rendered_title,
-                    'intro_text': rendered_intro,
-                    'conclusion_text': rendered_conclusion,
+                    'admin_message': rendered_admin_message,
                     # Hero image URL for hosted images
                     'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
+                    # Real bug found during the redesign: this context is built by hand and never
+                    # goes through get_email_context() again (see _skip_email_context below), so
+                    # neither of these were ever set — the org logo silently never rendered, and
+                    # the hero always defaulted to being treated as a real photo even when it's
+                    # the generic mascot icon.
+                    'owner_logo_url': f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo?activity_id={survey.activity.id}",
+                    'hero_is_photo': email_context.get('hero_is_photo', True),
                     # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
                     '_skip_email_context': True
                 }
-                
+
                 print(f"🔵 About to call send_email_async()")
                 print(f"🔵 Template: {template_name}")
                 print(f"🔵 Subject: {subject}")
@@ -12642,22 +12650,28 @@ def email_template_customization(activity_id):
     
     # Import and merge with default values
     from utils_email_defaults import get_default_email_templates
+    from utils import consolidate_admin_message
     defaults = get_default_email_templates()
-    
+
+    # Keys excluded from the passthrough spread below: subject/title/admin_message are
+    # handled explicitly, and the legacy trio is folded into admin_message rather than
+    # exposed directly (see consolidate_admin_message + task46 in
+    # migrations/upgrade_production_database.py for the one-time DB-wide sweep).
+    _excluded_keys = ['subject', 'title', 'admin_message', 'intro_text', 'conclusion_text', 'custom_message']
+
     # For each template type, merge defaults with current values
     templates_with_defaults = {}
     for template_key in template_types:
         template_defaults = defaults.get(template_key, {})
         template_current = current_templates.get(template_key, {})
-        
+
         # Merge: use current values if they exist, otherwise use defaults
         templates_with_defaults[template_key] = {
             'subject': template_current.get('subject') or template_defaults.get('subject', ''),
-            'title': template_current.get('title') or template_defaults.get('title', ''), 
-            'intro_text': template_current.get('intro_text') or template_defaults.get('intro_text', ''),
-            'conclusion_text': template_current.get('conclusion_text') or template_defaults.get('conclusion_text', ''),
+            'title': template_current.get('title') or template_defaults.get('title', ''),
+            'admin_message': consolidate_admin_message(template_current) or consolidate_admin_message(template_defaults),
             # Keep other fields as-is
-            **{k: v for k, v in template_current.items() if k not in ['subject', 'title', 'intro_text', 'conclusion_text']}
+            **{k: v for k, v in template_current.items() if k not in _excluded_keys}
         }
     
     # Get organization logo filename for fallback
@@ -12803,29 +12817,47 @@ def save_email_templates(activity_id):
         
         # Handle activity-wide owner logo upload (shared across all templates)
         owner_logo_file = None
-        
-        # Look for owner logo upload from relevant template type(s)
+        owner_logo_unsplash_filename = None
+
+        # Look for owner logo upload (direct file or Unsplash-selected reference) from
+        # relevant template type(s) — same two-source pattern as the hero image above.
         for template_type in templates_to_process:
             if not owner_logo_processed:
                 owner_logo_file = request.files.get(f'{template_type}_owner_logo')
                 if owner_logo_file and owner_logo_file.filename:
                     owner_logo_processed = True
                     break
-        
+                candidate = request.form.get(f'{template_type}_owner_logo_filename', '').strip()
+                if candidate:
+                    owner_logo_unsplash_filename = candidate
+                    owner_logo_processed = True
+                    break
+
         # Process owner logo if uploaded
         owner_logo_filename = None
+        owner_logo_bytes = None
         if owner_logo_file and owner_logo_file.filename:
+            owner_logo_bytes = owner_logo_file.read()
+        elif owner_logo_unsplash_filename:
+            # Image was selected from Unsplash web search — file already on server
+            unsplash_path = os.path.join('static', 'uploads', 'activity_images', owner_logo_unsplash_filename)
+            if os.path.exists(unsplash_path):
+                with open(unsplash_path, 'rb') as f:
+                    owner_logo_bytes = f.read()
+
+        if owner_logo_bytes:
             try:
                 # Use activity-specific filename that overwrites existing
                 owner_logo_filename = f"{activity_id}_owner_logo.png"
                 upload_path = os.path.join('static', 'uploads', owner_logo_filename)
-                
+
                 # Ensure uploads directory exists
                 os.makedirs(os.path.dirname(upload_path), exist_ok=True)
-                
+
                 # Save file (overwrites if exists)
-                owner_logo_file.save(upload_path)
-                
+                with open(upload_path, 'wb') as f:
+                    f.write(owner_logo_bytes)
+
             except Exception as e:
                 flash(f"Error uploading owner logo: {str(e)}", "error")
                 owner_logo_filename = None
@@ -12841,22 +12873,25 @@ def save_email_templates(activity_id):
             # Get form fields and sanitize them
             subject = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_subject', '').strip())
             title = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_title', '').strip())
-            intro_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_intro_text', '').strip())
-            conclusion_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_conclusion_text', '').strip())
-            
+            admin_message = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_admin_message', '').strip())
+
             # Remove HTML tags from subject and title (plain text fields)
             subject = bleach.clean(subject, tags=[], strip=True) if subject else ''
             title = bleach.clean(title, tags=[], strip=True) if title else ''
-            
+
             # Update values (preserve existing if new is empty)
             if subject:
                 template_data['subject'] = subject
             if title:
                 template_data['title'] = title
-            if intro_text:
-                template_data['intro_text'] = intro_text
-            if conclusion_text:
-                template_data['conclusion_text'] = conclusion_text
+            if admin_message:
+                template_data['admin_message'] = admin_message
+                # Lazily migrate this activity's stored shape off the old three-field
+                # layout now that it's being touched (see consolidate_admin_message in
+                # utils.py and task46 in migrations/upgrade_production_database.py).
+                template_data.pop('intro_text', None)
+                template_data.pop('conclusion_text', None)
+                template_data.pop('custom_message', None)
 
             # Handle show_qr_code toggle (only for templates with QR codes)
             if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
@@ -12965,7 +13000,7 @@ def reset_email_template(activity_id):
             
             # Clear the customizable fields while preserving any system fields
             # Note: show_qr_code is included so it resets to default (True = show QR)
-            fields_to_reset = ['subject', 'title', 'intro_text', 'conclusion_text', 'hero_image', 'activity_logo', 'show_qr_code']
+            fields_to_reset = ['subject', 'title', 'admin_message', 'intro_text', 'conclusion_text', 'custom_message', 'hero_image', 'activity_logo', 'show_qr_code']
             for field in fields_to_reset:
                 if field in template_data:
                     del template_data[field]
@@ -13049,7 +13084,7 @@ def email_preview(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import get_email_context, safe_template, generate_qr_code_image, get_setting
+    from utils import get_email_context, safe_template, generate_qr_code_image, get_setting, EMAIL_QR_BOX_SIZE
     from flask import render_template
     from datetime import datetime
     import os
@@ -13065,9 +13100,13 @@ def email_preview(activity_id):
         'user_email': 'john.doe@example.com',
         'activity_name': activity.name,
         'pass_code': 'SAMPLE123',
-        'amount': '$50.00'
+        'amount': '$50.00',
+        # A real send always has this (set inside send_email() itself) — without it here,
+        # anything gated behind {% if base_url %} (e.g. the Interac logo) silently vanishes
+        # from this preview only, looking like a real bug when it isn't one.
+        'base_url': get_setting('SITE_URL', '').rstrip('/'),
     }
-    
+
     # Add special context for survey_invitation
     if template_type == 'survey_invitation':
         base_context['survey_name'] = 'Sondage de satisfaction'
@@ -13097,10 +13136,10 @@ def email_preview(activity_id):
         # Create sample pass data using proper class structure
         class PassData:
             def __init__(self):
-                self.activity = type('obj', (object,), {
-                    'name': activity.name,
-                    'id': activity.id
-                })()
+                # The real Activity row, not a name/id-only stub — the Facts block reads
+                # activity.location_address_formatted, which a stub would leave Undefined
+                # and silently hide the "Lieu" row from the preview.
+                self.activity = activity
                 self.user = type('obj', (object,), {
                     'name': 'John Doe',
                     'email': 'john.doe@example.com',
@@ -13119,7 +13158,9 @@ def email_preview(activity_id):
                 })()
                 self.created_dt = datetime.now()
                 self.sold_amt = 50.00
-                self.paid = True
+                # latePayment exists because a pass is unpaid — showing "Payé" in that
+                # preview's Statut row would contradict the whole email.
+                self.paid = template_type != 'latePayment'
                 self.pass_code = 'SAMPLE123'
                 self.remaining_activities = 5
                 self.uses_remaining = 5
@@ -13127,7 +13168,7 @@ def email_preview(activity_id):
         pass_data = PassData()
 
         # The sample passport has to go into the context too, not just into the blocks
-        # below. intro_text/conclusion_text are stored as template source referencing
+        # below. admin_message is stored as template source referencing
         # pass_data; without it here the render raised UndefinedError, the fallback kept the
         # unrendered source, and the preview displayed raw Jinja ("Bonjour {{ pass_data...")
         # as body text — so the editor never showed what customers actually receive.
@@ -13160,6 +13201,7 @@ def email_preview(activity_id):
     if activity.email_templates and template_type in activity.email_templates:
         show_qr_code = activity.email_templates[template_type].get('show_qr_code', True)
     context['show_qr_code'] = show_qr_code
+    # hero_is_photo is computed by get_email_context() above.
 
     # Get the compiled template path
     template_path = safe_template(template_type)
@@ -13180,7 +13222,7 @@ def email_preview(activity_id):
         if activity.email_templates and template_type in activity.email_templates:
             preview_show_qr = activity.email_templates[template_type].get('show_qr_code', True)
         if preview_show_qr:
-            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123')).decode('utf-8')
+            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123', box_size=EMAIL_QR_BOX_SIZE)).decode('utf-8')
             rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
 
         # Add a preview banner to distinguish from actual emails
@@ -13240,7 +13282,7 @@ def email_preview_live(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import get_email_context, safe_template, generate_qr_code_image, ContentSanitizer, get_setting
+    from utils import get_email_context, safe_template, generate_qr_code_image, ContentSanitizer, get_setting, EMAIL_QR_BOX_SIZE
     from flask import render_template
     from datetime import datetime
     import os
@@ -13271,11 +13313,10 @@ def email_preview_live(activity_id):
         # Create sample pass data using proper class structure
         class PassData:
             def __init__(self):
-                self.activity = type('obj', (object,), {
-                    'name': activity.name,
-                    'id': activity.id,
-                    'location_address_formatted': activity.location_address_formatted  # For templates that show location
-                })()
+                # The real Activity row, not a name/id-only stub — the Facts block reads
+                # activity.location_address_formatted (and falls back to _raw), which a
+                # partial stub would leave Undefined for the fallback.
+                self.activity = activity
                 self.user = type('obj', (object,), {
                     'name': 'John Doe',
                     'email': 'john.doe@example.com',
@@ -13294,7 +13335,9 @@ def email_preview_live(activity_id):
                 })()
                 self.created_dt = datetime.now()
                 self.sold_amt = 50.00
-                self.paid = True
+                # latePayment exists because a pass is unpaid — showing "Payé" in that
+                # preview's Statut row would contradict the whole email.
+                self.paid = template_type != 'latePayment'
                 self.pass_code = 'SAMPLE123'
                 self.remaining_activities = 5
                 self.uses_remaining = 5
@@ -13367,7 +13410,7 @@ def email_preview_live(activity_id):
         # If field is absent, don't override — merged_template will use the saved DB value
 
     # Extract and sanitize customizations from form data for current template type
-    form_fields = ['subject', 'title', 'intro_text', 'conclusion_text', 'cta_text', 'cta_url', 'custom_message']
+    form_fields = ['subject', 'title', 'admin_message', 'cta_text', 'cta_url']
     for field in form_fields:
         form_key = f'{template_type}_{field}'
         value = request.form.get(form_key, '').strip()
@@ -13416,6 +13459,10 @@ def email_preview_live(activity_id):
         print(f"🔍 DEBUG PREVIEW: show_qr_code = {show_qr_code}")
         print(f"🔍 DEBUG PREVIEW: context['show_qr_code'] = {context.get('show_qr_code')}")
 
+        # hero_is_photo is computed by get_email_context() above. An uploaded-in-this-request
+        # hero is, by definition, the admin's own real image — override it below.
+        from utils import get_activity_hero_image
+
         # Phase 3: Handle uploaded hero BEFORE render — set context['hero_image_url'] to data URI
         hero_file_key = f'{template_type}_hero_image'
         if hero_file_key in request.files:
@@ -13426,13 +13473,13 @@ def email_preview_live(activity_id):
                     uploaded_hero_data = hero_file.read()
                     hero_base64 = base64.b64encode(uploaded_hero_data).decode('utf-8')
                     context['hero_image_url'] = f'data:image/png;base64,{hero_base64}'
+                    context['hero_is_photo'] = True
                     print(f"EMAIL LIVE PREVIEW: Using UPLOADED HERO as data URI in context")
                 except Exception as e:
                     print(f"Error reading uploaded hero file: {e}")
 
         # If hero_image_url is still a remote URL (not a data URI), load it locally for preview
         if context.get('hero_image_url') and not context['hero_image_url'].startswith('data:'):
-            from utils import get_activity_hero_image
             hero_data, _, _ = get_activity_hero_image(activity, template_type)
             if hero_data:
                 hero_base64 = base64.b64encode(hero_data).decode('utf-8')
@@ -13447,7 +13494,7 @@ def email_preview_live(activity_id):
 
         # Generate sample QR code for preview (only if enabled)
         if show_qr_code:
-            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123')).decode('utf-8')
+            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123', box_size=EMAIL_QR_BOX_SIZE)).decode('utf-8')
             rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
 
         # Add a live preview banner to distinguish from saved templates
@@ -13599,7 +13646,7 @@ def test_email_template(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import send_email, get_email_context, safe_template, get_setting, generate_qr_code_image
+    from utils import send_email, get_email_context, safe_template, get_setting, generate_qr_code_image, EMAIL_QR_BOX_SIZE
     from flask import render_template
     from datetime import datetime
     import os
@@ -13645,11 +13692,9 @@ def test_email_template(activity_id):
             # Using a simple class to provide dot notation access
             class PassData:
                 def __init__(self):
-                    self.activity = type('obj', (object,), {
-                        'name': activity.name,
-                        'id': activity.id,
-                        'location_address_formatted': activity.location_address_formatted  # For templates that show location
-                    })()
+                    # The real Activity row — the Facts block reads
+                    # activity.location_address_formatted / _raw directly.
+                    self.activity = activity
                     self.user = type('obj', (object,), {
                         'name': 'Test User',
                         'email': test_email,
@@ -13659,9 +13704,15 @@ def test_email_template(activity_id):
                         'name': 'Test Pass',
                         'price': 25.00
                     })()
+                    self.passport_type = type('obj', (object,), {
+                        'name': 'Test Pass',
+                        'sessions_included': 5
+                    })()
                     self.created_dt = datetime.now()
                     self.sold_amt = 25.00
-                    self.paid = True
+                    # latePayment exists because a pass is unpaid — showing "Payé" in that
+                    # test send's Statut row would contradict the whole email.
+                    self.paid = template_type != 'latePayment'
                     self.pass_code = 'TEST123'
                     self.remaining_activities = 3
                     self.uses_remaining = 3
@@ -13731,7 +13782,7 @@ def test_email_template(activity_id):
 
         QR_TEMPLATES = {'newPass', 'paymentReceived', 'redeemPass', 'latePayment'}
         if template_type in QR_TEMPLATES:
-            inline_images['qr_code'] = generate_qr_code_image('TEST123')
+            inline_images['qr_code'] = generate_qr_code_image('TEST123', box_size=EMAIL_QR_BOX_SIZE)
             print(f"   Added QR code: {len(inline_images['qr_code'])} bytes")
         else:
             print(f"   No QR code for template type: {template_type}")

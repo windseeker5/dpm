@@ -7,13 +7,14 @@
 
 {% set accent = '#6741d9' %}
 {% set preheader = 'Deux minutes pour nous dire comment ça s\'est passé.' %}
+{% set photo_eyebrow = 'Votre avis' %}
 
 {% block content %}
 
 {% if survey_url %}
 <tr>
   <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
-    {{ button(survey_url, 'Répondre au formulaire', accent=accent) }}
+    {{ button(survey_url, 'Répondre au formulaire') }}
     {% if question_count %}
     <div style="padding-top:10px; font-size:13px; color:#8892a4; line-height:1.5;">
       {{ question_count }} questions · environ deux minutes

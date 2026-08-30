@@ -1,13 +1,12 @@
 """
-Shared rendering for the activity-customizable parts of an email (intro/conclusion).
+Shared rendering for the activity-customizable part of an email (admin_message).
 
 WHY THIS MODULE EXISTS
 ----------------------
-`intro_text` and `conclusion_text` are stored as *template source* — in
-`config/email_defaults.json` and, per activity, in `Activity.email_templates`. Jinja does
-not recursively render a value, so `{{ intro_text | safe }}` emits that source verbatim.
-The stored text therefore has to be rendered in a second pass before it is injected into
-the email layout.
+`admin_message` is stored as *template source* — in `config/email_defaults.json` and, per
+activity, in `Activity.email_templates`. Jinja does not recursively render a value, so
+`{{ admin_message | safe }}` emits that source verbatim. The stored text therefore has to be
+rendered in a second pass before it is injected into the email layout.
 
 That rendering was spread across three places with three different contexts:
 
@@ -200,7 +199,7 @@ def build_email_text_context(
 
 
 def render_email_text(raw, context):
-    """Render one stored text field (intro_text / conclusion_text) against ``context``.
+    """Render one stored text field (admin_message) against ``context``.
 
     Never raises: a broken customized template degrades to the unrendered source rather
     than aborting the email that carries the customer's passport.

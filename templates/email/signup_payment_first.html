@@ -9,12 +9,13 @@
 
 {% set accent = '#b26a00' %}
 {% set preheader = 'Confirmez votre place par virement Interac.' %}
+{% set photo_eyebrow = 'Pré-inscription reçue' %}
 
 {% block content %}
 
 {% if requested_amount and payment_email %}
 <tr>
-  <td class="mp-pad" style="padding:22px 32px 0 32px;">
+  <td class="mp-pad" style="padding:0 32px;">
     {{ interac_block(requested_amount, payment_email, base_url) }}
   </td>
 </tr>
@@ -22,7 +23,7 @@
 
 {% if needs_signup_code and signup_code %}
 <tr>
-  <td class="mp-pad" style="padding:16px 32px 0 32px;">
+  <td class="mp-pad" style="padding:0 32px;">
     {{ signup_code_notice(signup_code) }}
   </td>
 </tr>

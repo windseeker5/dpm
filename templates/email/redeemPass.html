@@ -1,56 +1,68 @@
-{# Attendance recorded. Accent: teal — a receipt for something that already happened. #}
+{# Attendance recorded — this email doubles as the pass for the next visit. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import pass_card, button, session_list, history_table, next_session %}
+{% from "email/components.html" import identity_block, rows_block, status_pill, qr_block, section_card, button, money, credit_line %}
 
-{% set accent = '#0f7b8a' %}
 {% set preheader = 'Votre présence est enregistrée.' %}
+{% set photo_eyebrow = 'Présence enregistrée' %}
 
 {% block content %}
 
-{# The next session leads: it is what the customer opens this email to find out. Only for
-   scheduling activities — a plain credit pass has no "next" to show. #}
-{% if booked_slots %}
+{% set activity = pass_data.activity %}
+{% set total = pass_data.passport_type.sessions_included if pass_data.passport_type else None %}
+{% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
+
+{% set facts = [
+  {'label': 'Montant', 'value': money(pass_data.sold_amt)},
+  {'label': 'Statut', 'value': status_pill(pass_data.paid)},
+  {'label': 'Crédits', 'value': credit_line(pass_data.uses_remaining, total)},
+] %}
+{% if location %}{% set _ = facts.append({'label': 'Lieu', 'value': location}) %}{% endif %}
+
 <tr>
-  <td class="mp-pad" style="padding:20px 32px 0 32px;">
-    {{ next_session(booked_slots[0], accent=accent) }}
+  <td class="mp-pad" style="padding:24px 32px 0 32px;">
+    {{ identity_block('Participant', pass_data.user.name, pass_data.user.email) }}
+    {{ rows_block(facts) }}
+  </td>
+</tr>
+
+{% if show_qr_code %}
+<tr>
+  <td class="mp-pad" style="padding:0 32px;">
+    {{ qr_block('cid:qr_code', pass_data.pass_code, "Présentez ce code ou la référence à l'accueil") }}
   </td>
 </tr>
 {% endif %}
 
+{% if uses_scheduling and booked_slots %}
 <tr>
-  <td class="mp-pad" style="padding:22px 32px 0 32px;">
-    {# The QR still belongs here: this email doubles as the pass for the next visit, and the
-       block already shows how many credits are left. #}
-    {{ pass_card(pass_data, accent=accent, show_qr=show_qr_code, base_url=base_url) }}
-  </td>
-</tr>
-
-{# The first is already the hero above, so list only what follows it. #}
-{% if booked_slots | length > 1 %}
-<tr>
-  <td class="mp-pad" style="padding:22px 32px 0 32px;">
-    {{ session_list(booked_slots[1:], accent=accent, title='Autres séances réservées') }}
-  </td>
-</tr>
-{% endif %}
-
-{% if pass_url %}
-<tr>
-  <td class="mp-pad" align="center" style="padding:24px 32px 0 32px;">
-    {{ button(pass_url, 'Voir mon passeport', accent=accent) }}
-    {% if uses_scheduling %}
-    <div style="padding-top:10px; font-size:13px; color:#8892a4; line-height:1.5;">
-      Réservez votre prochaine séance au même endroit.
-    </div>
-    {% endif %}
+  <td class="mp-pad" style="padding:0 32px;">
+    {% set seance_items = [] %}
+    {% for slot in booked_slots %}
+      {% set _ = seance_items.append({'label': 'Séance ' ~ loop.index if booked_slots | length > 1 else 'Séance', 'value': slot}) %}
+    {% endfor %}
+    {{ section_card('Séances' if booked_slots | length > 1 else 'Séance', seance_items) }}
   </td>
 </tr>
 {% endif %}
 
 {% if history_rows %}
 <tr>
-  <td class="mp-pad" style="padding:22px 32px 0 32px;">
-    {{ history_table(history_rows) }}
+  <td class="mp-pad" style="padding:0 32px;">
+    {% set history_items = [] %}
+    {% for e in history_rows %}
+      {% set _ = history_items.append({'label': e.label, 'value': e.date, 'sub': e.by}) %}
+    {% endfor %}
+    {{ section_card('Historique', history_items) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if pass_url %}
+<tr>
+  <td class="mp-pad" style="padding:8px 32px 0 32px;">
+    {# href is deliberately pass_url (the real per-passport link), not cta_url — cta_url's
+       defaults are generic marketing pages (e.g. /my-passes), not recipient-specific. #}
+    {{ button(pass_url, cta_text or 'Voir mon passeport en ligne') }}
   </td>
 </tr>
 {% endif %}

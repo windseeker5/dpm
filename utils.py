@@ -181,10 +181,21 @@ def clear_hero_image_cache():
 
 def get_activity_hero_image(activity, template_type):
     """
-    Hero image selection with CORRECT priority order:
-    1. Custom uploaded hero (highest priority)
-    2. Original template default (proper default)
-    3. Activity image (ONLY if template has active customizations - NOT after reset)
+    Hero image selection, priority order:
+    1. Custom uploaded hero for this exact email type (highest priority — an explicit choice)
+    2. The activity's own real photo (the whole point of the Aug 2026 photo-band redesign —
+       see email-redesign/EMAIL_REDESIGN_HANDOFF.md)
+    3. The shipped generic mascot default — last resort, only when the activity has no photo
+       at all
+    4. A generated placeholder cover from the activity's name
+
+    Before Aug 2026 this order had the generic mascot (3) ahead of the real photo (2), gated
+    behind an unrelated "does this template have text customizations" check — meaning a real
+    uploaded activity photo was *never* used unless someone separately uploaded a duplicate
+    "custom hero" for that exact template type, since the mascot file always exists and so
+    always won first. Every activity's emails showed the cartoon mascot regardless of whether
+    the activity had a real photo, which is the opposite of what the redesign shipped to
+    replace it with. Reordered so the real photo is the default, not a rarely-reached fallback.
 
     Returns: tuple (image_data, is_custom, is_template_default)
     """
@@ -208,39 +219,23 @@ def get_activity_hero_image(activity, template_type):
         else:
             print(f"ℹ️ No custom hero found at {custom_hero_path}")
 
-    # Priority 2: Load original template default (pristine version)
+    # Priority 2: The activity's own real photo
+    if activity and activity.image_filename:
+        activity_image_paths = [
+            f"static/uploads/{activity.image_filename}",
+            f"static/uploads/activity_images/{activity.image_filename}"
+        ]
+        for activity_image_path in activity_image_paths:
+            if os.path.exists(activity_image_path):
+                with open(activity_image_path, "rb") as f:
+                    print(f"✅ Using activity's real photo as hero for {template_type}: {activity.image_filename}")
+                    return f.read(), False, False  # is_template_default=False — this is a photo
+
+    # Priority 3: The shipped generic mascot default — only when the activity has no photo
     template_hero_data = get_template_default_hero(template_type)
     if template_hero_data:
-        print(f"📦 Using original template default hero for {template_type}")
+        print(f"📦 Activity has no photo — using generic template default hero for {template_type}")
         return template_hero_data, False, True  # is_template_default=True
-
-    # Priority 3: Fall back to activity image ONLY if template has active customizations
-    # (NOT after reset - this prevents showing activity image when user clicked "reset to default")
-    if activity and activity.image_filename:
-        # Check if this template has any customizations in the database
-        has_customizations = False
-        if activity.email_templates and template_type in activity.email_templates:
-            template_data = activity.email_templates[template_type]
-            # Check if there are any actual custom values (not just empty dict)
-            customizable_fields = ['subject', 'title', 'intro_text', 'conclusion_text', 'hero_image', 'activity_logo']
-            has_customizations = any(field in template_data and template_data[field] for field in customizable_fields)
-
-        # Only use activity image if template was customized (user intentionally didn't upload hero)
-        # Do NOT use activity image if template was reset or never customized
-        if has_customizations:
-            # Try both locations: main uploads and activity_images subdirectory
-            activity_image_paths = [
-                f"static/uploads/{activity.image_filename}",
-                f"static/uploads/activity_images/{activity.image_filename}"
-            ]
-
-            for activity_image_path in activity_image_paths:
-                if os.path.exists(activity_image_path):
-                    with open(activity_image_path, "rb") as f:
-                        print(f"⚠️ Using activity image as fallback hero for customized template {template_type}: {activity.image_filename}")
-                        return f.read(), False, False  # is_template_default=False
-        else:
-            print(f"ℹ️ Template {template_type} has no customizations, skipping activity image fallback")
 
     # Priority 4: Generate placeholder cover from activity name
     if activity and activity.name:
@@ -376,7 +371,7 @@ class ContentSanitizer:
         sanitized = template_data.copy()
         
         # Fields that need HTML sanitization
-        html_fields = ['intro_text', 'custom_message', 'conclusion_text']
+        html_fields = ['admin_message']
         for field in html_fields:
             if field in sanitized:
                 sanitized[field] = ContentSanitizer.sanitize_html(sanitized[field])
@@ -1343,9 +1338,9 @@ def generate_qr_code(pass_code):
 
 
 @lru_cache(maxsize=512)
-def generate_qr_code_image(pass_code: str) -> bytes:
+def generate_qr_code_image(pass_code: str, box_size: int = 10) -> bytes:
     """Return PNG bytes for the given pass_code QR. Result is cached — same code always returns same bytes."""
-    qr = qrcode.make(pass_code)
+    qr = qrcode.make(pass_code, box_size=box_size)
     img_bytes = io.BytesIO()
     qr.save(img_bytes, format="PNG")
     return img_bytes.getvalue()
@@ -3465,6 +3460,12 @@ def get_all_activity_logs():
 # Keep in step with show_qr=False in the corresponding templates/email/<name>.html.
 NO_QR_TEMPLATES = {'latePayment'}
 
+# QR module box size for the email pass block: 33 modules (version 2 + border) * 5px = 165px,
+# matching the qr_block() display size exactly so no client has to rescale the PNG (rescaling a
+# non-divisor size forces browser smoothing and makes the code look muddy — Outlook also ignores
+# the image-rendering:pixelated CSS that would otherwise mask it).
+EMAIL_QR_BOX_SIZE = 5
+
 # The seven transactional email types, named as they appear in Activity.email_templates.
 EMAIL_TEMPLATE_TYPES = {
     'newPass', 'paymentReceived', 'latePayment', 'redeemPass',
@@ -3883,12 +3884,18 @@ def send_email_async(app, user=None, activity=None, **kwargs):
     activity_id = activity.id if activity and hasattr(activity, 'id') else None
     # Extract operational flag before thread starts (closure capture)
     operational = kwargs.get("operational", False)
+    # Same reasoning as activity_id: a live context['pass_data'] ORM object belongs to the
+    # *caller's* session, which can be torn down before this thread gets to it (a request's
+    # session closing once the response is sent, while the send is still running in the
+    # background). Reload a fresh, thread-session-bound Passport from this instead of touching
+    # the original object — see the reload block in send_in_thread().
+    _reload_pass_code = (kwargs.get("context") or {}).get("pass_code")
 
     def send_in_thread():
         with app.app_context():
             try:
                 from utils import send_email
-                from models import EmailLog, Activity
+                from models import EmailLog, Activity, Passport
                 import json
                 from datetime import datetime, timezone
 
@@ -3903,6 +3910,16 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                 to_email = kwargs.get("to_email")
                 template_name = kwargs.get("template_name")
                 context = kwargs.get("context", {})
+
+                # Reload pass_data in thread context too, for the same reason as activity above.
+                # The template rendering below reads pass_data.user / .activity / .uses_remaining
+                # extensively; a detached original would only fail once the calling thread's
+                # session happened to already be gone by the time rendering runs, which made this
+                # intermittent rather than a reliable, obvious break.
+                if _reload_pass_code and context.get("pass_data") is not None:
+                    fresh_pass_data = Passport.query.filter_by(pass_code=_reload_pass_code).first()
+                    if fresh_pass_data:
+                        context["pass_data"] = fresh_pass_data
                 inline_images = kwargs.get("inline_images", {})
                 html_body = kwargs.get("html_body")
                 timestamp_override = kwargs.get("timestamp_override")
@@ -4251,12 +4268,11 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     # Extract template values
     subject = email_context.get('subject', "Confirmation d'inscription")
     title = email_context.get('title', "Votre Inscription est Confirmée")
-    intro_raw = email_context.get('intro_text', '')
-    conclusion_raw = email_context.get('conclusion_text', '')
+    admin_message_raw = email_context.get('admin_message', '')
     # Which signup template, by workflow type. safe_template() turns this into the file.
     theme = 'signup_payment_first' if is_payment_first else 'signup'
 
-    # Render intro and conclusion manually with full context
+    # Render the admin message manually with full context
     render_context = {
         "user_name": signup.user.name,
         "activity_name": activity.name,
@@ -4276,8 +4292,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         render_context["requested_amount"] = _fr_money(signup.requested_amount)
         render_context["payment_email"] = payment_email
 
-    intro = render_template_string(intro_raw, **render_context)
-    conclusion = render_template_string(conclusion_raw, **render_context)
+    admin_message = render_template_string(admin_message_raw, **render_context)
 
     # Build context
     context = {
@@ -4289,8 +4304,7 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         "sessions_included": passport_type.sessions_included if passport_type else 1,
         "payment_instructions": passport_type.payment_instructions if passport_type else "",
         "title": title,
-        "intro_text": intro,
-        "conclusion_text": conclusion,
+        "admin_message": admin_message,
         "logo_url": "/static/minipass_logo.png",
         # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
         "_skip_email_context": True
@@ -4304,6 +4318,10 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     context['hero_image_url'] = email_context.get('hero_image_url', '')
     context['owner_logo_url'] = email_context.get('owner_logo_url')
     context['site_url'] = email_context.get('site_url', '')
+    # Without this, photo_band() defaults to treating the hero as a real photo (Jinja's
+    # `| default(True)`) even when it's actually the generic mascot icon — same bug the
+    # pass-style templates already had fixed via notify_pass_event's base_context.
+    context['hero_is_photo'] = email_context.get('hero_is_photo', True)
 
     # Add payment-first variables if applicable (for signup_payment_first template)
     if is_payment_first:
@@ -4411,6 +4429,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "activity_name": activity.name if activity else "",
         "show_qr_code": show_qr_code,
         "owner_logo_url": _owner_logo_url,
+        # hero_is_photo is computed by get_email_context() below, once, for every caller.
         # The customer has no account, so the passport page is their only durable way back in.
         "pass_url": _get_pass_url(pass_data),
         "uses_scheduling": bool(activity and getattr(activity, "uses_scheduling", False)),
@@ -4418,6 +4437,16 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         "history_rows": _build_history_rows(
             get_pass_history_data(pass_data.pass_code, fallback_admin_email=admin_email)
         ),
+        # send_email()'s background thread runs in its own app/session context. `pass_data` is
+        # a live ORM object bound to *this* (the caller's) session, which can be torn down
+        # before that thread gets around to it — e.g. a request's session closing once the
+        # response is sent, while the email is still being sent in the background. The thread
+        # only needs these two scalars for its EmailLog write; extracting them here, in the
+        # still-attached calling thread, means it never has to lazy-load through `pass_data`
+        # and risk a DetachedInstanceError (which was silently losing the EmailLog row, though
+        # not the send itself, for real pass emails).
+        "pass_code": pass_data.pass_code,
+        "user_name": pass_data.user.name if pass_data.user else None,
     }
 
     # Applies the activity's customizations and renders the stored intro/conclusion text.
@@ -4427,7 +4456,7 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
 
     inline_images = {}
     if show_qr_code:
-        inline_images["qr_code"] = generate_qr_code_image(pass_data.pass_code)
+        inline_images["qr_code"] = generate_qr_code_image(pass_data.pass_code, box_size=EMAIL_QR_BOX_SIZE)
 
     send_email_async(
         app=app,
@@ -4464,6 +4493,22 @@ def generate_response_token():
 # ================================
 
 
+def consolidate_admin_message(fields):
+    """Collapse the legacy intro_text/custom_message/conclusion_text trio into the single
+    admin_message field, in the exact concatenation order the email layout already renders
+    them in. Lets activities whose stored `email_templates` JSON predates the single-field
+    consolidation keep rendering/editing correctly without a forced migration.
+    See migrations/upgrade_production_database.py's task46 for the one-time DB-wide sweep.
+    """
+    if not fields:
+        return ''
+    admin_message = fields.get('admin_message')
+    if admin_message:
+        return admin_message
+    parts = [fields.get('intro_text') or '', fields.get('custom_message') or '', fields.get('conclusion_text') or '']
+    return ''.join(parts)
+
+
 def get_email_context(activity, template_type, base_context=None):
     """
     Merge activity email template customizations with default values
@@ -4483,12 +4528,10 @@ def get_email_context(activity, template_type, base_context=None):
     defaults = {
         'subject': 'Minipass Notification',
         'title': 'Welcome to Minipass',
-        'intro_text': 'Thank you for using our service.',
-        'conclusion_text': 'We appreciate your business!',
+        'admin_message': 'Thank you for using our service. We appreciate your business!',
         'hero_image': None,
         'cta_text': None,
         'cta_url': None,
-        'custom_message': None
     }
 
     # Load template-specific defaults from email_defaults.json
@@ -4519,13 +4562,21 @@ def get_email_context(activity, template_type, base_context=None):
             protected_blocks['history_html'] = base_context['history_html']
     
     # Apply activity-specific customizations if they exist
+    legacy_message_keys = ('intro_text', 'custom_message', 'conclusion_text')
     if activity and activity.email_templates:
         template_customizations = activity.email_templates.get(template_type, {})
         for key, value in template_customizations.items():
-            # NEVER allow customizations to override email blocks
-            if key not in ['owner_html', 'history_html']:
+            # NEVER allow customizations to override email blocks. The legacy trio is folded
+            # into admin_message below rather than applied directly.
+            if key not in ['owner_html', 'history_html'] and key not in legacy_message_keys:
                 if value is not None and value != '':
                     context[key] = value
+        # Legacy-shaped stored data (pre single-field consolidation) still needs to produce
+        # a message — consolidate_admin_message() also just returns admin_message itself
+        # when the data is already in the new shape.
+        admin_message_override = consolidate_admin_message(template_customizations)
+        if admin_message_override:
+            context['admin_message'] = admin_message_override
 
     # Restore protected blocks to ensure they're never overridden
     context.update(protected_blocks)
@@ -4577,7 +4628,7 @@ def get_email_context(activity, template_type, base_context=None):
         extra=context,
     )
 
-    for field in ['subject', 'title', 'intro_text', 'conclusion_text']:
+    for field in ['subject', 'title', 'admin_message']:
         if field in context and context[field]:
             context[field] = render_email_text(context[field], text_context)
 
@@ -4606,6 +4657,16 @@ def get_email_context(activity, template_type, base_context=None):
     context['site_url'] = _BASE_URL  # Used in templates for static assets (e.g. interac logo)
     if activity and 'hero_image_url' not in context:
         context['hero_image_url'] = f"{_BASE_URL}/activity/{activity.id}/hero-image/{template_type}"
+
+    # Whether the hero is a real photo (custom upload or the activity's own image) versus the
+    # shipped default/mascot icon — the photo band renders those two very differently. See
+    # photo_band()'s docstring in templates/email/components.html for why the default icon
+    # needs its own treatment instead of being cropped and scrimmed like a photo. Computed once
+    # here for every caller; a caller that already knows better (e.g. an admin previewing a
+    # hero file uploaded in this same request) can still pre-set it in base_context.
+    if activity and 'hero_is_photo' not in context:
+        _, _hero_is_custom, _hero_is_template_default = get_activity_hero_image(activity, template_type)
+        context['hero_is_photo'] = _hero_is_custom or not _hero_is_template_default
 
     if activity and 'owner_logo_url' not in context:
         context['owner_logo_url'] = f"{_BASE_URL}/owner-logo?activity_id={activity.id}"
