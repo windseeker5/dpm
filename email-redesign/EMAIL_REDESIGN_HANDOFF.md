@@ -423,3 +423,21 @@ Two more direct tweaks from the user's next look:
 
 Verified live at desktop and simulated 375px width (Lieu's long value wraps to 3 lines but
 stays right-aligned cleanly, no overlap). `web-design-guidelines`: clean, no new findings.
+
+## Sixth round, same session: QR card restyle, caption reorder, drop an empty-state message
+
+Three more small, precise tweaks:
+- The caption ("Présentez ce code ou la référence à l'accueil") moved from below the QR block
+  to above it — new order is caption → QR frame → pass_code, was QR frame → pass_code → caption.
+- `.pass-qr-frame` dropped its `1px solid #000` border entirely — now `background:#fff;
+  border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.12);` (a soft white card instead of a
+  hard-edged black-bordered box). A deliberate divergence from `qr_block()` in the email, which
+  keeps its tight black frame on purpose (see `components.html`) — noted inline.
+- Removed "Aucune séance disponible pour le moment." entirely — the message shown in Mes
+  séances when the user has credits left but no open session to book. The user didn't want it
+  shown at all; that state now renders nothing rather than an explanatory message. The other two
+  similar empty-state messages (no bookings yet; credits exhausted) were untouched — only this
+  one was flagged.
+
+Verified live: caption/QR order and card style confirmed, "Aucune séance disponible" gone from
+Mes séances with clean well spacing (no dangling gap). `web-design-guidelines`: clean.

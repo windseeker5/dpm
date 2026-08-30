@@ -265,12 +265,14 @@
       background-color: #fff3d6;
     }
 
-    /* QR — tight frame around the code itself, matching qr_block() in the email. */
+    /* QR — a plain white card, no border. This is a deliberate divergence from qr_block() in
+       the email, which keeps its tight black-bordered frame — see components.html. */
     .pass-qr-frame {
       display: inline-block;
-      border: 1px solid #000;
-      border-radius: 4px;
-      padding: 3px;
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
       line-height: 0;
     }
     .pass-qr-code {
@@ -500,6 +502,7 @@
             </div>
 
             <div class="mt-4">
+              <div class="text-muted small mb-2">Présentez ce code ou la référence à l'accueil</div>
               {# One image, sized by CSS at the breakpoint. Two <img> tags meant the browser
                  decoded the same QR twice. #}
               <div class="pass-qr-frame">
@@ -508,7 +511,6 @@
                      width="140" height="140" />
               </div>
               <div class="pass-qr-code">{{ hockey_pass.pass_code }}</div>
-              <div class="text-muted small mt-1">Présentez ce code ou la référence à l'accueil</div>
             </div>
           </div>
 
@@ -572,8 +574,6 @@
                 <button type="submit" class="btn btn-primary">Réserver</button>
               </div>
             </form>
-            {% else %}
-            <p class="text-muted mb-0 px-3">Aucune séance disponible pour le moment.</p>
             {% endif %}
           {% else %}
           <p class="text-muted mb-0 px-3">
