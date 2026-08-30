@@ -448,3 +448,18 @@ Immediate follow-up: the `box-shadow: 0 1px 3px rgba(0,0,0,.12)` added on the QR
 round above read as an unwanted grey border/shadow — removed entirely. `.pass-qr-frame` is now
 just `background:#fff; border-radius:10px; padding:8px;` — a plain white rounded card, nothing
 else.
+
+## Eighth round: frontend-design review, dead-code removal
+
+Asked for a read-only `frontend-design`-skill review of the finished page. Found (and, once
+asked, fixed) real dead weight left over from the "Prochaine séance" removal several rounds
+back: the page was still loading a whole second web font (Roboto Slab, 400+700 weights, a real
+`fonts.googleapis.com` request) for a block that no longer exists, plus three now-unused CSS
+classes (`.pass-next-label`, `.pass-next-date`, `.pass-label`). Removed the font `<link>`s and
+the dead classes; confirmed via `read_network_requests` that the `fonts.googleapis.com` request
+is gone and the page renders identically otherwise.
+
+Also flagged, not yet acted on: the Participant `.pass-well` now carries three different jobs
+in one undifferentiated grey box (identity, Facts, and the QR credential itself) — the QR is
+functionally the most important thing on the page but has no more visual weight than the "Lieu"
+row above it. Proposals pending for how to give it more presence.

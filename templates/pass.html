@@ -13,10 +13,6 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
-
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
   <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
@@ -87,34 +83,6 @@
       font-size: 0.85rem;
     }
 
-    /* The next session leads the page — it is what someone opens their passport to check.
-       Roboto Slab is already loaded above; the email sets the same treatment in Georgia,
-       so the two surfaces read as one. Tabular figures keep dates aligned like a posted
-       schedule rather than ragged prose. */
-    .pass-next-label {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #8892a4;
-    }
-    .pass-next-date {
-      font-family: 'Roboto Slab', Georgia, serif;
-      font-size: 1.5rem;
-      line-height: 1.25;
-      font-weight: 700;
-      color: #15192c;
-      text-transform: capitalize;
-      font-variant-numeric: tabular-nums;
-      text-wrap: balance;
-    }
-    .pass-label {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: #8892a4;
-    }
     .pass-value {
       font-size: 1rem;
       font-weight: 600;
@@ -123,9 +91,7 @@
 
     /* Shared visual language with the email templates (email/components.html) — same object,
        two surfaces. Section titles (Participant / Séances / Historique) sit above their
-       content, near-black, same treatment as identity_block()/section_card() in the email;
-       this is a distinct convention from .pass-label above (muted grey, used only for the
-       "Prochaine séance" callout). */
+       content, near-black, same treatment as identity_block()/section_card() in the email. */
     .pass-section-title {
       margin: 0 0 0.5rem 0;
       font-size: 0.6875rem;
