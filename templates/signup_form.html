@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f9fa">
   <title>Signup for {{ activity.name }}</title>
 
   <!-- Favicons -->
@@ -25,7 +26,10 @@
     :root {
       --primary-color: #206bc4;
       --success-color: #28a745;
-      --success-gradient: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      /* Flat, not a gradient: DESIGN_SYSTEM.md:41 bans gradients on cards and controls.
+         The two gradients left in this file are scrims over the hero photo, which exist
+         so white text stays legible on an arbitrary image - those are functional. */
+      --success-solid: #1a7f4b;
     }
 
     * {
@@ -220,7 +224,7 @@
 
     /* Quantity selector */
     .quantity-section {
-      background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+      background: #ffffff;
       border: 1px solid #e9ecef;
       border-radius: 8px;
       padding: 1rem 1.25rem;
@@ -509,8 +513,9 @@
       background: #ffffff;
     }
 
-    .form-control:focus {
-      outline: none;
+    .form-control:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 1px;
       border-color: var(--primary-color);
       box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.15);
     }
@@ -554,7 +559,7 @@
     .btn-cta-primary {
       width: 100%;
       padding: 1rem 1.5rem;
-      background: var(--success-gradient);
+      background: var(--success-solid);
       color: white;
       font-size: 1.125rem;
       font-weight: 600;
@@ -890,7 +895,7 @@
   <div class="mobile-hero" style="{% if activity.image_filename %}background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');{% else %}background: {{ placeholder_css(activity.name) }};{% endif %}">
     {% if settings and settings["LOGO_FILENAME"] %}
     <div class="mobile-hero-logo">
-      <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo">
+      <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo" width="120" height="40">
     </div>
     {% else %}
     <div class="mobile-hero-logo">
@@ -915,7 +920,7 @@
         <!-- Logo on form side (desktop only) -->
         {% if settings and settings["LOGO_FILENAME"] %}
         <div class="form-logo">
-          <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo">
+          <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo" width="120" height="40">
         </div>
         {% else %}
         <div class="form-logo">
@@ -1260,7 +1265,7 @@
               <div class="payment-method-card selected" onclick="selectPaymentMethod('interac', this)">
                 <div class="payment-method-radio"></div>
                 <div class="payment-method-logo">
-                  <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img">
+                  <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img" width="36" height="36">
                 </div>
                 <div class="payment-method-info">
                   <span class="payment-method-desc"><strong>Interac.</strong> Les instructions de paiement vous seront envoyees par courriel apres votre inscription.</span>
@@ -1281,7 +1286,7 @@
               <div class="payment-method-card selected">
                 <div class="payment-method-radio"></div>
                 <div class="payment-method-logo">
-                  <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img">
+                  <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img" width="36" height="36">
                 </div>
                 <div class="payment-method-info">
                   <span class="payment-method-desc"><strong>Interac.</strong> Les instructions de paiement vous seront envoyees par courriel apres votre inscription.</span>
@@ -1315,7 +1320,7 @@
             </div>
 
             <div id="notes-section">
-              <textarea name="notes" class="form-control" rows="3" placeholder="Exigences speciales, preferences ou autres notes..."></textarea>
+              <textarea name="notes" class="form-control" rows="3" placeholder="Exigences speciales, preferences ou autres notes…"></textarea>
             </div>
 
             <!-- Buttons -->

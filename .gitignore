@@ -15,6 +15,7 @@ venv/
 .vscode/
 .idea/
 .claude/
+.pi/
 
 # MacOS
 .DS_Store
@@ -28,25 +29,42 @@ playwright-wrapper.sh
 
 # SQLite database
 *.db
-instance/*.db
-instance/*.db-shm
-instance/*.db-wal
+instance/
 
 # Backup files and directories
 static/backups/*.zip
 static/backups/database/
 static/backups/instance/
 static/backups/*.db
-instance/*.backup_*
 static/uploads_backup_*/
 templates/email_templates_backup_*/
 templates/email_templates/*_original_old_oct9/
 
 #Lean And Clean
-pytest/
+# Note the trailing /* rather than /: git cannot re-include a file whose parent directory is
+# itself excluded, so the directories are matched by contents to allow the exceptions below.
+pytest/*
 tests/
-test/
+test/*
 tools/
+
+# Tracked exceptions — specific scripts that must survive a fresh clone.
+#
+# test/ and pytest/ stay ignored on purpose: pytest/ was untracked in fb6b6f0 after a
+# hardcoded SMTP password in it was scraped from this public repo and used to send ~3,300
+# phishing emails. That cleanup also silently took the email-template test script with it.
+#
+# Every file listed here reads its credentials from .env and has been checked to contain
+# none. Never add a path here without scanning it first (tools/scan_credentials.py).
+!test/test_all_email_templates.py
+!test/test_email_render.py
+!test/test_email_text.py
+!test/render_all.py
+!pytest/send_test_payment_email.py
+
+# Not the output of those tools, only the tools themselves.
+test/render/
+test/baseline/
 #sql/
 docs/
 CLAUDE.md

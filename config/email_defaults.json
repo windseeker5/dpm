@@ -1,65 +1,51 @@
 {
-    "newPass": {
-        "subject": "Votre passeport numérique est prêt",
-        "title": "Votre passeport est prêt",
-        "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Excellente nouvelle ! Votre passeport numérique vient d'être créé.</p>\n<p>Il vous donne accès à <strong>{{ pass_data.uses_remaining }}</strong> participations pour <strong>{{ pass_data.activity.name }}</strong>.</p>\n{% if pass_data.activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ pass_data.activity.location_address_formatted }}</p>\n{% endif %}\n<p>Présentez simplement le code QR ci-dessous lors de chaque participation.</p>",
-        "conclusion_text": "{% if not pass_data.paid %}<p><strong>Rappel important :</strong></p>\n<p>Votre passeport n'est pas encore payé. Merci de compléter le paiement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong>{% if payment_email %} à l'adresse courriel suivante : <strong>{{ payment_email }}</strong>{% endif %} pour activer votre accès.</p>{% endif %}\n<p>Merci de faire partie de cette aventure ! Votre participation nous permet de continuer à offrir ces activités de qualité.</p>\n<p>Si vous avez des questions ou besoin d'assistance, n'hésitez pas à nous contacter directement.</p>\n<p>À très bientôt,<br>\n<em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
-        "custom_message": "",
-        "cta_text": "Voir mon passeport",
-        "cta_url": "https://minipass.me/my-passes"
-    },
-    "paymentReceived": {
-        "subject": "Confirmation de paiement",
-        "title": "Paiement confirmé",
-        "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Nous avons bien reçu votre paiement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong>.</p>\n<p>Votre passeport numérique pour <strong>{{ pass_data.activity.name }}</strong> est maintenant actif et prêt à être utilisé !</p>\n{% if pass_data.activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ pass_data.activity.location_address_formatted }}</p>\n{% endif %}\n<p>Il vous reste <strong>{{ pass_data.uses_remaining }}</strong> participations.</p>",
-        "conclusion_text": "<p>Merci de votre confiance. Votre passeport est maintenant actif et vous pouvez commencer à l'utiliser dès aujourd'hui.</p>\n<p>Si vous avez des questions ou besoin d'assistance, n'hésitez pas à nous contacter directement. Nous sommes là pour vous aider.</p>\n<p>À très bientôt,<br>\n<em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
-        "custom_message": "",
-        "cta_text": "Voir mon passeport",
-        "cta_url": "https://minipass.me/my-passes"
-    },
-    "latePayment": {
-        "subject": "Rappel de paiement",
-        "title": "Rappel de paiement",
-        "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Votre passeport numérique pour <strong>{{ pass_data.activity.name }}</strong> est en attente de paiement.</p>\n<p>Pour activer votre accès, merci de compléter le paiement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong>{% if payment_email %} à l'adresse courriel suivante : <strong>{{ payment_email }}</strong>{% endif %}.</p>\n{% if pass_data.activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ pass_data.activity.location_address_formatted }}</p>\n{% endif %}",
-        "conclusion_text": "<p>Si vous avez des questions ou rencontrez un problème, n'hésitez pas à nous contacter. Nous serons heureux de vous aider.</p>\n<p>Une fois le paiement effectué, votre passeport sera immédiatement activé et prêt à utiliser.</p>\n<p>Merci de votre compréhension,<br>\n<em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
-        "custom_message": "",
-        "cta_text": "Effectuer le paiement",
-        "cta_url": "https://minipass.me/payment"
-    },
-    "signup": {
-        "subject": "Demande d'inscription reçue",
-        "title": "Demande d'inscription reçue",
-        "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p>\n<p>Merci pour votre demande d'inscription à <strong>{{ activity_name }}</strong> !</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}\n<p>Votre demande est maintenant entre les mains de notre équipe. Dès qu'elle sera approuvée, vous recevrez votre passeport numérique directement par courriel. Celui-ci contiendra toutes les informations nécessaires, incluant les modalités de paiement.</p>",
-        "conclusion_text": "<p>En attendant, aucune action n'est requise de votre part.</p>\n<p>Nous vous remercions de votre patience et espérons vous accueillir bientôt !</p>\n<p><em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
-        "custom_message": "",
-        "cta_text": "Voir les détails",
-        "cta_url": "https://minipass.me/my-signups"
-    },
-    "signup_payment_first": {
-        "subject": "Pré-inscription reçue — Prochaine étape",
-        "title": "Pré-inscription reçue — Prochaine étape",
-        "intro_text": "<p>Bonjour <strong>{{ user_name }}</strong>,</p>\n<p>Nous avons bien reçu votre pré-inscription à <strong>{{ activity_name }}</strong>.</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}\n<p>Pour <strong>confirmer votre place</strong>, veuillez effectuer un virement Interac.</p>",
-        "conclusion_text": "<p><strong>Dès réception de votre paiement</strong>, vous recevrez votre passeport numérique par courriel.</p><p><em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
-        "custom_message": "",
-        "cta_text": "Retour à l'accueil",
-        "cta_url": "https://minipass.me"
-    },
-    "redeemPass": {
-        "subject": "Participation confirmée",
-        "title": "Participation confirmée",
-        "intro_text": "<p>Bonjour <strong>{{ pass_data.user.name }}</strong>,</p>\n<p>Une participation vient d'être utilisée sur votre passeport numérique pour <strong>{{ pass_data.activity.name }}</strong>.</p>\n{% if pass_data.activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ pass_data.activity.location_address_formatted }}</p>\n{% endif %}\n<p><strong>Participations restantes :</strong> {{ pass_data.uses_remaining }}</p>",
-        "conclusion_text": "{% if not pass_data.paid %}<p><strong>Rappel important :</strong></p>\n<p>Votre passeport n'est pas encore payé. Merci de compléter le paiement de <strong>{{ \"%.2f\"|format(pass_data.sold_amt) }}$</strong>{% if payment_email %} à l'adresse courriel suivante : <strong>{{ payment_email }}</strong>{% endif %} pour continuer à profiter de vos participations.</p>{% endif %}\n<p>Merci d'avoir participé ! Nous espérons que vous avez apprécié l'expérience.</p>\n<p>N'oubliez pas de consulter votre passeport pour voir vos participations restantes et planifier votre prochaine visite.</p>\n<p>À très bientôt,<br>\n<em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
-        "custom_message": "",
-        "cta_text": "Voir mon passeport",
-        "cta_url": "https://minipass.me/my-passes"
-    },
-    "survey_invitation": {
-        "subject": "Votre participation à {{ activity_name }}",
-        "title": "Complétez votre expérience",
-        "intro_text": "<p>Bonjour,</p>\n<p>Vous avez récemment participé à <strong>{{ activity_name }}</strong>. Pour compléter votre dossier de participation, nous vous invitons à remplir un court formulaire.</p>\n<p>Cela prend seulement quelques minutes et nous aide à maintenir la qualité de nos activités.</p>\n{% if activity.location_address_formatted %}\n<p>📍 <strong>Lieu :</strong> {{ activity.location_address_formatted }}</p>\n{% endif %}",
-        "conclusion_text": "<p>Merci de compléter cette dernière étape. Votre participation nous permet de continuer à améliorer nos services.</p>\n<p>Si vous avez des questions, n'hésitez pas à nous contacter directement.</p>\n<p>Cordialement,<br>\n<em><strong>L'équipe{% if organization_name %} {{ organization_name }}{% endif %}</strong></em></p>",
-        "custom_message": "",
-        "cta_text": "Compléter le formulaire",
-        "cta_url": "{survey_url}"
-    }
+  "newPass": {
+    "subject": "Votre passeport est prêt",
+    "title": "Votre passeport est prêt",
+    "admin_message": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Votre passeport pour <strong>{{ activity_name }}</strong> est actif.</p>{% if not is_paid %}<p>Il reste <strong>{{ amount_display }}</strong> à régler{% if payment_email %} par virement à <strong>{{ payment_email }}</strong>{% endif %} pour activer votre passeport.</p>{% endif %}<p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
+    "cta_text": "Voir mon passeport en ligne",
+    "cta_url": "https://minipass.me/my-passes"
+  },
+  "paymentReceived": {
+    "subject": "Paiement confirmé",
+    "title": "Paiement confirmé",
+    "admin_message": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Nous avons reçu votre paiement de <strong>{{ amount_display }}</strong>. Votre passeport pour <strong>{{ activity_name }}</strong> est actif.</p><p>Merci de votre confiance.</p><p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
+    "cta_text": "Voir mon passeport en ligne",
+    "cta_url": "https://minipass.me/my-passes"
+  },
+  "latePayment": {
+    "subject": "Rappel de paiement",
+    "title": "Rappel de paiement",
+    "admin_message": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Votre passeport pour <strong>{{ activity_name }}</strong> attend son paiement de <strong>{{ amount_display }}</strong>{% if payment_email %}, par virement à <strong>{{ payment_email }}</strong>{% endif %}.</p><p>Votre passeport s'active dès la réception du paiement.</p><p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
+    "cta_text": "Effectuer le paiement",
+    "cta_url": "https://minipass.me/payment"
+  },
+  "signup": {
+    "subject": "Demande d'inscription reçue",
+    "title": "Demande d'inscription reçue",
+    "admin_message": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Nous avons reçu votre demande pour <strong>{{ activity_name }}</strong>. Vous recevrez votre passeport par courriel dès qu'elle sera approuvée.</p><p>Aucune action n'est requise pour l'instant.</p><p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
+    "cta_text": "Voir les détails",
+    "cta_url": "https://minipass.me/my-signups"
+  },
+  "signup_payment_first": {
+    "subject": "Pré-inscription reçue — Prochaine étape",
+    "title": "Pré-inscription reçue",
+    "admin_message": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Nous avons reçu votre pré-inscription à <strong>{{ activity_name }}</strong>.</p><p>Vous recevrez votre passeport dès réception du paiement.</p><p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
+    "cta_text": "Retour à l'accueil",
+    "cta_url": "https://minipass.me"
+  },
+  "redeemPass": {
+    "subject": "Présence confirmée",
+    "title": "Présence confirmée",
+    "admin_message": "<p>Bonjour <strong>{{ user_name }}</strong>,</p><p>Votre présence à <strong>{{ activity_name }}</strong> est enregistrée.</p>{% if not is_paid %}<p>Il reste <strong>{{ amount_display }}</strong> à régler{% if payment_email %} par virement à <strong>{{ payment_email }}</strong>{% endif %} pour activer votre passeport.</p>{% endif %}<p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
+    "cta_text": "Voir mon passeport en ligne",
+    "cta_url": "https://minipass.me/my-passes"
+  },
+  "survey_invitation": {
+    "subject": "Votre avis sur {{ activity_name }}",
+    "title": "Votre avis compte",
+    "admin_message": "<p>Bonjour,</p><p>Vous avez participé à <strong>{{ activity_name }}</strong>. Un court formulaire — deux minutes — nous aide à améliorer l'expérience.</p><p>Merci du temps que vous y consacrez.</p><p>À bientôt,<br><strong>L'équipe {{ organization_name }}</strong></p>",
+    "cta_text": "Compléter le formulaire",
+    "cta_url": "{survey_url}"
+  }
 }

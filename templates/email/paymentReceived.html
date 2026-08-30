@@ -1,0 +1,74 @@
+{# Payment confirmed — a receipt for something that already happened. #}
+{% extends "email/_base.html" %}
+{% from "email/components.html" import identity_block, rows_block, status_pill, qr_block, section_card, well, button, money, credit_line %}
+
+{% set preheader = 'Nous avons bien reçu votre paiement.' %}
+{% set photo_eyebrow = 'Paiement confirmé' %}
+
+{% block content %}
+
+{% set activity = pass_data.activity %}
+{% set total = pass_data.passport_type.sessions_included if pass_data.passport_type else None %}
+{% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
+
+{% set facts = [
+  {'label': 'Montant', 'value': money(pass_data.sold_amt)},
+  {'label': 'Statut', 'value': status_pill(pass_data.paid)},
+  {'label': 'Crédits', 'value': credit_line(pass_data.uses_remaining, total)},
+] %}
+{% if location %}{% set _ = facts.append({'label': 'Lieu', 'value': location}) %}{% endif %}
+
+<tr>
+  <td class="mp-pad" style="padding:24px 32px 0 32px;">
+    {% call well('Participant') %}
+      {{ identity_block(None, pass_data.user.name, pass_data.user.email) }}
+      {{ rows_block(facts, outer_border=False, top_margin=12) }}
+    {% endcall %}
+  </td>
+</tr>
+
+{% if show_qr_code %}
+<tr>
+  <td class="mp-pad" style="padding:0 32px;">
+    {% call well("Code d'accès") %}
+      {{ qr_block('cid:qr_code', pass_data.pass_code, "Présentez ce code ou la référence à l'accueil") }}
+    {% endcall %}
+  </td>
+</tr>
+{% endif %}
+
+{% if uses_scheduling and booked_slots %}
+<tr>
+  <td class="mp-pad" style="padding:0 32px;">
+    {% set seance_items = [] %}
+    {% for slot in booked_slots %}
+      {% set _ = seance_items.append({'label': 'Séance ' ~ loop.index if booked_slots | length > 1 else 'Séance', 'value': slot}) %}
+    {% endfor %}
+    {{ section_card('Séances' if booked_slots | length > 1 else 'Séance', seance_items) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if history_rows %}
+<tr>
+  <td class="mp-pad" style="padding:0 32px;">
+    {% set history_items = [] %}
+    {% for e in history_rows %}
+      {% set _ = history_items.append({'label': e.label, 'value': e.date, 'sub': e.by}) %}
+    {% endfor %}
+    {{ section_card('Historique', history_items) }}
+  </td>
+</tr>
+{% endif %}
+
+{% if pass_url %}
+<tr>
+  <td class="mp-pad" style="padding:8px 32px 0 32px;">
+    {# href is deliberately pass_url (the real per-passport link), not cta_url — cta_url's
+       defaults are generic marketing pages (e.g. /my-passes), not recipient-specific. #}
+    {{ button(pass_url, cta_text or 'Voir mon passeport en ligne') }}
+  </td>
+</tr>
+{% endif %}
+
+{% endblock %}

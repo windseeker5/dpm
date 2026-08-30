@@ -88,8 +88,7 @@ from utils import (
     generate_pass_code,
     generate_survey_token,
     generate_response_token,
-    format_slot_label,          # Session scheduling: French label for a dated slot
-    HERO_CID_MAP  # Shared constant for email template hero image CIDs
+    format_slot_label           # Session scheduling: French label for a dated slot
 )
 
 # 🧠 Data Tools
@@ -1287,18 +1286,16 @@ def resend_email(log_id):
         flash("Cannot resend — activity not found.", "warning")
         return redirect(request.referrer or url_for("activity_log"))
 
-    # Map template name back to event type
+    # Map template name back to event type. Historical EmailLog rows still carry the old
+    # "<name>_compiled/index.html" spelling, so normalise before looking it up.
     template_to_event = {
         "newPass": "pass_created",
-        "newPass_compiled": "pass_created",
         "paymentReceived": "payment_received",
-        "paymentReceived_compiled": "payment_received",
         "latePayment": "payment_late",
-        "latePayment_compiled": "payment_late",
         "redeemPass": "pass_redeemed",
-        "redeemPass_compiled": "pass_redeemed",
     }
-    base = log.template_name.split("/")[0] if log.template_name else ""
+    from utils import template_key
+    base = template_key(log.template_name) if log.template_name else ""
     event_type = template_to_event.get(base)
     if not event_type:
         flash(f"Cannot resend — unknown template type '{base}'.", "warning")
@@ -1942,17 +1939,22 @@ def bulk_signup_action():
             for signup in signups:
                 if not signup.paid:
                     try:
-                        # Send payment reminder email
+                        # This used to be called with event_type/signup_data/admin_email,
+                        # none of which notify_signup_event accepts — so every call raised
+                        # TypeError, the except below swallowed it, and the count still went
+                        # up. "Sent reminders to N signups" was reported while nothing was
+                        # ever sent. Count only what actually goes out.
                         notify_signup_event(
                             app=current_app._get_current_object(),
-                            event_type="payment_reminder",
-                            signup_data=signup,
-                            admin_email=admin_email,
+                            signup=signup,
+                            activity=signup.activity,
                             timestamp=datetime.now(timezone.utc)
                         )
                         count += 1
                     except Exception as e:
-                        print(f"Failed to send reminder for signup {signup.id}: {e}")
+                        # Log loudly: a silent failure here is what hid the bug for months.
+                        print(f"❌ Failed to send reminder for signup {signup.id}: "
+                              f"{type(e).__name__}: {e}")
             
             # Log admin action
             db.session.add(AdminActionLog(
@@ -2320,6 +2322,15 @@ def approve_and_create_pass(signup_id):
         created_by=current_admin.id if current_admin else None,
         created_dt=now_utc,
         paid=signup.paid,
+        # A passport created already-paid (payment-first: admin already confirmed payment
+        # before calling this route) needs the same paid metadata mark_passport_paid() sets,
+        # not just the boolean — get_pass_history_data() only renders the Historique
+        # "Paiement" row when BOTH paid AND paid_date are set, so leaving paid_date null left
+        # the Statut pill showing "Payé" while Historique showed "En attente" for the same
+        # passport. Found from a real payment-first passport, not by inspection.
+        paid_date=now_utc if signup.paid else None,
+        marked_paid_by=(session.get("admin", "unknown") if signup.paid else None),
+        payment_method=(signup.payment_method if signup.paid else None),
         notes=f"Created automatically from signup {signup.id}"
     )
     db.session.add(passport)
@@ -5189,27 +5200,11 @@ def setup():
         os.makedirs("static/backups", exist_ok=True)
         print("🗂️ Available backups in static/backups/:", [])
 
-    template_base = os.path.join("templates", "email_templates")
-    email_templates = []
-
-    # Safely check if templates directory exists
-    if not os.path.exists(template_base):
-        print(f"Templates directory not found: {template_base}")
-        os.makedirs(template_base, exist_ok=True)
-
-    for entry in os.listdir(template_base):
-        full_path = os.path.join(template_base, entry)
-
-        if entry.endswith(".html") and os.path.isfile(full_path):
-            email_templates.append(entry)
-        elif entry.endswith("_compiled") and os.path.isdir(full_path):
-            index_path = os.path.join(full_path, "index.html")
-            if os.path.exists(index_path):
-                email_templates.append(entry.replace("_compiled", "") + ".html")
-
-    # Add survey invitation template manually since it's in the main templates folder
-    email_templates.append("email_survey_invitation.html")
-    email_templates.sort()
+    # The seven transactional templates, listed straight from templates/email/. This used to
+    # walk email_templates/ looking for *_compiled/index.html folders; the layouts are plain
+    # files now, and the partials that start with "_" are not templates in their own right.
+    from utils import EMAIL_TEMPLATE_TYPES
+    email_templates = sorted(f"{t}.html" for t in EMAIL_TEMPLATE_TYPES)
 
     # Get fiscal year display string
     from utils import get_fiscal_year_display
@@ -5976,8 +5971,9 @@ def generate_backup():
                         archive_path = os.path.relpath(file_path, start=os.path.dirname(app.static_folder))
                         zipf.write(file_path, arcname=archive_path)
             
-            # Add ALL email template files (HTML, compiled, images, etc.)
-            email_templates_dir = os.path.join("templates", "email_templates")
+            # Add the email templates. These moved from templates/email_templates/ (master +
+            # _compiled + _original per type) to plain files in templates/email/.
+            email_templates_dir = os.path.join("templates", "email")
             if os.path.exists(email_templates_dir):
                 for root, dirs, files in os.walk(email_templates_dir):
                     for file in files:
@@ -6395,7 +6391,7 @@ def forgot_password():
                 send_email(
                     subject="Reset your Minipass password",
                     to_email=email,
-                    template_name="email_templates/password_reset.html",
+                    template_name="email/password_reset.html",
                     context={
                         "admin_name": admin.display_name,
                         "reset_url": reset_url,
@@ -12045,16 +12041,17 @@ def send_survey_invitations(survey_id):
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                 }
 
-                # Render subject, title, intro_text, and conclusion_text if they contain Jinja2 variables
-                subject_template = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
-                title_template = email_context.get('title', 'We\'d Love Your Feedback!')
-                intro_template = email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>')
-                conclusion_template = email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
+                # Render subject, title, and admin_message if they contain Jinja2 variables
+                # French fallbacks: these only fire if config/email_defaults.json fails to
+                # load, and an English heading on an otherwise French email is worse than a
+                # plain one.
+                subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
+                title_template = email_context.get('title', 'Votre avis compte')
+                admin_message_template = email_context.get('admin_message', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p><p>Merci du temps que vous y consacrez.</p>')
 
                 subject = JinjaTemplate(subject_template).render(**render_context)
                 rendered_title = JinjaTemplate(title_template).render(**render_context)
-                rendered_intro = JinjaTemplate(intro_template).render(**render_context)
-                rendered_conclusion = JinjaTemplate(conclusion_template).render(**render_context)
+                rendered_admin_message = JinjaTemplate(admin_message_template).render(**render_context)
 
                 template_name = 'survey_invitation'  # Match the template folder name
 
@@ -12073,14 +12070,20 @@ def send_survey_invitations(survey_id):
                     'privacy_url': "https://minipass.me/privacy",
                     # Survey email template variables - now RENDERED (Jinja2 variables already processed)
                     'title': rendered_title,
-                    'intro_text': rendered_intro,
-                    'conclusion_text': rendered_conclusion,
+                    'admin_message': rendered_admin_message,
                     # Hero image URL for hosted images
                     'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
+                    # Real bug found during the redesign: this context is built by hand and never
+                    # goes through get_email_context() again (see _skip_email_context below), so
+                    # neither of these were ever set — the org logo silently never rendered, and
+                    # the hero always defaulted to being treated as a real photo even when it's
+                    # the generic mascot icon.
+                    'owner_logo_url': f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo?activity_id={survey.activity.id}",
+                    'hero_is_photo': email_context.get('hero_is_photo', True),
                     # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
                     '_skip_email_context': True
                 }
-                
+
                 print(f"🔵 About to call send_email_async()")
                 print(f"🔵 Template: {template_name}")
                 print(f"🔵 Subject: {subject}")
@@ -12167,16 +12170,17 @@ def send_survey_invitations(survey_id):
                     'support_email': get_setting('SUPPORT_EMAIL', 'support@minipass.me'),
                 }
 
-                # Render subject, title, intro_text, and conclusion_text if they contain Jinja2 variables
-                subject_template = email_context.get('subject', f"{survey.name} - Your Feedback Requested")
-                title_template = email_context.get('title', 'We\'d Love Your Feedback!')
-                intro_template = email_context.get('intro_text', '<p>Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.</p>')
-                conclusion_template = email_context.get('conclusion_text', '<p>Thank you for helping us create better experiences!</p>')
+                # Render subject, title, and admin_message if they contain Jinja2 variables
+                # French fallbacks: these only fire if config/email_defaults.json fails to
+                # load, and an English heading on an otherwise French email is worse than a
+                # plain one.
+                subject_template = email_context.get('subject', f"Votre avis sur {survey.name}")
+                title_template = email_context.get('title', 'Votre avis compte')
+                admin_message_template = email_context.get('admin_message', '<p>Vous avez participé à cette activité. Un court formulaire nous aide à améliorer l\'expérience.</p><p>Merci du temps que vous y consacrez.</p>')
 
                 subject = JinjaTemplate(subject_template).render(**render_context)
                 rendered_title = JinjaTemplate(title_template).render(**render_context)
-                rendered_intro = JinjaTemplate(intro_template).render(**render_context)
-                rendered_conclusion = JinjaTemplate(conclusion_template).render(**render_context)
+                rendered_admin_message = JinjaTemplate(admin_message_template).render(**render_context)
 
                 template_name = 'survey_invitation'  # Match the template folder name
 
@@ -12195,14 +12199,20 @@ def send_survey_invitations(survey_id):
                     'privacy_url': "https://minipass.me/privacy",
                     # Survey email template variables - now RENDERED (Jinja2 variables already processed)
                     'title': rendered_title,
-                    'intro_text': rendered_intro,
-                    'conclusion_text': rendered_conclusion,
+                    'admin_message': rendered_admin_message,
                     # Hero image URL for hosted images
                     'hero_image_url': f"{get_setting('SITE_URL', '').rstrip('/')}/activity/{survey.activity.id}/hero-image/survey_invitation",
+                    # Real bug found during the redesign: this context is built by hand and never
+                    # goes through get_email_context() again (see _skip_email_context below), so
+                    # neither of these were ever set — the org logo silently never rendered, and
+                    # the hero always defaulted to being treated as a real photo even when it's
+                    # the generic mascot icon.
+                    'owner_logo_url': f"{get_setting('SITE_URL', '').rstrip('/')}/owner-logo?activity_id={survey.activity.id}",
+                    'hero_is_photo': email_context.get('hero_is_photo', True),
                     # CRITICAL: Flag to prevent send_email_async from re-applying get_email_context()
                     '_skip_email_context': True
                 }
-                
+
                 print(f"🔵 About to call send_email_async()")
                 print(f"🔵 Template: {template_name}")
                 print(f"🔵 Subject: {subject}")
@@ -12649,22 +12659,28 @@ def email_template_customization(activity_id):
     
     # Import and merge with default values
     from utils_email_defaults import get_default_email_templates
+    from utils import consolidate_admin_message
     defaults = get_default_email_templates()
-    
+
+    # Keys excluded from the passthrough spread below: subject/title/admin_message are
+    # handled explicitly, and the legacy trio is folded into admin_message rather than
+    # exposed directly (see consolidate_admin_message + task46 in
+    # migrations/upgrade_production_database.py for the one-time DB-wide sweep).
+    _excluded_keys = ['subject', 'title', 'admin_message', 'intro_text', 'conclusion_text', 'custom_message']
+
     # For each template type, merge defaults with current values
     templates_with_defaults = {}
     for template_key in template_types:
         template_defaults = defaults.get(template_key, {})
         template_current = current_templates.get(template_key, {})
-        
+
         # Merge: use current values if they exist, otherwise use defaults
         templates_with_defaults[template_key] = {
             'subject': template_current.get('subject') or template_defaults.get('subject', ''),
-            'title': template_current.get('title') or template_defaults.get('title', ''), 
-            'intro_text': template_current.get('intro_text') or template_defaults.get('intro_text', ''),
-            'conclusion_text': template_current.get('conclusion_text') or template_defaults.get('conclusion_text', ''),
+            'title': template_current.get('title') or template_defaults.get('title', ''),
+            'admin_message': consolidate_admin_message(template_current) or consolidate_admin_message(template_defaults),
             # Keep other fields as-is
-            **{k: v for k, v in template_current.items() if k not in ['subject', 'title', 'intro_text', 'conclusion_text']}
+            **{k: v for k, v in template_current.items() if k not in _excluded_keys}
         }
     
     # Get organization logo filename for fallback
@@ -12720,7 +12736,22 @@ def save_email_templates(activity_id):
     import bleach
     
     activity = Activity.query.get_or_404(activity_id)
-    
+
+    def resolve_activity_image_path(filename):
+        """Resolve a stored-Unsplash-download filename against static/uploads/activity_images,
+        rejecting anything that would escape that directory (.. segments, an absolute path,
+        etc.) rather than trusting the client-supplied form value as-is."""
+        if not filename:
+            return None
+        safe_name = secure_filename(filename)
+        if not safe_name:
+            return None
+        base_dir = os.path.realpath(os.path.join('static', 'uploads', 'activity_images'))
+        candidate_path = os.path.realpath(os.path.join(base_dir, safe_name))
+        if os.path.commonpath([base_dir, candidate_path]) != base_dir:
+            return None
+        return candidate_path if os.path.isfile(candidate_path) else None
+
     template_types = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'signup_payment_first', 'redeemPass', 'survey_invitation']
     
     # Initialize email_templates as empty dict if None
@@ -12771,13 +12802,13 @@ def save_email_templates(activity_id):
                 hero_file_data = hero_file.read()
             elif hero_image_filename:
                 # Image was selected from Unsplash web search — file already on server
-                unsplash_path = os.path.join('static', 'uploads', 'activity_images', hero_image_filename)
-                if os.path.exists(unsplash_path):
+                unsplash_path = resolve_activity_image_path(hero_image_filename)
+                if unsplash_path:
                     with open(unsplash_path, 'rb') as f:
                         hero_file_data = f.read()
                     print(f"Using Unsplash-downloaded image for {template_type}: {hero_image_filename}")
                 else:
-                    print(f"Unsplash image not found on disk for {template_type}: {unsplash_path}")
+                    print(f"Unsplash image not found on disk for {template_type}: {hero_image_filename}")
 
             if hero_file_data:
                 try:
@@ -12810,29 +12841,47 @@ def save_email_templates(activity_id):
         
         # Handle activity-wide owner logo upload (shared across all templates)
         owner_logo_file = None
-        
-        # Look for owner logo upload from relevant template type(s)
+        owner_logo_unsplash_filename = None
+
+        # Look for owner logo upload (direct file or Unsplash-selected reference) from
+        # relevant template type(s) — same two-source pattern as the hero image above.
         for template_type in templates_to_process:
             if not owner_logo_processed:
                 owner_logo_file = request.files.get(f'{template_type}_owner_logo')
                 if owner_logo_file and owner_logo_file.filename:
                     owner_logo_processed = True
                     break
-        
+                candidate = request.form.get(f'{template_type}_owner_logo_filename', '').strip()
+                if candidate:
+                    owner_logo_unsplash_filename = candidate
+                    owner_logo_processed = True
+                    break
+
         # Process owner logo if uploaded
         owner_logo_filename = None
+        owner_logo_bytes = None
         if owner_logo_file and owner_logo_file.filename:
+            owner_logo_bytes = owner_logo_file.read()
+        elif owner_logo_unsplash_filename:
+            # Image was selected from Unsplash web search — file already on server
+            unsplash_path = resolve_activity_image_path(owner_logo_unsplash_filename)
+            if unsplash_path:
+                with open(unsplash_path, 'rb') as f:
+                    owner_logo_bytes = f.read()
+
+        if owner_logo_bytes:
             try:
                 # Use activity-specific filename that overwrites existing
                 owner_logo_filename = f"{activity_id}_owner_logo.png"
                 upload_path = os.path.join('static', 'uploads', owner_logo_filename)
-                
+
                 # Ensure uploads directory exists
                 os.makedirs(os.path.dirname(upload_path), exist_ok=True)
-                
+
                 # Save file (overwrites if exists)
-                owner_logo_file.save(upload_path)
-                
+                with open(upload_path, 'wb') as f:
+                    f.write(owner_logo_bytes)
+
             except Exception as e:
                 flash(f"Error uploading owner logo: {str(e)}", "error")
                 owner_logo_filename = None
@@ -12848,22 +12897,25 @@ def save_email_templates(activity_id):
             # Get form fields and sanitize them
             subject = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_subject', '').strip())
             title = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_title', '').strip())
-            intro_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_intro_text', '').strip())
-            conclusion_text = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_conclusion_text', '').strip())
-            
+            admin_message = ContentSanitizer.sanitize_html(request.form.get(f'{template_type}_admin_message', '').strip())
+
             # Remove HTML tags from subject and title (plain text fields)
             subject = bleach.clean(subject, tags=[], strip=True) if subject else ''
             title = bleach.clean(title, tags=[], strip=True) if title else ''
-            
+
             # Update values (preserve existing if new is empty)
             if subject:
                 template_data['subject'] = subject
             if title:
                 template_data['title'] = title
-            if intro_text:
-                template_data['intro_text'] = intro_text
-            if conclusion_text:
-                template_data['conclusion_text'] = conclusion_text
+            if admin_message:
+                template_data['admin_message'] = admin_message
+                # Lazily migrate this activity's stored shape off the old three-field
+                # layout now that it's being touched (see consolidate_admin_message in
+                # utils.py and task46 in migrations/upgrade_production_database.py).
+                template_data.pop('intro_text', None)
+                template_data.pop('conclusion_text', None)
+                template_data.pop('custom_message', None)
 
             # Handle show_qr_code toggle (only for templates with QR codes)
             if template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
@@ -12895,24 +12947,11 @@ def save_email_templates(activity_id):
         
         db.session.commit()
 
-        # AUTO-COMPILE survey_invitation template after save
-        if is_individual_save and single_template == 'survey_invitation':
-            try:
-                import subprocess
-                compile_script = os.path.join('templates', 'email_templates', 'compileEmailTemplate.py')
-                result = subprocess.run(
-                    ['python', compile_script, 'survey_invitation'],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    cwd=os.path.dirname(compile_script)
-                )
-                if result.returncode != 0:
-                    print(f"Warning: Survey template compilation failed: {result.stderr}")
-                else:
-                    print(f"Survey invitation template compiled successfully after save")
-            except Exception as e:
-                print(f"Warning: Could not auto-compile survey template: {e}")
+        # The survey_invitation auto-compile subprocess used to run here. It rebuilt
+        # templates/email_templates/survey_invitation_compiled/, which safe_template() no
+        # longer resolves to — so it was a 30s-timeout subprocess doing PIL image work on
+        # every save, for output nothing reads. Customization lives entirely in the JSON
+        # column committed above; there is nothing to compile.
 
         # Return appropriate response based on request type
         if is_individual_save:
@@ -12985,7 +13024,7 @@ def reset_email_template(activity_id):
             
             # Clear the customizable fields while preserving any system fields
             # Note: show_qr_code is included so it resets to default (True = show QR)
-            fields_to_reset = ['subject', 'title', 'intro_text', 'conclusion_text', 'hero_image', 'activity_logo', 'show_qr_code']
+            fields_to_reset = ['subject', 'title', 'admin_message', 'intro_text', 'conclusion_text', 'custom_message', 'hero_image', 'activity_logo', 'show_qr_code']
             for field in fields_to_reset:
                 if field in template_data:
                     del template_data[field]
@@ -13016,21 +13055,14 @@ def reset_email_template(activity_id):
             except Exception as e:
                 print(f"Could not delete owner logo file {owner_logo_path}: {e}")
         
-        # NEW: Restore original compiled template files 
-        original_dir = f"templates/email_templates/{template_type}_original"
-        compiled_dir = f"templates/email_templates/{template_type}_compiled"
-        
-        if os.path.exists(original_dir):
-            try:
-                # Copy original files back to compiled directory
-                if os.path.exists(compiled_dir):
-                    shutil.rmtree(compiled_dir)
-                shutil.copytree(original_dir, compiled_dir)
-                print(f"Restored original template files: {original_dir} → {compiled_dir}")
-            except Exception as e:
-                print(f"Could not restore original template files: {e}")
-        else:
-            print(f"Original template directory not found: {original_dir}")
+        # A file restore used to happen here: rmtree of
+        # templates/email_templates/<type>_compiled followed by a copytree from <type>_original.
+        #
+        # That directory is global, not per-activity, so one owner clicking "Reset" rewrote
+        # template files shared by every activity in every organization — and did it at request
+        # time on a live server. It never had any per-activity meaning: customization is the
+        # JSON cleared above plus the uploaded files deleted above, and the layout now comes
+        # from templates/email/ which nothing here touches. Clearing the keys is the reset.
         
         # Mark the attribute as modified for SQLAlchemy
         from sqlalchemy.orm.attributes import flag_modified
@@ -13076,7 +13108,7 @@ def email_preview(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import get_email_context, safe_template, generate_qr_code_image, get_setting
+    from utils import get_email_context, safe_template, generate_qr_code_image, get_setting, EMAIL_QR_BOX_SIZE
     from flask import render_template
     from datetime import datetime
     import os
@@ -13092,27 +13124,31 @@ def email_preview(activity_id):
         'user_email': 'john.doe@example.com',
         'activity_name': activity.name,
         'pass_code': 'SAMPLE123',
-        'amount': '$50.00'
+        'amount': '$50.00',
+        # A real send always has this (set inside send_email() itself) — without it here,
+        # anything gated behind {% if base_url %} (e.g. the Interac logo) silently vanishes
+        # from this preview only, looking like a real bug when it isn't one.
+        'base_url': get_setting('SITE_URL', '').rstrip('/'),
     }
-    
+
     # Add special context for survey_invitation
     if template_type == 'survey_invitation':
-        base_context['survey_name'] = 'Customer Satisfaction Survey'
+        base_context['survey_name'] = 'Sondage de satisfaction'
         base_context['survey_url'] = 'https://example.com/survey/sample'
         base_context['question_count'] = 8
         base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
         base_context['organization_address'] = get_setting('ORG_ADDRESS', '')
         base_context['support_email'] = get_setting('SUPPORT_EMAIL', 'support@minipass.me')
-        # These will be overridden by get_email_context if customized
-        base_context['title'] = 'We\'d Love Your Feedback!'
-        base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
-        base_context['conclusion'] = 'Thank you for helping us create better experiences!'
+        # No title/intro/conclusion here on purpose. get_email_context only fills keys that are
+        # MISSING, so seeding sample copy pins it and the activity's real (French) text never
+        # applies — which is how an English "We'd Love Your Feedback!" heading ended up on top
+        # of an otherwise French email.
 
     # Add special context for signup_payment_first template
     elif template_type == 'signup_payment_first':
         base_context['needs_signup_code'] = True  # Show the signup code section in preview
         base_context['signup_code'] = 'MP-INS-0000001'
-        base_context['requested_amount'] = '$50.00'
+        base_context['requested_amount'] = '50,00 $'
         display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
         base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
         base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
@@ -13124,10 +13160,10 @@ def email_preview(activity_id):
         # Create sample pass data using proper class structure
         class PassData:
             def __init__(self):
-                self.activity = type('obj', (object,), {
-                    'name': activity.name,
-                    'id': activity.id
-                })()
+                # The real Activity row, not a name/id-only stub — the Facts block reads
+                # activity.location_address_formatted, which a stub would leave Undefined
+                # and silently hide the "Lieu" row from the preview.
+                self.activity = activity
                 self.user = type('obj', (object,), {
                     'name': 'John Doe',
                     'email': 'john.doe@example.com',
@@ -13137,39 +13173,50 @@ def email_preview(activity_id):
                     'name': 'Sample Pass',
                     'price': 50.00
                 })()
+                # The pass block draws credits as pips (used vs remaining), which needs the
+                # original allotment. Sample 5-of-8 so the preview shows both states rather
+                # than a misleadingly full row.
+                self.passport_type = type('obj', (object,), {
+                    'name': 'Sample Pass',
+                    'sessions_included': 8
+                })()
                 self.created_dt = datetime.now()
                 self.sold_amt = 50.00
-                self.paid = True
+                # latePayment exists because a pass is unpaid — showing "Payé" in that
+                # preview's Statut row would contradict the whole email.
+                self.paid = template_type != 'latePayment'
                 self.pass_code = 'SAMPLE123'
                 self.remaining_activities = 5
                 self.uses_remaining = 5
 
         pass_data = PassData()
 
-        # Render email blocks
-        base_context['owner_html'] = render_template(
-            "email_blocks/owner_card_inline.html",
-            pass_data=pass_data
-        )
+        # The sample passport has to go into the context too, not just into the blocks
+        # below. admin_message is stored as template source referencing
+        # pass_data; without it here the render raised UndefinedError, the fallback kept the
+        # unrendered source, and the preview displayed raw Jinja ("Bonjour {{ pass_data...")
+        # as body text — so the editor never showed what customers actually receive.
+        base_context['pass_data'] = pass_data
+
+        # No owner_html any more: templates/email/ builds the pass block from pass_data
+        # itself, so the pre-rendered gradient "business card" partial is gone.
         # Live-passport link shown below the QR. Included here so the preview shows what
         # the customer actually receives — it was previously missing from all preview paths.
         from utils import _get_pass_url
         base_context['pass_url'] = _get_pass_url(pass_data)
         base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
-        # Add history for ALL templates that need it (not just redeemPass)
-        history = [
-            {'date': '2025-01-09', 'action': 'Pass Created'},
-            {'date': '2025-01-10', 'action': 'Payment Received'}
+        # Sample history, in the {label, date, by} shape utils._build_history_rows() produces
+        # for real sends, so the preview shows the same table customers receive.
+        base_context['history_rows'] = [
+            {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
-            history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
+            base_context['history_rows'].append(
+                {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
+            )
 
-        base_context['history_html'] = render_template(
-            "email_blocks/history_table_inline.html",
-            history=history
-        )
-    
     # Get merged context with activity customizations (preserves email blocks)
     context = get_email_context(activity, template_type, base_context)
 
@@ -13178,6 +13225,7 @@ def email_preview(activity_id):
     if activity.email_templates and template_type in activity.email_templates:
         show_qr_code = activity.email_templates[template_type].get('show_qr_code', True)
     context['show_qr_code'] = show_qr_code
+    # hero_is_photo is computed by get_email_context() above.
 
     # Get the compiled template path
     template_path = safe_template(template_type)
@@ -13186,79 +13234,11 @@ def email_preview(activity_id):
         # Render the compiled template with the merged context
         rendered_html = render_template(template_path, **context)
         
-        # Load inline images and convert to data URIs for browser display
-        compiled_folder = template_path.replace('/index.html', '')
-        json_path = os.path.join('templates', compiled_folder, 'inline_images.json')
-        
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as f:
-                inline_images_data = json.load(f)
-                
-                # Use the proper hero image utility function to determine current hero
-                from utils import get_activity_hero_image
-                hero_data, is_custom_hero, is_template_default = get_activity_hero_image(activity, template_type)
-                has_custom_hero = hero_data is not None and is_custom_hero
-                
-                print(f"EMAIL TEMPLATE: activity={activity.id}, template_type={template_type}")
-                print(f"EMAIL TEMPLATE: Custom hero found: {has_custom_hero}, is_custom: {is_custom_hero}")
-
-                # Replace cid: references with data: URIs
-                for img_id, base64_data in inline_images_data.items():
-                    # Skip hero-related images ONLY if we have a custom hero image
-                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
-                    if (img_id == expected_hero_cid and has_custom_hero):
-                        print(f"EMAIL TEMPLATE: Skipping template hero '{img_id}' because custom hero exists")
-                        continue
-                        
-                    # Determine image type (most are PNG)
-                    mime_type = 'image/png'
-                    if img_id in ['facebook', 'instagram']:
-                        mime_type = 'image/png'
-                    
-                    # Replace cid:image_id with data URI
-                    cid_ref = f'cid:{img_id}'
-                    data_uri = f'data:{mime_type};base64,{base64_data}'
-                    rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"EMAIL TEMPLATE: Replaced {cid_ref} with template image")
-                
-                # Now handle custom hero image if it exists
-                if has_custom_hero:
-                    hero_base64 = base64.b64encode(hero_data).decode('utf-8')
-                    expected_hero_cid = HERO_CID_MAP.get(template_type, f'hero_{template_type}')
-                    cid_ref = f'cid:{expected_hero_cid}'
-                    data_uri = f'data:image/png;base64,{hero_base64}'
-                    rendered_html = rendered_html.replace(cid_ref, data_uri)
-                    print(f"EMAIL TEMPLATE: Replaced {cid_ref} with CUSTOM HERO image")
-
-        # Add logo image as data URI (same resolution as email send in utils.py)
-        logo_path = None
-        # Check for activity-specific owner logo first (custom upload via template editor)
-        activity_logo_path = os.path.join('static', 'uploads', f'{activity.id}_owner_logo.png')
-        if os.path.exists(activity_logo_path):
-            logo_path = activity_logo_path
-        if not logo_path:
-            # Use organization logo from settings as fallback
-            from utils import get_setting
-            org_logo = get_setting('LOGO_FILENAME', 'logo.png')
-            logo_path = os.path.join('static', 'uploads', org_logo)
-
-        if logo_path and os.path.exists(logo_path):
-            with open(logo_path, 'rb') as f:
-                logo_base64 = base64.b64encode(f.read()).decode('utf-8')
-                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
-                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
-        else:
-            # Generate placeholder logo when no real logo exists
-            from utils import generate_placeholder_logo_image
-            org_name = get_setting('ORG_NAME', 'Minipass')
-            try:
-                placeholder_buf = generate_placeholder_logo_image(org_name)
-                logo_base64 = base64.b64encode(placeholder_buf.read()).decode('utf-8')
-                rendered_html = rendered_html.replace('cid:logo', f'data:image/png;base64,{logo_base64}')
-                rendered_html = rendered_html.replace('cid:logo_image', f'data:image/png;base64,{logo_base64}')
-            except Exception:
-                pass
-
+        # The QR is the only CID image left, so it is the only thing to inline for the
+        # browser. Hero, owner logo and the Interac mark are hosted URLs the browser fetches
+        # directly (docs/EMAIL_DELIVERABILITY.md), so the old block here — loading
+        # inline_images.json, swapping cid:logo / cid:logo_image, and reconciling a custom
+        # hero against the template default — has nothing left to act on.
 
         # Generate sample QR code for preview (only if enabled)
         # Get show_qr_code setting from activity's email templates (default True)
@@ -13266,7 +13246,7 @@ def email_preview(activity_id):
         if activity.email_templates and template_type in activity.email_templates:
             preview_show_qr = activity.email_templates[template_type].get('show_qr_code', True)
         if preview_show_qr:
-            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123')).decode('utf-8')
+            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123', box_size=EMAIL_QR_BOX_SIZE)).decode('utf-8')
             rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
 
         # Add a preview banner to distinguish from actual emails
@@ -13326,7 +13306,7 @@ def email_preview_live(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import get_email_context, safe_template, generate_qr_code_image, ContentSanitizer, get_setting
+    from utils import get_email_context, safe_template, generate_qr_code_image, ContentSanitizer, get_setting, EMAIL_QR_BOX_SIZE
     from flask import render_template
     from datetime import datetime
     import os
@@ -13357,11 +13337,10 @@ def email_preview_live(activity_id):
         # Create sample pass data using proper class structure
         class PassData:
             def __init__(self):
-                self.activity = type('obj', (object,), {
-                    'name': activity.name,
-                    'id': activity.id,
-                    'location_address_formatted': activity.location_address_formatted  # For templates that show location
-                })()
+                # The real Activity row, not a name/id-only stub — the Facts block reads
+                # activity.location_address_formatted (and falls back to _raw), which a
+                # partial stub would leave Undefined for the fallback.
+                self.activity = activity
                 self.user = type('obj', (object,), {
                     'name': 'John Doe',
                     'email': 'john.doe@example.com',
@@ -13371,9 +13350,18 @@ def email_preview_live(activity_id):
                     'name': 'Sample Pass',
                     'price': 50.00
                 })()
+                # The pass block draws credits as pips (used vs remaining), which needs the
+                # original allotment. Sample 5-of-8 so the preview shows both states rather
+                # than a misleadingly full row.
+                self.passport_type = type('obj', (object,), {
+                    'name': 'Sample Pass',
+                    'sessions_included': 8
+                })()
                 self.created_dt = datetime.now()
                 self.sold_amt = 50.00
-                self.paid = True
+                # latePayment exists because a pass is unpaid — showing "Payé" in that
+                # preview's Statut row would contradict the whole email.
+                self.paid = template_type != 'latePayment'
                 self.pass_code = 'SAMPLE123'
                 self.remaining_activities = 5
                 self.uses_remaining = 5
@@ -13406,36 +13394,29 @@ def email_preview_live(activity_id):
             except Exception:
                 _owner_logo_url = None
 
-        # Render email blocks
-        base_context['owner_html'] = render_template(
-            "email_blocks/owner_card_inline.html",
-            pass_data=pass_data,
-            owner_logo_url=_owner_logo_url
-        )
+        # owner_html is obsolete: templates/email/ builds the pass block from
+        # pass_data itself, replacing the pre-rendered gradient card partial.
         base_context['owner_logo_url'] = _owner_logo_url
         # Live-passport link shown below the QR (see static preview above).
         from utils import _get_pass_url
         base_context['pass_url'] = _get_pass_url(pass_data)
         base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
-        # Add history for ALL templates that need it
-        history = [
-            {'date': '2025-01-09', 'action': 'Pass Created'},
-            {'date': '2025-01-10', 'action': 'Payment Received'}
+        # Same {label, date, by} shape as a real send (utils._build_history_rows).
+        base_context['history_rows'] = [
+            {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
+            {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
         ]
         if template_type == 'redeemPass':
-            history.append({'date': '2025-01-11', 'action': 'Pass Redeemed'})
-
-        base_context['history_html'] = render_template(
-            "email_blocks/history_table_inline.html",
-            history=history
-        )
+            base_context['history_rows'].append(
+                {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
+            )
 
     # Add special context for signup_payment_first template
     elif template_type == 'signup_payment_first':
         base_context['needs_signup_code'] = True  # Show the signup code section in preview
         base_context['signup_code'] = 'MP-INS-0000001'
-        base_context['requested_amount'] = '$50.00'
+        base_context['requested_amount'] = '50,00 $'
         display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
         base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
         base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
@@ -13453,7 +13434,7 @@ def email_preview_live(activity_id):
         # If field is absent, don't override — merged_template will use the saved DB value
 
     # Extract and sanitize customizations from form data for current template type
-    form_fields = ['subject', 'title', 'intro_text', 'conclusion_text', 'cta_text', 'cta_url', 'custom_message']
+    form_fields = ['subject', 'title', 'admin_message', 'cta_text', 'cta_url']
     for field in form_fields:
         form_key = f'{template_type}_{field}'
         value = request.form.get(form_key, '').strip()
@@ -13502,6 +13483,10 @@ def email_preview_live(activity_id):
         print(f"🔍 DEBUG PREVIEW: show_qr_code = {show_qr_code}")
         print(f"🔍 DEBUG PREVIEW: context['show_qr_code'] = {context.get('show_qr_code')}")
 
+        # hero_is_photo is computed by get_email_context() above. An uploaded-in-this-request
+        # hero is, by definition, the admin's own real image — override it below.
+        from utils import get_activity_hero_image
+
         # Phase 3: Handle uploaded hero BEFORE render — set context['hero_image_url'] to data URI
         hero_file_key = f'{template_type}_hero_image'
         if hero_file_key in request.files:
@@ -13512,13 +13497,13 @@ def email_preview_live(activity_id):
                     uploaded_hero_data = hero_file.read()
                     hero_base64 = base64.b64encode(uploaded_hero_data).decode('utf-8')
                     context['hero_image_url'] = f'data:image/png;base64,{hero_base64}'
+                    context['hero_is_photo'] = True
                     print(f"EMAIL LIVE PREVIEW: Using UPLOADED HERO as data URI in context")
                 except Exception as e:
                     print(f"Error reading uploaded hero file: {e}")
 
         # If hero_image_url is still a remote URL (not a data URI), load it locally for preview
         if context.get('hero_image_url') and not context['hero_image_url'].startswith('data:'):
-            from utils import get_activity_hero_image
             hero_data, _, _ = get_activity_hero_image(activity, template_type)
             if hero_data:
                 hero_base64 = base64.b64encode(hero_data).decode('utf-8')
@@ -13533,7 +13518,7 @@ def email_preview_live(activity_id):
 
         # Generate sample QR code for preview (only if enabled)
         if show_qr_code:
-            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123')).decode('utf-8')
+            qr_base64 = base64.b64encode(generate_qr_code_image('SAMPLE123', box_size=EMAIL_QR_BOX_SIZE)).decode('utf-8')
             rendered_html = rendered_html.replace('cid:qr_code', f'data:image/png;base64,{qr_base64}')
 
         # Add a live preview banner to distinguish from saved templates
@@ -13685,7 +13670,7 @@ def test_email_template(activity_id):
         return redirect(url_for("login"))
     
     from models import Activity
-    from utils import send_email, get_email_context, safe_template, get_setting, generate_qr_code_image
+    from utils import send_email, get_email_context, safe_template, get_setting, generate_qr_code_image, EMAIL_QR_BOX_SIZE
     from flask import render_template
     from datetime import datetime
     import os
@@ -13722,10 +13707,8 @@ def test_email_template(activity_id):
             base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
             base_context['organization_address'] = get_setting('ORG_ADDRESS', '')
             base_context['support_email'] = get_setting('SUPPORT_EMAIL', 'support@minipass.me')
-            # These will be overridden by get_email_context if customized
-            base_context['title'] = 'We\'d Love Your Feedback!'
-            base_context['intro'] = 'Thank you for participating in our activity! We hope you had a great experience and would love to hear your thoughts.'
-            base_context['conclusion'] = 'Thank you for helping us create better experiences!'
+            # No title/intro/conclusion here on purpose — see the matching note in
+            # email_preview(). Seeding them pins English copy over the activity's French text.
 
         # Add email blocks for templates that need them
         elif template_type in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment']:
@@ -13733,11 +13716,9 @@ def test_email_template(activity_id):
             # Using a simple class to provide dot notation access
             class PassData:
                 def __init__(self):
-                    self.activity = type('obj', (object,), {
-                        'name': activity.name,
-                        'id': activity.id,
-                        'location_address_formatted': activity.location_address_formatted  # For templates that show location
-                    })()
+                    # The real Activity row — the Facts block reads
+                    # activity.location_address_formatted / _raw directly.
+                    self.activity = activity
                     self.user = type('obj', (object,), {
                         'name': 'Test User',
                         'email': test_email,
@@ -13747,9 +13728,15 @@ def test_email_template(activity_id):
                         'name': 'Test Pass',
                         'price': 25.00
                     })()
+                    self.passport_type = type('obj', (object,), {
+                        'name': 'Test Pass',
+                        'sessions_included': 5
+                    })()
                     self.created_dt = datetime.now()
                     self.sold_amt = 25.00
-                    self.paid = True
+                    # latePayment exists because a pass is unpaid — showing "Payé" in that
+                    # test send's Statut row would contradict the whole email.
+                    self.paid = template_type != 'latePayment'
                     self.pass_code = 'TEST123'
                     self.remaining_activities = 3
                     self.uses_remaining = 3
@@ -13764,28 +13751,23 @@ def test_email_template(activity_id):
             _BASE_URL = get_setting('SITE_URL', '').rstrip('/')
             _owner_logo_url = f"{_BASE_URL}/owner-logo?activity_id={activity.id}"
 
-            # Render email blocks
-            base_context['owner_html'] = render_template(
-                "email_blocks/owner_card_inline.html",
-                pass_data=pass_data,
-                owner_logo_url=_owner_logo_url
-            )
+            # owner_html is obsolete: templates/email/ builds the pass block from
+            # pass_data itself, replacing the pre-rendered gradient card partial.
             base_context['owner_logo_url'] = _owner_logo_url
             # Live-passport link shown below the QR (see static preview above).
             from utils import _get_pass_url
             base_context['pass_url'] = _get_pass_url(pass_data)
             base_context['uses_scheduling'] = bool(activity and activity.uses_scheduling)
 
-            # Add history for templates that need it
-            if template_type in ['redeemPass', 'latePayment']:
-                history = [
-                    {'date': '2025-01-09', 'action': 'Pass Created'},
-                    {'date': '2025-01-10', 'action': 'Payment Received'},
-                    {'date': '2025-01-11', 'action': 'Pass Redeemed'}
-                ]
-                base_context['history_html'] = render_template(
-                    "email_blocks/history_table_inline.html",
-                    history=history
+            # Every pass template carries the history table, in the same {label, date, by}
+            # shape a real send builds (utils._build_history_rows).
+            base_context['history_rows'] = [
+                {'label': 'Création', 'date': '2026-01-09 09:14', 'by': 'kdresdell'},
+                {'label': 'Paiement', 'date': '2026-01-10 11:02', 'by': 'minipass-bot'},
+            ]
+            if template_type == 'redeemPass':
+                base_context['history_rows'].append(
+                    {'label': 'Participation 1', 'date': '2026-01-11 18:30', 'by': 'kdresdell'}
                 )
             
             print(f"Added email blocks for {template_type}")
@@ -13796,7 +13778,7 @@ def test_email_template(activity_id):
         elif template_type == 'signup_payment_first':
             base_context['needs_signup_code'] = True  # Show the signup code section
             base_context['signup_code'] = 'MP-INS-0000001'
-            base_context['requested_amount'] = '$25.00'
+            base_context['requested_amount'] = '25,00 $'
             display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
             base_context['payment_email'] = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
             base_context['organization_name'] = get_setting('ORG_NAME', 'minipass')
@@ -13824,7 +13806,7 @@ def test_email_template(activity_id):
 
         QR_TEMPLATES = {'newPass', 'paymentReceived', 'redeemPass', 'latePayment'}
         if template_type in QR_TEMPLATES:
-            inline_images['qr_code'] = generate_qr_code_image('TEST123')
+            inline_images['qr_code'] = generate_qr_code_image('TEST123', box_size=EMAIL_QR_BOX_SIZE)
             print(f"   Added QR code: {len(inline_images['qr_code'])} bytes")
         else:
             print(f"   No QR code for template type: {template_type}")

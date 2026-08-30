@@ -21,53 +21,39 @@ def get_default_email_templates():
             'newPass': {
                 'subject': 'Your Digital Pass is Ready!',
                 'title': 'Welcome!',
-                'intro_text': '<p>Your digital pass has been created.</p>',
-                'conclusion_text': '<p>Thank you!</p>',
-                'custom_message': '',
+                'admin_message': '<p>Your digital pass has been created.</p><p>Thank you!</p>',
                 'cta_text': 'View Pass',
                 'cta_url': 'https://minipass.me/my-passes'
             },
             'paymentReceived': {
                 'subject': 'Payment Received',
                 'title': 'Payment Confirmed',
-                'intro_text': '<p>We have received your payment.</p>',
-                'conclusion_text': '<p>Thank you!</p>',
-                'custom_message': ''
+                'admin_message': '<p>We have received your payment.</p><p>Thank you!</p>'
             },
             'latePayment': {
                 'subject': 'Payment Reminder',
                 'title': 'Payment Reminder',
-                'intro_text': '<p>You have a pending payment.</p>',
-                'conclusion_text': '<p>Thank you!</p>',
-                'custom_message': ''
+                'admin_message': '<p>You have a pending payment.</p><p>Thank you!</p>'
             },
             'signup': {
                 'subject': 'Registration Confirmed',
                 'title': 'Welcome!',
-                'intro_text': '<p>Your registration is confirmed.</p>',
-                'conclusion_text': '<p>Thank you!</p>',
-                'custom_message': ''
+                'admin_message': '<p>Your registration is confirmed.</p><p>Thank you!</p>'
             },
             'signup_payment_first': {
                 'subject': 'Registration Confirmed - Payment Instructions',
                 'title': 'Registration Confirmed',
-                'intro_text': '<p>Your registration is confirmed. Please complete payment.</p>',
-                'conclusion_text': '<p>Thank you!</p>',
-                'custom_message': ''
+                'admin_message': '<p>Your registration is confirmed. Please complete payment.</p><p>Thank you!</p>'
             },
             'redeemPass': {
                 'subject': 'Pass Redeemed',
                 'title': 'Enjoy!',
-                'intro_text': '<p>Your pass has been redeemed.</p>',
-                'conclusion_text': '<p>Thank you!</p>',
-                'custom_message': ''
+                'admin_message': '<p>Your pass has been redeemed.</p><p>Thank you!</p>'
             },
             'survey_invitation': {
                 'subject': 'We Value Your Feedback',
                 'title': 'Share Your Experience',
-                'intro_text': '<p>Please share your feedback.</p>',
-                'conclusion_text': '<p>Thank you!</p>',
-                'custom_message': '',
+                'admin_message': '<p>Please share your feedback.</p><p>Thank you!</p>',
                 'cta_text': 'Take Survey',
                 'cta_url': '{survey_url}'
             }

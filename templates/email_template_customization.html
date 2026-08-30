@@ -85,17 +85,19 @@
   }
 }
 
-/* Email Template Hybrid Preview Styling */
+/* Email Template Hybrid Preview Styling — mirrors the real design language 1:1 with
+   templates/pass.html's .pass-* vocabulary (same colors: #15192c ink, #f6f6f7 well,
+   #e4e8f0 divider), scaled down for a card-sized skeleton. Deliberately low-fidelity: plain
+   grey bars, not real typography — this only needs to read as "the same design, simplified". */
 .email-preview-placeholder {
   background: #ffffff;
   border: 1px solid #e9ecef;
   border-radius: 8px;
-  padding: 18px 30px;
-  height: 280px;
+  height: 300px;
   overflow: hidden;
   position: relative;
   box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-  transition: all 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .email-preview-placeholder:hover {
@@ -110,94 +112,112 @@
   min-height: 4px !important; /* Override Tabler's min-height: 1em */
 }
 
-@keyframes placeholder-glow {
-  0% { opacity: 1; }
-  100% { opacity: 0.6; }
+/* Photo band — full-bleed strip + solid ink caption bar, mirrors .pass-hero-photo +
+   .pass-hero-caption / photo_band(). */
+.mini-photo-band {
+  width: 100%;
+  height: 56px;
+  object-fit: cover;
+  display: block;
+  background: #f6f6f7;
 }
 
-/* Mini Hero Image - small centered illustration */
-.mini-hero {
-  height: 52px;
+.mini-ink-bar {
+  background: #15192c;
+  padding: 6px 14px;
+}
+
+.mini-ink-line {
+  border-radius: 1px;
+  height: 4px !important;
+  min-height: 4px !important;
+}
+
+.mini-ink-line-eyebrow {
+  width: 30%;
+  background: rgba(255,255,255,0.5) !important;
+  margin-bottom: 4px;
+}
+
+.mini-ink-line-headline {
+  width: 65%;
+  height: 6px !important;
+  min-height: 6px !important;
+  background: rgba(255,255,255,0.9) !important;
+}
+
+.mini-body {
+  padding: 12px 16px 12px 16px;
+}
+
+/* Participant identity — plain text, no box, mirrors identity_block(). */
+.mini-identity .placeholder {
+  margin-bottom: 3px;
+}
+
+/* Facts — label left / value right, divider between rows only, mirrors .pass-row /
+   rows_block(). */
+.mini-facts {
+  border-top: 1px solid #e4e8f0;
+  margin-top: 6px;
+}
+
+.mini-fact-row {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
-  background: #ffffff;
-  border-radius: 4px;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #e4e8f0;
 }
 
-.mini-hero-img {
-  width: auto;
-  height: 100%;
-  max-width: 58%;
-  object-fit: contain;
-  border-radius: 4px;
+.mini-fact-row .placeholder {
+  margin-bottom: 0;
 }
 
-/* Mini Logo */
-.mini-logo {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  border-radius: 2px;
-  background: white;
-  border: 1px solid #e9ecef;
-}
-
-/* Mini Owner Card */
-.mini-owner-card {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 4px;
-  padding: 6px;
-  overflow: hidden;
-}
-
-/* Mini History Table */
-.mini-history-table {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 4px;
-  padding: 3px;
-}
-
-.mini-table-row {
-  margin-bottom: 1px;
-}
-
-/* Mini QR Code */
-.mini-qr {
+/* QR — tight frame, mirrors .pass-qr-frame / qr_block(). */
+.mini-qr-frame-wrap {
   display: flex;
   justify-content: center;
 }
 
-/* Button placeholder colors */
-.placeholder-button {
-  height: 10px !important;
+.mini-qr-frame {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  background: #f6f6f7;
 }
 
-.placeholder-button-green {
-  background: #4CAF50 !important;
+/* Well — title sits above the box, not inside it, mirrors .pass-well / section_card(). */
+.mini-well-title {
+  width: 32%;
+  height: 3px !important;
+  min-height: 3px !important;
+  background: #adb5bd !important;
+  margin-bottom: 4px;
 }
 
-.placeholder-button-blue {
-  background: #2196F3 !important;
+.mini-well {
+  background: #f6f6f7;
+  border-radius: 4px;
+  padding: 5px 8px;
 }
 
-.placeholder-button-orange {
-  background: #FF9800 !important;
+.mini-well .mini-fact-row {
+  border-bottom-color: rgba(0,0,0,0.06);
 }
 
-.placeholder-button-purple {
-  background: #9C27B0 !important;
+.mini-well .mini-fact-row:last-child {
+  border-bottom: none;
 }
 
-.placeholder-qr {
-  height: 30px !important;
-  width: 30px !important;
-  margin: 0 auto;
-  background: #f1f3f4 !important;
-  border: 1px dashed #d1d5db !important;
+/* CTA — solid ink, one variant only, never colored by template type, matches button(). */
+.mini-cta {
+  height: 9px !important;
+  min-height: 9px !important;
+  background: #15192c !important;
+  border-radius: 2px;
+  width: 100%;
 }
 
 </style>
@@ -241,109 +261,94 @@
           {% for template_key, template_name in template_types.items() %}
           {% set template_data = current_templates.get(template_key, {}) %}
           {% set raw_template_data = activity.email_templates.get(template_key, {}) if activity.email_templates else {} %}
-          {% set is_customized = (raw_template_data.get('subject') and raw_template_data.get('subject') != '') or (raw_template_data.get('title') and raw_template_data.get('title') != '') or (raw_template_data.get('intro_text') and raw_template_data.get('intro_text') != '') or (raw_template_data.get('conclusion_text') and raw_template_data.get('conclusion_text') != '') or (raw_template_data.get('hero_image') and raw_template_data.get('hero_image') != '') or (raw_template_data.get('activity_logo') and raw_template_data.get('activity_logo') != '') %}
+          {% set is_customized = (raw_template_data.get('subject') and raw_template_data.get('subject') != '') or (raw_template_data.get('title') and raw_template_data.get('title') != '') or (raw_template_data.get('admin_message') and raw_template_data.get('admin_message') != '') or (raw_template_data.get('intro_text') and raw_template_data.get('intro_text') != '') or (raw_template_data.get('conclusion_text') and raw_template_data.get('conclusion_text') != '') or (raw_template_data.get('custom_message') and raw_template_data.get('custom_message') != '') or (raw_template_data.get('hero_image') and raw_template_data.get('hero_image') != '') or (raw_template_data.get('activity_logo') and raw_template_data.get('activity_logo') != '') %}
           
           <div class="template-item" data-template="{{ template_key }}">
             <!-- Email Template Hybrid Preview -->
             <div class="email-preview-placeholder">
-              <!-- Mini Hero Image (small centered illustration) -->
-              <div class="mini-hero mb-1">
-                <img src="{{ url_for('get_hero_image', activity_id=activity.id, template_type=template_key) }}"
-                     alt="Hero"
-                     class="mini-hero-img"
-                     width="1"
-                     height="52"
-                     onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}';">
+              <!-- Photo band + ink caption bar — mirrors photo_band() / .pass-hero-*,
+                   shared by every template type since _base.html renders it unconditionally. -->
+              <img src="{{ url_for('get_hero_image', activity_id=activity.id, template_type=template_key) }}"
+                   alt="" class="mini-photo-band" width="400" height="56" loading="lazy"
+                   onerror="this.src='{{ url_for('static', filename='uploads/defaults/default_hero.png') }}';">
+              <div class="mini-ink-bar">
+                <div class="placeholder mini-ink-line mini-ink-line-eyebrow"></div>
+                <div class="placeholder mini-ink-line mini-ink-line-headline"></div>
               </div>
 
-              <!-- Mini Title (centered, thicker) -->
-              <div class="d-flex justify-content-center mb-1">
-                <div class="placeholder" style="width: 65%; height: 6px !important; min-height: 6px !important; background: #adb5bd !important;"></div>
-              </div>
+              <div class="mini-body">
+                {% if template_key in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment'] %}
+                  <!-- Participant identity — plain text, mirrors identity_block(). -->
+                  <div class="mini-identity mb-1">
+                    <div class="placeholder" style="width: 22%;"></div>
+                    <div class="placeholder" style="width: 52%; height: 5px !important; min-height: 5px !important;"></div>
+                  </div>
 
-              <!-- Mini text content placeholders -->
-              <div class="placeholder col-10 mb-1"></div>
-              <div class="placeholder col-12 mb-1"></div>
-              <div class="placeholder col-8 mb-1"></div>
-              <div class="placeholder col-11 mb-1"></div>
-              <div class="placeholder col-6 mb-1"></div>
-
-              {% if template_key in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment'] %}
-                <!-- Mini Owner/Passport Card with colored header -->
-                <div class="mini-owner-card mb-1">
-                  <div class="d-flex align-items-center gap-1">
-                    <div class="flex-grow-1">
-                      <div class="placeholder col-12 mb-0"></div>
-                      <div class="placeholder col-8 mb-0"></div>
-                      <div class="placeholder col-6 mb-0"></div>
+                  <!-- Facts — label/value rows, mirrors .pass-row / rows_block(). -->
+                  <div class="mini-facts mb-1">
+                    <div class="mini-fact-row">
+                      <div class="placeholder" style="width: 26%;"></div>
+                      <div class="placeholder" style="width: 18%;"></div>
                     </div>
-                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #e9ecef; flex-shrink: 0;"></div>
+                    <div class="mini-fact-row">
+                      <div class="placeholder" style="width: 20%;"></div>
+                      <div class="placeholder" style="width: 24%;"></div>
+                    </div>
+                    <div class="mini-fact-row">
+                      <div class="placeholder" style="width: 22%;"></div>
+                      <div class="placeholder" style="width: 16%;"></div>
+                    </div>
                   </div>
-                </div>
 
-                {% if template_key != 'redeemPass' %}
-                <!-- Mini History Table -->
-                <div class="mini-history-table mb-1">
-                  <div class="mini-table-row d-flex gap-1 mb-0">
-                    <div class="placeholder col-3"></div>
-                    <div class="placeholder col-6"></div>
+                  {% if template_key != 'latePayment' %}
+                  <!-- QR — title above, tight frame below, mirrors qr_block()'s label param
+                       ("Code d'accès") and .pass-qr-frame. Skipped for latePayment: the pass
+                       isn't usable until paid, matching NO_QR_TEMPLATES in utils.py. -->
+                  <div class="mini-well-title"></div>
+                  <div class="mini-qr-frame-wrap mb-1">
+                    <div class="mini-qr-frame"></div>
                   </div>
-                  <div class="mini-table-row d-flex gap-1 mb-0">
-                    <div class="placeholder col-3"></div>
-                    <div class="placeholder col-5"></div>
+                  {% endif %}
+
+                  <!-- Séances/Historique — title above the well, mirrors section_card(). -->
+                  <div class="mini-well-title"></div>
+                  <div class="mini-well mb-1">
+                    <div class="mini-fact-row">
+                      <div class="placeholder" style="width: 24%;"></div>
+                      <div class="placeholder" style="width: 20%;"></div>
+                    </div>
                   </div>
-                </div>
+
+                  <div class="mini-cta"></div>
+
+                {% elif template_key in ['signup', 'signup_payment_first', 'survey_invitation'] %}
+                  <!-- Message body — these three templates have no Facts/QR, just an
+                       admin-edited message paragraph (verified against the real templates:
+                       signup.html's content block is empty, signup_payment_first.html only
+                       calls interac_block(), survey_invitation.html is message + button()). -->
+                  <div class="placeholder col-10 mb-1"></div>
+                  <div class="placeholder col-12 mb-1"></div>
+                  <div class="placeholder col-8 mb-1"></div>
+
+                  {% if template_key == 'signup_payment_first' %}
+                  <!-- Instructions de paiement — same well component as Séances/Historique,
+                       mirrors interac_block(). -->
+                  <div class="mini-well-title"></div>
+                  <div class="mini-well mb-1">
+                    <div class="mini-fact-row">
+                      <div class="placeholder" style="width: 34%;"></div>
+                      <div class="placeholder" style="width: 20%;"></div>
+                    </div>
+                    <div class="mini-fact-row">
+                      <div class="placeholder" style="width: 26%;"></div>
+                      <div class="placeholder" style="width: 30%;"></div>
+                    </div>
+                  </div>
+                  {% elif template_key == 'survey_invitation' %}
+                  <div class="mini-cta"></div>
+                  {% endif %}
                 {% endif %}
-              {% endif %}
-
-              {% if template_key == 'signup' or template_key == 'signup_payment_first' or template_key == 'survey_invitation' %}
-                <!-- Extra text lines for templates without owner card -->
-                <div class="placeholder col-9 mb-1"></div>
-                <div class="placeholder col-7 mb-1"></div>
-              {% endif %}
-
-              {% if template_key == 'signup_payment_first' %}
-                <!-- Payment info box -->
-                <div class="mini-history-table mb-1">
-                  <div class="mini-table-row d-flex gap-1 mb-0">
-                    <div class="placeholder col-4"></div>
-                    <div class="placeholder col-7"></div>
-                  </div>
-                  <div class="mini-table-row d-flex gap-1 mb-0">
-                    <div class="placeholder col-4"></div>
-                    <div class="placeholder col-5"></div>
-                  </div>
-                </div>
-              {% endif %}
-
-              <!-- Mini Button/QR placeholder based on template type -->
-              {% if template_key == 'newPass' %}
-                <div class="placeholder placeholder-button placeholder-button-green col-4 mb-1"></div>
-              {% elif template_key == 'paymentReceived' %}
-                <div class="placeholder placeholder-button placeholder-button-blue col-4 mb-1"></div>
-              {% elif template_key == 'latePayment' %}
-                <div class="placeholder placeholder-button placeholder-button-orange col-4 mb-1"></div>
-              {% elif template_key == 'signup' %}
-                <div class="d-flex gap-1 mb-1">
-                  <div class="placeholder placeholder-button placeholder-button-green col-3"></div>
-                  <div class="placeholder placeholder-button placeholder-button-blue col-3"></div>
-                </div>
-              {% elif template_key == 'signup_payment_first' %}
-                <div class="placeholder placeholder-button placeholder-button-blue col-4 mb-1"></div>
-              {% elif template_key == 'redeemPass' %}
-                <!-- QR instruction text + large QR code -->
-                <div class="d-flex justify-content-center mb-1">
-                  <div class="placeholder" style="width: 55%; height: 3px !important; min-height: 3px !important;"></div>
-                </div>
-                <div class="mini-qr mb-1">
-                  <div class="placeholder placeholder-qr"></div>
-                </div>
-              {% elif template_key == 'survey_invitation' %}
-                <div class="placeholder placeholder-button placeholder-button-purple col-4 mb-1"></div>
-              {% endif %}
-
-              <!-- Mini footer text -->
-              <div class="placeholder col-6"></div>
+              </div>
             </div>
 
             <div class="template-overlay">
@@ -553,9 +558,9 @@
                placeholder="Leave empty to use system default">
       </div>
       
-      <!-- Hero Image — Photo Normalization Tool (see DESIGN_SYSTEM.md §15) -->
+      <!-- Activity Image — Photo Normalization Tool (see DESIGN_SYSTEM.md §15) -->
       <div class="mb-3">
-        <label class="form-label">Hero Image</label>
+        <label class="form-label">Activity Image</label>
         <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
              style="border:1px solid rgba(98,105,118,0.2);width:fit-content;max-width:100%;">
           <!-- Thumbnail: click to open options, red-X to reset to default -->
@@ -598,6 +603,63 @@
             <input type="hidden" id="{{ template_key }}HeroFilename" value="">
           </div>
         </div>
+        <small class="form-hint">Defaults to this activity's own photo. Click to search or upload a different one for this email only.</small>
+      </div>
+
+      <!-- Organization Logo — Photo Normalization Tool (see DESIGN_SYSTEM.md §15, Logo
+           variant — same widget/config as the Organization Logo field in unified_settings.html,
+           the canonical reference for this variant). Right below Activity Image because that's
+           the order they appear in the actual email (photo, then org name + logo). One shared
+           setting for the whole activity, not per-template — overriding it from any one
+           template's editor changes it everywhere for this activity (e.g. a themed logo for a
+           Christmas event). Shown in every template's editor so it isn't hidden behind
+           whichever template happens to be first. -->
+      <div class="mb-3">
+        <label class="form-label">Organization Logo</label>
+        <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
+             style="border:1px solid rgba(98,105,118,0.2);width:fit-content;max-width:100%;">
+          <!-- Thumbnail: click to open options, red-X to reset to default -->
+          <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
+               style="width:100px;min-height:100px;cursor:pointer;"
+               id="{{ template_key }}LogoWrapper">
+          </div>
+          <!-- Options panel -->
+          <div id="{{ template_key }}LogoOptions" class="flex-grow-1 p-2"
+               style="display:none;border-left:1px solid rgba(98,105,118,0.2);">
+            <!-- Source toggle: Search ↔ Upload — defaults to Upload for logos -->
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <small class="text-muted fw-medium">
+                <i class="ti ti-world-search" style="font-size:13px;"></i> Search
+              </small>
+              <label class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="{{ template_key }}LogoSourceToggle" role="switch" checked>
+              </label>
+              <small class="text-muted">
+                <i class="ti ti-upload" style="font-size:13px;"></i> Upload
+              </small>
+            </div>
+            <!-- Search panel (hidden by default for logos) -->
+            <div id="{{ template_key }}LogoSearchPanel" style="display:none;">
+              <div class="input-group">
+                <input type="text" id="{{ template_key }}LogoSearchInput"
+                       class="form-control" placeholder="e.g., Company, Sports">
+                <button type="button" id="{{ template_key }}LogoSearchBtn" class="btn btn-primary">
+                  <i class="ti ti-search"></i>
+                </button>
+              </div>
+            </div>
+            <!-- Upload panel (shown by default for logos) -->
+            <div id="{{ template_key }}LogoUploadPanel">
+              <label for="modal_{{ template_key }}_owner_logo" class="form-label visually-hidden">Organization logo file</label>
+              <input type="file" name="{{ template_key }}_owner_logo"
+                     id="modal_{{ template_key }}_owner_logo"
+                     class="form-control" accept="image/*">
+            </div>
+            <!-- Hidden: stores filename when image is selected from Unsplash (web search) -->
+            <input type="hidden" id="{{ template_key }}LogoFilename" value="">
+          </div>
+        </div>
+        <small class="form-hint">Shown next to your organization name at the top of every email for this activity. Defaults to your organization's logo — click to search or upload a different one, e.g. for a themed event.</small>
       </div>
 
       <!-- Email Title -->
@@ -611,28 +673,21 @@
                placeholder="Main heading shown in the email">
       </div>
       
-      <!-- Introduction Text -->
+      <!-- Admin Message -->
       <div class="mb-3">
-        <label for="modal_{{ template_key }}_intro_text" class="form-label">Introduction Text</label>
-        <textarea name="{{ template_key }}_intro_text" 
-                  id="modal_{{ template_key }}_intro_text"
-                  class="form-control template-textarea" 
-                  rows="5"
-                  placeholder="Opening message for the email">{{ template_data.get('intro_text', '') }}</textarea>
-      </div>
-      
-      <!-- Conclusion Text -->
-      <div class="mb-3">
-        <label for="modal_{{ template_key }}_conclusion_text" class="form-label">Conclusion Text</label>
-        <textarea name="{{ template_key }}_conclusion_text"
-                  id="modal_{{ template_key }}_conclusion_text"
+        <label for="modal_{{ template_key }}_admin_message" class="form-label">Admin Message</label>
+        <textarea name="{{ template_key }}_admin_message"
+                  id="modal_{{ template_key }}_admin_message"
                   class="form-control template-textarea"
-                  rows="5"
-                  placeholder="Closing message for the email">{{ template_data.get('conclusion_text', '') }}</textarea>
+                  rows="8"
+                  placeholder="Message shown in the email">{{ template_data.get('admin_message', '') }}</textarea>
       </div>
 
-      <!-- QR Code Toggle (only for templates with QR codes) -->
-      {% if template_key in ['newPass', 'paymentReceived', 'redeemPass', 'latePayment'] %}
+      <!-- QR Code Toggle (only for templates that actually show a QR code).
+           latePayment is excluded: the passport isn't usable until it's paid, so that layout
+           renders no code and the switch would do nothing. Keep in step with
+           utils.NO_QR_TEMPLATES. -->
+      {% if template_key in ['newPass', 'paymentReceived', 'redeemPass'] %}
       <div class="mb-3">
         <label class="form-check">
           <input type="checkbox"
@@ -643,53 +698,6 @@
           <span class="form-check-label">Afficher le code QR dans l'email</span>
         </label>
         <small class="form-hint">Désactivez si vos utilisateurs n'utilisent pas le code QR.</small>
-      </div>
-      {% endif %}
-
-      <!-- Global Settings (only show for first template) -->
-      {% if loop.first %}
-      <hr class="my-4">
-      <h6 class="mb-3">Organization Logo</h6>
-      <p class="text-muted small mb-3">Logo shown at the bottom of all email templates.</p>
-      
-      <!-- Owner Card Logo -->
-      <div class="mb-3">
-        <label class="form-label">Owner Card Logo</label>
-        <div class="d-flex align-items-center gap-2">
-          <div class="current-logo-preview" id="modal-owner-logo-preview-{{ template_key }}">
-            {% if has_custom_owner_logo %}
-            <img id="modal-owner-img-preview-{{ template_key }}"
-                 src="{{ url_for('static', filename='uploads/' + activity.id|string + '_owner_logo.png') }}"
-                 alt="Current owner logo"
-                 style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;"
-                 onerror="this.src='{{ placeholder_logo_data_uri or url_for('static', filename='uploads/' + org_logo_filename) }}';">
-            {% elif org_logo_exists %}
-            <img id="modal-owner-img-preview-{{ template_key }}"
-                 src="{{ url_for('static', filename='uploads/' + org_logo_filename) }}"
-                 alt="Current owner logo"
-                 style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">
-            {% elif placeholder_logo_data_uri %}
-            <img id="modal-owner-img-preview-{{ template_key }}"
-                 src="{{ placeholder_logo_data_uri }}"
-                 alt="Organization placeholder logo"
-                 style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px; background: white;">
-            {% else %}
-            <div id="modal-owner-img-preview-{{ template_key }}"
-                 style="width: 60px; height: 60px; border-radius: 6px; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;">
-              {{ placeholder_letter(activity.name) }}
-            </div>
-            {% endif %}
-          </div>
-          <div class="flex-fill">
-            <input type="file" 
-                   name="{{ template_key }}_owner_logo" 
-                   id="modal_{{ template_key }}_owner_logo"
-                   class="form-control" 
-                   accept="image/*"
-                   onchange="previewImage(this, 'modal-owner-img-preview-{{ template_key }}')">
-            <small class="form-hint d-block">Logo shown in organization card at bottom of email</small>
-          </div>
-        </div>
       </div>
       {% endif %}
     </div>
@@ -746,22 +754,48 @@ document.addEventListener('DOMContentLoaded', function() {
                     src: `/activity/{{ activity.id }}/hero-image/${template}`,
                 });
 
+                // Organization logo picker — same widget/config as the Organization Logo field
+                // in unified_settings.html (the canonical "Logo" variant of the Photo
+                // Normalization Tool, DESIGN_SYSTEM.md §15): search+upload+crop, freeform crop
+                // (no aspectRatio — a non-square logo isn't force-cropped; the email itself
+                // renders it with object-fit:contain) and PNG output (preserves transparency,
+                // unlike the JPEG default). /owner-logo already resolves the same priority
+                // order used at send time (activity-specific override -> org default ->
+                // generated placeholder), so this widget always previews exactly what would
+                // actually be sent. Cache-busted because, unlike /hero-image, this route
+                // doesn't send Cache-Control: no-store, so a same-URL re-fetch right after an
+                // upload could otherwise show the browser's cached previous logo.
+                initPhotoNormalizer({
+                    wrapperId:        `${template}LogoWrapper`,
+                    uploadInputId:    `modal_${template}_owner_logo`,
+                    cropModalId:      `${template}LogoCropModal`,
+                    cropImageId:      `${template}LogoCropImage`,
+                    confirmBtnId:     `${template}LogoCropConfirmBtn`,
+                    optionsPanelId:   `${template}LogoOptions`,
+                    hiddenInputId:    `${template}LogoFilename`,
+                    sourceToggleId:   `${template}LogoSourceToggle`,
+                    searchPanelId:    `${template}LogoSearchPanel`,
+                    uploadPanelId:    `${template}LogoUploadPanel`,
+                    searchInputId:    `${template}LogoSearchInput`,
+                    searchBtnId:      `${template}LogoSearchBtn`,
+                    unsplashModalId:  `${template}LogoUnsplashModal`,
+                    unsplashImagesId:`${template}LogoUnsplashImages`,
+                    prevPageBtnId:    `${template}LogoPrevPageBtn`,
+                    nextPageBtnId:    `${template}LogoNextPageBtn`,
+                    maxWidth:         400,
+                    maxHeight:        400,
+                    outputFormat:     'image/png',
+                    objectFit:        'contain',
+                    placeholderLabel: 'Add logo',
+                    src: `/owner-logo?activity_id={{ activity.id }}&t=${Date.now()}`,
+                });
+
                 // Update modal title with template name
                 const modalTitleElement = document.getElementById('modalTemplateName');
                 if (modalTitleElement) {
                     modalTitleElement.textContent = templateName;
                 }
-                
-                // Ensure hero images are loaded with cache-busting to show current state
-                const heroImg = document.getElementById(`modal-hero-img-preview-${template}`);
-                if (heroImg) {
-                    const currentSrc = heroImg.src;
-                    // Add cache-busting parameter to ensure fresh load
-                    if (!currentSrc.includes('?t=')) {
-                        heroImg.src = currentSrc + `?t=${Date.now()}`;
-                    }
-                }
-                
+
                 // Add tinymce class to textareas that should be rich text editors
                 document.querySelectorAll('#customizeModal .template-textarea').forEach(textarea => {
                     textarea.classList.add('tinymce');
@@ -832,54 +866,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Enhanced image preview for modals with hero image support
-    window.previewImage = (input, previewId) => {
-        const file = input.files?.[0];
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = e => {
-                const img = document.getElementById(previewId);
-                if (img) {
-                    img.src = e.target.result;
-                    // Add visual feedback for new image selection
-                    img.style.border = '2px solid #206bc4';
-                    img.style.borderRadius = '6px';
-                    
-                    // Add a small "NEW" badge if this is a hero image
-                    if (previewId.includes('hero-img-preview')) {
-                        // Remove any existing badge
-                        const existingBadge = img.parentElement.querySelector('.new-image-badge');
-                        if (existingBadge) existingBadge.remove();
-                        
-                        // Add new badge
-                        const badge = document.createElement('div');
-                        badge.className = 'new-image-badge';
-                        badge.innerHTML = '<i class="ti ti-upload"></i> NEW';
-                        badge.style.cssText = 'position: absolute; top: -8px; right: -8px; background: #206bc4; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10;';
-                        
-                        img.parentElement.style.position = 'relative';
-                        img.parentElement.appendChild(badge);
-                    }
-                }
-            };
-            reader.readAsDataURL(file);
-        } else if (input.files?.length === 0) {
-            // Handle file clear - revert to original image
-            const img = document.getElementById(previewId);
-            if (img && previewId.includes('hero-img-preview')) {
-                // Extract template type from preview ID
-                const templateType = previewId.replace('modal-hero-img-preview-', '');
-                // Reload original hero image
-                img.src = `/activity/{{ activity.id }}/hero-image/${templateType}?t=${Date.now()}`;
-                img.style.border = '1px solid #dee2e6';
-                
-                // Remove new badge
-                const badge = img.parentElement.querySelector('.new-image-badge');
-                if (badge) badge.remove();
-            }
-        }
-    };
-    
     // Handle Preview Changes button with debouncing
     let previewInProgress = false;
 
@@ -926,12 +912,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append(`${templateType}_hero_image`, heroImageInput.files[0]);
             }
 
-            // Get TinyMCE content for intro and conclusion text
-            const introEditor = tinymce.get(`modal_${templateType}_intro_text`);
-            const conclusionEditor = tinymce.get(`modal_${templateType}_conclusion_text`);
+            // Get TinyMCE content for the admin message
+            const messageEditor = tinymce.get(`modal_${templateType}_admin_message`);
 
-            if (introEditor) formData.append(`${templateType}_intro_text`, introEditor.getContent());
-            if (conclusionEditor) formData.append(`${templateType}_conclusion_text`, conclusionEditor.getContent());
+            if (messageEditor) formData.append(`${templateType}_admin_message`, messageEditor.getContent());
 
             // Get QR code toggle for preview
             // Get QR code toggle for preview - search INSIDE the modal to avoid duplicate ID issue
@@ -1006,17 +990,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Get TinyMCE content
             if (typeof tinymce !== 'undefined') {
-                const introEditor = tinymce.get(`modal_${templateType}_intro_text`);
-                const conclusionEditor = tinymce.get(`modal_${templateType}_conclusion_text`);
-                
-                if (introEditor) formData.append(`${templateType}_intro_text`, introEditor.getContent());
-                if (conclusionEditor) formData.append(`${templateType}_conclusion_text`, conclusionEditor.getContent());
+                const messageEditor = tinymce.get(`modal_${templateType}_admin_message`);
+
+                if (messageEditor) formData.append(`${templateType}_admin_message`, messageEditor.getContent());
             }
             
             // Get file inputs for images
             const heroImageInput = document.querySelector(`#modal_${templateType}_hero_image`);
             const ownerLogoInput = document.querySelector(`#modal_${templateType}_owner_logo`);
             const heroFilenameInput = document.querySelector(`#${templateType}HeroFilename`);
+            const logoFilenameInput = document.querySelector(`#${templateType}LogoFilename`);
 
             if (heroImageInput && heroImageInput.files[0]) {
                 // Local file upload or crop-confirmed file
@@ -1026,7 +1009,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append(`${templateType}_hero_image_filename`, heroFilenameInput.value);
             }
             if (ownerLogoInput && ownerLogoInput.files[0]) {
+                // Local file upload or crop-confirmed file
                 formData.append(`${templateType}_owner_logo`, ownerLogoInput.files[0]);
+            } else if (logoFilenameInput && logoFilenameInput.value) {
+                // Unsplash image already downloaded to server — send filename so backend can use it
+                formData.append(`${templateType}_owner_logo_filename`, logoFilenameInput.value);
             }
 
             // Get QR code toggle (for templates that have it) - search INSIDE the modal to avoid duplicate ID issue
@@ -1141,6 +1128,41 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- Logo crop modal — no aspectRatio passed to initPhotoNormalizer for this one, so Cropper.js
+     defaults to freeform: it doesn't force a square, just lets the admin fine-tune the crop
+     area (defaults to ~90% of the image), so a wide/rectangular logo isn't clipped. -->
+<div class="modal modal-blur fade" id="{{ template_key }}LogoCropModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-crop me-2"></i>Adjust Logo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0" style="background:#1a1a2e;">
+        <div style="max-height:60vh;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+          <img id="{{ template_key }}LogoCropImage" src="" alt="Crop preview"
+               style="display:block;max-width:100%;max-height:60vh;">
+        </div>
+        <div class="p-3 text-center">
+          <small class="text-muted">
+            <i class="ti ti-arrows-move me-1"></i>Drag to reposition
+            <span class="mx-2">|</span>
+            <i class="ti ti-zoom-in me-1"></i>Scroll to zoom
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="ti ti-x me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="{{ template_key }}LogoCropConfirmBtn">
+          <i class="ti ti-check me-1"></i>Use Logo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Unsplash image picker modal -->
 <div class="modal modal-blur fade" id="{{ template_key }}HeroUnsplashModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -1154,6 +1176,28 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="d-flex justify-content-between align-items-center pt-3" style="display:none!important;">
           <button class="btn btn-outline-secondary" id="{{ template_key }}HeroPrevPageBtn">Previous</button>
           <button class="btn btn-outline-primary" id="{{ template_key }}HeroNextPageBtn">Next</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Logo Unsplash image picker modal -->
+<div class="modal modal-blur fade" id="{{ template_key }}LogoUnsplashModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-photo-search me-2"></i>Select an Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="{{ template_key }}LogoUnsplashImages" class="row g-3"></div>
+        <div class="d-flex justify-content-between align-items-center pt-3" style="display:none!important;">
+          <button class="btn btn-outline-secondary" id="{{ template_key }}LogoPrevPageBtn">Previous</button>
+          <button class="btn btn-outline-primary" id="{{ template_key }}LogoNextPageBtn">Next</button>
         </div>
       </div>
       <div class="modal-footer">

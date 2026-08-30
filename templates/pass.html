@@ -4,16 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# Matches the page background so the browser chrome doesn't band against it on mobile. #}
+  <meta name="theme-color" content="#f6f8fb">
   <title>Mon passeport - {{ hockey_pass.activity.name if hockey_pass.activity else 'Minipass' }}</title>
 
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
 
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
@@ -38,25 +36,45 @@
       background-color: #f6f8fb;
       min-height: 100vh;
     }
-    .pass-page-header {
-      text-align: center;
-      padding: 2rem 1rem 1.5rem;
+    /* Org identity — overlaid on the hero photo itself (top-left), not a separate row below
+       it. Unlike the email — where Gmail's lack of position:absolute support forces the logo
+       into a plain row under the ink bar (see photo_band() in email/components.html) — this
+       is a real page, so the overlay is safe here. White text + shadow keeps it legible over
+       any photo. */
+    .pass-hero-org {
+      position: absolute;
+      top: 50%;
+      left: 1.25rem;
+      transform: translateY(-50%);
+      z-index: 2;
     }
-    .pass-org-logo {
-      max-height: 64px;
-      max-width: 200px;
+    .pass-hero-org-logo {
+      width: 96px;
+      height: 96px;
       object-fit: contain;
+      /* drop-shadow (not box-shadow) follows the PNG's real alpha silhouette instead of its
+         rectangular bounding box — box-shadow was painting a solid card-like backing behind
+         the logo's transparent background. White, so it reads as a glow, not a shadow. */
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.95));
     }
-    .pass-org-logo-fallback {
-      width: 64px;
-      height: 64px;
-      border-radius: 14px;
+    .pass-hero-org-logo--fallback {
+      width: 96px;
+      height: 96px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #fff;
       font-weight: 700;
       font-size: 2rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+    }
+    .pass-hero-org-name {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.125rem;
+      line-height: 1.25;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85), 0 0 10px rgba(0, 0, 0, 0.5);
     }
     .pass-footer {
       text-align: center;
@@ -64,22 +82,205 @@
       color: #8a94a6;
       font-size: 0.85rem;
     }
+
+    .pass-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #15192c;
+    }
+
+    /* Shared visual language with the email templates (email/components.html) — same object,
+       two surfaces. Section titles (Participant / Séances / Historique) sit above their
+       content, near-black, same treatment as identity_block()/section_card() in the email. */
+    .pass-section-title {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #15192c;
+    }
+
+    /* Photo header band — activity photo, full width, edge to edge with the card. The ink
+       caption bar (eyebrow + activity name) still sits below the photo, matching
+       photo_band() in email/components.html — but the org identity is now overlaid directly
+       on the photo (see .pass-hero-org above), which the email can't do (Gmail has no
+       position:absolute support), so this is one deliberate divergence from strict
+       email/page parity. */
+    .pass-hero-wrap {
+      position: relative;
+    }
+    .pass-hero-photo {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      object-position: center 55%;
+      background-color: #f6f6f7;
+    }
+    .pass-hero-contained {
+      width: 100%;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f6f6f7;
+    }
+    .pass-hero-contained img {
+      max-width: 120px;
+      max-height: 120px;
+      object-fit: contain;
+    }
+    .pass-hero-contained .pass-hero-letter {
+      width: 96px;
+      height: 96px;
+      border-radius: 14px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pass-hero-caption {
+      background-color: #15192c;
+      padding: 0.875rem 1.25rem;
+    }
+    .pass-hero-eyebrow {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 0.25rem;
+    }
+    .pass-hero-headline {
+      margin: 0;
+      font-size: 1.375rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+    }
+    .pass-hero-menu-btn {
+      background-color: transparent;
+      border-color: transparent;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .pass-hero-menu-btn:hover, .pass-hero-menu-btn:focus {
+      background-color: rgba(255, 255, 255, 0.12);
+      border-color: transparent;
+      color: #fff;
+    }
+
+    /* Facts — label left / value right, same line, divider between rows. Matches Historique's
+       and Mes séances' own row layout (event/label left, date/status right) — Facts is inside
+       the same page as those, so it uses the same row convention, not a stacked one. */
+    .pass-rows {
+      margin-top: 1.125rem;
+      border-bottom: 1px solid #e4e8f0;
+    }
+    .pass-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+    }
+    .pass-row + .pass-row {
+      border-top: 1px solid #e4e8f0;
+    }
+    .pass-row-label {
+      font-size: 0.84375rem;
+      color: #4a5568;
+    }
+    .pass-row-value {
+      font-size: 0.84375rem;
+      font-weight: 700;
+      color: #15192c;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    /* Stacked value + sub-line (e.g. Crédits + "N séances réservées"), mirrors rows_block()'s
+       item.sub in the email macro — same size/color/margin. */
+    .pass-row-value-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .pass-row-sub {
+      font-size: 0.6875rem;
+      color: #8892a4;
+      margin-top: 2px;
+    }
+    .pass-status-pill {
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.75rem;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+    .pass-status-pill--paid {
+      color: #1a7f4b;
+      background-color: #eaf6ef;
+    }
+    .pass-status-pill--unpaid {
+      color: #8a6d1f;
+      background-color: #fff3d6;
+    }
+
+    /* QR — a plain white card, no border. This is a deliberate divergence from qr_block() in
+       the email, which keeps its tight black-bordered frame — see components.html. */
+    .pass-qr-frame {
+      display: inline-block;
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 8px;
+      line-height: 0;
+    }
+    .pass-qr-code {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #15192c;
+      margin-top: 0.75rem;
+    }
+
+    /* Séances / Historique — same light neutral-grey well as section_card() in the email, no
+       border, title sits above the box rather than inside it. */
+    .pass-well {
+      background-color: #f6f6f7;
+      border-radius: 8px;
+      padding: 0.25rem 1rem;
+    }
+    .pass-well .list-group-item {
+      background-color: transparent;
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+    .pass-well form,
+    .pass-well p {
+      padding: 0.5rem 0 0.75rem;
+    }
+
+    /* Guideline floor: visible keyboard focus, no tap delay, motion respected. */
+    .btn:focus-visible,
+    .form-select:focus-visible,
+    a:focus-visible {
+      outline: 2px solid var(--minipass-primary-600, #206bc4);
+      outline-offset: 2px;
+    }
+    .btn, .form-select, a {
+      touch-action: manipulation;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
   </style>
 </head>
 <body>
-
-<!-- Organisation branding -->
-<div class="pass-page-header">
-  {% if settings and settings.get('LOGO_FILENAME') %}
-    <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-         alt="{{ settings.get('ORG_NAME', 'Organisation') }}" class="pass-org-logo">
-  {% else %}
-    <div class="pass-org-logo-fallback"
-         style="background: {{ placeholder_color(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }};">
-      {{ placeholder_letter(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }}
-    </div>
-  {% endif %}
-</div>
 
 <!-- Flash messages -->
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -108,35 +309,58 @@
   {% endif %}
 {% endwith %}
 
-<div class="container-xl px-3">
+<div class="container-xl px-3 pt-4">
   <div class="row justify-content-center">
+
+    {% set activity = hockey_pass.activity %}
 
     <!-- ✅ Owner Info -->
     <div class="col-11 col-md-10 col-lg-8 mx-auto">
-      <div class="card shadow-md mb-4 bg-white">
+      <div class="card shadow-md mb-4 bg-white overflow-hidden">
 
-        <!-- 🔲 Header -->
-        <div class="card-header d-flex justify-content-between align-items-start gap-2">
-          <div class="d-flex align-items-start flex-grow-1" style="min-width: 0;">
-            {% if hockey_pass.activity and (hockey_pass.activity.image_filename or hockey_pass.activity.logo_filename) %}
-            <span class="avatar me-3 flex-shrink-0"
-                  style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + (hockey_pass.activity.image_filename or hockey_pass.activity.logo_filename)) }}');">
-            </span>
+        <!-- 🔲 Photo header band — org identity overlaid top-left (see .pass-hero-org),
+             activity name in the ink bar below the photo, mirroring photo_band() in
+             email/components.html for the caption-bar part. -->
+        <div class="pass-hero-wrap">
+          {% if activity and activity.image_filename %}
+          <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+               class="pass-hero-photo" alt="" width="800" height="200">
+          {% elif activity and activity.logo_filename %}
+          <div class="pass-hero-contained">
+            <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.logo_filename) }}"
+                 alt="" width="120" height="120">
+          </div>
+          {% else %}
+          <div class="pass-hero-contained"
+               style="background: {{ placeholder_color(activity.name if activity else 'Activity') }};">
+            <span class="pass-hero-letter">{{ placeholder_letter(activity.name if activity else 'Activity') }}</span>
+          </div>
+          {% endif %}
+
+          <div class="pass-hero-org d-flex align-items-center gap-2">
+            {% if settings and settings.get('LOGO_FILENAME') %}
+            <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+                 alt="" class="pass-hero-org-logo flex-shrink-0" width="96" height="96">
             {% else %}
-            <span class="avatar me-3 flex-shrink-0 d-flex align-items-center justify-content-center"
-                  style="background: {{ placeholder_color(hockey_pass.activity.name if hockey_pass.activity else 'Activity') }}; color: #fff; font-weight: 700;">
-              {{ placeholder_letter(hockey_pass.activity.name if hockey_pass.activity else 'Activity') }}
-            </span>
+            <div class="pass-hero-org-logo--fallback flex-shrink-0"
+                 style="background: {{ placeholder_color(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }};">
+              {{ placeholder_letter(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }}
+            </div>
             {% endif %}
+            {# One word per line — an org name reads as a small stacked wordmark instead of a
+               long single line competing with the activity headline in the ink bar below. #}
+            <div class="pass-hero-org-name">
+              {% for word in (settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass').split() %}
+              <div>{{ word }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
 
-            <h3 class="card-title mb-0">
-              {{ hockey_pass.activity.name if hockey_pass.activity else '-' }}
-              {% if hockey_pass.paid %}
-                <span class="badge bg-green-lt ms-2 d-none d-md-inline-block">Payé</span>
-              {% else %}
-                <span class="badge bg-red-lt ms-2 d-none d-md-inline-block">Non payé</span>
-              {% endif %}
-            </h3>
+        <div class="pass-hero-caption d-flex justify-content-between align-items-start gap-2">
+          <div style="min-width: 0;">
+            <div class="pass-hero-eyebrow">Passeport d'activité</div>
+            <h3 class="pass-hero-headline">{{ activity.name if activity else '-' }}</h3>
           </div>
 
           {# Admin-only controls. A customer reaching this page from their email must never
@@ -145,10 +369,11 @@
           {% if is_admin %}
           <!-- 3-dot Menu -->
           <div class="dropdown flex-shrink-0">
-            <a href="#" class="btn btn-icon fs-4 p-1" data-bs-toggle="dropdown"
-               aria-expanded="false" aria-label="Actions">
+            {# <button>, not <a href="#">: this opens a menu, it does not navigate. #}
+            <button type="button" class="btn btn-icon fs-4 p-1 pass-hero-menu-btn" data-bs-toggle="dropdown"
+                    aria-expanded="false" aria-label="Actions">
               <i class="ti ti-dots-vertical" aria-hidden="true"></i>
-            </a>
+            </button>
             <div class="dropdown-menu dropdown-menu-end">
               <a href="{{ url_for('edit_passport', passport_id=hockey_pass.id) }}" class="dropdown-item">
                 <i class="ti ti-pencil me-2" aria-hidden="true"></i> Edit
@@ -174,62 +399,102 @@
 
         <!-- 🔲 Body -->
         <div class="card-body">
-          <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-3">
-            <div class="text-center order-1 order-md-2">
-              <img src="data:image/png;base64,{{ qr_data }}"
-                   alt="Code QR du passeport"
-                   class="rounded bg-white d-md-none"
-                   width="120" height="120" />
-              <img src="data:image/png;base64,{{ qr_data }}"
-                   alt="Code QR du passeport"
-                   class="rounded bg-white d-none d-md-inline-block"
-                   width="160" height="160" />
-            </div>
 
-            <div class="flex-grow-1 text-center text-md-start order-2 order-md-1">
-              <div class="fw-bold">{{ hockey_pass.user.name }}</div>
-              <div class="text-muted small">{{ hockey_pass.user.email }}</div>
-              <div class="text-muted small">{{ hockey_pass.user.phone_number }}</div>
+          {# Needed below for the Crédits sub-line ("N séances réservées") — the "Prochaine
+             séance" callout that used to read from this too was removed (redundant with
+             Mes séances below), but the count is still worth surfacing next to Crédits. #}
+          {% set upcoming = my_bookings | rejectattr('is_past') | rejectattr('attended_dt') | list %}
 
-              <div class="h4 fw-bold mt-3 mb-1">${{ "%.2f"|format(hockey_pass.sold_amt or 0) }}</div>
+          {# Participant identity, then a grey card holding Facts + QR together — same
+             content and order as identity_block() / rows_block() / qr_block() in the email,
+             laid out left-aligned in one card instead of the email's separate rows. #}
+          <h3 class="pass-section-title">Participant</h3>
+          <div class="pass-well">
+            <div class="pass-value" style="font-size: 1.375rem;">{{ hockey_pass.user.name }}</div>
+            {% if hockey_pass.user.email %}<div class="text-muted small">{{ hockey_pass.user.email }}</div>{% endif %}
+            {% if hockey_pass.user.phone_number %}<div class="text-muted small">{{ hockey_pass.user.phone_number }}</div>{% endif %}
 
-              {# Show BOTH numbers on a scheduling activity. "Activités restantes" alone
-                 reads as "you have almost nothing left" for someone who is fully booked -
-                 their credits are spent, but they still have every session to attend. #}
-              {% if hockey_pass.activity and hockey_pass.activity.uses_scheduling %}
-                {% set upcoming_count = my_bookings | rejectattr('is_past') | list | length %}
-                <div class="text-muted small">
-                  <strong>{{ upcoming_count }}</strong>
-                  {{ "séance réservée" if upcoming_count == 1 else "séances réservées" }}
-                  ·
-                  <strong>{{ hockey_pass.uses_remaining }}</strong>
-                  {{ "crédit disponible" if hockey_pass.uses_remaining == 1 else "crédits disponibles" }}
-                </div>
-              {% else %}
-                <div class="text-muted small">
-                  Activités restantes: <strong>{{ hockey_pass.uses_remaining }}</strong>
-                </div>
+            {% set total_credits = hockey_pass.passport_type.sessions_included if hockey_pass.passport_type else None %}
+            {% set location = (activity.location_address_formatted or activity.location_address_raw) if activity else None %}
+            <div class="pass-rows">
+              <div class="pass-row">
+                <span class="pass-row-label">Montant</span>
+                {# French formatting, matching utils._fr_money and the email's money() macro —
+                   this read "$500.00" while the email said "500,00 $". #}
+                <span class="pass-row-value">{{ "%.2f"|format(hockey_pass.sold_amt or 0)|replace(".", ",") }}&nbsp;$</span>
+              </div>
+              <div class="pass-row">
+                <span class="pass-row-label">Statut</span>
+                <span class="pass-row-value">
+                  {% if hockey_pass.paid %}
+                  <span class="pass-status-pill pass-status-pill--paid">Payé</span>
+                  {% else %}
+                  <span class="pass-status-pill pass-status-pill--unpaid">Non payé</span>
+                  {% endif %}
+                </span>
+              </div>
+              <div class="pass-row">
+                <span class="pass-row-label">Crédits</span>
+                <span class="pass-row-value-group">
+                  <span class="pass-row-value">
+                    {# total<=1 is a quantity-purchase passport type (one date, N tickets bought at
+                       once), not a multi-session one — showing "1 sur 1" reads as broken math.
+                       Only show the fraction when the total is a real multi-session count, same
+                       guard as credit_line() in email/components.html. #}
+                    {%- if total_credits and total_credits > 1 -%}
+                      {{ hockey_pass.uses_remaining }} sur {{ total_credits }}
+                    {%- else -%}
+                      {{ hockey_pass.uses_remaining }}
+                      {{ "crédit" if hockey_pass.uses_remaining == 1 else "crédits" }}
+                    {%- endif -%}
+                  </span>
+                  {# Credits alone mislead someone fully booked: their credits are spent, but
+                     every session is still ahead of them. Name both — as a sub-line here, not a
+                     standalone floating line, so it stays tied to the number it explains. #}
+                  {% if activity and activity.uses_scheduling %}
+                  <span class="pass-row-sub">
+                    {{ upcoming | length }} {{ "séance réservée" if upcoming | length == 1 else "séances réservées" }}
+                  </span>
+                  {% endif %}
+                </span>
+              </div>
+              {% if location %}
+              <div class="pass-row">
+                <span class="pass-row-label">Lieu</span>
+                <span class="pass-row-value">{{ location }}</span>
+              </div>
               {% endif %}
             </div>
           </div>
-        </div>
 
-      </div>
-    </div>
+          {# QR — its own titled section, not the last line item buried inside Participant's
+             well. It's the actual credential; it gets the same standing as every other
+             section on the page (title above, well below), matching Séances/Historique. #}
+          <h3 class="pass-section-title mt-4">Code d'accès</h3>
+          <div class="pass-well">
+            <div class="text-muted small mb-2">Présentez ce code ou la référence à l'accueil</div>
+            {# One image, sized by CSS at the breakpoint. Two <img> tags meant the browser
+               decoded the same QR twice. #}
+            <div class="pass-qr-frame">
+              <img src="data:image/png;base64,{{ qr_data }}"
+                   alt="Code QR du passeport"
+                   width="140" height="140" />
+            </div>
+            <div class="pass-qr-code">{{ hockey_pass.pass_code }}</div>
+          </div>
 
-    <!-- ✅ Séances (activities that use scheduling) -->
-    {% if hockey_pass.activity and hockey_pass.activity.uses_scheduling %}
-    <div class="col-11 col-md-10 col-lg-8 mx-auto">
-      <div class="card shadow-md mb-4 bg-white">
-        <div class="card-header">
-          <h3 class="card-title">Mes séances</h3>
-        </div>
-        <div class="card-body">
+          {# Séances (activities that use scheduling) — nested inside this same continuous
+             card, not a separate box: one flowing document, matching the email's single
+             shell. Title above the well, not inside it — same section_card() convention as
+             the email's Séances/Historique. #}
+          {% if hockey_pass.activity and hockey_pass.activity.uses_scheduling %}
+          <h3 class="pass-section-title mt-4">Mes séances</h3>
+          <div class="pass-well">
 
           {% if my_bookings %}
           <div class="list-group list-group-flush mb-3">
             {% for booking in my_bookings %}
-            <div class="list-group-item d-flex align-items-center justify-content-between px-0">
+            <div class="list-group-item d-flex align-items-center justify-content-between px-3">
               <div>
                 <div class="fw-bold text-capitalize">{{ format_slot_label(booking.slot) }}</div>
                 {% if booking.attended_dt %}
@@ -243,7 +508,7 @@
               {# No cancelling once they've been checked in — the session was used, so
                  refunding the credit would give it away. #}
               {% if not booking.is_past and not booking.attended_dt %}
-              <button type="button" class="btn btn-sm btn-outline-danger"
+              <button type="button" class="btn btn-sm btn-link text-danger"
                       data-bs-toggle="modal" data-bs-target="#cancel-booking-modal-{{ booking.id }}">
                 Annuler
               </button>
@@ -252,12 +517,12 @@
             {% endfor %}
           </div>
           {% else %}
-          <p class="text-muted">Aucune séance réservée pour le moment.</p>
+          <p class="text-muted px-3">Aucune séance réservée pour le moment.</p>
           {% endif %}
 
           {% if hockey_pass.uses_remaining > 0 %}
             {% if bookable_slots %}
-            <form method="POST"
+            <form method="POST" class="px-3"
                   action="{{ url_for('book_slot_from_pass', pass_code=hockey_pass.pass_code) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <label class="form-label" for="slotSelect">
@@ -278,95 +543,71 @@
                 <button type="submit" class="btn btn-primary">Réserver</button>
               </div>
             </form>
-            {% else %}
-            <p class="text-muted mb-0">Aucune séance disponible pour le moment.</p>
             {% endif %}
           {% else %}
-          <p class="text-muted mb-0">
+          <p class="text-muted mb-0 px-3">
             Vous avez utilisé tous vos crédits. Contactez l'organisateur pour en obtenir d'autres.
           </p>
+          {% endif %}
+
+      </div>
+          {% endif %}
+
+          {% if history %}
+          <h3 class="pass-section-title mt-4">Historique</h3>
+          <div class="pass-well">
+
+        {# Two lines per row, not a three-column table: event and date on one line with the
+           operator beneath. A 3-column table is unreadable at 320px, and this matches the
+           history block the email now renders, so the two never disagree. #}
+        <div class="list-group list-group-flush">
+          {% if history.created %}
+          <div class="list-group-item px-3">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <span class="fw-semibold">Création</span>
+              <span class="text-muted small text-nowrap">{{ history.created }}</span>
+            </div>
+            {% if history.created_by %}<div class="text-muted small">par {{ history.created_by | trim_email }}</div>{% endif %}
+          </div>
+          {% endif %}
+
+          <div class="list-group-item px-3">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <span class="fw-semibold">Paiement</span>
+              <span class="text-muted small text-nowrap">
+                {%- if history.paid %}{{ history.paid }}{% else %}En attente{% endif -%}
+              </span>
+            </div>
+            {% if history.paid and history.paid_by %}<div class="text-muted small">par {{ history.paid_by | trim_email }}</div>{% endif %}
+          </div>
+
+          {% for r in history.redemptions %}
+          <div class="list-group-item px-3">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              {# "Participation N", matching the email. "Activité #N" named nothing the
+                 customer recognises. #}
+              <span class="fw-semibold">Participation {{ loop.index }}</span>
+              <span class="text-muted small text-nowrap">{{ r.date }}</span>
+            </div>
+            {% if r.by %}<div class="text-muted small">par {{ r.by | trim_email }}</div>{% endif %}
+          </div>
+          {% endfor %}
+
+          {% if history.expired %}
+          <div class="list-group-item px-3">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <span class="fw-semibold">Expiré</span>
+              <span class="text-muted small text-nowrap">{{ history.expired }}</span>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
           {% endif %}
 
         </div>
       </div>
     </div>
-    {% endif %}
-
-    {% if history %}
-    <!-- ✅ Historique Table -->
-    <div class="col-11 col-md-10 col-lg-8 mx-auto">
-      <div class="card shadow-md mb-4 bg-white">
-        <div class="card-header">
-          <h3 class="card-title">Historique</h3>
-        </div>
-
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-vcenter card-table">
-              <thead>
-                <tr>
-                  <th>Activité</th>
-                  <th>Date</th>
-                  <th>Par</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% if history.created %}
-                <tr>
-                  <td>Création</td>
-                  <td>
-                    {{ history.created[:10] }}
-                    <span class="d-none d-md-inline">{{ history.created[10:] }}</span>
-                  </td>
-                  <td>{{ history.created_by | trim_email }}</td>
-                </tr>
-                {% endif %}
-
-                {% if history.paid %}
-                <tr>
-                  <td>Paiement</td>
-                  <td>
-                    {{ history.paid[:10] }}
-                    <span class="d-none d-md-inline">{{ history.paid[10:] }}</span>
-                  </td>
-                  <td>{{ history.paid_by | trim_email }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                  <td>Paiement</td>
-                  <td>❌ Non payé</td>
-                  <td>–</td>
-                </tr>
-                {% endif %}
-
-                {% for r in history.redemptions %}
-                <tr>
-                  <td>Activité #{{ loop.index }}</td>
-                  <td>
-                    {{ r.date[:10] }}
-                    <span class="d-none d-md-inline">{{ r.date[10:] }}</span>
-                  </td>
-                  <td>{{ r.by | trim_email }}</td>
-                </tr>
-                {% endfor %}
-
-                {% if history.expired %}
-                <tr>
-                  <td>Expiré</td>
-                  <td>
-                    {{ history.expired[:10] }}
-                    <span class="d-none d-md-inline">{{ history.expired[10:] }}</span>
-                  </td>
-                  <td>-</td>
-                </tr>
-                {% endif %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
 
   </div>
 </div>

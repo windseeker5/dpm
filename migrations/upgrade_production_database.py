@@ -19,6 +19,7 @@ import sqlite3
 import sys
 import os
 import json
+import hashlib
 from datetime import datetime, timezone
 
 # Add parent directory to path
@@ -3445,6 +3446,198 @@ def enable_wal_mode(conn):
         return False
 
 
+def task45_clear_unmodified_email_copy(cursor):
+    """Drop stored email copy that is just a verbatim copy of the old defaults.
+
+    Opening the email template editor saved a full copy of every default into
+    Activity.email_templates, whether or not the owner changed anything. That stored copy
+    shadows config/email_defaults.json, so an activity would keep the old wording forever
+    even after the defaults are rewritten.
+
+    This clears only fields that still hash to a known old default, letting those activities
+    inherit the new copy. Anything an owner actually wrote hashes to something else and is
+    left exactly as it is. A template key is removed entirely once nothing custom remains.
+    """
+    log("✔️ ", "TASK 45: Clearing unmodified email copy so new defaults apply", Colors.BLUE)
+
+    if not check_column_exists(cursor, 'activity', 'email_templates'):
+        log("⏭️ ", "  activity.email_templates doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    # sha256 of every string shipped as a default before the 2026-08 copy rewrite.
+    OLD_DEFAULT_HASHES = {
+        "00e26bdff3e046410857e2b8a3306b6bc59f4a45dbb51386f4f890cdfc7a42a2",
+        "1cc2ce4a13dd40dbdb6fb9dc8bd1d3e00aa14e55165ffcfff00f6f844f8918b3",
+        "1dc49b4fb315886e9fe39e7e3044560ff8e334c849e615bde23254dde7564569",
+        "21b620f1e782b2dd5cdd7d466afd5cb4b7c23fef7b0d50363ba2b05e395b0c0d",
+        "2471dc639c7efbc7d5d76bfee90f42ae02a129367fb041879f470915a0b7806f",
+        "29a354664467eea8379735a285adca347facb6a97218d8a8a21f9b759d199c77",
+        "2bfaf9bb4153c909e7c3f30b31672fde86297f19eb9c84dbe815c51ddd991bae",
+        "34268494ad22aada8b922c6be0908cb85c96b7baf992f325f545716a95111be3",
+        "40ff3d974680f454d3734ced8d2d3715452f8faf8466dd0357b7d07ab6299846",
+        "459b77c14690261abaf2ccf847eef84b41d8544f41244c1f1fdd71976e03510d",
+        "4a6b3b03879a8b9e35e97890cdc8a6a55812c3a5cc13ca6aace0c65b7c492381",
+        "4b45a42f30bbda10200653b7d077b8cb47a851b9b9a4323b8a717bbdc42a03bc",
+        "4d3215c9207ea30f24bdcd448b31d627d8ba5acc05d37a155803f622b56695b2",
+        "53f286edbd8c837a48814bc5fa829e458bc51eddb132092d77d4f4b77e6da9aa",
+        "55f160b7adc64165a3c3dfde4f8e95ab7a5060d67c01caaa01570a430372c215",
+        "5d32d66a724f9a2355b4c91c2ea08c12b3d312f5ce3db4276411c1716ea6ee5a",
+        "6ed050fa9a10e1cd5a6642640c1100ec871664b1f5764c3e9f7668318c0e3e6c",
+        "776c1c0c3b2a5e6a2769d265627850e3ee3d89caafdfc4131a62fa89c1839e2c",
+        "8f9f9b08ec0d1a6a81b17a3886ff739659eb2cea7e55d17ed08c44f903b9c5bf",
+        "90f7d0a2c6888e56481b623fb0311026f287d036eb7e836ee8b0ed67efa58679",
+        "91642b4c20e14149bd4099b0d32e0447037030cc6e8c026a018e1496bd8cc4cc",
+        "9a252280c382c83990891599f5215c851816afbf91449ee071ba0757c882108b",
+        "a3a9039f592d6506ec9a771b841c5a83c00fc8915730574399517031efebabf4",
+        "a50e0610d5145289f9c4b3c6e7a2124a76cfdb0b3dfe5d8930823f539c9e1e2c",
+        "a60c212aff3ef587c9cab0bf44e289988753739dbbf8858b5d89ef39d08761fe",
+        "a87e203f98bcf0f7e41e28a75cfa6739e9e9f60d74675a8efcec8060f3dc1cc9",
+        "ad2da3a59464565c418a8c21b2dc556b62147433edb6dd6f253bd2089e4c1111",
+        "b584fb2a6cb2f44561e664d826b1cb244127198b842d49c3e1d93bcb3d168faa",
+        "c868172cc0dd4f8f893d3354333aab90910e1b4854adcd8625505a1143f39e31",
+        "cc1bf3685fb1339dff278257cb1b7ed1bfa5ba7810437343864629dfd5720577",
+        "cda69897212a2c58ee8cfe88e216e84fa3e2d301f692bd77d3f7a2807ac21ac8",
+        "e55b338cc63b3ac61fdd5128158c42004a2598dff2930d1273d6f59af48cc695",
+        "ee37bea7ea6c9ba7e7dd68733c8ba0bc98a5f005f5cddd4deae47e17dabddf9e",
+        "fb4691152e1ccc3a9a019f0560dcc0aba9c150bbb5bca4c77155cb8c56c1cd85",
+    }
+
+    # Image and toggle choices are real settings, not copy - never clear them.
+    KEEP_KEYS = {'hero_image', 'activity_logo', 'show_qr_code'}
+
+    cursor.execute(
+        "SELECT id, name, email_templates FROM activity "
+        "WHERE email_templates IS NOT NULL AND email_templates != ''"
+    )
+    rows = cursor.fetchall()
+    if not rows:
+        log("⏭️ ", "  No activities with stored email templates", Colors.YELLOW)
+        return True
+
+    activities_changed = 0
+    fields_cleared = 0
+    fields_kept = 0
+
+    for activity_id, activity_name, raw in rows:
+        try:
+            stored = json.loads(raw)
+        except (ValueError, TypeError):
+            log("⚠️ ", f"  Activity {activity_id} has unreadable email_templates, skipping", Colors.YELLOW)
+            continue
+
+        if not isinstance(stored, dict):
+            continue
+
+        changed = False
+        for template_key in list(stored.keys()):
+            fields = stored.get(template_key)
+            if not isinstance(fields, dict):
+                continue
+
+            for field in list(fields.keys()):
+                if field in KEEP_KEYS:
+                    continue
+                value = fields.get(field)
+                if not isinstance(value, str) or not value.strip():
+                    continue
+                digest = hashlib.sha256(value.encode('utf-8')).hexdigest()
+                if digest in OLD_DEFAULT_HASHES:
+                    del fields[field]
+                    fields_cleared += 1
+                    changed = True
+                else:
+                    fields_kept += 1
+
+            # Nothing custom left -> drop the key so the activity fully inherits defaults.
+            if not any(v for v in fields.values()):
+                del stored[template_key]
+                changed = True
+
+        if changed:
+            cursor.execute(
+                "UPDATE activity SET email_templates = ? WHERE id = ?",
+                (json.dumps(stored, ensure_ascii=False) if stored else None, activity_id)
+            )
+            activities_changed += 1
+            log("✅", f"  {activity_name}: reset to inherit default copy", Colors.GREEN)
+
+    log("✅", f"  {activities_changed} activity(ies) updated, "
+              f"{fields_cleared} default field(s) cleared, "
+              f"{fields_kept} customized field(s) preserved", Colors.GREEN)
+    return True
+
+
+def task46_consolidate_admin_message(cursor):
+    """Collapse the legacy intro_text/custom_message/conclusion_text trio into one
+    admin_message field, per stored template.
+
+    The email admin editor used to expose three separate fields; they're now one. The app's
+    read path (utils.consolidate_admin_message) already folds the old shape into
+    admin_message at render/edit time, so this isn't required for correctness — but it's the
+    same one-time DB-wide sweep task45 did for the same JSON column, so activities aren't
+    left carrying dead fields indefinitely, waiting on someone to open the editor and save.
+    """
+    log("✔️ ", "TASK 46: Consolidating admin_message field", Colors.BLUE)
+
+    if not check_column_exists(cursor, 'activity', 'email_templates'):
+        log("⏭️ ", "  activity.email_templates doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    cursor.execute(
+        "SELECT id, name, email_templates FROM activity "
+        "WHERE email_templates IS NOT NULL AND email_templates != ''"
+    )
+    rows = cursor.fetchall()
+    if not rows:
+        log("⏭️ ", "  No activities with stored email templates", Colors.YELLOW)
+        return True
+
+    legacy_keys = ('intro_text', 'custom_message', 'conclusion_text')
+    activities_changed = 0
+    templates_changed = 0
+
+    for activity_id, activity_name, raw in rows:
+        try:
+            stored = json.loads(raw)
+        except (ValueError, TypeError):
+            log("⚠️ ", f"  Activity {activity_id} has unreadable email_templates, skipping", Colors.YELLOW)
+            continue
+
+        if not isinstance(stored, dict):
+            continue
+
+        changed = False
+        for template_key, fields in stored.items():
+            if not isinstance(fields, dict):
+                continue
+            if not any(key in fields for key in legacy_keys):
+                continue
+
+            if not fields.get('admin_message'):
+                parts = [fields.get(k) or '' for k in ('intro_text', 'custom_message', 'conclusion_text')]
+                admin_message = ''.join(parts)
+                if admin_message:
+                    fields['admin_message'] = admin_message
+
+            for key in legacy_keys:
+                fields.pop(key, None)
+
+            templates_changed += 1
+            changed = True
+
+        if changed:
+            cursor.execute(
+                "UPDATE activity SET email_templates = ? WHERE id = ?",
+                (json.dumps(stored, ensure_ascii=False), activity_id)
+            )
+            activities_changed += 1
+            log("✅", f"  {activity_name}: consolidated to admin_message", Colors.GREEN)
+
+    log("✅", f"  {activities_changed} activity(ies) updated, "
+              f"{templates_changed} template(s) consolidated", Colors.GREEN)
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -3509,6 +3702,8 @@ def main():
         ("Activity Scheduling Toggle", task42_add_activity_uses_scheduling),
         ("Session Scheduling Tables", task43_add_session_scheduling_tables),
         ("Slot Booking Attendance Stamp", task44_add_slot_booking_attended),
+        ("Clear Unmodified Email Copy", task45_clear_unmodified_email_copy),
+        ("Consolidate Admin Message", task46_consolidate_admin_message),
     ]
 
     completed = 0
