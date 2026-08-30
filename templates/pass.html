@@ -465,18 +465,22 @@
               </div>
               {% endif %}
             </div>
+          </div>
 
-            <div class="mt-4">
-              <div class="text-muted small mb-2">Présentez ce code ou la référence à l'accueil</div>
-              {# One image, sized by CSS at the breakpoint. Two <img> tags meant the browser
-                 decoded the same QR twice. #}
-              <div class="pass-qr-frame">
-                <img src="data:image/png;base64,{{ qr_data }}"
-                     alt="Code QR du passeport"
-                     width="140" height="140" />
-              </div>
-              <div class="pass-qr-code">{{ hockey_pass.pass_code }}</div>
+          {# QR — its own titled section, not the last line item buried inside Participant's
+             well. It's the actual credential; it gets the same standing as every other
+             section on the page (title above, well below), matching Séances/Historique. #}
+          <h3 class="pass-section-title mt-4">Code d'accès</h3>
+          <div class="pass-well">
+            <div class="text-muted small mb-2">Présentez ce code ou la référence à l'accueil</div>
+            {# One image, sized by CSS at the breakpoint. Two <img> tags meant the browser
+               decoded the same QR twice. #}
+            <div class="pass-qr-frame">
+              <img src="data:image/png;base64,{{ qr_data }}"
+                   alt="Code QR du passeport"
+                   width="140" height="140" />
             </div>
+            <div class="pass-qr-code">{{ hockey_pass.pass_code }}</div>
           </div>
 
           {# Séances (activities that use scheduling) — nested inside this same continuous

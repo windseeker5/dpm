@@ -459,7 +459,20 @@ classes (`.pass-next-label`, `.pass-next-date`, `.pass-label`). Removed the font
 the dead classes; confirmed via `read_network_requests` that the `fonts.googleapis.com` request
 is gone and the page renders identically otherwise.
 
-Also flagged, not yet acted on: the Participant `.pass-well` now carries three different jobs
-in one undifferentiated grey box (identity, Facts, and the QR credential itself) — the QR is
-functionally the most important thing on the page but has no more visual weight than the "Lieu"
-row above it. Proposals pending for how to give it more presence.
+Also flagged: the Participant `.pass-well` carried three different jobs in one undifferentiated
+grey box (identity, Facts, and the QR credential itself) — the QR had no more visual weight than
+the "Lieu" row above it despite being the functionally most important thing on the page.
+Proposed 3 fixes (own section / bigger "ticket" treatment / ink-accent tie-back to the hero);
+user picked the first.
+
+## Ninth round: give the QR its own section ("Code d'accès")
+
+Extracted the QR block out of the Participant well entirely — it's now its own titled section
+(`<h3 class="pass-section-title">Code d'accès</h3>` + its own `.pass-well`), sitting between
+Participant and Mes séances, exactly matching how every other section on the page already
+works (title above, grey well below). Participant's well now only carries identity + Facts,
+ending at Lieu. No new CSS, no new visual language — pure structural move reusing the existing
+pattern. Verified live at desktop and simulated 375px width; mobile arguably reads better now,
+since the QR card gets full-width room instead of sharing a cramped row with empty space.
+`web-design-guidelines`: clean, no findings (structural move, same heading level, no new
+interactive elements).
