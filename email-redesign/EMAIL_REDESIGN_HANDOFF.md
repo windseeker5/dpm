@@ -476,3 +476,43 @@ pattern. Verified live at desktop and simulated 375px width; mobile arguably rea
 since the QR card gets full-width room instead of sharing a cramped row with empty space.
 `web-design-guidelines`: clean, no findings (structural move, same heading level, no new
 interactive elements).
+
+## Tenth round: partial port of the passport's design to the email templates
+
+The user asked directly whether the passport's now-finished design could be used as the model
+for all 7 email templates, and demanded an honest feasibility answer, not just agreement.
+**Verdict: partial, not total, and the reason is not a judgment call.**
+
+The passport's biggest recent change — the org logo overlaid on the hero photo with a white
+glow — **cannot go into the emails.** `photo_band()`'s own docstring in `components.html`
+already documents that this exact idea (overlaying content on the photo, that time just a text
+caption) was tried and tested in real Gmail sends across web/iOS/Android during the original
+Aug 2026 redesign, and broke — Gmail has zero support for `position:absolute`/`relative` in
+HTML email. That failure is *why* the email's org identity already lives in a plain row below
+the ink bar. Re-attempting an overlay now (with an image logo *and* `filter:drop-shadow`, which
+has essentially no support in Outlook/Windows Mail either) would just reproduce a bug this
+project already found and fixed once. Left `_base.html`'s org identity row untouched — this is
+now a permanent, deliberate divergence between the two surfaces, not an oversight.
+
+What *did* port, or already matched:
+- Facts (label-left/value-right, same line) — the email's `rows_block()` already works this
+  way; nothing to change, the passport had drifted and came back.
+- QR as its own block, separate from Facts — already true structurally in every pass-style
+  template (`qr_block()` is its own `<tr>`); just needed a matching visible title.
+- **Implemented:** `qr_block()` in `components.html` gained an optional `label` param
+  (same title-above-content convention as `section_card()`) and lost its `border:1px solid
+  #000` in favor of a plain white rounded card (`background:#fff; border-radius:10px`),
+  matching `.pass-qr-frame` exactly. Wired `label="Code d'accès"` at all 3 call sites
+  (`newPass.html`/`paymentReceived.html`/`redeemPass.html` — `latePayment.html` has no QR,
+  see `NO_QR_TEMPLATES` in `utils.py`).
+- **Explicit, accepted tradeoff, not a bug**: dropping the border means an email client that
+  blocks images by default now shows nothing where the QR should be, instead of a visible empty
+  frame. User's own call, made knowingly after being told the tradeoff — documented here so it
+  isn't "discovered" and re-litigated later as a defect.
+
+Verified: `test/render_all.py` — all 7 render with no exceptions. Live `/email-preview` check
+for `newPass` — "CODE D'ACCÈS" label renders correctly above a borderless white QR card. Real
+send via `test/send_real_email_preview.py --template newPass paymentReceived redeemPass` — all
+3 delivered successfully to a real inbox for final visual confirmation, per this project's
+standing rule that a same-origin preview alone never proves an email actually survives a real
+client.

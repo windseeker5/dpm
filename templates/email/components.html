@@ -240,17 +240,29 @@
 
 
 {#
-  QR: a tight frame around only the code itself, not a well around the whole group.
+  QR: a plain white rounded card around only the code itself, not a well around the whole
+  group. Matches templates/pass.html's .pass-qr-frame exactly (background:#fff, border-radius,
+  no border) — a deliberate, explicit choice to match the passport page 1:1, accepting the
+  tradeoff that an email client blocking images by default now shows nothing where the QR
+  should be, instead of a visible empty bordered frame. See
+  email-redesign/EMAIL_REDESIGN_HANDOFF.md for the decision.
+
   qr_src's box_size must stay in step with the frame's display size — see
   utils.EMAIL_QR_BOX_SIZE — or the browser has to rescale the PNG and it looks muddy.
+
+  `label`: optional title above the block, same title-above-content convention as
+  section_card() — matches templates/pass.html's "Code d'accès" section.
 #}
-{% macro qr_block(qr_src, ref_code=None, caption=None) -%}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin-top:24px;">
+{% macro qr_block(qr_src, ref_code=None, caption=None, label=None) -%}
+{% if label %}
+<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:{{ C_INK }}; margin:16px 0 8px 0;">{{ label }}</div>
+{% endif %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; {% if not label %}margin-top:24px;{% endif %}">
   <tr>
     <td align="center" style="padding-bottom:16px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #000000; border-radius:4px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff; border-radius:10px;">
         <tr>
-          <td style="padding:3px;">
+          <td style="padding:8px;">
             <img src="{{ qr_src }}" width="165" height="165" alt="Code QR du passeport" style="display:block; width:165px; height:165px; border:0;">
           </td>
         </tr>

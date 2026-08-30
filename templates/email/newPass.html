@@ -28,7 +28,7 @@
 {% if show_qr_code %}
 <tr>
   <td class="mp-pad" style="padding:0 32px;">
-    {{ qr_block('cid:qr_code', pass_data.pass_code, "Présentez ce code ou la référence à l'accueil") }}
+    {{ qr_block('cid:qr_code', pass_data.pass_code, "Présentez ce code ou la référence à l'accueil", label="Code d'accès") }}
   </td>
 </tr>
 {% endif %}
