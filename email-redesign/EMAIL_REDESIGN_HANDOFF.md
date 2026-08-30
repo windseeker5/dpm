@@ -441,3 +441,10 @@ Three more small, precise tweaks:
 
 Verified live: caption/QR order and card style confirmed, "Aucune séance disponible" gone from
 Mes séances with clean well spacing (no dangling gap). `web-design-guidelines`: clean.
+
+## Seventh round, same session: simplify the QR card — drop the shadow
+
+Immediate follow-up: the `box-shadow: 0 1px 3px rgba(0,0,0,.12)` added on the QR card in the
+round above read as an unwanted grey border/shadow — removed entirely. `.pass-qr-frame` is now
+just `background:#fff; border-radius:10px; padding:8px;` — a plain white rounded card, nothing
+else.
