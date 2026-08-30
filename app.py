@@ -12736,7 +12736,22 @@ def save_email_templates(activity_id):
     import bleach
     
     activity = Activity.query.get_or_404(activity_id)
-    
+
+    def resolve_activity_image_path(filename):
+        """Resolve a stored-Unsplash-download filename against static/uploads/activity_images,
+        rejecting anything that would escape that directory (.. segments, an absolute path,
+        etc.) rather than trusting the client-supplied form value as-is."""
+        if not filename:
+            return None
+        safe_name = secure_filename(filename)
+        if not safe_name:
+            return None
+        base_dir = os.path.realpath(os.path.join('static', 'uploads', 'activity_images'))
+        candidate_path = os.path.realpath(os.path.join(base_dir, safe_name))
+        if os.path.commonpath([base_dir, candidate_path]) != base_dir:
+            return None
+        return candidate_path if os.path.isfile(candidate_path) else None
+
     template_types = ['newPass', 'paymentReceived', 'latePayment', 'signup', 'signup_payment_first', 'redeemPass', 'survey_invitation']
     
     # Initialize email_templates as empty dict if None
@@ -12787,13 +12802,13 @@ def save_email_templates(activity_id):
                 hero_file_data = hero_file.read()
             elif hero_image_filename:
                 # Image was selected from Unsplash web search — file already on server
-                unsplash_path = os.path.join('static', 'uploads', 'activity_images', hero_image_filename)
-                if os.path.exists(unsplash_path):
+                unsplash_path = resolve_activity_image_path(hero_image_filename)
+                if unsplash_path:
                     with open(unsplash_path, 'rb') as f:
                         hero_file_data = f.read()
                     print(f"Using Unsplash-downloaded image for {template_type}: {hero_image_filename}")
                 else:
-                    print(f"Unsplash image not found on disk for {template_type}: {unsplash_path}")
+                    print(f"Unsplash image not found on disk for {template_type}: {hero_image_filename}")
 
             if hero_file_data:
                 try:
@@ -12849,8 +12864,8 @@ def save_email_templates(activity_id):
             owner_logo_bytes = owner_logo_file.read()
         elif owner_logo_unsplash_filename:
             # Image was selected from Unsplash web search — file already on server
-            unsplash_path = os.path.join('static', 'uploads', 'activity_images', owner_logo_unsplash_filename)
-            if os.path.exists(unsplash_path):
+            unsplash_path = resolve_activity_image_path(owner_logo_unsplash_filename)
+            if unsplash_path:
                 with open(unsplash_path, 'rb') as f:
                     owner_logo_bytes = f.read()
 

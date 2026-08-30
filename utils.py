@@ -4220,7 +4220,7 @@ def _fr_money(amount):
 
 def notify_signup_event(app, *, signup, activity, timestamp=None):
     from utils import send_email_async, get_email_context, get_setting
-    from flask import render_template_string, url_for
+    from flask import url_for
     import os
     import json
     import base64
@@ -4268,31 +4268,17 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
     # Extract template values
     subject = email_context.get('subject', "Confirmation d'inscription")
     title = email_context.get('title', "Votre Inscription est Confirmée")
-    admin_message_raw = email_context.get('admin_message', '')
+    # admin_message_raw is already fully rendered — get_email_context() renders it through
+    # utils_email_text's sandboxed renderer, against base_context (which already carries
+    # user_name/activity_name and, for payment-first, needs_signup_code/signup_code/
+    # requested_amount/payment_email). Re-rendering it here through Flask's plain, unsandboxed
+    # render_template_string() was a second-order SSTI: signup.user.name comes straight from
+    # the public signup form with no filtering, so a name like "{{ ''.__class__.__mro__... }}"
+    # would survive the first (safe) render as literal output text, then get executed as real
+    # template *source* by this second pass. Do not reintroduce a second render here.
+    admin_message = email_context.get('admin_message', '')
     # Which signup template, by workflow type. safe_template() turns this into the file.
     theme = 'signup_payment_first' if is_payment_first else 'signup'
-
-    # Render the admin message manually with full context
-    render_context = {
-        "user_name": signup.user.name,
-        "activity_name": activity.name,
-        "activity": activity,
-        "organization_name": get_setting('ORG_NAME', 'minipass')
-    }
-    # Add payment-first variables if applicable
-    if is_payment_first:
-        display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
-        payment_email = display_email if display_email else get_setting('MAIL_USERNAME', 'paiement@minipass.me')
-
-        # Use the same needs_signup_code value from base_context
-        needs_signup_code = base_context.get("needs_signup_code", False)
-
-        render_context["needs_signup_code"] = needs_signup_code
-        render_context["signup_code"] = (signup.signup_code or f"MP-INS-{signup.id:07d}") if needs_signup_code else ""
-        render_context["requested_amount"] = _fr_money(signup.requested_amount)
-        render_context["payment_email"] = payment_email
-
-    admin_message = render_template_string(admin_message_raw, **render_context)
 
     # Build context
     context = {

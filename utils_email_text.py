@@ -193,7 +193,14 @@ def build_email_text_context(
     )
 
     if extra:
-        context.update(extra)
+        # "activity" and "pass_data" were just converted to inert SimpleNamespace copies
+        # above specifically so no live SQLAlchemy model reaches the sandbox — callers pass
+        # the whole assembled context dict as `extra` for convenience, and it commonly still
+        # carries the *live* ORM objects under these same keys. Never let those two keys be
+        # reintroduced here: doing so previously let a customized template call
+        # `pass_data.query` / `activity.query` (SandboxedEnvironment only blocks dunder
+        # access, not ordinary method calls) and enumerate other activities' records.
+        context.update({k: v for k, v in extra.items() if k not in ("activity", "pass_data")})
 
     return context
 
