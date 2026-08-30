@@ -1,6 +1,6 @@
 {# Attendance recorded — this email doubles as the pass for the next visit. #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import identity_block, rows_block, status_pill, qr_block, section_card, button, money, credit_line %}
+{% from "email/components.html" import identity_block, rows_block, status_pill, qr_block, section_card, well, button, money, credit_line %}
 
 {% set preheader = 'Votre présence est enregistrée.' %}
 {% set photo_eyebrow = 'Présence enregistrée' %}
@@ -20,15 +20,19 @@
 
 <tr>
   <td class="mp-pad" style="padding:24px 32px 0 32px;">
-    {{ identity_block('Participant', pass_data.user.name, pass_data.user.email) }}
-    {{ rows_block(facts) }}
+    {% call well('Participant') %}
+      {{ identity_block(None, pass_data.user.name, pass_data.user.email) }}
+      {{ rows_block(facts, outer_border=False, top_margin=12) }}
+    {% endcall %}
   </td>
 </tr>
 
 {% if show_qr_code %}
 <tr>
   <td class="mp-pad" style="padding:0 32px;">
-    {{ qr_block('cid:qr_code', pass_data.pass_code, "Présentez ce code ou la référence à l'accueil", label="Code d'accès") }}
+    {% call well("Code d'accès") %}
+      {{ qr_block('cid:qr_code', pass_data.pass_code, "Présentez ce code ou la référence à l'accueil") }}
+    {% endcall %}
   </td>
 </tr>
 {% endif %}

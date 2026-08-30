@@ -528,3 +528,38 @@ have made it disappear entirely). Also added the missing `.mini-well-title` abov
 `qr_block()`'s new `label` param. Re-verified live against the real Wing Foil activity
 (id 16) — both the collapsed card skeleton and the actual `/email-preview` for
 `paymentReceived` now show "CODE D'ACCÈS" + a clean borderless QR consistently.
+
+## Eleventh round: the actual miss — Participant/Code d'accès had no grey card at all
+
+The tenth round's QR fix was real but incomplete, and the user caught it from a screenshot:
+Historique had its grey well (it already did, via `section_card()`), but **Participant and
+Code d'accès were still plain flowing content with no card at all** — because the Aug 2026
+redesign's original philosophy was "one continuous document, only Séances/Historique/payment
+instructions get a boxed well." The passport page moved past that philosophy several rounds
+ago (Participant + Facts + QR each got their own `.pass-well` card), but that structural change
+was never actually ported to the emails — only the QR's label/border was. Should have caught
+this in the "template by template" breakdown two turns ago; didn't, because I was only checking
+row *style* (label-left/value-right), not card *presence*.
+
+Fixed properly this time, in `components.html`:
+- Added a new generic `well(label)` macro — same title-above-card visual as `section_card()`,
+  but built with Jinja's `{% call %}`/`caller()` so it can wrap *any* content (not just a
+  `rows_block()` items list). `section_card()` now calls `well()` internally for Séances/
+  Historique — same output, no visual change there, just de-duplicated.
+- `identity_block()`'s `label` param is now optional (`None` skips rendering it) — the
+  "PARTICIPANT" title used to live *inside* `identity_block()`'s own output; now `well()`
+  supplies it from outside, matching the passport's `<h3>` above `.pass-well` placement
+  exactly. Old callers that still pass a label keep working unchanged.
+- `qr_block()` lost the `label` param added last round (superseded — `well()` handles all
+  section titling now) and its standalone `margin-top:24px` (no longer needed; it's always
+  inside `well()`'s own padded cell now).
+- All 4 pass-style templates (`newPass`/`paymentReceived`/`redeemPass`/`latePayment`) now wrap
+  their Participant block in `{% call well('Participant') %}...{% endcall %}`, and the 3
+  QR-bearing ones wrap `qr_block()` in `{% call well("Code d'accès") %}...{% endcall %}`.
+
+Verified: all 7 render with no exceptions (`render_all.py`), live `/email-preview` for
+`newPass` and `latePayment` — Participant and Code d'accès now show the same grey card as
+Historique, matching the passport's Participant/Code d'accès/Mes séances/Historique
+consistency exactly. Real send of **all 7** via `send_real_email_preview.py --reset-fixture`,
+confirmed `SENT` for all 7 in `email_log` — this time actually all of them, not the 3-of-7
+partial check from the round before.

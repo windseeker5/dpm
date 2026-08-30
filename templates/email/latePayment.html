@@ -3,7 +3,7 @@
   code to present would only be confusing.
 #}
 {% extends "email/_base.html" %}
-{% from "email/components.html" import identity_block, rows_block, status_pill, section_card, button, money, credit_line %}
+{% from "email/components.html" import identity_block, rows_block, status_pill, section_card, well, button, money, credit_line %}
 
 {% set preheader = 'Votre passeport attend son paiement.' %}
 {% set photo_eyebrow = 'Paiement en attente' %}
@@ -23,8 +23,10 @@
 
 <tr>
   <td class="mp-pad" style="padding:24px 32px 0 32px;">
-    {{ identity_block('Participant', pass_data.user.name, pass_data.user.email) }}
-    {{ rows_block(facts) }}
+    {% call well('Participant') %}
+      {{ identity_block(None, pass_data.user.name, pass_data.user.email) }}
+      {{ rows_block(facts, outer_border=False, top_margin=12) }}
+    {% endcall %}
   </td>
 </tr>
 
