@@ -386,3 +386,22 @@ anything.
 Verified live: hero overlay legible at desktop and simulated 375px width, Historique now shows
 the real paid date/admin instead of "En attente". `web-design-guidelines` caught one thing:
 the new org-logo `<img>` was missing explicit `width`/`height` — fixed.
+
+## Fourth fix, same session: the hero-overlay logo "card" was box-shadow, not the image
+
+The user's very next look at the overlay caught a real CSS bug: the org logo appeared to sit on
+a solid white card, and they correctly suspected the logo PNG itself (`flhgi-logo-kd.png`) was
+actually transparent — confirmed with PIL (`mode: RGBA`, ~35% of pixels at alpha=0, a real
+alpha channel, not a flattened white background). The "card" was `box-shadow` on the `<img>`:
+box-shadow always renders around an element's rectangular bounding box, ignoring the image's
+own alpha shape — so a transparent circular badge got a solid rounded-rect shadow painted
+behind its transparent area, looking exactly like a backing card. Fixed by switching to
+`filter: drop-shadow(...)` instead, which *does* follow the PNG's real alpha silhouette — and
+made it white/soft instead of dark, per the ask, so it reads as a glow around the crest, not a
+shadow. Left `box-shadow` in place only on the solid-color letter-avatar fallback
+(`.pass-hero-org-logo--fallback`, used when no logo is uploaded), where a rectangular shadow is
+correct since that shape genuinely is a filled rectangle, not a transparent PNG.
+
+Also bumped the logo 72px→96px, and split the org name one word per line (`{% for word in
+org_name.split() %}`) instead of one flowing line — generalizes to any number of words, not
+hardcoded to two. `web-design-guidelines` re-run after: clean, no new findings.

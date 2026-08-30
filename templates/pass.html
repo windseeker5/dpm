@@ -52,24 +52,31 @@
       z-index: 2;
     }
     .pass-hero-org-logo {
-      width: 72px;
-      height: 72px;
-      border-radius: 10px;
+      width: 96px;
+      height: 96px;
       object-fit: contain;
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+      /* drop-shadow (not box-shadow) follows the PNG's real alpha silhouette instead of its
+         rectangular bounding box — box-shadow was painting a solid card-like backing behind
+         the logo's transparent background. White, so it reads as a glow, not a shadow. */
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.95));
     }
     .pass-hero-org-logo--fallback {
+      width: 96px;
+      height: 96px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #fff;
       font-weight: 700;
-      font-size: 1.75rem;
+      font-size: 2rem;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
     }
     .pass-hero-org-name {
       color: #fff;
       font-weight: 700;
       font-size: 1.125rem;
+      line-height: 1.25;
       text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85), 0 0 10px rgba(0, 0, 0, 0.5);
     }
     .pass-footer {
@@ -359,15 +366,19 @@
           <div class="pass-hero-org d-flex align-items-center gap-2">
             {% if settings and settings.get('LOGO_FILENAME') %}
             <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
-                 alt="" class="pass-hero-org-logo flex-shrink-0" width="72" height="72">
+                 alt="" class="pass-hero-org-logo flex-shrink-0" width="96" height="96">
             {% else %}
-            <div class="pass-hero-org-logo pass-hero-org-logo--fallback flex-shrink-0"
+            <div class="pass-hero-org-logo--fallback flex-shrink-0"
                  style="background: {{ placeholder_color(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }};">
               {{ placeholder_letter(settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass') }}
             </div>
             {% endif %}
+            {# One word per line — an org name reads as a small stacked wordmark instead of a
+               long single line competing with the activity headline in the ink bar below. #}
             <div class="pass-hero-org-name">
-              {{ settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass' }}
+              {% for word in (settings.get('ORG_NAME', 'Minipass') if settings else 'Minipass').split() %}
+              <div>{{ word }}</div>
+              {% endfor %}
             </div>
           </div>
         </div>
