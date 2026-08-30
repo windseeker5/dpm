@@ -563,3 +563,23 @@ Historique, matching the passport's Participant/Code d'accès/Mes séances/Histo
 consistency exactly. Real send of **all 7** via `send_real_email_preview.py --reset-fixture`,
 confirmed `SENT` for all 7 in `email_log` — this time actually all of them, not the 3-of-7
 partial check from the round before.
+
+## Twelfth round: qr_block() itself still didn't match — order and alignment
+
+Even after the card fix, `qr_block()`'s *internal* layout was still the pre-redesign one: the
+caption rendered **after** the QR+pass_code (passport has it **before**), and every row was
+`align="center"` (passport is left-aligned throughout, an explicit ask from several rounds
+back that never got carried into this macro). The eleventh round fixed the card wrapper but
+never actually opened `qr_block()` to check its own row order/alignment against
+`templates/pass.html`'s real markup — exactly the kind of "should have looked at the actual
+page" miss the user called out.
+
+Fixed in `components.html`: `qr_block()` now renders caption → QR → `ref_code`, all
+`align="left"`, matching `.pass-qr-frame`'s surrounding markup in `pass.html` row for row.
+Padding rebalanced now that caption leads instead of trails (8px under caption, 16px under the
+QR, 0 under `ref_code` — `well()`'s own cell padding closes it out, no double spacing).
+
+Verified live `/email-preview` for `newPass` and `redeemPass` (same shared macro, so both
+prove the fix at once) — caption sits above a left-aligned QR card, `pass_code` below it,
+identical order to the passport. Real send of all 7 again via
+`send_real_email_preview.py --reset-fixture`, confirmed `SENT` for all 7.

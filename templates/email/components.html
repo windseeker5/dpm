@@ -257,11 +257,18 @@
   section title (that was removed in favor of well()'s single title-above-card mechanism,
   used uniformly for Participant/Code d'accès/Séances/Historique so none of them can drift
   out of sync with each other again).
+
+  Order and alignment match templates/pass.html exactly: caption ABOVE the QR (not below —
+  this was wrong for a full round before being caught), everything left-aligned (not centered
+  — same reason), pass_code below the QR.
 #}
 {% macro qr_block(qr_src, ref_code=None, caption=None) -%}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+  {% if caption %}
+  <tr><td align="left" style="padding-bottom:8px; font-size:11px; color:{{ C_BODY }};">{{ caption }}</td></tr>
+  {% endif %}
   <tr>
-    <td align="center" style="padding-bottom:16px;">
+    <td align="left" style="padding-bottom:16px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff; border-radius:10px;">
         <tr>
           <td style="padding:8px;">
@@ -272,10 +279,7 @@
     </td>
   </tr>
   {% if ref_code %}
-  <tr><td align="center" style="padding-bottom:4px; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:16px; font-weight:700; letter-spacing:0.02em; color:{{ C_INK }};">{{ ref_code }}</td></tr>
-  {% endif %}
-  {% if caption %}
-  <tr><td align="center" style="padding-bottom:32px; font-size:11px; color:{{ C_BODY }};">{{ caption }}</td></tr>
+  <tr><td align="left" style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:16px; font-weight:700; letter-spacing:0.02em; color:{{ C_INK }};">{{ ref_code }}</td></tr>
   {% endif %}
 </table>
 {%- endmacro %}
