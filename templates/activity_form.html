@@ -112,6 +112,20 @@
   color: #1d2332;
 }
 
+/* Advanced settings: flat toggle-row list, no per-row boxes/headings */
+.settings-list .setting-row {
+  padding: 0.85rem 0;
+}
+.settings-list .setting-row:first-child {
+  padding-top: 0;
+}
+.settings-list .setting-row:last-child {
+  padding-bottom: 0;
+}
+.settings-list .setting-row + .setting-row {
+  border-top: 1px solid rgba(98, 105, 118, 0.16);
+}
+
 @media (max-width: 768px) {
   .card-body {
     padding: 1rem;
@@ -140,6 +154,12 @@
 
   .section-divider {
     margin-top: 1.5rem !important;
+  }
+
+  /* Prevent iOS Safari auto-zoom on focus (needs 16px+ inputs) */
+  .form-control,
+  .form-select {
+    font-size: 16px;
   }
 }
 </style>
@@ -173,7 +193,7 @@
             <!-- BASIC INFORMATION SECTION (Always Expanded)  -->
             <!-- ============================================ -->
             <div class="mb-4">
-              <!-- Status Toggle (Own Row - First) -->
+              <!-- Active / Archived Status (Own Row - First) -->
               <div class="mb-3 d-flex align-items-center">
                 {% set current_status = activity.status if activity else 'active' %}
                 <span class="me-2" id="statusLabel">{{ 'Active' if current_status == 'active' else 'Archived' }}</span>
@@ -198,24 +218,6 @@
               <div class="mb-3">
                 <label class="form-label">Description</label>
                 <textarea class="form-control" name="description" rows="3" placeholder="What? Where? When? Describe your activity...">{{ activity.description if activity else '' }}</textarea>
-              </div>
-
-              <!-- Activity Target Revenue -->
-              <div class="mb-3">
-                <label class="form-label">Target Revenue (Optional)</label>
-                <div class="input-group" style="max-width: 300px;">
-                  <span class="input-group-text">$</span>
-                  <input type="number"
-                         class="form-control"
-                         name="goal_revenue"
-                         step="0.01"
-                         min="0"
-                         placeholder="0.00"
-                         value="{{ '%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else '' }}">
-                </div>
-                <small class="form-hint">
-                  Set a revenue goal to track progress on your activity dashboard
-                </small>
               </div>
 
               <!-- Cover Photo -->
@@ -267,380 +269,58 @@
                 <input type="hidden" name="selected_image_filename" id="selectedImageFilename" value="{{ activity.image_filename if activity else '' }}">
               </div>
 
+              <!-- Location -->
+              <div class="mb-3">
+                <label class="form-label">Location (Optional)</label>
+                <div class="input-group">
+                  <input type="text"
+                         id="locationAutocomplete"
+                         class="form-control"
+                         placeholder="Enter address (e.g., 821 rue des sables rimouski)"
+                         autocomplete="off"
+                         value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
+                  <button type="button" id="lookupLocationBtn" class="btn btn-primary">
+                    <i class="ti ti-search me-1"></i>Lookup
+                  </button>
+                </div>
+                <small id="locationHint" class="form-hint">
+                  Where will this activity take place?
+                </small>
+
+                <!-- Loading indicator -->
+                <div id="locationLoading" class="mt-2" style="display: none;">
+                  <span class="spinner-border spinner-border-sm me-2"></span>Looking up address...
+                </div>
+
+                <!-- Error display -->
+                <div id="locationError" class="alert alert-warning mt-2" style="display: none;">
+                  <i class="ti ti-alert-circle me-1"></i><span id="locationErrorText"></span>
+                </div>
+
+                <!-- Multiple results selection list -->
+                <div id="locationResults" class="list-group mt-2" style="display: none;"></div>
+
+                <!-- Confirmed location display -->
+                <div id="locationConfirmed" class="align-items-center border rounded p-3 mt-2" style="display: none;">
+                  <a id="viewMapLink" href="#" target="_blank" class="text-reset text-decoration-none">
+                    <i class="ti ti-map-pin me-2 text-muted"></i>
+                    <span id="confirmedAddressText"></span>
+                  </a>
+                  <span class="ms-auto text-secondary" style="cursor: pointer;"
+                        id="clearLocationBtn">
+                    <i class="ti ti-x" style="font-size: 18px;"></i>
+                  </span>
+                </div>
+
+                <!-- Hidden fields to store location data -->
+                <input type="hidden" name="location_address_raw" id="locationAddressRaw" value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
+                <input type="hidden" name="location_address_formatted" id="locationAddressFormatted" value="{{ activity.location_address_formatted if activity and activity.location_address_formatted else '' }}">
+                <input type="hidden" name="location_coordinates" id="locationCoordinates" value="{{ activity.location_coordinates if activity and activity.location_coordinates else '' }}">
+              </div>
+
               <!-- Activity Type (Hidden - kept for backwards compatibility) -->
               <input type="hidden" name="type" value="{{ activity.type if activity else '' }}">
             </div>
-
-            <!-- Section Divider -->
-            <div class="section-divider mt-5 mb-3"></div>
-
-            <!-- ============================================ -->
-            <!-- SIGNUP SETTINGS SECTION                      -->
-            <!-- ============================================ -->
-            <div class="mb-4">
-              <h3 class="mb-3">Signup Workflow</h3>
-              <div class="ps-0">
-
-                    <!-- Signup Workflow -->
-                    <div class="mb-4 form-selectgroup form-selectgroup-boxes">
-
-                      <!-- Review First Card -->
-                      <label class="form-selectgroup-item w-100 mb-3">
-                        <input type="checkbox" name="workflow_type" value="approval_first" class="form-selectgroup-input"
-                               {{ 'checked' if not activity or not activity.workflow_type or activity.workflow_type == 'approval_first' else '' }}>
-                        <div class="form-selectgroup-label w-100 p-3">
-                          <span class="form-selectgroup-check form-selectgroup-check-floated"></span>
-                          <div class="d-flex align-items-center">
-                            <div class="me-3">
-                              <span class="avatar border-0">
-                                <i class="ti ti-clipboard-check"></i>
-                              </span>
-                            </div>
-                            <div class="flex-fill">
-                              <strong>Review First</strong>
-                              <div class="text-secondary mt-1">
-                                You approve who gets in. Accepted signups receive payment instructions.
-                                <br><em><strong class="text-dark">Best for:</strong> Tryouts, limited spots, selective groups</em>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-
-                      <!-- Pay First Card -->
-                      <label class="form-selectgroup-item w-100">
-                        <input type="checkbox" name="workflow_type" value="payment_first" class="form-selectgroup-input"
-                               {{ 'checked' if activity and activity.workflow_type == 'payment_first' else '' }}>
-                        <div class="form-selectgroup-label w-100 p-3">
-                          <span class="form-selectgroup-check form-selectgroup-check-floated"></span>
-                          <div class="d-flex align-items-center">
-                            <div class="me-3">
-                              <span class="avatar border-0">
-                                <i class="ti ti-credit-card"></i>
-                              </span>
-                            </div>
-                            <div class="flex-fill">
-                              <strong>Pay First</strong>
-                              <div class="text-secondary mt-1">
-                                Payment is requested automatically on signup. Passport delivered once paid — nothing to approve.
-                                <br><em><strong class="text-dark">Best for:</strong> Open events, classes, large groups</em>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-
-                    </div>
-
-                    <!-- Capacity Options -->
-                    <div class="mb-3">
-                      <label class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="is_quantity_limited" id="isQuantityLimited"
-                               {{ 'checked' if activity and activity.is_quantity_limited else '' }}
-                               onchange="toggleCapacityFields()">
-                        <span class="form-check-label">Limit capacity</span>
-                      </label>
-                    </div>
-                    <div class="mb-3" id="maxSessionsField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
-                      <label class="form-label">Maximum spots</label>
-                      <input type="number" class="form-control" name="max_sessions" min="1"
-                             value="{{ activity.max_sessions if activity and activity.max_sessions else '' }}"
-                             placeholder="e.g., 80" style="max-width: 150px;">
-                      <small class="form-hint">Signups are blocked when all spots are taken</small>
-                    </div>
-                    <div id="showRemainingField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
-                      <label class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" name="show_remaining_quantity"
-                               {{ 'checked' if activity and activity.show_remaining_quantity else '' }}>
-                        <span class="form-check-label">Show remaining spots on signup form</span>
-                      </label>
-                    </div>
-
-                    <!-- Additional Options -->
-                    <div class="mb-3">
-                      <label class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="allow_quantity_selection" id="allowQuantitySelection"
-                               {{ 'checked' if activity and activity.allow_quantity_selection else '' }}>
-                        <span class="form-check-label">Allow multiple passports per signup</span>
-                      </label>
-                    </div>
-
-                    <div class="mb-3">
-                      <label class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="offer_passport_renewal"
-                               {{ 'checked' if activity and activity.offer_passport_renewal else '' }}>
-                        <span class="form-check-label">Prompt renewal when passport runs out</span>
-                      </label>
-                    </div>
-
-                    {% if stripe_configured %}
-                    <div class="mb-3">
-                      <label class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="accept_credit_card"
-                               {{ 'checked' if activity and activity.accept_credit_card else '' }}>
-                        <span class="form-check-label">Accept credit card via Stripe</span>
-                      </label>
-                    </div>
-                    {% endif %}
-
-                    <!-- Discord Integration -->
-                    <div class="mb-3 mt-3">
-                      <label class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="discordToggle"
-                               onchange="toggleDiscordSection()"
-                               {{ 'checked' if activity and activity.discord_webhook_url else '' }}>
-                        <span class="form-check-label">
-                          <i class="ti ti-brand-discord me-1"></i>
-                          This activity has a Discord server
-                        </span>
-                      </label>
-                    </div>
-                    <div id="discordSection" style="display:{{ 'block' if activity and activity.discord_webhook_url else 'none' }};">
-                      <div class="mb-3">
-                        <label class="form-label">Webhook URL</label>
-                        <div class="input-group">
-                          <input type="url" class="form-control" name="discord_webhook_url"
-                                 id="discordWebhookUrl"
-                                 placeholder="https://discord.com/api/webhooks/..."
-                                 value="{{ activity.discord_webhook_url if activity and activity.discord_webhook_url else '' }}">
-                          <button type="button" class="btn btn-outline-secondary" id="discordTestBtn"
-                                  onclick="testDiscordWebhook()">
-                            <i class="ti ti-brand-discord me-1"></i>Test
-                          </button>
-                        </div>
-                        <small class="form-hint">
-                          Discord server → Settings → Integrations → Webhooks → New Webhook → Copy URL.
-                        </small>
-                      </div>
-                      <div class="mb-3">
-                        <label class="form-label">Discord invite link <span class="text-muted">(optional)</span></label>
-                        <input type="url" class="form-control" name="discord_invite_url"
-                               id="discordInviteUrl"
-                               placeholder="https://discord.gg/..."
-                               value="{{ activity.discord_invite_url if activity and activity.discord_invite_url else '' }}">
-                        <small class="form-hint">
-                          Invite link for participants to join your Discord server. Discord server → Invite People → Copy Link.
-                        </small>
-                      </div>
-                    </div>
-
-              </div>
-            </div>
-
-            <div class="section-divider mt-5 mb-3"></div>
-
-            <!-- ============================================ -->
-            <!-- SCHEDULE & LOCATION SECTION                  -->
-            <!-- ============================================ -->
-            <div class="mb-4 pt-3">
-              <h3 class="mb-3">Schedule & Location</h3>
-              <div class="ps-0">
-
-                    <!-- Start and End Dates -->
-                    <div class="row">
-                      <div class="col-md-6 mb-3">
-                        <label class="form-label">Start Date</label>
-                        <input type="datetime-local" name="start_date" class="form-control" value="{{ activity.start_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.start_date else '' }}">
-                      </div>
-                      <div class="col-md-6 mb-3">
-                        <label class="form-label">End Date</label>
-                        <input type="datetime-local" name="end_date" class="form-control" value="{{ activity.end_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.end_date else '' }}">
-                      </div>
-                    </div>
-
-                    <!-- Location Section -->
-                    <div class="mb-3">
-                      <label class="form-label">Location (Optional)</label>
-                      <div class="input-group">
-                        <input type="text"
-                               id="locationAutocomplete"
-                               class="form-control"
-                               placeholder="Enter address (e.g., 821 rue des sables rimouski)"
-                               autocomplete="off"
-                               value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
-                        <button type="button" id="lookupLocationBtn" class="btn btn-primary">
-                          <i class="ti ti-search me-1"></i>Lookup
-                        </button>
-                      </div>
-                      <small id="locationHint" class="form-hint">
-                        Where will this activity take place?
-                      </small>
-
-                      <!-- Loading indicator -->
-                      <div id="locationLoading" class="mt-2" style="display: none;">
-                        <span class="spinner-border spinner-border-sm me-2"></span>Looking up address...
-                      </div>
-
-                      <!-- Error display -->
-                      <div id="locationError" class="alert alert-warning mt-2" style="display: none;">
-                        <i class="ti ti-alert-circle me-1"></i><span id="locationErrorText"></span>
-                      </div>
-
-                      <!-- Multiple results selection list -->
-                      <div id="locationResults" class="list-group mt-2" style="display: none;"></div>
-
-                      <!-- Confirmed location display -->
-                      <div id="locationConfirmed" class="align-items-center border rounded p-3 mt-2" style="display: none;">
-                        <a id="viewMapLink" href="#" target="_blank" class="text-reset text-decoration-none">
-                          <i class="ti ti-map-pin me-2 text-muted"></i>
-                          <span id="confirmedAddressText"></span>
-                        </a>
-                        <span class="ms-auto text-secondary" style="cursor: pointer;"
-                              id="clearLocationBtn">
-                          <i class="ti ti-x" style="font-size: 18px;"></i>
-                        </span>
-                      </div>
-
-                      <!-- Hidden fields to store location data -->
-                      <input type="hidden" name="location_address_raw" id="locationAddressRaw" value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
-                      <input type="hidden" name="location_address_formatted" id="locationAddressFormatted" value="{{ activity.location_address_formatted if activity and activity.location_address_formatted else '' }}">
-                      <input type="hidden" name="location_coordinates" id="locationCoordinates" value="{{ activity.location_coordinates if activity and activity.location_coordinates else '' }}">
-                    </div>
-
-              </div>
-            </div>
-
-            <div class="section-divider mt-5 mb-3"></div>
-
-            <!-- ============================================ -->
-            <!-- SESSION BOOKING SECTION                      -->
-            <!-- ============================================ -->
-            <div class="mb-4" aria-labelledby="sessionBookingHeading">
-              <h3 class="mb-2" id="sessionBookingHeading">Session booking</h3>
-              <p class="text-secondary mb-3" id="sessionsHelp">
-                Let participants reserve one date and time during signup or later from their passport.
-              </p>
-
-              <div class="border rounded p-3 mb-3 bg-secondary-lt">
-                <label class="form-check form-switch mb-0">
-                  <input class="form-check-input" type="checkbox" name="uses_scheduling" id="usesScheduling"
-                         aria-controls="schedulingFields" aria-describedby="sessionsHelp"
-                         aria-expanded="{{ 'true' if activity and activity.uses_scheduling else 'false' }}"
-                         {{ 'checked' if activity and activity.uses_scheduling else '' }}
-                         onchange="toggleSchedulingFields()">
-                  <span class="form-check-label">
-                    <span class="d-block fw-semibold">Enable session booking</span>
-                    <span class="d-block text-secondary small">Each participant chooses an available session.</span>
-                  </span>
-                </label>
-              </div>
-
-              <div id="schedulingFields" class="{{ 'd-none' if not activity or not activity.uses_scheduling else '' }}">
-                <div class="alert alert-info" role="note">
-                  <div class="d-flex">
-                    <i class="ti ti-info-circle me-2 mt-1" aria-hidden="true"></i>
-                    <div>
-                      <strong>Capacity is managed per session.</strong>
-                      The activity-level capacity setting is ignored while session booking is enabled.
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Primary flow: add one exact session -->
-                <div class="border rounded mb-3">
-                  <div class="p-3 border-bottom">
-                    <h4 class="mb-1">Add a session</h4>
-                    <p class="text-secondary mb-0">Choose the exact date, time, and number of available spots.</p>
-                  </div>
-                  <div class="p-3">
-                    <div class="row g-3 align-items-end">
-                      <div class="col-md-4">
-                        <label class="form-label" for="singleSlotDateInput">Date</label>
-                        <input type="date" class="form-control" id="singleSlotDateInput">
-                      </div>
-                      <div class="col-md-3">
-                        <label class="form-label" for="singleSlotTimeInput">Time</label>
-                        <select class="form-select" id="singleSlotTimeInput" aria-describedby="singleSlotMsg">
-                          {{ session_time_options() }}
-                        </select>
-                      </div>
-                      <div class="col-md-2">
-                        <label class="form-label" for="singleSlotCapacityInput">Capacity</label>
-                        <input type="number" class="form-control" id="singleSlotCapacityInput" min="1" value="6" inputmode="numeric">
-                      </div>
-                      <div class="col-md-3 d-grid">
-                        <button type="button" class="btn btn-primary" id="addSingleSlotBtn" disabled>
-                          <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Add session
-                        </button>
-                      </div>
-                    </div>
-                    <div id="singleSlotMsg" class="form-hint mt-2" role="status" aria-live="polite">
-                      Choose a date and time to add a session.
-                    </div>
-
-                    <!-- Secondary flow: bulk combinations for advanced use -->
-                    <details class="mt-4">
-                      <summary class="fw-semibold text-primary">Add multiple sessions at once</summary>
-                      <div class="border rounded p-3 mt-3">
-                        <p class="text-secondary mb-3">
-                          Select several dates and times. Every date-and-time combination will become a session.
-                        </p>
-                        <div class="row g-3">
-                          <div class="col-md-5">
-                            <label class="form-label" for="slotDateInput">Dates</label>
-                            <div class="input-group">
-                              <input type="date" class="form-control" id="slotDateInput">
-                              <button type="button" class="btn btn-outline-primary" id="addSlotDateBtn">
-                                <i class="ti ti-plus me-1" aria-hidden="true"></i>Add
-                              </button>
-                            </div>
-                            <div id="slotDateChips" class="d-flex flex-wrap gap-2 mt-2" role="list" aria-live="polite"></div>
-                          </div>
-                          <div class="col-md-4">
-                            <label class="form-label" for="slotTimeInput">Times</label>
-                            <div class="input-group">
-                              <select class="form-select" id="slotTimeInput">
-                                {{ session_time_options() }}
-                              </select>
-                              <button type="button" class="btn btn-outline-primary" id="addSlotTimeBtn">
-                                <i class="ti ti-plus me-1" aria-hidden="true"></i>Add
-                              </button>
-                            </div>
-                            <div id="slotTimeChips" class="d-flex flex-wrap gap-2 mt-2" role="list" aria-live="polite"></div>
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label" for="slotCapacityInput">Capacity</label>
-                            <input type="number" class="form-control" id="slotCapacityInput" min="1" value="6" inputmode="numeric">
-                            <small class="form-hint">Spots in each session</small>
-                          </div>
-                        </div>
-
-                        <div id="slotPreviewMsg" class="alert alert-secondary mt-3 mb-0" role="status" aria-live="polite"></div>
-                        <div class="d-grid d-sm-block mt-3">
-                          <button type="button" class="btn btn-outline-primary" id="generateSlotsBtn" disabled>
-                            <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Add multiple sessions
-                          </button>
-                        </div>
-                      </div>
-                    </details>
-
-                    <div class="border-top mt-4 pt-3 text-secondary small">
-                      Sessions are saved when you select <strong>Save</strong> at the top of the page.
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Existing and newly generated sessions -->
-                <div class="border rounded overflow-hidden">
-                  <div class="p-3 border-bottom">
-                    <h4 class="mb-1">Scheduled sessions</h4>
-                    <p class="text-secondary mb-0" id="slotCountSummary">Review capacity and bookings before saving.</p>
-                  </div>
-                  <div id="slotsContainer" class="list-group list-group-flush d-none"></div>
-                  <div id="noSlots" class="empty py-5">
-                    <div class="empty-icon">
-                      <i class="ti ti-calendar-off" aria-hidden="true"></i>
-                    </div>
-                    <p class="empty-title">No sessions scheduled</p>
-                    <p class="empty-subtitle text-secondary">
-                      Choose a date and time above, then select <strong>Add session</strong>.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="section-divider mt-5 mb-3"></div>
 
             <!-- ============================================ -->
             <!-- PASSPORT TYPES SECTION (Always Visible)      -->
@@ -675,56 +355,409 @@
               </div>
             </div>
 
-            <div class="section-divider mt-5 mb-3"></div>
+          </div>
+        </div>
 
-            <!-- ============================================ -->
-            <!-- PASSPORT INHERITANCE SECTION                 -->
-            <!-- ============================================ -->
-            {% set inherited_ids = activity.get_inherited_activity_ids() if activity else [] %}
-            <div class="mb-4">
-              <h3 class="mb-3">Inherit Passports from Other Activities</h3>
-              <p class="text-muted mb-2">
-                Manage passports from other activities here too, like last season.
-              </p>
-              <div class="mb-3">
-                <label class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="inheritPassportsToggle"
-                         onchange="toggleInheritedActivitiesSection()"
-                         {{ 'checked' if inherited_ids else '' }}>
-                  <span class="form-check-label">Inherit passports from other activities</span>
-                </label>
-              </div>
-              <div id="inheritedActivitiesSection" class="ms-5" style="display:{{ 'block' if inherited_ids else 'none' }};">
-                {% if other_activities %}
-                <div id="inheritedActivitiesList" style="max-height: 260px; overflow-y: auto;">
-                  {% for other in other_activities %}
-                  <div class="rounded mb-1 {{ 'bg-blue-lt' if other.id in inherited_ids else '' }}">
-                    <label class="form-check d-flex align-items-center py-2 px-3 mb-0" style="cursor: pointer;">
-                      <input class="form-check-input m-0" type="checkbox"
-                             name="inherited_activity_ids" value="{{ other.id }}"
-                             {{ 'checked' if other.id in inherited_ids else '' }}
-                             onchange="this.closest('.rounded').classList.toggle('bg-blue-lt', this.checked)">
-                      <span class="form-check-label ms-2 min-w-0">
-                        {{ other.name }}
-                        {% if other.status in ['inactive', 'archived'] %}<span class="badge bg-secondary-lt ms-1">Archived</span>{% endif %}
-                      </span>
-                    </label>
+        <!-- ============================================ -->
+        <!-- ADVANCED SETTINGS (collapsed by default;      -->
+        <!-- auto-expanded on edit when non-default data   -->
+        <!-- exists — see advanced_expanded). Its own card,-->
+        <!-- spaced apart, no divider — per whitespace-    -->
+        <!-- balance / visual-hierarchy guidance.          -->
+        <!-- ============================================ -->
+        <div class="card mt-4">
+                <button class="btn btn-link w-100 text-start p-3 text-decoration-none text-dark d-flex justify-content-between align-items-center"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseActivityAdvanced"
+                        aria-expanded="{{ 'true' if advanced_expanded else 'false' }}"
+                        aria-controls="collapseActivityAdvanced">
+                  <span class="fw-medium">
+                    <i class="ti ti-adjustments me-2"></i>
+                    Activity Advanced Settings
+                  </span>
+                  <i class="ti ti-chevron-down" id="activity-advanced-chevron"></i>
+                </button>
+                <div id="collapseActivityAdvanced" class="collapse {{ 'show' if advanced_expanded else '' }}">
+                  <div class="border-top p-3">
+
+                    <!-- ============================================ -->
+                    <!-- SIGNUP WORKFLOW                              -->
+                    <!-- ============================================ -->
+                    <div class="mb-4 form-selectgroup form-selectgroup-boxes">
+
+                      <!-- Pay First Card -->
+                      <label class="form-selectgroup-item w-100 mb-3">
+                        <input type="checkbox" name="workflow_type" value="payment_first" class="form-selectgroup-input"
+                               {{ 'checked' if not activity or not activity.workflow_type or activity.workflow_type == 'payment_first' else '' }}>
+                        <div class="form-selectgroup-label w-100 p-3">
+                          <span class="form-selectgroup-check form-selectgroup-check-floated"></span>
+                          <div class="d-flex align-items-center">
+                            <div class="me-3">
+                              <span class="avatar border-0">
+                                <i class="ti ti-credit-card"></i>
+                              </span>
+                            </div>
+                            <div class="flex-fill">
+                              <strong>Pay First</strong>
+                              <div class="text-secondary mt-1">
+                                Payment is requested automatically on signup. Passport delivered once paid — nothing to approve.
+                                <br><em><strong class="text-dark">Best for:</strong> Open events, classes, large groups</em>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+
+                      <!-- Review First Card -->
+                      <label class="form-selectgroup-item w-100">
+                        <input type="checkbox" name="workflow_type" value="approval_first" class="form-selectgroup-input"
+                               {{ 'checked' if activity and activity.workflow_type == 'approval_first' else '' }}>
+                        <div class="form-selectgroup-label w-100 p-3">
+                          <span class="form-selectgroup-check form-selectgroup-check-floated"></span>
+                          <div class="d-flex align-items-center">
+                            <div class="me-3">
+                              <span class="avatar border-0">
+                                <i class="ti ti-clipboard-check"></i>
+                              </span>
+                            </div>
+                            <div class="flex-fill">
+                              <strong>Review First</strong>
+                              <div class="text-secondary mt-1">
+                                You approve who gets in. Accepted signups receive payment instructions.
+                                <br><em><strong class="text-dark">Best for:</strong> Tryouts, limited spots, selective groups</em>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+
+                    </div>
+
+                    <!-- Target Revenue -->
+                    <div class="mb-3">
+                      <label class="form-label">Target Revenue (Optional)</label>
+                      <div class="input-group" style="max-width: 300px;">
+                        <span class="input-group-text">$</span>
+                        <input type="number"
+                               class="form-control"
+                               name="goal_revenue"
+                               step="0.01"
+                               min="0"
+                               placeholder="0.00"
+                               value="{{ '%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else '' }}">
+                      </div>
+                      <small class="form-hint">
+                        Set a revenue goal to track progress on your activity dashboard
+                      </small>
+                    </div>
+
+                    <div class="section-divider mt-4 mb-3"></div>
+
+                    <!-- ============================================ -->
+                    <!-- SETTINGS LIST (flat toggle rows)             -->
+                    <!-- ============================================ -->
+                    <div class="settings-list">
+
+                      <!-- Capacity Options -->
+                      <div class="setting-row">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" name="is_quantity_limited" id="isQuantityLimited"
+                                 {{ 'checked' if activity and activity.is_quantity_limited else '' }}
+                                 onchange="toggleCapacityFields()">
+                          <span class="form-check-label">Limit capacity</span>
+                        </label>
+                        <div class="mt-2" id="maxSessionsField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
+                          <label class="form-label">Maximum spots</label>
+                          <input type="number" class="form-control" name="max_sessions" min="1"
+                                 value="{{ activity.max_sessions if activity and activity.max_sessions else '' }}"
+                                 placeholder="e.g., 80" style="max-width: 150px;">
+                          <small class="form-hint">Signups are blocked when all spots are taken</small>
+                        </div>
+                        <div id="showRemainingField" class="mt-2" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
+                          <label class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="show_remaining_quantity"
+                                   {{ 'checked' if activity and activity.show_remaining_quantity else '' }}>
+                            <span class="form-check-label">Show remaining spots on signup form</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <!-- Additional Options -->
+                      <div class="setting-row">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" name="allow_quantity_selection" id="allowQuantitySelection"
+                                 {{ 'checked' if activity and activity.allow_quantity_selection else '' }}>
+                          <span class="form-check-label">Allow multiple passports per signup</span>
+                        </label>
+                      </div>
+
+                      <div class="setting-row">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" name="offer_passport_renewal"
+                                 {{ 'checked' if activity and activity.offer_passport_renewal else '' }}>
+                          <span class="form-check-label">Prompt renewal when passport runs out</span>
+                        </label>
+                      </div>
+
+                      {% if stripe_configured %}
+                      <div class="setting-row">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" name="accept_credit_card"
+                                 {{ 'checked' if activity and activity.accept_credit_card else '' }}>
+                          <span class="form-check-label">Accept credit card via Stripe</span>
+                        </label>
+                      </div>
+                      {% endif %}
+
+                      <!-- Schedule Dates -->
+                      {% set has_schedule_dates = activity and (activity.start_date or activity.end_date) %}
+                      <div class="setting-row">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="usesScheduleDates"
+                                 aria-controls="scheduleDatesFields"
+                                 {{ 'checked' if has_schedule_dates else '' }}
+                                 onchange="toggleScheduleDatesFields()">
+                          <span class="form-check-label">
+                            <span class="d-block fw-semibold">Set season dates</span>
+                            <span class="d-block text-secondary small">Add a start and end date for this activity.</span>
+                          </span>
+                        </label>
+                        <div id="scheduleDatesFields" class="row mt-2" style="{{ 'display: flex;' if has_schedule_dates else 'display: none;' }}">
+                          <div class="col-md-6 mb-2">
+                            <label class="form-label">Start Date</label>
+                            <input type="datetime-local" name="start_date" class="form-control"
+                                   value="{{ activity.start_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.start_date else '' }}"
+                                   {{ '' if has_schedule_dates else 'disabled' }}>
+                          </div>
+                          <div class="col-md-6 mb-2">
+                            <label class="form-label">End Date</label>
+                            <input type="datetime-local" name="end_date" class="form-control"
+                                   value="{{ activity.end_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.end_date else '' }}"
+                                   {{ '' if has_schedule_dates else 'disabled' }}>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Session Booking -->
+                      <div class="setting-row" aria-labelledby="sessionBookingHeading">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" name="uses_scheduling" id="usesScheduling"
+                                 aria-controls="schedulingFields"
+                                 aria-expanded="{{ 'true' if activity and activity.uses_scheduling else 'false' }}"
+                                 {{ 'checked' if activity and activity.uses_scheduling else '' }}
+                                 onchange="toggleSchedulingFields()">
+                          <span class="form-check-label" id="sessionBookingHeading">
+                            <span class="d-block fw-semibold">Enable session booking</span>
+                            <span class="d-block text-secondary small">Each participant chooses an available session.</span>
+                          </span>
+                        </label>
+
+                      <div id="schedulingFields" class="mt-3 {{ 'd-none' if not activity or not activity.uses_scheduling else '' }}">
+                        <div class="alert alert-info" role="note">
+                          <div class="d-flex">
+                            <i class="ti ti-info-circle me-2 mt-1" aria-hidden="true"></i>
+                            <div>
+                              <strong>Capacity is managed per session.</strong>
+                              The activity-level capacity setting is ignored while session booking is enabled.
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Primary flow: add one exact session -->
+                        <div class="border rounded mb-3">
+                          <div class="p-3 border-bottom">
+                            <h4 class="mb-1">Add a session</h4>
+                            <p class="text-secondary mb-0">Choose the exact date, time, and number of available spots.</p>
+                          </div>
+                          <div class="p-3">
+                            <div class="row g-3 align-items-end">
+                              <div class="col-md-4">
+                                <label class="form-label" for="singleSlotDateInput">Date</label>
+                                <input type="date" class="form-control" id="singleSlotDateInput">
+                              </div>
+                              <div class="col-md-3">
+                                <label class="form-label" for="singleSlotTimeInput">Time</label>
+                                <select class="form-select" id="singleSlotTimeInput" aria-describedby="singleSlotMsg">
+                                  {{ session_time_options() }}
+                                </select>
+                              </div>
+                              <div class="col-md-2">
+                                <label class="form-label" for="singleSlotCapacityInput">Capacity</label>
+                                <input type="number" class="form-control" id="singleSlotCapacityInput" min="1" value="6" inputmode="numeric">
+                              </div>
+                              <div class="col-md-3 d-grid">
+                                <button type="button" class="btn btn-primary" id="addSingleSlotBtn" disabled>
+                                  <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Add session
+                                </button>
+                              </div>
+                            </div>
+                            <div id="singleSlotMsg" class="form-hint mt-2" role="status" aria-live="polite">
+                              Choose a date and time to add a session.
+                            </div>
+
+                            <!-- Secondary flow: bulk combinations for advanced use -->
+                            <details class="mt-4">
+                              <summary class="fw-semibold text-primary">Add multiple sessions at once</summary>
+                              <div class="border rounded p-3 mt-3">
+                                <p class="text-secondary mb-3">
+                                  Select several dates and times. Every date-and-time combination will become a session.
+                                </p>
+                                <div class="row g-3">
+                                  <div class="col-md-5">
+                                    <label class="form-label" for="slotDateInput">Dates</label>
+                                    <div class="input-group">
+                                      <input type="date" class="form-control" id="slotDateInput">
+                                      <button type="button" class="btn btn-outline-primary" id="addSlotDateBtn">
+                                        <i class="ti ti-plus me-1" aria-hidden="true"></i>Add
+                                      </button>
+                                    </div>
+                                    <div id="slotDateChips" class="d-flex flex-wrap gap-2 mt-2" role="list" aria-live="polite"></div>
+                                  </div>
+                                  <div class="col-md-4">
+                                    <label class="form-label" for="slotTimeInput">Times</label>
+                                    <div class="input-group">
+                                      <select class="form-select" id="slotTimeInput">
+                                        {{ session_time_options() }}
+                                      </select>
+                                      <button type="button" class="btn btn-outline-primary" id="addSlotTimeBtn">
+                                        <i class="ti ti-plus me-1" aria-hidden="true"></i>Add
+                                      </button>
+                                    </div>
+                                    <div id="slotTimeChips" class="d-flex flex-wrap gap-2 mt-2" role="list" aria-live="polite"></div>
+                                  </div>
+                                  <div class="col-md-3">
+                                    <label class="form-label" for="slotCapacityInput">Capacity</label>
+                                    <input type="number" class="form-control" id="slotCapacityInput" min="1" value="6" inputmode="numeric">
+                                    <small class="form-hint">Spots in each session</small>
+                                  </div>
+                                </div>
+
+                                <div id="slotPreviewMsg" class="alert alert-secondary mt-3 mb-0" role="status" aria-live="polite"></div>
+                                <div class="d-grid d-sm-block mt-3">
+                                  <button type="button" class="btn btn-outline-primary" id="generateSlotsBtn" disabled>
+                                    <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Add multiple sessions
+                                  </button>
+                                </div>
+                              </div>
+                            </details>
+
+                            <div class="border-top mt-4 pt-3 text-secondary small">
+                              Sessions are saved when you select <strong>Save</strong> at the top of the page.
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Existing and newly generated sessions -->
+                        <div class="border rounded overflow-hidden">
+                          <div class="p-3 border-bottom">
+                            <h4 class="mb-1">Scheduled sessions</h4>
+                            <p class="text-secondary mb-0" id="slotCountSummary">Review capacity and bookings before saving.</p>
+                          </div>
+                          <div id="slotsContainer" class="list-group list-group-flush d-none"></div>
+                          <div id="noSlots" class="empty py-5">
+                            <div class="empty-icon">
+                              <i class="ti ti-calendar-off" aria-hidden="true"></i>
+                            </div>
+                            <p class="empty-title">No sessions scheduled</p>
+                            <p class="empty-subtitle text-secondary">
+                              Choose a date and time above, then select <strong>Add session</strong>.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                      <!-- Discord Integration -->
+                      <div class="setting-row">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="discordToggle"
+                                 onchange="toggleDiscordSection()"
+                                 {{ 'checked' if activity and activity.discord_webhook_url else '' }}>
+                          <span class="form-check-label">
+                            <i class="ti ti-brand-discord me-1"></i>
+                            This activity has a Discord server
+                          </span>
+                        </label>
+                        <div id="discordSection" class="mt-2" style="display:{{ 'block' if activity and activity.discord_webhook_url else 'none' }};">
+                          <div class="mb-3">
+                            <label class="form-label">Webhook URL</label>
+                            <div class="input-group">
+                              <input type="url" class="form-control" name="discord_webhook_url"
+                                     id="discordWebhookUrl"
+                                     placeholder="https://discord.com/api/webhooks/..."
+                                     value="{{ activity.discord_webhook_url if activity and activity.discord_webhook_url else '' }}">
+                              <button type="button" class="btn btn-outline-secondary" id="discordTestBtn"
+                                      onclick="testDiscordWebhook()">
+                                <i class="ti ti-brand-discord me-1"></i>Test
+                              </button>
+                            </div>
+                            <small class="form-hint">
+                              Discord server → Settings → Integrations → Webhooks → New Webhook → Copy URL.
+                            </small>
+                          </div>
+                          <div class="mb-0">
+                            <label class="form-label">Discord invite link <span class="text-muted">(optional)</span></label>
+                            <input type="url" class="form-control" name="discord_invite_url"
+                                   id="discordInviteUrl"
+                                   placeholder="https://discord.gg/..."
+                                   value="{{ activity.discord_invite_url if activity and activity.discord_invite_url else '' }}">
+                            <small class="form-hint">
+                              Invite link for participants to join your Discord server. Discord server → Invite People → Copy Link.
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Passport Inheritance -->
+                      {% set inherited_ids = activity.get_inherited_activity_ids() if activity else [] %}
+                      <div class="setting-row">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="inheritPassportsToggle"
+                                 onchange="toggleInheritedActivitiesSection()"
+                                 {{ 'checked' if inherited_ids else '' }}>
+                          <span class="form-check-label">
+                            <span class="d-block fw-semibold">Inherit passports from other activities</span>
+                            <span class="d-block text-secondary small">Manage passports from other activities here too, like last season.</span>
+                          </span>
+                        </label>
+                        <div id="inheritedActivitiesSection" class="mt-2" style="display:{{ 'block' if inherited_ids else 'none' }};">
+                          {% if other_activities %}
+                          <div id="inheritedActivitiesList" style="max-height: 260px; overflow-y: auto;">
+                            {% for other in other_activities %}
+                            <div class="rounded mb-1 {{ 'bg-blue-lt' if other.id in inherited_ids else '' }}">
+                              <label class="form-check d-flex align-items-center py-2 px-3 mb-0" style="cursor: pointer;">
+                                <input class="form-check-input m-0" type="checkbox"
+                                       name="inherited_activity_ids" value="{{ other.id }}"
+                                       {{ 'checked' if other.id in inherited_ids else '' }}
+                                       onchange="this.closest('.rounded').classList.toggle('bg-blue-lt', this.checked)">
+                                <span class="form-check-label ms-2 min-w-0">
+                                  {{ other.name }}
+                                  {% if other.status in ['inactive', 'archived'] %}<span class="badge bg-secondary-lt ms-1">Archived</span>{% endif %}
+                                </span>
+                              </label>
+                            </div>
+                            {% endfor %}
+                          </div>
+                          {% else %}
+                          <p class="text-muted mb-0">No other activities exist yet.</p>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                    </div>
+
                   </div>
-                  {% endfor %}
                 </div>
-                {% else %}
-                <p class="text-muted">No other activities exist yet.</p>
-                {% endif %}
-              </div>
-            </div>
+        </div>
 
-            <div class="section-divider mt-5 mb-3"></div>
-
-            <!-- ============================================ -->
-            <!-- FINANCIAL MANAGEMENT SECTION (Edit Only)     -->
-            <!-- ============================================ -->
-            {% if activity %}
-            <div class="mb-4" id="finances">
+        <!-- ============================================ -->
+        <!-- FINANCIAL MANAGEMENT SECTION (Edit Only)      -->
+        <!-- Its own card too, spaced apart, no divider.   -->
+        <!-- ============================================ -->
+        {% if activity %}
+        <div class="card mt-4">
+          <div class="card-body" id="finances">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <h3 class="mb-0">Finances</h3>
                 <div class="dropdown">
@@ -815,24 +848,23 @@
               </div>
               {% endif %}
             </div>
-            {% endif %}
-
-            <!-- Signup Links Container (Legacy - Hidden) -->
-            {% if activity %}
-            <div id="signupLinksContainer" style="display: none;">
-              <!-- Legacy container - functionality moved to table -->
-            </div>
-            {% endif %}
-
           </div>
+        </div>
+        {% endif %}
 
-          <!-- Bottom Save Button -->
-          <div class="card-footer text-end">
-            <a href="{{ url_for('dashboard') }}" class="btn me-2">Cancel</a>
-            <button type="submit" class="btn btn-success">
-              <i class="ti ti-check me-1"></i>Save
-            </button>
-          </div>
+        <!-- Signup Links Container (Legacy - Hidden) -->
+        {% if activity %}
+        <div id="signupLinksContainer" style="display: none;">
+          <!-- Legacy container - functionality moved to table -->
+        </div>
+        {% endif %}
+
+        <!-- Bottom Save Button -->
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('dashboard') }}" class="btn">Cancel</a>
+          <button type="submit" class="btn btn-success">
+            <i class="ti ti-check me-1"></i>Save
+          </button>
         </div>
       </div>
     </div>
@@ -1262,6 +1294,15 @@ Add Type
     document.getElementById('showRemainingField').style.display = isLimited ? 'block' : 'none';
   }
 
+  // Toggle season Start/End Date fields. Disabling them when off (not just
+  // hiding) means an unchecked toggle submits no date, clearing it on save.
+  function toggleScheduleDatesFields() {
+    const on = document.getElementById('usesScheduleDates').checked;
+    const fields = document.getElementById('scheduleDatesFields');
+    fields.style.display = on ? 'flex' : 'none';
+    fields.querySelectorAll('input').forEach(function (el) { el.disabled = !on; });
+  }
+
   // Toggle the Sessions builder. When scheduling is on, per-session spots govern
   // availability, so the activity-level Capacity block is disabled to avoid two
   // competing limits (see get_remaining_capacity in utils.py).
@@ -1459,6 +1500,17 @@ Add Type
     let passportTypeCounter = 0;
     let passportTypes = [];
 
+    // Chevron rotation for Advanced settings
+    const collapseActivityAdvanced = document.getElementById('collapseActivityAdvanced');
+    const activityAdvancedChevron = document.getElementById('activity-advanced-chevron');
+    if (collapseActivityAdvanced && activityAdvancedChevron) {
+      collapseActivityAdvanced.addEventListener('show.bs.collapse', () => activityAdvancedChevron.style.transform = 'rotate(180deg)');
+      collapseActivityAdvanced.addEventListener('hide.bs.collapse', () => activityAdvancedChevron.style.transform = 'rotate(0deg)');
+      if (collapseActivityAdvanced.classList.contains('show')) {
+        activityAdvancedChevron.style.transform = 'rotate(180deg)';
+      }
+    }
+
     // Photo Normalization Tool — cover photo (see docs/DESIGN.md)
     var coverPhotoNormalizer = initPhotoNormalizer({
       wrapperId:      'coverPhotoWrapper',
@@ -1502,6 +1554,7 @@ Add Type
         <tr data-id="${id}">
           <td>
             <div class="fw-bold">${passportType.name || 'New Passport Type'}</div>
+            <div class="d-md-none text-muted small">$${passportType.price_per_user || '0.00'} &middot; ${passportType.sessions_included || '1'} sessions</div>
           </td>
           <td class="d-none d-md-table-cell">
             <span class="fw-bold text-muted">$${passportType.price_per_user || '0.00'}</span>
