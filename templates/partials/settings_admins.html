@@ -178,6 +178,24 @@
 {% endif %}
 {% endfor %}
 
+<!-- Remove Unsaved Admin Confirmation Modal (for admins added client-side, not yet saved) -->
+<div class="modal modal-blur fade" id="removeNewAdminModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-trash mb-2 text-danger" style="font-size: 2rem;" aria-hidden="true"></i>
+        <h3>Remove this admin?</h3>
+        <div class="text-muted" id="removeNewAdminEmail"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger w-100" id="confirmRemoveNewAdminBtn">Yes, Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Reset Password Modals (one per non-self admin) -->
 {% for admin in admins %}
 {% if admin.email != session.get('admin') %}
@@ -824,20 +842,29 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    // Handle remove button for new admins (keep original logic for dynamically added admins)
+    // Handle remove button for new admins (dynamically added, not yet saved)
     if (e.target.closest('.remove-admin-btn')) {
       const button = e.target.closest('.remove-admin-btn');
       const block = button.closest(".admin-block");
       const email = block.querySelector('.admin-email').value;
 
-      if (confirm(`Are you sure you want to remove admin: ${email}?`)) {
-        // Animate removal
-        block.style.transition = 'opacity 0.3s, transform 0.3s';
-        block.style.opacity = '0';
-        block.style.transform = 'translateX(-20px)';
-        setTimeout(() => block.remove(), 300);
-      }
+      pendingNewAdminBlock = block;
+      document.getElementById('removeNewAdminEmail').textContent = email || 'this admin';
+      new bootstrap.Modal(document.getElementById('removeNewAdminModal')).show();
     }
+  });
+
+  let pendingNewAdminBlock = null;
+  document.getElementById('confirmRemoveNewAdminBtn').addEventListener('click', function () {
+    if (pendingNewAdminBlock) {
+      const block = pendingNewAdminBlock;
+      pendingNewAdminBlock = null;
+      block.style.transition = 'opacity 0.3s, transform 0.3s';
+      block.style.opacity = '0';
+      block.style.transform = 'translateX(-20px)';
+      setTimeout(() => block.remove(), 300);
+    }
+    bootstrap.Modal.getInstance(document.getElementById('removeNewAdminModal')).hide();
   });
 
   // Add new admin

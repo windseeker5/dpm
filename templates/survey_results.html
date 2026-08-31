@@ -391,12 +391,9 @@
         </p>
         <div class="empty-action">
           {% if survey.status == 'active' %}
-          <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-primary" onclick="return confirm('Send survey invitations to all participants?')">
-              <i class="ti ti-mail"></i> Send Invitations
-            </button>
-          </form>
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#sendInvitationsModal">
+            <i class="ti ti-mail"></i> Send Invitations
+          </button>
           {% endif %}
         </div>
       </div>
@@ -597,6 +594,27 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Send Invitations Confirmation Modal -->
+<div class="modal modal-blur fade" id="sendInvitationsModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-primary"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-mail mb-2 text-primary" style="font-size: 2rem;" aria-hidden="true"></i>
+        <h3>Send survey invitations?</h3>
+        <div class="text-muted">This will email all participants.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" class="w-100">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary w-100">Yes, Send</button>
+        </form>
       </div>
     </div>
   </div>

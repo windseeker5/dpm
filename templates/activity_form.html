@@ -1236,6 +1236,24 @@ Add Type
   </div>
 </div>
 
+<!-- Cancel Session Confirmation Modal -->
+<div class="modal modal-blur fade" id="cancelSlotModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-calendar-x mb-2 text-danger" style="font-size: 2rem;" aria-hidden="true"></i>
+        <h3>Cancel this session?</h3>
+        <div class="text-muted" id="cancelSlotMessage"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Keep session</button>
+        <button type="button" class="btn btn-danger w-100" id="confirmCancelSlotBtn">Yes, cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Delete Passport Type Confirmation Modal -->
 <div class="modal modal-blur fade" id="deletePassportTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
@@ -2475,19 +2493,37 @@ Add Type
       rows.forEach(r => slotsContainer.appendChild(r));
     }
 
+    const cancelSlotModal = new bootstrap.Modal(document.getElementById('cancelSlotModal'));
+    let pendingSlotRemoval = null;
+
+    function removeSlotRow(slotId) {
+      const row = slotsContainer.querySelector(`[data-id="${slotId}"]`);
+      if (row) row.remove();
+      updateSlotsVisibility();
+    }
+
+    document.getElementById('confirmCancelSlotBtn').addEventListener('click', function () {
+      if (pendingSlotRemoval) {
+        removeSlotRow(pendingSlotRemoval);
+        pendingSlotRemoval = null;
+      }
+      cancelSlotModal.hide();
+    });
+
     slotsContainer.addEventListener('click', function (e) {
       const link = e.target.closest('button[data-remove-slot]');
       if (!link) return;
       e.preventDefault();
       const booked = parseInt(link.dataset.booked || 0, 10);
-      if (booked > 0 &&
-          !confirm(`This session has ${booked} booking(s). Cancelling it will free their ` +
-                   `seats and give their credits back. Continue?`)) {
+      const slotId = link.dataset.removeSlot;
+      if (booked > 0) {
+        pendingSlotRemoval = slotId;
+        document.getElementById('cancelSlotMessage').textContent =
+          `This session has ${booked} booking(s). Cancelling it will free their seats and give their credits back.`;
+        cancelSlotModal.show();
         return;
       }
-      const row = slotsContainer.querySelector(`[data-id="${link.dataset.removeSlot}"]`);
-      if (row) row.remove();
-      updateSlotsVisibility();
+      removeSlotRow(slotId);
     });
 
     // Keep the hidden capacity input in sync with the visible number box.
