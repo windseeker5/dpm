@@ -276,12 +276,9 @@
                     </button>
                   </form>
                   {% elif survey.status == 'closed' %}
-                  <form method="POST" action="{{ url_for('reopen_survey', survey_id=survey.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="dropdown-item" onclick="return confirmReopenSurvey('{{ survey.name }}')">
-                      <i class="ti ti-play me-2"></i>Reopen Survey
-                    </button>
-                  </form>
+                  <button type="button" class="dropdown-item" onclick="confirmReopenSurvey({{ survey.id }}, '{{ survey.name }}')">
+                    <i class="ti ti-play me-2"></i>Reopen Survey
+                  </button>
                   {% endif %}
                   {% if survey.responses %}
                   <a class="dropdown-item" href="{{ url_for('export_survey_results', survey_id=survey.id) }}">
@@ -615,6 +612,37 @@
     </div>
   </div>
 </div>
+
+<!-- Reopen Survey Confirmation Modal -->
+<div class="modal modal-blur fade" id="reopenSurveyModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-play me-2"></i>Reopen Survey</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Reopen survey <strong id="reopenSurveyName"></strong>?</p>
+        <div class="alert alert-info mb-0">
+          <i class="ti ti-info-circle me-2"></i>
+          <strong>This will:</strong>
+          <ul class="mb-0 mt-2">
+            <li>Allow new responses again</li>
+            <li>Make the survey active</li>
+            <li>Enable sending invitations</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" id="reopenSurveyForm" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary"><i class="ti ti-play me-2"></i>Reopen Survey</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -892,8 +920,11 @@ function confirmCloseSurvey(surveyId, surveyName) {
   return false; // Prevent form submission
 }
 
-function confirmReopenSurvey(surveyName) {
-  return confirm(`Reopen survey "${surveyName}"?\n\nThis will:\n• Allow new responses again\n• Make the survey active\n• Enable sending invitations`);
+function confirmReopenSurvey(surveyId, surveyName) {
+  document.getElementById('reopenSurveyName').textContent = surveyName;
+  document.getElementById('reopenSurveyForm').action = `/reopen-survey/${surveyId}`;
+  new bootstrap.Modal(document.getElementById('reopenSurveyModal')).show();
+  return false; // Prevent form submission
 }
 
 </script>

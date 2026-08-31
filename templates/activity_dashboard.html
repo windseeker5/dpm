@@ -1123,12 +1123,9 @@ div.dropdown-divider {
             <div class="text-secondary">This activity is archived. Close all passports to remove them from active KPIs.</div>
           </div>
           <div class="ms-auto">
-            <form method="POST" action="{{ url_for('bulk_close_passports', activity_id=activity.id) }}">
-              <button type="submit" class="btn btn-warning"
-                onclick="return confirm('Mark {{ open_passports_count }} passport(s) as fully used?')">
-                Close all passports
-              </button>
-            </form>
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#bulkClosePassportsModal">
+              Close all passports
+            </button>
           </div>
         </div>
       </div>
@@ -1330,6 +1327,27 @@ div.dropdown-divider {
       <!-- Shared modal dialogs for passport actions (outside main-table-card so search doesn't destroy them) -->
 
       <!-- Shared Redeem (Check In) Modal -->
+      <!-- Bulk Close Passports Confirmation Modal -->
+      <div class="modal modal-blur fade" id="bulkClosePassportsModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-status bg-warning"></div>
+            <div class="modal-body text-center py-4">
+              <i class="ti ti-ticket-off mb-2 text-warning" style="font-size: 2rem;" aria-hidden="true"></i>
+              <h3>Close all passports?</h3>
+              <div class="text-muted">Mark {{ open_passports_count }} passport(s) as fully used.</div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+              <form method="POST" action="{{ url_for('bulk_close_passports', activity_id=activity.id) }}" class="w-100">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-warning w-100">Yes, Close All</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="modal modal-blur fade" id="redeem-modal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
           <div class="modal-content">
