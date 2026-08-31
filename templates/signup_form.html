@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f8f9fa">
-  <title>Signup for {{ activity.name }}</title>
+  <title>Inscription — {{ activity.name }}</title>
 
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
@@ -235,83 +235,6 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-
-    /* Session picker (activity.uses_scheduling) */
-    .slot-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-
-    .slot-option {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 1px solid #dee2e6;
-      border-radius: 8px;
-      background: #ffffff;
-      cursor: pointer;
-      text-align: left;
-      font-size: 0.95rem;
-      min-height: 44px;                  /* comfortable touch target */
-      touch-action: manipulation;        /* no 300ms double-tap zoom delay */
-      transition: border-color 0.15s, background 0.15s;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .slot-option { transition: none; }
-    }
-
-    .slot-option:hover:not(:disabled) {
-      border-color: #0054a6;
-      background: #f6f9fd;
-    }
-
-    .slot-option:focus-visible {
-      outline: 2px solid #0054a6;
-      outline-offset: 2px;
-    }
-
-    .slot-option.selected {
-      border-color: #0054a6;
-      border-width: 2px;
-      background: #f6f9fd;
-    }
-
-    /* Full sessions stay visible but unusable — hiding them makes people email to ask
-       whether the session was cancelled, and visible scarcity encourages booking. */
-    .slot-option.slot-full {
-      opacity: 0.55;
-      cursor: not-allowed;
-      background: #f8f9fa;
-    }
-
-    .slot-when {
-      font-weight: 600;
-      color: #212529;
-      text-transform: capitalize;
-    }
-
-    .slot-left {
-      font-size: 0.85rem;
-      color: #6c757d;
-      white-space: nowrap;
-      margin-left: 1rem;
-    }
-
-    .slot-option.selected .slot-left {
-      color: #0054a6;
-      font-weight: 600;
-    }
-
-    .slot-error {
-      color: #d63939;
-      font-size: 0.85rem;
-      margin-top: 0.5rem;
     }
 
     .quantity-label {
@@ -1026,14 +949,14 @@
               <div class="info-item">
                 <i class="ti ti-ticket"></i>
                 <div class="info-item-content">
-                  <div class="info-label">Sessions</div>
+                  <div class="info-label">Séances</div>
                   <div class="info-value">
                     {% if selected_passport_type %}
-                      {{ selected_passport_type.sessions_included }} {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
+                      {{ selected_passport_type.sessions_included }} {{ "séance" if selected_passport_type.sessions_included == 1 else "séances" }}
                     {% elif passport_types|length == 1 %}
-                      {{ passport_types[0].sessions_included }} {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
+                      {{ passport_types[0].sessions_included }} {{ "séance" if passport_types[0].sessions_included == 1 else "séances" }}
                     {% else %}
-                      {{ activity.sessions_included }} {{ "session" if activity.sessions_included == 1 else "sessions" }}
+                      {{ activity.sessions_included }} {{ "séance" if activity.sessions_included == 1 else "séances" }}
                     {% endif %}
                   </div>
                 </div>
@@ -1090,14 +1013,14 @@
               <div class="info-item">
                 <i class="ti ti-ticket"></i>
                 <div class="info-item-content">
-                  <div class="info-label">Sessions</div>
+                  <div class="info-label">Séances</div>
                   <div class="info-value">
                     {% if selected_passport_type %}
-                      {{ selected_passport_type.sessions_included }} {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
+                      {{ selected_passport_type.sessions_included }} {{ "séance" if selected_passport_type.sessions_included == 1 else "séances" }}
                     {% elif passport_types|length == 1 %}
-                      {{ passport_types[0].sessions_included }} {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
+                      {{ passport_types[0].sessions_included }} {{ "séance" if passport_types[0].sessions_included == 1 else "séances" }}
                     {% else %}
-                      {{ activity.sessions_included }} {{ "session" if activity.sessions_included == 1 else "sessions" }}
+                      {{ activity.sessions_included }} {{ "séance" if activity.sessions_included == 1 else "séances" }}
                     {% endif %}
                   </div>
                 </div>
@@ -1142,53 +1065,77 @@
 
           <!-- Session Selection (only when the activity uses scheduling) -->
           {% if activity.uses_scheduling %}
-          <div class="quantity-section">
-            <div class="quantity-row" style="display:block;">
-              <span class="quantity-label">Choisissez votre séance</span>
-              {% if not available_slots %}
-              <p class="small text-muted" style="margin: 0.5rem 0 0;">
-                Aucune séance disponible pour le moment — vous pourrez en choisir une plus tard.
-              </p>
-              {% endif %}
-              <div class="slot-list" id="slot-list" role="group" aria-label="Séances disponibles">
-                {% for slot in available_slots %}
-                <button type="button"
-                        class="slot-option{% if slot.is_full %} slot-full{% endif %}"
-                        data-slot-id="{{ slot.id }}"
-                        aria-pressed="false"
-                        {% if slot.is_full %}disabled aria-disabled="true"{% endif %}
-                        onclick="selectSlot(this)">
-                  <span class="slot-when">{{ format_slot_label(slot) }}</span>
-                  <span class="slot-left">
-                    {% if slot.is_full %}
-                      Complet
-                    {% else %}
-                      {{ slot.seats_left }} {{ "place" if slot.seats_left == 1 else "places" }}
-                    {% endif %}
-                  </span>
-                </button>
-                {% endfor %}
-                <button type="button"
-                        class="slot-option slot-decide-later"
-                        id="decide-later-option"
-                        aria-pressed="false"
-                        onclick="selectDecideLater(this)">
-                  <span class="slot-when">Je choisirai ma séance plus tard</span>
-                  <span class="slot-left">Après le paiement</span>
-                </button>
+          {% set selectable_slots = available_slots | rejectattr('is_full') | list %}
+          {% set full_slots = available_slots | selectattr('is_full') | list %}
+          <fieldset class="quantity-section" id="slot-picker" data-has-slots="{{ 'true' if selectable_slots else 'false' }}">
+            <legend class="quantity-label">Choisissez votre séance</legend>
+            <div class="d-grid gap-3 mt-3">
+              {% if selectable_slots %}
+              <div class="card" data-slot-mode-card="now">
+                <div class="card-body">
+                  <label class="form-check mb-0" for="slot-mode-now">
+                    <input class="form-check-input" type="radio" name="slot_choice_mode"
+                           id="slot-mode-now" value="now" checked>
+                    <span class="form-check-label">
+                      <span class="fw-semibold d-block">Choisir maintenant</span>
+                      <span class="text-secondary small d-block mt-1">Réservez dès maintenant la séance qui vous convient.</span>
+                    </span>
+                  </label>
+                  <div class="mt-3 ms-4" id="slot-select-panel">
+                    <label class="form-label" for="slot-select">Date et heure</label>
+                    <select class="form-select" id="slot-select" aria-describedby="slot-select-hint">
+                      <option value="">Choisir une date et une heure</option>
+                      <optgroup label="Séances disponibles">
+                        {% for slot in selectable_slots %}
+                        <option value="{{ slot.id }}" data-seats-left="{{ slot.seats_left }}">
+                          {{ format_slot_label(slot) }} — {{ slot.seats_left }} {{ "place restante" if slot.seats_left == 1 else "places restantes" }}
+                        </option>
+                        {% endfor %}
+                      </optgroup>
+                      {% if full_slots %}
+                      <optgroup label="Séances complètes">
+                        {% for slot in full_slots %}
+                        <option value="{{ slot.id }}" disabled>{{ format_slot_label(slot) }} — complet</option>
+                        {% endfor %}
+                      </optgroup>
+                      {% endif %}
+                    </select>
+                    <div class="text-secondary small mt-2" id="slot-select-hint" aria-live="polite">
+                      Sélectionnez la séance qui vous convient.
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div id="slot-error" class="slot-error" role="alert" style="display:none;">
-                Veuillez choisir une séance, ou l'option « plus tard », pour continuer.
+              {% else %}
+              <div class="alert alert-info mb-0" role="status">
+                Aucune séance n’est disponible actuellement. Vous pourrez choisir plus tard depuis votre passeport.
+              </div>
+              {% endif %}
+
+              <div class="card" data-slot-mode-card="later">
+                <div class="card-body">
+                  <label class="form-check mb-0" for="slot-mode-later">
+                    <input class="form-check-input" type="radio" name="slot_choice_mode"
+                           id="slot-mode-later" value="later" {{ 'checked' if not selectable_slots else '' }}>
+                    <span class="form-check-label">
+                      <span class="fw-semibold d-block">Choisir plus tard</span>
+                      <span class="text-secondary small d-block mt-1">Vous pourrez réserver votre séance depuis votre passeport après le paiement.</span>
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
-          </div>
+            <div id="slot-error" class="text-danger small mt-2 d-none" role="alert">
+              Choisissez une séance ou sélectionnez « Choisir plus tard » pour continuer.
+            </div>
+          </fieldset>
           {% endif %}
 
           <!-- Quantity Selection -->
           {% if activity.allow_quantity_selection and not activity.uses_scheduling %}
           <div class="quantity-section">
             <div class="quantity-row">
-              <span class="quantity-label">Quantite</span>
+              <span class="quantity-label">Quantité</span>
               <div class="quantity-controls">
                 <button type="button" class="qty-btn" onclick="updateQty(-1)">-</button>
                 <span class="qty-value" id="qty-display">1</span>
@@ -1213,7 +1160,7 @@
           <!-- Reserve CTA -->
           <div class="buttons-row">
             <button type="button" class="btn-cta-primary" onclick="goToStep(2)">
-              Reserver ma place
+              Réserver ma place
               <i class="ti ti-arrow-right"></i>
             </button>
           </div>
@@ -1236,7 +1183,7 @@
             <!-- Hidden quantity (updated by JS) -->
             <input type="hidden" name="requested_sessions" id="hidden-qty" value="1">
 
-            <!-- Hidden chosen session (set by selectSlot in step 1) -->
+            <!-- Hidden chosen session (set by the compact session picker in step 1) -->
             {% if activity.uses_scheduling %}
             <input type="hidden" name="slot_id" id="hidden-slot" value="">
             {% endif %}
@@ -1360,35 +1307,57 @@ var currentQty = 1;
 
 // Session picker (only present when the activity uses scheduling)
 var usesScheduling = {{ 'true' if activity.uses_scheduling else 'false' }};
-// True once the user has picked a real slot OR explicitly chosen "decide later" —
-// distinct from hidden-slot's value, which stays empty for "decide later" on purpose.
-var slotDecided = false;
+var slotPicker = document.getElementById('slot-picker');
+var hasSelectableSlots = slotPicker ? slotPicker.dataset.hasSlots === 'true' : false;
+// When no session is currently available, "Choisir plus tard" is selected automatically.
+var slotDecided = usesScheduling && !hasSelectableSlots;
 
-function selectSlot(btn) {
-  if (btn.disabled) return;
-  document.querySelectorAll('.slot-option').forEach(function(o) {
-    o.classList.remove('selected');
-    o.setAttribute('aria-pressed', 'false');
-  });
-  btn.classList.add('selected');
-  btn.setAttribute('aria-pressed', 'true');
-  document.getElementById('hidden-slot').value = btn.dataset.slotId;
-  slotDecided = true;
+function clearSlotError() {
   var err = document.getElementById('slot-error');
-  if (err) err.style.display = 'none';
+  if (err) err.classList.add('d-none');
 }
 
-function selectDecideLater(btn) {
-  document.querySelectorAll('.slot-option').forEach(function(o) {
-    o.classList.remove('selected');
-    o.setAttribute('aria-pressed', 'false');
+function updateSlotSelection() {
+  var select = document.getElementById('slot-select');
+  if (!select) return;
+  var selected = select.selectedOptions[0];
+  var seats = selected ? parseInt(selected.dataset.seatsLeft || '0', 10) : 0;
+  document.getElementById('hidden-slot').value = select.value;
+  slotDecided = Boolean(select.value);
+  document.getElementById('slot-select-hint').textContent = slotDecided
+    ? `${seats} ${seats === 1 ? 'place restante' : 'places restantes'} pour cette séance.`
+    : 'Sélectionnez la séance qui vous convient.';
+  if (slotDecided) clearSlotError();
+}
+
+function updateSlotMode() {
+  var chooseNow = document.getElementById('slot-mode-now');
+  var chooseLater = document.getElementById('slot-mode-later');
+  var panel = document.getElementById('slot-select-panel');
+  var nowSelected = Boolean(chooseNow && chooseNow.checked);
+  if (panel) panel.hidden = !nowSelected;
+  slotPicker.querySelectorAll('[data-slot-mode-card]').forEach(function(card) {
+    var selected = card.dataset.slotModeCard === (nowSelected ? 'now' : 'later');
+    card.classList.toggle('border-primary', selected);
+    card.classList.toggle('bg-blue-lt', selected);
   });
-  btn.classList.add('selected');
-  btn.setAttribute('aria-pressed', 'true');
-  document.getElementById('hidden-slot').value = '';
-  slotDecided = true;
-  var err = document.getElementById('slot-error');
-  if (err) err.style.display = 'none';
+
+  if (chooseLater && chooseLater.checked) {
+    document.getElementById('hidden-slot').value = '';
+    slotDecided = true;
+    clearSlotError();
+  } else if (nowSelected) {
+    updateSlotSelection();
+  }
+}
+
+if (slotPicker) {
+  var slotSelect = document.getElementById('slot-select');
+  if (slotSelect) slotSelect.addEventListener('change', updateSlotSelection);
+  slotPicker.querySelectorAll('input[name="slot_choice_mode"]').forEach(function(radio) {
+    radio.addEventListener('change', updateSlotMode);
+  });
+  updateSlotMode();
 }
 
 // Step navigation
@@ -1400,7 +1369,7 @@ function goToStep(step) {
     if (!slotDecided) {
       var err = document.getElementById('slot-error');
       if (err) {
-        err.style.display = 'block';
+        err.classList.remove('d-none');
         err.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       return;

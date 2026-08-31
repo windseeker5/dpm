@@ -496,7 +496,7 @@
             {% for booking in my_bookings %}
             <div class="list-group-item d-flex align-items-center justify-content-between px-3">
               <div>
-                <div class="fw-bold text-capitalize">{{ format_slot_label(booking.slot) }}</div>
+                <div class="fw-bold">{{ format_slot_label(booking.slot) }}</div>
                 {% if booking.attended_dt %}
                   <span class="badge bg-blue-lt">Présence confirmée</span>
                 {% elif booking.is_past %}
@@ -629,7 +629,7 @@
           <div class="modal-body text-center py-4">
             <i class="ti ti-calendar-x mb-2 text-danger" style="font-size: 2rem;" aria-hidden="true"></i>
             <h3>Annuler cette séance?</h3>
-            <div class="text-muted text-capitalize">{{ format_slot_label(booking.slot) }}</div>
+            <div class="text-muted">{{ format_slot_label(booking.slot) }}</div>
             <div class="text-muted mt-2">Votre crédit vous sera remis.</div>
           </div>
           <div class="modal-footer">
