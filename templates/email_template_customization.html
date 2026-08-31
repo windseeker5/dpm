@@ -558,7 +558,7 @@
                placeholder="Leave empty to use system default">
       </div>
       
-      <!-- Activity Image — Photo Normalization Tool (see DESIGN_SYSTEM.md §15) -->
+      <!-- Activity Image — Photo Normalization Tool (see docs/DESIGN.md) -->
       <div class="mb-3">
         <label class="form-label">Activity Image</label>
         <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
@@ -606,7 +606,7 @@
         <small class="form-hint">Defaults to this activity's own photo. Click to search or upload a different one for this email only.</small>
       </div>
 
-      <!-- Organization Logo — Photo Normalization Tool (see DESIGN_SYSTEM.md §15, Logo
+      <!-- Organization Logo — Photo Normalization Tool (see docs/DESIGN.md, Logo
            variant — same widget/config as the Organization Logo field in unified_settings.html,
            the canonical reference for this variant). Right below Activity Image because that's
            the order they appear in the actual email (photo, then org name + logo). One shared
@@ -756,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Organization logo picker — same widget/config as the Organization Logo field
                 // in unified_settings.html (the canonical "Logo" variant of the Photo
-                // Normalization Tool, DESIGN_SYSTEM.md §15): search+upload+crop, freeform crop
+                // Normalization Tool, docs/DESIGN.md): search+upload+crop, freeform crop
                 // (no aspectRatio — a non-square logo isn't force-cropped; the email itself
                 // renders it with object-fit:contain) and PNG output (preserves transparency,
                 // unlike the JPEG default). /owner-logo already resolves the same priority
