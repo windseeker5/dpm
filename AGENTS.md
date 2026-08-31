@@ -1,105 +1,52 @@
-# AGENTS.md
+# AGENTS.md — Minipass Development Guide
 
-## Documentation Index
+This is the single entry point for AI agents working on Minipass.
 
-**Read relevant docs before starting any task.**
+## Response rules
 
-- `docs/PRODUCT.md` — Complete feature inventory and system architecture (read for feature context)
-- `docs/DESIGN_SYSTEM.md` — Tabler.io UI component patterns (read for ANY template/UI work)
-- `docs/EMAIL_TEMPLATE_SYSTEM.md` — Email template system (read for ANY email-related work)
-- `docs/EMAIL_DELIVERABILITY.md` — **RFC 5322 compliance, image hosting rules, spam triggers, CID policy** (read for ANY email template or send_email() work)
-- `docs/CHANGELOG.md` — Recent feature updates and changes (read when you need recent context)
-- `docs/UPGRADE_AND_DEPLOY.md` — Production deployment procedures (read for deployment tasks)
+1. **Answer briefly and clearly by default.** Use plain language and include only what is needed to understand the result.
+2. **Put required user actions first.** If the user must do something, begin with a clearly labelled action and exact steps. Never bury an action after explanations.
+3. **Lead with the result.** Do not repeat the request or add a long preamble. Add detail only when requested or needed to explain risk.
 
----
+## Project in one sentence
 
-## ⛔ UI RULES — READ FIRST
+Minipass is a Flask/Jinja SaaS for activity management: digital passports, registrations, payments (Interac auto-match + Stripe), session booking, financials, surveys, and transactional email.
 
-### We use TABLER.IO — NOT Bootstrap, NOT Tailwind, NOT custom CSS
+## UI strategy
 
-**Before ANY UI work:**
-1. **READ `docs/DESIGN_SYSTEM.md`** — Search for the section you need
-2. **COPY from existing templates** — `templates/dashboard.html`, `templates/passports.html`
-3. **NO `<style>` blocks** — Everything uses Tabler classes
+Minipass keeps its current **Flask + Jinja + Tabler.io** foundation. There is no framework migration planned.
 
-**After ANY UI work:**
-4. **Audit the changed template(s) for accessibility/UX** — ARIA, focus states, touch targets, keyboard nav, semantic HTML — as a quality gate before considering the work done
+Improve UI one explicitly selected page at a time using the available UI/UX skills. Preserve working behavior and avoid broad redesigns outside the requested page. Read `docs/DESIGN.md` before any UI work.
 
-### DESIGN_SYSTEM.md Quick Index:
-| Need | Section |
-|------|---------|
-| Page layout | Section 12 |
-| Tables | Section 6 |
-| Search bars | Section 4 |
-| Filters | Section 5 |
-| Empty states | Section 7 |
-| Form buttons | Section 13 |
+## Documentation map
 
-### ❌ BANNED — Delete if you write this:
-```html
-<style> anything </style>
-box-shadow, gradient, transform, animation
-class="custom-anything"
-class="my-anything"
-```
+| Task | Read this |
+|---|---|
+| Understand the product and flows | `docs/PRODUCT.md` |
+| Do any UI work | `docs/DESIGN.md` |
+| Do any email work | `docs/EMAIL.md` |
+| Change models or migrations | `docs/ARCHITECTURE.md` |
+| Test a feature | `docs/TESTING.md` |
+| Lost? | `docs/README.md` |
 
-### ✅ USE TABLER CLASSES:
-```html
-<div class="card">
-<div class="container-xl">
-<a class="btn btn-primary">
-<table class="table table-vcenter card-table">
-```
+## Hard rules
 
----
+1. **Python-first.** Business logic lives in Python, not JavaScript. Use minimal vanilla JavaScript only for interactions that cannot be handled server-side.
+2. **Server-side rendering.** Use Flask routes + Jinja. No React, Vue, Angular, or SPA framework.
+3. **Database changes:** edit `models.py`, then add an idempotent task to `migrations/upgrade_production_database.py`. Do not use Flask-Migrate.
+4. **Browser testing:** verify every implemented UI flow with pi's `browser-tools` against the real local app at `http://localhost:5000`. Inspect the DOM first and use screenshots for visual confirmation. Verify cleanup with a direct SQLite query.
+5. **Testing credentials:** when authentication is required locally, always use `kdresdell@gmail.com` / `admin123`. Do not substitute another admin account. Use these credentials only in the local development environment unless the user explicitly authorizes another environment.
+6. **Test data:** always use `kdresdell@gmail.com` for any User, Passport, or Signup created during testing. Fake domains can bounce and damage email deliverability.
+7. **Test artifacts:** screenshots, scripts, and test assets go in `test/`, never in the main app folder.
 
-## Project Info
+## Dev environment
 
-**Minipass** — SaaS for activity management (sports leagues, fitness classes, loyalty programs)
+- Flask app: `app.py` on `localhost:5000`
+- Database: `instance/minipass.db` (SQLite)
+- Models: `models.py`
+- Templates: `templates/`
+- Local admin: `kdresdell@gmail.com` / `admin123`
 
-| Component | Location |
-|-----------|----------|
-| Flask app | `app.py` (runs on `localhost:5000`) |
-| Models | `models.py` |
-| Templates | `templates/` (Jinja2 + Tabler.io) |
-| Database | `instance/minipass.db` (SQLite) |
-| Design system | `docs/DESIGN_SYSTEM.md` |
+## Deprecated documentation
 
----
-
-## Development Rules
-
-### Python-first
-- Business logic in Python, not JavaScript
-- JS only for small UI interactions (<10 lines per function)
-- No React, Vue, Angular
-
-### Testing
-- Unit tests: `python -m unittest test.test_kpi_data -v`
-- **MANDATORY — test every implemented plan with Playwright MCP against the real local dev environment** (`http://localhost:5000`, the actual running Flask app and dev database) — not just test-client scripts or DB copies. Scripted/simulated tests can silently target the wrong database and don't exercise real templates, JS, CSRF, or session behavior.
-  - Login: `kdresdell@gmail.com` / `admin123` (local dev admin only)
-  - After testing, verify cleanup with a direct DB query (`sqlite3 instance/minipass.db "SELECT ..."`), not just through the app/ORM — ORM identity-map caching across multiple requests can make a deletion look like it failed (or succeeded) when it didn't
-- **MANDATORY — never use a fake or placeholder email** (`example.com`, `test@test.com`, etc.) for any `User`, `Passport`, or `Signup` created during testing, whether created through the UI or inserted directly for test setup. This app sends real SMTP email on passport/signup/redemption/payment actions — fake domains bounce and risk the sending Gmail account being flagged or banned. **Always use `kdresdell@gmail.com`** instead.
-- **Test artifacts location**: Save ALL test files (screenshots, test scripts, images) in `test/` folder — NOT in the main `app/` folder
-
-### Database changes
-1. Edit `models.py`
-2. Add migration to `migrations/upgrade_production_database.py`
-3. Do NOT use Flask-Migrate
-
----
-
-## What's Already Running
-
-- Flask server: `localhost:5000` (always on, debug mode)
-- Database: SQLite configured
-- Tabler CSS: loaded globally in `base.html`
-
----
-
-## Common Commands
-
-```bash
-source venv/bin/activate
-python -m unittest test.test_kpi_data -v
-```
+Files under `docs/.archive/` and `email-redesign/.archive/` are historical only. Do not follow them.
