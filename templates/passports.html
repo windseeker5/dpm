@@ -113,7 +113,6 @@
           <thead>
             <tr>
               <th>User</th>
-              <th class="d-md-none text-center">#</th>
               <th class="d-none d-md-table-cell">Activity</th>
               <th class="d-none d-lg-table-cell">Passport Type</th>
               <th class="d-none d-md-table-cell text-center">Amount</th>
@@ -143,15 +142,20 @@
                 <div>
                   <div class="fw-bold">{{ passport.user.name or 'Anonymous' }}</div>
                   <div class="text-muted small d-none d-md-block">{{ passport.user.email or 'No email' }}</div>
+                  <!-- Mobile-only metrics -->
+                  <div class="d-md-none mt-1">
+                    {% if passport.paid %}
+                      <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
+                    {% else %}
+                      <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
+                    {% endif %}
+                    <span class="badge bg-blue-lt ms-1">{{ passport.uses_remaining or 0 }} left</span>
+                    {% if passport.sold_amt %}
+                      <span class="badge bg-secondary-lt ms-1">${{ "%.0f"|format(passport.sold_amt) }}</span>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
-            </td>
-            <td class="d-md-none text-center" style="vertical-align: middle;">
-              {% if passport.paid %}
-                <span class="badge bg-green-lt text-green-lt-fg">{{ passport.uses_remaining or 0 }}</span>
-              {% else %}
-                <span class="badge bg-yellow-lt text-yellow-lt-fg">{{ passport.uses_remaining or 0 }}</span>
-              {% endif %}
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
               <div>

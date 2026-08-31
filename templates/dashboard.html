@@ -475,7 +475,7 @@
 
         <!-- Mobile Layout -->
         <div class="d-md-none">
-          <div class="d-flex overflow-auto pb-2" style="scroll-snap-type: x mandatory;">
+          <div class="d-flex overflow-auto pb-2" id="mobileActivitiesScroll" style="scroll-snap-type: x mandatory;">
             {% for activity in activities %}
             <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
               <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="text-decoration-none text-reset d-block">
@@ -569,9 +569,10 @@
             </div>
           </div>
           <!-- Scroll indicators for activities -->
-          <div class="text-center mt-2">
+          <div class="text-center mt-2" id="mobileActivitiesDots">
             {% for i in range(activity_indicator_count) %}
-              <span class="badge {% if i == 0 %}bg-primary{% else %}bg-light{% endif %} me-1" 
+              <span class="badge activity-dot {% if i == 0 %}bg-primary{% else %}bg-light{% endif %} me-1"
+                    data-index="{{ i }}"
                     style="width: 8px; height: 8px; border-radius: 50%;"></span>
             {% endfor %}
           </div>
@@ -2072,6 +2073,24 @@ document.addEventListener('DOMContentLoaded', function() {
       const cardWidth = scroll.querySelector('.mobile-kpi-card').offsetWidth + 16;
       const index = Math.min(dots.length - 1, Math.round(scroll.scrollLeft / cardWidth));
       dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+    });
+  }
+});
+
+// Mobile Activities carousel dot navigation — keeps the existing indicator
+// dots in sync with actual scroll position instead of leaving dot 0 stuck.
+document.addEventListener('DOMContentLoaded', function() {
+  const scroll = document.getElementById('mobileActivitiesScroll');
+  const dots = document.querySelectorAll('.activity-dot');
+  if (scroll && dots.length > 0) {
+    const setActive = (i) => dots.forEach((dot, idx) => {
+      dot.classList.toggle('bg-primary', idx === i);
+      dot.classList.toggle('bg-light', idx !== i);
+    });
+    scroll.addEventListener('scroll', () => {
+      const maxScroll = scroll.scrollWidth - scroll.clientWidth;
+      const ratio = maxScroll > 0 ? scroll.scrollLeft / maxScroll : 0;
+      setActive(Math.min(dots.length - 1, Math.round(ratio * (dots.length - 1))));
     });
   }
 });
