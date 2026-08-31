@@ -18,7 +18,7 @@ Templates tested:
 6. signup_payment_first - Pay-first signup with Interac instructions (no QR)
 7. survey_invitation - Survey invitation (no QR)
 
-Images (see docs/EMAIL.md):
+Images (see docs/EMAIL_DELIVERABILITY.md):
 - hero and owner logo are hosted HTTP URLs, never CID
 - only the QR code is attached as a CID inline image
 - use_hosted_images=True is passed to send_email()

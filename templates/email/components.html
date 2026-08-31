@@ -126,7 +126,7 @@
 
 {#
   ============================================================================
-  Aug 2026 redesign — approved direction (see docs/EMAIL.md).
+  Aug 2026 redesign — approved direction (email-redesign/EMAIL_REDESIGN_HANDOFF.md).
 
   One continuous flowing document per email, no boxed "hero" card, no colored accent
   borders. These macros implement it: a single reusable row component (facts, séances,
@@ -148,7 +148,7 @@
   showed that broken — Gmail does not support position:absolute/relative in HTML email at all,
   so the caption div either dropped out of place or clipped against the wrong ancestor. A
   bulletproof-background-image + VML hybrid was considered and rejected: it's fundamentally a
-  CSS background-image, which docs/EMAIL.md already documents as rejected for this
+  CSS background-image, which EMAIL_REDESIGN_HANDOFF.md already tested and rejected for this
   hero for the same Outlook reason. So there is no supported way to put text over the photo
   itself in HTML email — the caption now sits in a solid ink bar immediately below the photo
   instead, the same reliable pattern already used for the non-photo (mascot) branch below,
@@ -247,7 +247,7 @@
   .pass-qr-frame exactly (background:#fff, border-radius, no border) — a deliberate, explicit
   choice to match the passport page 1:1, accepting the tradeoff that an email client blocking
   images by default now shows nothing where the QR should be, instead of a visible empty
-  bordered frame. See docs/EMAIL.md for the decision.
+  bordered frame. See email-redesign/EMAIL_REDESIGN_HANDOFF.md for the decision.
 
   qr_src's box_size must stay in step with the frame's display size — see
   utils.EMAIL_QR_BOX_SIZE — or the browser has to rescale the PNG and it looks muddy.

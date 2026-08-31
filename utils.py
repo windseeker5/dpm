@@ -184,7 +184,7 @@ def get_activity_hero_image(activity, template_type):
     Hero image selection, priority order:
     1. Custom uploaded hero for this exact email type (highest priority — an explicit choice)
     2. The activity's own real photo (the whole point of the Aug 2026 photo-band redesign —
-       see docs/EMAIL.md)
+       see email-redesign/EMAIL_REDESIGN_HANDOFF.md)
     3. The shipped generic mascot default — last resort, only when the activity has no photo
        at all
     4. A generated placeholder cover from the activity's name
@@ -3955,7 +3955,7 @@ def send_email_async(app, user=None, activity=None, **kwargs):
                 # Custom hero images for the activity, when a caller is still using CID
                 # images. The compiled-template inline_images.json loading that used to sit
                 # here is gone with templates/email_templates/: hero and logo are hosted URLs
-                # now (docs/EMAIL.md) and only the QR is ever a CID part.
+                # now (docs/EMAIL_DELIVERABILITY.md) and only the QR is ever a CID part.
                 if template_name and not html_body and not use_hosted_images and activity_in_thread:
                     from utils import get_activity_hero_image
 

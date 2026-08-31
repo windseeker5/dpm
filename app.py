@@ -13236,7 +13236,7 @@ def email_preview(activity_id):
         
         # The QR is the only CID image left, so it is the only thing to inline for the
         # browser. Hero, owner logo and the Interac mark are hosted URLs the browser fetches
-        # directly (docs/EMAIL.md), so the old block here — loading
+        # directly (docs/EMAIL_DELIVERABILITY.md), so the old block here — loading
         # inline_images.json, swapping cid:logo / cid:logo_image, and reconciling a custom
         # hero against the template default — has nothing left to act on.
 

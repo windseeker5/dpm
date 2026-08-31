@@ -66,12 +66,8 @@ tools/
 test/render/
 test/baseline/
 #sql/
-# Archived historical docs (kept locally, not tracked)
-docs/.archive/
-email-redesign/.archive/
-
-# Untracked skill/experiment folders
-.impeccable/
+docs/
+CLAUDE.md
 
 
 
