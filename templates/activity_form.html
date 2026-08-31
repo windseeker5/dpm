@@ -3,6 +3,17 @@
   {{ "Edit Activity" if activity else "New Activity" }}
 {% endblock %}
 
+{% macro session_time_options() -%}
+  <option value="">Choose a time</option>
+  {% for total_minutes in range(0, 1440, 15) %}
+    {% set hour = total_minutes // 60 %}
+    {% set minute = total_minutes % 60 %}
+    {% set display_hour = hour % 12 if hour % 12 else 12 %}
+    {% set period = 'AM' if hour < 12 else 'PM' %}
+    <option value="{{ '%02d:%02d'|format(hour, minute) }}">{{ display_hour }}:{{ '%02d'|format(minute) }} {{ period }}</option>
+  {% endfor %}
+{%- endmacro %}
+
 {% block head %}
 <style>
 .form-label.required::after {
@@ -492,94 +503,139 @@
             <div class="section-divider mt-5 mb-3"></div>
 
             <!-- ============================================ -->
-            <!-- SESSIONS SECTION                             -->
+            <!-- SESSION BOOKING SECTION                      -->
             <!-- ============================================ -->
-            <div class="mb-4">
-              <h3 class="mb-2">Sessions</h3>
-              <p class="text-muted mb-3">
-                Turn this on when people must pick a specific date and time — a 11:00 or a 14:00 lesson, a Tuesday spin class.
-                Leave it off when they simply show up and you scan their passport.
+            <div class="mb-4" aria-labelledby="sessionBookingHeading">
+              <h3 class="mb-2" id="sessionBookingHeading">Session booking</h3>
+              <p class="text-secondary mb-3" id="sessionsHelp">
+                Let participants reserve one date and time during signup or later from their passport.
               </p>
 
-              <div class="mb-3">
-                <label class="form-check form-switch">
+              <div class="border rounded p-3 mb-3 bg-secondary-lt">
+                <label class="form-check form-switch mb-0">
                   <input class="form-check-input" type="checkbox" name="uses_scheduling" id="usesScheduling"
+                         aria-controls="schedulingFields" aria-describedby="sessionsHelp"
+                         aria-expanded="{{ 'true' if activity and activity.uses_scheduling else 'false' }}"
                          {{ 'checked' if activity and activity.uses_scheduling else '' }}
                          onchange="toggleSchedulingFields()">
-                  <span class="form-check-label">Let people choose a session when they sign up</span>
+                  <span class="form-check-label">
+                    <span class="d-block fw-semibold">Enable session booking</span>
+                    <span class="d-block text-secondary small">Each participant chooses an available session.</span>
+                  </span>
                 </label>
               </div>
 
-              <div id="schedulingFields" style="{{ 'display: block;' if activity and activity.uses_scheduling else 'display: none;' }}">
+              <div id="schedulingFields" class="{{ 'd-none' if not activity or not activity.uses_scheduling else '' }}">
+                <div class="alert alert-info" role="note">
+                  <div class="d-flex">
+                    <i class="ti ti-info-circle me-2 mt-1" aria-hidden="true"></i>
+                    <div>
+                      <strong>Capacity is managed per session.</strong>
+                      The activity-level capacity setting is ignored while session booking is enabled.
+                    </div>
+                  </div>
+                </div>
 
-                <!-- Builder: dates x times x spots -->
-                <div class="card mb-3">
-                  <div class="card-body">
-                    <h4 class="card-title">Add sessions</h4>
-                    <div class="row g-3">
-                      <div class="col-md-5">
-                        <label class="form-label" for="slotDateInput">On these dates</label>
-                        <div class="input-group">
-                          <input type="date" class="form-control" id="slotDateInput">
-                          <button type="button" class="btn btn-outline-primary" id="addSlotDateBtn"
-                                  aria-label="Add this date">
-                            <i class="ti ti-plus" aria-hidden="true"></i>
-                          </button>
-                        </div>
-                        <div id="slotDateChips" class="mt-2"></div>
-                      </div>
+                <!-- Primary flow: add one exact session -->
+                <div class="border rounded mb-3">
+                  <div class="p-3 border-bottom">
+                    <h4 class="mb-1">Add a session</h4>
+                    <p class="text-secondary mb-0">Choose the exact date, time, and number of available spots.</p>
+                  </div>
+                  <div class="p-3">
+                    <div class="row g-3 align-items-end">
                       <div class="col-md-4">
-                        <label class="form-label" for="slotTimeInput">At these times</label>
-                        <div class="input-group">
-                          <input type="time" class="form-control" id="slotTimeInput">
-                          <button type="button" class="btn btn-outline-primary" id="addSlotTimeBtn"
-                                  aria-label="Add this time">
-                            <i class="ti ti-plus" aria-hidden="true"></i>
-                          </button>
-                        </div>
-                        <div id="slotTimeChips" class="mt-2"></div>
+                        <label class="form-label" for="singleSlotDateInput">Date</label>
+                        <input type="date" class="form-control" id="singleSlotDateInput">
                       </div>
                       <div class="col-md-3">
-                        <label class="form-label" for="slotCapacityInput">Spots each</label>
-                        <input type="number" class="form-control" id="slotCapacityInput" min="1" value="6">
-                        <small class="form-hint">People per session</small>
+                        <label class="form-label" for="singleSlotTimeInput">Time</label>
+                        <select class="form-select" id="singleSlotTimeInput" aria-describedby="singleSlotMsg">
+                          {{ session_time_options() }}
+                        </select>
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label" for="singleSlotCapacityInput">Capacity</label>
+                        <input type="number" class="form-control" id="singleSlotCapacityInput" min="1" value="6" inputmode="numeric">
+                      </div>
+                      <div class="col-md-3 d-grid">
+                        <button type="button" class="btn btn-primary" id="addSingleSlotBtn" disabled>
+                          <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Add session
+                        </button>
                       </div>
                     </div>
+                    <div id="singleSlotMsg" class="form-hint mt-2" role="status" aria-live="polite">
+                      Choose a date and time to add a session.
+                    </div>
 
-                    <div class="d-flex align-items-center mt-3">
-                      <button type="button" class="btn btn-primary" id="generateSlotsBtn">
-                        <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Generate sessions
-                      </button>
-                      <span id="slotPreviewMsg" class="ms-3 text-muted" aria-live="polite"></span>
+                    <!-- Secondary flow: bulk combinations for advanced use -->
+                    <details class="mt-4">
+                      <summary class="fw-semibold text-primary">Add multiple sessions at once</summary>
+                      <div class="border rounded p-3 mt-3">
+                        <p class="text-secondary mb-3">
+                          Select several dates and times. Every date-and-time combination will become a session.
+                        </p>
+                        <div class="row g-3">
+                          <div class="col-md-5">
+                            <label class="form-label" for="slotDateInput">Dates</label>
+                            <div class="input-group">
+                              <input type="date" class="form-control" id="slotDateInput">
+                              <button type="button" class="btn btn-outline-primary" id="addSlotDateBtn">
+                                <i class="ti ti-plus me-1" aria-hidden="true"></i>Add
+                              </button>
+                            </div>
+                            <div id="slotDateChips" class="d-flex flex-wrap gap-2 mt-2" role="list" aria-live="polite"></div>
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label" for="slotTimeInput">Times</label>
+                            <div class="input-group">
+                              <select class="form-select" id="slotTimeInput">
+                                {{ session_time_options() }}
+                              </select>
+                              <button type="button" class="btn btn-outline-primary" id="addSlotTimeBtn">
+                                <i class="ti ti-plus me-1" aria-hidden="true"></i>Add
+                              </button>
+                            </div>
+                            <div id="slotTimeChips" class="d-flex flex-wrap gap-2 mt-2" role="list" aria-live="polite"></div>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label" for="slotCapacityInput">Capacity</label>
+                            <input type="number" class="form-control" id="slotCapacityInput" min="1" value="6" inputmode="numeric">
+                            <small class="form-hint">Spots in each session</small>
+                          </div>
+                        </div>
+
+                        <div id="slotPreviewMsg" class="alert alert-secondary mt-3 mb-0" role="status" aria-live="polite"></div>
+                        <div class="d-grid d-sm-block mt-3">
+                          <button type="button" class="btn btn-outline-primary" id="generateSlotsBtn" disabled>
+                            <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Add multiple sessions
+                          </button>
+                        </div>
+                      </div>
+                    </details>
+
+                    <div class="border-top mt-4 pt-3 text-secondary small">
+                      Sessions are saved when you select <strong>Save</strong> at the top of the page.
                     </div>
                   </div>
                 </div>
 
-                <!-- Generated sessions -->
-                <div class="card">
-                  <div class="table-responsive">
-                    <table class="table table-vcenter card-table" id="slotsTable" style="display: none;">
-                      <thead>
-                        <tr>
-                          <th>Session</th>
-                          <th class="d-none d-md-table-cell">Spots</th>
-                          <th class="d-none d-md-table-cell">Booked</th>
-                          <th class="w-1">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody id="slotsContainer"></tbody>
-                    </table>
+                <!-- Existing and newly generated sessions -->
+                <div class="border rounded overflow-hidden">
+                  <div class="p-3 border-bottom">
+                    <h4 class="mb-1">Scheduled sessions</h4>
+                    <p class="text-secondary mb-0" id="slotCountSummary">Review capacity and bookings before saving.</p>
                   </div>
-                  <div id="noSlots" class="card-body text-center text-muted py-4">
-                    <i class="ti ti-calendar-off mb-2" style="font-size: 2rem;"></i>
-                    <p class="mb-0">No sessions yet. Add dates and times above, then press <strong>Generate sessions</strong>.</p>
+                  <div id="slotsContainer" class="list-group list-group-flush d-none"></div>
+                  <div id="noSlots" class="empty py-5">
+                    <div class="empty-icon">
+                      <i class="ti ti-calendar-off" aria-hidden="true"></i>
+                    </div>
+                    <p class="empty-title">No sessions scheduled</p>
+                    <p class="empty-subtitle text-secondary">
+                      Choose a date and time above, then select <strong>Add session</strong>.
+                    </p>
                   </div>
-                </div>
-
-                <div class="alert alert-info mt-3 mb-0">
-                  <i class="ti ti-info-circle me-1"></i>
-                  With sessions on, each session's own spot count controls availability — the
-                  <strong>Capacity</strong> setting above is ignored.
                 </div>
               </div>
             </div>
@@ -1210,14 +1266,16 @@ Add Type
   // availability, so the activity-level Capacity block is disabled to avoid two
   // competing limits (see get_remaining_capacity in utils.py).
   function toggleSchedulingFields() {
-    const on = document.getElementById('usesScheduling').checked;
-    document.getElementById('schedulingFields').style.display = on ? 'block' : 'none';
+    const schedulingToggle = document.getElementById('usesScheduling');
+    const on = schedulingToggle.checked;
+    document.getElementById('schedulingFields').classList.toggle('d-none', !on);
+    schedulingToggle.setAttribute('aria-expanded', String(on));
 
     const capacityToggle = document.getElementById('isQuantityLimited');
     if (capacityToggle) {
       capacityToggle.disabled = on;
       const capacityBlock = capacityToggle.closest('.mb-3');
-      if (capacityBlock) capacityBlock.style.opacity = on ? '0.5' : '1';
+      if (capacityBlock) capacityBlock.classList.toggle('opacity-50', on);
       if (on) {
         document.getElementById('maxSessionsField').style.display = 'none';
         document.getElementById('showRemainingField').style.display = 'none';
@@ -2077,33 +2135,55 @@ Add Type
     // new_N for ones added here. The server parses both in create/edit_activity.
     const slotsContainer = document.getElementById('slotsContainer');
     const noSlots = document.getElementById('noSlots');
-    const slotsTable = document.getElementById('slotsTable');
+    const slotCountSummary = document.getElementById('slotCountSummary');
+    const generateSlotsBtn = document.getElementById('generateSlotsBtn');
+    const singleSlotDateInput = document.getElementById('singleSlotDateInput');
+    const singleSlotTimeInput = document.getElementById('singleSlotTimeInput');
+    const singleSlotCapacityInput = document.getElementById('singleSlotCapacityInput');
+    const addSingleSlotBtn = document.getElementById('addSingleSlotBtn');
+    const singleSlotMsg = document.getElementById('singleSlotMsg');
 
     let slotCounter = 0;
     let slotDates = [];   // "YYYY-MM-DD"
     let slotTimes = [];   // "HH:MM"
 
-    const FR_DAYS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-    const FR_MONTHS = ['janvier','février','mars','avril','mai','juin','juillet',
-                       'août','septembre','octobre','novembre','décembre'];
+    const slotLocale = document.documentElement.lang || undefined;
 
-    // Formats a naive local "YYYY-MM-DDTHH:MM" for display. Parsed manually rather
-    // than via new Date(str) so the browser can never shift it by a timezone.
-    function formatSlotLabel(startsAt) {
-      const [datePart, timePart] = startsAt.split('T');
+    // Parse local date/time parts manually so display never shifts between time zones.
+    function localDateTime(startsAt) {
+      const [datePart, timePart = '00:00'] = startsAt.split('T');
       const [y, m, d] = datePart.split('-').map(Number);
-      const dt = new Date(y, m - 1, d);
-      return `${FR_DAYS[dt.getDay()]} ${d} ${FR_MONTHS[m - 1]}, ${timePart}`;
+      const [hour, minute] = timePart.split(':').map(Number);
+      return new Date(y, m - 1, d, hour, minute);
     }
 
-    function renderChips(containerId, values, onRemove) {
+    function formatSlotLabel(startsAt) {
+      return new Intl.DateTimeFormat(slotLocale, {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+      }).format(localDateTime(startsAt));
+    }
+
+    function formatChipLabel(value, type) {
+      if (type === 'date') {
+        return new Intl.DateTimeFormat(slotLocale, {
+          weekday: 'short', month: 'short', day: 'numeric'
+        }).format(localDateTime(`${value}T00:00`));
+      }
+      return new Intl.DateTimeFormat(slotLocale, {
+        hour: 'numeric', minute: '2-digit'
+      }).format(localDateTime(`2000-01-01T${value}`));
+    }
+
+    function renderChips(containerId, values, type) {
       const box = document.getElementById(containerId);
       if (!values.length) { box.innerHTML = ''; return; }
-      box.innerHTML = values.map((v, i) =>
-        `<span class="badge bg-blue-lt me-1 mb-1">${v}` +
-        `<button type="button" class="btn-link border-0 bg-transparent p-0 ms-2" ` +
-        `data-idx="${i}" data-remove="${onRemove}" aria-label="Remove ${v}">&times;</button></span>`
-      ).join('');
+      box.innerHTML = values.map((value, index) => {
+        const label = formatChipLabel(value, type);
+        return `<span class="badge bg-blue-lt text-blue p-2" role="listitem">${label}` +
+          `<button type="button" class="btn-close ms-2" data-idx="${index}" ` +
+          `data-remove="${type}" aria-label="Remove ${label}"></button></span>`;
+      }).join('');
     }
 
     function refreshChips() {
@@ -2117,11 +2197,17 @@ Add Type
     // Live count so the admin sees exactly what will be created before saving.
     function updateSlotPreview() {
       const msg = document.getElementById('slotPreviewMsg');
-      const n = slotDates.length * slotTimes.length;
-      if (!n) {
-        msg.textContent = 'Add at least one date and one time.';
+      const count = slotDates.length * slotTimes.length;
+      generateSlotsBtn.disabled = count === 0;
+
+      if (!slotDates.length && !slotTimes.length) {
+        msg.textContent = 'Start by adding at least one date and one time.';
+      } else if (!slotDates.length) {
+        msg.textContent = 'Add a date to create sessions for the selected times.';
+      } else if (!slotTimes.length) {
+        msg.textContent = 'Add a time to create sessions for the selected dates.';
       } else {
-        msg.innerHTML = `<strong>${n}</strong> session${n > 1 ? 's' : ''} will be added ` +
+        msg.innerHTML = `<strong>${count}</strong> session${count > 1 ? 's' : ''} ready to add ` +
                         `(${slotDates.length} date${slotDates.length > 1 ? 's' : ''} ` +
                         `&times; ${slotTimes.length} time${slotTimes.length > 1 ? 's' : ''}).`;
       }
@@ -2143,22 +2229,45 @@ Add Type
       refreshChips();
     });
 
-    document.getElementById('addSlotDateBtn').addEventListener('click', function () {
-      const input = document.getElementById('slotDateInput');
-      const v = input.value;
-      if (!v) return;
-      if (slotDates.indexOf(v) === -1) slotDates.push(v);
-      input.value = '';
+    const slotDateInput = document.getElementById('slotDateInput');
+    const slotTimeInput = document.getElementById('slotTimeInput');
+    const slotToday = new Date();
+    slotToday.setMinutes(slotToday.getMinutes() - slotToday.getTimezoneOffset());
+    const slotTodayValue = slotToday.toISOString().slice(0, 10);
+    slotDateInput.min = slotTodayValue;
+    singleSlotDateInput.min = slotTodayValue;
+
+    function addSelectedDate() {
+      const value = slotDateInput.value;
+      if (!value) return;
+      if (slotDates.indexOf(value) === -1) slotDates.push(value);
+      slotDateInput.value = '';
       refreshChips();
+      slotDateInput.focus();
+    }
+
+    function addSelectedTime() {
+      const value = slotTimeInput.value;
+      if (!value) return;
+      if (slotTimes.indexOf(value) === -1) slotTimes.push(value);
+      slotTimeInput.value = '';
+      refreshChips();
+      slotTimeInput.focus();
+    }
+
+    document.getElementById('addSlotDateBtn').addEventListener('click', addSelectedDate);
+    document.getElementById('addSlotTimeBtn').addEventListener('click', addSelectedTime);
+
+    slotDateInput.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      addSelectedDate();
     });
 
-    document.getElementById('addSlotTimeBtn').addEventListener('click', function () {
-      const input = document.getElementById('slotTimeInput');
-      const v = input.value;
-      if (!v) return;
-      if (slotTimes.indexOf(v) === -1) slotTimes.push(v);
-      input.value = '';
-      refreshChips();
+    slotTimeInput.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      addSelectedTime();
     });
 
     function existingStartTimes() {
@@ -2169,40 +2278,105 @@ Add Type
     function createSlotRow(slot) {
       const id = slot.id || `new_${slotCounter++}`;
       const booked = parseInt(slot.seats_taken || 0, 10);
+      const capacity = parseInt(slot.capacity || 1, 10);
+      const available = Math.max(0, capacity - booked);
       const label = formatSlotLabel(slot.starts_at);
-      // Removing a session that already has people in it would strand their bookings,
-      // so the server cancels (and refunds) instead — the UI reflects that wording.
-      const removeLabel = booked > 0 ? 'Cancel session' : 'Remove';
-      const removeClass = booked > 0 ? 'text-warning' : 'text-danger';
+      // Removing a session that already has people in it cancels their bookings and
+      // refunds credits on save, so the action must say exactly what will happen.
+      const removeLabel = booked > 0 ? 'Cancel session' : 'Remove session';
 
       return `
-        <tr data-id="${id}">
-          <td>
-            <div class="fw-bold">${label}</div>
-            ${booked > 0 ? '<div class="text-muted small">Has bookings</div>' : ''}
-          </td>
-          <td class="d-none d-md-table-cell">
-            <input type="number" class="form-control form-control-sm slot-capacity-input"
-                   style="max-width: 90px;" min="${Math.max(1, booked)}"
-                   value="${slot.capacity}" data-for="${id}"
-                   aria-label="Spots for ${label}">
-          </td>
-          <td class="d-none d-md-table-cell">${booked}</td>
-          <td>
-            <button type="button" class="btn btn-sm btn-outline-secondary ${removeClass}"
-                    data-remove-slot="${id}" data-booked="${booked}"
-                    aria-label="${removeLabel} ${label}">${removeLabel}</button>
-          </td>
+        <div class="list-group-item p-3" data-id="${id}">
+          <div class="row g-3 align-items-center">
+            <div class="col-12 col-md">
+              <div class="fw-semibold">${label}</div>
+              <span class="badge bg-blue-lt text-blue mt-1" data-slot-booking-summary>
+                ${booked} of ${capacity} booked
+              </span>
+            </div>
+            <div class="col-6 col-md-auto">
+              <label class="form-label small mb-1" for="slot-capacity-${id}">Capacity</label>
+              <input type="number" class="form-control slot-capacity-input"
+                     id="slot-capacity-${id}" min="${Math.max(1, booked)}" required inputmode="numeric"
+                     value="${capacity}" data-for="${id}" data-booked="${booked}"
+                     aria-label="Capacity for ${label}">
+            </div>
+            <div class="col-6 col-md-auto">
+              <div class="form-label small mb-1">Available</div>
+              <div class="fw-semibold" data-slot-available>${available}</div>
+            </div>
+            <div class="col-12 col-md-auto">
+              <div class="d-grid">
+                <button type="button" class="btn btn-outline-danger"
+                        data-remove-slot="${id}" data-booked="${booked}"
+                        aria-label="${removeLabel}: ${label}">${removeLabel}</button>
+              </div>
+            </div>
+          </div>
           <input type="hidden" name="slots[${id}][starts_at]" value="${slot.starts_at}">
-          <input type="hidden" name="slots[${id}][capacity]" value="${slot.capacity}">
-        </tr>
+          <input type="hidden" name="slots[${id}][capacity]" value="${capacity}">
+        </div>
       `;
     }
 
+    function setSingleSlotMessage(message, tone = '') {
+      singleSlotMsg.className = `form-hint mt-2 ${tone}`;
+      singleSlotMsg.textContent = message;
+    }
+
+    function getSingleSlotDraft() {
+      const date = singleSlotDateInput.value;
+      const time = singleSlotTimeInput.value;
+      const capacity = parseInt(singleSlotCapacityInput.value, 10);
+      if (!date || !time || !Number.isInteger(capacity) || capacity < 1) return null;
+      return { starts_at: `${date}T${time}`, capacity, seats_taken: 0 };
+    }
+
+    function updateSingleSlotState() {
+      const draft = getSingleSlotDraft();
+      addSingleSlotBtn.disabled = !draft;
+      if (!draft) {
+        setSingleSlotMessage('Choose a date and time to add a session.');
+        return;
+      }
+      setSingleSlotMessage(`Ready to add ${formatSlotLabel(draft.starts_at)} with ${draft.capacity} spots.`);
+    }
+
+    function addSingleSession() {
+      const draft = getSingleSlotDraft();
+      if (!draft) { updateSingleSlotState(); return; }
+      if (existingStartTimes().includes(draft.starts_at)) {
+        setSingleSlotMessage('That session already exists. Choose another date or time.', 'text-danger');
+        singleSlotTimeInput.focus();
+        return;
+      }
+      slotsContainer.insertAdjacentHTML('beforeend', createSlotRow(draft));
+      sortSlotRows();
+      updateSlotsVisibility();
+      setSingleSlotMessage(`${formatSlotLabel(draft.starts_at)} added. Save the activity to keep it.`, 'text-success');
+      singleSlotTimeInput.value = '';
+      addSingleSlotBtn.disabled = true;
+      singleSlotTimeInput.focus();
+    }
+
+    [singleSlotDateInput, singleSlotTimeInput, singleSlotCapacityInput].forEach(function (input) {
+      input.addEventListener('input', updateSingleSlotState);
+      input.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        addSingleSession();
+      });
+    });
+    addSingleSlotBtn.addEventListener('click', addSingleSession);
+
     function updateSlotsVisibility() {
-      const has = slotsContainer.children.length > 0;
-      noSlots.style.display = has ? 'none' : 'block';
-      slotsTable.style.display = has ? 'table' : 'none';
+      const count = slotsContainer.children.length;
+      const hasSessions = count > 0;
+      noSlots.classList.toggle('d-none', hasSessions);
+      slotsContainer.classList.toggle('d-none', !hasSessions);
+      slotCountSummary.textContent = hasSessions
+        ? `${count} session${count > 1 ? 's' : ''}. Review capacity and bookings before saving.`
+        : 'Review capacity and bookings before saving.';
     }
 
     document.getElementById('generateSlotsBtn').addEventListener('click', function () {
@@ -2258,7 +2432,7 @@ Add Type
                    `seats and give their credits back. Continue?`)) {
         return;
       }
-      const row = slotsContainer.querySelector(`tr[data-id="${link.dataset.removeSlot}"]`);
+      const row = slotsContainer.querySelector(`[data-id="${link.dataset.removeSlot}"]`);
       if (row) row.remove();
       updateSlotsVisibility();
     });
@@ -2266,8 +2440,14 @@ Add Type
     // Keep the hidden capacity input in sync with the visible number box.
     slotsContainer.addEventListener('input', function (e) {
       if (!e.target.classList.contains('slot-capacity-input')) return;
-      const row = e.target.closest('tr');
+      const row = e.target.closest('[data-id]');
+      const capacity = parseInt(e.target.value, 10);
+      const booked = parseInt(e.target.dataset.booked || 0, 10);
       row.querySelector('input[name*="[capacity]"]').value = e.target.value;
+
+      if (Number.isNaN(capacity)) return;
+      row.querySelector('[data-slot-available]').textContent = Math.max(0, capacity - booked);
+      row.querySelector('[data-slot-booking-summary]').textContent = `${booked} of ${capacity} booked`;
     });
 
     {% if activity and activity.slots %}
@@ -2288,6 +2468,7 @@ Add Type
     {% endif %}
 
     updateSlotsVisibility();
+    updateSingleSlotState();
     updateSlotPreview();
     toggleSchedulingFields();
 

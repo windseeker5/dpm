@@ -1,1490 +1,547 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f8f9fa">
-  <title>Signup for {{ activity.name }}</title>
+  <meta name="theme-color" content="#ffffff">
+  <title>Inscription — {{ activity.name }}</title>
 
-  <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
-
-  <!-- Tabler Core CSS -->
-  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
-  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
-
-  <!-- Custom Styles -->
-  <link href="{{ url_for('static', filename='minipass.css') }}" rel="stylesheet">
-
-  <style>
-    :root {
-      --primary-color: #206bc4;
-      --success-color: #28a745;
-      /* Flat, not a gradient: DESIGN_SYSTEM.md:41 bans gradients on cards and controls.
-         The two gradients left in this file are scrims over the hero photo, which exist
-         so white text stays legible on an arbitrary image - those are functional. */
-      --success-solid: #1a7f4b;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f8f9fa;
-    }
-
-    /* ========================================
-       DESKTOP LAYOUT: Split Screen
-       ======================================== */
-    .signup-wrapper {
-      display: flex;
-      min-height: 100vh;
-    }
-
-    .signup-form-side {
-      flex: 1;
-      max-width: 50%;
-      padding: 2rem 3rem;
-      overflow-y: auto;
-      background: #ffffff;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    .signup-image-side {
-      flex: 1;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      position: relative;
-    }
-
-    .signup-image-side::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to right, rgba(0,0,0,0.15), transparent 30%);
-    }
-
-    /* Form container - centered, max 480px */
-    .signup-form-content {
-      max-width: 480px;
-      margin: 0 auto;
-      width: 100%;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    /* ========================================
-       PROGRESS INDICATOR
-       ======================================== */
-    .signup-progress {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0;
-      margin-bottom: 1rem;
-      padding: 0 1rem;
-    }
-
-    .progress-step {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-    }
-
-    .step-number {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: #e9ecef;
-      color: #6c757d;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 0.75rem;
-      margin-bottom: 0;
-    }
-
-    .progress-step.active .step-number {
-      background: var(--primary-color);
-      color: white;
-    }
-
-    .progress-step.completed .step-number {
-      background: var(--success-color);
-      color: white;
-    }
-
-    .step-label {
-      display: none !important;
-    }
-
-    .progress-line {
-      width: 60px;
-      height: 2px;
-      background: #e9ecef;
-      margin: 0 0.5rem;
-      margin-bottom: 0;
-    }
-
-    .progress-line.completed {
-      background: var(--success-color);
-    }
-
-    /* ========================================
-       STEP CONTAINERS
-       ======================================== */
-    .signup-step {
-      display: none;
-      flex-direction: column;
-    }
-
-    .signup-step.active {
-      display: flex;
-    }
-
-    /* ========================================
-       STEP 1: ACTIVITY OVERVIEW
-       ======================================== */
-    .activity-card {
-      background: #ffffff;
-      border: 1px solid #e9ecef;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .activity-title {
-      font-family: 'Roboto Slab', serif;
-      font-weight: 700;
-      font-size: 1.5rem;
-      color: #0f172a;
-      margin-bottom: 0.5rem;
-    }
-
-    .activity-description {
-      color: #6c757d;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      margin-bottom: 1rem;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .info-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-    }
-
-    .info-item i {
-      font-size: 1.125rem;
-      color: #6c757d;
-      margin-top: 0.125rem;
-      flex-shrink: 0;
-    }
-
-    .info-item-content {
-      min-width: 0;
-    }
-
-    .info-label {
-      font-size: 0.7rem;
-      color: #6c757d;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 0.125rem;
-    }
-
-    .info-value {
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: #212529;
-    }
-
-    /* Quantity selector */
-    .quantity-section {
-      background: #ffffff;
-      border: 1px solid #e9ecef;
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .quantity-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    /* Session picker (activity.uses_scheduling) */
-    .slot-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-
-    .slot-option {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 1px solid #dee2e6;
-      border-radius: 8px;
-      background: #ffffff;
-      cursor: pointer;
-      text-align: left;
-      font-size: 0.95rem;
-      min-height: 44px;                  /* comfortable touch target */
-      touch-action: manipulation;        /* no 300ms double-tap zoom delay */
-      transition: border-color 0.15s, background 0.15s;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .slot-option { transition: none; }
-    }
-
-    .slot-option:hover:not(:disabled) {
-      border-color: #0054a6;
-      background: #f6f9fd;
-    }
-
-    .slot-option:focus-visible {
-      outline: 2px solid #0054a6;
-      outline-offset: 2px;
-    }
-
-    .slot-option.selected {
-      border-color: #0054a6;
-      border-width: 2px;
-      background: #f6f9fd;
-    }
-
-    /* Full sessions stay visible but unusable — hiding them makes people email to ask
-       whether the session was cancelled, and visible scarcity encourages booking. */
-    .slot-option.slot-full {
-      opacity: 0.55;
-      cursor: not-allowed;
-      background: #f8f9fa;
-    }
-
-    .slot-when {
-      font-weight: 600;
-      color: #212529;
-      text-transform: capitalize;
-    }
-
-    .slot-left {
-      font-size: 0.85rem;
-      color: #6c757d;
-      white-space: nowrap;
-      margin-left: 1rem;
-    }
-
-    .slot-option.selected .slot-left {
-      color: #0054a6;
-      font-weight: 600;
-    }
-
-    .slot-error {
-      color: #d63939;
-      font-size: 0.85rem;
-      margin-top: 0.5rem;
-    }
-
-    .quantity-label {
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: #212529;
-    }
-
-    .quantity-controls {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .qty-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      border: 1px solid #dee2e6;
-      background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 1.25rem;
-      color: #495057;
-    }
-
-    .qty-btn:active {
-      background: #e9ecef;
-    }
-
-    .qty-value {
-      font-weight: 700;
-      font-size: 1.125rem;
-      min-width: 2rem;
-      text-align: center;
-    }
-
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid #dee2e6;
-    }
-
-    .total-label {
-      font-size: 0.9rem;
-      color: #6c757d;
-    }
-
-    .total-amount {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #212529;
-    }
-
-    /* ========================================
-       STEP 2: CONTACT FORM
-       ======================================== */
-    .order-summary {
-      background: #f8f9fa;
-      border: 1px solid var(--success-color);
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .order-summary-qty {
-      font-weight: 700;
-      color: #212529;
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-
-    .order-summary-name {
-      flex: 1;
-      text-align: left;
-      font-weight: 400;
-      color: #212529;
-      font-size: 0.95rem;
-    }
-
-    .order-summary-price {
-      font-weight: 700;
-      color: #212529;
-      font-size: 1.125rem;
-      flex-shrink: 0;
-    }
-
-    .form-section-title {
-      display: none;
-    }
-
-    .payment-info-text {
-      color: #6c757d;
-      font-size: 0.9rem;
-      margin-bottom: 1.5rem;
-      line-height: 1.5;
-    }
-
-    /* Payment Method Card */
-    .payment-method-card {
-      background: #ffffff;
-      border: 2px solid #e9ecef;
-      border-radius: 8px;
-      padding: 0.625rem 1.25rem;
-      margin-bottom: 0.375rem;
-      display: flex;
-      align-items: center;
-      gap: 0.875rem;
-      cursor: pointer;
-    }
-
-    .payment-method-card.selected {
-      border-color: #206bc4;
-    }
-
-    .payment-methods-group {
-      margin-bottom: 1rem;
-    }
-
-    .payment-method-radio {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      border: 2px solid #adb5bd;
-      background: #fff;
-      position: relative;
-      flex-shrink: 0;
-    }
-
-    .payment-method-card.selected .payment-method-radio {
-      border-color: #206bc4;
-    }
-
-    .payment-method-radio::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: transparent;
-    }
-
-    .payment-method-card.selected .payment-method-radio::after {
-      background: #206bc4;
-    }
-
-    .payment-method-logo {
-      flex-shrink: 0;
-    }
-
-    .interac-logo-img {
-      width: 36px;
-      height: 36px;
-      border-radius: 6px;
-      object-fit: contain;
-    }
-
-    .payment-method-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .payment-method-desc {
-      font-size: 0.85rem;
-      color: #212529;
-      line-height: 1.5;
-    }
-
-    /* Form fields */
-    .form-group {
-      margin-bottom: 1.25rem;
-    }
-
-    .form-label {
-      font-weight: 600;
-      color: #495057;
-      font-size: 0.875rem;
-      margin-bottom: 0.5rem;
-      display: block;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      font-size: 1rem;
-      border: 1px solid #dee2e6;
-      border-radius: 8px;
-      background: #ffffff;
-    }
-
-    .form-control:focus-visible {
-      outline: 2px solid var(--primary-color);
-      outline-offset: 1px;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.15);
-    }
-
-    .form-control::placeholder {
-      color: #adb5bd;
-    }
-
-    /* Notes toggle */
-    .notes-toggle {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--primary-color);
-      font-size: 0.875rem;
-      cursor: pointer;
-      margin-bottom: 1rem;
-    }
-
-    .notes-toggle i {
-      font-size: 1rem;
-    }
-
-    #notes-section {
-      display: none;
-      margin-bottom: 1rem;
-    }
-
-    #notes-section.visible {
-      display: block;
-    }
-
-    /* Trust signals - hidden */
-    .trust-signals {
-      display: none;
-    }
-
-    /* ========================================
-       CTA BUTTONS
-       ======================================== */
-    .btn-cta-primary {
-      width: 100%;
-      padding: 1rem 1.5rem;
-      background: var(--success-solid);
-      color: white;
-      font-size: 1.125rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      min-height: 56px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      box-shadow: 0 4px 14px rgba(40, 167, 69, 0.35);
-    }
-
-    .btn-secondary {
-      background: transparent;
-      color: #6c757d;
-      border: none;
-      padding: 0.75rem 1rem;
-      font-size: 0.9rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .buttons-row {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-      padding-top: 1rem;
-    }
-
-    .buttons-row .btn-cta-primary {
-      width: 100%;
-    }
-
-    .buttons-row .btn-secondary {
-      align-self: center;
-    }
-
-    /* ========================================
-       SOLD OUT STATE
-       ======================================== */
-    .sold-out-card {
-      background: #fff5f5;
-      border: 1px solid #f8d7da;
-      border-radius: 12px;
-      padding: 2rem;
-      text-align: center;
-    }
-
-    .sold-out-card i {
-      font-size: 3rem;
-      color: #dc3545;
-      margin-bottom: 1rem;
-    }
-
-    .sold-out-card h3 {
-      color: #dc3545;
-      margin-bottom: 0.5rem;
-    }
-
-    .sold-out-card p {
-      color: #6c757d;
-      margin: 0;
-    }
-
-    /* Remaining capacity alert */
-    /* Flash messages. This page is standalone so it never inherited base.html's flash
-       block — every rejection (session full, already past, sold out, payment not
-       configured) used to bounce the user back here with no explanation at all. */
-    .signup-flash {
-      border-radius: 8px;
-      padding: 0.85rem 1rem;
-      margin-bottom: 1.25rem;
-      display: flex;
-      align-items: flex-start;
-      gap: 0.6rem;
-      font-size: 0.92rem;
-      line-height: 1.4;
-    }
-    .signup-flash i { flex-shrink: 0; font-size: 1.1rem; margin-top: 1px; }
-    .signup-flash-error   { background: #fbe1e1; color: #a11c1c; }
-    .signup-flash-warning { background: #fdf3d8; color: #8a6100; }
-    .signup-flash-success { background: #d8f3e0; color: #14653a; }
-    .signup-flash-info    { background: #d1ecf1; color: #0c5460; }
-
-    .capacity-alert {
-      background: #d1ecf1;
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-      color: #0c5460;
-      font-size: 0.9rem;
-    }
-
-    .capacity-alert i {
-      font-size: 1.125rem;
-    }
-
-    /* ========================================
-       MOBILE LAYOUT
-       ======================================== */
-    .mobile-hero {
-      display: none;
-    }
-
-    @media (max-width: 768px) {
-      body {
-        background: #ffffff;
-      }
-
-      .signup-wrapper {
-        flex-direction: column;
-        min-height: auto;
-        background: #ffffff;
-      }
-
-      .signup-form-side {
-        max-width: 100%;
-        padding: 0;
-        order: 2;
-        min-height: auto;
-      }
-
-      .signup-image-side {
-        display: none !important;
-        height: 0 !important;
-        width: 0 !important;
-        min-height: 0 !important;
-        flex: 0 !important;
-        overflow: hidden;
-      }
-
-      /* Mobile hero banner */
-      .mobile-hero {
-        display: block;
-        height: 160px; /* reduced from 220px, saves 60px */
-        background-size: cover;
-        background-position: center;
-        position: relative;
-      }
-
-      .mobile-hero::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 70%);
-        /* Darker gradient: 0.8 at bottom (was 0.75), 0.4 at mid (was 0.3) */
-      }
-
-      .mobile-hero-content {
-        position: absolute;
-        bottom: -0.75rem; /* Move title down by pushing container lower */
-        left: 0;
-        right: 0;
-        padding: 1.25rem;
-        z-index: 1;
-        display: flex;
-        align-items: flex-end;
-      }
-
-      .mobile-hero-title {
-        color: white;
-        font-family: 'Roboto Slab', serif;
-        font-weight: 700;
-        font-size: 1.5rem; /* Increased from 1.375rem - more prominent */
-        text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 20px rgba(0,0,0,0.4);
-        /* Stronger multi-layer shadow for better contrast */
-        margin: 0;
-        line-height: 1.2;
-      }
-
-      .signup-form-content {
-        padding: 1rem; /* reduced from 1.25rem */
-        padding-bottom: 4rem; /* reduced from 6rem, saves 32px */
-        max-width: 100%;
-        min-height: auto;
-        overflow: visible;
-      }
-
-      /* Ensure mobile body/html can scroll */
-      html, body {
-        overflow-y: auto !important;
-        height: auto !important;
-      }
-
-      .signup-wrapper {
-        min-height: auto;
-        overflow: visible;
-      }
-
-      .signup-progress {
-        margin-bottom: 1rem; /* reduced from 1.5rem, saves 8px */
-      }
-
-      .progress-line {
-        width: 40px;
-      }
-
-      .activity-card {
-        display: none; /* Hide on mobile since hero shows title */
-      }
-
-      .info-grid {
-        grid-template-columns: 1fr;
-        gap: 0.5rem; /* reduced from 0.75rem */
-      }
-
-      .info-grid-card {
-        background: #ffffff !important;
-        border: 1px solid #e9ecef;
-        border-radius: 12px;
-        padding: 1rem; /* reduced from 1.25rem, saves 10px */
-        margin-bottom: 1rem; /* reduced from 1.25rem, saves 4px */
-      }
-
-      .quantity-section {
-        margin-bottom: 1rem; /* reduced from 1.25rem, saves 4px */
-        padding: 0.875rem 1rem; /* reduced from 1rem 1.25rem */
-      }
-
-      .btn-cta-primary {
-        min-height: 52px;
-        font-size: 1rem;
-      }
-
-      .buttons-row {
-        margin-top: 1rem; /* reduced from 1.5rem, saves 8px */
-        padding-top: 0.75rem; /* reduced from 1rem */
-        gap: 0.5rem;
-        margin-bottom: 2rem;
-      }
-
-      .buttons-row .btn-secondary {
-        width: 100%;
-        justify-content: center;
-      }
-
-      /* Compact info items */
-      .info-item i {
-        font-size: 1rem; /* reduced from 1.125rem */
-      }
-
-      .info-label {
-        font-size: 0.65rem; /* reduced from 0.7rem */
-        margin-bottom: 0; /* reduced from 0.125rem */
-      }
-
-      .info-value {
-        font-size: 0.9rem; /* reduced from 0.95rem */
-      }
-
-      /* Increase logo size for stronger branding */
-      .mobile-hero-logo img {
-        height: 80px !important; /* Increased from 70px */
-      }
-
-      /* Adjust placeholder logo size */
-      .mobile-hero-logo > div {
-        width: 70px !important; /* Increased from 60px */
-        height: 70px !important; /* Increased from 60px */
-        font-size: 2.25rem !important; /* Increased from 2rem */
-      }
-
-      /* Hide description in mobile hero */
-      .mobile-hero-description {
-        display: none !important;
-      }
-    }
-
-    /* Desktop: Logo on form side - above progress indicator */
-    .form-logo {
-      text-align: center;
-      margin-bottom: 0.75rem;
-    }
-
-    .form-logo img {
-      height: 120px;
-      max-width: 300px;
-      object-fit: contain;
-    }
-
-    /* Hide desktop logo on mobile (mobile uses hero logo) */
-    @media (max-width: 768px) {
-      .form-logo {
-        display: none;
-      }
-    }
-
-    /* Mobile: Logo CENTERED on hero - NO BACKGROUND */
-    .mobile-hero-logo {
-      position: absolute;
-      top: 1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 2;
-    }
-
-    .mobile-hero-logo img {
-      height: 100px;
-      width: auto;
-      object-fit: contain;
-      display: block;
-      filter: drop-shadow(0 0 10px rgba(255,255,255,0.9))
-              drop-shadow(0 0 20px rgba(255,255,255,0.6));
-    }
-
-    /* Mobile: Activity description on hero */
-    .mobile-hero-description {
-      color: rgba(255,255,255,0.9);
-      font-size: 0.875rem;
-      margin-top: 0.5rem;
-      margin-bottom: 0;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-  </style>
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet">
 </head>
+<body class="bg-white">
+  <!--
+    THESIS: A reservation should feel like one calm decision, not a stack of unrelated cards.
+    OWN-WORLD: Tabler neutrals, organization blue, crisp rules, generous white space, and the real activity photograph.
+    STORY: Understand the offer, choose a session, provide contact details, and confirm without losing context.
+    FIRST VIEWPORT: A compact 7/5 split keeps the complete first decision and CTA visible beside the activity image.
+    FORM: Premium split reservation, selected from the assigned surface structure; seed 167bbff1.
+    FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+  -->
 
-<body>
-  <!-- Mobile Hero Banner (visible only on mobile) -->
-  <div class="mobile-hero" style="{% if activity.image_filename %}background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');{% else %}background: {{ placeholder_css(activity.name) }};{% endif %}">
-    {% if settings and settings["LOGO_FILENAME"] %}
-    <div class="mobile-hero-logo">
-      <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo" width="120" height="40">
-    </div>
-    {% else %}
-    <div class="mobile-hero-logo">
-      <div style="width: 80px; height: 80px; border-radius: 12px; background: {{ placeholder_color(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}; color: #fff; font-weight: 700; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.9)) drop-shadow(0 0 20px rgba(255,255,255,0.6));">
-        {{ placeholder_letter(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}
-      </div>
-    </div>
-    {% endif %}
-    <div class="mobile-hero-content">
-      <h1 class="mobile-hero-title">{{ activity.name }}</h1>
-      {% if activity.description %}
-      <p class="mobile-hero-description">{{ activity.description }}</p>
-      {% endif %}
-    </div>
+  {% if selected_passport_type %}
+    {% set signup_price = selected_passport_type.price_per_user or 0 %}
+    {% set included_sessions = selected_passport_type.sessions_included %}
+  {% elif passport_types|length == 1 %}
+    {% set signup_price = passport_types[0].price_per_user or 0 %}
+    {% set included_sessions = passport_types[0].sessions_included %}
+  {% else %}
+    {% set signup_price = activity.price_per_user or 0 %}
+    {% set included_sessions = activity.sessions_included %}
+  {% endif %}
+  {% set display_price = ("%.2f"|format(signup_price)).replace('.', ',') %}
+  {% if activity.location_address_formatted %}
+    {% set address_parts = activity.location_address_formatted.replace(', Canada', '').split(', ') %}
+    {% set display_location = address_parts[0] ~ ', ' ~ address_parts[1] if address_parts|length >= 2 else activity.location_address_formatted.replace(', Canada', '') %}
+  {% endif %}
+
+  {% if activity.image_filename %}
+  <div class="d-lg-none ratio ratio-3x1 overflow-hidden bg-secondary-lt">
+    <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+         class="w-100 h-100 object-fit-cover" alt="Photo de {{ activity.name }}">
   </div>
+  {% endif %}
 
-  <div class="signup-wrapper">
-    <!-- Left Side: Form -->
-    <div class="signup-form-side">
-      <div class="signup-form-content">
+  <div class="container-fluid p-0">
+    <div class="row g-0 min-vh-100">
+      <main class="col-12 col-lg-7 bg-white" id="main-content">
+        <div class="container py-4 py-lg-5 px-3 px-sm-4">
+          <div class="row justify-content-center">
+            <div class="col-12 col-md-10 col-xl-9 col-xxl-8">
 
-        <!-- Logo on form side (desktop only) -->
-        {% if settings and settings["LOGO_FILENAME"] %}
-        <div class="form-logo">
-          <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}" alt="Logo" width="120" height="40">
-        </div>
-        {% else %}
-        <div class="form-logo">
-          <div style="width: 90px; height: 90px; border-radius: 12px; background: {{ placeholder_color(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}; color: #fff; font-weight: 700; font-size: 3rem; display: inline-flex; align-items: center; justify-content: center;">
-            {{ placeholder_letter(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}
-          </div>
-        </div>
-        {% endif %}
-
-        {# Flash messages. Without this every rejection (session full, session already
-           passed, sold out, payment misconfigured) silently redirected back here and the
-           user had no idea why. #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-            <div class="signup-flash signup-flash-{{ 'error' if category == 'error' else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }}"
-                 role="alert" aria-live="polite">
-              {% if category == 'error' %}<i class="ti ti-alert-circle" aria-hidden="true"></i>
-              {% elif category == 'warning' %}<i class="ti ti-alert-triangle" aria-hidden="true"></i>
-              {% elif category == 'success' %}<i class="ti ti-circle-check" aria-hidden="true"></i>
-              {% else %}<i class="ti ti-info-circle" aria-hidden="true"></i>{% endif %}
-              <span>{{ message }}</span>
-            </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
-        {% if is_sold_out %}
-        <!-- SOLD OUT State -->
-        <div class="signup-progress">
-          <div class="progress-step active">
-            <div class="step-number">1</div>
-            <div class="step-label">Activite</div>
-          </div>
-          <div class="progress-line"></div>
-          <div class="progress-step">
-            <div class="step-number">2</div>
-            <div class="step-label">Inscription</div>
-          </div>
-        </div>
-
-        <div class="activity-card">
-          <h2 class="activity-title">{{ activity.name }}</h2>
-          {% if activity.description %}
-          <p class="activity-description">{{ activity.description }}</p>
-          {% endif %}
-        </div>
-
-        <div class="sold-out-card">
-          <i class="ti ti-alert-circle"></i>
-          <h3>COMPLET / SOLD OUT</h3>
-          <p>Cette activite a atteint sa capacite maximale.</p>
-          <p class="small text-muted mt-2">This activity has reached maximum capacity.</p>
-        </div>
-
-        {% else %}
-
-        <!-- Progress Indicator -->
-        <div class="signup-progress">
-          <div class="progress-step active" id="progress-step-1">
-            <div class="step-number" id="step-number-1">1</div>
-            <div class="step-label">Activite</div>
-          </div>
-          <div class="progress-line" id="progress-line-1"></div>
-          <div class="progress-step" id="progress-step-2">
-            <div class="step-number">2</div>
-            <div class="step-label">Inscription</div>
-          </div>
-        </div>
-
-        <!-- ========================================
-             STEP 1: Activity Overview
-             ======================================== -->
-        <div class="signup-step active" id="step-1">
-
-          <!-- Activity Card (desktop only, mobile uses hero) -->
-          <div class="activity-card">
-            <h2 class="activity-title">{{ activity.name }}</h2>
-            {% if activity.description %}
-            <p class="activity-description">{{ activity.description }}</p>
-            {% endif %}
-          </div>
-
-          <!-- Standard Info Grid -->
-          <div class="info-grid-card d-block d-md-none">
-            <div class="info-grid">
-              <div class="info-item">
-                <i class="ti ti-currency-dollar"></i>
-                <div class="info-item-content">
-                  <div class="info-label">Montant</div>
-                  <div class="info-value" id="mobile-price-display">
-                    {% if selected_passport_type %}
-                      ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
-                    {% elif passport_types|length == 1 %}
-                      ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
-                    {% else %}
-                      ${{ "%.2f"|format(activity.price_per_user or 0) }}
-                    {% endif %}
+              <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
+                {% if settings and settings["LOGO_FILENAME"] %}
+                <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+                     alt="{{ settings.get('ORG_NAME', 'Organisation') }}" width="88" height="72"
+                     class="object-fit-contain">
+                {% else %}
+                <span class="avatar avatar-lg bg-primary-lt text-primary fw-bold" aria-hidden="true">
+                  {{ placeholder_letter(settings.get('ORG_NAME', activity.name) if settings else activity.name) }}
+                </span>
+                {% endif %}
+                <div class="text-end flex-fill">
+                  <div class="d-flex align-items-center justify-content-end gap-2 mb-2">
+                    <span class="small fw-semibold" id="progress-status">Étape 1 sur 2</span>
+                    <span class="text-secondary small" id="progress-label">Séance</span>
+                  </div>
+                  <div class="progress progress-sm ms-auto" role="progressbar" aria-label="Progression de l’inscription"
+                       aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" id="signup-progress">
+                    <div class="progress-bar w-50" id="progress-bar"></div>
                   </div>
                 </div>
-              </div>
+              </header>
 
-              <div class="info-item">
-                <i class="ti ti-ticket"></i>
-                <div class="info-item-content">
-                  <div class="info-label">Sessions</div>
-                  <div class="info-value">
-                    {% if selected_passport_type %}
-                      {{ selected_passport_type.sessions_included }} {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
-                    {% elif passport_types|length == 1 %}
-                      {{ passport_types[0].sessions_included }} {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
-                    {% else %}
-                      {{ activity.sessions_included }} {{ "session" if activity.sessions_included == 1 else "sessions" }}
-                    {% endif %}
+              {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                  {% for category, message in messages %}
+                  <div class="alert alert-{{ 'danger' if category == 'error' else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }} d-flex align-items-start gap-2"
+                       role="alert" aria-live="polite">
+                    <i class="ti ti-{{ 'alert-circle' if category == 'error' else 'alert-triangle' if category == 'warning' else 'circle-check' if category == 'success' else 'info-circle' }} fs-3" aria-hidden="true"></i>
+                    <span>{{ message }}</span>
                   </div>
-                </div>
-              </div>
+                  {% endfor %}
+                {% endif %}
+              {% endwith %}
 
-              {% if activity.location_address_formatted %}
-              <div class="info-item">
-                <i class="ti ti-map-pin"></i>
-                <div class="info-item-content">
-                  <div class="info-label">Lieu</div>
-                  <div class="info-value" style="font-size: 0.85rem;">
-                    {% set address_parts = activity.location_address_formatted.replace(', Canada', '').split(', ') %}
-                    {% if address_parts|length >= 2 %}
-                      {{ address_parts[0] }}, {{ address_parts[1] }}
-                    {% else %}
-                      {{ activity.location_address_formatted.replace(', Canada', '') }}
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-              {% endif %}
-
-              {% if activity.show_remaining_quantity and remaining_capacity is not none %}
-              <div class="info-item">
-                <i class="ti ti-users"></i>
-                <div class="info-item-content">
-                  <div class="info-label">Places</div>
-                  <div class="info-value">{{ remaining_capacity }} {{ "restante" if remaining_capacity == 1 else "restantes" }}</div>
-                </div>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Desktop info (inside activity card styling) -->
-          <div class="d-none d-md-block" style="background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
-            <div class="info-grid">
-              <div class="info-item">
-                <i class="ti ti-currency-dollar"></i>
-                <div class="info-item-content">
-                  <div class="info-label">Montant</div>
-                  <div class="info-value" id="desktop-price-display">
-                    {% if selected_passport_type %}
-                      ${{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
-                    {% elif passport_types|length == 1 %}
-                      ${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
-                    {% else %}
-                      ${{ "%.2f"|format(activity.price_per_user or 0) }}
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-
-              <div class="info-item">
-                <i class="ti ti-ticket"></i>
-                <div class="info-item-content">
-                  <div class="info-label">Sessions</div>
-                  <div class="info-value">
-                    {% if selected_passport_type %}
-                      {{ selected_passport_type.sessions_included }} {{ "session" if selected_passport_type.sessions_included == 1 else "sessions" }}
-                    {% elif passport_types|length == 1 %}
-                      {{ passport_types[0].sessions_included }} {{ "session" if passport_types[0].sessions_included == 1 else "sessions" }}
-                    {% else %}
-                      {{ activity.sessions_included }} {{ "session" if activity.sessions_included == 1 else "sessions" }}
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-
-              {% if activity.location_address_formatted %}
-              <div class="info-item">
-                <i class="ti ti-map-pin"></i>
-                <div class="info-item-content">
-                  <div class="info-label">Lieu</div>
-                  <div class="info-value" style="font-size: 0.85rem;">
-                    {% set address_parts = activity.location_address_formatted.replace(', Canada', '').split(', ') %}
-                    {% if address_parts|length >= 2 %}
-                      {{ address_parts[0] }}, {{ address_parts[1] }}
-                    {% else %}
-                      {{ activity.location_address_formatted.replace(', Canada', '') }}
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-              {% endif %}
-
-              {% if activity.show_remaining_quantity and remaining_capacity is not none %}
-              <div class="info-item">
-                <i class="ti ti-users"></i>
-                <div class="info-item-content">
-                  <div class="info-label">Places</div>
-                  <div class="info-value">{{ remaining_capacity }} {{ "restante" if remaining_capacity == 1 else "restantes" }}</div>
-                </div>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Remaining Capacity Alert (if not shown in grid) -->
-          {% if activity.show_remaining_quantity and remaining_capacity is not none and remaining_capacity <= 10 %}
-          <div class="capacity-alert d-none d-md-flex">
-            <i class="ti ti-alert-triangle"></i>
-            <span><strong>{{ remaining_capacity }}</strong> {{ "place restante" if remaining_capacity == 1 else "places restantes" }}</span>
-          </div>
-          {% endif %}
-
-          <!-- Session Selection (only when the activity uses scheduling) -->
-          {% if activity.uses_scheduling %}
-          <div class="quantity-section">
-            <div class="quantity-row" style="display:block;">
-              <span class="quantity-label">Choisissez votre séance</span>
-              {% if not available_slots %}
-              <p class="small text-muted" style="margin: 0.5rem 0 0;">
-                Aucune séance disponible pour le moment — vous pourrez en choisir une plus tard.
-              </p>
-              {% endif %}
-              <div class="slot-list" id="slot-list" role="group" aria-label="Séances disponibles">
-                {% for slot in available_slots %}
-                <button type="button"
-                        class="slot-option{% if slot.is_full %} slot-full{% endif %}"
-                        data-slot-id="{{ slot.id }}"
-                        aria-pressed="false"
-                        {% if slot.is_full %}disabled aria-disabled="true"{% endif %}
-                        onclick="selectSlot(this)">
-                  <span class="slot-when">{{ format_slot_label(slot) }}</span>
-                  <span class="slot-left">
-                    {% if slot.is_full %}
-                      Complet
-                    {% else %}
-                      {{ slot.seats_left }} {{ "place" if slot.seats_left == 1 else "places" }}
-                    {% endif %}
+              {% if is_sold_out %}
+              <section class="card" aria-labelledby="sold-out-title">
+                <div class="card-body text-center p-4 p-md-5">
+                  <span class="avatar avatar-xl bg-red-lt text-red mb-3" aria-hidden="true">
+                    <i class="ti ti-calendar-off fs-1"></i>
                   </span>
-                </button>
-                {% endfor %}
-                <button type="button"
-                        class="slot-option slot-decide-later"
-                        id="decide-later-option"
-                        aria-pressed="false"
-                        onclick="selectDecideLater(this)">
-                  <span class="slot-when">Je choisirai ma séance plus tard</span>
-                  <span class="slot-left">Après le paiement</span>
-                </button>
-              </div>
-              <div id="slot-error" class="slot-error" role="alert" style="display:none;">
-                Veuillez choisir une séance, ou l'option « plus tard », pour continuer.
-              </div>
-            </div>
-          </div>
-          {% endif %}
+                  <h1 class="h2 mb-2" id="sold-out-title">Cette activité est complète</h1>
+                  <p class="text-secondary mb-0">Toutes les places pour {{ activity.name }} ont été réservées.</p>
+                </div>
+              </section>
+              {% else %}
 
-          <!-- Quantity Selection -->
-          {% if activity.allow_quantity_selection and not activity.uses_scheduling %}
-          <div class="quantity-section">
-            <div class="quantity-row">
-              <span class="quantity-label">Quantite</span>
-              <div class="quantity-controls">
-                <button type="button" class="qty-btn" onclick="updateQty(-1)">-</button>
-                <span class="qty-value" id="qty-display">1</span>
-                <button type="button" class="qty-btn" onclick="updateQty(1)">+</button>
-              </div>
-            </div>
-            <div class="total-row">
-              <span class="total-label">Total</span>
-              <span class="total-amount">$<span id="total-amount">
-                {% if selected_passport_type %}
-                  {{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
-                {% elif passport_types|length == 1 %}
-                  {{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
-                {% else %}
-                  {{ "%.2f"|format(activity.price_per_user or 0) }}
-                {% endif %}
-              </span></span>
-            </div>
-          </div>
-          {% endif %}
+              <section class="signup-step" id="step-1" aria-labelledby="step-1-title">
+                <div class="mb-4">
+                  <h1 class="display-6 mb-2" id="step-1-title">Réserver votre place</h1>
+                  <p class="text-secondary mb-0">{{ activity.name }}</p>
+                </div>
 
-          <!-- Reserve CTA -->
-          <div class="buttons-row">
-            <button type="button" class="btn-cta-primary" onclick="goToStep(2)">
-              Reserver ma place
-              <i class="ti ti-arrow-right"></i>
-            </button>
-          </div>
-        </div>
+                <div class="card">
+                  <div class="card-body p-3 p-sm-4">
+                    <section aria-label="Résumé de l’activité">
+                      <div class="row g-3 align-items-start">
+                        <div class="col-6 col-sm-3">
+                          <div class="text-secondary small mb-1">Montant</div>
+                          <div class="fw-bold fs-3" id="price-display">{{ display_price }}&nbsp;$</div>
+                        </div>
+                        <div class="col-6 col-sm-3">
+                          <div class="text-secondary small mb-1">Inclus</div>
+                          <div class="fw-semibold">{{ included_sessions }} {{ "séance" if included_sessions == 1 else "séances" }}</div>
+                        </div>
+                        {% if display_location %}
+                        <div class="col-12 col-sm-6">
+                          <div class="text-secondary small mb-1">Lieu</div>
+                          <div class="fw-semibold d-flex align-items-start gap-2">
+                            <i class="ti ti-map-pin text-secondary mt-1" aria-hidden="true"></i>
+                            <span>{{ display_location }}</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                      </div>
+                    </section>
 
-        <!-- ========================================
-             STEP 2: Contact Form
-             ======================================== -->
-        <div class="signup-step" id="step-2">
-          <form method="POST" id="signup-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if activity.description %}
+                    <p class="text-secondary small border-top pt-3 mt-3 mb-0">{{ activity.description }}</p>
+                    {% endif %}
 
-            <!-- Hidden passport type ID -->
-            {% if selected_passport_type %}
-              <input type="hidden" name="passport_type_id" value="{{ selected_passport_type.id }}">
-            {% elif passport_types|length == 1 %}
-              <input type="hidden" name="passport_type_id" value="{{ passport_types[0].id }}">
-            {% endif %}
+                    {% if activity.uses_scheduling %}
+                    {% set selectable_slots = available_slots | rejectattr('is_full') | list %}
+                    {% set full_slots = available_slots | selectattr('is_full') | list %}
+                    <fieldset class="border-top pt-4 mt-4" id="slot-picker" data-has-slots="{{ 'true' if selectable_slots else 'false' }}">
+                      <legend class="h3 mb-1">Choisissez votre séance</legend>
+                      <p class="text-secondary mb-3">Vous pourrez modifier votre choix plus tard depuis votre passeport.</p>
 
-            <!-- Hidden quantity (updated by JS) -->
-            <input type="hidden" name="requested_sessions" id="hidden-qty" value="1">
+                      {% if selectable_slots %}
+                      <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column gap-2 mb-3">
+                        <label class="form-selectgroup-item flex-fill">
+                          <input type="radio" name="slot_choice_mode" value="now" id="slot-mode-now"
+                                 class="form-selectgroup-input" checked>
+                          <span class="form-selectgroup-label d-flex align-items-start p-3">
+                            <span class="form-selectgroup-check me-3"></span>
+                            <span>
+                              <strong class="d-block">Choisir maintenant</strong>
+                              <span class="text-secondary small">Réservez la séance qui vous convient.</span>
+                            </span>
+                          </span>
+                        </label>
 
-            <!-- Hidden chosen session (set by selectSlot in step 1) -->
-            {% if activity.uses_scheduling %}
-            <input type="hidden" name="slot_id" id="hidden-slot" value="">
-            {% endif %}
+                        <div class="ms-sm-5" id="slot-select-panel">
+                          <label class="form-label" for="slot-select">Date et heure</label>
+                          <select class="form-select" id="slot-select" aria-describedby="slot-select-hint">
+                            <option value="">Sélectionner une séance</option>
+                            <optgroup label="Séances disponibles">
+                              {% for slot in selectable_slots %}
+                              <option value="{{ slot.id }}" data-seats-left="{{ slot.seats_left }}">
+                                {{ format_slot_label(slot) }} — {{ slot.seats_left }} {{ "place restante" if slot.seats_left == 1 else "places restantes" }}
+                              </option>
+                              {% endfor %}
+                            </optgroup>
+                            {% if full_slots %}
+                            <optgroup label="Séances complètes">
+                              {% for slot in full_slots %}
+                              <option value="{{ slot.id }}" disabled>{{ format_slot_label(slot) }} — complet</option>
+                              {% endfor %}
+                            </optgroup>
+                            {% endif %}
+                          </select>
+                          <div class="text-secondary small mt-2" id="slot-select-hint" aria-live="polite">
+                            Sélectionnez une date et une heure pour continuer.
+                          </div>
+                        </div>
 
-            <!-- Order Summary -->
-            <div class="order-summary">
-              {% if activity.allow_quantity_selection %}
-              <span class="order-summary-qty" id="summary-qty-prefix">1 x</span>
+                        <label class="form-selectgroup-item flex-fill">
+                          <input type="radio" name="slot_choice_mode" value="later" id="slot-mode-later"
+                                 class="form-selectgroup-input">
+                          <span class="form-selectgroup-label d-flex align-items-start p-3">
+                            <span class="form-selectgroup-check me-3"></span>
+                            <span>
+                              <strong class="d-block">Choisir plus tard</strong>
+                              <span class="text-secondary small">Réservez depuis votre passeport après le paiement.</span>
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                      {% else %}
+                      <div class="alert alert-info mb-3" role="status">
+                        Aucune séance n’est disponible actuellement. Vous pourrez choisir depuis votre passeport après le paiement.
+                      </div>
+                      <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column">
+                        <label class="form-selectgroup-item flex-fill">
+                          <input type="radio" name="slot_choice_mode" value="later" id="slot-mode-later"
+                                 class="form-selectgroup-input" checked>
+                          <span class="form-selectgroup-label d-flex align-items-start p-3">
+                            <span class="form-selectgroup-check me-3"></span>
+                            <span>
+                              <strong class="d-block">Choisir plus tard</strong>
+                              <span class="text-secondary small">Nous vous informerons lorsqu’une séance sera disponible.</span>
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                      {% endif %}
+
+                      <div id="slot-error" class="text-danger small mt-2 d-none" role="alert">
+                        Sélectionnez une séance ou choisissez « Choisir plus tard » pour continuer.
+                      </div>
+                    </fieldset>
+                    {% endif %}
+
+                    {% if activity.allow_quantity_selection and not activity.uses_scheduling %}
+                    <section class="border-top pt-4 mt-4" aria-labelledby="quantity-title">
+                      <div class="d-flex align-items-center justify-content-between gap-3">
+                        <div>
+                          <h2 class="h3 mb-1" id="quantity-title">Quantité</h2>
+                          <p class="text-secondary small mb-0">Nombre de places à réserver</p>
+                        </div>
+                        <div class="btn-group" role="group" aria-label="Modifier la quantité">
+                          <button type="button" class="btn btn-outline-secondary" id="qty-decrease" aria-label="Diminuer la quantité">
+                            <i class="ti ti-minus" aria-hidden="true"></i>
+                          </button>
+                          <span class="btn btn-outline-secondary disabled fw-bold" id="qty-display" aria-live="polite">1</span>
+                          <button type="button" class="btn btn-outline-secondary" id="qty-increase" aria-label="Augmenter la quantité">
+                            <i class="ti ti-plus" aria-hidden="true"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="d-flex justify-content-between align-items-center border-top mt-3 pt-3">
+                        <span class="text-secondary">Total</span>
+                        <strong class="fs-2" id="total-amount">{{ display_price }}&nbsp;$</strong>
+                      </div>
+                    </section>
+                    {% endif %}
+                  </div>
+                  <div class="card-footer bg-white p-3 p-sm-4">
+                    <button type="button" class="btn btn-primary btn-lg w-100" id="continue-button">
+                      Continuer
+                      <i class="ti ti-arrow-right ms-1" aria-hidden="true"></i>
+                    </button>
+                    <div class="text-secondary small text-center mt-2">Aucun paiement ne sera effectué à cette étape.</div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="signup-step d-none" id="step-2" aria-labelledby="step-2-title">
+                <div class="mb-4">
+                  <h1 class="display-6 mb-2" id="step-2-title">Vos coordonnées</h1>
+                  <p class="text-secondary mb-0">Dernière étape pour confirmer votre inscription.</p>
+                </div>
+
+                <form method="POST" id="signup-form" class="card">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  {% if selected_passport_type %}
+                  <input type="hidden" name="passport_type_id" value="{{ selected_passport_type.id }}">
+                  {% elif passport_types|length == 1 %}
+                  <input type="hidden" name="passport_type_id" value="{{ passport_types[0].id }}">
+                  {% endif %}
+                  <input type="hidden" name="requested_sessions" id="hidden-qty" value="1">
+                  {% if activity.uses_scheduling %}
+                  <input type="hidden" name="slot_id" id="hidden-slot" value="">
+                  {% endif %}
+
+                  <div class="card-body p-3 p-sm-4">
+                    <div class="d-flex align-items-start justify-content-between gap-3 border-bottom pb-3 mb-4">
+                      <div>
+                        <div class="text-secondary small mb-1">Votre réservation</div>
+                        <div class="fw-semibold">{{ activity.name }}</div>
+                        <div class="text-secondary small d-none" id="summary-slot"></div>
+                      </div>
+                      <div class="text-end flex-shrink-0">
+                        {% if activity.allow_quantity_selection %}
+                        <span class="text-secondary small" id="summary-qty-prefix">1 ×</span>
+                        {% endif %}
+                        <strong class="d-block fs-3" id="summary-total">{{ display_price }}&nbsp;$</strong>
+                      </div>
+                    </div>
+
+                    {% if activity.accept_credit_card %}
+                    <fieldset class="mb-4">
+                      <legend class="h3 mb-3">Mode de paiement</legend>
+                      <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column gap-2">
+                        <label class="form-selectgroup-item flex-fill">
+                          <input type="radio" name="payment_method" value="interac" class="form-selectgroup-input" checked>
+                          <span class="form-selectgroup-label d-flex align-items-center p-3">
+                            <span class="form-selectgroup-check me-3"></span>
+                            <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="" width="36" height="36" class="rounded me-3">
+                            <span>
+                              <strong class="d-block">Virement Interac</strong>
+                              <span class="text-secondary small">Les instructions vous seront envoyées par courriel.</span>
+                            </span>
+                          </span>
+                        </label>
+                        <label class="form-selectgroup-item flex-fill">
+                          <input type="radio" name="payment_method" value="stripe" class="form-selectgroup-input">
+                          <span class="form-selectgroup-label d-flex align-items-center p-3">
+                            <span class="form-selectgroup-check me-3"></span>
+                            <span class="avatar bg-orange-lt text-orange me-3" aria-hidden="true"><i class="ti ti-credit-card fs-2"></i></span>
+                            <span>
+                              <strong class="d-block">Carte de crédit</strong>
+                              <span class="text-secondary small">Paiement sécurisé avec Stripe.</span>
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                    </fieldset>
+                    {% else %}
+                    <input type="hidden" name="payment_method" value="interac">
+                    <div class="alert alert-info d-flex align-items-center gap-3 mb-4" role="status">
+                      <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="" width="36" height="36" class="rounded">
+                      <div>
+                        <strong class="d-block">Paiement par virement Interac</strong>
+                        <span class="small">Les instructions vous seront envoyées par courriel après l’inscription.</span>
+                      </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                      <label class="form-label" for="signup-name">Nom complet <span class="text-danger" aria-hidden="true">*</span></label>
+                      <input type="text" name="name" id="signup-name" class="form-control" required
+                             autocomplete="name" aria-required="true">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label" for="signup-email">Adresse courriel <span class="text-danger" aria-hidden="true">*</span></label>
+                      <input type="email" name="email" id="signup-email" class="form-control" required
+                             autocomplete="email" inputmode="email" aria-required="true">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label" for="signup-phone">Téléphone <span class="text-secondary fw-normal">(facultatif)</span></label>
+                      <input type="tel" name="phone" id="signup-phone" class="form-control"
+                             autocomplete="tel" inputmode="tel">
+                    </div>
+
+                    <button type="button" class="btn btn-ghost-secondary" id="notes-toggle"
+                            aria-expanded="false" aria-controls="notes-section">
+                      <i class="ti ti-plus" id="notes-toggle-icon" aria-hidden="true"></i>
+                      Ajouter une note
+                    </button>
+                    <div class="mt-3" id="notes-section" hidden>
+                      <label class="form-label" for="signup-notes">Note</label>
+                      <textarea name="notes" id="signup-notes" class="form-control" rows="3"
+                                placeholder="Exigences particulières ou informations utiles"></textarea>
+                    </div>
+                  </div>
+
+                  <div class="card-footer bg-white p-3 p-sm-4">
+                    <button type="submit" class="btn btn-primary btn-lg w-100" id="submit-button">
+                      <span id="submit-button-label">Confirmer l’inscription</span>
+                      <i class="ti ti-check ms-1" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="btn btn-ghost-secondary w-100 mt-2" id="back-button">
+                      <i class="ti ti-arrow-left me-1" aria-hidden="true"></i>
+                      Retour à la séance
+                    </button>
+                  </div>
+                </form>
+              </section>
               {% endif %}
-              <span class="order-summary-name">{{ activity.name }}</span>
-              <span class="order-summary-price">$<span id="summary-total">
-                {% if selected_passport_type %}
-                  {{ "%.2f"|format(selected_passport_type.price_per_user or 0) }}
-                {% elif passport_types|length == 1 %}
-                  {{ "%.2f"|format(passport_types[0].price_per_user or 0) }}
-                {% else %}
-                  {{ "%.2f"|format(activity.price_per_user or 0) }}
-                {% endif %}
-              </span></span>
             </div>
-
-            <!-- Payment Method -->
-            <input type="hidden" name="payment_method" id="payment_method_input" value="interac">
-            {% if activity.accept_credit_card %}
-            <div class="payment-methods-group">
-              <div class="payment-method-card selected" onclick="selectPaymentMethod('interac', this)">
-                <div class="payment-method-radio"></div>
-                <div class="payment-method-logo">
-                  <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img" width="36" height="36">
-                </div>
-                <div class="payment-method-info">
-                  <span class="payment-method-desc"><strong>Interac.</strong> Les instructions de paiement vous seront envoyees par courriel apres votre inscription.</span>
-                </div>
-              </div>
-              <div class="payment-method-card" onclick="selectPaymentMethod('stripe', this)">
-                <div class="payment-method-radio"></div>
-                <div class="payment-method-logo">
-                  <i class="ti ti-credit-card" style="font-size: 2.25rem; color: #e67e22;"></i>
-                </div>
-                <div class="payment-method-info">
-                  <span class="payment-method-desc"><strong>Carte de credit.</strong> Payer par carte de credit via Stripe.</span>
-                </div>
-              </div>
-            </div>
-            {% else %}
-            <div class="payment-methods-group">
-              <div class="payment-method-card selected">
-                <div class="payment-method-radio"></div>
-                <div class="payment-method-logo">
-                  <img src="{{ url_for('static', filename='images/interac-logo.jpg') }}" alt="Interac" class="interac-logo-img" width="36" height="36">
-                </div>
-                <div class="payment-method-info">
-                  <span class="payment-method-desc"><strong>Interac.</strong> Les instructions de paiement vous seront envoyees par courriel apres votre inscription.</span>
-                </div>
-              </div>
-            </div>
-            {% endif %}
-
-            <!-- Name -->
-            <div class="form-group">
-              <label class="form-label">Nom complet <span style="color: #dc3545;">*</span></label>
-              <input type="text" name="name" class="form-control" required placeholder="Entrez votre nom complet" autocomplete="name">
-            </div>
-
-            <!-- Email -->
-            <div class="form-group">
-              <label class="form-label">Adresse courriel <span style="color: #dc3545;">*</span></label>
-              <input type="email" name="email" class="form-control" required placeholder="courriel@exemple.com" autocomplete="email">
-            </div>
-
-            <!-- Phone -->
-            <div class="form-group">
-              <label class="form-label">Telephone <span style="color: #6c757d; font-weight: 400;">(optionnel)</span></label>
-              <input type="tel" name="phone" class="form-control" placeholder="+1 (514) 123-4567" autocomplete="tel">
-            </div>
-
-            <!-- Notes Toggle -->
-            <div class="notes-toggle" onclick="toggleNotes()">
-              <i class="ti ti-plus" id="notes-toggle-icon"></i>
-              <span>Ajouter une note</span>
-            </div>
-
-            <div id="notes-section">
-              <textarea name="notes" class="form-control" rows="3" placeholder="Exigences speciales, preferences ou autres notes…"></textarea>
-            </div>
-
-            <!-- Buttons -->
-            <div class="buttons-row">
-              <button type="submit" class="btn-cta-primary">
-                Confirmer l'inscription
-                <i class="ti ti-check"></i>
-              </button>
-              <button type="button" class="btn-secondary" onclick="goToStep(1)">
-                <i class="ti ti-arrow-left"></i>
-                Retour
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
+      </main>
 
-        {% endif %}
-
-      </div>
+      <aside class="col-lg-5 d-none d-lg-block bg-secondary-lt" aria-label="Photo de l’activité">
+        <div class="position-sticky top-0 vh-100 overflow-hidden">
+          {% if activity.image_filename %}
+          <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+               class="w-100 h-100 object-fit-cover" alt="">
+          {% else %}
+          <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-primary-lt" aria-hidden="true">
+            <span class="display-1 fw-bold text-primary">{{ placeholder_letter(activity.name) }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </aside>
     </div>
-
-    <!-- Right Side: Image (Desktop only) -->
-    {% if activity.image_filename %}
-    <div class="signup-image-side" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}');"></div>
-    {% else %}
-    <div class="signup-image-side" style="background: {{ placeholder_css(activity.name) }}; display: flex; align-items: center; justify-content: center;">
-      <span style="font-size: 8rem; font-weight: 700; color: rgba(255,255,255,0.15);">{{ placeholder_letter(activity.name) }}</span>
-    </div>
-    {% endif %}
   </div>
 
 <script>
-// Unit price for calculations
-var unitPrice = {{ (selected_passport_type.price_per_user or 0) if selected_passport_type else ((passport_types[0].price_per_user or 0) if passport_types|length == 1 else (activity.price_per_user or 0)) }};
+var unitPrice = {{ signup_price }};
 var maxQty = {{ remaining_capacity if remaining_capacity is not none else 10 }};
 var currentQty = 1;
-
-// Session picker (only present when the activity uses scheduling)
 var usesScheduling = {{ 'true' if activity.uses_scheduling else 'false' }};
-// True once the user has picked a real slot OR explicitly chosen "decide later" —
-// distinct from hidden-slot's value, which stays empty for "decide later" on purpose.
-var slotDecided = false;
+var slotPicker = document.getElementById('slot-picker');
+var hasSelectableSlots = slotPicker ? slotPicker.dataset.hasSlots === 'true' : false;
+var slotDecided = usesScheduling && !hasSelectableSlots;
+var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function selectSlot(btn) {
-  if (btn.disabled) return;
-  document.querySelectorAll('.slot-option').forEach(function(o) {
-    o.classList.remove('selected');
-    o.setAttribute('aria-pressed', 'false');
-  });
-  btn.classList.add('selected');
-  btn.setAttribute('aria-pressed', 'true');
-  document.getElementById('hidden-slot').value = btn.dataset.slotId;
-  slotDecided = true;
-  var err = document.getElementById('slot-error');
-  if (err) err.style.display = 'none';
+function formatMoney(value) {
+  return new Intl.NumberFormat('fr-CA', {
+    style: 'currency',
+    currency: 'CAD',
+    minimumFractionDigits: 2
+  }).format(value);
 }
 
-function selectDecideLater(btn) {
-  document.querySelectorAll('.slot-option').forEach(function(o) {
-    o.classList.remove('selected');
-    o.setAttribute('aria-pressed', 'false');
-  });
-  btn.classList.add('selected');
-  btn.setAttribute('aria-pressed', 'true');
-  document.getElementById('hidden-slot').value = '';
-  slotDecided = true;
-  var err = document.getElementById('slot-error');
-  if (err) err.style.display = 'none';
+function clearSlotError() {
+  var error = document.getElementById('slot-error');
+  if (error) error.classList.add('d-none');
 }
 
-// Step navigation
+function updateSlotSelection() {
+  var select = document.getElementById('slot-select');
+  var hiddenSlot = document.getElementById('hidden-slot');
+  if (!select || !hiddenSlot) return;
+  var selected = select.selectedOptions[0];
+  var seats = selected ? parseInt(selected.dataset.seatsLeft || '0', 10) : 0;
+  hiddenSlot.value = select.value;
+  slotDecided = Boolean(select.value);
+  document.getElementById('slot-select-hint').textContent = slotDecided
+    ? `${seats} ${seats === 1 ? 'place restante' : 'places restantes'} pour cette séance.`
+    : 'Sélectionnez une date et une heure pour continuer.';
+  if (slotDecided) clearSlotError();
+}
+
+function updateSlotMode() {
+  var chooseNow = document.getElementById('slot-mode-now');
+  var chooseLater = document.getElementById('slot-mode-later');
+  var panel = document.getElementById('slot-select-panel');
+  var hiddenSlot = document.getElementById('hidden-slot');
+  var nowSelected = Boolean(chooseNow && chooseNow.checked);
+  if (panel) panel.hidden = !nowSelected;
+
+  if (chooseLater && chooseLater.checked) {
+    if (hiddenSlot) hiddenSlot.value = '';
+    slotDecided = true;
+    clearSlotError();
+  } else if (nowSelected) {
+    updateSlotSelection();
+  }
+}
+
+if (slotPicker) {
+  var slotSelect = document.getElementById('slot-select');
+  if (slotSelect) slotSelect.addEventListener('change', updateSlotSelection);
+  slotPicker.querySelectorAll('input[name="slot_choice_mode"]').forEach(function(radio) {
+    radio.addEventListener('change', updateSlotMode);
+  });
+  updateSlotMode();
+}
+
+function updateProgress(step) {
+  var status = document.getElementById('progress-status');
+  var label = document.getElementById('progress-label');
+  var progress = document.getElementById('signup-progress');
+  var bar = document.getElementById('progress-bar');
+  status.textContent = `Étape ${step} sur 2`;
+  label.textContent = step === 1 ? 'Séance' : 'Coordonnées';
+  progress.setAttribute('aria-valuenow', step === 1 ? '50' : '100');
+  bar.classList.toggle('w-50', step === 1);
+  bar.classList.toggle('w-100', step === 2);
+}
+
 function goToStep(step) {
-  // A scheduled activity must have a session choice made (a real slot, or "decide
-  // later") before the details step, otherwise the server would reject the submission
-  // after the user filled everything in.
-  if (step === 2 && usesScheduling) {
-    if (!slotDecided) {
-      var err = document.getElementById('slot-error');
-      if (err) {
-        err.style.display = 'block';
-        err.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      return;
+  if (step === 2 && usesScheduling && !slotDecided) {
+    var error = document.getElementById('slot-error');
+    if (error) {
+      error.classList.remove('d-none');
+      error.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
     }
+    var select = document.getElementById('slot-select');
+    if (select) select.focus();
+    return;
   }
 
-  document.querySelectorAll('.signup-step').forEach(function(s) { s.classList.remove('active'); });
-  document.getElementById('step-' + step).classList.add('active');
-
-  // Update progress indicator
-  var step1 = document.getElementById('progress-step-1');
-  var step2 = document.getElementById('progress-step-2');
-  var line1 = document.getElementById('progress-line-1');
-  var stepNum1 = document.getElementById('step-number-1');
-
-  if (step === 2) {
-    step1.className = 'progress-step completed';
-    step2.className = 'progress-step active';
-    line1.className = 'progress-line completed';
-    stepNum1.innerHTML = '<i class="ti ti-check"></i>';
-    updateSummary();
-  } else {
-    step1.className = 'progress-step active';
-    step2.className = 'progress-step';
-    line1.className = 'progress-line';
-    stepNum1.innerHTML = '1';
+  document.getElementById('step-1').classList.toggle('d-none', step !== 1);
+  document.getElementById('step-2').classList.toggle('d-none', step !== 2);
+  updateProgress(step);
+  if (step === 2) updateSummary();
+  window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+  var heading = document.getElementById(`step-${step}-title`);
+  if (heading) {
+    heading.setAttribute('tabindex', '-1');
+    heading.focus({ preventScroll: true });
   }
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Quantity controls
 function updateQty(delta) {
   var newQty = Math.max(1, Math.min(currentQty + delta, Math.min(maxQty, 10)));
-  if (newQty !== currentQty) {
-    currentQty = newQty;
-    document.getElementById('qty-display').textContent = currentQty;
-    document.getElementById('hidden-qty').value = currentQty;
-    document.getElementById('total-amount').textContent = (currentQty * unitPrice).toFixed(2);
-  }
+  if (newQty === currentQty) return;
+  currentQty = newQty;
+  document.getElementById('qty-display').textContent = currentQty;
+  document.getElementById('hidden-qty').value = currentQty;
+  document.getElementById('total-amount').textContent = formatMoney(currentQty * unitPrice);
 }
 
-// Update order summary on step 2
 function updateSummary() {
-  document.getElementById('summary-total').textContent = (currentQty * unitPrice).toFixed(2);
-  var qtyPrefix = document.getElementById('summary-qty-prefix');
-  if (qtyPrefix) {
-    qtyPrefix.textContent = currentQty + ' x';
+  document.getElementById('summary-total').textContent = formatMoney(currentQty * unitPrice);
+  var quantity = document.getElementById('summary-qty-prefix');
+  if (quantity) quantity.textContent = `${currentQty} ×`;
+  var selectedSlot = document.getElementById('slot-select');
+  var slotSummary = document.getElementById('summary-slot');
+  if (selectedSlot && slotSummary && selectedSlot.value) {
+    slotSummary.textContent = selectedSlot.selectedOptions[0].textContent.trim();
+    slotSummary.classList.remove('d-none');
+  } else if (slotSummary) {
+    slotSummary.textContent = 'Séance à choisir plus tard';
+    slotSummary.classList.remove('d-none');
   }
 }
 
-// Notes toggle
-function toggleNotes() {
-  var section = document.getElementById('notes-section');
-  var icon = document.getElementById('notes-toggle-icon');
+var continueButton = document.getElementById('continue-button');
+if (continueButton) continueButton.addEventListener('click', function() { goToStep(2); });
+var backButton = document.getElementById('back-button');
+if (backButton) backButton.addEventListener('click', function() { goToStep(1); });
+var decreaseButton = document.getElementById('qty-decrease');
+if (decreaseButton) decreaseButton.addEventListener('click', function() { updateQty(-1); });
+var increaseButton = document.getElementById('qty-increase');
+if (increaseButton) increaseButton.addEventListener('click', function() { updateQty(1); });
 
-  if (section.classList.contains('visible')) {
-    section.classList.remove('visible');
-    icon.className = 'ti ti-plus';
-  } else {
-    section.classList.add('visible');
-    icon.className = 'ti ti-minus';
-    // Scroll to show button
-    setTimeout(function() {
-      var button = document.querySelector('.buttons-row');
-      if (button) {
-        button.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }
-    }, 100);
-  }
+var notesToggle = document.getElementById('notes-toggle');
+if (notesToggle) {
+  notesToggle.addEventListener('click', function() {
+    var section = document.getElementById('notes-section');
+    var expanded = notesToggle.getAttribute('aria-expanded') === 'true';
+    notesToggle.setAttribute('aria-expanded', String(!expanded));
+    section.hidden = expanded;
+    document.getElementById('notes-toggle-icon').className = expanded ? 'ti ti-plus' : 'ti ti-minus';
+    if (!expanded) document.getElementById('signup-notes').focus();
+  });
 }
 
-function selectPaymentMethod(method, el) {
-  document.getElementById('payment_method_input').value = method;
-  document.querySelectorAll('.payment-method-card').forEach(function(c) { c.classList.remove('selected'); });
-  el.classList.add('selected');
-  var btn = document.querySelector('.btn-cta-primary');
-  if (btn) {
-    btn.innerHTML = method === 'stripe'
-      ? 'Payer par carte <i class="ti ti-credit-card"></i>'
-      : 'Confirmer l\'inscription <i class="ti ti-check"></i>';
-  }
+document.querySelectorAll('input[name="payment_method"]').forEach(function(input) {
+  input.addEventListener('change', function() {
+    document.getElementById('submit-button-label').textContent = input.value === 'stripe'
+      ? 'Payer par carte'
+      : 'Confirmer l’inscription';
+  });
+});
+
+var signupForm = document.getElementById('signup-form');
+if (signupForm) {
+  signupForm.addEventListener('submit', function() {
+    var submitButton = document.getElementById('submit-button');
+    submitButton.disabled = true;
+    submitButton.setAttribute('aria-busy', 'true');
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Traitement…';
+  });
 }
 </script>
-
 </body>
 </html>

@@ -563,7 +563,7 @@ def _utc_naive_now():
 
 
 def format_slot_label(slot, include_weekday=True):
-    """Human label for a slot, e.g. 'samedi 14 juillet, 11:00'.
+    """Human label for a slot, e.g. 'samedi 14 juillet à 11 h 00'.
 
     Built by hand because there are no locale helpers in this app and babel/locale is not
     configured — relying on system locale would produce English on some hosts.
@@ -578,7 +578,7 @@ def format_slot_label(slot, include_weekday=True):
         parts.append(_FR_DAYS.get(dt.weekday(), ""))
     parts.append(f"{dt.day} {_FR_MONTHS.get(dt.month, '')}")
     label = " ".join(p for p in parts if p).strip()
-    return f"{label}, {dt.strftime('%H:%M')}"
+    return f"{label} à {dt.hour} h {dt.minute:02d}"
 
 
 def get_slot_hold_hours():
