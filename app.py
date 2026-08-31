@@ -2581,7 +2581,7 @@ def create_activity():
         admin_id = admin.id if admin else None
 
         # Workflow and quantity limit fields
-        workflow_type = request.form.get("workflow_type", "approval_first")
+        workflow_type = request.form.get("workflow_type", "payment_first")
         allow_quantity_selection = "allow_quantity_selection" in request.form
         is_quantity_limited = "is_quantity_limited" in request.form
         max_sessions_str = request.form.get("max_sessions", "").strip()
@@ -2755,10 +2755,7 @@ def create_activity():
 
     return render_template("activity_form.html",
                           activity=None,
-                          has_workflow_data=False,
-                          has_capacity_data=False,
-                          has_schedule_data=False,
-                          has_advanced_data=False,
+                          advanced_expanded=False,
                           google_maps_api_key=google_maps_api_key,
                           payment_email=payment_email,
                           stripe_configured=stripe_configured,
@@ -2820,7 +2817,7 @@ def edit_activity(activity_id):
         activity.discord_invite_url = request.form.get("discord_invite_url", "").strip() or None
 
         # Update workflow and quantity limit fields
-        activity.workflow_type = request.form.get("workflow_type", "approval_first")
+        activity.workflow_type = request.form.get("workflow_type", activity.workflow_type)
         activity.allow_quantity_selection = "allow_quantity_selection" in request.form
         activity.is_quantity_limited = "is_quantity_limited" in request.form
         max_sessions_str = request.form.get("max_sessions", "").strip()
@@ -3039,9 +3036,11 @@ def edit_activity(activity_id):
             'sessions_included': pt.sessions_included
         })
     
-    # Smart accordion expansion: detect which sections have data
+    # Smart accordion expansion: detect which sections have non-default data,
+    # so editing an activity that already uses these settings auto-expands
+    # Advanced instead of hiding them.
     has_workflow_data = (
-        activity.workflow_type == 'payment_first' or
+        activity.workflow_type == 'approval_first' or
         activity.offer_passport_renewal or
         activity.accept_credit_card
     )
@@ -3052,11 +3051,17 @@ def edit_activity(activity_id):
     )
     has_schedule_data = (
         activity.start_date or
-        activity.end_date or
-        activity.location_address_formatted
+        activity.end_date
     )
+    has_discord_data = bool(activity.discord_webhook_url)
     has_advanced_data = (
-        activity.goal_revenue and activity.goal_revenue > 0
+        (activity.goal_revenue and activity.goal_revenue > 0) or
+        activity.status == 'archived' or
+        bool(activity.get_inherited_activity_ids())
+    )
+    advanced_expanded = (
+        has_workflow_data or has_capacity_data or has_schedule_data or
+        has_discord_data or has_advanced_data
     )
 
     # Get Google Maps API key for Places Autocomplete
@@ -3081,10 +3086,7 @@ def edit_activity(activity_id):
                           summary=summary,
                           current_period=period,
                           period_display=period_display,
-                          has_workflow_data=has_workflow_data,
-                          has_capacity_data=has_capacity_data,
-                          has_schedule_data=has_schedule_data,
-                          has_advanced_data=has_advanced_data,
+                          advanced_expanded=advanced_expanded,
                           google_maps_api_key=google_maps_api_key,
                           payment_email=payment_email,
                           stripe_configured=stripe_configured,
@@ -8774,10 +8776,10 @@ def activity_form(activity_id=None):
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL", "")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
 
-    # Smart accordion expansion: detect which sections have data
+    # Smart accordion expansion: detect which sections have non-default data
     if activity:
         has_workflow_data = (
-            activity.workflow_type == 'payment_first' or
+            activity.workflow_type == 'approval_first' or
             getattr(activity, 'offer_passport_renewal', False)
         )
         has_capacity_data = (
@@ -8787,17 +8789,20 @@ def activity_form(activity_id=None):
         )
         has_schedule_data = (
             activity.start_date or
-            activity.end_date or
-            getattr(activity, 'location_address_formatted', None)
+            activity.end_date
         )
+        has_discord_data = bool(getattr(activity, 'discord_webhook_url', None))
         has_advanced_data = (
-            getattr(activity, 'goal_revenue', 0) and activity.goal_revenue > 0
+            (getattr(activity, 'goal_revenue', 0) and activity.goal_revenue > 0) or
+            activity.status == 'archived' or
+            bool(activity.get_inherited_activity_ids())
+        )
+        advanced_expanded = (
+            has_workflow_data or has_capacity_data or has_schedule_data or
+            has_discord_data or has_advanced_data
         )
     else:
-        has_workflow_data = False
-        has_capacity_data = False
-        has_schedule_data = False
-        has_advanced_data = False
+        advanced_expanded = False
 
     if activity:
         other_activities = Activity.query.filter(Activity.id != activity.id) \
@@ -8811,10 +8816,7 @@ def activity_form(activity_id=None):
                            summary=summary,
                            google_maps_api_key=google_maps_api_key,
                            payment_email=payment_email,
-                           has_workflow_data=has_workflow_data,
-                           has_capacity_data=has_capacity_data,
-                           has_schedule_data=has_schedule_data,
-                           has_advanced_data=has_advanced_data,
+                           advanced_expanded=advanced_expanded,
                            other_activities=other_activities)
 
 

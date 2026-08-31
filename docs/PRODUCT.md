@@ -20,6 +20,7 @@
 - Track status: sent, opened, redeemed.
 - QR scan interface for redemption.
 - Custom payment instructions per passport type.
+- **Passport inheritance** — an activity can accept passports issued by another activity (e.g. the previous season), so returning members keep using the pass they already hold.
 
 ### 2. Registration System
 - Customizable registration forms per activity.
@@ -62,18 +63,33 @@
 ### 9. Data Ownership
 - SQLite export, backup/restore, automated daily backups.
 
+### 10. Self-Service Plan Management
+- Tenants upgrade/downgrade their own plan at `/current-plan`.
+- Proration preview before committing: credit for unused time, prorated new charge, net amount.
+- Upgrades apply immediately; downgrades take effect at renewal.
+- Activity-limit enforcement with an archive-or-upgrade prompt when the cap is hit.
+
+### 11. AI Analytics Chatbot
+- Natural-language questions over the organization's own data.
+- Providers: Google Gemini, Groq, Ollama (configurable in `.env`).
+- Queries audited in `QueryLog`.
+
+### 12. Push Notifications
+- Web push subscriptions (`PushSubscription`) for admin alerts, e.g. new signups.
+
 ## Pricing tiers
 
-| Feature | Starter | Professional | Enterprise |
+Defined in `app.py:5714-5716`:
+
+| | Solo | Club | Organisation |
 |---|---|---|---|
-| Active activities | 1 | 10 | 100 |
-| Payment matching | ✅ | ✅ | ✅ |
-| Email templates | ✅ | ✅ | ✅ |
-| Financial management | ✅ | ✅ | ✅ |
-| Stripe payments | ✅ | ✅ | ✅ |
-| Session booking | ✅ | ✅ | ✅ |
-| Surveys | — | ✅ | ✅ |
-| AI analytics chatbot | — | ✅ | ✅ |
+| Active activities | 1 | 15 | 100 |
+| Monthly | $20 | $50 | $120 |
+| Annual (per month) | $10 | $25 | $60 |
+
+**Active activity count is the only limit enforced in code.** Every other feature — payment matching, email templates, financial management, Stripe payments, session booking, surveys, AI chatbot — is available on all tiers; there is no per-feature tier gate anywhere in the codebase. Treat any feature-by-tier matrix on the marketing site as packaging intent, not as something the app enforces.
+
+Tenants change plans themselves at `/current-plan`, with Stripe proration previewed before they commit.
 
 ## Technical stack
 
@@ -89,7 +105,9 @@
 
 ## Key models
 
-`Admin`, `User`, `Activity`, `PassportType`, `Passport`, `Signup`, `Redemption`, `Session`, `Booking`, `EbankPayment`, `Income`, `Expense`, `Setting`, `Survey`, `SurveyTemplate`, `SurveyResponse`, `EmailLog`.
+`Admin`, `User`, `Activity`, `PassportType`, `Passport`, `Signup`, `Redemption`, `ActivitySlot`, `SlotBooking`, `EbankPayment`, `StripeTransaction`, `Income`, `Expense`, `Setting`, `Survey`, `SurveyTemplate`, `SurveyResponse`, `EmailLog`.
+
+The Book Session feature's models are `ActivitySlot` and `SlotBooking` — there are no models named `Session` or `Booking`. Full list in `docs/ARCHITECTURE.md`.
 
 ## UI direction
 
