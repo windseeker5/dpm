@@ -94,7 +94,7 @@ from utils import (
 # 🧠 Data Tools
 from collections import defaultdict
 
-# ✅ Old chatbot imports removed - using new chatbot_v2 blueprint instead
+# Wayne's local-first skill router is registered below.
 
 # ==========================================
 # HARDCODED DEFAULTS FOR REMOVED UI FIELDS
@@ -180,33 +180,23 @@ app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", os.urandom(32).hex())
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
-# 🤖 Register Chatbot Blueprint - Using correct template with Gemini
+# Register Wayne, the trusted local-first minipass data assistant.
 try:
-    from chatbot_v2.routes_simple import chatbot_bp
-    app.register_blueprint(chatbot_bp)
-    print("Gemini chatbot (correct template) registered successfully")
-    
+    from wayne import wayne_bp
+    app.register_blueprint(wayne_bp)
+    print("Wayne data assistant registered successfully")
+
     # Register Settings API Blueprint
     from api.settings import settings_api
     app.register_blueprint(settings_api)
     print("Settings API registered successfully")
-    
-    
-    # List routes to verify
-    for rule in app.url_map.iter_rules():
-        if 'chatbot' in rule.rule:
-            print(f"  🗗 {rule.rule} -> {rule.endpoint}")
-    
-    # Exempt chatbot API from CSRF for testing
-    csrf.exempt(chatbot_bp)
-    print("Chatbot API exempted from CSRF")
 
-    # Exempt geocode API from CSRF (for AJAX calls)
+    # Geocoding is an existing AJAX API and remains CSRF-exempt.
+    # Wayne is intentionally NOT exempt: its form sends a valid CSRF token.
     csrf.exempt(geocode_api)
     print("Geocode API exempted from CSRF")
 except Exception as e:
-    print(f"Simple Chatbot registration failed: {e}")
-    import traceback
+    print(f"Wayne registration failed: {e}")
     traceback.print_exc()
 
 @app.template_filter("hashlib_md5")

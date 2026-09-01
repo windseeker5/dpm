@@ -36,7 +36,7 @@ Registered in `app.py:148-191`:
 | `backup_api` | `api/backup.py` | Backup/restore endpoints |
 | `geocode_api` | `api/geocode.py` | Address geocoding |
 | `settings_api` | `api/settings.py` | Settings endpoints |
-| `chatbot_bp` | `chatbot_v2/routes_simple.py` | AI analytics chatbot (CSRF-exempt) |
+| `chatbot_bp` | `wayne/routes.py` | Wayne data assistant (CSRF-protected) |
 
 ## Models
 
@@ -92,9 +92,9 @@ Registered in `app.py:148-191`:
 | SMTP | Automated participant communication |
 | Google Maps API | Primary geocoding |
 | Nominatim/OpenStreetMap | Fallback geocoding |
-| Google Gemini / Groq / Ollama | Optional AI chatbot providers |
+| OpenRouter | Optional fallback for Wayne's bilingual skill selection |
 
-Chatbot providers live in `chatbot_v2/providers/` (`gemini.py`, `groq.py`, `ollama.py`, plus `mock.py` for testing). Enabled via `CHATBOT_ENABLE_GEMINI` / `_GROQ` / `_OLLAMA` in `.env`. There is no Anthropic or OpenAI provider — older docs and a stale docstring in `chatbot_v2/ai_providers.py` claim otherwise.
+Wayne uses trusted Python skills in `wayne/skills/`; OpenRouter never generates SQL and never receives database results. Obvious English/French questions are routed locally without an API call. Ambiguous questions use `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` from `.env` to select an approved skill and arguments.
 
 ## Subscription tiers
 
@@ -118,10 +118,10 @@ Tenants change plans themselves at `/current-plan`. Upgrades apply immediately w
 ## Database changes
 
 1. Edit `models.py`.
-2. Add an idempotent task to `migrations/upgrade_production_database.py` (46 tasks so far; follow the existing `taskNN_description(cursor)` pattern).
+2. Add an idempotent task to `migrations/upgrade_production_database.py` (47 tasks so far; follow the existing `taskNN_description(cursor)` pattern).
 3. Do **not** add Flask-Migrate/Alembic revisions.
 
-Alembic exists in the repo (`flask_migrate` is imported at `app.py:44` and `migrations/versions/` holds 10 revisions), but it is **legacy and dormant** — the newest revision is from 2026-01-27, while all schema work since has gone through the idempotent tasks, including session scheduling (`task43`) and the email admin-message consolidation (`task46`, 2026-08-30).
+Alembic exists in the repo (`flask_migrate` is imported at `app.py:44` and `migrations/versions/` holds 10 revisions), but it is **legacy and dormant** — the newest revision is from 2026-01-27, while all schema work since has gone through the idempotent tasks, including session scheduling (`task43`), email admin-message consolidation (`task46`), and legacy chatbot cleanup (`task47`).
 
 ## Security and reliability notes
 

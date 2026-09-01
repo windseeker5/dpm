@@ -69,10 +69,12 @@
 - Upgrades apply immediately; downgrades take effect at renewal.
 - Activity-limit enforcement with an archive-or-upgrade prompt when the cap is hit.
 
-### 11. AI Analytics Chatbot
-- Natural-language questions over the organization's own data.
-- Providers: Google Gemini, Groq, Ollama (configurable in `.env`).
-- Queries audited in `QueryLog`.
+### 11. Wayne Data Assistant
+- English/French questions over the organization's own data.
+- Trusted Python skills execute predefined queries; the model never writes SQL.
+- Obvious questions route locally. OpenRouter selects an approved skill only when wording is ambiguous.
+- Wayne only answers questions about data stored in minipass.
+- Queries are audited in `QueryLog`.
 
 ### 12. Push Notifications
 - Web push subscriptions (`PushSubscription`) for admin alerts, e.g. new signups.
