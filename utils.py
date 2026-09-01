@@ -1346,6 +1346,106 @@ def generate_qr_code_image(pass_code: str, box_size: int = 10) -> bytes:
     return img_bytes.getvalue()
 
 
+def generate_signup_card_image(signup_url: str, organization_name: str,
+                               activity_name: str, passport_type_name: str) -> bytes:
+    """Build a clean 4:5 PNG signup card containing a reliably scannable QR code."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    width, height = 1080, 1350
+    image = Image.new("RGB", (width, height), "white")
+    draw = ImageDraw.Draw(image)
+
+    font_paths = {
+        "regular": [
+            "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        ],
+        "bold": [
+            "/usr/share/fonts/noto/NotoSans-Bold.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        ],
+    }
+
+    def load_font(size, bold=False):
+        for path in font_paths["bold" if bold else "regular"]:
+            try:
+                return ImageFont.truetype(path, size)
+            except OSError:
+                continue
+        try:
+            return ImageFont.load_default(size=size)
+        except TypeError:
+            return ImageFont.load_default()
+
+    def text_width(text, font):
+        box = draw.textbbox((0, 0), text, font=font)
+        return box[2] - box[0]
+
+    def wrap_text(text, font, max_width, max_lines):
+        words = (text or "").split()
+        if not words:
+            return [""]
+        lines = []
+        current = words.pop(0)
+        while words:
+            candidate = f"{current} {words[0]}"
+            if text_width(candidate, font) <= max_width:
+                current = candidate
+                words.pop(0)
+            else:
+                lines.append(current)
+                current = words.pop(0)
+                if len(lines) == max_lines - 1:
+                    break
+        if words:
+            remainder = " ".join([current] + words)
+            while remainder and text_width(remainder + "…", font) > max_width:
+                remainder = remainder[:-1].rstrip()
+            current = remainder + "…"
+        lines.append(current)
+        return lines[:max_lines]
+
+    def draw_centered_lines(lines, font, y, fill, spacing):
+        for line in lines:
+            box = draw.textbbox((0, 0), line, font=font)
+            line_width = box[2] - box[0]
+            line_height = box[3] - box[1]
+            draw.text(((width - line_width) / 2, y), line, font=font, fill=fill)
+            y += line_height + spacing
+        return y
+
+    org_font = load_font(42, bold=True)
+    activity_font = load_font(52, bold=True)
+    type_font = load_font(34)
+    prompt_font = load_font(38, bold=True)
+
+    org_lines = wrap_text(organization_name or "minipass", org_font, 900, 1)
+    y = draw_centered_lines(org_lines, org_font, 72, "#343a46", 8)
+    y += 34
+    y = draw_centered_lines(wrap_text(activity_name, activity_font, 900, 2),
+                            activity_font, y, "#1d273b", 10)
+    y += 20
+    y = draw_centered_lines(wrap_text(passport_type_name, type_font, 860, 2),
+                            type_font, y, "#626976", 8)
+
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=4)
+    qr.add_data(signup_url)
+    qr.make(fit=True)
+    module_count = qr.modules_count + 8
+    box_size = max(8, min(18, 680 // module_count))
+    qr.box_size = box_size
+    qr_image = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    qr_y = max(370, int(y + 32))
+    image.paste(qr_image, ((width - qr_image.width) // 2, qr_y))
+
+    prompt_y = qr_y + qr_image.height + 38
+    draw_centered_lines(["Scan to register"], prompt_font, prompt_y, "#1d273b", 8)
+
+    img_bytes = io.BytesIO()
+    image.save(img_bytes, format="PNG", optimize=True)
+    return img_bytes.getvalue()
+
+
 def auto_create_passport_from_signup(signup, payment_record=None, marked_paid_by="minipass-bot@system"):
     """
     Create a passport automatically when payment matches a signup (payment-first workflow).

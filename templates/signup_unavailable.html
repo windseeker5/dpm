@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Inscriptions fermées</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet">
+</head>
+<body class="bg-white">
+  <main class="container d-flex align-items-center justify-content-center min-vh-100 py-5">
+    <section class="text-center" style="max-width: 34rem;">
+      <span class="avatar avatar-xl bg-secondary-lt text-secondary mb-4" aria-hidden="true">
+        <i class="ti ti-calendar-x fs-1"></i>
+      </span>
+      <h1 class="mb-3">Les inscriptions sont fermées</h1>
+      {% if activity %}
+      <p class="h3 fw-normal mb-3">{{ activity.name }}</p>
+      {% endif %}
+      <p class="text-secondary fs-3 mb-0">
+        Cette activité n’accepte plus de nouvelles inscriptions. Communiquez avec l’organisation pour obtenir plus d’information.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
