@@ -8,14 +8,14 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title mb-3 text-center text-md-start">
+          <h1 class="page-title mb-3">
             {% if current_admin and current_admin.display_name %}
               Welcome back, {{ current_admin.display_name }}!
             {% else %}
               Welcome back!
             {% endif %}
           </h1>
-          <p class="text-muted mb-0 text-center text-md-start">
+          <p class="text-muted mb-0">
             Your overview for today.
           </p>
         </div>
@@ -542,7 +542,8 @@
               </a>
             </div>
             {% endfor %}
-            <!-- Mobile placeholder - always shown as last card -->
+            {% if activities|length < 4 %}
+            <!-- Mobile placeholder - matches desktop: only shown when there's room for more -->
             <div class="flex-shrink-0 me-3" style="width: 280px; scroll-snap-align: start;">
               <a href="{{ url_for('create_activity') }}" style="text-decoration: none;" class="d-block h-100">
                 <div class="card h-100" style="border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px dashed #d1d5db; cursor: pointer; position: relative;">
@@ -565,13 +566,12 @@
                 </div>
               </a>
             </div>
+            {% endif %}
           </div>
           <!-- Scroll indicators for activities -->
-          <div class="text-center mt-2" id="mobileActivitiesDots">
+          <div class="mobile-kpi-dots mt-2" id="mobileActivitiesDots">
             {% for i in range(activity_indicator_count) %}
-              <span class="badge activity-dot {% if i == 0 %}bg-primary{% else %}bg-light{% endif %} me-1"
-                    data-index="{{ i }}"
-                    style="width: 8px; height: 8px; border-radius: 50%;"></span>
+              <div class="mobile-dot activity-dot {% if i == 0 %}active{% endif %}" data-index="{{ i }}"></div>
             {% endfor %}
           </div>
         </div>
@@ -712,7 +712,7 @@
   }
   
   .mobile-dot.active {
-    background: #206bc4;
+    background: #495057;
   }
 }
 </style>
@@ -2081,10 +2081,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const scroll = document.getElementById('mobileActivitiesScroll');
   const dots = document.querySelectorAll('.activity-dot');
   if (scroll && dots.length > 0) {
-    const setActive = (i) => dots.forEach((dot, idx) => {
-      dot.classList.toggle('bg-primary', idx === i);
-      dot.classList.toggle('bg-light', idx !== i);
-    });
+    const setActive = (i) => dots.forEach((dot, idx) => dot.classList.toggle('active', idx === i));
     scroll.addEventListener('scroll', () => {
       const maxScroll = scroll.scrollWidth - scroll.clientWidth;
       const ratio = maxScroll > 0 ? scroll.scrollLeft / maxScroll : 0;

@@ -2283,6 +2283,7 @@ html, body {
 
 /* Header Content - Three Column Layout */
 .gradient-header-content {
+  position: relative; /* anchor for absolutely-centered org name below */
   display: flex;
   align-items: center;
   height: 60px; /* Main content area (80px - 20px wave) */
@@ -2315,14 +2316,16 @@ html, body {
   /* No filter - use logo as-is (colorful design) */
 }
 
-/* CENTER: Organization Name (flexible width) */
+/* CENTER: Organization Name — centered on the header's own width, not on
+   the leftover space after the logo column, since there's no right-side
+   column to balance it against (moved to the sidebar footer). */
 .gradient-header-center {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 0 2rem;
 }
 
 .gradient-header-org-name {
