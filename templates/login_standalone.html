@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#00ab66">
-  
-  <title>Login - Minipass</title>
-  
+
+  <title>Sign in - {{ org_name }}</title>
+
   <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 
-  <!-- PWA Manifest (dynamic - uses subdomain as app name) -->
+  <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json">
 
   <!-- PWA Meta Tags -->
@@ -23,495 +23,629 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
   <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
-  
+
   <style>
+    :root {
+      --mp-green: #00ab66;
+      --mp-green-dark: #00916d;
+      --mp-green-focus: rgba(0, 171, 102, 0.15);
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e5e7eb;
+    }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
+    html, body {
+      min-height: 100%;
+    }
+
     body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #00ab66 0%, #00916d 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fff;
+      color: var(--text-primary);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .login-container {
-      min-height: 100vh;
+    .login-page {
       display: flex;
-      align-items: stretch;
+      min-height: 100vh;
     }
 
-    /* Left side - Decorative patterns */
-    .login-left {
+    /* Left brand panel */
+    .brand-panel {
       flex: 0 0 55%;
-      background: linear-gradient(135deg, #00ab66 0%, #00916d 100%);
+      background: linear-gradient(135deg, var(--mp-green) 0%, var(--mp-green-dark) 100%);
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-    }
-
-    .geometric-pattern {
-      position: absolute;
-      inset: 0;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-opacity='0.1'%3E%3Cpolygon fill='%23ffffff' points='50 0 60 40 100 50 60 60 50 100 40 60 0 50 40 40'/%3E%3C/g%3E%3C/svg%3E") repeat;
-      opacity: 0.1;
-    }
-
-    .floating-shapes {
-      position: absolute;
-      inset: 0;
-    }
-
-    .shape {
-      position: absolute;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
-      animation: float 6s ease-in-out infinite;
-    }
-
-    .shape:nth-child(1) {
-      width: 80px;
-      height: 80px;
-      top: 20%;
-      left: 20%;
-      animation-delay: 0s;
-    }
-
-    .shape:nth-child(2) {
-      width: 120px;
-      height: 120px;
-      top: 60%;
-      left: 70%;
-      animation-delay: 2s;
-    }
-
-    .shape:nth-child(3) {
-      width: 60px;
-      height: 60px;
-      top: 80%;
-      left: 30%;
-      animation-delay: 4s;
-    }
-
-    .shape:nth-child(4) {
-      width: 100px;
-      height: 100px;
-      top: 30%;
-      left: 80%;
-      animation-delay: 1s;
-    }
-
-    @keyframes float {
-      0%, 100% {
-        transform: translateY(0px) rotate(0deg);
-      }
-      50% {
-        transform: translateY(-20px) rotate(180deg);
-      }
-    }
-
-    .brand-content {
-      text-align: center;
-      z-index: 2;
-      color: white;
-    }
-
-    .brand-logo {
-      font-size: 3rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .brand-tagline {
-      font-size: 1.2rem;
-      opacity: 0.9;
-      font-weight: 300;
-      max-width: 400px;
-      margin: 0 auto;
-      line-height: 1.6;
-    }
-
-    /* Right side - Login form */
-    .login-right {
-      flex: 0 0 45%;
-      background: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       padding: 2rem;
     }
 
-    .login-form-container {
+    .brand-panel::before {
+      display: none;
+    }
+
+    .brand-shapes {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .brand-shape {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+    }
+
+    .brand-shape:nth-child(1) { width: 80px; height: 80px; top: 20%; left: 20%; }
+    .brand-shape:nth-child(2) { width: 120px; height: 120px; top: 60%; left: 70%; }
+    .brand-shape:nth-child(3) { width: 60px; height: 60px; top: 80%; left: 30%; }
+    .brand-shape:nth-child(4) { width: 100px; height: 100px; top: 30%; left: 80%; }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .brand-shape {
+        animation: float 7s ease-in-out infinite;
+      }
+      .brand-shape:nth-child(1) { animation-delay: 0s; }
+      .brand-shape:nth-child(2) { animation-delay: 2s; }
+      .brand-shape:nth-child(3) { animation-delay: 4s; }
+      .brand-shape:nth-child(4) { animation-delay: 1s; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-18px) rotate(180deg); }
+    }
+
+    .brand-content {
+      position: relative;
+      z-index: 2;
+      text-align: left;
+      color: #fff;
+      max-width: 540px;
+    }
+
+    .brand-logo {
+      display: block;
+      width: max-content;
+      margin-bottom: 1.5rem;
+    }
+
+    .brand-logo img {
+      max-width: 160px;
+      height: auto;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+    }
+
+    .brand-copy {
+      margin-left: 1.5rem;
+    }
+
+    .brand-headline {
+      font-size: clamp(0.95rem, 1.4vw, 1.125rem);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #fff;
+      margin-bottom: 0.75rem;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .brand-tagline {
+      font-size: 1.125rem;
+      font-weight: 300;
+      line-height: 1.6;
+      opacity: 0.95;
+      text-wrap: balance;
+    }
+
+    /* Right form panel */
+    .form-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      padding: 2rem;
+      background: #fff;
+    }
+
+    .form-container {
       width: 100%;
       max-width: 400px;
     }
 
-    .login-header {
+    .org-header {
+      flex-direction: column;
+      align-items: center;
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
 
-    .login-title {
-      font-family: 'Roboto Slab', serif !important;
+    .org-logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: contain;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .org-header .org-logo,
+    .org-header .org-placeholder {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .org-placeholder {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      color: #fff;
+      font-weight: 700;
       font-size: 2rem;
-      font-weight: 600;
-      color: #1e293b;
-      margin-bottom: 2rem; /* Increased spacing */
       display: flex;
       align-items: center;
       justify-content: center;
+      margin: 0 auto 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+      text-align: left;
+    }
+
+    .page-subtitle {
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
+      text-align: left;
+      margin: 0;
+    }
+
+    .org-header .page-title,
+    .org-header .page-subtitle {
+      width: 100%;
+      text-align: center;
+    }
+
+    .org-header .page-title {
+      justify-content: center;
+    }
+
+    .alert {
+      border-radius: 0.625rem;
+      padding: 0.875rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9375rem;
+      display: flex;
+      align-items: center;
       gap: 0.5rem;
     }
 
-    .login-subtitle {
-      color: #64748b;
-      font-size: 1rem;
-      font-weight: 400;
-    }
-
-    .form-card {
-      background: white;
-      border: none;
-      box-shadow: none;
-      padding: 0;
-    }
-
-    .form-label {
+    .login-form .form-label {
       font-weight: 500;
-      color: #374151;
-      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+      margin-bottom: 0.375rem;
+      font-size: 0.9375rem;
     }
 
-    .form-control {
-      border: 2px solid #e5e7eb;
-      border-radius: 0.5rem;
-      padding: 0.75rem 1rem;
+    .login-form .form-control {
+      border: 1.5px solid var(--border-color);
+      border-radius: 0.625rem;
+      padding: 0.8125rem 1rem;
       font-size: 1rem;
-      transition: all 0.2s ease;
-      background: white;
+      min-height: 48px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
-    .form-control:focus {
-      border-color: #00ab66;
-      box-shadow: 0 0 0 3px rgba(0, 171, 102, 0.15);
-      outline: none;
+    .login-form .form-control:focus {
+      border-color: var(--mp-green);
+      box-shadow: 0 0 0 3px var(--mp-green-focus);
+    }
+
+    .input-group .form-control {
+      border-right: none;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    .input-group-text.toggle-password {
+      background: transparent;
+      border: 1.5px solid var(--border-color);
+      border-left: none;
+      border-top-right-radius: 0.625rem;
+      border-bottom-right-radius: 0.625rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 0 0.75rem;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .input-group-text.toggle-password:hover {
+      color: var(--text-primary);
+    }
+
+    .input-group-text.toggle-password:focus-visible {
+      outline: 2px solid var(--mp-green);
+      outline-offset: 2px;
     }
 
     .btn-login {
-      background: linear-gradient(135deg, #00ab66 0%, #00916d 100%);
-      border: none;
-      border-radius: 0.5rem;
-      padding: 0.875rem 1.5rem;
+      width: 100%;
+      min-height: 48px;
+      border-radius: 0.625rem;
+      padding: 0.8125rem 1.5rem;
       font-size: 1rem;
       font-weight: 600;
-      color: white;
-      transition: all 0.2s ease;
-      display: flex;
+      color: #fff;
+      background: linear-gradient(135deg, var(--mp-green) 0%, var(--mp-green-dark) 100%);
+      border: none;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
-      width: 100%;
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
     }
 
     .btn-login:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 171, 102, 0.4);
-      background: linear-gradient(135deg, #009959 0%, #007d5a 100%);
-      color: white;
+      box-shadow: 0 4px 12px rgba(0, 171, 102, 0.35);
     }
 
     .btn-login:active {
       transform: translateY(0);
     }
 
-    /* Desktop-only: organization logo in white section */
-    .org-logo-desktop {
+    .btn-login:focus-visible {
+      outline: 2px solid var(--mp-green);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px var(--mp-green-focus);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.75;
+      cursor: wait;
+      transform: none;
+    }
+
+    .btn-login .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    .btn-login.loading .spinner {
+      display: block;
+    }
+
+    .btn-login.loading .btn-text {
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .forgot-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      margin-top: 0.75rem;
+      color: var(--text-secondary);
+      font-size: 0.9375rem;
+      text-decoration: none;
+      border-radius: 0.5rem;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+
+    .forgot-link:hover,
+    .forgot-link:focus-visible {
+      color: var(--mp-green);
+      background: rgba(0, 171, 102, 0.05);
+      outline: 2px solid var(--mp-green);
+      outline-offset: 2px;
+    }
+
+    .minipass-footer {
+      margin-top: 1.5rem;
       text-align: center;
-      margin-bottom: 2.5rem;
     }
 
-    /* Mobile-only: organization logo in green section */
-    .org-logo-mobile {
-      display: none;  /* Hidden by default on desktop */
+    .minipass-footer img {
+      max-width: 110px;
+      height: auto;
+      opacity: 0.8;
     }
 
-    /* Mobile-only: Minipass branding below form */
-    .minipass-branding-mobile {
-      display: none;  /* Hidden by default on desktop */
+    .minipass-footer .tagline {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-top: 0.5rem;
+      line-height: 1.5;
     }
 
-    /* Mobile responsiveness */
+    /* Mobile */
     @media (max-width: 768px) {
-      .login-container {
+      .login-page {
         flex-direction: column;
       }
 
-      .login-left {
-        flex: 0 0 35%;  /* Increased from 30% to 35% */
-        min-height: 35vh;  /* Increased from 30vh to 35vh */
+      .brand-panel {
+        flex: 0 0 clamp(220px, 30vh, 245px);
+        min-height: clamp(220px, 30vh, 245px);
+        padding: 1.25rem 1rem;
+        border-radius: 0;
+        margin-bottom: 1.5rem;
       }
 
-      /* Hide desktop version of organization logo */
-      .org-logo-desktop {
+      .brand-panel::before {
         display: none;
       }
 
-      /* Show mobile version in green section */
-      .org-logo-mobile {
-        display: block;
-        text-align: center;
-        position: relative;
+      .brand-content {
+        display: none;
       }
 
-      /* White circle behind logo (5% smaller) with glow */
-      .org-logo-mobile::before {
+      .brand-shapes {
+        display: none;
+      }
+
+      .mobile-org-header {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .mobile-logo-wrap {
+        position: relative;
+        width: 112px;
+        height: 112px;
+      }
+
+      .mobile-logo-wrap::before {
         content: '';
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 106px;  /* 5% smaller than 112px logo */
+        width: 106px;
         height: 106px;
-        background: white;
+        background: #fff;
         border-radius: 50%;
         box-shadow: 0 0 30px rgba(255, 255, 255, 0.4),
-                    0 0 50px rgba(255, 255, 255, 0.2);  /* Original glow */
+                    0 0 50px rgba(255, 255, 255, 0.2);
         z-index: 0;
       }
 
-      /* Mobile organization logo sizing */
-      .org-logo-mobile img,
-      .org-logo-mobile > div {
-        width: 112px !important;  /* Reduced by 20% from 140px */
-        height: 112px !important;
+      .mobile-logo-wrap .org-logo,
+      .mobile-logo-wrap .org-placeholder {
         position: relative;
-        z-index: 1;  /* Above the white circle */
-      }
-
-      /* Hide Minipass branding from green section */
-      .brand-content {
-        display: none;
-      }
-
-      /* Show Minipass branding below form */
-      .minipass-branding-mobile {
+        z-index: 1;
         display: block;
-        text-align: center;
-        margin-top: 1rem;  /* Reduced from 2rem for better spacing */
-        padding: 1.5rem 0;
-        transition: opacity 0.2s ease;
+        width: 112px;
+        height: 112px;
+        margin: 0;
+        box-shadow: none;
       }
 
-      .minipass-branding-mobile:hover {
-        opacity: 0.8;
+      .mobile-logo-wrap .org-placeholder {
+        font-size: 2.8rem;
       }
 
-      .minipass-branding-mobile img {
-        max-width: 119px;  /* Reduced by 15% from 140px */
-        height: auto;
-        margin-bottom: 1rem;
-      }
-
-      /* Hide login subtitle on mobile to save space */
-      .login-subtitle {
-        display: none;
-      }
-
-      .minipass-branding-mobile .tagline {
-        font-size: 0.875rem;
-        color: #64748b;  /* Gray text */
-        line-height: 1.5;
-        opacity: 0.85;
-      }
-
-      .brand-logo {
-        font-size: 2rem;
-      }
-
-      .brand-tagline {
-        font-size: 1rem;
-      }
-
-      .login-right {
+      .form-panel {
         flex: 1;
-        padding: 1.5rem 1rem;
+        padding: 0 1rem 1.5rem;
+        justify-content: flex-start;
       }
 
-      .login-title {
-        font-size: 1.5rem;
-      }
-
-      .shape {
+      .org-header {
         display: none;
+      }
+
+      .page-title {
+        font-size: 1.375rem;
+      }
+
+      .minipass-footer {
+        margin-top: auto;
+        padding-top: 1.5rem;
       }
     }
 
-    @media (max-width: 480px) {
-      .login-left {
-        flex: 0 0 30%;  /* Adjusted for smallest screens */
-        min-height: 30vh;
-      }
-
-      .login-right {
-        padding: 1rem;
-      }
-
-      .login-form-container {
-        max-width: 100%;
+    @media (max-width: 360px) {
+      .form-panel {
+        padding: 1.25rem 0.875rem;
       }
     }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <!-- Left side - Decorative patterns -->
-    <div class="login-left">
-      <div class="geometric-pattern"></div>
-      <div class="floating-shapes">
-        <div class="shape"></div>
-        <div class="shape"></div>
-        <div class="shape"></div>
-        <div class="shape"></div>
+  <main class="login-page">
+    <!-- Brand panel -->
+    <div class="brand-panel" aria-hidden="true">
+      <div class="brand-shapes">
+        <div class="brand-shape"></div>
+        <div class="brand-shape"></div>
+        <div class="brand-shape"></div>
+        <div class="brand-shape"></div>
       </div>
 
-      <!-- Desktop: Minipass branding -->
+      <!-- Desktop brand content -->
       <div class="brand-content">
         <div class="brand-logo">
-          <img src="{{ url_for('static', filename='minipass_logo.png') }}" alt="Minipass Logo" style="max-width: 200px; height: auto;">
+          <img src="{{ url_for('static', filename='minipass_logo.png') }}" alt="Minipass" width="613" height="109">
         </div>
-        <div class="brand-tagline" style="margin-top: 2rem;">
-          Streamline your activity management with modern digital passes and seamless user experiences.
+        <div class="brand-copy">
+          <h2 class="brand-headline">YOU CREATE. EVERYTHING AUTOMATES.</h2>
+          <p class="brand-tagline">Set up your activity once, and Minipass puts it online automatically: signups, payments, tracking, and finances run almost by themselves.</p>
         </div>
       </div>
 
-      <!-- Mobile: Organization logo -->
-      <div class="org-logo-mobile">
-        {% if org_logo %}
-          <img src="{{ url_for('static', filename='uploads/' ~ org_logo) }}"
-               alt="Organization"
-               style="width: 112px; height: 112px; object-fit: contain; border-radius: 50%;">
-        {% else %}
-          <div style="width: 112px; height: 112px; border-radius: 50%;
-                      background: {{ placeholder_color(org_name) }};
-                      color: #fff; font-weight: 700; font-size: 2.8rem;
-                      display: flex; align-items: center; justify-content: center;
-                      margin: 0 auto;">
-            {{ placeholder_letter(org_name) }}
-          </div>
-        {% endif %}
+      <!-- Mobile organization logo -->
+      <div class="mobile-org-header d-md-none">
+        <div class="mobile-logo-wrap">
+          {% if org_logo %}
+            <img src="{{ url_for('static', filename='uploads/' ~ org_logo) }}"
+                 alt="{{ org_name }} logo"
+                 class="org-logo"
+                 width="173" height="164">
+          {% else %}
+            <div class="org-placeholder" style="background: {{ placeholder_color(org_name) }};">
+              {{ placeholder_letter(org_name) }}
+            </div>
+          {% endif %}
+        </div>
       </div>
     </div>
 
-    <!-- Right side - Login form -->
-    <div class="login-right">
-      <div class="login-form-container">
-        <div class="login-header">
-          <!-- Organization Logo - Desktop Only -->
-          <div class="org-logo-desktop">
-            {% if org_logo %}
-              <img src="{{ url_for('static', filename='uploads/' ~ org_logo) }}"
-                   alt="Organization"
-                   style="width: 120px; height: 120px; object-fit: contain; border-radius: 50%;">
-            {% else %}
-              <div style="width: 120px; height: 120px; border-radius: 50%;
-                          background: {{ placeholder_color(org_name) }};
-                          color: #fff; font-weight: 700; font-size: 3rem;
-                          display: flex; align-items: center; justify-content: center;
-                          margin: 0 auto;">
-                {{ placeholder_letter(org_name) }}
-              </div>
-            {% endif %}
-          </div>
+    <!-- Form panel -->
+    <div class="form-panel">
+      <div class="form-container">
+        <!-- Desktop org header -->
+        <div class="org-header d-none d-md-flex">
+          {% if org_logo %}
+            <img src="{{ url_for('static', filename='uploads/' ~ org_logo) }}"
+                 alt="{{ org_name }} logo"
+                 class="org-logo"
+                 width="173" height="164">
+          {% else %}
+            <div class="org-placeholder" style="background: {{ placeholder_color(org_name) }};">
+              {{ placeholder_letter(org_name) }}
+            </div>
+          {% endif %}
+          <h1 class="page-title">Sign in to {{ org_name }}</h1>
+          <p class="page-subtitle">Enter your admin credentials to continue.</p>
+        </div>
 
-          <h1 class="login-title">
-            <i class="ti ti-lock"></i>
-            Login
-          </h1>
-          <p class="login-subtitle">Welcome back! Please sign in to your account.</p>
+        <!-- Mobile page title -->
+        <div class="d-md-none mb-3">
+          <h1 class="page-title">Sign in</h1>
+          <p class="page-subtitle">Enter your admin credentials.</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% for category, message in messages %}
-            <div class="alert alert-{{ 'success' if category == 'success' else ('warning' if category == 'info' else 'danger') }} mb-3" role="alert">
-              {{ message }}
+            <div class="alert alert-{{ 'success' if category == 'success' else ('warning' if category == 'info' else 'danger') }}" role="alert">
+              <i class="ti ti-{{ 'circle-check' if category == 'success' else ('alert-circle' if category == 'info' else 'alert-triangle') }}" aria-hidden="true"></i>
+              <span>{{ message }}</span>
             </div>
           {% endfor %}
         {% endwith %}
 
-        <!-- PRESERVE EXACT FORM STRUCTURE -->
-        <form method="POST" autocomplete="on" class="form-card">
-          <div class="card-body">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <form method="POST" autocomplete="on" class="login-form" id="loginForm" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <!-- Email Input -->
-            <div class="mb-3">
-              <label class="form-label" for="email">Email</label>
-              <input id="email" name="email" type="email" inputmode="email"
-                     class="form-control" required autocomplete="email" />
-            </div>
+          <!-- Email -->
+          <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <input id="email" name="email" type="email" inputmode="email"
+                   class="form-control" required autocomplete="email"
+                   value="{{ email }}" placeholder="you@example.com">
+          </div>
 
-            <!-- Password Input -->
-            <div class="mb-3">
-              <label class="form-label" for="password">Password</label>
+          <!-- Password -->
+          <div class="mb-4">
+            <label class="form-label" for="password">Password</label>
+            <div class="input-group">
               <input id="password" name="password" type="password"
-                     class="form-control" required autocomplete="current-password" />
-            </div>
-
-            <!-- Submit Button -->
-            <div class="form-footer">
-              <button type="submit" class="btn btn-login">
-                <i class="ti ti-login"></i>
-                Login
-              </button>
+                     class="form-control" required autocomplete="current-password"
+                     placeholder="Enter your password">
+              <span class="input-group-text toggle-password" role="button"
+                    tabindex="0" aria-label="Show password" aria-pressed="false">
+                <i class="ti ti-eye" aria-hidden="true"></i>
+              </span>
             </div>
           </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn btn-login" id="loginButton">
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="btn-text"><i class="ti ti-login" aria-hidden="true"></i> Sign in</span>
+          </button>
         </form>
 
-        <div style="text-align:center; margin-top:12px;">
-          <a href="/forgot-password" style="color:#6c757d; font-size:0.875rem; text-decoration:none;">
-            Forgot your password?
-          </a>
-        </div>
+        <a href="/forgot-password" class="forgot-link">Forgot your password?</a>
 
-        <!-- Mobile: Minipass branding below form -->
-        <a href="https://minipass.me" target="_blank" rel="noopener noreferrer" class="minipass-branding-mobile" style="text-decoration: none; color: inherit;">
-          <img src="{{ url_for('static', filename='mp-logo-regular.png') }}"
-               alt="Minipass"
-               style="max-width: 119px; height: auto; margin-bottom: 1rem;">
-          <div class="tagline">
-            Streamline your activity management with modern digital passes and seamless user experiences.
-          </div>
-        </a>
+        <footer class="minipass-footer">
+          <img src="{{ url_for('static', filename='mp-logo-regular.png') }}" alt="Powered by Minipass" width="613" height="109">
+          <p class="tagline">Less admin. More time on what matters.</p>
+        </footer>
       </div>
     </div>
-  </div>
+  </main>
 
-  <!-- Tabler Core JS (if needed for form interactions) -->
   <script src="{{ url_for('static', filename='tabler/js/tabler.min.js') }}"></script>
 
-  <!-- PWA Service Worker Registration -->
   <script>
-    // Register service worker for PWA functionality
+    (function() {
+      const form = document.getElementById('loginForm');
+      const button = document.getElementById('loginButton');
+      const toggle = document.querySelector('.toggle-password');
+      const passwordInput = document.getElementById('password');
+
+      // Password visibility toggle
+      if (toggle && passwordInput) {
+        toggle.addEventListener('click', function() {
+          const isHidden = passwordInput.type === 'password';
+          passwordInput.type = isHidden ? 'text' : 'password';
+          toggle.setAttribute('aria-pressed', String(isHidden));
+          toggle.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+          toggle.querySelector('i').className = isHidden ? 'ti ti-eye-off' : 'ti ti-eye';
+        });
+
+        toggle.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggle.click();
+          }
+        });
+      }
+
+      // Loading state on submit
+      if (form && button) {
+        form.addEventListener('submit', function() {
+          if (!form.checkValidity()) return;
+          button.disabled = true;
+          button.classList.add('loading');
+        });
+      }
+    })();
+  </script>
+
+  <!-- PWA Service Worker -->
+  <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
+      window.addEventListener('load', function() {
         navigator.serviceWorker.register('/static/service-worker.js')
-          .then((registration) => {
-            console.log('✅ Minipass PWA: Service Worker registered successfully', registration.scope);
-          })
-          .catch((error) => {
-            console.log('❌ Minipass PWA: Service Worker registration failed:', error);
-          });
+          .then(function(reg) { console.log('SW registered:', reg.scope); })
+          .catch(function(err) { console.log('SW registration failed:', err); });
       });
     }
   </script>
