@@ -42,6 +42,21 @@
   box-shadow: 0 8px 24px rgba(32, 107, 196, 0.12);
 }
 
+/* Activity card title: bumped from the generic h3 weight/size since Inter at
+   400 reads thin at this size; scoped to .activity-card so it doesn't affect
+   the ~20 other pages using the generic .card-title component. */
+.activity-card .card-title {
+  font-size: var(--minipass-text-lg, 1.125rem) !important;
+  font-weight: var(--minipass-font-semibold, 600) !important;
+}
+
+/* Activity card status line + workflow chip: Tabler's default secondary gray
+   (#6c7a91) measures ~4.35:1 on white, just under WCAG AA's 4.5:1 floor. */
+.activity-status-text,
+.activity-workflow-chip {
+  color: #586174 !important;
+}
+
 /* KPI Cards - Rounded corners */
 .kpi-card-rounded,
 div.card.kpi-card-rounded,

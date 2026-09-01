@@ -8,7 +8,7 @@
     <div class="dashboard-container">
       <div class="d-flex align-items-center justify-content-between w-100">
         <div class="d-flex align-items-center">
-          <h1 class="page-title mb-0"><i class="ti ti-settings fs-1 text-muted me-2"></i>Settings</h1>
+          <h1 class="page-title mb-0"><i class="ti ti-settings text-secondary me-2"></i>Settings</h1>
         </div>
         <div class="d-flex align-items-center">
           <button type="submit" class="btn btn-success" form="unified-settings-form">
@@ -175,7 +175,7 @@
         <!-- Interac Bot Configuration Card -->
         <div class="card bg-white mb-3">
           <div class="card-body">
-            <h2 class="mb-3">Interac Bot</h2>
+            <h2 class="mb-4">Interac Bot</h2>
 
             <div class="form-check form-switch mb-2">
               <input class="form-check-input" type="checkbox" name="enable_email_payment_bot" id="enable_email_payment_bot" {% if settings.ENABLE_EMAIL_PAYMENT_BOT == 'True' %}checked{% endif %}>
@@ -264,7 +264,7 @@
         <!-- Stripe Payments Card -->
         <div class="card bg-white mb-3">
           <div class="card-body">
-            <h2 class="mb-3">Stripe Payments</h2>
+            <h2 class="mb-4">Stripe Payments</h2>
 
             <div class="form-check form-switch mb-2">
               <input class="form-check-input" type="checkbox"
@@ -351,7 +351,7 @@
         <!-- Push Notifications Card -->
         <div class="card bg-white mb-3">
           <div class="card-body">
-            <h2 class="mb-3">Push Notifications</h2>
+            <h2 class="mb-4">Push Notifications</h2>
 
             <div class="form-check form-switch mb-2">
               <input class="form-check-input" type="checkbox" id="push-notifications-toggle">
