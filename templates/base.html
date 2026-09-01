@@ -476,45 +476,6 @@
         </span>
       </div>
 
-      <!-- RIGHT: User Avatar -->
-      {% if session.get("admin") %}
-      <div class="gradient-header-user">
-        <div class="dropdown">
-          <a href="#" class="header-user-link d-flex align-items-center" data-bs-toggle="dropdown">
-            <span class="avatar avatar-sm"
-                  style="background-image: url('{% if current_admin and current_admin.avatar_filename %}{{ url_for('static', filename='uploads/avatars/' ~ current_admin.avatar_filename) }}{% else %}https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon{% endif %}')">
-              {% if total_notifications > 0 %}
-              <span class="avatar-badge">{{ total_notifications }}</span>
-              {% endif %}
-            </span>
-          </a>
-          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-            {% if pending_signups_count and pending_signups_count > 0 %}
-            <a href="{{ url_for('list_signups') }}" class="dropdown-item text-warning">
-              <i class="ti ti-user-plus me-2"></i>Signups ({{ pending_signups_count }})
-            </a>
-            <div class="dropdown-divider"></div>
-            {% endif %}
-            {% if unmatched_payment_count and unmatched_payment_count > 0 %}
-            <a href="{{ url_for('payment_bot_matches') }}" class="dropdown-item text-danger">
-              <i class="ti ti-mail-dollar me-2"></i>Interac Inbox ({{ unmatched_payment_count }})
-            </a>
-            <div class="dropdown-divider"></div>
-            {% endif %}
-            <a href="{{ url_for('activity_log') }}{% if failed_email_count and failed_email_count > 0 %}?type=Email+Failed{% endif %}" class="dropdown-item {% if failed_email_count and failed_email_count > 0 %}text-danger{% endif %}">
-              <i class="ti ti-history me-2"></i>Activity Log{% if failed_email_count and failed_email_count > 0 %} ({{ failed_email_count }} failed){% endif %}
-            </a>
-            <a href="{{ url_for('setup') }}" class="dropdown-item">
-              <i class="ti ti-settings me-2"></i>Settings
-            </a>
-            <div class="dropdown-divider"></div>
-            <a href="{{ url_for('logout') }}" class="dropdown-item text-danger">
-              <i class="ti ti-logout me-2"></i>Logout
-            </a>
-          </div>
-        </div>
-      </div>
-      {% endif %}
     </div>
 
     <!-- Subtle Wave SVG - Solid gray -->
@@ -535,8 +496,8 @@
     <nav class="minipass-sidebar" id="sidebar">
       <!-- Mobile close button (no logo section) -->
       <div class="minipass-sidebar-brand">
-        <button class="sidebar-close d-lg-none" type="button" id="sidebarClose">
-          <i class="ti ti-x"></i>
+        <button class="sidebar-close d-lg-none" type="button" id="sidebarClose" aria-label="Close menu">
+          <i class="ti ti-x" aria-hidden="true"></i>
         </button>
       </div>
       
@@ -548,46 +509,34 @@
             <li class="nav-item">
               <a href="{{ url_for('dashboard') }}" 
                  class="nav-link {{ 'active' if request.endpoint == 'dashboard' }}">
-                <i class="nav-icon ti ti-layout-dashboard"></i>
+                <i class="nav-icon ti ti-layout-dashboard" aria-hidden="true"></i>
                 <span class="nav-text">Dashboard</span>
-                {% if request.endpoint == 'dashboard' %}
-                <span class="nav-indicator"></span>
-                {% endif %}
               </a>
             </li>
             <li class="nav-item">
               <a href="{{ url_for('list_activities') }}" 
                  class="nav-link {{ 'active' if request.endpoint == 'list_activities' }}">
-                <i class="nav-icon ti ti-activity"></i>
+                <i class="nav-icon ti ti-activity" aria-hidden="true"></i>
                 <span class="nav-text">Activities</span>
-                {% if request.endpoint == 'list_activities' %}
-                <span class="nav-indicator"></span>
-                {% endif %}
               </a>
             </li>
             <li class="nav-item">
               <a href="{{ url_for('list_signups') }}" 
                  class="nav-link {{ 'active' if request.endpoint == 'list_signups' }}">
-                <i class="nav-icon ti ti-user-check"></i>
+                <i class="nav-icon ti ti-user-check" aria-hidden="true"></i>
                 <span class="nav-text">Signups</span>
                 {% if pending_signups_count > 0 %}
                 <span class="nav-badge">{{ pending_signups_count }}</span>
-                {% endif %}
-                {% if request.endpoint == 'list_signups' %}
-                <span class="nav-indicator"></span>
                 {% endif %}
               </a>
             </li>
             <li class="nav-item">
               <a href="{{ url_for('list_passports') }}" 
                  class="nav-link {{ 'active' if request.endpoint == 'list_passports' }}">
-                <i class="nav-icon ti ti-ticket"></i>
+                <i class="nav-icon ti ti-ticket" aria-hidden="true"></i>
                 <span class="nav-text">Passports</span>
                 {% if active_passport_count and active_passport_count > 0 %}
-                <span class="nav-badge bg-green">{{ active_passport_count }}</span>
-                {% endif %}
-                {% if request.endpoint == 'list_passports' %}
-                <span class="nav-indicator"></span>
+                <span class="nav-badge bg-neutral">{{ active_passport_count }}</span>
                 {% endif %}
               </a>
             </li>
@@ -595,24 +544,18 @@
             <li class="nav-item">
               <a href="{{ url_for('list_surveys') }}"
                  class="nav-link {{ 'active' if request.endpoint == 'list_surveys' }}">
-                <i class="nav-icon ti ti-clipboard-check"></i>
+                <i class="nav-icon ti ti-clipboard-check" aria-hidden="true"></i>
                 <span class="nav-text">Surveys</span>
-                {% if request.endpoint == 'list_surveys' %}
-                <span class="nav-indicator"></span>
-                {% endif %}
               </a>
             </li>
             {% endif %}
             <li class="nav-item">
               <a href="{{ url_for('payment_bot_matches') }}"
                  class="nav-link {{ 'active' if request.endpoint == 'payment_bot_matches' }}">
-                <i class="nav-icon ti ti-mail-dollar"></i>
+                <i class="nav-icon ti ti-mail-dollar" aria-hidden="true"></i>
                 <span class="nav-text">Interac Inbox</span>
                 {% if unmatched_payment_count and unmatched_payment_count > 0 %}
                 <span class="nav-badge">{{ unmatched_payment_count }}</span>
-                {% endif %}
-                {% if request.endpoint == 'payment_bot_matches' %}
-                <span class="nav-indicator"></span>
                 {% endif %}
               </a>
             </li>
@@ -623,59 +566,45 @@
         <div class="nav-section">
           <ul class="nav-list">
             <li class="nav-item nav-item-expandable">
-              <a href="#"
+              <button type="button"
                  class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint }}"
                  data-bs-toggle="collapse"
                  data-bs-target="#reports-submenu"
                  aria-expanded="{{ 'true' if request.endpoint in ['activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint else 'false' }}">
-                <i class="nav-icon ti ti-chart-bar"></i>
+                <i class="nav-icon ti ti-chart-bar" aria-hidden="true"></i>
                 <span class="nav-text">Reports</span>
-                <i class="nav-chevron ti ti-chevron-right"></i>
-                {% if request.endpoint in ['activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint %}
-                <span class="nav-indicator"></span>
-                {% endif %}
-              </a>
+                <i class="nav-chevron ti ti-chevron-right" aria-hidden="true"></i>
+              </button>
               <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['activity_log', 'financial_report', 'user_contacts_report'] or 'chatbot' in request.endpoint }}" id="reports-submenu">
                 <ul class="nav-list">
                   <li class="nav-item">
                     <a href="{{ url_for('financial_report') }}" class="nav-link {{ 'active' if request.endpoint == 'financial_report' }}">
-                      <i class="nav-icon ti ti-report-money"></i>
+                      <i class="nav-icon ti ti-report-money" aria-hidden="true"></i>
                       <span class="nav-text">Financial</span>
-                      {% if request.endpoint == 'financial_report' %}
-                      <span class="nav-indicator"></span>
-                      {% endif %}
                     </a>
                   </li>
                   <li class="nav-item">
                     <a href="{{ url_for('activity_log') }}" class="nav-link {{ 'active' if request.endpoint == 'activity_log' }}">
-                      <i class="nav-icon ti ti-history"></i>
+                      <i class="nav-icon ti ti-history" aria-hidden="true"></i>
                       <span class="nav-text">Activity Log</span>
                       {% if failed_email_count and failed_email_count > 0 %}
                       <span class="nav-badge bg-red">{{ failed_email_count }}</span>
-                      {% elif request.endpoint == 'activity_log' %}
-                      <span class="nav-indicator"></span>
                       {% endif %}
                     </a>
                   </li>
                   <li class="nav-item">
                     <a href="{{ url_for('user_contacts_report') }}" class="nav-link {{ 'active' if request.endpoint == 'user_contacts_report' }}">
-                      <i class="nav-icon ti ti-users"></i>
+                      <i class="nav-icon ti ti-users" aria-hidden="true"></i>
                       <span class="nav-text">Contacts</span>
-                      {% if request.endpoint == 'user_contacts_report' %}
-                      <span class="nav-indicator"></span>
-                      {% endif %}
                     </a>
                   </li>
                   {% if subscription and subscription.tier_info.activities > 1 %}
                   <li class="nav-item">
                     <a href="/chatbot/"
                        class="nav-link {{ 'active' if 'chatbot' in request.endpoint }}">
-                      <i class="nav-icon ti ti-message-chatbot"></i>
+                      <i class="nav-icon ti ti-message-chatbot" aria-hidden="true"></i>
                       <span class="nav-text">Ask Wayne AI</span>
                       <span class="nav-tag">Beta</span>
-                      {% if 'chatbot' in request.endpoint %}
-                      <span class="nav-indicator"></span>
-                      {% endif %}
                     </a>
                   </li>
                   {% endif %}
@@ -689,48 +618,39 @@
         <div class="nav-section">
           <ul class="nav-list">
             <li class="nav-item nav-item-expandable">
-              <a href="#"
+              <button type="button"
                  class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] }}"
                  data-bs-toggle="collapse"
                  data-bs-target="#settings-submenu"
                  aria-expanded="{{ 'true' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] else 'false' }}">
-                <i class="nav-icon ti ti-settings"></i>
+                <i class="nav-icon ti ti-settings" aria-hidden="true"></i>
                 <span class="nav-text">Settings</span>
-                <i class="nav-chevron ti ti-chevron-right"></i>
-                {% if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] %}
-                <span class="nav-indicator"></span>
-                {% endif %}
-              </a>
+                <i class="nav-chevron ti ti-chevron-right" aria-hidden="true"></i>
+              </button>
               <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] }}" id="settings-submenu">
                 <ul class="nav-list">
                   <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="admins">
-                      <i class="nav-icon ti ti-users"></i>
+                      <i class="nav-icon ti ti-users" aria-hidden="true"></i>
                       <span class="nav-text">Admin</span>
                     </a>
                   </li>
                   <li class="nav-item">
                     <a href="{{ url_for('unified_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'unified_settings' }}">
-                      <i class="nav-icon ti ti-mail-cog"></i>
+                      <i class="nav-icon ti ti-mail-cog" aria-hidden="true"></i>
                       <span class="nav-text">Email</span>
-                      {% if request.endpoint == 'unified_settings' %}
-                      <span class="nav-indicator"></span>
-                      {% endif %}
                     </a>
                   </li>
                   <li class="nav-item">
                     <a href="{{ url_for('setup') }}" class="nav-link" data-tab="data">
-                      <i class="nav-icon ti ti-database"></i>
+                      <i class="nav-icon ti ti-database" aria-hidden="true"></i>
                       <span class="nav-text">Data</span>
                     </a>
                   </li>
                   <li class="nav-item">
                     <a href="{{ url_for('current_plan') }}" class="nav-link {{ 'active' if request.endpoint == 'current_plan' }}">
-                      <i class="nav-icon ti ti-credit-card"></i>
+                      <i class="nav-icon ti ti-credit-card" aria-hidden="true"></i>
                       <span class="nav-text">Plan</span>
-                      {% if request.endpoint == 'current_plan' %}
-                      <span class="nav-indicator"></span>
-                      {% endif %}
                     </a>
                   </li>
                 </ul>
@@ -738,6 +658,19 @@
             </li>
           </ul>
         </div>
+      </div>
+
+      <!-- Sidebar Footer: current admin + logout -->
+      <div class="minipass-sidebar-footer">
+        <span class="avatar avatar-sm" aria-hidden="true"
+              style="background-image: url('{% if current_admin and current_admin.avatar_filename %}{{ url_for('static', filename='uploads/avatars/' ~ current_admin.avatar_filename) }}{% else %}https://www.gravatar.com/avatar/{{ session['admin']|lower|trim|encode_md5 }}?d=identicon{% endif %}')"></span>
+        <div class="sidebar-footer-user">
+          <span class="sidebar-footer-name">{{ current_admin.full_name if current_admin else session.get('admin') }}</span>
+          <span class="sidebar-footer-role">Admin</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="sidebar-footer-logout" title="Logout" aria-label="Logout">
+          <i class="ti ti-logout" aria-hidden="true"></i>
+        </a>
       </div>
     </nav>
     {% endif %}

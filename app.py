@@ -1058,6 +1058,7 @@ def _get_sidebar_counts(admin_email):
             'current_admin': {
                 'avatar_filename': admin_obj.avatar_filename,
                 'display_name': admin_obj.display_name,
+                'full_name': admin_obj.full_name,
                 'email': admin_obj.email,
             } if admin_obj else None,
         }
