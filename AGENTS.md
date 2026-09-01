@@ -2,6 +2,10 @@
 
 This is the single entry point for AI agents working on Minipass.
 
+## First rule — test every implementation
+
+1. **Always test the implemented result.** For every UI change, use pi's `browser-tools` or Playwright against the real local app at `http://localhost:5000`, capture the relevant desktop and mobile screenshots, **open and visually inspect those screenshots**, and verify the requested result before reporting completion. DOM values, CSS properties, computed measurements, or merely generating a screenshot do not count as visual validation. For non-UI changes, run the most relevant focused test or compile check and report it accurately.
+
 ## Response rules
 
 1. **Answer briefly and clearly by default.** Use plain language and include only what is needed to understand the result.

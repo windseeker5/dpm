@@ -6323,6 +6323,10 @@ def reset_admin_password(admin_id):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    from utils import get_setting, get_placeholder_color, get_placeholder_letter
+    org_logo = get_setting('LOGO_FILENAME', '')
+    org_name = get_setting('ORG_NAME', 'Minipass')
+
     if request.method == "POST":
         email = request.form["email"].strip().lower()
         password = request.form["password"]
@@ -6355,12 +6359,15 @@ def login():
                 print("💥 Exception during bcrypt check:", e)
 
         flash("Invalid login!", "error")
-        return redirect(url_for("login"))
+        return render_template("login_standalone.html",
+                             email=email,
+                             org_logo=org_logo,
+                             org_name=org_name,
+                             placeholder_color=get_placeholder_color,
+                             placeholder_letter=get_placeholder_letter)
 
-    from utils import get_setting, get_placeholder_color, get_placeholder_letter
-    org_logo = get_setting('LOGO_FILENAME', '')
-    org_name = get_setting('ORG_NAME', 'Minipass')
     return render_template("login_standalone.html",
+                         email="",
                          org_logo=org_logo,
                          org_name=org_name,
                          placeholder_color=get_placeholder_color,
