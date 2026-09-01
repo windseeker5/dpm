@@ -76,6 +76,7 @@ from utils import (
     send_email_async,
     get_setting,
     generate_qr_code_image,
+    generate_signup_card_image,
     get_pass_history_data,
     get_all_activity_logs,
     match_gmail_payments_to_passes,
@@ -3084,13 +3085,58 @@ def edit_activity(activity_id):
 
 
 
+def _passport_type_signup_url(passport_type):
+    """Return the configured public signup URL, never an internal proxy hostname."""
+    base_url = (get_setting("SITE_URL", "") or "").strip().rstrip("/")
+    if not re.match(r"^https?://", base_url, re.IGNORECASE):
+        base_url = request.url_root.rstrip("/")
+    signup_path = url_for("signup", activity_id=passport_type.activity_id)
+    return f"{base_url}{signup_path}?passport_type_id={passport_type.id}"
+
+
+def _shareable_passport_type(passport_type_id):
+    passport_type = db.session.get(PassportType, passport_type_id)
+    if not passport_type or passport_type.status != "active":
+        return None
+    if not passport_type.activity or passport_type.activity.status != "active":
+        return None
+    return passport_type
+
+
+@app.route("/admin/passport-type/<int:passport_type_id>/signup-card.png")
+def signup_qr_card(passport_type_id):
+    if "admin" not in session:
+        return Response("Authentication required", status=401)
+
+    passport_type = _shareable_passport_type(passport_type_id)
+    if not passport_type:
+        return Response("Signup QR code is unavailable", status=404)
+
+    signup_url = _passport_type_signup_url(passport_type)
+    png = generate_signup_card_image(
+        signup_url=signup_url,
+        organization_name=get_setting("ORG_NAME", "minipass"),
+        activity_name=passport_type.activity.name,
+        passport_type_name=passport_type.name,
+    )
+    response = make_response(png)
+    response.mimetype = "image/png"
+    response.headers["Cache-Control"] = "private, no-store"
+    if request.args.get("download") == "1":
+        filename = secure_filename(
+            f"{passport_type.activity.name}-{passport_type.name}-signup.png"
+        ) or f"signup-{passport_type.id}.png"
+        response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
 
 @app.route("/signup/<int:activity_id>", methods=["GET", "POST"])
 def signup(activity_id):
     activity = db.session.get(Activity, activity_id)
     if not activity:
-        flash("Activity not found.", "error")
-        return redirect(url_for("dashboard"))
+        return render_template("signup_unavailable.html"), 404
+    if activity.status != "active":
+        return render_template("signup_unavailable.html", activity=activity), 410
 
     # Get passport type if specified
     passport_type_id = request.args.get('passport_type_id')
