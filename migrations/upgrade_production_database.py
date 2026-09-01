@@ -3638,6 +3638,20 @@ def task46_consolidate_admin_message(cursor):
     return True
 
 
+def task47_drop_legacy_chat_tables(cursor):
+    """Remove conversation tables used only by the discarded chatbot backend.
+
+    Wayne is stateless and retains only QueryLog for auditing. DROP IF EXISTS
+    keeps this safe for both older databases and installations where the legacy
+    Alembic cleanup had already removed these tables.
+    """
+    log("🧹", "TASK 47: Removing legacy chatbot tables", Colors.BLUE)
+    for table_name in ("chat_message", "chat_usage", "chat_conversation"):
+        cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
+        log("✅", f"  Removed {table_name} if present", Colors.GREEN)
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -3704,6 +3718,7 @@ def main():
         ("Slot Booking Attendance Stamp", task44_add_slot_booking_attended),
         ("Clear Unmodified Email Copy", task45_clear_unmodified_email_copy),
         ("Consolidate Admin Message", task46_consolidate_admin_message),
+        ("Remove Legacy Chat Tables", task47_drop_legacy_chat_tables),
     ]
 
     completed = 0

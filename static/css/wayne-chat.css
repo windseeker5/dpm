@@ -1,0 +1,255 @@
+.wayne-page {
+  min-height: calc(100vh - 7rem);
+  padding: 1.5rem;
+  background: #f6f8fb;
+}
+
+.wayne-shell [hidden] {
+  display: none !important;
+}
+
+.wayne-shell {
+  width: min(100%, 56rem);
+  min-height: calc(100vh - 10rem);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.wayne-welcome {
+  width: min(100%, 46rem);
+  margin: auto;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.wayne-welcome h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  letter-spacing: -0.035em;
+}
+
+.wayne-ai {
+  color: #d946ef;
+  background: linear-gradient(110deg, #2563eb 5%, #d946ef 52%, #f97316 95%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.wayne-welcome > p {
+  max-width: 65ch;
+  margin: 0 auto 1.75rem;
+  color: #52606d;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.wayne-composer {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.625rem;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #d5dde7;
+  border-radius: 1.75rem;
+  box-shadow: 0 0.375rem 1.25rem rgba(31, 41, 55, 0.07);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.wayne-composer:focus-within {
+  border-color: #79a9df;
+  box-shadow: 0 0 0 0.2rem rgba(32, 107, 196, 0.12), 0 0.5rem 1.5rem rgba(31, 41, 55, 0.08);
+}
+
+.wayne-composer .form-control {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  max-height: 9rem;
+  padding: 0.65rem 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  resize: none;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.wayne-composer .form-control:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.wayne-composer .form-control::placeholder {
+  color: #8290a3;
+}
+
+.wayne-send.btn {
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+.wayne-send.btn i {
+  font-size: 1.15rem;
+}
+
+.wayne-conversation {
+  min-height: calc(100vh - 10rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.wayne-messages {
+  flex: 1;
+  padding: 1rem 0 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wayne-message {
+  max-width: min(82%, 46rem);
+  overflow-wrap: anywhere;
+}
+
+.wayne-message-user {
+  align-self: flex-end;
+}
+
+.wayne-message-wayne {
+  align-self: flex-start;
+  width: 100%;
+}
+
+.wayne-message-content {
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  line-height: 1.55;
+}
+
+.wayne-message-user .wayne-message-content {
+  color: #16395f;
+  background: #e7f0fb;
+  border-end-end-radius: 0.25rem;
+}
+
+.wayne-message-wayne .wayne-message-content {
+  background: #fff;
+  border: 1px solid #d9e0e8;
+  border-end-start-radius: 0.25rem;
+  box-shadow: 0 0.375rem 1rem rgba(31, 41, 55, 0.06);
+}
+
+.wayne-message-error .wayne-message-content {
+  color: #8b1e2d;
+  background: #fff1f2;
+  border-color: #efb5bd;
+}
+
+.wayne-result-meta {
+  margin: 1rem 0 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #52606d;
+  font-size: 0.8125rem;
+}
+
+.wayne-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid #d9e0e8;
+  border-radius: 0.625rem;
+}
+
+.wayne-table {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.wayne-table th {
+  white-space: nowrap;
+  background: #f6f8fb;
+}
+
+.wayne-table th,
+.wayne-table td {
+  min-width: 8rem;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.wayne-composer-compact {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 2;
+}
+
+.wayne-typing {
+  align-self: flex-start;
+  padding: 0.875rem 1rem;
+  display: flex;
+  gap: 0.3rem;
+  background: #fff;
+  border: 1px solid #d9e0e8;
+  border-radius: 1rem;
+}
+
+.wayne-typing span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #52606d;
+  animation: wayne-pulse 1.2s ease-in-out infinite;
+}
+
+.wayne-typing span:nth-child(2) { animation-delay: 0.15s; }
+.wayne-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes wayne-pulse {
+  0%, 70%, 100% { opacity: 0.35; transform: translateY(0); }
+  35% { opacity: 1; transform: translateY(-0.2rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wayne-composer { transition: none; }
+  .wayne-typing span { animation: none; }
+}
+
+@media (max-width: 767px) {
+  .wayne-page { padding: 0.75rem; }
+
+  .wayne-shell,
+  .wayne-conversation {
+    min-height: calc(100vh - 8rem);
+  }
+
+  .wayne-welcome {
+    padding: 1.25rem 0;
+  }
+
+  .wayne-welcome > p {
+    margin-bottom: 1.25rem;
+    font-size: 0.9375rem;
+  }
+
+  .wayne-message { max-width: 94%; }
+  .wayne-message-wayne { max-width: 100%; }
+
+  .wayne-result-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
