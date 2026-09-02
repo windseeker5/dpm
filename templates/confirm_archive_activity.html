@@ -7,7 +7,8 @@
   <div class="page-header">
     <div class="row align-items-center">
       <div class="col-auto">
-        <h2 class="page-title">Archive "{{ activity.name }}"</h2>
+        <h2 class="page-title">Archive activity</h2>
+        <div class="text-secondary">{{ activity.name }}</div>
       </div>
     </div>
   </div>
@@ -34,6 +35,7 @@
           </p>
 
           <form method="POST" action="{{ url_for('execute_archive_activity', activity_id=activity.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next_page" value="{{ next_page }}">
 
             <div class="mb-3">
@@ -46,10 +48,11 @@
                       <span class="form-selectgroup-check"></span>
                     </div>
                     <div>
-                      <strong>Event completed — close all passports</strong>
+                      <strong>Archive and check in every active passport</strong>
                       <div class="text-secondary small">
-                        Set all {{ active_count }} passport(s) to 0 remaining uses.
-                        They will no longer appear in active KPIs.
+                        Checks in all {{ active_count }} passport(s) as fully used, same as a normal
+                        QR check-in — each participant gets the usual check-in email. They will no
+                        longer appear in active KPIs.
                       </div>
                     </div>
                   </div>
@@ -63,9 +66,10 @@
                       <span class="form-selectgroup-check"></span>
                     </div>
                     <div>
-                      <strong>Archive only — leave passports unchanged</strong>
+                      <strong>Archive silently</strong>
                       <div class="text-secondary small">
-                        Passports keep their remaining uses. Active KPIs will still include them.
+                        Passports keep their remaining uses and no email is sent. Use this when
+                        another activity (like next season) still inherits these passports.
                       </div>
                     </div>
                   </div>
@@ -74,7 +78,7 @@
             </div>
 
             <div class="d-flex gap-2">
-              <button type="submit" class="btn btn-primary">Archive activity</button>
+              <button type="submit" class="btn btn-warning">Archive activity</button>
               <a href="{{ url_for('list_activities') }}" class="btn btn-ghost-secondary">Cancel</a>
             </div>
           </form>

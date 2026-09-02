@@ -2967,16 +2967,29 @@ def edit_activity(activity_id):
                 created_by=admin_obj.id if admin_obj else None,
             ))
 
-        # Gate: if archiving an activity that has active passports, ask for confirmation first
-        if new_status == 'inactive' and old_status != 'inactive':
-            active_count = Passport.query.filter_by(activity_id=activity_id)\
-                                         .filter(Passport.uses_remaining > 0).count()
-            if active_count > 0:
-                activity.status = old_status  # Revert status; save all other form changes
-                db.session.commit()
-                return redirect(url_for("confirm_archive_activity",
-                                        activity_id=activity_id,
-                                        next="edit_activity"))
+        # Gate: if archiving an activity that has active passports, the page's own
+        # "how do you want to handle them?" modal already asked before this POST was
+        # sent (see activity_form.html) and passport_action carries the answer. Only
+        # fall back to the standalone confirm page if a client submitted without it
+        # (e.g. JS disabled).
+        if new_status == 'archived' and old_status not in ('archived', 'inactive'):
+            active_passports = Passport.query.filter_by(activity_id=activity_id)\
+                                              .filter(Passport.uses_remaining > 0).all()
+            if active_passports:
+                passport_action = request.form.get("passport_action")
+                if passport_action == "close_and_archive":
+                    from utils import close_out_passport
+                    admin_email = session.get("admin")
+                    for passport in active_passports:
+                        close_out_passport(current_app._get_current_object(), passport, admin_email)
+                elif passport_action == "archive_only":
+                    pass  # leave passports untouched
+                else:
+                    activity.status = old_status  # Revert status; save all other form changes
+                    db.session.commit()
+                    return redirect(url_for("confirm_archive_activity",
+                                            activity_id=activity_id,
+                                            next="edit_activity"))
 
         db.session.commit()
 
@@ -7117,7 +7130,7 @@ def archive_activity_from_limit(activity_id):
                                 next="tier_limit_exceeded"))
 
     # Archive the activity
-    activity.status = 'inactive'
+    activity.status = 'archived'
     db.session.commit()
 
     flash(f'Activity "{activity.name}" has been archived.', 'success')
@@ -9329,11 +9342,14 @@ def execute_archive_activity(activity_id):
     next_page = request.form.get("next_page", "list_activities")
 
     if passport_action == "close_and_archive":
-        Passport.query.filter_by(activity_id=activity_id)\
-                      .filter(Passport.uses_remaining > 0)\
-                      .update({"uses_remaining": 0})
+        from utils import close_out_passport
+        admin_email = session.get("admin")
+        active_passports = Passport.query.filter_by(activity_id=activity_id)\
+                                          .filter(Passport.uses_remaining > 0).all()
+        for passport in active_passports:
+            close_out_passport(current_app._get_current_object(), passport, admin_email)
 
-    activity.status = 'inactive'
+    activity.status = 'archived'
     db.session.commit()
     flash(f'Activity "{activity.name}" archived.', 'success')
 
@@ -9347,14 +9363,18 @@ def bulk_close_passports(activity_id):
     if "admin" not in session:
         return redirect(url_for("login"))
     activity = db.session.get(Activity, activity_id)
-    if not activity or activity.status != 'inactive':
+    if not activity or activity.status not in ('archived', 'inactive'):
         flash("Activity not found or not archived.", "error")
         return redirect(url_for("list_activities"))
 
-    count = Passport.query.filter_by(activity_id=activity_id)\
-                          .filter(Passport.uses_remaining > 0)\
-                          .update({"uses_remaining": 0})
-    db.session.commit()
+    from utils import close_out_passport
+    admin_email = session.get("admin")
+    active_passports = Passport.query.filter_by(activity_id=activity_id)\
+                                      .filter(Passport.uses_remaining > 0).all()
+    count = 0
+    for passport in active_passports:
+        if close_out_passport(current_app._get_current_object(), passport, admin_email):
+            count += 1
     flash(f"{count} passport(s) closed successfully.", "success")
     return redirect(url_for("activity_dashboard", activity_id=activity_id))
 
