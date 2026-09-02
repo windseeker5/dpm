@@ -78,10 +78,10 @@
   <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="page-title mb-0"><i class="ti ti-clipboard-check text-secondary me-2"></i>Surveys</h1>
+        <h1 class="page-title mb-0">Surveys</h1>
         <div class="dropdown">
-          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            Actions
+          <button type="button" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+            <i class="ti ti-dots-vertical"></i>
           </button>
           <div class="dropdown-menu dropdown-menu-end">
             <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
@@ -110,7 +110,7 @@
                name="q"
                id="enhancedSearchInput"
                class="form-control form-control-lg shadow-sm" 
-               placeholder="Start typing to search surveys instantly..." 
+               placeholder="Search surveys…" 
                value="{{ current_filters.q or '' }}"
                style="padding-right: 100px; border-radius: 0.5rem;"
                autocomplete="off"
@@ -244,9 +244,8 @@
             </td>
             <td class="text-center" style="vertical-align: middle;">
               <div class="dropdown d-inline-block">
-                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                  <span class="d-none d-md-inline">Actions</span>
-                  <i class="ti ti-menu-2 d-md-none"></i>
+                <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
+                  <i class="ti ti-dots-vertical"></i>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end">
                   <a class="dropdown-item" href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank">

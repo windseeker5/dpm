@@ -690,20 +690,20 @@ div.dropdown-divider {
 
               <!-- Desktop Action Buttons -->
               <div class="activity-actions d-none d-md-flex">
-                <!-- Standalone Green Scan Button -->
-                <a href="{{ url_for('scan_qr', activity_id=activity.id) }}" class="btn btn-sm btn-success">
+                <!-- Standalone Scan Button -->
+                <a href="{{ url_for('scan_qr', activity_id=activity.id) }}" class="btn btn-sm btn-dark">
                   <i class="ti ti-scan"></i> Scan
                 </a>
 
-                <!-- Standalone Blue Passport Button -->
-                <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-sm btn-primary">
-                  <i class="ti ti-ticket"></i> <i class="ti ti-plus"></i> Passport
+                <!-- Standalone Passport Button -->
+                <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-sm btn-dark">
+                  <i class="ti ti-plus"></i> Passport
                 </a>
 
-                <!-- Gray Actions Dropdown -->
+                <!-- Actions Dropdown -->
                 <div class="dropdown">
-                  <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    Actions
+                  <button class="btn btn-sm btn-outline-secondary btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                    <i class="ti ti-dots-vertical"></i>
                   </button>
                   <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
@@ -725,14 +725,14 @@ div.dropdown-divider {
 
               <!-- Mobile Action Buttons -->
               <div class="activity-actions-mobile-bottom d-md-none">
-                <!-- Blue Create Passport Button -->
-                <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-primary">
+                <!-- Create Passport Button -->
+                <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-dark">
                   <i class="ti ti-plus"></i> Passport
                 </a>
-                <!-- Gray Actions Dropdown -->
+                <!-- Actions Dropdown -->
                 <div class="dropdown">
-                  <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    Actions
+                  <button class="btn btn-outline-secondary btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                    <i class="ti ti-dots-vertical"></i>
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="{{ url_for('scan_qr', activity_id=activity.id) }}">
@@ -1080,9 +1080,7 @@ div.dropdown-divider {
 
 
       <!-- Passport List Title -->
-      <h2 class="mt-4 mb-3">
-        <i class="ti ti-activity-heartbeat text-secondary me-2"></i>Activity Passport
-      </h2>
+      <h2 class="mt-4 mb-3">Activity Passport</h2>
 
       <!-- Enhanced Dynamic Search -->
       <form method="GET" action="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="mb-4" id="dynamicSearchForm">
@@ -1247,9 +1245,8 @@ div.dropdown-divider {
             </td>
             <td class="text-center" style="vertical-align: middle;">
               <div class="dropdown d-inline-block">
-                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                  <span class="d-none d-md-inline">Actions</span>
-                  <i class="ti ti-menu-2 d-md-none"></i>
+                <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
+                  <i class="ti ti-dots-vertical"></i>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end">
                   {% if passport.uses_remaining > 0 %}
@@ -1500,9 +1497,7 @@ div.dropdown-divider {
 
       <!-- Signups Section -->
       {% if has_pending_signups %}
-      <h2 class="mt-5 mb-3">
-        <i class="ti ti-edit text-secondary me-2"></i>Signups
-      </h2>
+      <h2 class="mt-5 mb-3">Signups</h2>
 
 
       <!-- Main Signups Table -->
@@ -1630,9 +1625,8 @@ div.dropdown-divider {
               </td>
               <td class="text-center" style="vertical-align: middle;">
                 <div class="dropdown d-inline-block">
-                  <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                    <span class="d-none d-md-inline">Actions</span>
-                    <i class="ti ti-menu-2 d-md-none"></i>
+                  <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
+                    <i class="ti ti-dots-vertical"></i>
                   </a>
                   <div class="dropdown-menu dropdown-menu-end">
                     {% if signup.status == 'pending' %}

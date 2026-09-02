@@ -1140,7 +1140,7 @@ html {
 
 .mobile-nav-item:hover,
 .mobile-nav-item.active {
-  color: var(--minipass-primary-600);
+  color: #1a1f36;
 }
 
 .mobile-nav-item i {
@@ -2654,45 +2654,40 @@ body {
   font-weight: 500;
 }
 
-/* Type badge colors - light versions */
-.badge.bg-red-lt {
-  background-color: #fee2e2 !important;
-  color: #991b1b !important;
+/* Badge color system — collapsed from ~14 Tabler "-lt" hues down to 3
+   restrained tones (neutral / positive / attention), shadcn-style: color
+   signals real state, not decoration. The badge's own text label still
+   carries the specific meaning (Rejected vs Pending vs Unpaid), so one
+   shared "attention" tone for all of them doesn't lose information. */
+
+/* Neutral — informational default: counts, workflow type, categorization */
+.badge.bg-blue-lt,
+.badge.bg-azure-lt,
+.badge.bg-teal-lt,
+.badge.bg-purple-lt,
+.badge.bg-orange-lt,
+.badge.bg-secondary-lt,
+.badge.bg-primary-lt,
+.badge.bg-gray-lt {
+  background-color: #f3f4f6 !important;
+  color: #4b5563 !important;
 }
 
-.badge.bg-blue-lt {
-  background-color: #dbeafe !important;
-  color: #1e40af !important;
-}
-
-.badge.bg-green-lt {
+/* Positive — real success/paid/active/matched states only */
+.badge.bg-green-lt,
+.badge.bg-success-lt {
   background-color: #dcfce7 !important;
   color: #166534 !important;
 }
 
-.badge.bg-teal-lt {
-  background-color: #ccfbf1 !important;
-  color: #115e59 !important;
-}
-
-.badge.bg-yellow-lt {
+/* Attention — anything unresolved or negative: pending, unpaid, rejected,
+   expired, no-match. One tone; the label text disambiguates specifics. */
+.badge.bg-yellow-lt,
+.badge.bg-red-lt,
+.badge.bg-warning-lt,
+.badge.bg-danger-lt {
   background-color: #fef3c7 !important;
   color: #92400e !important;
-}
-
-.badge.bg-purple-lt {
-  background-color: #f3e8ff !important;
-  color: #6b21a8 !important;
-}
-
-.badge.bg-orange-lt {
-  background-color: #ffedd5 !important;
-  color: #9a3412 !important;
-}
-
-.badge.bg-gray-lt {
-  background-color: #f3f4f6 !important;
-  color: #4b5563 !important;
 }
 /* ============================================
    MOBILE RESPONSIVE PAGINATION

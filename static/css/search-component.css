@@ -180,12 +180,16 @@
 @media (max-width: 768px) {
   #enhancedSearchInput {
     font-size: 16px; /* Prevent zoom on iOS */
+    /* The Ctrl+K hint is already hidden below md; only the clear button
+       (24px, shown once typing starts) needs reserved space here, not
+       the full 100px — that unused padding was clipping the placeholder. */
+    padding-right: 44px !important;
   }
-  
+
   .input-icon {
     margin-bottom: 0.75rem;
   }
-  
+
   #searchCharCounter {
     min-width: 60px;
     font-size: 0.7rem;
