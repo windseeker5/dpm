@@ -243,6 +243,7 @@
                          onchange="updateStatusValue()">
                 </label>
                 <input type="hidden" name="status" id="statusValue" value="{{ current_status }}">
+                <input type="hidden" name="passport_action" id="passportActionValue" value="">
               </div>
 
               <!-- Activity Name (Own Row - Second) -->
@@ -1342,6 +1343,65 @@ Add Type
   </div>
 </div>
 
+<!-- Archive Options Modal (shown when saving with the toggle set to Archived and the
+     activity still has active passports) -->
+<div class="modal modal-blur fade" id="archiveOptionsModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body">
+        <div class="text-center mb-3">
+          <i class="ti ti-archive mb-2 text-warning" style="font-size: 2rem;" aria-hidden="true"></i>
+          <h3 class="mb-1">Archive this activity?</h3>
+          <div class="text-secondary">
+            This activity still has <span id="archiveOptionsCount"></span> passport(s) with
+            unused sessions. Choose how to handle them:
+          </div>
+        </div>
+        <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column gap-2">
+          <label class="form-selectgroup-item flex-fill">
+            <input type="radio" name="modal_passport_action" value="close_and_archive"
+              class="form-selectgroup-input" checked>
+            <div class="form-selectgroup-label d-flex align-items-center p-3">
+              <div class="me-3">
+                <span class="form-selectgroup-check"></span>
+              </div>
+              <div>
+                <strong>Archive and check in every active passport</strong>
+                <div class="text-secondary small">
+                  Checks in every passport as fully used, same as a normal QR check-in —
+                  each participant gets the usual check-in email.
+                </div>
+              </div>
+            </div>
+          </label>
+          <label class="form-selectgroup-item flex-fill">
+            <input type="radio" name="modal_passport_action" value="archive_only"
+              class="form-selectgroup-input">
+            <div class="form-selectgroup-label d-flex align-items-center p-3">
+              <div class="me-3">
+                <span class="form-selectgroup-check"></span>
+              </div>
+              <div>
+                <strong>Archive silently</strong>
+                <div class="text-secondary small">
+                  Passports keep their remaining uses and no email is sent. Use this when
+                  another activity (like next season) still inherits these passports.
+                </div>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning w-100" id="confirmArchiveOptions">Archive activity</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -1366,6 +1426,51 @@ Add Type
       statusLabel.textContent = 'Archived';
     }
   }
+
+  // Archiving via the toggle: if the activity still has active passports, ask how to
+  // handle them (same choice as the Activities list Archive action) before saving,
+  // instead of bouncing to a separate page after the fact.
+  (function () {
+    const form = document.getElementById('activityForm');
+    const activityId = form.dataset.activityId;
+    const originalStatus = {{ (activity.status if activity else 'active')|tojson }};
+    let archiveConfirmed = false;
+
+    if (!activityId) return; // new activity - nothing to check
+
+    form.addEventListener('submit', function (e) {
+      if (archiveConfirmed) return; // already confirmed, let it through
+
+      const goingArchived = document.getElementById('statusValue').value === 'archived';
+      const wasAlreadyArchived = originalStatus === 'archived' || originalStatus === 'inactive';
+      if (!goingArchived || wasAlreadyArchived) return;
+
+      e.preventDefault();
+      fetch(`/check-activity-passports/${activityId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.has_active_passports) {
+            document.getElementById('archiveOptionsCount').textContent = data.count;
+            new bootstrap.Modal(document.getElementById('archiveOptionsModal')).show();
+          } else {
+            archiveConfirmed = true;
+            form.submit();
+          }
+        })
+        .catch(error => {
+          console.error('Error checking activity passports:', error);
+          alert('Error checking activity. Please try again.');
+        });
+    });
+
+    document.getElementById('confirmArchiveOptions').addEventListener('click', function () {
+      const chosen = document.querySelector('input[name="modal_passport_action"]:checked').value;
+      document.getElementById('passportActionValue').value = chosen;
+      archiveConfirmed = true;
+      bootstrap.Modal.getInstance(document.getElementById('archiveOptionsModal')).hide();
+      form.submit();
+    });
+  })();
 
   // Toggle capacity limit fields visibility
   function toggleCapacityFields() {

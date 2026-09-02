@@ -169,7 +169,7 @@
               {% set status = activity.status or 'active' %}
               {% if status == 'active' %}
                 <span class="badge bg-green-lt text-green-lt-fg">Active</span>
-              {% elif status == 'inactive' %}
+              {% elif status in ('archived', 'inactive') %}
                 <span class="badge bg-yellow-lt text-yellow-lt-fg">Archived</span>
               {% elif status == 'draft' %}
                 <span class="badge bg-gray-lt text-gray-lt-fg">Draft</span>
@@ -207,7 +207,8 @@
                   </a>
                   {% endif %}
                   {% if activity.status == 'active' %}
-                  <a class="dropdown-item text-warning" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
+                  <a class="dropdown-item text-warning" href="#"
+                     onclick="checkAndArchiveActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
                     <i class="ti ti-archive me-2"></i>Archive
                   </a>
                   {% endif %}
@@ -301,6 +302,96 @@
           <button class="btn btn-primary w-100" data-bs-dismiss="modal">Understood</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Archive Activity Modal (shown only when the activity has no active passports) -->
+<div class="modal modal-blur fade" id="activityArchiveModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-archive mb-2 text-warning" style="font-size: 2rem;" aria-hidden="true"></i>
+        <h3>Archive this activity?</h3>
+        <div class="text-secondary">
+          <strong id="archiveActivityName"></strong> will be hidden from your active list.
+          You can restore it anytime.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" id="activityArchiveForm" class="w-100" action="">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="passport_action" value="archive_only">
+          <input type="hidden" name="next_page" value="list_activities">
+          <button type="submit" class="btn btn-warning w-100">Archive</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Archive Options Modal (shown when the activity still has active passports) -->
+<div class="modal modal-blur fade" id="archiveOptionsModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <form method="POST" id="archiveOptionsForm" action="">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next_page" value="list_activities">
+        <div class="modal-body">
+          <div class="text-center mb-3">
+            <i class="ti ti-archive mb-2 text-warning" style="font-size: 2rem;" aria-hidden="true"></i>
+            <h3 class="mb-1">Archive this activity?</h3>
+            <div class="text-secondary">
+              <strong id="archiveOptionsActivityName"></strong> still has
+              <span id="archiveOptionsCount"></span> passport(s) with unused sessions.
+              Choose how to handle them:
+            </div>
+          </div>
+          <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column gap-2">
+            <label class="form-selectgroup-item flex-fill">
+              <input type="radio" name="passport_action" value="close_and_archive"
+                class="form-selectgroup-input" checked>
+              <div class="form-selectgroup-label d-flex align-items-center p-3">
+                <div class="me-3">
+                  <span class="form-selectgroup-check"></span>
+                </div>
+                <div>
+                  <strong>Archive and check in every active passport</strong>
+                  <div class="text-secondary small">
+                    Checks in every passport as fully used, same as a normal QR check-in —
+                    each participant gets the usual check-in email.
+                  </div>
+                </div>
+              </div>
+            </label>
+            <label class="form-selectgroup-item flex-fill">
+              <input type="radio" name="passport_action" value="archive_only"
+                class="form-selectgroup-input">
+              <div class="form-selectgroup-label d-flex align-items-center p-3">
+                <div class="me-3">
+                  <span class="form-selectgroup-check"></span>
+                </div>
+                <div>
+                  <strong>Archive silently</strong>
+                  <div class="text-secondary small">
+                    Passports keep their remaining uses and no email is sent. Use this when
+                    another activity (like next season) still inherits these passports.
+                  </div>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning w-100">Archive activity</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -408,6 +499,30 @@ function checkAndDeleteActivity(activityId, activityName) {
                 document.getElementById('deleteActivityId').value = activityId;
                 document.getElementById('activityDeleteForm').action = `/delete-activity/${activityId}`;
                 const modal = new bootstrap.Modal(document.getElementById('activityDeleteModal'));
+                modal.show();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking activity passports:', error);
+            alert('Error checking activity. Please try again.');
+        });
+}
+
+// Activity archive functionality
+function checkAndArchiveActivity(activityId, activityName) {
+    fetch(`/check-activity-passports/${activityId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.has_active_passports) {
+                document.getElementById('archiveOptionsActivityName').textContent = activityName;
+                document.getElementById('archiveOptionsCount').textContent = data.count;
+                document.getElementById('archiveOptionsForm').action = `/execute-archive-activity/${activityId}`;
+                const modal = new bootstrap.Modal(document.getElementById('archiveOptionsModal'));
+                modal.show();
+            } else {
+                document.getElementById('archiveActivityName').textContent = activityName;
+                document.getElementById('activityArchiveForm').action = `/execute-archive-activity/${activityId}`;
+                const modal = new bootstrap.Modal(document.getElementById('activityArchiveModal'));
                 modal.show();
             }
         })

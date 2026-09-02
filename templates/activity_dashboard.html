@@ -1112,7 +1112,7 @@ div.dropdown-divider {
 
 
     <!-- Archived activity: bulk-close callout -->
-    {% if activity.status == 'inactive' %}
+    {% if activity.status in ('archived', 'inactive') %}
       {% if open_passports_count > 0 %}
       <div class="alert alert-warning" role="alert" style="margin-top: 1rem;">
         <div class="d-flex align-items-center">
@@ -1332,7 +1332,7 @@ div.dropdown-divider {
             <div class="modal-body text-center py-4">
               <i class="ti ti-ticket-off mb-2 text-warning" style="font-size: 2rem;" aria-hidden="true"></i>
               <h3>Close all passports?</h3>
-              <div class="text-muted">Mark {{ open_passports_count }} passport(s) as fully used.</div>
+              <div class="text-muted">Checks in {{ open_passports_count }} passport(s) as fully used and emails each participant, same as a normal QR check-in.</div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>

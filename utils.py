@@ -4550,6 +4550,42 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     )
 
 
+def close_out_passport(app, passport, admin_email):
+    """Check in the remaining balance of one passport as part of a bulk close
+    (activity archived / event completed), and send the same 'redeemPass' email a
+    normal QR check-in would send. One email per passport, not one per remaining
+    credit - mass-closing shouldn't spam a participant once per session left.
+    """
+    from models import AdminActionLog
+    from datetime import datetime, timezone
+
+    if passport.uses_remaining <= 0:
+        return False
+
+    passport.uses_remaining = 0
+    db.session.add(passport)
+
+    db.session.add(Redemption(
+        passport_id=passport.id,
+        date_used=datetime.now(timezone.utc),
+        redeemed_by=admin_email or "system",
+    ))
+    db.session.add(AdminActionLog(
+        admin_email=admin_email or "system",
+        action=f"Passport {passport.pass_code} closed via bulk archive/check-in."
+    ))
+    db.session.commit()
+
+    notify_pass_event(
+        app=app,
+        event_type="pass_redeemed",
+        pass_data=passport,
+        activity=passport.activity,
+        admin_email=admin_email,
+    )
+    return True
+
+
 # ================================
 # 📋 SURVEY UTILITIES
 # ================================
