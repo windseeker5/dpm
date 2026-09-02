@@ -42,6 +42,21 @@
   box-shadow: 0 8px 24px rgba(32, 107, 196, 0.12);
 }
 
+/* Activity card title: bumped from the generic h3 weight/size since Inter at
+   400 reads thin at this size; scoped to .activity-card so it doesn't affect
+   the ~20 other pages using the generic .card-title component. */
+.activity-card .card-title {
+  font-size: var(--minipass-text-lg, 1.125rem) !important;
+  font-weight: var(--minipass-font-semibold, 600) !important;
+}
+
+/* Activity card status line + workflow chip: Tabler's default secondary gray
+   (#6c7a91) measures ~4.35:1 on white, just under WCAG AA's 4.5:1 floor. */
+.activity-status-text,
+.activity-workflow-chip {
+  color: #586174 !important;
+}
+
 /* KPI Cards - Rounded corners */
 .kpi-card-rounded,
 div.card.kpi-card-rounded,
@@ -1125,7 +1140,7 @@ html {
 
 .mobile-nav-item:hover,
 .mobile-nav-item.active {
-  color: var(--minipass-primary-600);
+  color: #1a1f36;
 }
 
 .mobile-nav-item i {
@@ -2268,6 +2283,7 @@ html, body {
 
 /* Header Content - Three Column Layout */
 .gradient-header-content {
+  position: relative; /* anchor for absolutely-centered org name below */
   display: flex;
   align-items: center;
   height: 60px; /* Main content area (80px - 20px wave) */
@@ -2300,14 +2316,16 @@ html, body {
   /* No filter - use logo as-is (colorful design) */
 }
 
-/* CENTER: Organization Name (flexible width) */
+/* CENTER: Organization Name — centered on the header's own width, not on
+   the leftover space after the logo column, since there's no right-side
+   column to balance it against (moved to the sidebar footer). */
 .gradient-header-center {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 0 2rem;
 }
 
 .gradient-header-org-name {
@@ -2636,45 +2654,40 @@ body {
   font-weight: 500;
 }
 
-/* Type badge colors - light versions */
-.badge.bg-red-lt {
-  background-color: #fee2e2 !important;
-  color: #991b1b !important;
+/* Badge color system — collapsed from ~14 Tabler "-lt" hues down to 3
+   restrained tones (neutral / positive / attention), shadcn-style: color
+   signals real state, not decoration. The badge's own text label still
+   carries the specific meaning (Rejected vs Pending vs Unpaid), so one
+   shared "attention" tone for all of them doesn't lose information. */
+
+/* Neutral — informational default: counts, workflow type, categorization */
+.badge.bg-blue-lt,
+.badge.bg-azure-lt,
+.badge.bg-teal-lt,
+.badge.bg-purple-lt,
+.badge.bg-orange-lt,
+.badge.bg-secondary-lt,
+.badge.bg-primary-lt,
+.badge.bg-gray-lt {
+  background-color: #f3f4f6 !important;
+  color: #4b5563 !important;
 }
 
-.badge.bg-blue-lt {
-  background-color: #dbeafe !important;
-  color: #1e40af !important;
-}
-
-.badge.bg-green-lt {
+/* Positive — real success/paid/active/matched states only */
+.badge.bg-green-lt,
+.badge.bg-success-lt {
   background-color: #dcfce7 !important;
   color: #166534 !important;
 }
 
-.badge.bg-teal-lt {
-  background-color: #ccfbf1 !important;
-  color: #115e59 !important;
-}
-
-.badge.bg-yellow-lt {
+/* Attention — anything unresolved or negative: pending, unpaid, rejected,
+   expired, no-match. One tone; the label text disambiguates specifics. */
+.badge.bg-yellow-lt,
+.badge.bg-red-lt,
+.badge.bg-warning-lt,
+.badge.bg-danger-lt {
   background-color: #fef3c7 !important;
   color: #92400e !important;
-}
-
-.badge.bg-purple-lt {
-  background-color: #f3e8ff !important;
-  color: #6b21a8 !important;
-}
-
-.badge.bg-orange-lt {
-  background-color: #ffedd5 !important;
-  color: #9a3412 !important;
-}
-
-.badge.bg-gray-lt {
-  background-color: #f3f4f6 !important;
-  color: #4b5563 !important;
 }
 /* ============================================
    MOBILE RESPONSIVE PAGINATION

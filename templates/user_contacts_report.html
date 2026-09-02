@@ -14,12 +14,12 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title"><i class="ti ti-users me-2 text-blue"></i>Contacts</h1>
+          <h1 class="page-title">Contacts</h1>
         </div>
         <div class="col-auto ms-auto d-print-none">
           <div class="btn-list">
             <a href="{{ url_for('user_contacts_export', q=current_filters.q, status=current_filters.status, show_all='true' if current_filters.show_all else '') }}"
-               class="btn btn-primary shadow-sm">
+               class="btn btn-dark shadow-sm">
               Export
             </a>
           </div>
@@ -42,7 +42,7 @@
                  name="q"
                  id="enhancedSearchInput"
                  class="form-control form-control-lg shadow-sm"
-                 placeholder="Start typing to search users"
+                 placeholder="Search contacts…"
                  value="{{ current_filters.q or '' }}"
                  style="padding-right: 100px; border-radius: 0.5rem;"
                  autocomplete="off"

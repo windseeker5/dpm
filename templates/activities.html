@@ -13,12 +13,12 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title"><i class="ti ti-activity text-orange me-2"></i>Activities</h1>
+          <h1 class="page-title">Activities</h1>
         </div>
         <div class="col-auto ms-auto d-print-none">
           <div class="btn-list">
-            <a href="{{ url_for('create_activity') }}" class="btn btn-primary shadow-sm">
-              <i class="ti ti-plus me-2"></i> Activity
+            <a href="{{ url_for('create_activity') }}" class="btn btn-dark shadow-sm">
+              <i class="ti ti-plus me-2"></i> Add
             </a>
           </div>
         </div>
@@ -40,7 +40,7 @@
                name="q"
                id="enhancedSearchInput"
                class="form-control form-control-lg shadow-sm" 
-               placeholder="Start typing to search activities instantly..." 
+               placeholder="Search activities…" 
                value="{{ current_filters.q or '' }}"
                style="padding-right: 100px; border-radius: 0.5rem;"
                autocomplete="off"
@@ -91,7 +91,7 @@
           <p class="empty-state-description text-muted mb-3">
             Activities are the core of your organization. Create your first activity to start managing signups and passports.
           </p>
-          <a href="{{ url_for('create_activity') }}" class="btn btn-primary">
+          <a href="{{ url_for('create_activity') }}" class="btn btn-dark">
             <i class="ti ti-plus me-1"></i>Create Activity
           </a>
         </div>
@@ -152,7 +152,7 @@
                       <span class="badge bg-blue-lt ms-1"><i class="ti ti-users me-1"></i>{{ activity.active_passports_count }}</span>
                     {% endif %}
                     {% if activity.total_revenue %}
-                      <span class="badge bg-green-lt ms-1">${{ "%.0f"|format(activity.total_revenue) }}</span>
+                      <span class="badge bg-secondary-lt ms-1">${{ "%.0f"|format(activity.total_revenue) }}</span>
                     {% endif %}
                   </div>
                 </div>
@@ -160,9 +160,9 @@
             </td>
             <td class="d-none d-md-table-cell" style="vertical-align: middle;">
               {% if activity.workflow_type == 'payment_first' %}
-                <span class="badge bg-green-lt">Pay First</span>
+                <span class="badge bg-secondary-lt">Pay First</span>
               {% else %}
-                <span class="badge bg-blue-lt">Review First</span>
+                <span class="badge bg-secondary-lt">Review First</span>
               {% endif %}
             </td>
             <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
@@ -191,9 +191,8 @@
             </td>
             <td class="text-center" style="vertical-align: middle;">
               <div class="dropdown d-inline-block">
-                <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                  <span class="d-none d-md-inline">Actions</span>
-                  <i class="ti ti-menu-2 d-md-none"></i>
+                <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
+                  <i class="ti ti-dots-vertical"></i>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end">
                   <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">

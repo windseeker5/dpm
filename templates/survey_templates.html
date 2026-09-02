@@ -21,17 +21,12 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h2 class="mt-4 mb-3">
-            <i class="ti ti-template me-2" style="color: #206bc4;"></i>Survey Templates
-          </h2>
+          <h1 class="page-title">Survey Templates</h1>
         </div>
         <div class="col-auto ms-auto d-print-none">
           <div class="dropdown">
-            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <!-- Desktop: Show text -->
-              <span class="d-none d-md-inline">Actions</span>
-              <!-- Mobile: Show hamburger icon only -->
-              <i class="ti ti-menu-2 d-md-none"></i>
+            <button class="btn btn-outline-secondary btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+              <i class="ti ti-dots-vertical"></i>
             </button>
             <div class="dropdown-menu dropdown-menu-end">
               <a class="dropdown-item" href="{{ url_for('list_surveys') }}">
@@ -62,7 +57,7 @@
                  name="q"
                  id="enhancedSearchInput"
                  class="form-control form-control-lg shadow-sm"
-                 placeholder="Start typing to search"
+                 placeholder="Search templates…"
                  value="{{ current_filters.q or '' }}"
                  style="padding-right: 100px; border-radius: 0.5rem;"
                  autocomplete="off"
@@ -144,11 +139,8 @@
                 <!-- Actions: Always visible -->
                 <td class="text-center" style="vertical-align: middle;">
                   <div class="dropdown d-inline-block">
-                    <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                      <!-- Desktop: Show text -->
-                      <span class="d-none d-md-inline">Actions</span>
-                      <!-- Mobile: Show icon -->
-                      <i class="ti ti-menu-2 d-md-none"></i>
+                    <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
+                      <i class="ti ti-dots-vertical"></i>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end">
                       <a class="dropdown-item" href="{{ url_for('edit_survey_template', template_id=template.id) }}">
@@ -187,7 +179,7 @@
                       {% endif %}
                     </p>
                     <div class="empty-action">
-                      <a href="{{ url_for('create_survey_template') }}" class="btn btn-primary">
+                      <a href="{{ url_for('create_survey_template') }}" class="btn btn-dark">
                         <i class="ti ti-plus"></i> Create Template
                       </a>
                     </div>

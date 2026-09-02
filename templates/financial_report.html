@@ -18,7 +18,7 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title"><i class="ti ti-report-money text-blue me-2"></i>Financial</h1>
+          <h1 class="page-title">Financial</h1>
           <div class="d-flex align-items-center gap-2">
             <p class="text-muted mb-0">{{ period_display }}</p>
             <div class="dropdown">
@@ -42,7 +42,7 @@
               <i class="ti ti-plus me-2"></i>Expense
             </button>
             <div class="dropdown">
-              <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+              <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                 <i class="ti ti-download me-2"></i>Export
               </button>
               <div class="dropdown-menu dropdown-menu-end">
@@ -394,9 +394,8 @@
                             <td class="text-center">
                               {% if transaction.editable %}
                                 <div class="dropdown">
-                                  <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                                    <span class="d-none d-md-inline">Actions</span>
-                                    <i class="ti ti-menu-2 d-md-none"></i>
+                                  <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
+                                    <i class="ti ti-dots-vertical"></i>
                                   </a>
                                   <div class="dropdown-menu dropdown-menu-end">
                                     {% if transaction.receipt_filename %}
@@ -1325,15 +1324,6 @@ document.addEventListener('DOMContentLoaded', function() {
   margin-bottom: 2rem;
 }
 
-.page-title {
-  font-weight: 700;
-  color: #0f172a;
-  font-size: 2.25rem;
-  line-height: 1.2;
-  margin-bottom: 0.5rem;
-}
-
-
 /* Table Styling */
 .table {
   background-color: transparent !important;
@@ -1382,10 +1372,6 @@ document.addEventListener('DOMContentLoaded', function() {
 @media (max-width: 767px) {
   .dashboard-container {
     padding: 0 1rem;
-  }
-
-  .page-title {
-    font-size: 1.75rem;
   }
 
   .financial-icon {

@@ -14,10 +14,8 @@
       <!-- Page Title -->
       <div class="mt-4 mb-3">
         <div class="d-flex justify-content-between align-items-center">
-          <h2 class="mb-0">
-            <i class="ti ti-mail-dollar me-2" style="color: #ffc107;"></i>Interac Inbox
-          </h2>
-          <a href="/admin/unified-settings?test_payment_bot=1" class="btn btn-primary btn-icon" title="Refresh">
+          <h1 class="page-title mb-0">Interac Inbox</h1>
+          <a href="/admin/unified-settings?test_payment_bot=1" class="btn btn-dark btn-icon" title="Refresh" aria-label="Refresh">
             <i class="ti ti-refresh"></i>
           </a>
         </div>
@@ -36,7 +34,7 @@
                  name="q"
                  id="enhancedSearchInput"
                  class="form-control form-control-lg shadow-sm"
-                 placeholder="Start typing to search"
+                 placeholder="Search payments…"
                  value="{{ current_filters.q or '' }}"
                  style="padding-right: 100px; border-radius: 0.5rem;"
                  autocomplete="off"
@@ -140,17 +138,11 @@
                   <!-- Row 3: Status + Amount badges (mobile only) -->
                   <div class="d-md-none mt-1">
                     {% if payment.result == 'MATCHED' %}
-                      <span class="badge bg-green-lt text-green-lt-fg">
-                        <i class="ti ti-circle-check"></i> Matched
-                      </span>
+                      <span class="badge bg-green-lt text-green-lt-fg">Matched</span>
                     {% elif payment.result == 'NO_MATCH' %}
-                      <span class="badge bg-orange-lt text-orange-lt-fg">
-                        <i class="ti ti-alert-circle"></i> No Match
-                      </span>
+                      <span class="badge bg-orange-lt text-orange-lt-fg">No Match</span>
                     {% elif payment.result == 'MANUAL_PROCESSED' %}
-                      <span class="badge bg-blue-lt text-blue-lt-fg">
-                        <i class="ti ti-archive"></i> Archived
-                      </span>
+                      <span class="badge bg-blue-lt text-blue-lt-fg">Archived</span>
                     {% endif %}
 
                     {% if payment.bank_info_amt %}
@@ -222,13 +214,8 @@
               <!-- Actions Column: Always visible -->
               <td class="text-center" style="vertical-align: middle;">
                 <div class="dropdown d-inline-block">
-                  <!-- Desktop: Text button with dropdown arrow -->
-                  <a href="#" class="btn btn-outline-secondary dropdown-toggle d-none d-md-inline-block" data-bs-toggle="dropdown">
-                    Actions
-                  </a>
-                  <!-- Mobile: Icon-only button without dropdown arrow -->
-                  <a href="#" class="btn btn-outline-secondary btn-lg d-md-none" data-bs-toggle="dropdown">
-                    <i class="ti ti-menu-2"></i>
+                  <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
+                    <i class="ti ti-dots-vertical"></i>
                   </a>
                   <div class="dropdown-menu dropdown-menu-end">
                     {% if payment.result == 'NO_MATCH' %}

@@ -1177,24 +1177,16 @@ def generate_pass_code():
 # ── Placeholder Gradients for Missing Activity Covers & Org Logos ──
 
 PLACEHOLDER_GRADIENTS = [
-    ('135deg', '#FF6B6B', '#EE5A24'),  # Coral
-    ('135deg', '#0ABDE3', '#006266'),  # Ocean
-    ('135deg', '#10AC84', '#01A3A4'),  # Forest
-    ('135deg', '#9B59B6', '#6C3483'),  # Purple
-    ('135deg', '#F39C12', '#E67E22'),  # Amber
-    ('135deg', '#2C3E50', '#34495E'),  # Navy
-    ('135deg', '#E84393', '#D63031'),  # Berry
-    ('135deg', '#6C5CE7', '#4834D4'),  # Indigo
-    ('135deg', '#00B894', '#00CEC9'),  # Emerald
-    ('135deg', '#636E72', '#2D3436'),  # Slate
-    ('135deg', '#B53471', '#6F1E51'),  # Wine
-    ('135deg', '#0984E3', '#74B9FF'),  # Azure
+    ('135deg', '#64748B', '#475569'),  # Slate
+    ('135deg', '#334155', '#1E293B'),  # Navy
+    ('135deg', '#4B8B84', '#2F5D58'),  # Teal
+    ('135deg', '#7C6BA8', '#5B4B87'),  # Purple
+    ('135deg', '#C08552', '#8B5A2B'),  # Terracotta
+    ('135deg', '#8E5572', '#5C3548'),  # Wine
 ]
 
 PLACEHOLDER_SOLID_COLORS = [
-    '#EE5A24', '#006266', '#01A3A4', '#6C3483',
-    '#E67E22', '#34495E', '#D63031', '#4834D4',
-    '#00CEC9', '#2D3436', '#6F1E51', '#0984E3',
+    '#475569', '#1E293B', '#2F5D58', '#5B4B87', '#8B5A2B', '#5C3548',
 ]
 
 
