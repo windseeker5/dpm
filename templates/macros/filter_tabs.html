@@ -1,0 +1,34 @@
+{#
+  Filter Tabs — segmented filter control for the top of list/table pages
+  (Active/Archived/All, Pending/Approved/All, etc).
+
+  Styled by .mp-filter-tabs/.mp-filter-btn/.mp-filter-count in
+  static/css/mp-components.css, using the same --mp-* tokens as Button and
+  Action Menu (not the old .github-filter-* classes in
+  static/css/filter-component.css, which use a different, off-system
+  GitHub-Primer color palette — see /style-guide's Filter Tabs section for
+  why). Do not add inline styles when using this macro.
+
+  Usage:
+    {% from 'macros/filter_tabs.html' import filter_tabs %}
+    {{ filter_tabs(tabs=[
+      {"label": "Active", "url": url_for('list_activities', status='active'),
+       "count": statistics.active_activities, "active": current_filters.status == 'active'},
+      {"label": "Archived", "url": url_for('list_activities', status='not_active'),
+       "count": statistics.inactive_activities, "active": current_filters.status == 'not_active'},
+      {"label": "All", "url": url_for('list_activities', show_all='true'),
+       "count": statistics.total_activities, "active": current_filters.show_all}
+    ]) }}
+
+  Parameters:
+    - tabs: list of {label, url, count (optional), active (bool)} dicts
+    - aria_label: optional, default "Filter buttons"
+#}
+
+{% macro filter_tabs(tabs, aria_label="Filter buttons") %}
+<div class="mp-filter-tabs" role="group" aria-label="{{ aria_label }}">
+  {%- for tab in tabs %}
+  <a href="{{ tab.url }}" class="mp-filter-btn{% if tab.active %} active{% endif %}">{{ tab.label }}{% if tab.count is defined and tab.count is not none %} <span class="mp-filter-count">({{ tab.count }})</span>{% endif %}</a>
+  {%- endfor %}
+</div>
+{% endmacro %}

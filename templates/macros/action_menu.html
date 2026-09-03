@@ -1,0 +1,101 @@
+{#
+  Action Menu — ported from KDUI (flask-shadcn-starter).
+  Source: components/action_menu.html + basecoat/dropdown-menu.html.jinja
+  Markup/logic transcribed as-is; only .dropdown-menu -> .mp-action-menu
+  (Bootstrap/Tabler already owns .dropdown-menu in this app — see
+  static/css/mp-components.css and static/js/mp-action-menu.js for why).
+
+  Usage:
+    {% from 'macros/action_menu.html' import action_menu %}
+    {{ action_menu(id="row-actions-" ~ row.id, items=[
+      {"label": "View", "url": url_for('detail_x', item_id=row.id)},
+      {"label": "Edit", "url": url_for('edit_x', item_id=row.id)},
+      {"type": "separator"},
+      {"label": "Delete", "attrs": {"data-variant": "destructive", "onclick": "..."}}
+    ]) }}
+
+  Parameters:
+    - id: unique id (required whenever more than one menu is on a page, e.g. one per table row)
+    - items: list of {label, url?, icon?, attrs?} dicts, or {"type": "separator"}, or
+             {"type": "group", "label": ..., "items": [...]}
+    - label: trigger button text, default "Action"
+    - align: popover alignment, "start" | "end" (default "end")
+#}
+
+{% macro dropdown_menu(trigger, id=None, items=None, main_attrs={}, trigger_attrs={}, popover_attrs={}, menu_attrs={}) %}
+{% set id = id or ("mp-action-menu-" + (range(100000, 999999) | random | string)) %}
+<div
+  id="{{ id }}"
+  class="mp-action-menu {{ main_attrs.class | default('') }}"
+  {% for key, value in main_attrs.items() %}{% if key != 'class' %}{{ key }}="{{ value }}"{% endif %}{% endfor %}
+>
+  <button
+    type="button"
+    id="{{ id }}-trigger"
+    aria-haspopup="menu"
+    aria-controls="{{ id }}-menu"
+    aria-expanded="false"
+    {% for key, value in trigger_attrs.items() %}{{ key }}="{{ value }}"{% endfor %}
+  >
+    {{ trigger | safe }}
+  </button>
+  <div
+    id="{{ id }}-popover"
+    data-popover
+    aria-hidden="true"
+    {% for key, value in popover_attrs.items() %}{{ key }}="{{ value }}"{% endfor %}
+  >
+    <div
+      role="menu"
+      id="{{ id }}-menu"
+      aria-labelledby="{{ id }}-trigger"
+      {% for key, value in menu_attrs.items() %}{{ key }}="{{ value }}"{% endfor %}
+    >
+      {% if items %}
+        {{ render_dropdown_items(items, id ~ "-items") }}
+      {% else %}
+        {{ caller() if caller is defined }}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro render_dropdown_items(items, parent_id_prefix="items") %}
+  {% for item in items %}
+    {% set item_id = parent_id_prefix ~ "-" ~ loop.index %}
+    {% set item_type = item.type | default("item") %}
+    {% if item_type == "group" %}
+      {% set group_label_id = item.id | default("group-label-" + item_id) %}
+      <div role="group" aria-labelledby="{{ group_label_id }}"
+        {% if item.attrs %}{% for key, value in item.attrs.items() %}{{ key }}="{{ value }}"{% endfor %}{% endif %}>
+        <div role="heading" id="{{ group_label_id }}">{{ item.label | default('') }}</div>
+        {{ render_dropdown_items(item.get('items', []), item_id) if item.get('items') }}
+      </div>
+    {% elif item_type == "separator" %}
+      <hr role="separator" />
+    {% elif item_type == "item" %}
+      {% if item.url %}
+        <a id="{{ item_id }}" role="menuitem" href="{{ item.url }}"
+          {% if item.attrs %}{% for key, value in item.attrs.items() %}{% if key not in ("href", "url") %}{{ key }}="{{ value }}"{% endif %}{% endfor %}{% endif %}>
+          {% if item.icon %}{{ item.icon | safe }}{% endif %}{{ item.label | default('') | safe }}
+        </a>
+      {% else %}
+        <div id="{{ item_id }}" role="menuitem"
+          {% if item.attrs %}{% for key, value in item.attrs.items() %}{{ key }}="{{ value }}"{% endfor %}{% endif %}>
+          {% if item.icon %}{{ item.icon | safe }}{% endif %}{{ item.label | default('') | safe }}
+        </div>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{% macro action_menu(id, items, label="Action", align="end") %}
+{{ dropdown_menu(
+  id=id,
+  trigger='<span>' ~ label ~ '</span><span class="w-px"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  trigger_attrs={"class": "mp-btn", "data-variant": "outline", "data-size": "sm"},
+  popover_attrs={"data-align": align},
+  items=items
+) }}
+{% endmacro %}
