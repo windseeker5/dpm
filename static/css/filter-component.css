@@ -167,14 +167,17 @@ a.github-filter-btn.active:hover {
 
 /* Filter count styling */
 .main-table-card .card-header .github-filter-group .github-filter-btn .filter-count,
-.main-table-card .card-header .github-filter-group .github-filter-btn span[style*="opacity"] {
+.main-table-card .card-header .github-filter-group .github-filter-btn span[style*="opacity"],
+/* Fallback selector for other contexts (e.g. /style-guide demo) */
+.github-filter-btn .filter-count {
   opacity: 0.6 !important;
   margin-left: 4px !important;
   font-weight: normal !important;
 }
 
 .main-table-card .card-header .github-filter-group .github-filter-btn.active .filter-count,
-.main-table-card .card-header .github-filter-group .github-filter-btn.active span[style*="opacity"] {
+.main-table-card .card-header .github-filter-group .github-filter-btn.active span[style*="opacity"],
+.github-filter-btn.active .filter-count {
   opacity: 0.8 !important;
   font-weight: 500 !important;
 }

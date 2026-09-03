@@ -1,0 +1,29 @@
+{#
+  Standard button component, ported from KDUI (flask-shadcn-starter).
+  Do not hand-roll button colors/classes anywhere else — use this macro.
+
+  Usage:
+    {% from 'macros/buttons.html' import button %}
+    {{ button("Save") }}
+    {{ button("Cancel", variant="secondary") }}
+    {{ button("Delete", variant="destructive", size="sm") }}
+    {{ button("View", href=url_for('some.route'), variant="outline") }}
+    {{ button("Submit", type="submit", attrs={"id": "save-btn", "onclick": "doThing()"}) }}
+
+  Parameters:
+    - text: button label (rendered as-is; pass pre-escaped/marked-safe HTML for icons)
+    - variant: primary (default) | secondary | outline | ghost | destructive | link
+    - size: default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg
+    - type: button (default) | submit | reset — ignored when href is set
+    - href: if set, renders an <a> styled as a button instead of a <button>
+    - id: optional element id
+    - attrs: dict of extra attributes (onclick, data-*, aria-*, class additions, etc.)
+#}
+
+{% macro button(text, variant="primary", size="default", type="button", href=None, id=None, attrs={}) %}
+  {%- if href -%}
+    <a href="{{ href }}" class="mp-btn" data-variant="{{ variant }}"{% if size != "default" %} data-size="{{ size }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>{{ text }}</a>
+  {%- else -%}
+    <button type="{{ type }}" class="mp-btn" data-variant="{{ variant }}"{% if size != "default" %} data-size="{{ size }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>{{ text }}</button>
+  {%- endif -%}
+{% endmacro %}

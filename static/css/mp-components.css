@@ -1,0 +1,430 @@
+/*
+  MiniPass design-system components — port of KDUI (flask-shadcn-starter).
+
+  Source of truth (do not hand-tune values here — re-port from source instead):
+    ~/Documents/DEV/kdui/flask-shadcn-starter/node_modules/basecoat-css/dist/
+      components/button.css       (base layout)
+      styles/vega.css:20-80       (sizes + variants)
+      base/base.css               (color tokens, :root block, light theme only)
+
+  Values below are transcribed 1:1 from those Tailwind utility declarations
+  (h-9 -> height:2.25rem, bg-primary -> background:var(--mp-primary), etc.) —
+  nothing redesigned. Namespaced .mp-btn (not .btn) because Tabler/Bootstrap
+  already owns .btn globally in this app; do not rename without migrating
+  every existing .btn usage first. Dark theme intentionally not ported —
+  MiniPass has no dark mode today.
+*/
+
+:root {
+  --mp-background: oklch(1 0 0);
+  --mp-foreground: oklch(0.145 0 0);
+  --mp-primary: oklch(0.205 0 0);
+  --mp-primary-foreground: oklch(0.985 0 0);
+  --mp-secondary: oklch(0.97 0 0);
+  --mp-secondary-foreground: oklch(0.205 0 0);
+  --mp-muted: oklch(0.97 0 0);
+  --mp-muted-foreground: oklch(0.556 0 0);
+  --mp-destructive: oklch(0.577 0.245 27.325);
+  --mp-border: oklch(0.922 0 0);
+  --mp-ring: oklch(0.708 0 0);
+  --mp-popover: oklch(1 0 0);
+  --mp-popover-foreground: oklch(0.145 0 0);
+  --mp-accent: oklch(0.97 0 0);
+  --mp-accent-foreground: oklch(0.205 0 0);
+  --mp-radius: 0.625rem;
+  --mp-radius-md: calc(var(--mp-radius) - 2px);
+  --mp-radius-sm: calc(var(--mp-radius) - 4px);
+}
+
+.mp-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  outline-style: none;
+  user-select: none;
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: var(--mp-radius-md);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.mp-btn svg {
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.mp-btn svg:not([class*="size-"]) {
+  width: 1rem;
+  height: 1rem;
+}
+
+.mp-btn:focus-visible {
+  border-color: var(--mp-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-btn:active:not([aria-haspopup]) {
+  transform: translateY(1px);
+}
+
+.mp-btn:disabled,
+.mp-btn[disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Sizes */
+.mp-btn:not([data-size]),
+.mp-btn[data-size="default"] {
+  height: 2.25rem;
+  gap: 0.375rem;
+  padding-inline: 0.625rem;
+}
+
+.mp-btn[data-size="xs"] {
+  height: 1.5rem;
+  gap: 0.25rem;
+  padding-inline: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  border-radius: min(var(--mp-radius-md), 8px);
+}
+
+.mp-btn[data-size="sm"] {
+  height: 2rem;
+  gap: 0.25rem;
+  padding-inline: 0.625rem;
+  border-radius: min(var(--mp-radius-md), 10px);
+}
+
+.mp-btn[data-size="lg"] {
+  height: 2.5rem;
+  gap: 0.375rem;
+  padding-inline: 0.625rem;
+}
+
+.mp-btn[data-size="icon"] {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+}
+
+.mp-btn[data-size="icon-xs"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border-radius: min(var(--mp-radius-md), 8px);
+}
+
+.mp-btn[data-size="icon-sm"] {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: min(var(--mp-radius-md), 10px);
+}
+
+.mp-btn[data-size="icon-lg"] {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+
+/* Variants */
+.mp-btn:not([data-variant]),
+.mp-btn[data-variant="primary"] {
+  background: var(--mp-primary);
+  color: var(--mp-primary-foreground);
+}
+.mp-btn:not([data-variant]):hover,
+.mp-btn[data-variant="primary"]:hover {
+  background: color-mix(in oklch, var(--mp-primary) 80%, transparent);
+}
+
+.mp-btn[data-variant="secondary"] {
+  background: var(--mp-secondary);
+  color: var(--mp-secondary-foreground);
+}
+.mp-btn[data-variant="secondary"]:hover {
+  background: color-mix(in oklch, var(--mp-secondary), var(--mp-foreground) 5%);
+}
+
+.mp-btn[data-variant="outline"] {
+  border-color: var(--mp-border);
+  background: var(--mp-background);
+  color: var(--mp-foreground);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+.mp-btn[data-variant="outline"]:hover {
+  background: var(--mp-muted);
+  color: var(--mp-foreground);
+}
+
+.mp-btn[data-variant="ghost"] {
+  background: transparent;
+  color: var(--mp-foreground);
+}
+.mp-btn[data-variant="ghost"]:hover {
+  background: var(--mp-muted);
+  color: var(--mp-foreground);
+}
+
+.mp-btn[data-variant="destructive"] {
+  background: color-mix(in oklch, var(--mp-destructive) 10%, transparent);
+  color: var(--mp-destructive);
+}
+.mp-btn[data-variant="destructive"]:hover {
+  background: color-mix(in oklch, var(--mp-destructive) 20%, transparent);
+}
+
+.mp-btn[data-variant="link"] {
+  background: transparent;
+  border-color: transparent;
+  color: var(--mp-primary);
+  text-underline-offset: 4px;
+}
+.mp-btn[data-variant="link"]:hover {
+  text-decoration: underline;
+}
+
+@media (pointer: coarse) {
+  .mp-btn:not([data-size^="icon"]) {
+    min-height: 44px;
+  }
+}
+
+/*
+  Action Menu — port of KDUI's action_menu()/dropdown_menu() macros.
+  Source: node_modules/basecoat-css/dist/{components/dropdown-menu.css,
+  components/popover.css, styles/vega.css:414-702}. Namespaced .mp-action-menu
+  (not .dropdown-menu) because Bootstrap/Tabler already owns .dropdown-menu
+  globally in this app with a different DOM shape (the popup itself, not a
+  wrapper) — same reasoning as .mp-btn. All descendant selectors below are
+  scoped under .mp-action-menu even where the KDUI source used a bare
+  attribute selector (e.g. [data-popover], [role="menu"]), purely as an
+  extra safety margin against any future collision — values unchanged.
+*/
+
+.mp-action-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.mp-action-menu > [data-popover] {
+  position: absolute;
+  /* Tabler's fixed sidebar/navbar sit at z-index:1040-1041 and its own
+     .dropdown-menu at 1000 (see static/tabler/css/tabler.min.css) — KDUI's
+     source z-50 (Tailwind scale) is invisible under Tabler's chrome, so
+     this is raised to clear it, not an arbitrary value. */
+  z-index: 1055;
+  min-width: 100%;
+  width: max-content;
+  overflow-x: hidden;
+  overflow-y: auto;
+  visibility: visible;
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 100ms;
+  outline: none;
+  margin-top: 0.25rem;
+  top: 100%;
+  background: var(--mp-popover);
+  color: var(--mp-popover-foreground);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--mp-foreground) 10%, transparent),
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-radius: var(--mp-radius-md);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mp-action-menu > [data-popover][aria-hidden="true"] {
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.95) translateY(-0.5rem);
+  pointer-events: none;
+}
+
+.mp-action-menu > [data-popover][data-align="end"] {
+  right: 0;
+}
+
+.mp-action-menu > [data-popover]:not([data-align="end"]) {
+  left: 0;
+}
+
+.mp-action-menu [role="menu"] {
+  outline: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.mp-action-menu [role="menuitem"] {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: default;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  outline: none;
+  user-select: none;
+  border-radius: var(--mp-radius-sm);
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.mp-action-menu [role="menuitem"] svg {
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.mp-action-menu [role="menuitem"] svg:not([class*="size-"]) {
+  width: 1rem;
+  height: 1rem;
+}
+
+.mp-action-menu [role="menuitem"][aria-disabled="true"],
+.mp-action-menu [role="menuitem"]:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.mp-action-menu [role="menuitem"]:hover:not([aria-disabled="true"]),
+.mp-action-menu [role="menuitem"]:focus-visible {
+  background: var(--mp-accent);
+  color: var(--mp-accent-foreground);
+}
+
+.mp-action-menu [role="menuitem"].active {
+  background: var(--mp-muted);
+  color: var(--mp-foreground);
+}
+
+.mp-action-menu [role="menuitem"][data-variant="destructive"] {
+  color: var(--mp-destructive);
+}
+
+.mp-action-menu [role="menuitem"][data-variant="destructive"] svg {
+  color: var(--mp-destructive);
+}
+
+.mp-action-menu [role="menuitem"][data-variant="destructive"]:is(:focus-visible, .active) {
+  background: color-mix(in oklch, var(--mp-destructive) 10%, transparent);
+  color: var(--mp-destructive);
+}
+
+.mp-action-menu [role="separator"] {
+  border: 0;
+  background: var(--mp-border);
+  margin: 0.25rem -0.25rem;
+  height: 1px;
+}
+
+.mp-action-menu .w-px {
+  width: 1px;
+  height: 1rem;
+  background: var(--mp-border);
+  margin-inline: 0.25rem;
+}
+
+/*
+  Typography — body/description text role. Headings (h1-h5) are styled
+  globally in templates/base.html (they're structural elements, not opt-in
+  components); this is the one role that needed a class since <p>/<body>
+  are already owned by Tabler everywhere. Validated against impeccable's
+  typeset.md + operate.md: fixed rem scale, tight 1.125-1.2 step ratio,
+  single font family (Inter, already the site body font).
+*/
+.mp-text-body {
+  font-size: var(--minipass-text-sm, 0.875rem);
+  font-weight: var(--minipass-font-normal, 400);
+  line-height: 1.5;
+  color: var(--minipass-gray-600, #4b5563);
+}
+
+/*
+  Filter Tabs — same segmented-control pattern as the old .github-filter-*
+  classes (static/css/filter-component.css), rebuilt on the --mp-* tokens
+  so it matches Button/Action Menu instead of GitHub's old blue-tinted
+  Primer palette (#f6f8fa/#d1d5da/#24292e/#0969da focus ring). Namespaced
+  .mp-filter-* — .github-filter-* is untouched and still used by the 9
+  live pages that hand-roll it; this is a separate, not-yet-adopted class
+  family, same reasoning as .mp-btn vs .btn.
+*/
+.mp-filter-tabs {
+  display: inline-flex;
+  align-items: center;
+  background: var(--mp-secondary);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+
+.mp-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  padding-inline: 0.75rem;
+  border: none;
+  border-radius: calc(var(--mp-radius-md) - 2px);
+  background: transparent;
+  color: var(--mp-muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.mp-filter-btn:hover {
+  /* Beats Tabler's a:hover{text-decoration:underline} (higher specificity
+     than a plain class) — browser/framework default bleeding through. */
+  text-decoration: none;
+}
+
+.mp-filter-btn:hover:not(.active) {
+  background: color-mix(in oklch, var(--mp-foreground) 5%, transparent);
+  color: var(--mp-foreground);
+}
+
+.mp-filter-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-filter-btn.active {
+  background: var(--mp-background);
+  color: var(--mp-foreground);
+  font-weight: 600;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.mp-filter-count {
+  margin-left: 0.375rem;
+  color: var(--mp-muted-foreground);
+  font-weight: 400;
+}
+
+.mp-filter-btn.active .mp-filter-count {
+  color: var(--mp-muted-foreground);
+}
