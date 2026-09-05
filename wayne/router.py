@@ -25,6 +25,8 @@ SCOPE_TERMS = (
     "passport", "passeport", "payment", "paiement", "paid", "paye", "revenue",
     "revenu", "cash flow", "tresorerie", "booking", "reservation", "session",
     "attendance", "presence", "survey", "sondage", "email", "courriel",
+    "customer", "client", "reminder", "rappel", "expense", "depense", "credit",
+    "seat", "place", "cancelled", "canceled", "annule",
 )
 
 
@@ -53,6 +55,35 @@ def _extract_year(question: str) -> int | None:
             return int(match.group(1))
     if any(term in q for term in ("this year", "cette annee")):
         return datetime.now().year
+    return None
+
+
+def _extract_period(question: str) -> str | None:
+    q = _plain(question)
+    if any(term in q for term in ("today", "aujourd'hui", "aujourd’hui")):
+        return "today"
+    if any(term in q for term in ("this week", "cette semaine")):
+        return "this_week"
+    if any(term in q for term in ("this month", "ce mois", "ce mois-ci")):
+        return "this_month"
+    if any(term in q for term in ("this year", "cette annee")):
+        return "this_year"
+    return None
+
+
+def _extract_customer(question: str) -> str | None:
+    patterns = (
+        r"\b(?:everything about|summary for|history for)\s+(.+?)[?.!]*$",
+        r"\bhow much has\s+(.+?)\s+spent[?.!]*$",
+        r"\bwhen was\s+(.+?)(?:'s|’s)\s+last visit[?.!]*$",
+        r"\b(?:tout sur|resume de|historique de|derniere visite de)\s+(.+?)[?.!]*$",
+        r"\bcombien\s+(.+?)\s+a-t-il depense[?.!]*$",
+    )
+    plain_question = _plain(question)
+    for pattern in patterns:
+        match = re.search(pattern, plain_question, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()[:150] or None
     return None
 
 
@@ -86,7 +117,10 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     q = _plain(question).strip()
     activity = _extract_activity(question)
     year = _extract_year(question)
+    period = _extract_period(question)
+    customer = _extract_customer(question)
     args = {"activity": activity} if activity else {}
+    time_args = {"year": year} if year else {"period": period} if period else {}
 
     greeting_only = re.fullmatch(
         r"(?:hello|hi|hey|bonjour|bonsoir|salut|allo)(?:\s+wayne)?[\s!.,?]*",
@@ -110,30 +144,85 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
         return RouteDecision(status="out_of_scope", language=language)
 
     unpaid = any(term in q for term in (
-        "unpaid", "not paid", "hasn't paid", "have not paid", "non pay", "impaye", "pas paye",
+        "unpaid", "not paid", "hasn't paid", "hasn’t paid", "have not paid", "non pay", "impaye", "pas paye",
         "n'a pas paye", "n'ont pas paye", "n’est pas paye", "ne sont pas paye",
     ))
     paid = any(term in q for term in (" paid", "paye", "payee"))
     count = any(term in q for term in ("how many", "count", "combien", "nombre", "total number"))
-    unsupported_date_filter = any(term in q for term in (
-        "today", "this week", "this month", "aujourd'hui", "cette semaine", "ce mois",
-    ))
+    if any(term in q for term in (
+        "what needs my attention", "needs attention", "need my attention",
+        "necessite mon attention", "a surveiller aujourd", "priorites aujourd",
+    )):
+        return RouteDecision(status="skill", language=language, skill="operational_overview", arguments={})
+
+    if customer and any(term in q for term in (
+        "everything about", "summary for", "history for", "how much has", "last visit",
+        "tout sur", "resume de", "historique de", "derniere visite", "a-t-il depense",
+    )):
+        return RouteDecision(status="skill", language=language, skill="customer_summary", arguments={"customer": customer})
+
+    if any(term in q for term in ("email", "emails", "courriel", "courriels")):
+        email_args = dict(time_args)
+        if customer:
+            email_args["customer"] = customer
+        return RouteDecision(status="skill", language=language, skill="email_delivery_summary", arguments=email_args)
+    if any(term in q for term in ("reminder", "reminders", "rappel", "rappels")):
+        return RouteDecision(status="skill", language=language, skill="reminder_summary", arguments=time_args)
+
+    if any(term in q for term in ("expense", "expenses", "depense", "depenses")) and any(term in q for term in ("owe", "unpaid", "still pay", "dois", "impaye")):
+        return RouteDecision(status="skill", language=language, skill="outstanding_expenses", arguments=args)
+    if any(term in q for term in ("how much do customers owe", "how much do customers still owe", "amounts still owed", "outstanding balance", "who owes", "montant du", "me doivent", "doit encore", "soldes impayes")):
+        return RouteDecision(status="skill", language=language, skill="outstanding_balances", arguments=args)
+    if any(term in q for term in ("payment received", "payments received", "pay today", "paid today", "money did i collect", "how much money", "how much did i collect", "paiement recu", "paiements recus", "recu ce", "recu aujourd", "combien ai-je encaisse")):
+        return RouteDecision(status="skill", language=language, skill="payment_summary", arguments=time_args)
+
+    if any(term in q for term in ("no-show", "no show", "did not show", "didn't show", "didn’t show", "not show up", "absence", "pas presente", "ne s'est pas presente", "ne s’est pas presente")):
+        return RouteDecision(status="skill", language=language, skill="session_no_shows", arguments=args)
+
+    if any(term in q for term in ("not answered", "not completed", "hasn't answered", "hasn’t answered", "haven't answered", "haven’t answered", "pas repondu", "pas encore repondu", "n'a pas repondu", "n’ont pas repondu")):
+        return RouteDecision(status="skill", language=language, skill="pending_survey_responses", arguments=args)
+    if ("survey" in q or "sondage" in q) and any(term in q for term in ("completed", "response", "reponse", "taux")):
+        return RouteDecision(status="skill", language=language, skill="survey_summary", arguments=args)
+
+    if any(term in q for term in ("attendance", "attended", "presence", "present")):
+        return RouteDecision(status="skill", language=language, skill="session_attendance", arguments={**args, **time_args})
 
     if unpaid:
         return RouteDecision(status="skill", language=language, skill="list_unpaid_participants", arguments=args)
     if paid and any(term in q for term in ("who", "list", "show", "qui", "liste", "participant", "personne")):
         return RouteDecision(status="skill", language=language, skill="list_paid_participants", arguments=args)
+    if any(term in q for term in ("one credit", "1 credit", "running out of credit", "low credit", "peu de credit", "un credit restant")):
+        low_args = dict(args)
+        low_args["threshold"] = 1
+        return RouteDecision(status="skill", language=language, skill="low_credit_passports", arguments=low_args)
+
     if "passport" in q or "passeport" in q:
+        if any(term in q for term in ("sold", "sell", "sales", "vendu", "vente", "se vend")):
+            return RouteDecision(status="skill", language=language, skill="passport_sales_summary", arguments={**args, **time_args})
+        if any(term in q for term in ("never been used", "never used", "jamais ete utilise", "jamais utilise", "jamais servi")):
+            return RouteDecision(status="skill", language=language, skill="unused_passports", arguments=args)
+        if any(term in q for term in ("one credit", "1 credit", "running out", "low credit", "peu de credit", "un credit", "manquent de credit")):
+            low_args = dict(args)
+            low_args["threshold"] = 1
+            return RouteDecision(status="skill", language=language, skill="low_credit_passports", arguments=low_args)
         if any(term in q for term in ("active", "actif", "actifs", "valid", "credit restant", "credits remaining", "still have", "encore des credit")):
             return RouteDecision(status="skill", language=language, skill="list_active_passports", arguments=args)
         if any(term in q for term in ("exhaust", "used up", "no credit", "sans credit", "epuise")):
             return RouteDecision(status="skill", language=language, skill="list_exhausted_passports", arguments=args)
         if count:
             return RouteDecision(status="skill", language=language, skill="count_passports", arguments=args)
-    if any(term in q for term in ("signup", "registration", "inscription")) and count:
-        return RouteDecision(status="skill", language=language, skill="count_signups", arguments=args)
-    if any(term in q for term in ("participant", "person", "people", "personne")) and count:
-        return RouteDecision(status="skill", language=language, skill="count_participants", arguments=args)
+    participant_question = any(term in q for term in ("participant", "person", "people", "personne"))
+    if any(term in q for term in ("signup", "registration", "registered", "inscription", "inscrit")) and not (participant_question and count):
+        if any(term in q for term in ("most", "highest", "le plus", "la plus")):
+            return RouteDecision(status="skill", language=language, skill="activity_registration_summary", arguments={"mode": "top", **time_args})
+        if any(term in q for term in ("no registration", "no signup", "without registration", "sans inscription")):
+            return RouteDecision(status="skill", language=language, skill="activity_registration_summary", arguments={"mode": "zero", **time_args})
+        if count:
+            return RouteDecision(status="skill", language=language, skill="count_signups", arguments={**args, **time_args})
+        if any(term in q for term in ("who", "list", "show", "new", "qui", "liste", "nouvelles")):
+            return RouteDecision(status="skill", language=language, skill="list_signups", arguments={**args, **time_args})
+    if participant_question and count:
+        return RouteDecision(status="skill", language=language, skill="count_participants", arguments={**args, **time_args})
 
     year_args = {"year": year} if year else {}
     if any(term in q for term in (
@@ -147,21 +236,34 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     )):
         return RouteDecision(status="skill", language=language, skill="highest_revenue_activity", arguments=year_args)
 
+    if any(term in q for term in ("compare my activities", "compare activities", "activity performance", "performance des activites", "compare mes activites")):
+        return RouteDecision(status="skill", language=language, skill="activity_performance", arguments=time_args)
+
     if any(term in q for term in ("cash flow", "tresorerie", "sommaire financier", "financial summary")):
-        if year or unsupported_date_filter:
+        if year or period:
             return RouteDecision(status="unsupported", language=language)
         return RouteDecision(status="skill", language=language, skill="financial_summary", arguments={})
     if any(term in q for term in ("revenue", "revenu", "revenus")):
-        if unsupported_date_filter:
+        if any(term in q for term in ("compared", "compare to", "versus", "vs ", "par rapport")):
             return RouteDecision(status="unsupported", language=language)
+        if period in {"today", "this_week"}:
+            return RouteDecision(status="skill", language=language, skill="payment_summary", arguments=time_args)
         if year:
             args["year"] = year
+        elif period:
+            args["period"] = period
         return RouteDecision(status="skill", language=language, skill="activity_revenue", arguments=args)
+    if any(term in q for term in ("almost full", "nearly full", "presque complete", "presque pleine")):
+        return RouteDecision(status="skill", language=language, skill="available_session_seats", arguments={**args, "mode": "nearly_full"})
+    if any(term in q for term in ("completely full", "are full", "sont completes", "sont pleines")):
+        return RouteDecision(status="skill", language=language, skill="available_session_seats", arguments={**args, "mode": "full"})
     if any(term in q for term in ("seat", "space", "place libre", "places libre", "places restent", "capacity", "capacite")):
         return RouteDecision(status="skill", language=language, skill="available_session_seats", arguments=args)
-    if any(term in q for term in ("attendance", "attended", "presence", "present")):
-        return RouteDecision(status="skill", language=language, skill="session_attendance", arguments=args)
+    if any(term in q for term in ("redeemed", "redemption", "credits used", "credit utilise", "utilisations de passeport")):
+        return RouteDecision(status="skill", language=language, skill="redemption_summary", arguments={**args, **time_args})
     if "survey" in q or "sondage" in q:
+        if any(term in q for term in ("not answered", "not completed", "hasn't answered", "have not answered", "pas repondu", "pas encore repondu", "n'a pas repondu", "n’a pas repondu", "n’ont pas repondu")):
+            return RouteDecision(status="skill", language=language, skill="pending_survey_responses", arguments=args)
         return RouteDecision(status="skill", language=language, skill="survey_summary", arguments=args)
     if any(term in q for term in ("activit", "activities")) and any(term in q for term in ("list", "show", "which", "liste", "quelles")):
         status = "archived" if "archiv" in q else "active"

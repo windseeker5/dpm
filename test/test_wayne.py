@@ -82,6 +82,75 @@ class WayneRouterTests(unittest.TestCase):
         self.assertEqual({"year": 2026}, decision.arguments)
         self.assertEqual("local", decision.source)
 
+    def test_operations_questions_route_locally_in_both_languages(self):
+        cases = (
+            ("What needs my attention today?", "operational_overview"),
+            ("How much do customers owe me?", "outstanding_balances"),
+            ("How much do I still owe in expenses?", "outstanding_expenses"),
+            ("Did anyone pay today?", "payment_summary"),
+            ("Compare my activities in 2026", "activity_performance"),
+            ("Which passports have never been used?", "unused_passports"),
+            ("Who has one credit left?", "low_credit_passports"),
+            ("How many passports did I sell this month?", "passport_sales_summary"),
+            ("Who did not show up?", "session_no_shows"),
+            ("Are any activities almost full?", "available_session_seats"),
+            ("How many emails did I send this year?", "email_delivery_summary"),
+            ("Who received a payment reminder?", "reminder_summary"),
+            ("Who has not answered the survey?", "pending_survey_responses"),
+            ("Which activity has the most registrations?", "activity_registration_summary"),
+            ("Who registered this week?", "list_signups"),
+            ("How many credits were redeemed this week?", "redemption_summary"),
+            ("Qu’est-ce qui nécessite mon attention aujourd’hui?", "operational_overview"),
+            ("Combien ai-je reçu ce mois-ci?", "payment_summary"),
+            ("Quels passeports n’ont jamais été utilisés?", "unused_passports"),
+            ("Qui ne s’est pas présenté?", "session_no_shows"),
+            ("Combien de courriels ai-je envoyés cette année?", "email_delivery_summary"),
+            ("Qui n’a pas encore répondu au sondage?", "pending_survey_responses"),
+        )
+        for question, expected_skill in cases:
+            with self.subTest(question=question):
+                decision = route_question(question)
+                self.assertEqual(expected_skill, decision.skill)
+                self.assertEqual("local", decision.source)
+
+    def test_overlapping_wording_uses_the_specific_skill(self):
+        cases = (
+            ("Who still hasn’t paid?", "list_unpaid_participants"),
+            ("Who registered but didn’t show up?", "session_no_shows"),
+            ("How many people attended hockey this month?", "session_attendance"),
+            ("How many people completed the survey?", "survey_summary"),
+            ("Which participants haven’t answered yet?", "pending_survey_responses"),
+        )
+        for question, expected_skill in cases:
+            with self.subTest(question=question):
+                self.assertEqual(expected_skill, route_question(question).skill)
+
+    def test_unsupported_comparison_does_not_return_wrong_revenue(self):
+        decision = route_question("Did revenue increase compared with last year?")
+        self.assertEqual("unsupported", decision.status)
+        self.assertIsNone(decision.skill)
+
+    def test_period_is_passed_to_local_skill(self):
+        decision = route_question("How many signups did I get this month?")
+        self.assertEqual("count_signups", decision.skill)
+        self.assertEqual({"period": "this_month"}, decision.arguments)
+
+    def test_customer_history_extracts_customer_name(self):
+        decision = route_question("Show me everything about Steven Belanger")
+        self.assertEqual("customer_summary", decision.skill)
+        self.assertEqual({"customer": "steven belanger"}, decision.arguments)
+
+    def test_customer_spending_question_extracts_name(self):
+        decision = route_question("How much has Steven Belanger spent?")
+        self.assertEqual("customer_summary", decision.skill)
+        self.assertEqual({"customer": "steven belanger"}, decision.arguments)
+
+    def test_french_customer_visit_question_extracts_name(self):
+        decision = route_question("Quelle est la dernière visite de Steven Belanger?")
+        self.assertEqual("customer_summary", decision.skill)
+        self.assertEqual({"customer": "steven belanger"}, decision.arguments)
+        self.assertEqual("fr", decision.language)
+
     def test_help_is_local(self):
         decision = route_question("What data can you help me with?")
         self.assertEqual("help", decision.status)

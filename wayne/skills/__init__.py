@@ -8,13 +8,16 @@ Adding or changing a skill:
 The router automatically receives this metadata; no prompt duplication is needed.
 """
 
-from . import activities, bookings, finances, participants, passports, surveys
+from . import activities, bookings, communications, customers, finances, operations, participants, passports, surveys
 
 _ALL = (
     activities.SKILLS
     + participants.SKILLS
     + passports.SKILLS
     + bookings.SKILLS
+    + operations.SKILLS
+    + customers.SKILLS
+    + communications.SKILLS
     + finances.SKILLS
     + surveys.SKILLS
 )

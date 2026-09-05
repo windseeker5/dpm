@@ -26,12 +26,12 @@ def _message(kind: str, language: str) -> str:
             "fr": "Je suis Wayne, votre assistant de données minipass. Je peux seulement vous aider avec les informations enregistrées dans minipass.",
         },
         "unsupported": {
-            "en": "I don’t have that skill yet. Try asking about participant totals, signups, paid or unpaid registrations, passports, activities, revenue, cash flow, session space, attendance, or surveys.",
-            "fr": "Je n’ai pas encore cette compétence. Essayez une question sur les participants, inscriptions, paiements, passeports, activités, revenus, séances, présences ou sondages.",
+            "en": "I don’t have that skill yet. Try asking about daily priorities, customers, registrations, payments, passports, activities, finances, attendance, emails, reminders, or surveys.",
+            "fr": "Je n’ai pas encore cette compétence. Essayez une question sur les priorités, clients, inscriptions, paiements, passeports, activités, finances, présences, courriels, rappels ou sondages.",
         },
         "help": {
-            "en": "Try asking: “How many participants?”, “Who has not paid for hockey?”, “Show active passports”, or “What is my cash flow?”",
-            "fr": "Essayez : « Combien de participants? », « Qui n’a pas payé pour le hockey? », « Affiche les passeports actifs » ou « Quel est mon flux de trésorerie? »",
+            "en": "Try asking: “What needs my attention today?”, “Who has not paid?”, “Show me everything about a customer”, or “Compare my activities.”",
+            "fr": "Essayez : « Qu’est-ce qui nécessite mon attention? », « Qui n’a pas payé? », « Montre-moi tout sur un client » ou « Compare mes activités. »",
         },
         "fallback": {
             "en": "I couldn’t match that wording without using more AI. Try a short, direct question such as “How many passports?” or “Who has not paid?”",
