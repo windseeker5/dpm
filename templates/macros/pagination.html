@@ -12,6 +12,107 @@
     - page_param: Optional name of the page parameter (default: 'page'). Use for multi-table pagination (e.g., 'passport_page', 'signup_page')
 #}
 
+{#
+  Pagination — Desktop / Mobile (mp-* styled, style-guide component).
+
+  Unlike render_pagination() above, these take plain values instead of a
+  Flask-SQLAlchemy Pagination object and don't call url_for(request.endpoint,
+  ...) — so they're demo-able in the style guide with base_path="#" and
+  don't need a real list-view request context. A real page adopting these
+  later passes base_path=request.path and its existing current_filters dict
+  (every list page already builds one for render_pagination() today).
+
+  The current-page indicator uses --mp-brand-primary (mp-components.css),
+  not a hardcoded color — see that variable's own comment for why (future
+  per-tenant branding color, same pattern as --mp-chart-1).
+
+  Usage:
+    {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+    {{ pagination_desktop(page=2, pages=9, per_page=5, total=43, items_count=5,
+       base_path=request.path, filters=current_filters) }}
+    {{ pagination_mobile(page=2, pages=9, per_page=5, total=43, items_count=5,
+       base_path=request.path, filters=current_filters) }}
+
+  Parameters (both):
+    - page: current page number (1-indexed)
+    - pages: total number of pages
+    - per_page: items per page
+    - total: total item count across all pages
+    - items_count: number of items on the CURRENT page (usually per_page,
+      except a possibly-shorter last page)
+    - base_path: URL path to link to (e.g. request.path)
+    - filters: dict of extra query params to preserve, e.g. {"status": "active"}
+    - page_param: query param name for the page number, default "page"
+    - window (pagination_desktop only): how many page numbers to show on
+      each side of the current page before collapsing into "…", default 2
+#}
+
+{% macro pagination_desktop(page, pages, per_page, total, items_count, base_path, filters={}, page_param='page', window=2) %}
+<div class="card-footer d-flex justify-content-between align-items-center">
+  {% if total > 0 %}
+    <span class="text-muted">Showing {{ ((page - 1) * per_page) + 1 }} to {{ ((page - 1) * per_page) + items_count }} of {{ total }} entries</span>
+    {% if pages > 1 %}
+    <nav aria-label="Pagination">
+      <div class="mp-pagination">
+        {% if page > 1 %}
+        <a class="mp-page-btn" href="{{ base_path }}?{{ page_param }}={{ page - 1 }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}" aria-label="Previous page"><i class="ti ti-chevron-left"></i></a>
+        {% else %}
+        <span class="mp-page-btn" aria-disabled="true" aria-label="Previous page"><i class="ti ti-chevron-left"></i></span>
+        {% endif %}
+
+        {% set ns = namespace(last_shown=0) %}
+        {% for p in range(1, pages + 1) %}
+          {% set show = (p == 1) or (p == pages) or (p >= page - window and p <= page + window) %}
+          {% if show %}
+            {% if p - ns.last_shown > 1 %}<span class="mp-page-ellipsis" aria-hidden="true">…</span>{% endif %}
+            {% if p == page %}
+            <span class="mp-page-btn active" aria-current="page">{{ p }}</span>
+            {% else %}
+            <a class="mp-page-btn" href="{{ base_path }}?{{ page_param }}={{ p }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}">{{ p }}</a>
+            {% endif %}
+            {% set ns.last_shown = p %}
+          {% endif %}
+        {% endfor %}
+
+        {% if page < pages %}
+        <a class="mp-page-btn" href="{{ base_path }}?{{ page_param }}={{ page + 1 }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}" aria-label="Next page"><i class="ti ti-chevron-right"></i></a>
+        {% else %}
+        <span class="mp-page-btn" aria-disabled="true" aria-label="Next page"><i class="ti ti-chevron-right"></i></span>
+        {% endif %}
+      </div>
+    </nav>
+    {% endif %}
+  {% else %}
+    <span class="text-muted">No entries found</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro pagination_mobile(page, pages, per_page, total, items_count, base_path, filters={}, page_param='page') %}
+<div class="card-footer">
+  {% if total > 0 %}
+    <div class="text-muted small mb-2 text-center">Showing {{ ((page - 1) * per_page) + 1 }} to {{ ((page - 1) * per_page) + items_count }} of {{ total }} entries</div>
+    {% if pages > 1 %}
+    <nav aria-label="Pagination" class="mp-pagination-mobile">
+      {% if page > 1 %}
+      <a class="mp-page-btn" href="{{ base_path }}?{{ page_param }}={{ page - 1 }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}" aria-label="Previous page"><i class="ti ti-chevron-left"></i></a>
+      {% else %}
+      <span class="mp-page-btn" aria-disabled="true" aria-label="Previous page"><i class="ti ti-chevron-left"></i></span>
+      {% endif %}
+      <span class="mp-pagination-mobile__label">Page <strong>{{ page }}</strong> of {{ pages }}</span>
+      {% if page < pages %}
+      <a class="mp-page-btn" href="{{ base_path }}?{{ page_param }}={{ page + 1 }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}" aria-label="Next page"><i class="ti ti-chevron-right"></i></a>
+      {% else %}
+      <span class="mp-page-btn" aria-disabled="true" aria-label="Next page"><i class="ti ti-chevron-right"></i></span>
+      {% endif %}
+    </nav>
+    {% endif %}
+  {% else %}
+    <span class="text-muted">No entries found</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
 {% macro render_pagination(pagination, current_filters={}, items=[], page_param='page') %}
   <div class="card-footer d-flex justify-content-between align-items-center">
     {% if pagination and pagination.total > 0 %}
