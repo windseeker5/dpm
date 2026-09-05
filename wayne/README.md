@@ -4,10 +4,14 @@ Wayne is the minipass data assistant. He only answers questions about data store
 
 ## How routing works
 
-1. `router.py` matches common English/French questions locally.
-2. Only unmatched wording goes to OpenRouter.
-3. OpenRouter may select an approved skill and arguments. It never sees the schema, writes SQL, or receives query results.
-4. The selected trusted Python skill reads the database and formats the answer.
+1. `router.py` matches common English/French questions locally for zero AI tokens.
+2. Obvious minipass questions without a supported skill get a local explanation instead of an AI call.
+3. Only unusual wording goes to OpenRouter, using a compact single-language skill list.
+4. OpenRouter may select an approved skill and arguments. It never sees the schema, writes SQL, or receives query results.
+5. Successful AI routing decisions are cached in memory so repeated questions use zero additional tokens.
+6. The selected trusted Python skill reads the database and formats the answer.
+
+Wayne safely handles empty or truncated model output, retries it once, and then returns useful example questions instead of appearing broken. A per-process daily request limit provides a final spending safeguard.
 
 ## Change an existing skill
 
@@ -50,8 +54,11 @@ Edit the handler to change what it calculates. Edit `SkillDefinition` to change 
 
 ```env
 OPENROUTER_API_KEY=your-key
-OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+# Prefer a cheap, non-reasoning model that supports JSON output.
+OPENROUTER_MODEL=openai/gpt-4.1-nano
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_DAILY_REQUEST_LIMIT=50
+OPENROUTER_MAX_TOKENS=300
 ```
 
-The key is required only for questions the local router cannot match.
+The key is required only for questions the local router cannot match. Set the daily limit to `0` to disable OpenRouter completely. The limit is per application process; also configure an account-level spending limit in OpenRouter for production protection.

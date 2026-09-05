@@ -3,6 +3,9 @@
 import json
 import re
 import unicodedata
+from collections import OrderedDict
+from dataclasses import replace
+from threading import Lock
 
 from wayne.client import select_skill
 from wayne.skills import SKILLS, public_catalog
@@ -16,6 +19,13 @@ FRENCH_MARKERS = {
     "tresorerie", "sondage", "présence", "presence", "places", "reste", "liste",
 }
 
+SCOPE_TERMS = (
+    "activit", "participant", "personne", "signup", "registration", "inscription",
+    "passport", "passeport", "payment", "paiement", "paid", "paye", "revenue",
+    "revenu", "cash flow", "tresorerie", "booking", "reservation", "session",
+    "attendance", "presence", "survey", "sondage", "email", "courriel",
+)
+
 
 def _plain(text: str) -> str:
     normalized = unicodedata.normalize("NFKD", text.lower())
@@ -28,22 +38,43 @@ def detect_language(question: str) -> str:
 
 
 def _extract_activity(question: str) -> str | None:
-    """Extract a simple trailing activity phrase without asking OpenRouter."""
-    match = re.search(r"\b(?:for|pour)\s+(.+?)[?.!]*$", question, re.IGNORECASE)
+    """Extract common English/French trailing activity phrases locally."""
+    match = re.search(
+        r"\b(?:for|pour|au|aux|du|de la|de l['’])\s+(.+?)[?.!]*$",
+        question,
+        re.IGNORECASE,
+    )
     if not match:
         return None
     value = match.group(1).strip()
     value = re.sub(r"^(?:the|l['’]|le|la|les)\s*", "", value, flags=re.IGNORECASE)
+    # A year or relative date is a filter, not an activity name. Existing skills
+    # do not support date filters and must not silently return an all-time total.
+    if re.fullmatch(r"(?:19|20)\d{2}", value) or _plain(value) in {
+        "today", "this week", "this month", "this year", "aujourd'hui", "cette semaine", "ce mois", "cette annee",
+    }:
+        return None
     return value[:150] or None
 
 
 def _local_decision(question: str, language: str) -> RouteDecision | None:
-    q = _plain(question)
+    q = _plain(question).strip()
     activity = _extract_activity(question)
     args = {"activity": activity} if activity else {}
 
-    if re.search(r"\b(hello|hi|hey|bonjour|salut|allo)\b", q):
+    greeting_only = re.fullmatch(
+        r"(?:hello|hi|hey|bonjour|bonsoir|salut|allo)(?:\s+wayne)?[\s!.,?]*",
+        q,
+    )
+    if greeting_only:
         return RouteDecision(status="greeting", language=language)
+
+    if any(term in q for term in (
+        "what can you do", "how can you help", "what data can you", "help me use wayne",
+        "que peux-tu faire", "comment peux-tu m'aider", "comment peux-tu m’aider",
+        "qu'est-ce que tu peux faire", "qu’est-ce que tu peux faire", "quelles donnees peux-tu",
+    )):
+        return RouteDecision(status="help", language=language)
 
     if any(term in q for term in (
         "weather", "meteo", "recipe", "recette", "joke", "blague",
@@ -52,16 +83,22 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     )):
         return RouteDecision(status="out_of_scope", language=language)
 
-    unpaid = any(term in q for term in ("unpaid", "not paid", "hasn't paid", "have not paid", "non pay", "impaye", "pas paye"))
+    unpaid = any(term in q for term in (
+        "unpaid", "not paid", "hasn't paid", "have not paid", "non pay", "impaye", "pas paye",
+        "n'a pas paye", "n'ont pas paye", "n’est pas paye", "ne sont pas paye",
+    ))
     paid = any(term in q for term in (" paid", "paye", "payee"))
-    count = any(term in q for term in ("how many", "count", "combien", "nombre"))
+    count = any(term in q for term in ("how many", "count", "combien", "nombre", "total number"))
+    date_filter = bool(re.search(r"\b(?:19|20)\d{2}\b", q)) or any(term in q for term in (
+        "today", "this week", "this month", "this year", "aujourd'hui", "cette semaine", "ce mois", "cette annee",
+    ))
 
     if unpaid:
         return RouteDecision(status="skill", language=language, skill="list_unpaid_participants", arguments=args)
-    if paid and any(term in q for term in ("who", "list", "qui", "liste", "participant", "personne")):
+    if paid and any(term in q for term in ("who", "list", "show", "qui", "liste", "participant", "personne")):
         return RouteDecision(status="skill", language=language, skill="list_paid_participants", arguments=args)
     if "passport" in q or "passeport" in q:
-        if any(term in q for term in ("active", "valid", "credit restant", "credits remaining", "still have")):
+        if any(term in q for term in ("active", "actif", "actifs", "valid", "credit restant", "credits remaining", "still have", "encore des credit")):
             return RouteDecision(status="skill", language=language, skill="list_active_passports", arguments=args)
         if any(term in q for term in ("exhaust", "used up", "no credit", "sans credit", "epuise")):
             return RouteDecision(status="skill", language=language, skill="list_exhausted_passports", arguments=args)
@@ -72,8 +109,12 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     if any(term in q for term in ("participant", "person", "people", "personne")) and count:
         return RouteDecision(status="skill", language=language, skill="count_participants", arguments=args)
     if any(term in q for term in ("cash flow", "tresorerie", "sommaire financier", "financial summary")):
+        if date_filter:
+            return RouteDecision(status="unsupported", language=language)
         return RouteDecision(status="skill", language=language, skill="financial_summary", arguments={})
     if any(term in q for term in ("revenue", "revenu", "revenus")):
+        if date_filter:
+            return RouteDecision(status="unsupported", language=language)
         return RouteDecision(status="skill", language=language, skill="activity_revenue", arguments=args)
     if any(term in q for term in ("seat", "space", "place libre", "places libre", "places restent", "capacity", "capacite")):
         return RouteDecision(status="skill", language=language, skill="available_session_seats", arguments=args)
@@ -82,30 +123,51 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     if "survey" in q or "sondage" in q:
         return RouteDecision(status="skill", language=language, skill="survey_summary", arguments=args)
     if any(term in q for term in ("activit", "activities")) and any(term in q for term in ("list", "show", "which", "liste", "quelles")):
-        status = "archived" if ("archiv" in q) else "active"
+        status = "archived" if "archiv" in q else "active"
         return RouteDecision(status="skill", language=language, skill="list_activities", arguments={"status": status})
+
+    # An obvious minipass request with no matching trusted skill is unsupported.
+    # Handling it here avoids paying an AI model to reach the same conclusion.
+    if any(term in q for term in SCOPE_TERMS):
+        return RouteDecision(status="unsupported", language=language)
     return None
 
 
-SYSTEM_PROMPT = """You are Wayne, the minipass data assistant. Your only job in this call is to select one approved skill; never answer the question and never write SQL.
-Scope: minipass activities, participants, signups, passports, payments, finances, bookings, attendance, and surveys only.
-Return JSON only with: status (skill, out_of_scope, or unsupported), language (en or fr), skill (approved name or null), arguments (object).
-Use out_of_scope for unrelated questions. Use unsupported when the question concerns minipass data but no skill can answer it. Never invent arguments. Preserve an activity name from the question exactly."""
+SYSTEM_PROMPT = """Select one listed minipass skill. Never answer and never write SQL.
+Return one JSON object with keys: status, language, skill, arguments.
+status must be skill, out_of_scope, or unsupported. language must be en or fr.
+For status skill, use an exact listed skill name. Otherwise skill must be JSON null.
+arguments must be a JSON object. Preserve activity names exactly."""
 
 
-def route_question(question: str) -> RouteDecision:
-    language = detect_language(question)
-    local = _local_decision(question, language)
-    if local:
-        return local
+_decision_cache = OrderedDict()
+_decision_cache_lock = Lock()
+_DECISION_CACHE_SIZE = 256
+
+
+def clear_decision_cache() -> None:
+    """Clear cached AI routing decisions (primarily for tests and maintenance)."""
+    with _decision_cache_lock:
+        _decision_cache.clear()
+
+
+def _openrouter_decision(question: str, language: str) -> RouteDecision:
+    """Route unusual wording once, then reuse that decision without more tokens."""
+    cache_key = (question, language)
+    with _decision_cache_lock:
+        cached = _decision_cache.get(cache_key)
+        if cached:
+            _decision_cache.move_to_end(cache_key)
+            return replace(cached, source="cache", tokens_used=0)
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
             "role": "user",
             "content": json.dumps(
-                {"question": question, "approved_skills": public_catalog()},
+                {"question": question, "skills": public_catalog(language=language)},
                 ensure_ascii=False,
+                separators=(",", ":"),
             ),
         },
     ]
@@ -120,8 +182,10 @@ def route_question(question: str) -> RouteDecision:
 
     status = payload.get("status")
     skill_name = payload.get("skill")
-    if status == "skill" and skill_name not in SKILLS:
-        status, skill_name = "unsupported", None
+    if skill_name not in SKILLS:
+        if status == "skill":
+            status = "unsupported"
+        skill_name = None
 
     selected_args = payload.get("arguments") if isinstance(payload.get("arguments"), dict) else {}
     if skill_name:
@@ -133,7 +197,7 @@ def route_question(question: str) -> RouteDecision:
     else:
         selected_args = {}
 
-    return RouteDecision(
+    decision = RouteDecision(
         status=status if status in {"skill", "out_of_scope", "unsupported"} else "unsupported",
         language=payload.get("language") if payload.get("language") in {"en", "fr"} else language,
         skill=skill_name,
@@ -142,3 +206,17 @@ def route_question(question: str) -> RouteDecision:
         model=response["model"],
         tokens_used=response["tokens_used"],
     )
+    with _decision_cache_lock:
+        _decision_cache[cache_key] = decision
+        _decision_cache.move_to_end(cache_key)
+        while len(_decision_cache) > _DECISION_CACHE_SIZE:
+            _decision_cache.popitem(last=False)
+    return decision
+
+
+def route_question(question: str) -> RouteDecision:
+    language = detect_language(question)
+    local = _local_decision(question, language)
+    if local:
+        return local
+    return _openrouter_decision(question.strip(), language)
