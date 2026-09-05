@@ -4,6 +4,7 @@ import json
 import re
 import unicodedata
 from collections import OrderedDict
+from datetime import datetime
 from dataclasses import replace
 from threading import Lock
 
@@ -37,6 +38,24 @@ def detect_language(question: str) -> str:
     return "fr" if words & FRENCH_MARKERS else "en"
 
 
+def _extract_year(question: str) -> int | None:
+    """Extract an explicit calendar year without confusing activity season names."""
+    q = _plain(question)
+    patterns = (
+        r"\b(?:in|during|en)\s+((?:19|20)\d{2})\b",
+        r"\bfor\s+(?:the\s+)?year\s+((?:19|20)\d{2})\b",
+        r"\bpour\s+l['’]annee\s+((?:19|20)\d{2})\b",
+        r"\b(?:year|annee)\s+((?:19|20)\d{2})\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, q)
+        if match:
+            return int(match.group(1))
+    if any(term in q for term in ("this year", "cette annee")):
+        return datetime.now().year
+    return None
+
+
 def _extract_activity(question: str) -> str | None:
     """Extract common English/French trailing activity phrases locally."""
     match = re.search(
@@ -50,9 +69,15 @@ def _extract_activity(question: str) -> str | None:
     value = re.sub(r"^(?:the|l['’]|le|la|les)\s*", "", value, flags=re.IGNORECASE)
     # A year or relative date is a filter, not an activity name. Existing skills
     # do not support date filters and must not silently return an all-time total.
-    if re.fullmatch(r"(?:19|20)\d{2}", value) or _plain(value) in {
-        "today", "this week", "this month", "this year", "aujourd'hui", "cette semaine", "ce mois", "cette annee",
-    }:
+    plain_value = _plain(value)
+    if (
+        re.fullmatch(r"(?:19|20)\d{2}", value)
+        or re.fullmatch(r"(?:the\s+)?year\s+(?:19|20)\d{2}", plain_value)
+        or re.fullmatch(r"annee\s+(?:19|20)\d{2}", plain_value)
+        or plain_value in {
+            "today", "this week", "this month", "this year", "aujourd'hui", "cette semaine", "ce mois", "cette annee",
+        }
+    ):
         return None
     return value[:150] or None
 
@@ -60,6 +85,7 @@ def _extract_activity(question: str) -> str | None:
 def _local_decision(question: str, language: str) -> RouteDecision | None:
     q = _plain(question).strip()
     activity = _extract_activity(question)
+    year = _extract_year(question)
     args = {"activity": activity} if activity else {}
 
     greeting_only = re.fullmatch(
@@ -89,8 +115,8 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     ))
     paid = any(term in q for term in (" paid", "paye", "payee"))
     count = any(term in q for term in ("how many", "count", "combien", "nombre", "total number"))
-    date_filter = bool(re.search(r"\b(?:19|20)\d{2}\b", q)) or any(term in q for term in (
-        "today", "this week", "this month", "this year", "aujourd'hui", "cette semaine", "ce mois", "cette annee",
+    unsupported_date_filter = any(term in q for term in (
+        "today", "this week", "this month", "aujourd'hui", "cette semaine", "ce mois",
     ))
 
     if unpaid:
@@ -109,12 +135,14 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     if any(term in q for term in ("participant", "person", "people", "personne")) and count:
         return RouteDecision(status="skill", language=language, skill="count_participants", arguments=args)
     if any(term in q for term in ("cash flow", "tresorerie", "sommaire financier", "financial summary")):
-        if date_filter:
+        if year or unsupported_date_filter:
             return RouteDecision(status="unsupported", language=language)
         return RouteDecision(status="skill", language=language, skill="financial_summary", arguments={})
     if any(term in q for term in ("revenue", "revenu", "revenus")):
-        if date_filter:
+        if unsupported_date_filter:
             return RouteDecision(status="unsupported", language=language)
+        if year:
+            args["year"] = year
         return RouteDecision(status="skill", language=language, skill="activity_revenue", arguments=args)
     if any(term in q for term in ("seat", "space", "place libre", "places libre", "places restent", "capacity", "capacite")):
         return RouteDecision(status="skill", language=language, skill="available_session_seats", arguments=args)

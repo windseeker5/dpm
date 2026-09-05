@@ -9,20 +9,33 @@ from .helpers import money
 
 def activity_revenue(args, language):
     activity = (args.get("activity") or "").strip().lower()
+    year = args.get("year")
+    try:
+        year = int(year) if year is not None else None
+    except (TypeError, ValueError):
+        year = None
+    if year is not None and not 1900 <= year <= 2100:
+        year = None
+
     sql = text("""
         SELECT account, COALESCE(SUM(cash_received), 0) AS revenue
         FROM monthly_financial_summary
         WHERE (:activity = '' OR LOWER(account) LIKE '%' || :activity || '%')
+          AND (:year_prefix = '' OR month LIKE :year_prefix)
         GROUP BY account
         ORDER BY revenue DESC
         LIMIT 200
     """)
-    records = db.session.execute(sql, {"activity": activity}).all()
+    records = db.session.execute(
+        sql,
+        {"activity": activity, "year_prefix": f"{year}-%" if year else ""},
+    ).all()
     total = sum(float(row[1] or 0) for row in records)
+    period = f" en {year}" if language == "fr" and year else f" in {year}" if year else ""
     answer = (
-        f"Les revenus encaissés totalisent {money(total)} pour {len(records)} activité(s)."
+        f"Les revenus encaissés{period} totalisent {money(total)} pour {len(records)} activité(s)."
         if language == "fr"
-        else f"Cash revenue totals {money(total)} across {len(records)} activity/activities."
+        else f"Cash revenue{period} totals {money(total)} across {len(records)} activity/activities."
     )
     columns = ["Activité", "Revenus encaissés"] if language == "fr" else ["Activity", "Cash revenue"]
     rows = [[row[0], money(row[1])] for row in records]
@@ -63,10 +76,13 @@ def financial_summary(args, language):
 SKILLS = [
     SkillDefinition(
         name="activity_revenue",
-        description_en="Show cash revenue received, optionally filtered by activity.",
-        description_fr="Afficher les revenus encaissés, avec activité facultative.",
-        examples=("Revenue by activity", "Quel revenu a été encaissé pour le hockey?"),
-        parameters={"activity": "Optional activity name or part of its name"},
+        description_en="Show cash revenue received, optionally filtered by activity and calendar year.",
+        description_fr="Afficher les revenus encaissés, avec activité et année civile facultatives.",
+        examples=("Revenue by activity", "Revenue in 2026", "Quel revenu a été encaissé pour le hockey en 2026?"),
+        parameters={
+            "activity": "Optional activity name or part of its name",
+            "year": "Optional four-digit calendar year",
+        },
         handler=activity_revenue,
     ),
     SkillDefinition(
