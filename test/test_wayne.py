@@ -7,8 +7,13 @@ import json
 import unittest
 from unittest.mock import patch
 
+from flask import Flask
+from sqlalchemy import text
+
+from models import db
 from wayne.client import _RetryableResponseError, _parse_response
 from wayne.router import clear_decision_cache, route_question
+from wayne.skills.finances import activity_revenue, highest_revenue_activity, most_profitable_activity
 
 
 class WayneRouterTests(unittest.TestCase):
@@ -51,9 +56,30 @@ class WayneRouterTests(unittest.TestCase):
         self.assertEqual("list_unpaid_participants", decision.skill)
         self.assertEqual("fr", decision.language)
 
-    def test_date_filter_is_not_silently_ignored(self):
+    def test_english_revenue_year_routes_locally(self):
         decision = route_question("What was my revenue in 2026?")
-        self.assertEqual("unsupported", decision.status)
+        self.assertEqual("activity_revenue", decision.skill)
+        self.assertEqual({"year": 2026}, decision.arguments)
+        self.assertEqual("local", decision.source)
+
+    def test_exact_french_revenue_year_question_routes_locally(self):
+        decision = route_question("Hey Wayne, peux-tu me donner mes revenus total pour l'année 2026?")
+        self.assertEqual("activity_revenue", decision.skill)
+        self.assertEqual({"year": 2026}, decision.arguments)
+        self.assertEqual("fr", decision.language)
+        self.assertEqual("local", decision.source)
+
+    def test_highest_collected_revenue_routes_locally_in_french(self):
+        decision = route_question("Et Wayne, peux-tu me dire quelle activité a été la plus payante?")
+        self.assertEqual("highest_revenue_activity", decision.skill)
+        self.assertEqual({}, decision.arguments)
+        self.assertEqual("fr", decision.language)
+        self.assertEqual("local", decision.source)
+
+    def test_most_profitable_routes_locally_with_year(self):
+        decision = route_question("What was my most profitable activity in 2026?")
+        self.assertEqual("most_profitable_activity", decision.skill)
+        self.assertEqual({"year": 2026}, decision.arguments)
         self.assertEqual("local", decision.source)
 
     def test_help_is_local(self):
@@ -90,6 +116,60 @@ class WayneRouterTests(unittest.TestCase):
         self.assertEqual("cache", second.source)
         self.assertEqual(0, second.tokens_used)
         select_skill.assert_called_once()
+
+
+class WayneFinanceSkillTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = Flask(__name__)
+        cls.app.config.update(
+            SQLALCHEMY_DATABASE_URI="sqlite://",
+            SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        )
+        db.init_app(cls.app)
+        cls.context = cls.app.app_context()
+        cls.context.push()
+        db.session.execute(text("""
+            CREATE TABLE monthly_financial_summary (
+                month TEXT,
+                account TEXT,
+                cash_received REAL,
+                total_revenue REAL,
+                total_expenses REAL,
+                net_income REAL
+            )
+        """))
+        db.session.execute(text("""
+            INSERT INTO monthly_financial_summary
+                (month, account, cash_received, total_revenue, total_expenses, net_income)
+            VALUES
+                ('2025-12', 'Yoga', 100.00, 120.00, 20.00, 100.00),
+                ('2026-01', 'Yoga', 250.00, 300.00, 50.00, 250.00),
+                ('2026-02', 'Hockey', 400.00, 420.00, 300.00, 120.00)
+        """))
+        db.session.commit()
+
+    @classmethod
+    def tearDownClass(cls):
+        db.session.remove()
+        cls.context.pop()
+
+    def test_revenue_is_filtered_to_requested_year(self):
+        result = activity_revenue({"year": 2026}, "fr")
+        self.assertEqual("Les revenus encaissés en 2026 totalisent $650.00 pour 2 activité(s).", result.answer)
+        self.assertEqual([["Hockey", "$400.00"], ["Yoga", "$250.00"]], result.rows)
+
+    def test_highest_revenue_uses_collected_cash(self):
+        result = highest_revenue_activity({"year": 2026}, "fr")
+        self.assertIn("Hockey", result.answer)
+        self.assertIn("$400.00", result.answer)
+        self.assertEqual([["Hockey", "$400.00"]], result.rows)
+
+    def test_most_profitable_uses_net_income_after_expenses(self):
+        result = most_profitable_activity({"year": 2026}, "en")
+        self.assertIn("Yoga", result.answer)
+        self.assertIn("$250.00", result.answer)
+        self.assertEqual([["Yoga", "$250.00"]], result.rows)
 
 
 class FakeResponse:
