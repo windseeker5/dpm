@@ -134,6 +134,19 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
         return RouteDecision(status="skill", language=language, skill="count_signups", arguments=args)
     if any(term in q for term in ("participant", "person", "people", "personne")) and count:
         return RouteDecision(status="skill", language=language, skill="count_participants", arguments=args)
+
+    year_args = {"year": year} if year else {}
+    if any(term in q for term in (
+        "most profitable", "highest profit", "best profit", "plus profitable",
+        "plus rentable", "meilleur benefice", "benefice le plus eleve",
+    )):
+        return RouteDecision(status="skill", language=language, skill="most_profitable_activity", arguments=year_args)
+    if any(term in q for term in (
+        "most revenue", "highest revenue", "top revenue", "generated the most revenue",
+        "plus payante", "plus payant", "genere le plus de revenus", "revenus les plus eleves",
+    )):
+        return RouteDecision(status="skill", language=language, skill="highest_revenue_activity", arguments=year_args)
+
     if any(term in q for term in ("cash flow", "tresorerie", "sommaire financier", "financial summary")):
         if year or unsupported_date_filter:
             return RouteDecision(status="unsupported", language=language)
