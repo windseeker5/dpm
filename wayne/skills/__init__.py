@@ -22,15 +22,14 @@ _ALL = (
 SKILLS = {skill.name: skill for skill in _ALL}
 
 
-def public_catalog() -> list[dict]:
-    """Return only the compact metadata OpenRouter needs for skill selection."""
+def public_catalog(language: str = "en") -> list[dict]:
+    """Return compact, single-language metadata for inexpensive AI routing."""
+    description_attr = "description_fr" if language == "fr" else "description_en"
     return [
         {
             "name": skill.name,
-            "description_en": skill.description_en,
-            "description_fr": skill.description_fr,
-            "parameters": skill.parameters,
-            "examples": list(skill.examples),
+            "description": getattr(skill, description_attr),
+            "parameters": list(skill.parameters),
         }
         for skill in _ALL
     ]

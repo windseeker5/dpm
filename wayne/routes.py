@@ -8,8 +8,9 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from decorators import admin_required, rate_limit
 from models import QueryLog, db
 from wayne.client import OpenRouterConfigError, OpenRouterRequestError, configured_model
-from wayne.router import route_question
+from wayne.router import detect_language, route_question
 from wayne.skills import SKILLS
+from wayne.types import RouteDecision
 
 wayne_bp = Blueprint("chatbot", __name__, url_prefix="/chatbot")
 
@@ -25,8 +26,16 @@ def _message(kind: str, language: str) -> str:
             "fr": "Je suis Wayne, votre assistant de données minipass. Je peux seulement vous aider avec les informations enregistrées dans minipass.",
         },
         "unsupported": {
-            "en": "That concerns minipass data, but I don’t have the required skill yet. Ask an administrator to add it to Wayne’s skill library.",
-            "fr": "Cette question concerne les données de minipass, mais je n’ai pas encore la compétence requise. Demandez à un administrateur de l’ajouter à la bibliothèque de Wayne.",
+            "en": "I don’t have that skill yet. Try asking about participant totals, signups, paid or unpaid registrations, passports, activities, revenue, cash flow, session space, attendance, or surveys.",
+            "fr": "Je n’ai pas encore cette compétence. Essayez une question sur les participants, inscriptions, paiements, passeports, activités, revenus, séances, présences ou sondages.",
+        },
+        "help": {
+            "en": "Try asking: “How many participants?”, “Who has not paid for hockey?”, “Show active passports”, or “What is my cash flow?”",
+            "fr": "Essayez : « Combien de participants? », « Qui n’a pas payé pour le hockey? », « Affiche les passeports actifs » ou « Quel est mon flux de trésorerie? »",
+        },
+        "fallback": {
+            "en": "I couldn’t match that wording without using more AI. Try a short, direct question such as “How many passports?” or “Who has not paid?”",
+            "fr": "Je n’ai pas reconnu cette formulation sans utiliser davantage d’IA. Essayez une question courte, comme « Combien de passeports? » ou « Qui n’a pas payé? »",
         },
     }
     return messages[kind][language]
@@ -74,6 +83,7 @@ def ask():
     if len(question) > 500:
         return jsonify(success=False, error="Your question must be 500 characters or fewer."), 400
 
+    decision = None
     try:
         decision = route_question(question)
         if decision.status != "skill":
@@ -102,21 +112,19 @@ def ask():
             skill=decision.skill,
             routed_by=decision.source,
         )
-    except OpenRouterConfigError:
-        current_app.logger.warning("Wayne needs OpenRouter configuration for an unmatched question")
-        return jsonify(
-            success=False,
-            error="Wayne could not match that question locally, and OpenRouter is not configured. Add OPENROUTER_API_KEY to .env.",
-        ), 503
-    except (OpenRouterRequestError, ValueError) as exc:
-        current_app.logger.warning("Wayne routing failed: %s", exc)
-        return jsonify(
-            success=False,
-            error="Wayne could not understand that question right now. Please try a more specific wording.",
-        ), 503
+    except (OpenRouterConfigError, OpenRouterRequestError, ValueError) as exc:
+        language = detect_language(question)
+        fallback = RouteDecision(status="unsupported", language=language, source="openrouter")
+        answer = _message("fallback", language)
+        elapsed = int((time.monotonic() - started) * 1000)
+        _log_query(question, fallback, "error", elapsed, error=str(exc), answer=answer)
+        current_app.logger.warning("Wayne routing fallback: %s", exc)
+        return jsonify(success=True, answer=answer, rows=[], columns=[], skill=None, routed_by="fallback")
     except Exception as exc:
         db.session.rollback()
         elapsed = int((time.monotonic() - started) * 1000)
+        failed = decision or RouteDecision(status="unsupported", language=detect_language(question))
+        _log_query(question, failed, "error", elapsed, error=str(exc))
         current_app.logger.exception("Wayne skill execution failed")
         return jsonify(
             success=False,
