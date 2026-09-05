@@ -17,12 +17,15 @@ Wayne safely handles empty or truncated model output, retries it once, and then 
 
 Open the matching file under `wayne/skills/`:
 
-- `participants.py` — people, signups, paid/unpaid lists
+- `participants.py` — people, dated signups, paid/unpaid lists
 - `passports.py` — passport counts and credits
 - `activities.py` — activity lists
 - `bookings.py` — sessions, seats, attendance
-- `finances.py` — revenue and cash flow
-- `surveys.py` — survey totals
+- `operations.py` — priorities, balances, payments, comparisons, sales, redemptions and no-shows
+- `customers.py` — customer history, spending, credits, visits and amounts due
+- `communications.py` — email delivery and payment reminders
+- `finances.py` — revenue, cash flow and profitability
+- `surveys.py` — survey totals, response rates and unanswered invitations
 
 Each skill has two nearby pieces:
 

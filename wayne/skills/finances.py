@@ -4,7 +4,7 @@ from sqlalchemy import text
 
 from models import db
 from wayne.types import SkillDefinition, SkillResult
-from .helpers import money
+from .helpers import date_bounds, money, period_label
 
 
 def activity_revenue(args, language):
@@ -17,21 +17,25 @@ def activity_revenue(args, language):
     if year is not None and not 1900 <= year <= 2100:
         year = None
 
+    start, end = date_bounds({"year": year} if year else args)
+    start_month = start.strftime("%Y-%m") if start else ""
+    end_month = end.strftime("%Y-%m") if end else ""
     sql = text("""
         SELECT account, COALESCE(SUM(cash_received), 0) AS revenue
         FROM monthly_financial_summary
         WHERE (:activity = '' OR LOWER(account) LIKE '%' || :activity || '%')
-          AND (:year_prefix = '' OR month LIKE :year_prefix)
+          AND (:start_month = '' OR month >= :start_month)
+          AND (:end_month = '' OR month < :end_month)
         GROUP BY account
         ORDER BY revenue DESC
         LIMIT 200
     """)
     records = db.session.execute(
         sql,
-        {"activity": activity, "year_prefix": f"{year}-%" if year else ""},
+        {"activity": activity, "start_month": start_month, "end_month": end_month},
     ).all()
     total = sum(float(row[1] or 0) for row in records)
-    period = f" en {year}" if language == "fr" and year else f" in {year}" if year else ""
+    period = period_label({"year": year} if year else args, language)
     answer = (
         f"Les revenus encaissés{period} totalisent {money(total)} pour {len(records)} activité(s)."
         if language == "fr"
@@ -140,6 +144,7 @@ SKILLS = [
         parameters={
             "activity": "Optional activity name or part of its name",
             "year": "Optional four-digit calendar year",
+            "period": "Optional: this_month or this_year",
         },
         handler=activity_revenue,
     ),
