@@ -1117,9 +1117,19 @@ def inject_globals_and_csrf():
 
     from utils import get_placeholder_css, get_placeholder_letter, get_placeholder_color
 
+    brand_primary = get_setting("PRIMARY_BRAND_COLOR", "#066fd1")
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", brand_primary or ""):
+        brand_primary = "#066fd1"
+    rgb = tuple(int(brand_primary[index:index + 2], 16) / 255 for index in (1, 3, 5))
+    linear_rgb = tuple(value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4 for value in rgb)
+    luminance = 0.2126 * linear_rgb[0] + 0.7152 * linear_rgb[1] + 0.0722 * linear_rgb[2]
+    brand_primary_foreground = "#000000" if (luminance + 0.05) / 0.05 >= 4.5 else "#ffffff"
+
     return {
         'now': datetime.now(timezone.utc),
         'ORG_NAME': get_setting("ORG_NAME", "Your Organization"),
+        'PRIMARY_BRAND_COLOR': brand_primary,
+        'PRIMARY_BRAND_FOREGROUND': brand_primary_foreground,
         'git_version': get_git_version(),
         'csrf_token': generate_csrf,  # returns the raw CSRF token
         'pending_signups_count': pending_signups_count,
@@ -5112,24 +5122,26 @@ def setup():
                         db.session.delete(admin_to_delete)
 
         # 📧 Step 3: Email settings
-        email_settings = {
-            "MAIL_SERVER": request.form.get("mail_server", "").strip(),
-            "MAIL_PORT": request.form.get("mail_port", "587").strip(),
-            "MAIL_USE_TLS": "mail_use_tls" in request.form,
-            "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
-            "MAIL_PASSWORD": request.form.get("mail_password_raw", "").strip(),
-            "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip(),
-            "MAIL_SENDER_NAME": request.form.get("mail_sender_name", "").strip()
-        }
+        email_settings = {}
+        if "mail_server" in request.form:
+            email_settings = {
+                "MAIL_SERVER": request.form.get("mail_server", "").strip(),
+                "MAIL_PORT": request.form.get("mail_port", "587").strip(),
+                "MAIL_USE_TLS": "mail_use_tls" in request.form,
+                "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
+                "MAIL_PASSWORD": request.form.get("mail_password_raw", "").strip(),
+                "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip(),
+                "MAIL_SENDER_NAME": request.form.get("mail_sender_name", "").strip()
+            }
 
-        for key, value in email_settings.items():
-            if key == "MAIL_PASSWORD" and (not value or value == "********"):
-                continue
-            setting = Setting.query.filter_by(key=key).first()
-            if setting:
-                setting.value = str(value)
-            else:
-                db.session.add(Setting(key=key, value=str(value)))
+            for key, value in email_settings.items():
+                if key == "MAIL_PASSWORD" and (not value or value == "********"):
+                    continue
+                setting = Setting.query.filter_by(key=key).first()
+                if setting:
+                    setting.value = str(value)
+                else:
+                    db.session.add(Setting(key=key, value=str(value)))
 
         # ⚙️ Step 4: App-level settings
         extra_settings = {
@@ -5225,14 +5237,17 @@ def setup():
         print("[SETUP] Admins configured:", admin_emails)
         print("[SETUP] Settings saved:", list(email_settings.keys()) + list(extra_settings.keys()))
 
-        flash("Setup completed successfully!", "success")
-        return redirect(url_for("setup"))
+        flash("Team settings saved successfully!", "success")
+        return redirect(url_for("setup", section="team"))
 
     ##
     ##  GET request — Load existing config
     ##
 
     settings = {s.key: s.value for s in Setting.query.all()}
+    current_section = request.args.get("section", "team")
+    if current_section not in {"team", "data"}:
+        current_section = "team"
     admins = Admin.query.all()
     backup_file = request.args.get("backup_file")
 
@@ -5269,7 +5284,8 @@ def setup():
         backup_file=backup_file,
         backup_files=backup_files,
         email_templates=email_templates,
-        fiscal_year_display=fiscal_year_display
+        fiscal_year_display=fiscal_year_display,
+        current_section=current_section
     )
 
 
@@ -5338,7 +5354,16 @@ def unified_settings():
         # Redirect back to payment_bot_matches if that's where they came from
         return redirect(url_for("payment_bot_matches"))
     
+    valid_sections = {"general", "email", "payments"}
+    current_section = request.args.get("section", "general")
+    if current_section not in valid_sections:
+        current_section = "general"
+
     if request.method == "POST":
+        posted_section = request.form.get("settings_section", current_section)
+        if posted_section not in valid_sections:
+            posted_section = "general"
+
         # Check if this is a manual payment bot trigger
         if request.form.get("action") == "test_payment_bot":
             try:
@@ -5372,17 +5397,24 @@ def unified_settings():
             return redirect(url_for("unified_settings"))
             
         try:
-            # Step 1: Organization Settings
-            org_settings = {
-                "ORG_NAME": request.form.get("ORG_NAME", "").strip(),
-                "CALL_BACK_DAYS": request.form.get("CALL_BACK_DAYS", "0").strip(),
-                # Keep hardcoded defaults for removed fields
-                "DEFAULT_PASS_AMOUNT": str(REMOVED_FIELD_DEFAULTS['default_pass_amount']),
-                "DEFAULT_SESSION_QT": str(REMOVED_FIELD_DEFAULTS['default_session_qt']),
-                "EMAIL_INFO_TEXT": REMOVED_FIELD_DEFAULTS['email_info_text'],
-                "EMAIL_FOOTER_TEXT": REMOVED_FIELD_DEFAULTS['email_footer_text'],
-            }
-            
+            # Save only the section that was submitted, so one tab cannot
+            # clear settings that belong to another tab.
+            org_settings = {}
+            if posted_section == "general":
+                org_settings = {
+                    "ORG_NAME": request.form.get("ORG_NAME", "").strip(),
+                    "FISCAL_YEAR_START_MONTH": request.form.get("FISCAL_YEAR_START_MONTH", "1").strip(),
+                    "DEFAULT_PASS_AMOUNT": str(REMOVED_FIELD_DEFAULTS['default_pass_amount']),
+                    "DEFAULT_SESSION_QT": str(REMOVED_FIELD_DEFAULTS['default_session_qt']),
+                    "EMAIL_INFO_TEXT": REMOVED_FIELD_DEFAULTS['email_info_text'],
+                    "EMAIL_FOOTER_TEXT": REMOVED_FIELD_DEFAULTS['email_footer_text'],
+                }
+                brand_color = request.form.get("PRIMARY_BRAND_COLOR", "#066fd1").strip()
+                if not re.fullmatch(r"#[0-9a-fA-F]{6}", brand_color):
+                    flash("Choose a valid 6-digit brand color, such as #066FD1.", "error")
+                    return redirect(url_for("unified_settings", section="general"))
+                org_settings["PRIMARY_BRAND_COLOR"] = brand_color.lower()
+
             for key, value in org_settings.items():
                 existing = Setting.query.filter_by(key=key).first()
                 if existing:
@@ -5431,15 +5463,17 @@ def unified_settings():
                         shutil.copy(logo_path, snapshot)
 
             # Step 3: Email Settings
-            email_settings = {
-                "MAIL_SERVER": request.form.get("mail_server", "").strip(),
-                "MAIL_PORT": request.form.get("mail_port", "587").strip(),
-                "MAIL_USE_TLS": "mail_use_tls" in request.form,
-                "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
-                "MAIL_PASSWORD": request.form.get("mail_password_raw", "").strip(),
-                "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip(),
-                "MAIL_SENDER_NAME": request.form.get("mail_sender_name", "").strip()
-            }
+            email_settings = {}
+            if posted_section == "email":
+                email_settings = {
+                    "MAIL_SERVER": request.form.get("mail_server", "").strip(),
+                    "MAIL_PORT": request.form.get("mail_port", "587").strip(),
+                    "MAIL_USE_TLS": "mail_use_tls" in request.form,
+                    "MAIL_USERNAME": request.form.get("mail_username", "").strip(),
+                    "MAIL_PASSWORD": request.form.get("mail_password_raw", "").strip(),
+                    "MAIL_DEFAULT_SENDER": request.form.get("mail_default_sender", "").strip(),
+                    "MAIL_SENDER_NAME": request.form.get("mail_sender_name", "").strip()
+                }
             
             for key, value in email_settings.items():
                 if key == "MAIL_PASSWORD" and (not value or value == "********"):
@@ -5450,15 +5484,24 @@ def unified_settings():
                 else:
                     db.session.add(Setting(key=key, value=str(value)))
             
-            # Step 4: Payment Bot Settings
-            bot_settings = {
-                "ENABLE_EMAIL_PAYMENT_BOT": "enable_email_payment_bot" in request.form,
-                "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
-                "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
-                "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
-                "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed'],
-                "DISPLAY_PAYMENT_EMAIL": request.form.get("display_payment_email", "").strip()
-            }
+            # Step 4: Payment Settings
+            bot_settings = {}
+            if posted_section == "payments":
+                reminder_setting = Setting.query.filter_by(key="CALL_BACK_DAYS").first()
+                reminder_value = request.form.get("CALL_BACK_DAYS", "15").strip()
+                if reminder_setting:
+                    reminder_setting.value = reminder_value
+                else:
+                    db.session.add(Setting(key="CALL_BACK_DAYS", value=reminder_value))
+
+                bot_settings = {
+                    "ENABLE_EMAIL_PAYMENT_BOT": "enable_email_payment_bot" in request.form,
+                    "BANK_EMAIL_FROM": request.form.get("bank_email_from", "").strip(),
+                    "BANK_EMAIL_SUBJECT": request.form.get("bank_email_subject", "").strip(),
+                    "BANK_EMAIL_NAME_CONFIDANCE": request.form.get("bank_email_name_confidance", "85").strip(),
+                    "GMAIL_LABEL_FOLDER_PROCESSED": REMOVED_FIELD_DEFAULTS['gmail_label_folder_processed'],
+                    "DISPLAY_PAYMENT_EMAIL": request.form.get("display_payment_email", "").strip()
+                }
             
             for key, value in bot_settings.items():
                 existing = Setting.query.filter_by(key=key).first()
@@ -5467,27 +5510,27 @@ def unified_settings():
                 else:
                     db.session.add(Setting(key=key, value=str(value)))
 
-            # Step 4b: Stripe Credit Card Payment Settings (skip blank to preserve existing)
-            # Save enabled toggle (always write — False when checkbox is absent from POST)
-            stripe_enabled_value = str("stripe_payments_enabled" in request.form)
-            existing_enabled = Setting.query.filter_by(key="STRIPE_PAYMENTS_ENABLED").first()
-            if existing_enabled:
-                existing_enabled.value = stripe_enabled_value
-            else:
-                db.session.add(Setting(key="STRIPE_PAYMENTS_ENABLED", value=stripe_enabled_value))
-
-            stripe_fields = {
-                "STRIPE_PAYMENTS_SECRET_KEY": request.form.get("stripe_payments_secret_key", "").strip(),
-                "STRIPE_WEBHOOK_SECRET": request.form.get("stripe_webhook_secret", "").strip(),
-            }
-            for key, value in stripe_fields.items():
-                if not value:
-                    continue  # Don't overwrite existing key with blank
-                existing = Setting.query.filter_by(key=key).first()
-                if existing:
-                    existing.value = value
+            # Stripe settings belong only to the Payments section.
+            if posted_section == "payments":
+                stripe_enabled_value = str("stripe_payments_enabled" in request.form)
+                existing_enabled = Setting.query.filter_by(key="STRIPE_PAYMENTS_ENABLED").first()
+                if existing_enabled:
+                    existing_enabled.value = stripe_enabled_value
                 else:
-                    db.session.add(Setting(key=key, value=value))
+                    db.session.add(Setting(key="STRIPE_PAYMENTS_ENABLED", value=stripe_enabled_value))
+
+                stripe_fields = {
+                    "STRIPE_PAYMENTS_SECRET_KEY": request.form.get("stripe_payments_secret_key", "").strip(),
+                    "STRIPE_WEBHOOK_SECRET": request.form.get("stripe_webhook_secret", "").strip(),
+                }
+                for key, value in stripe_fields.items():
+                    if not value:
+                        continue
+                    existing = Setting.query.filter_by(key=key).first()
+                    if existing:
+                        existing.value = value
+                    else:
+                        db.session.add(Setting(key=key, value=value))
 
             # Step 5: Save all changes
             db.session.commit()
@@ -5497,15 +5540,16 @@ def unified_settings():
             log_admin_action(f"Unified Settings Updated by {session.get('admin', 'Unknown')}")
 
             # Always use standard flash messages and redirect
-            flash("All settings saved successfully!", "success")
-            return redirect(url_for("unified_settings"))
+            section_names = {"general": "General", "email": "Email", "payments": "Payment"}
+            flash(f"{section_names[posted_section]} settings saved successfully!", "success")
+            return redirect(url_for("unified_settings", section=posted_section))
 
         except Exception as e:
             db.session.rollback()
 
             # Always use standard flash messages and redirect
             flash(f"Error saving settings: {str(e)}", "error")
-            return redirect(url_for("unified_settings"))
+            return redirect(url_for("unified_settings", section=posted_section))
     
     # GET request - load all settings
     settings = {s.key: s.value for s in Setting.query.all()}
@@ -5524,7 +5568,8 @@ def unified_settings():
     return render_template("unified_settings.html",
                            settings=settings,
                            webhook_url=webhook_url,
-                           stripe_payments_enabled=stripe_payments_enabled)
+                           stripe_payments_enabled=stripe_payments_enabled,
+                           current_section=current_section)
 
 
 # Alternative route name to match template url_for reference

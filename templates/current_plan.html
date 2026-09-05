@@ -1,22 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Subscription | Minipass{% endblock %}
+{% from 'macros/settings_nav.html' import settings_nav %}
+{% block title %}Plan & Billing | minipass{% endblock %}
 {% block content %}
 
 <div class="page-wrapper">
-  <!-- Page Header -->
-  <div class="page-header d-print-none" style="padding-top: 2rem;">
+  <div class="page-header d-print-none">
     <div class="dashboard-container">
-      <div class="row g-2 align-items-center">
-        <div class="col">
-          <h1 class="page-title">Subscription</h1>
-        </div>
-      </div>
+      <h1 class="page-title mb-1">Settings</h1>
+      <p class="mp-text-body mb-0">Manage your organization and account.</p>
     </div>
   </div>
 
   <!-- Page Body -->
   <div class="page-body">
     <div class="dashboard-container">
+      {{ settings_nav('plan') }}
+      <div class="mb-4">
+        <h2 class="mb-1">Plan & Billing</h2>
+        <p class="mp-text-body mb-0">Review your subscription, usage, and renewal details.</p>
+      </div>
 
       <!-- State flags -->
       {% set is_beta = subscription_meta.is_beta_tester %}

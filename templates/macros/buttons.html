@@ -20,10 +20,10 @@
     - attrs: dict of extra attributes (onclick, data-*, aria-*, class additions, etc.)
 #}
 
-{% macro button(text, variant="primary", size="default", type="button", href=None, id=None, attrs={}) %}
+{% macro button(text, variant="primary", size="default", type="button", href=None, id=None, attrs={}, icon=None) %}
   {%- if href -%}
-    <a href="{{ href }}" class="mp-btn" data-variant="{{ variant }}"{% if size != "default" %} data-size="{{ size }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>{{ text }}</a>
+    <a href="{{ href }}" class="mp-btn{% if attrs.get('class') %} {{ attrs.get('class') }}{% endif %}" data-variant="{{ variant }}"{% if size != "default" %} data-size="{{ size }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% for key, value in attrs.items() %}{% if key != 'class' %} {{ key }}="{{ value }}"{% endif %}{% endfor %}>{% if icon %}<i class="ti {{ icon }}" aria-hidden="true"></i>{% endif %}{{ text }}</a>
   {%- else -%}
-    <button type="{{ type }}" class="mp-btn" data-variant="{{ variant }}"{% if size != "default" %} data-size="{{ size }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>{{ text }}</button>
+    <button type="{{ type }}" class="mp-btn{% if attrs.get('class') %} {{ attrs.get('class') }}{% endif %}" data-variant="{{ variant }}"{% if size != "default" %} data-size="{{ size }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% for key, value in attrs.items() %}{% if key != 'class' %} {{ key }}="{{ value }}"{% endif %}{% endfor %}>{% if icon %}<i class="ti {{ icon }}" aria-hidden="true"></i>{% endif %}{{ text }}</button>
   {%- endif -%}
 {% endmacro %}

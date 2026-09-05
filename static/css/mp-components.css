@@ -20,16 +20,34 @@
   --mp-foreground: oklch(0.145 0 0);
   --mp-primary: oklch(0.205 0 0);
   --mp-primary-foreground: oklch(0.985 0 0);
-  --mp-secondary: oklch(0.97 0 0);
+  /* Gray Scale (standardized). These four were originally pure oklch —
+     zero chroma, fully achromatic gray. Fully neutral grays like that read
+     flatter/more sterile than a gray with a whisper of tint (why GitHub,
+     Linear, Stripe, and Vercel all use a lightly-tinted "gray," never a
+     true one) — comparing Filter Tabs against the old GitHub-Primer
+     palette it replaced (#f6f8fa/#d1d5da/#24292e, all subtly cool-tinted)
+     made the difference concrete, not just a feeling. Retinted to Tabler's
+     own existing gray scale instead of inventing a competing token
+     system — the same source .mp-data-table's gray-scale fix already
+     standardized on, and what the other ~100 pages in this app already
+     run on. This is a root-level change: every component reading these
+     tokens (Button, Action Menu, Filter Tabs, Pagination) picks up the
+     same consistent grays automatically. --mp-background/--mp-foreground
+     (white/near-black) are untouched — lightness extremes don't show the
+     same flatness effect chroma=0 mid-tones do.
+     Old values: --mp-secondary/--mp-muted/--mp-accent: oklch(0.97 0 0);
+                 --mp-border: oklch(0.922 0 0);
+                 --mp-muted-foreground: oklch(0.556 0 0); */
+  --mp-secondary: var(--tblr-gray-100, #eef3f6);
   --mp-secondary-foreground: oklch(0.205 0 0);
-  --mp-muted: oklch(0.97 0 0);
-  --mp-muted-foreground: oklch(0.556 0 0);
+  --mp-muted: var(--tblr-gray-100, #eef3f6);
+  --mp-muted-foreground: var(--tblr-gray-600, #49566c);
   --mp-destructive: oklch(0.577 0.245 27.325);
-  --mp-border: oklch(0.922 0 0);
+  --mp-border: var(--tblr-gray-200, #dce1e7);
   --mp-ring: oklch(0.708 0 0);
   --mp-popover: oklch(1 0 0);
   --mp-popover-foreground: oklch(0.145 0 0);
-  --mp-accent: oklch(0.97 0 0);
+  --mp-accent: var(--tblr-gray-100, #eef3f6);
   --mp-accent-foreground: oklch(0.205 0 0);
   --mp-radius: 0.625rem;
   --mp-radius-md: calc(var(--mp-radius) - 2px);
@@ -41,6 +59,14 @@
      property (e.g. per-tenant inline style on <body>) with no JS/macro
      changes. */
   --mp-chart-1: #206bc4;
+  /* Brand/primary color — reused wherever a component needs to mark "this
+     is the current/active thing" (currently: Pagination's current-page
+     indicator). Defaults to the app's existing blue so nothing changes
+     visually today; once the planned Settings -> Branding feature lets a
+     tenant pick their own primary color, only this one variable needs to
+     be overridden (e.g. an inline style on <body>) — no component CSS
+     changes. Same reasoning as --mp-chart-1 above. */
+  --mp-brand-primary: var(--tblr-primary, #066fd1);
 }
 
 .mp-btn {
@@ -49,7 +75,11 @@
   align-items: center;
   justify-content: center;
   white-space: nowrap;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
   outline-style: none;
   user-select: none;
   cursor: pointer;
@@ -381,7 +411,16 @@
   background: var(--mp-secondary);
   border: 1px solid var(--mp-border);
   border-radius: var(--mp-radius-md);
-  padding: 2px;
+  /* padding: 0 (not 2px) is deliberate — with padding, the buttons sit
+     inset from the container's own edges, leaving a visible ring of the
+     container's background color around the active pill (most obvious
+     along the bottom edge). The old GitHub-Primer version this replaced
+     had zero padding for the same reason: buttons fill the container's
+     full height, so the active pill sits flush against the outer border
+     with no seam. Button radius below matches this container's radius
+     (not radius-2px) for the same reason — with no padding gap, they need
+     to nest at the same radius, not a smaller one. */
+  padding: 0;
   gap: 2px;
 }
 
@@ -391,7 +430,7 @@
   height: 2rem;
   padding-inline: 0.75rem;
   border: none;
-  border-radius: calc(var(--mp-radius-md) - 2px);
+  border-radius: var(--mp-radius-md);
   background: transparent;
   color: var(--mp-muted-foreground);
   font-size: 0.875rem;
@@ -423,7 +462,10 @@
   background: var(--mp-background);
   color: var(--mp-foreground);
   font-weight: 600;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  /* Crisp bottom-only hairline (not a soft all-around shadow) — matches
+     the old version's precisely-cut look instead of a softer floating
+     pill. Same idea as the old rgba(27,31,35,0.04), retinted. */
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
 }
 
 .mp-filter-count {
@@ -640,4 +682,589 @@
 .mp-kpi-card-mobile__period {
   font-size: var(--minipass-text-xs, 0.75rem);
   color: var(--minipass-gray-600, #4b5563);
+}
+
+/* Settings shell — shared horizontal navigation and calm form surface. */
+.mp-settings-nav {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--mp-border);
+}
+
+.mp-settings-tabs {
+  display: flex;
+  align-items: end;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mp-settings-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mp-settings-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.65rem 0 0.75rem;
+  color: var(--mp-muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.mp-settings-tab:hover {
+  color: var(--mp-foreground);
+  text-decoration: none;
+}
+
+.mp-settings-tab:focus-visible {
+  border-radius: var(--mp-radius-sm);
+  outline: 2px solid var(--mp-ring);
+  outline-offset: 2px;
+}
+
+.mp-settings-tab.active {
+  color: var(--mp-foreground);
+  font-weight: 600;
+}
+
+.mp-settings-tab.active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--mp-brand-primary);
+  content: "";
+}
+
+.mp-settings-select-wrap {
+  display: none;
+}
+
+.mp-settings-surface {
+  max-width: 880px;
+  overflow: hidden;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-background);
+  box-shadow: var(--minipass-shadow-sm, 0 1px 2px rgb(0 0 0 / 0.05));
+}
+
+.mp-settings-heading,
+.mp-settings-section,
+.mp-settings-actions {
+  padding: 1.5rem;
+}
+
+.mp-settings-heading {
+  padding-bottom: 1.25rem;
+}
+
+.mp-settings-section {
+  border-top: 1px solid var(--mp-border);
+}
+
+.mp-settings-section-title {
+  margin-bottom: 0.25rem;
+}
+
+.mp-settings-fields {
+  max-width: 640px;
+  margin-top: 1.25rem;
+}
+
+.mp-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--mp-border);
+  background: var(--mp-muted);
+}
+
+.mp-settings-advanced {
+  margin-top: 1rem;
+  border-top: 1px solid var(--mp-border);
+}
+
+.mp-settings-advanced > summary {
+  min-height: 44px;
+  padding: 0.75rem 0;
+  color: var(--mp-foreground);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mp-settings-advanced > summary:focus-visible {
+  border-radius: var(--mp-radius-sm);
+  outline: 2px solid var(--mp-ring);
+  outline-offset: 2px;
+}
+
+.mp-settings-status-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mp-settings-status-copy {
+  min-width: 0;
+  max-width: 65ch;
+}
+
+.mp-brand-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-sm);
+  background: var(--mp-muted);
+}
+
+.mp-brand-color-input {
+  width: 3rem;
+  min-width: 3rem;
+  height: 2.25rem;
+  padding: 0.2rem;
+}
+
+@media (max-width: 767.98px) {
+  .mp-settings-nav {
+    border-bottom: 0;
+  }
+
+  .mp-settings-tabs {
+    display: none;
+  }
+
+  .mp-settings-select-wrap {
+    display: block;
+  }
+
+  .mp-settings-heading,
+  .mp-settings-section,
+  .mp-settings-actions {
+    padding: 1.25rem;
+  }
+
+  .mp-settings-status-row {
+    flex-direction: column;
+  }
+
+  .mp-settings-actions .mp-btn {
+    width: 100%;
+  }
+}
+
+/*
+  Avatar (Initials) — colored-circle avatar, no image request. Color comes
+  from Tabler's own bg-*-lt/text-*-lt-fg badge classes (set server-side by
+  macros/avatar.html), not a new palette — only shape/sizing lives here.
+*/
+.mp-avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}
+
+.mp-avatar-initials[data-size="sm"] {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.6875rem;
+}
+
+.mp-avatar-initials:not([data-size]),
+.mp-avatar-initials[data-size="md"] {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 0.8125rem;
+}
+
+.mp-avatar-initials[data-size="lg"] {
+  width: 3rem;
+  height: 3rem;
+  font-size: 0.9375rem;
+}
+
+/*
+  Data Table Toolbar — filter_tabs() + a search icon on the same row
+  (macros/data_table.html's table_toolbar()). Both "breakpoints" share the
+  same markup; only the CSS below and mp-table-toolbar.js's toggled
+  [data-search-open] attribute differ:
+    - wide (>=768px): the input grows inline next to the tabs, which stay
+      centered and visible.
+    - narrow (<768px): the tabs are hidden outright and the input takes
+      the full row — see the @container block at the bottom of this
+      section.
+
+  Sized with a *container* query (container-type: inline-size below), not
+  a viewport @media query, so the narrow/wide behavior tracks this
+  element's own rendered width — the same macro instance still does the
+  right thing if it's ever placed somewhere narrower than the full page
+  (e.g. a side panel), and it's what lets the style guide show a genuinely
+  narrow "Mobile" demo card side-by-side with the "Desktop" one without
+  needing the whole browser window resized.
+*/
+.mp-table-toolbar {
+  /* Tabs are the only in-flow child (search is position:absolute below),
+     so justify-content:center keeps them dead-center regardless of the
+     search input's collapsed/expanded width. width:100% matters here —
+     without it this div (a flex item inside .card-header, which is a flex
+     container in Tabler) shrinks to its own content width and centering
+     has no extra space to distribute. */
+  container-type: inline-size;
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+}
+
+.mp-table-toolbar__search {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+}
+
+.mp-table-toolbar__search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  border-radius: var(--mp-radius-md);
+  color: var(--mp-muted-foreground);
+  cursor: pointer;
+}
+
+.mp-table-toolbar__search-btn:hover {
+  background: var(--mp-muted);
+  color: var(--mp-foreground);
+}
+
+.mp-table-toolbar__search-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-table-toolbar__search-btn .mp-table-toolbar__icon-close {
+  display: none;
+}
+
+/* Wide/desktop default: the input is always visible (no click needed) —
+   the icon button only exists to become the collapse/expand toggle once
+   the @container rule below kicks in on a narrow container. */
+.mp-table-toolbar__search-input {
+  width: 14rem;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-background);
+  font-size: 0.875rem;
+  color: var(--mp-foreground);
+  opacity: 1;
+  pointer-events: auto;
+  transition: width 150ms ease, opacity 150ms ease, padding 150ms ease;
+}
+
+.mp-table-toolbar__search-input:focus-visible {
+  outline: none;
+  border-color: var(--mp-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+@container (max-width: 767.98px) {
+  /* Narrow container: collapse to icon-only by default; [data-search-open]
+     (toggled by mp-table-toolbar.js) replaces the tabs with the input. */
+  .mp-table-toolbar__search-input {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    border-color: transparent;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .mp-table-toolbar[data-search-open] .mp-filter-tabs {
+    display: none;
+  }
+  .mp-table-toolbar[data-search-open] .mp-table-toolbar__search {
+    position: static;
+    transform: none;
+    width: 100%;
+  }
+  .mp-table-toolbar[data-search-open] .mp-table-toolbar__search-input {
+    width: 100%;
+    flex: 1 1 auto;
+    opacity: 1;
+    pointer-events: auto;
+    padding: 0.375rem 0.625rem;
+    border-color: var(--mp-border);
+  }
+  /* Icon swap only makes sense narrow — wide always shows the input, so
+     the button never needs a "close" state there. */
+  .mp-table-toolbar[data-search-open] .mp-table-toolbar__search-btn .mp-table-toolbar__icon-search {
+    display: none;
+  }
+  .mp-table-toolbar[data-search-open] .mp-table-toolbar__search-btn .mp-table-toolbar__icon-close {
+    display: inline-flex;
+  }
+}
+
+/*
+  Data Table — Gray Scale. Wrap the whole table card in
+  class="card mp-data-table" (see the "Show Jinja usage" snippet on the
+  style guide) to get this.
+
+  Investigated four grays that looked mismatched side by side in one
+  card: the column header text, the muted secondary text (email/pass-code
+  lines, footer count), the .table-hover row tint, and the
+  .card-footer/pagination background. All four turned out to be genuine
+  Tabler defaults, each pulling from a *different* Tabler CSS variable —
+  .table thead th hardcodes color:var(--tblr-secondary) (#6c7a91) directly
+  (a different token from the one below, despite the near-identical name),
+  .text-muted uses --tblr-secondary-color (an rgba(24,36,51,.75) overlay),
+  .table-hover uses --tblr-table-hover-bg (rgba(emphasis-color,.075), a
+  third, darker-leaning overlay), and .card-footer uses
+  --tblr-card-cap-bg/--tblr-bg-surface-tertiary (a fourth value). Tabler
+  was never designed with the expectation that all four would sit stacked
+  in one small card, so left alone they read as uncoordinated.
+
+  Fix: redeclare those *same* Tabler custom properties (not a competing
+  token system — see mp-btn's own "namespaced because Tabler already owns
+  X" reasoning above for why introducing a 5th gray language would make
+  this worse, not better) down to just two values, reused for every gray
+  role in the table: --tblr-gray-600 for all muted text (header labels,
+  email/pass-code secondary lines, footer count), a faint translucent
+  black for gray backgrounds (row hover, footer/pagination) — translucent
+  rather than a flat opaque gray-100 fill because the same opacity-based
+  wash mp-filter-btn's own hover already uses (see Filter Tabs above) reads
+  as lighter/softer than an equivalent solid fill at a glance, which is
+  what "too dark" feedback on the hover was really asking for. Scoped to
+  .mp-data-table only — this does not touch grays anywhere else in the
+  app.
+
+  .mp-data-table .table thead th (not the shorter .mp-data-table thead th)
+  is deliberate: Tabler's own .table thead th rule has the exact same
+  specificity (one class + two type selectors) as a shorter version of
+  this selector would, so which one wins becomes a coin flip on
+  stylesheet load order. Repeating .table in the chain makes this rule
+  unambiguously more specific, so it wins regardless of load order.
+
+  Every rule below is a *direct* property override (color/background,
+  with !important where Tabler's own rule already used !important) rather
+  than redeclaring one of Tabler's internal custom properties. Tried the
+  custom-property route first (redeclaring --tblr-secondary-color to fix
+  .text-muted) and verified against the running page's computed styles —
+  it silently did nothing, because Tabler's minified CSS ships *two*
+  different .text-muted rules (one reading --tblr-secondary-color, a
+  second, later one reading rgba(var(--tblr-muted-rgb),...)), and the
+  second one is what's actually active. Overriding the property directly,
+  at higher specificity, doesn't depend on knowing which of Tabler's
+  internal variables happens to be wired to which rule in a given
+  version — it just wins.
+*/
+.mp-data-table .table thead th {
+  /* Tabler's own .table thead th rule also sets a background
+     (--tblr-bg-surface-tertiary, a very pale blue-tinted near-white) —
+     left alone, that's what actually reads as "light blue" here, not the
+     text color (verified: text color alone already matched the footer).
+     Override it to the same neutral tint the footer uses so header and
+     footer are visually identical, not just numerically equal. */
+  background-color: rgba(0, 0, 0, 0.04);
+  color: var(--tblr-gray-600, #49566c);
+  font-weight: 500;
+}
+
+.mp-data-table .text-muted {
+  color: var(--tblr-gray-600, #49566c) !important;
+}
+
+.mp-data-table .table-hover > tbody > tr:hover > * {
+  /* Deliberately lighter than the header/footer gray (rgba(0,0,0,.04)
+     below) — not the same tint. Barely-there, almost white. */
+  box-shadow: none !important;
+  background-color: rgba(0, 0, 0, 0.015) !important;
+}
+
+.mp-data-table .card-footer {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/*
+  Data Table — Mobile card list (macros/data_table.html's table_mobile()).
+  A real card per row, not the table-with-hidden-columns approach the live
+  passports/signups/activities pages use today.
+*/
+.mp-table-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mp-table-mobile-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: var(--mp-background);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  box-shadow: var(--minipass-shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+}
+
+.mp-table-mobile-card > .mp-action-menu {
+  flex-shrink: 0;
+}
+
+.mp-table-mobile-card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mp-table-mobile-card__primary {
+  font-weight: 600;
+  color: var(--mp-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mp-table-mobile-card__secondary {
+  margin-top: 0.125rem;
+  font-size: 0.8125rem;
+  color: var(--minipass-gray-600, #4b5563);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mp-table-mobile-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+/*
+  Pagination — Desktop (macros/pagination.html's pagination_desktop()).
+  Rounded pill buttons matching .mp-filter-btn's recipe, not Bootstrap's
+  boxy .page-link squares. The current page uses --mp-brand-primary (see
+  its own comment in :root above) — the one place in this component that
+  carries color, marking "you are here."
+*/
+.mp-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mp-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding-inline: 0.375rem;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-background);
+  color: var(--mp-foreground);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+
+a.mp-page-btn:hover {
+  /* Beats Tabler's a:hover{text-decoration:underline} — same fix
+     .mp-filter-btn:hover already needed, just missed here initially. */
+  text-decoration: none;
+  background: var(--mp-muted);
+}
+
+.mp-page-btn:focus-visible {
+  outline: none;
+  border-color: var(--mp-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-page-btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mp-page-btn.active {
+  background: var(--mp-brand-primary);
+  border-color: var(--mp-brand-primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: default;
+}
+
+.mp-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  color: var(--mp-muted-foreground);
+  font-size: 0.875rem;
+}
+
+@media (pointer: coarse) {
+  .mp-page-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/*
+  Pagination — Mobile (macros/pagination.html's pagination_mobile()). No
+  individual page-number buttons — a "‹ Page 2 of 5 ›" control instead,
+  same reasoning as the Data Table's mobile card list: small numbered
+  targets don't work reliably on touch. Always 44px regardless of pointer
+  type (this variant is the dedicated mobile one, unlike .mp-page-btn
+  above which only grows on @media (pointer:coarse)).
+*/
+.mp-pagination-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.mp-pagination-mobile .mp-page-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.mp-pagination-mobile__label {
+  font-size: 0.875rem;
+  color: var(--mp-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-pagination-mobile__label strong {
+  color: var(--mp-brand-primary);
+  font-weight: 600;
 }

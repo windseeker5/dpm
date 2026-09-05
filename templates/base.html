@@ -37,7 +37,7 @@
   <!-- Reusable Components -->
   <link href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=1.5" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=2.4" rel="stylesheet">
   
   <!-- Enhanced Flash Alert Overlay Styles -->
   <style>
@@ -417,7 +417,7 @@
   
   {% block head %}{% endblock %}
 </head>
-<body class="antialiased" {% if session.get('admin') %}data-admin-user="true"{% endif %}>
+<body class="antialiased" style="--mp-brand-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary-foreground: {{ PRIMARY_BRAND_FOREGROUND }};" {% if session.get('admin') %}data-admin-user="true"{% endif %}>
 
   <!-- Skip Navigation for Accessibility -->
   <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
@@ -559,15 +559,6 @@
                 {% endif %}
               </a>
             </li>
-            {% if subscription and subscription.tier_info.activities > 1 %}
-            <li class="nav-item">
-              <a href="{{ url_for('list_surveys') }}"
-                 class="nav-link {{ 'active' if request.endpoint == 'list_surveys' }}">
-                <i class="nav-icon ti ti-clipboard-check" aria-hidden="true"></i>
-                <span class="nav-text">Surveys</span>
-              </a>
-            </li>
-            {% endif %}
             <li class="nav-item">
               <a href="{{ url_for('payment_bot_matches') }}"
                  class="nav-link {{ 'active' if request.endpoint == 'payment_bot_matches' }}">
@@ -578,6 +569,15 @@
                 {% endif %}
               </a>
             </li>
+            {% if subscription and subscription.tier_info.activities > 1 %}
+            <li class="nav-item">
+              <a href="{{ url_for('list_surveys') }}"
+                 class="nav-link {{ 'active' if request.endpoint == 'list_surveys' }}">
+                <i class="nav-icon ti ti-clipboard-check" aria-hidden="true"></i>
+                <span class="nav-text">Surveys</span>
+              </a>
+            </li>
+            {% endif %}
           </ul>
         </div>
 
@@ -636,44 +636,12 @@
         <!-- Tools Section -->
         <div class="nav-section">
           <ul class="nav-list">
-            <li class="nav-item nav-item-expandable">
-              <button type="button"
-                 class="nav-link nav-link-expandable {{ 'active' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] }}"
-                 data-bs-toggle="collapse"
-                 data-bs-target="#settings-submenu"
-                 aria-expanded="{{ 'true' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] else 'false' }}">
+            <li class="nav-item">
+              <a href="{{ url_for('unified_settings', section='general') }}"
+                 class="nav-link {{ 'active' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] }}">
                 <i class="nav-icon ti ti-settings" aria-hidden="true"></i>
                 <span class="nav-text">Settings</span>
-                <i class="nav-chevron ti ti-chevron-right" aria-hidden="true"></i>
-              </button>
-              <div class="collapse nav-submenu {{ 'show' if request.endpoint in ['setup', 'payment_bot_settings', 'unified_settings', 'current_plan'] }}" id="settings-submenu">
-                <ul class="nav-list">
-                  <li class="nav-item">
-                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="admins">
-                      <i class="nav-icon ti ti-users" aria-hidden="true"></i>
-                      <span class="nav-text">Admin</span>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="{{ url_for('unified_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'unified_settings' }}">
-                      <i class="nav-icon ti ti-mail-cog" aria-hidden="true"></i>
-                      <span class="nav-text">Email</span>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="{{ url_for('setup') }}" class="nav-link" data-tab="data">
-                      <i class="nav-icon ti ti-database" aria-hidden="true"></i>
-                      <span class="nav-text">Data</span>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="{{ url_for('current_plan') }}" class="nav-link {{ 'active' if request.endpoint == 'current_plan' }}">
-                      <i class="nav-icon ti ti-credit-card" aria-hidden="true"></i>
-                      <span class="nav-text">Plan</span>
-                    </a>
-                  </li>
-                </ul>
-              </div>
+              </a>
             </li>
           </ul>
         </div>
@@ -902,34 +870,6 @@
         }
       });
       
-      // Settings submenu tab coordination
-      const settingsSubmenuLinks = document.querySelectorAll('#settings-submenu .nav-link');
-      settingsSubmenuLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-          const tabName = this.getAttribute('data-tab');
-          if (tabName) {
-            // Check if we're on the settings page
-            if (window.location.pathname === '/setup') {
-              // Prevent navigation and switch tabs directly
-              e.preventDefault();
-              
-              // Call the tab switching function if available
-              if (typeof window.showSettingsTab === 'function') {
-                window.showSettingsTab(tabName);
-              }
-              
-              // Update active states in submenu
-              settingsSubmenuLinks.forEach(l => l.classList.remove('active'));
-              this.classList.add('active');
-              
-              return false;
-            } else {
-              // Store the selected tab for navigation to settings page
-              localStorage.setItem('settings-active-tab', tabName);
-            }
-          }
-        });
-      });
     });
   </script>
   
@@ -944,6 +884,7 @@
   <script src="{{ url_for('static', filename='js/search-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/filter-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/mp-action-menu.js') }}?v=1.0"></script>
+  <script src="{{ url_for('static', filename='js/mp-settings-nav.js') }}?v=1.0"></script>
 
   <!-- PWA Service Worker Registration -->
   <script>

@@ -60,7 +60,10 @@
 {% from 'macros/buttons.html' import button %}
 {% from 'macros/action_menu.html' import action_menu %}
 {% from 'macros/filter_tabs.html' import filter_tabs %}
+{% from 'macros/settings_nav.html' import settings_nav %}
 {% from 'macros/kpi_card.html' import kpi_card_desktop, kpi_card_mobile %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state %}
 <div class="page-wrapper">
   <div class="page-header d-print-none">
     <div class="container-xl">
@@ -169,11 +172,15 @@
         <div class="card-header">
           <div>
             <h3 class="card-title mb-0">Filter Tabs</h3>
-            <div class="text-muted small mt-1">Segmented filter control for table/list pages. Not yet wired into any real page — see AGENTS.md rule 13.</div>
+            <div class="text-muted small mt-1">Segmented filter control for table/list pages. Not yet wired into any real page — see AGENTS.md rule 13. Also used inside the Data Table component's toolbar below.</div>
           </div>
         </div>
         <div class="card-body">
-          <div class="sg-preview">
+          <!-- Plain white, not .sg-preview's gray box — Filter Tabs' own
+               resting background is itself light gray, and stacking two
+               near-identical grays washed out its outline. A real page
+               places it directly on a white card, same as here. -->
+          <div class="border rounded p-4">
             {{ filter_tabs(tabs=[
               {"label": "Active", "url": "#", "count": 5, "active": true},
               {"label": "Archived", "url": "#", "count": 8, "active": false},
@@ -192,6 +199,24 @@
   {"label": "All", "url": url_for('list_activities', show_all='true'),
    "count": statistics.total_activities, "active": current_filters.show_all}
 ]) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="settings-navigation">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Settings Navigation</h3>
+            <div class="text-muted small mt-1">Shared section navigation for the Settings area. Horizontal links on desktop and a labelled selector on mobile.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {{ settings_nav('general') }}
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/settings_nav.html' import settings_nav %}
+
+{{ settings_nav('general') }}{% endraw %}</code></pre>
           </details>
         </div>
       </div>
@@ -255,6 +280,200 @@
         </div>
       </div>
 
+      <div class="card mb-4" id="pagination">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Pagination</h3>
+            <div class="text-muted small mt-1">
+              Desktop keeps numbered pages + prev/next (structurally unchanged from today, just restyled). Mobile drops individual page-number buttons entirely — "‹ Page 2 of 5 ›" with large tap targets instead. The current-page indicator uses <code>--mp-brand-primary</code>, ready for the planned per-tenant branding color. Not yet wired into any real page.
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="text-muted small mb-2">Desktop — enough pages to show the … ellipsis</div>
+          <div class="card mp-data-table mb-4">
+            <div class="card-body py-3">
+              <div class="text-muted small">Sample table rows would go here.</div>
+            </div>
+            {{ pagination_desktop(page=4, pages=9, per_page=5, total=43, items_count=5, base_path="#", filters={}) }}
+          </div>
+
+          <div class="text-muted small mb-2">Mobile</div>
+          <div class="card mp-data-table mb-4" style="max-width: 420px;">
+            <div class="card-body py-3">
+              <div class="text-muted small">Sample cards would go here.</div>
+            </div>
+            {{ pagination_mobile(page=2, pages=5, per_page=5, total=23, items_count=5, base_path="#", filters={}) }}
+          </div>
+
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+
+<div class="card mp-data-table">
+  ...table or card list...
+  {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+     total=pagination.total, items_count=items|length,
+     base_path=request.path, filters=current_filters) }}
+</div>
+
+<div class="card mp-data-table d-md-none">
+  ...mobile card list...
+  {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+     total=pagination.total, items_count=items|length,
+     base_path=request.path, filters=current_filters) }}
+</div>{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="data-table">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Data Table</h3>
+            <div class="text-muted small mt-1">
+              The shared shape behind the Passports/Sign-ups/Activities list pages: a toolbar (filter tabs centered, search icon collapsed to the left — expands inline on desktop, replaces the tabs entirely on mobile), <code>table_desktop()</code>/<code>table_mobile()</code> for the row list, and <code>table_empty_state()</code> for when there's nothing to show. Not yet wired into any real page — same status as Filter Tabs above.
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% set sample_rows = [
+            {
+              "id": 1, "avatar_name": "Samuel Gendreau", "primary": "Samuel Gendreau", "secondary": "gendro_68@hotmail.com",
+              "mobile_secondary": "FLHGI: Tournoi de Golf et Souper des retrouvailles 2026",
+              "cells": ['<div><div class="fw-bold">FLHGI: Tournoi de Golf et Souper des retrouvailles 2026</div><div class="text-muted small">MP-fcd275d8b0c1</div></div>',
+                        '<span class="text-muted">Joueur Golf + Souper 2026</span>', '$25',
+                        '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '1', '2026-08-27'],
+              "badges": [{"text": "Paid", "variant": "green"}, {"text": "1 left", "variant": "blue"}, {"text": "$25", "variant": "secondary"}],
+              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+            },
+            {
+              "id": 2, "avatar_name": "Marco Henry", "primary": "Marco Henry", "secondary": "mhenry07@hotmail.com",
+              "mobile_secondary": "FLHGI: Tournoi de Golf et Souper des retrouvailles 2026",
+              "cells": ['<div><div class="fw-bold">FLHGI: Tournoi de Golf et Souper des retrouvailles 2026</div><div class="text-muted small">MP-03a1fe5e01cd</div></div>',
+                        '<span class="text-muted">Souper seulement 2026</span>', '$20',
+                        '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '1', '2026-08-24'],
+              "badges": [{"text": "Paid", "variant": "green"}, {"text": "1 left", "variant": "blue"}, {"text": "$20", "variant": "secondary"}],
+              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+            },
+            {
+              "id": 3, "avatar_name": "GESTION RUSTY INC.", "primary": "GESTION RUSTY INC.", "secondary": "rusty1@telus.net",
+              "mobile_secondary": "FLHGI: Tournoi de Golf et Souper des retrouvailles 2026",
+              "cells": ['<div><div class="fw-bold">FLHGI: Tournoi de Golf et Souper des retrouvailles 2026</div><div class="text-muted small">MP-d392bf94880b</div></div>',
+                        '<span class="text-muted">Souper seulement 2026</span>', '$20',
+                        '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '1', '2026-08-24'],
+              "badges": [{"text": "Paid", "variant": "green"}, {"text": "1 left", "variant": "blue"}, {"text": "$20", "variant": "secondary"}],
+              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+            },
+            {
+              "id": 4, "avatar_name": "Ken Dresdell", "primary": "Ken Dresdell", "secondary": "kdresdell@gmail.com",
+              "mobile_secondary": "FLHGI: Tournoi de Golf et Souper des retrouvailles 2026",
+              "cells": ['<div><div class="fw-bold">FLHGI: Tournoi de Golf et Souper des retrouvailles 2026</div><div class="text-muted small">MP-acae50029c26</div></div>',
+                        '<span class="text-muted">Joueur Golf + Souper 2026</span>', '$100',
+                        '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '4', '2026-08-23'],
+              "badges": [{"text": "Paid", "variant": "green"}, {"text": "4 left", "variant": "blue"}, {"text": "$100", "variant": "secondary"}],
+              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+            },
+            {
+              "id": 5, "avatar_name": "Jean Martin Morin", "primary": "Jean Martin Morin", "secondary": "jean-martin.morin@telus.net",
+              "mobile_secondary": "FLHGI: Tournoi de Golf et Souper des retrouvailles 2026",
+              "cells": ['<div><div class="fw-bold">FLHGI: Tournoi de Golf et Souper des retrouvailles 2026</div><div class="text-muted small">MP-25947cbcae47</div></div>',
+                        '<span class="text-muted">Joueur Golf + Souper 2026</span>', '$25',
+                        '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '1', '2026-08-22'],
+              "badges": [{"text": "Paid", "variant": "green"}, {"text": "1 left", "variant": "blue"}, {"text": "$25", "variant": "secondary"}],
+              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+            }
+          ] %}
+          {% set sample_columns = [
+            {"label": "Activity", "class": "d-none d-md-table-cell"},
+            {"label": "Passport Type", "class": "d-none d-lg-table-cell"},
+            {"label": "Amount", "class": "d-none d-md-table-cell text-center"},
+            {"label": "Status", "class": "d-none d-lg-table-cell text-center"},
+            {"label": "Uses Remaining", "class": "d-none d-md-table-cell text-center"},
+            {"label": "Created", "class": "d-none d-md-table-cell"}
+          ] %}
+
+          <div class="text-muted small mb-2">Populated — Desktop. A real <code>.card</code>, same as a live page. The toolbar's search icon is its own component instance, sized to <em>this card's</em> width — no need to resize the browser to see the narrower "Mobile" version below behave differently.</div>
+          <div class="card mp-data-table mb-4">
+            <div class="card-header">
+              {{ table_toolbar(id="sg-table-toolbar-desktop", tabs=[
+                {"label": "Active", "url": "#", "count": 5, "active": true},
+                {"label": "Unpaid", "url": "#", "count": 1, "active": false},
+                {"label": "All", "url": "#", "count": 5, "active": false}
+              ], search_placeholder="Search passports…") }}
+            </div>
+            {{ table_desktop(id="sg-table-desktop", columns=sample_columns, rows=sample_rows) }}
+            {{ pagination_desktop(page=1, pages=5, per_page=5, total=23, items_count=5, base_path="#", filters={}) }}
+          </div>
+
+          <div class="text-muted small mb-2">Populated — Mobile. Tap the search icon here: because this card is narrow, it replaces the tabs entirely instead of expanding inline.</div>
+          <div class="card mp-data-table mb-4" style="max-width: 420px;">
+            <div class="card-header">
+              {{ table_toolbar(id="sg-table-toolbar-mobile", tabs=[
+                {"label": "Active", "url": "#", "count": 5, "active": true},
+                {"label": "Unpaid", "url": "#", "count": 1, "active": false},
+                {"label": "All", "url": "#", "count": 5, "active": false}
+              ], search_placeholder="Search passports…") }}
+            </div>
+            <div class="card-body">
+              {{ table_mobile(id="sg-table-mobile", rows=sample_rows) }}
+            </div>
+            {{ pagination_mobile(page=1, pages=5, per_page=5, total=23, items_count=5, base_path="#", filters={}) }}
+          </div>
+
+          <div class="text-muted small mb-2">Empty — <code>table_empty_state()</code>, e.g. when a filter/search matches nothing</div>
+          <div class="card mp-data-table">
+            {{ table_empty_state(icon="ti-search", title="No passports match your filters",
+               description="Try adjusting your search or filter criteria.",
+               action_label="Clear all filters", action_url="#") }}
+          </div>
+
+          <details class="mt-3">
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+
+<div class="card mp-data-table">
+  <div class="card-header">
+    {{ table_toolbar(id="passports-toolbar", tabs=[
+      {"label": "Active", "url": url_for('list_passports', status='active'),
+       "count": statistics.active_passports, "active": current_filters.status == 'active'},
+      {"label": "Unpaid", "url": url_for('list_passports', payment_status='unpaid'),
+       "count": statistics.unpaid_passports, "active": current_filters.payment_status == 'unpaid'},
+      {"label": "All", "url": url_for('list_passports', show_all='true'),
+       "count": statistics.total_passports, "active": current_filters.show_all}
+    ], search_value=current_filters.q, search_placeholder="Search passports…") }}
+  </div>
+
+  {% if not rows %}
+    {{ table_empty_state(icon="ti-search", title="No passports match your filters",
+       description="Try adjusting your search or filter criteria.",
+       action_label="Clear all filters", action_url=url_for('list_passports', show_all='true')) }}
+  {% else %}
+    {% set columns = [
+      {"label": "Activity", "class": "d-none d-md-table-cell"},
+      {"label": "Amount", "class": "d-none d-md-table-cell text-center"},
+      {"label": "Status", "class": "d-none d-lg-table-cell text-center"},
+    ] %}
+    {# rows = passports mapped to {id, avatar_name, primary, secondary, mobile_secondary, cells, badges, actions} #}
+    <div class="d-none d-md-block">
+      {{ table_desktop(id="passports-table", columns=columns, rows=rows) }}
+      {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+         total=pagination.total, items_count=passports|length,
+         base_path=request.path, filters=current_filters) }}
+    </div>
+    <div class="d-md-none">
+      {{ table_mobile(id="passports-table-mobile", rows=rows) }}
+      {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+         total=pagination.total, items_count=passports|length,
+         base_path=request.path, filters=current_filters) }}
+    </div>
+  {% endif %}
+</div>{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -263,6 +482,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.1"></script>
 <script src="{{ url_for('static', filename='js/mp-kpi-card.js') }}?v=1.2"></script>
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>
   // Demo-only: the real filter_tabs() macro renders real <a href> links whose
   // "active" state comes from the current URL's query string (server-side),
