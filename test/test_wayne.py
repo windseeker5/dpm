@@ -70,11 +70,54 @@ class WayneRouterTests(unittest.TestCase):
         self.assertEqual("local", decision.source)
 
     def test_highest_collected_revenue_routes_locally_in_french(self):
-        decision = route_question("Et Wayne, peux-tu me dire quelle activité a été la plus payante?")
-        self.assertEqual("highest_revenue_activity", decision.skill)
+        questions = (
+            "Et Wayne, peux-tu me dire quelle activité a été la plus payante?",
+            "Quelle est mon activité la plus... avec le plus de revenus?",
+            "Mais non, donne-moi juste l'activité qui a le plus de revenus. Pas la liste, j'en veux juste la. Donne-moi l'activité.",
+        )
+        for question in questions:
+            with self.subTest(question=question):
+                decision = route_question(question)
+                self.assertEqual("highest_revenue_activity", decision.skill)
+                self.assertEqual({}, decision.arguments)
+                self.assertEqual("fr", decision.language)
+                self.assertEqual("local", decision.source)
+
+    def test_exact_french_unpaid_passports_question(self):
+        decision = route_question("Est-ce qu'il y a des passeports qui n'ont pas été payés encore?")
+        self.assertEqual("list_unpaid_passports", decision.skill)
         self.assertEqual({}, decision.arguments)
         self.assertEqual("fr", decision.language)
         self.assertEqual("local", decision.source)
+
+    def test_french_unpaid_passport_variations(self):
+        questions = (
+            "Quels passeports restent à payer?",
+            "Quels passeports n’ont toujours pas été payés?",
+            "Quels passeports ont un paiement en attente?",
+            "Pour quels passeports le paiement n’a pas été reçu?",
+            "Quels passeports sont impayés?",
+            "Quels passeports sont non réglés?",
+            "Quels passeports sont non acquittés?",
+            "Qui doit encore payer son passeport?",
+        )
+        for question in questions:
+            with self.subTest(question=question):
+                decision = route_question(question)
+                self.assertEqual("list_unpaid_passports", decision.skill)
+                self.assertEqual("fr", decision.language)
+                self.assertEqual("local", decision.source)
+
+    def test_french_highest_revenue_and_profit_variations(self):
+        revenue_questions = (
+            "Quelle activité rapporte le plus?",
+            "Laquelle a généré le plus d’argent?",
+            "Quelle activité a le meilleur chiffre d’affaires?",
+        )
+        for question in revenue_questions:
+            with self.subTest(question=question):
+                self.assertEqual("highest_revenue_activity", route_question(question).skill)
+        self.assertEqual("most_profitable_activity", route_question("Quelle activité est la plus lucrative?").skill)
 
     def test_most_profitable_routes_locally_with_year(self):
         decision = route_question("What was my most profitable activity in 2026?")

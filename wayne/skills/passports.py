@@ -64,6 +64,39 @@ def list_exhausted_passports(args, language):
     return _passport_list(args, language, False)
 
 
+def list_unpaid_passports(args, language):
+    activity = args.get("activity")
+    query = (
+        db.session.query(
+            User.name,
+            User.email,
+            Activity.name,
+            Passport.pass_code,
+            Passport.sold_amt,
+        )
+        .join(User, User.id == Passport.user_id)
+        .join(Activity, Activity.id == Passport.activity_id)
+        .filter(Passport.paid.isnot(True))
+    )
+    query = activity_filter(query, Activity.name, activity)
+    records = query.order_by(Activity.name, User.name).limit(MAX_ROWS).all()
+    label = activity_label(activity, language)
+    count = len(records)
+    if language == "fr":
+        passport_label = "passeport non payé" if count == 1 else "passeports non payés"
+        answer = f"J’ai trouvé {count} {passport_label} pour {label}."
+    else:
+        passport_label = "unpaid passport" if count == 1 else "unpaid passports"
+        answer = f"I found {count} {passport_label} for {label}."
+    columns = (
+        ["Participant", "Courriel", "Activité", "Passeport", "Montant"]
+        if language == "fr"
+        else ["Participant", "Email", "Activity", "Passport", "Amount"]
+    )
+    rows = [[r[0], r[1] or "—", r[2], r[3], money(r[4])] for r in records]
+    return SkillResult(answer=answer, columns=columns, rows=rows)
+
+
 SKILLS = [
     SkillDefinition(
         name="count_passports",
@@ -88,5 +121,13 @@ SKILLS = [
         examples=("Show exhausted passports", "Passeports sans crédit"),
         parameters={"activity": "Optional activity name or part of its name"},
         handler=list_exhausted_passports,
+    ),
+    SkillDefinition(
+        name="list_unpaid_passports",
+        description_en="List passports that have not been paid, optionally for an activity.",
+        description_fr="Lister les passeports qui n’ont pas encore été payés, avec activité facultative.",
+        examples=("Are there any unpaid passports?", "Quels passeports n’ont pas encore été payés?"),
+        parameters={"activity": "Optional activity name or part of its name"},
+        handler=list_unpaid_passports,
     ),
 ]
