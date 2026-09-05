@@ -1,0 +1,203 @@
+{#
+  Data Table — the shared shape behind the Passports/Sign-ups/Activities
+  list pages, which today each hand-roll their own copy of this table
+  (search box + filter tabs + <table> with d-none/d-md-table-cell columns
+  + Bootstrap .dropdown row actions). Three pieces:
+
+    - table_toolbar(): filter_tabs() (centered) + a search icon collapsed
+      to the left of them. Same markup at every width — only CSS
+      (mp-components.css, a *container* query on the toolbar's own
+      rendered width, not the page viewport) and JS (mp-table-toolbar.js)
+      change the *behavior*:
+        wide (>=768px):   the input is always visible, no click needed.
+        narrow (<768px):  collapsed to just the icon; clicking it replaces
+                 the tab row entirely with a full-width input; clearing/
+                 closing restores the tabs.
+    - table_desktop() / table_mobile(): two distinct macros for the row
+      list itself, same reasoning as kpi_card_desktop()/kpi_card_mobile()
+      (macros/kpi_card.html) — table_mobile() is a real card list, not a
+      table with columns hidden via CSS.
+
+  Wrap the whole thing in class="card mp-data-table" (not just "card") —
+  that scopes the Gray Scale rules in mp-components.css so the header
+  labels, row-hover tint, and footer/pagination background all draw from
+  the same two grays instead of three different (and, stacked together,
+  visibly mismatched) Tabler defaults. See that CSS section's own comment
+  for why.
+
+  Both table macros take the same `rows` shape so a page renders both from
+  one dataset (wrap each in its own d-none/d-md-block visibility, same
+  technique the live pages already use for other elements):
+
+    rows = [{
+      id: <unique row id, e.g. passport.id>,
+      avatar_name: <string to derive the initials avatar from>,
+      primary: <bold line, e.g. user name>,
+      secondary: <muted line, e.g. email> (optional),
+      mobile_secondary: <muted line shown by table_mobile() instead of
+               `secondary`, when the two views want different second-line
+               content — e.g. desktop already has its own Activity column
+               so `secondary` is the email, but table_mobile() has no
+               separate Activity column so `mobile_secondary` is the
+               activity name> (optional — falls back to `secondary`),
+      cells: [<safe-html per column, aligned with table_desktop's columns>],
+      badges: [{text, variant}] (optional — table_mobile only, variant is a
+               Tabler color name used as bg-<variant>-lt, e.g. "green"),
+      actions: [<action_menu() items, see macros/action_menu.html>]
+    }, ...]
+
+  When `rows` is empty, render table_empty_state() instead of
+  table_desktop()/table_mobile() (see that macro's own doc comment below).
+
+  Usage:
+    {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile %}
+
+    <div class="card mp-data-table">
+      <div class="card-header">
+        {{ table_toolbar(id="passports-toolbar", tabs=[...same shape as filter_tabs()...],
+           search_value=current_filters.q, search_placeholder="Search passports…") }}
+      </div>
+      <div class="d-none d-md-block">
+        {{ table_desktop(id="passports-table", columns=[
+          {"label": "Activity", "class": "d-none d-md-table-cell"},
+          {"label": "Amount", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Status", "class": "d-none d-lg-table-cell text-center"},
+        ], rows=rows) }}
+      </div>
+      <div class="d-md-none">
+        {{ table_mobile(id="passports-table-mobile", rows=rows) }}
+      </div>
+    </div>
+
+  Parameters (table_toolbar):
+    - id: unique id (required)
+    - tabs: same shape as filter_tabs()'s `tabs` param
+    - search_name: form field name for the search input, default "q"
+    - search_value: current search text, default ""
+    - search_placeholder: default "Search…"
+
+  Parameters (table_desktop):
+    - id: unique id (required)
+    - columns: list of {label, class} — `class` carries the existing
+      Tabler responsive-visibility classes (d-none d-md-table-cell, etc.),
+      rendered on both the <th> and each row's matching <td>. "User" and
+      "Actions" are fixed columns, not part of this list.
+    - rows: see shape above
+
+  Parameters (table_mobile):
+    - id: unique id (required)
+    - rows: see shape above
+#}
+
+{% from 'macros/filter_tabs.html' import filter_tabs %}
+{% from 'macros/action_menu.html' import action_menu %}
+{% from 'macros/avatar.html' import avatar_initials %}
+
+{% macro table_toolbar(id, tabs, search_name="q", search_value="", search_placeholder="Search…") %}
+<div class="mp-table-toolbar" id="{{ id }}">
+  <div class="mp-table-toolbar__search">
+    <button type="button" class="mp-table-toolbar__search-btn" aria-label="Search" aria-expanded="false" aria-controls="{{ id }}-input">
+      <i class="ti ti-search mp-table-toolbar__icon-search"></i>
+      <i class="ti ti-x mp-table-toolbar__icon-close"></i>
+    </button>
+    <input type="search" id="{{ id }}-input" class="mp-table-toolbar__search-input"
+           name="{{ search_name }}" value="{{ search_value }}"
+           placeholder="{{ search_placeholder }}" autocomplete="off">
+  </div>
+  {{ filter_tabs(tabs) }}
+</div>
+{% endmacro %}
+
+{% macro table_desktop(id, columns, rows) %}
+<div class="table-responsive">
+  <table class="table table-hover" id="{{ id }}">
+    <thead>
+      <tr>
+        <th>User</th>
+        {% for col in columns %}<th class="{{ col.class | default('') }}">{{ col.label }}</th>{% endfor %}
+        <th class="text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td style="vertical-align: middle;">
+          <div class="d-flex align-items-center gap-3">
+            {{ avatar_initials(row.avatar_name) }}
+            <div style="min-width: 0;">
+              <div class="fw-bold">{{ row.primary }}</div>
+              {% if row.secondary %}<div class="text-muted small">{{ row.secondary }}</div>{% endif %}
+            </div>
+          </div>
+        </td>
+        {% for cell in row.cells %}
+        <td class="{{ columns[loop.index0].class | default('') }}" style="vertical-align: middle;">{{ cell | safe }}</td>
+        {% endfor %}
+        <td class="text-center" style="vertical-align: middle;">
+          {{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions) }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+{% macro table_mobile(id, rows) %}
+<div class="mp-table-mobile-list" id="{{ id }}">
+  {% for row in rows %}
+  {% set mobile_secondary = row.mobile_secondary if row.mobile_secondary is defined else row.secondary %}
+  <div class="mp-table-mobile-card">
+    {{ avatar_initials(row.avatar_name) }}
+    <div class="mp-table-mobile-card__body">
+      <div class="mp-table-mobile-card__primary">{{ row.primary }}</div>
+      {% if mobile_secondary %}<div class="mp-table-mobile-card__secondary">{{ mobile_secondary }}</div>{% endif %}
+      {% if row.badges %}
+      <div class="mp-table-mobile-card__badges">
+        {% for badge in row.badges %}<span class="badge bg-{{ badge.variant }}-lt">{{ badge.text }}</span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions) }}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{#
+  table_empty_state() — the "no rows" state for a Data Table (zero results
+  after filtering, or nothing has ever been created yet). Same shape as the
+  empty states already hand-built in passports.html (is_first_time_empty /
+  is_zero_results), genericized into one macro so table_desktop()/
+  table_mobile() aren't left to render an empty <table>/<div> when `rows`
+  is empty — callers should render this instead in that case.
+
+  Usage:
+    {% if not rows %}
+      {{ table_empty_state(icon="ti-ticket", title="No passports yet",
+         description="Passports are created automatically when users complete signups and payment is confirmed.") }}
+    {% endif %}
+    ...
+    {{ table_empty_state(icon="ti-search", title="No passports match your filters",
+       description="Try adjusting your search or filter criteria.",
+       action_label="Clear all filters", action_url=url_for('list_passports', show_all='true')) }}
+
+  Parameters:
+    - icon: Tabler icon name without the "ti-" prefix's own "ti " class, e.g. "ti-ticket"
+    - icon_color: CSS color for the icon, default muted gray
+    - title: short heading
+    - description: one-line supporting text
+    - action_label / action_url: optional link shown below the description
+#}
+{% macro table_empty_state(icon="ti-inbox", icon_color="#6c757d", title="No results", description=none, action_label=none, action_url=none) %}
+<div class="mp-table-empty-state text-center py-5">
+  <div class="mb-3">
+    <i class="ti {{ icon }}" style="font-size: 48px; color: {{ icon_color }};"></i>
+  </div>
+  <h3 class="mb-2">{{ title }}</h3>
+  {% if description %}<p class="text-muted mb-3">{{ description }}</p>{% endif %}
+  {% if action_label and action_url %}
+  <a href="{{ action_url }}" class="btn btn-link">{{ action_label }}</a>
+  {% endif %}
+</div>
+{% endmacro %}

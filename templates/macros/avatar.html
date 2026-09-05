@@ -1,0 +1,40 @@
+{#
+  Avatar (Initials) — colored-circle avatar generated from a name, no
+  network request. Replaces the Gravatar-identicon `<img>` pattern used by
+  the live passports/signups/activities tables (a random pattern requiring
+  a per-row request to gravatar.com with the user's email hashed into the
+  URL) — same initials-avatar approach as Gmail/Slack.
+
+  Color is picked deterministically from a hash of the name (not random per
+  render) using the app's existing `encode_md5` Jinja filter
+  (app.py's @app.template_filter('encode_md5')), bucketed into one of
+  Tabler's own `bg-*-lt`/`text-*-lt-fg` color pairs — reusing the same
+  palette already used for the Paid/Unpaid badges instead of inventing a
+  new color system.
+
+  Usage:
+    {% from 'macros/avatar.html' import avatar_initials %}
+    {{ avatar_initials(passport.user.name or 'Anonymous') }}
+    {{ avatar_initials(row.primary, size="sm") }}
+
+  Parameters:
+    - name: full name (or any string) to derive initials + color from
+    - size: "sm" (2rem) | "md" (default, 2.5rem) | "lg" (3rem)
+    - attrs: dict of extra attributes on the outer element
+#}
+
+{% set avatar_palette = ["blue", "azure", "purple", "pink", "orange", "teal", "green", "indigo"] %}
+
+{% macro avatar_initials(name, size="md", attrs={}) %}
+{% set safe_name = (name or "?") | trim %}
+{% set words = safe_name.split() %}
+{% set initials = ((words[0][0] if words|length > 0 else "?") ~ (words[1][0] if words|length > 1 else "")) | upper %}
+{% set hash_int = (safe_name|lower|encode_md5)[:2] | int(0, 16) %}
+{% set color = avatar_palette[hash_int % (avatar_palette | length)] %}
+<div
+  class="mp-avatar-initials bg-{{ color }}-lt text-{{ color }}-lt-fg"
+  data-size="{{ size }}"
+  aria-hidden="true"
+  {% for attr_key, attr_value in attrs.items() %}{{ attr_key }}="{{ attr_value }}" {% endfor %}
+>{{ initials }}</div>
+{% endmacro %}
