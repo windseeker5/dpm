@@ -75,7 +75,11 @@
   align-items: center;
   justify-content: center;
   white-space: nowrap;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
   outline-style: none;
   user-select: none;
   cursor: pointer;
@@ -678,6 +682,184 @@
 .mp-kpi-card-mobile__period {
   font-size: var(--minipass-text-xs, 0.75rem);
   color: var(--minipass-gray-600, #4b5563);
+}
+
+/* Settings shell — shared horizontal navigation and calm form surface. */
+.mp-settings-nav {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--mp-border);
+}
+
+.mp-settings-tabs {
+  display: flex;
+  align-items: end;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mp-settings-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mp-settings-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.65rem 0 0.75rem;
+  color: var(--mp-muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.mp-settings-tab:hover {
+  color: var(--mp-foreground);
+  text-decoration: none;
+}
+
+.mp-settings-tab:focus-visible {
+  border-radius: var(--mp-radius-sm);
+  outline: 2px solid var(--mp-ring);
+  outline-offset: 2px;
+}
+
+.mp-settings-tab.active {
+  color: var(--mp-foreground);
+  font-weight: 600;
+}
+
+.mp-settings-tab.active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--mp-brand-primary);
+  content: "";
+}
+
+.mp-settings-select-wrap {
+  display: none;
+}
+
+.mp-settings-surface {
+  max-width: 880px;
+  overflow: hidden;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-background);
+  box-shadow: var(--minipass-shadow-sm, 0 1px 2px rgb(0 0 0 / 0.05));
+}
+
+.mp-settings-heading,
+.mp-settings-section,
+.mp-settings-actions {
+  padding: 1.5rem;
+}
+
+.mp-settings-heading {
+  padding-bottom: 1.25rem;
+}
+
+.mp-settings-section {
+  border-top: 1px solid var(--mp-border);
+}
+
+.mp-settings-section-title {
+  margin-bottom: 0.25rem;
+}
+
+.mp-settings-fields {
+  max-width: 640px;
+  margin-top: 1.25rem;
+}
+
+.mp-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--mp-border);
+  background: var(--mp-muted);
+}
+
+.mp-settings-advanced {
+  margin-top: 1rem;
+  border-top: 1px solid var(--mp-border);
+}
+
+.mp-settings-advanced > summary {
+  min-height: 44px;
+  padding: 0.75rem 0;
+  color: var(--mp-foreground);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mp-settings-advanced > summary:focus-visible {
+  border-radius: var(--mp-radius-sm);
+  outline: 2px solid var(--mp-ring);
+  outline-offset: 2px;
+}
+
+.mp-settings-status-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mp-settings-status-copy {
+  min-width: 0;
+  max-width: 65ch;
+}
+
+.mp-brand-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-sm);
+  background: var(--mp-muted);
+}
+
+.mp-brand-color-input {
+  width: 3rem;
+  min-width: 3rem;
+  height: 2.25rem;
+  padding: 0.2rem;
+}
+
+@media (max-width: 767.98px) {
+  .mp-settings-nav {
+    border-bottom: 0;
+  }
+
+  .mp-settings-tabs {
+    display: none;
+  }
+
+  .mp-settings-select-wrap {
+    display: block;
+  }
+
+  .mp-settings-heading,
+  .mp-settings-section,
+  .mp-settings-actions {
+    padding: 1.25rem;
+  }
+
+  .mp-settings-status-row {
+    flex-direction: column;
+  }
+
+  .mp-settings-actions .mp-btn {
+    width: 100%;
+  }
 }
 
 /*

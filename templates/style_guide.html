@@ -60,6 +60,7 @@
 {% from 'macros/buttons.html' import button %}
 {% from 'macros/action_menu.html' import action_menu %}
 {% from 'macros/filter_tabs.html' import filter_tabs %}
+{% from 'macros/settings_nav.html' import settings_nav %}
 {% from 'macros/kpi_card.html' import kpi_card_desktop, kpi_card_mobile %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state %}
@@ -198,6 +199,24 @@
   {"label": "All", "url": url_for('list_activities', show_all='true'),
    "count": statistics.total_activities, "active": current_filters.show_all}
 ]) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="settings-navigation">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Settings Navigation</h3>
+            <div class="text-muted small mt-1">Shared section navigation for the Settings area. Horizontal links on desktop and a labelled selector on mobile.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {{ settings_nav('general') }}
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/settings_nav.html' import settings_nav %}
+
+{{ settings_nav('general') }}{% endraw %}</code></pre>
           </details>
         </div>
       </div>

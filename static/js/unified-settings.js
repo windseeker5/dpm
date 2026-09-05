@@ -63,7 +63,7 @@ function initializePaymentBotToggle() {
 
     if (toggle && config) {
         toggle.addEventListener('change', function() {
-            config.style.display = this.checked ? 'block' : 'none';
+            config.classList.toggle('d-none', !this.checked);
         });
     }
 }
@@ -77,7 +77,7 @@ function initializeStripeToggle() {
 
     if (toggle && keyFields) {
         toggle.addEventListener('change', function() {
-            keyFields.style.display = this.checked ? 'block' : 'none';
+            keyFields.classList.toggle('d-none', !this.checked);
         });
     }
 }

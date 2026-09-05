@@ -1,0 +1,26 @@
+{# Shared navigation for the settings area. #}
+{% macro settings_nav(active) %}
+  {% set items = [
+    ('general', 'General', url_for('unified_settings', section='general')),
+    ('team', 'Team', url_for('setup', section='team')),
+    ('email', 'Email & Alerts', url_for('unified_settings', section='email')),
+    ('payments', 'Payments', url_for('unified_settings', section='payments')),
+    ('data', 'Data', url_for('setup', section='data')),
+    ('plan', 'Plan & Billing', url_for('current_plan'))
+  ] %}
+  <nav class="mp-settings-nav" aria-label="Settings sections">
+    <div class="mp-settings-tabs" role="list">
+      {% for key, label, href in items %}
+        <a href="{{ href }}" class="mp-settings-tab{% if active == key %} active{% endif %}"{% if active == key %} aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </div>
+    <div class="mp-settings-select-wrap">
+      <label for="mp-settings-section" class="form-label">Settings Section</label>
+      <select id="mp-settings-section" class="form-select" data-mp-settings-nav>
+        {% for key, label, href in items %}
+          <option value="{{ href }}"{% if active == key %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </nav>
+{% endmacro %}

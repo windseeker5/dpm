@@ -145,8 +145,13 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
 
     unpaid = any(term in q for term in (
         "unpaid", "not paid", "hasn't paid", "hasn’t paid", "have not paid", "non pay", "impaye", "pas paye",
-        "n'a pas paye", "n'ont pas paye", "n’est pas paye", "ne sont pas paye",
-    ))
+        "n'a pas paye", "n'ont pas paye", "n’est pas paye", "ne sont pas paye", "pas encore paye",
+        "n'a pas ete paye", "n’ont pas ete paye", "n'ont pas ete paye", "n’est pas encore paye",
+        "toujours pas paye", "reste a payer", "restent a payer", "doit encore payer", "doivent encore payer",
+        "paiement non recu", "paiement n'a pas ete recu", "paiement n’a pas ete recu",
+        "paiement en attente", "paiements en attente", "en attente de paiement", "sans paiement",
+        "non regle", "non acquitte",
+    )) or bool(re.search(r"\bn['’](?:a|ont)\s+(?:toujours\s+)?pas\s+(?:encore\s+)?(?:ete\s+)?pay", q))
     paid = any(term in q for term in (" paid", "paye", "payee"))
     count = any(term in q for term in ("how many", "count", "combien", "nombre", "total number"))
     if any(term in q for term in (
@@ -172,7 +177,8 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     if any(term in q for term in ("expense", "expenses", "depense", "depenses")) and any(term in q for term in ("owe", "unpaid", "still pay", "dois", "impaye")):
         return RouteDecision(status="skill", language=language, skill="outstanding_expenses", arguments=args)
     if any(term in q for term in ("how much do customers owe", "how much do customers still owe", "amounts still owed", "outstanding balance", "who owes", "montant du", "me doivent", "doit encore", "soldes impayes")):
-        return RouteDecision(status="skill", language=language, skill="outstanding_balances", arguments=args)
+        skill = "list_unpaid_passports" if unpaid and ("passport" in q or "passeport" in q) else "outstanding_balances"
+        return RouteDecision(status="skill", language=language, skill=skill, arguments=args)
     if any(term in q for term in ("payment received", "payments received", "pay today", "paid today", "money did i collect", "how much money", "how much did i collect", "paiement recu", "paiements recus", "recu ce", "recu aujourd", "combien ai-je encaisse")):
         return RouteDecision(status="skill", language=language, skill="payment_summary", arguments=time_args)
 
@@ -188,7 +194,8 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
         return RouteDecision(status="skill", language=language, skill="session_attendance", arguments={**args, **time_args})
 
     if unpaid:
-        return RouteDecision(status="skill", language=language, skill="list_unpaid_participants", arguments=args)
+        skill = "list_unpaid_passports" if "passport" in q or "passeport" in q else "list_unpaid_participants"
+        return RouteDecision(status="skill", language=language, skill=skill, arguments=args)
     if paid and any(term in q for term in ("who", "list", "show", "qui", "liste", "participant", "personne")):
         return RouteDecision(status="skill", language=language, skill="list_paid_participants", arguments=args)
     if any(term in q for term in ("one credit", "1 credit", "running out of credit", "low credit", "peu de credit", "un credit restant")):
@@ -227,12 +234,15 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
     year_args = {"year": year} if year else {}
     if any(term in q for term in (
         "most profitable", "highest profit", "best profit", "plus profitable",
-        "plus rentable", "meilleur benefice", "benefice le plus eleve",
+        "plus rentable", "plus lucrative", "meilleur benefice", "benefice le plus eleve",
     )):
         return RouteDecision(status="skill", language=language, skill="most_profitable_activity", arguments=year_args)
     if any(term in q for term in (
         "most revenue", "highest revenue", "top revenue", "generated the most revenue",
         "plus payante", "plus payant", "genere le plus de revenus", "revenus les plus eleves",
+        "le plus de revenu", "la plus de revenu", "rapporte le plus",
+        "genere le plus d'argent", "genere le plus d’argent", "meilleur chiffre d'affaires",
+        "meilleur chiffre d’affaires", "chiffre d'affaires le plus eleve", "chiffre d’affaires le plus eleve",
     )):
         return RouteDecision(status="skill", language=language, skill="highest_revenue_activity", arguments=year_args)
 

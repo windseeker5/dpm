@@ -87,22 +87,6 @@
     margin-bottom: 1rem;
   }
   
-  /* Sticky save button on mobile */
-  .page-header .btn-success {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1030;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border-radius: 50px;
-    padding: 0.75rem 1.5rem;
-  }
-  
-  /* Add padding to bottom to account for fixed save button */
-  .page-body {
-    padding-bottom: 80px;
-  }
-  
   /* Full width add admin button on mobile */
   #add-admin-btn {
     width: 100%;
@@ -135,25 +119,6 @@
   .admin-block .col-md-8 {
     flex: 0 0 auto;
     width: 60%;
-  }
-}
-
-/* Desktop Enhancements */
-@media (min-width: 1024px) {
-  /* Ensure proper spacing on desktop */
-  .page-header .dashboard-container {
-    display: flex;
-    align-items: center;
-  }
-  
-  /* Keep save button visible on scroll on desktop */
-  .page-header.sticky {
-    position: sticky;
-    top: 0;
-    z-index: 1020;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    padding: 1rem 0;
   }
 }
 

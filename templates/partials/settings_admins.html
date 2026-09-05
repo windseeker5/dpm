@@ -1,3 +1,5 @@
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/action_menu.html' import action_menu %}
 <!-- Gravatar Information Panel (shown only when needed) -->
 <div class="alert alert-info mb-4 d-none" id="gravatar-info-panel" role="alert">
   <div class="d-flex">
@@ -79,10 +81,7 @@
             <div class="col-12">
               {% if admin.email == session.get('admin') %}
               <!-- Self-service Change Password -->
-              <button type="button" class="btn btn-outline-secondary btn-change-password"
-                      data-admin-id="{{ admin.id }}">
-                <i class="ti ti-key me-1"></i>Change Password
-              </button>
+              {{ button("Change Password", variant="outline", icon="ti-key", attrs={"class": "btn-change-password", "data-admin-id": admin.id}) }}
               <div class="change-password-section mt-3 d-none" data-admin-id="{{ admin.id }}">
                 <div class="card card-body bg-muted-lt">
                   <div class="mb-3">
@@ -113,13 +112,6 @@
                   </div>
                 </div>
               </div>
-              {% else %}
-              <!-- Reset Password for other admins -->
-              <button type="button" class="btn btn-outline-secondary"
-                      data-bs-toggle="modal"
-                      data-bs-target="#reset-password-modal-{{ loop.index }}">
-                <i class="ti ti-key me-1"></i>Reset Password
-              </button>
               {% endif %}
             </div>
           </div>
@@ -128,14 +120,13 @@
         <!-- Actions -->
         <div class="col-12 col-md-2 text-end">
           {% if admin.email != session.get('admin') %}
-          <button type="button" class="btn btn-outline-danger"
-                  data-bs-toggle="modal"
-                  data-bs-target="#delete-admin-modal-{{ loop.index }}">
-            <i class="ti ti-trash"></i>
-            <span class="d-none d-md-inline ms-1">Remove</span>
-          </button>
+            {{ action_menu(id="admin-actions-" ~ admin.id, label="Actions", items=[
+              {"label": "Reset Password", "url": "#reset-password-modal-" ~ loop.index, "attrs": {"data-bs-toggle": "modal"}},
+              {"type": "separator"},
+              {"label": "Remove Administrator", "url": "#delete-admin-modal-" ~ loop.index, "attrs": {"data-bs-toggle": "modal", "data-variant": "destructive"}}
+            ]) }}
           {% else %}
-          <span class="badge bg-blue-lt">This is you</span>
+            <span class="badge bg-blue-lt">This is you</span>
           {% endif %}
         </div>
       </div>
@@ -276,10 +267,8 @@
 </div>
 
 <!-- Save Settings Button -->
-<div class="d-flex justify-content-start mt-3">
-  <button type="submit" class="btn btn-success" form="settings-form">
-    <i class="ti ti-device-floppy me-2"></i>Save Settings
-  </button>
+<div class="d-flex justify-content-end mt-3">
+  {{ button("Save Team Settings", type="submit", icon="ti-device-floppy", attrs={"form": "settings-form"}) }}
 </div>
 
 <!-- Deletion tracking -->
