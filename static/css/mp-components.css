@@ -34,6 +34,13 @@
   --mp-radius: 0.625rem;
   --mp-radius-md: calc(var(--mp-radius) - 2px);
   --mp-radius-sm: calc(var(--mp-radius) - 4px);
+  /* Chart series color(s) — separate namespace from --mp-primary (which is
+     a neutral button color, not the app's blue). Read by mp-kpi-card.js
+     instead of a hardcoded hex so there's one place to change it, and so a
+     future per-tenant brand color only needs to override this custom
+     property (e.g. per-tenant inline style on <body>) with no JS/macro
+     changes. */
+  --mp-chart-1: #206bc4;
 }
 
 .mp-btn {
@@ -427,4 +434,210 @@
 
 .mp-filter-btn.active .mp-filter-count {
   color: var(--mp-muted-foreground);
+}
+
+/*
+  KPI Card — compact stat card: label + period dropdown + value + trend
+  badge in a padded top region, then a sparkline chart that bleeds flush to
+  the card's own left/right/bottom edges. Deliberately NOT built on Tabler's
+  .card/.card-body — that class's uniform padding is exactly what fights an
+  edge-to-edge chart. The chart region is a sibling of the padded top
+  region (not nested inside it), so no negative-margin hacks are needed.
+  Period dropdown reuses .mp-action-menu's popover CSS (see above) via
+  macros/kpi_card.html's dropdown_menu() call — only the trigger button
+  gets component-specific styling below. Chart rendering is handled by
+  static/js/mp-kpi-card.js (ApexCharts sparkline).
+*/
+.mp-kpi-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--mp-background);
+  color: var(--mp-foreground);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  box-shadow: var(--minipass-shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+  /* No overflow:hidden here — it would also clip the period dropdown's
+     popover, which is supposed to hang below the card. Only the chart
+     region (the last child, see .mp-kpi-card__chart) needs its own
+     corners clipped to match the card's radius. */
+  position: relative;
+}
+
+.mp-kpi-card__top {
+  /* Narrower horizontal padding than a Tabler .card-body — this card
+     needs to comfortably fit 5+ across a row, not just 3-4. */
+  padding: 0.75rem 0.625rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mp-kpi-card[data-size="compact"] .mp-kpi-card__top {
+  padding: 0.5rem 0.625rem 0.375rem;
+  gap: 0.125rem;
+}
+
+.mp-kpi-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mp-kpi-card__label {
+  min-width: 0;
+  font-size: var(--minipass-text-xs, 0.75rem);
+  font-weight: var(--minipass-font-normal, 400);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--minipass-gray-600, #4b5563);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mp-kpi-card__value {
+  font-size: var(--minipass-text-2xl, 1.5rem);
+  font-weight: var(--minipass-font-bold, 700);
+  line-height: 1.2;
+  color: var(--mp-foreground);
+}
+
+.mp-kpi-card[data-size="compact"] .mp-kpi-card__value {
+  font-size: var(--minipass-text-xl, 1.25rem);
+}
+
+.mp-kpi-card__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: fit-content;
+  font-size: var(--minipass-text-xs, 0.75rem);
+  font-weight: var(--minipass-font-medium, 500);
+}
+
+.mp-kpi-card__trend svg {
+  flex-shrink: 0;
+}
+
+.mp-kpi-card__trend.is-up {
+  color: var(--minipass-success, #10b981);
+}
+
+.mp-kpi-card__trend.is-down {
+  color: var(--minipass-danger, #ef4444);
+}
+
+.mp-kpi-card__trend.is-flat {
+  color: var(--minipass-gray-600, #4b5563);
+}
+
+/* Period dropdown trigger — small text button, not a .mp-btn variant (no
+   color-role variants apply to a "Last 7 days" selector). Reuses .mp-btn's
+   focus-visible ring recipe verbatim for consistency. */
+.mp-kpi-card__period-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: none;
+  background: transparent;
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--mp-radius-sm);
+  font-size: var(--minipass-text-xs, 0.75rem);
+  color: var(--minipass-gray-600, #4b5563);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mp-kpi-card__period-trigger:hover {
+  background: var(--mp-muted);
+  color: var(--mp-foreground);
+}
+
+.mp-kpi-card__period-trigger:focus-visible {
+  outline: none;
+  border-color: var(--mp-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+@media (pointer: coarse) {
+  .mp-kpi-card__period-trigger {
+    min-height: 32px;
+  }
+}
+
+/* Edge-to-edge chart region — unpadded sibling of __top, flush to the
+   card's own left/right/bottom border-box. 40px matches the sparkline
+   height already used in production. */
+.mp-kpi-card__chart {
+  height: 40px;
+  width: 100%;
+  margin-top: auto;
+  overflow: hidden;
+  border-radius: 0 0 var(--mp-radius-md) var(--mp-radius-md);
+}
+
+/* ApexCharts always draws an opaque background <rect> (#fefefe) as the
+   first child of its internal <g class="apexcharts-svg">, regardless of
+   the chart.background JS option (that option only sets the outer <svg>
+   element's own CSS background, which was already irrelevant here). The
+   area series' fill stops ~1.5px short of the container's full height
+   (room reserved for the line stroke), so that rect's off-white shows
+   through as a stray line under the chart unless forced transparent here.
+   A plain CSS rule beats the rect's fill="" attribute in specificity. */
+.mp-kpi-card__chart svg.apexcharts-svg > rect {
+  fill: transparent;
+}
+
+.mp-kpi-card__chart .apexcharts-canvas {
+  display: block;
+}
+
+/*
+  KPI Card — Mobile — a distinct, simpler component (not a responsive
+  variant of .mp-kpi-card): centered label/value/trend, a static period
+  caption instead of a dropdown, and no chart. Modeled on the mobile KPI
+  pattern already live in templates/dashboard.html's .mobile-kpi-card
+  (rebuilt on --mp-* and --minipass-* tokens instead of inline hex styles). No
+  dropdown here on purpose — this card is swiped in a horizontal carousel,
+  and a nested dropdown interaction would fight that gesture.
+*/
+.mp-kpi-card-mobile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 92px;
+  padding: 0.85rem 0.75rem;
+  background: var(--mp-background);
+  /* A touch darker than --mp-border (oklch 92%) — Tabler's own reference
+     card (dashboard.html's real mobile KPI cards) reads as "a card" mostly
+     from its border, since its own shadow is nearly invisible
+     (--tblr-box-shadow-card is 4% opacity). Match that, not a heavier
+     shadow. */
+  border: 1px solid var(--minipass-gray-300, #d1d5db);
+  border-radius: var(--mp-radius-md);
+  box-shadow: var(--minipass-shadow-default, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1));
+  text-align: center;
+}
+
+.mp-kpi-card-mobile__label {
+  font-size: var(--minipass-text-xs, 0.75rem);
+  font-weight: var(--minipass-font-normal, 400);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--minipass-gray-600, #4b5563);
+}
+
+.mp-kpi-card-mobile__value {
+  font-size: var(--minipass-text-2xl, 1.5rem);
+  font-weight: var(--minipass-font-bold, 700);
+  line-height: 1.1;
+  color: var(--mp-foreground);
+}
+
+.mp-kpi-card-mobile__period {
+  font-size: var(--minipass-text-xs, 0.75rem);
+  color: var(--minipass-gray-600, #4b5563);
 }

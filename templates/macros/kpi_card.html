@@ -1,0 +1,115 @@
+{#
+  KPI Card — desktop and mobile variants.
+
+  kpi_card_desktop(): compact stat card with a trend badge, a period-
+  selector dropdown, and a sparkline chart that bleeds edge-to-edge (no
+  card padding around it). The dropdown reuses macros/action_menu.html's
+  dropdown_menu() so it inherits that component's popover CSS and
+  mp-action-menu.js's open/close/keyboard behavior instead of a second
+  dropdown implementation. Chart rendering (ApexCharts) is handled by
+  static/js/mp-kpi-card.js, which also reads --mp-chart-1 for its color.
+
+  kpi_card_mobile(): a distinct, simpler card for small/swipeable layouts —
+  centered label/value/trend, a static period caption instead of a
+  dropdown, and no chart. Not a shrunk version of the desktop card; see
+  static/css/mp-components.css's .mp-kpi-card-mobile comment for why.
+
+  Usage:
+    {% from 'macros/kpi_card.html' import kpi_card_desktop, kpi_card_mobile %}
+    {{ kpi_card_desktop(id="kpi-revenue", label="Revenue", value=1248, format="currency",
+       change=12.4, trend_data=[900,940,880,1010,1090,1150,1248], chart_type="area") }}
+    {{ kpi_card_mobile(id="kpi-revenue-m", label="Revenue", value=1248, format="currency",
+       change=12.4, period_label="Fiscal year") }}
+
+  Parameters (kpi_card_desktop):
+    - id: unique id (required) — used to derive all child element ids
+    - label: eyebrow label, e.g. "Revenue"
+    - value: current numeric value
+    - format: "number" (default) | "currency"
+    - change: percent change vs previous period (float), or None to omit the trend badge
+    - trend_data: list of numbers oldest -> newest, or None/empty to omit the chart
+    - chart_type: "area" (line, e.g. revenue) | "bar" (counts)
+    - period: currently selected period code, default "7d"
+    - periods: list of period codes offered in the dropdown, or None/[] to omit the dropdown
+    - size: "default" | "compact"
+    - attrs: dict of extra attributes on the outer card element
+
+  Parameters (kpi_card_mobile):
+    - id, label, value, format: same as above
+    - change: percent change, or None to omit the trend badge
+    - period_label: static caption text, e.g. "Fiscal year" (no dropdown on mobile — see CSS comment)
+    - attrs: dict of extra attributes on the outer card element
+#}
+
+{% from 'macros/action_menu.html' import dropdown_menu %}
+
+{% set kpi_period_labels = {"7d": "Last 7 days", "30d": "Last 30 days", "90d": "Last 90 days", "fy": "Fiscal year", "all": "All time"} %}
+{% set kpi_period_short_labels = {"7d": "7D", "30d": "30D", "90d": "90D", "fy": "FY", "all": "All"} %}
+
+{% macro kpi_card_desktop(id, label, value, format="number", change=None, trend_data=None, chart_type="area", period="7d", periods=["7d", "30d", "90d", "all"], size="default", attrs={}) %}
+<div
+  id="{{ id }}"
+  class="mp-kpi-card"
+  {% if size != "default" %}data-size="{{ size }}"{% endif %}
+  data-kpi-format="{{ format }}"
+  data-kpi-chart-type="{{ chart_type }}"
+  data-kpi-period="{{ period }}"
+  {% for attr_key, attr_value in attrs.items() %}{{ attr_key }}="{{ attr_value }}" {% endfor %}
+>
+  <div class="mp-kpi-card__top">
+    <div class="mp-kpi-card__row">
+      <div class="mp-kpi-card__label">{{ label }}</div>
+      {% if periods %}
+        {% set period_trigger %}<span id="{{ id }}-period-label">{{ kpi_period_short_labels.get(period, period) }}</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>{% endset %}
+        {% call dropdown_menu(
+          id=id ~ "-period",
+          trigger=period_trigger,
+          trigger_attrs={"class": "mp-kpi-card__period-trigger"},
+          popover_attrs={"data-align": "end"},
+          main_attrs={"class": "mp-kpi-card__period"}
+        ) %}
+          {% for p in periods %}
+          <div role="menuitem" data-period-value="{{ p }}"{% if p == period %} class="active"{% endif %}>{{ kpi_period_labels.get(p, p) }}</div>
+          {% endfor %}
+        {% endcall %}
+      {% endif %}
+    </div>
+    <div class="mp-kpi-card__value" id="{{ id }}-value">{% if format == "currency" %}${{ "{:,.0f}".format(value) }}{% else %}{{ "{:,.0f}".format(value) }}{% endif %}</div>
+    {% if change is not none %}
+    <div class="mp-kpi-card__trend {{ 'is-up' if change > 0 else ('is-down' if change < 0 else 'is-flat') }}" id="{{ id }}-trend">
+      {{ "{:.0f}".format(change|abs) }}%
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        {% if change > 0 %}<path d="M3 17 9 11 13 15 21 7"/><path d="M15 7h6v6"/>
+        {% elif change < 0 %}<path d="M3 7 9 13 13 9 21 17"/><path d="M15 17h6v-6"/>
+        {% else %}<path d="M4 12h16"/>{% endif %}
+      </svg>
+    </div>
+    {% endif %}
+  </div>
+  {% if trend_data %}
+  <div class="mp-kpi-card__chart" id="{{ id }}-chart" data-trend="{{ trend_data | tojson | forceescape }}"></div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro kpi_card_mobile(id, label, value, format="number", change=None, period_label="Fiscal year", attrs={}) %}
+<div
+  id="{{ id }}"
+  class="mp-kpi-card-mobile"
+  {% for attr_key, attr_value in attrs.items() %}{{ attr_key }}="{{ attr_value }}" {% endfor %}
+>
+  <div class="mp-kpi-card-mobile__label">{{ label }}</div>
+  <div class="mp-kpi-card-mobile__value">{% if format == "currency" %}${{ "{:,.0f}".format(value) }}{% else %}{{ "{:,.0f}".format(value) }}{% endif %}</div>
+  {% if change is not none %}
+  <div class="mp-kpi-card__trend {{ 'is-up' if change > 0 else ('is-down' if change < 0 else 'is-flat') }}">
+    {{ "{:.0f}".format(change|abs) }}%
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      {% if change > 0 %}<path d="M3 17 9 11 13 15 21 7"/><path d="M15 7h6v6"/>
+      {% elif change < 0 %}<path d="M3 7 9 13 13 9 21 17"/><path d="M15 17h6v-6"/>
+      {% else %}<path d="M4 12h16"/>{% endif %}
+    </svg>
+  </div>
+  {% endif %}
+  <div class="mp-kpi-card-mobile__period">{{ period_label }}</div>
+</div>
+{% endmacro %}
