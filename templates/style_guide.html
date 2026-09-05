@@ -33,6 +33,26 @@
     font-size: .875rem;
     user-select: none;
   }
+  /* KPI Card demo only: a plain flex row lets cards shrink to their own
+     content's minimum width, so a shorter card (e.g. no trend badge) can
+     end up narrower/shorter than its neighbors. A grid with an explicit
+     minmax(0, ...) track forces every card to the same width regardless
+     of content. */
+  .sg-preview-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: .75rem;
+    align-items: stretch;
+  }
+  .sg-preview-kpi-mobile {
+    display: flex;
+    gap: .5rem;
+    max-width: 320px;
+    overflow-x: auto;
+  }
+  .sg-preview-kpi-mobile > * {
+    flex: 0 0 140px;
+  }
 </style>
 {% endblock %}
 
@@ -40,6 +60,7 @@
 {% from 'macros/buttons.html' import button %}
 {% from 'macros/action_menu.html' import action_menu %}
 {% from 'macros/filter_tabs.html' import filter_tabs %}
+{% from 'macros/kpi_card.html' import kpi_card_desktop, kpi_card_mobile %}
 <div class="page-wrapper">
   <div class="page-header d-print-none">
     <div class="container-xl">
@@ -175,12 +196,73 @@
         </div>
       </div>
 
+      <div class="card mb-4" id="kpi-card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">KPI Card — Desktop</h3>
+            <div class="text-muted small mt-1">Compact stat card: label, period dropdown, value, trend badge, and an edge-to-edge sparkline. Every card in a row is forced to the same width/height regardless of content — narrow enough that 5 fit across a row.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview sg-preview-kpi-grid">
+            {{ kpi_card_desktop(id="sg-kpi-revenue", label="Revenue", value=1248, format="currency",
+               change=12.4, trend_data=[900, 940, 880, 1010, 1090, 1150, 1248], chart_type="area") }}
+            {{ kpi_card_desktop(id="sg-kpi-active", label="Active Passes", value=57,
+               change=-4.0, trend_data=[62, 60, 58, 61, 59, 58, 57], chart_type="bar") }}
+            {{ kpi_card_desktop(id="sg-kpi-redeemed", label="Redeemed", value=41,
+               change=6.0, trend_data=[30, 32, 35, 33, 38, 40, 41], chart_type="bar") }}
+            {{ kpi_card_desktop(id="sg-kpi-signups", label="Signups", value=12,
+               change=0, trend_data=[10, 11, 9, 12, 11, 13, 12], chart_type="bar") }}
+            {{ kpi_card_desktop(id="sg-kpi-unpaid", label="Unpaid", value=3, change=none,
+               trend_data=[5, 4, 4, 6, 3, 3, 3], chart_type="bar") }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/kpi_card.html' import kpi_card_desktop %}
+
+{{ kpi_card_desktop(id="kpi-revenue", label="Revenue", value=kpi_data['revenue']['current'],
+   format="currency", change=kpi_data['revenue']['change'],
+   trend_data=kpi_data['revenue']['trend_data'], chart_type="area") }}
+
+{{ kpi_card_desktop(id="kpi-unpaid", label="Unpaid", value=kpi_data['unpaid_passports']['current'],
+   change=kpi_data['unpaid_passports']['change'],
+   trend_data=kpi_data['unpaid_passports']['trend_data'], chart_type="bar") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="kpi-card-mobile">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">KPI Card — Mobile</h3>
+            <div class="text-muted small mt-1">Its own simpler design for small/swipeable layouts — centered value, no dropdown, no chart. Not a shrunk desktop card.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            <div class="sg-preview-kpi-mobile">
+              {{ kpi_card_mobile(id="sg-kpi-revenue-m", label="Revenue", value=1248, format="currency", change=12.4) }}
+              {{ kpi_card_mobile(id="sg-kpi-unpaid-m", label="Unpaid", value=3, change=none) }}
+            </div>
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/kpi_card.html' import kpi_card_mobile %}
+
+{{ kpi_card_mobile(id="kpi-revenue-m", label="Revenue", value=kpi_data['revenue']['current'],
+   format="currency", change=kpi_data['revenue']['change'], period_label="Fiscal year") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.1"></script>
+<script src="{{ url_for('static', filename='js/mp-kpi-card.js') }}?v=1.2"></script>
 <script>
   // Demo-only: the real filter_tabs() macro renders real <a href> links whose
   // "active" state comes from the current URL's query string (server-side),
@@ -192,6 +274,54 @@
       e.preventDefault();
       tab.parentElement.querySelectorAll('.mp-filter-btn').forEach(function (t) { t.classList.remove('active'); });
       tab.classList.add('active');
+    });
+  });
+
+  // Demo-only: real usage wires root.onPeriodChange to fetch live data (e.g.
+  // /api/kpi-data?period=...). There's no backend behind this page, so this
+  // just swaps in a second canned trend_data sample per period to show the
+  // dropdown -> chart interaction working.
+  document.addEventListener('DOMContentLoaded', function () {
+    var sampleTrends = {
+      'sg-kpi-revenue': {
+        '7d': [900, 940, 880, 1010, 1090, 1150, 1248],
+        '30d': [700, 820, 760, 900, 1000, 1100, 1050, 1150, 1200, 1248],
+        '90d': [500, 600, 650, 700, 800, 900, 950, 1000, 1100, 1248],
+        'all': [300, 450, 500, 620, 700, 800, 900, 1000, 1150, 1248]
+      },
+      'sg-kpi-active': {
+        '7d': [62, 60, 58, 61, 59, 58, 57],
+        '30d': [70, 68, 65, 63, 61, 60, 58, 57, 56, 57],
+        '90d': [80, 75, 72, 70, 68, 65, 62, 60, 58, 57],
+        'all': [90, 85, 80, 75, 70, 65, 62, 60, 58, 57]
+      },
+      'sg-kpi-redeemed': {
+        '7d': [30, 32, 35, 33, 38, 40, 41],
+        '30d': [20, 22, 25, 27, 30, 33, 35, 37, 39, 41],
+        '90d': [10, 14, 18, 22, 26, 30, 33, 36, 39, 41],
+        'all': [5, 10, 15, 20, 25, 30, 33, 36, 39, 41]
+      },
+      'sg-kpi-signups': {
+        '7d': [10, 11, 9, 12, 11, 13, 12],
+        '30d': [9, 10, 11, 10, 12, 11, 13, 12, 11, 12],
+        '90d': [8, 9, 10, 11, 10, 12, 11, 13, 12, 12],
+        'all': [7, 8, 9, 10, 11, 10, 12, 11, 13, 12]
+      },
+      'sg-kpi-unpaid': {
+        '7d': [5, 4, 4, 6, 3, 3, 3],
+        '30d': [8, 7, 6, 5, 5, 4, 4, 3, 3, 3],
+        '90d': [12, 10, 9, 8, 7, 6, 5, 4, 3, 3],
+        'all': [15, 13, 11, 9, 7, 6, 5, 4, 3, 3]
+      }
+    };
+    Object.keys(sampleTrends).forEach(function (cardId) {
+      var card = document.getElementById(cardId);
+      if (!card) return;
+      card.onPeriodChange = function (period) {
+        var samples = sampleTrends[cardId];
+        var trendData = samples[period] || samples['7d'];
+        card.refreshChart(trendData);
+      };
     });
   });
 </script>
