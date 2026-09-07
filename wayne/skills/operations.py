@@ -227,7 +227,47 @@ def redemption_summary(args, language):
 
 def passport_sales_summary(args, language):
     activity = args.get("activity")
+    mode = args.get("mode") or "all"
     start, end = date_bounds(args)
+    period = period_label(args, language)
+
+    if mode == "top":
+        query = (
+            db.session.query(
+                Activity.name,
+                func.count(Passport.id),
+                func.coalesce(func.sum(Passport.sold_amt), 0),
+            )
+            .join(Activity, Activity.id == Passport.activity_id)
+            .filter(Passport.paid.is_(True))
+        )
+        query = activity_filter(query, Activity.name, activity)
+        if start:
+            query = query.filter(Passport.paid_date >= start)
+        if end:
+            query = query.filter(Passport.paid_date < end)
+        records = (
+            query.group_by(Activity.name)
+            .order_by(func.count(Passport.id).desc())
+            .limit(1)
+            .all()
+        )
+        if records:
+            answer = (
+                f"L’activité avec le plus de passeports vendus{period} est « {records[0][0]} », avec {records[0][1]} passeport(s)."
+                if language == "fr"
+                else f"The activity with the most passports sold{period} is “{records[0][0]}” with {records[0][1]} passport(s)."
+            )
+        else:
+            answer = (
+                f"Aucun passeport vendu{period}."
+                if language == "fr"
+                else f"No passports sold{period}."
+            )
+        columns = ["Activité", "Vendus", "Montant"] if language == "fr" else ["Activity", "Sold", "Amount"]
+        rows = [[r[0], r[1], money(r[2])] for r in records]
+        return SkillResult(answer=answer, columns=columns, rows=rows)
+
     query = (
         db.session.query(
             Activity.name,
@@ -252,7 +292,6 @@ def passport_sales_summary(args, language):
     )
     count = sum(int(r[2] or 0) for r in records)
     amount = sum(float(r[3] or 0) for r in records)
-    period = period_label(args, language)
     answer = (
         f"{count} passeport(s) vendu(s){period} totalisent {money(amount)}."
         if language == "fr"
@@ -402,7 +441,7 @@ SKILLS = [
         description_en="Summarize paid passport sales by activity and passport type for a period or year.",
         description_fr="Résumer les ventes de passeports payés par activité et type pour une période ou année.",
         examples=("How many passports did I sell this month?", "Quel type de passeport se vend le plus?"),
-        parameters={"activity": "Optional activity name", "period": "Optional common period", "year": "Optional year"},
+        parameters={"activity": "Optional activity name", "period": "Optional common period", "year": "Optional year", "mode": "all or top"},
         handler=passport_sales_summary,
     ),
     SkillDefinition(

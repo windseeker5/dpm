@@ -1,0 +1,59 @@
+{#
+  Alert dialog, ported from KDUI (flask-shadcn-starter). Uses the native
+  <dialog> element's own showModal()/close() API via inline onclick — no JS
+  file, no library.
+
+  Usage:
+    {% from 'macros/alert_dialog.html' import alert_dialog %}
+    {{ alert_dialog(
+      id="delete-passport-dialog",
+      trigger_text="Delete",
+      trigger_variant="destructive",
+      title="Delete this passport?",
+      description="This action cannot be undone.",
+      confirm_label="Delete",
+      confirm_variant="destructive"
+    ) }}
+
+  Parameters:
+    - id: unique id for the <dialog> element (required — used by the trigger/close handlers)
+    - trigger_text: trigger button label
+    - trigger_variant: variant for the trigger button (default "outline")
+    - title: dialog title
+    - description: optional dialog description
+    - cancel_label: default "Cancel"
+    - confirm_label: default "Continue"
+    - confirm_variant: variant for the confirm button (e.g. "destructive")
+    - confirm_href: if set, the confirm button is a link to this URL instead of a closing button
+    - size: "sm" for a narrower dialog
+    - class_: extra classes for the dialog element
+    - attrs: dict of extra attributes for the dialog element
+#}
+
+{% from 'macros/buttons.html' import button %}
+
+{% macro alert_dialog(id, trigger_text='Show dialog', trigger_variant='outline', title='Are you sure?', description=None, cancel_label='Cancel', confirm_label='Continue', confirm_variant=None, confirm_href=None, size=None, class_='', attrs={}) %}
+{{ button(trigger_text, variant=trigger_variant, attrs={"onclick": "document.getElementById('" ~ id ~ "').showModal()"}) }}
+<dialog
+  id="{{ id }}"
+  class="mp-alert-dialog{% if class_ %} {{ class_ }}{% endif %}"
+  aria-labelledby="{{ id }}-title"
+  {% if description %}aria-describedby="{{ id }}-description"{% endif %}
+  {% if size %}data-size="{{ size }}"{% endif %}
+  onclick="if (event.target === this) this.close()"
+  {% for key, value in attrs.items() %}{{ key }}="{{ value }}"{% endfor %}
+>
+  <div class="mp-alert-dialog__body">
+    <h2 id="{{ id }}-title" class="mp-alert-dialog__title">{{ title }}</h2>
+    {% if description %}<p id="{{ id }}-description" class="mp-alert-dialog__description">{{ description }}</p>{% endif %}
+  </div>
+  <div class="mp-alert-dialog__footer">
+    <button type="button" class="mp-btn" data-variant="outline" onclick="this.closest('dialog').close()">{{ cancel_label }}</button>
+    {% if confirm_href %}
+      <a href="{{ confirm_href }}" class="mp-btn"{% if confirm_variant %} data-variant="{{ confirm_variant }}"{% endif %}>{{ confirm_label }}</a>
+    {% else %}
+      <button type="button" class="mp-btn"{% if confirm_variant %} data-variant="{{ confirm_variant }}"{% endif %} onclick="this.closest('dialog').close()">{{ confirm_label }}</button>
+    {% endif %}
+  </div>
+</dialog>
+{% endmacro %}

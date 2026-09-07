@@ -1,0 +1,53 @@
+{#
+  Text input / field, ported from KDUI (flask-shadcn-starter). Renders a
+  label + input (+ optional description) stack, sharing .mp-field/.mp-label
+  with checkbox.html, switch.html, radio.html and textarea.html.
+
+  Usage:
+    {% from 'macros/input.html' import text_input %}
+    {{ text_input(id="passport-search", label="Search", placeholder="Search passports…") }}
+    {{ text_input(id="email", label="Email", type="email", description="We'll only use this to send the pass.") }}
+
+  Parameters:
+    - id: input id (also used for label association)
+    - label: optional label text
+    - type: input type (default "text")
+    - name: input name; defaults to id
+    - placeholder: placeholder text
+    - value: pre-filled value
+    - description: optional helper text below the input
+    - disabled: default False
+    - class_: extra classes for the wrapper (or input, if no label/description)
+    - attrs: dict of extra attributes for the input
+#}
+
+{% macro text_input(id, label=None, type="text", name=None, placeholder=None, value=None, description=None, disabled=False, class_='', attrs={}) %}
+{% set input_name = name or id %}
+{% if label or description %}
+<div class="mp-field{% if class_ %} {{ class_ }}{% endif %}">
+  {% if label %}<label class="mp-label" for="{{ id }}">{{ label }}</label>{% endif %}
+  <input
+    type="{{ type }}"
+    id="{{ id }}"
+    name="{{ input_name }}"
+    class="mp-input"
+    {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+    {% if value is not none %}value="{{ value }}"{% endif %}
+    {% if disabled %}disabled{% endif %}
+    {% for key, val in attrs.items() %}{{ key }}="{{ val }}"{% endfor %}
+  />
+  {% if description %}<p class="mp-field__description">{{ description }}</p>{% endif %}
+</div>
+{% else %}
+<input
+  type="{{ type }}"
+  id="{{ id }}"
+  name="{{ input_name }}"
+  class="mp-input{% if class_ %} {{ class_ }}{% endif %}"
+  {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+  {% if value is not none %}value="{{ value }}"{% endif %}
+  {% if disabled %}disabled{% endif %}
+  {% for key, val in attrs.items() %}{{ key }}="{{ val }}"{% endfor %}
+/>
+{% endif %}
+{% endmacro %}

@@ -1605,7 +1605,6 @@ def dashboard():
     from models import Activity, Signup, Passport, db
     from sqlalchemy.sql import func
     from datetime import datetime
-    from kpi_renderer import render_revenue_card, render_active_users_card, render_passports_created_card, render_passports_unpaid_card, render_passports_redeemed_card
     import re
 
     # Detect mobile user agent
@@ -1697,13 +1696,118 @@ def dashboard():
     # ✅ Extract active passport count for the dashboard badge
     active_passport_count = passport_stats['active_passports']
 
-    # Render KPI cards using new templates
-    revenue_card = render_revenue_card()
-    active_users_card = render_active_users_card()
-    passports_created_card = render_passports_created_card()
-    passports_unpaid_card = render_passports_unpaid_card()
-
     activity_indicator_count = min(len(activity_cards) + 1, 4)  # +1 for placeholder card, capped at 4
+
+    # --- History log: filter tabs + search + server-side pagination ---
+    # Categories are grounded in actual type-string frequency across the log
+    # data (checked via a one-off count), not a guessed grouping: Email
+    # (Email Sent/Dismissed) and Passport (Created/Redeemed/Marked Paid*) are
+    # the two biggest buckets by far, Payment covers Interac/manual matching,
+    # Signup covers the submit/approve/reject lifecycle, and Admin is the
+    # catch-all (settings, activities, expenses, income, reminders).
+    def log_category(log):
+        log_type = (log.get('type') or '').lower()
+        if 'email' in log_type:
+            return 'email'
+        if 'passport' in log_type or log_type.startswith('marked paid'):
+            return 'passport'
+        if 'interac' in log_type or 'payment' in log_type:
+            return 'payment'
+        if 'signup' in log_type:
+            return 'signup'
+        return 'admin'
+
+    LOG_ICON_MAP = {
+        'Passport Redeemed': ('ti-ticket', 'text-danger'),
+        'Email Sent': ('ti-mail', 'text-info'),
+        'Email Dismissed': ('ti-mail-off', 'text-muted'),
+        'Passport Created': ('ti-id', 'text-lime'),
+        'Interac Payment Matched': ('ti-currency-dollar', 'text-success'),
+        'Payment Manually Processed': ('ti-currency-dollar', 'text-success'),
+        'Payment No Match': ('ti-alert-triangle', 'text-warning'),
+        'Reminder Sent': ('ti-bell', 'text-purple'),
+        'Signup Submitted': ('ti-user-plus', 'text-success'),
+        'Signup Approved': ('ti-user-check', 'text-green'),
+        'Signup Rejected': ('ti-user-x', 'text-danger'),
+        'Signup Cancelled': ('ti-user-x', 'text-danger'),
+        'Activity Created': ('ti-target', 'text-orange'),
+        'Admin Action': ('ti-settings', 'text-muted'),
+    }
+
+    def log_type_cell(log_type):
+        icon_class, color_class = LOG_ICON_MAP.get(log_type, ('ti-activity', 'text-muted'))
+        if log_type.startswith('Marked Paid'):
+            icon_class, color_class = ('ti-check', 'text-green')
+        return f'<i class="ti {icon_class} {color_class}"></i> {log_type}'
+
+    log_tab = request.args.get('tab', 'all')
+    log_q = request.args.get('q', '').strip()
+
+    filtered_logs = all_logs if log_tab == 'all' else [l for l in all_logs if log_category(l) == log_tab]
+    if log_q:
+        q_lower = log_q.lower()
+        filtered_logs = [
+            l for l in filtered_logs
+            if q_lower in (l.get('details') or '').lower() or q_lower in (l.get('user') or '').lower()
+        ]
+
+    LOG_PER_PAGE = 10
+    log_total = len(filtered_logs)
+    log_pages = max(1, (log_total + LOG_PER_PAGE - 1) // LOG_PER_PAGE)
+    log_page = request.args.get('page', 1, type=int)
+    log_page = max(1, min(log_page, log_pages))
+    start = (log_page - 1) * LOG_PER_PAGE
+    page_logs = filtered_logs[start:start + LOG_PER_PAGE]
+
+    from markupsafe import escape as _escape
+
+    log_rows = []
+    for log in page_logs:
+        details = log.get('details') or ''
+        local_ts = utc_to_local(log['timestamp']) if log.get('timestamp') else None
+        formatted_dt = local_ts.strftime('%Y-%m-%d %H:%M') if local_ts else '—'
+        date_only = local_ts.strftime('%Y-%m-%d') if local_ts else ''
+        log_rows.append({
+            'date_time': formatted_dt,
+            'date_only': date_only,
+            'type_html': log_type_cell(log.get('type') or ''),
+            'details': str(_escape(details)),
+        })
+
+    from collections import Counter as _Counter
+    log_category_counts = _Counter(log_category(l) for l in all_logs)
+    log_total_count = len(all_logs)
+
+    log_current_filters = {}
+    if log_q:
+        log_current_filters['q'] = log_q
+    if log_tab != 'all':
+        log_current_filters['tab'] = log_tab
+    def format_compact_count(n):
+        # Filter-tab counts (e.g. 4042) render wide enough to break the pill
+        # layout on mobile — compact notation (YouTube/Gmail-style: "4k",
+        # "1.7k") keeps them short at any screen size. Below 1000 there's
+        # nothing to gain by abbreviating, so show the exact number.
+        if n < 1000:
+            return str(n)
+        value = round(n / 1000, 1)
+        return f"{int(value)}k" if value == int(value) else f"{value}k"
+
+    log_tabs = [
+        {'key': 'email', 'label': 'Email', 'hide_on_mobile': True},
+        {'key': 'passport', 'label': 'Passport'},
+        {'key': 'all', 'label': 'All'},
+    ]
+    for tab in log_tabs:
+        raw_count = log_total_count if tab['key'] == 'all' else log_category_counts.get(tab['key'], 0)
+        tab['count'] = format_compact_count(raw_count)
+        tab['active'] = log_tab == tab['key']
+        tab['url'] = url_for('dashboard', tab=tab['key'], q=log_q or None)
+
+    # "View full log" carries the current tab/search over to /activity-log's
+    # own (unrelated) filter params, so e.g. the Email tab deep-links into
+    # the full log already filtered to Email instead of dropping the filter.
+    view_full_log_url = url_for('activity_log', type=(log_tab if log_tab != 'all' else None), q=log_q or None)
 
     return render_template(
         "dashboard.html",
@@ -1715,11 +1819,18 @@ def dashboard():
         signup_stats=signup_stats,
         active_passport_count=active_passport_count,
         logs=all_logs,
-        revenue_card=revenue_card,
-        active_users_card=active_users_card,
-        passports_created_card=passports_created_card,
-        passports_unpaid_card=passports_unpaid_card,
         activity_indicator_count=activity_indicator_count,
+        log_rows=log_rows,
+        log_tabs=log_tabs,
+        log_tab=log_tab,
+        log_q=log_q,
+        log_current_filters=log_current_filters,
+        log_page=log_page,
+        log_pages=log_pages,
+        log_total=log_total,
+        log_items_count=len(page_logs),
+        log_per_page=LOG_PER_PAGE,
+        view_full_log_url=view_full_log_url,
     )
 
 
@@ -6264,34 +6375,51 @@ def upload_and_restore_backup():
     return redirect(url_for("setup") + "#tab-data")
 
 
-@app.route("/users.json")
-def users_json():
-    from models import User
+@app.route("/api/users/search")
+def api_search_users():
+    """Return a small, deduplicated set of customer matches for admin autocomplete."""
+    if "admin" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
 
-    # Get all users ordered by ID descending (newest first)
-    users = (
-        db.session.query(User.name, User.email, User.phone_number, User.id)
-        .filter(User.name.isnot(None))
-        .filter(User.name != '')
-        .order_by(User.id.desc())
+    search_query = request.args.get("q", "").strip()
+    if len(search_query) < 2:
+        return jsonify([])
+
+    # Escape LIKE wildcards so customer-entered %, _ and \\ remain literal characters.
+    escaped_query = (
+        search_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
+    prefix_pattern = f"{escaped_query}%"
+
+    # User rows intentionally preserve each signup/passport transaction. Group by the
+    # normalized name and select only the newest row, matching the old cache behaviour
+    # without loading every customer into Python or sending them all to the browser.
+    latest_user_ids = (
+        db.session.query(func.max(User.id).label("user_id"))
+        .filter(User.name.isnot(None), User.name != "")
+        .filter(User.name.collate("NOCASE").like(prefix_pattern, escape="\\"))
+        .group_by(func.lower(func.trim(User.name)))
+        .order_by(func.max(User.id).desc())
+        .limit(10)
         .all()
     )
+    ordered_ids = [row.user_id for row in latest_user_ids]
+    if not ordered_ids:
+        return jsonify([])
 
-    # Deduplicate by name (case-insensitive), keeping the first (newest) record
-    seen_names = set()
-    result = []
-    for u in users:
-        name_lower = u[0].strip().lower()
-        if name_lower not in seen_names:
-            seen_names.add(name_lower)
-            result.append({
-                "name": u[0],
-                "email": u[1] or "",
-                "phone": u[2] or ""
-            })
-
-    print("Sending user cache JSON:", result)
-    return jsonify(result)
+    users_by_id = {
+        user.id: user
+        for user in User.query.filter(User.id.in_(ordered_ids)).all()
+    }
+    return jsonify([
+        {
+            "name": users_by_id[user_id].name,
+            "email": users_by_id[user_id].email or "",
+            "phone": users_by_id[user_id].phone_number or "",
+        }
+        for user_id in ordered_ids
+        if user_id in users_by_id
+    ])
 
 
 

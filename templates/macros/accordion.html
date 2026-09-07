@@ -1,0 +1,31 @@
+{#
+  Accordion, ported from KDUI (flask-shadcn-starter). Native <details>/
+  <summary> — each item toggles independently (no "only one open" JS
+  behavior; add it later if a real page needs that constraint).
+
+  Usage:
+    {% from 'macros/accordion.html' import accordion %}
+    {{ accordion(items=[
+      {"title": "How do I redeem a pass?", "content": "Scan the QR code at check-in."},
+      {"title": "Can I get a refund?", "content": "Refunds are available up to 48h before the event.", "open": true}
+    ]) }}
+
+  Parameters:
+    - items: list of {title, content, open (bool, optional)}
+    - class_: extra classes for the accordion container
+    - attrs: dict of extra attributes for the accordion container
+#}
+
+{% macro accordion(items=[], class_='', attrs={}) %}
+<div class="mp-accordion{% if class_ %} {{ class_ }}{% endif %}"{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>
+  {% for item in items %}
+  <details{% if item.open %} open{% endif %}>
+    <summary>
+      <span>{{ item.title }}</span>
+      <i class="ti ti-chevron-down"></i>
+    </summary>
+    <div class="mp-accordion__content">{{ item.content }}</div>
+  </details>
+  {% endfor %}
+</div>
+{% endmacro %}

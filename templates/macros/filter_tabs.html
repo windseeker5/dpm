@@ -1,13 +1,31 @@
 {#
   Filter Tabs — segmented filter control for the top of list/table pages
-  (Active/Archived/All, Pending/Approved/All, etc).
+  (Active/Archived/All, Pending/Approved/All, etc), matched to GitHub's own
+  file-view Preview/Code/Blame control: gray track, white active pill,
+  hairline separators that vanish on whichever side touches the active
+  tab, plus a sliding indicator (static/js/mp-filter-tabs.js) that
+  animates .active moving between buttons within the same page (see
+  style_guide.html's demo — real filtered pages navigate on click instead,
+  so there's nothing to animate from there; the indicator just lands
+  silently in place on load).
 
-  Styled by .mp-filter-tabs/.mp-filter-btn/.mp-filter-count in
-  static/css/mp-components.css, using the same --mp-* tokens as Button and
-  Action Menu (not the old .github-filter-* classes in
-  static/css/filter-component.css, which use a different, off-system
-  GitHub-Primer color palette — see /style-guide's Filter Tabs section for
-  why). Do not add inline styles when using this macro.
+  Styled by .mp-filter-tabs/.mp-filter-btn/.mp-filter-count/
+  .mp-filter-tabs__indicator in static/css/mp-components.css, using the
+  same --mp-* tokens as Button and Action Menu (not the old
+  .github-filter-* classes in static/css/filter-component.css, which use a
+  different, off-system GitHub-Primer color palette — see /style-guide's
+  Filter Tabs section for why). Do not add inline styles when using this
+  macro. Requires static/js/mp-filter-tabs.js on the page (loaded globally
+  in base.html) to position the indicator — without it the tab list still
+  works and looks correct (the active button has its own non-JS-dependent
+  background), it just won't animate between states.
+
+  Scroll position across the resulting page reload is handled automatically
+  — static/js/mp-scroll-restore.js (also loaded globally in base.html)
+  saves the scroll position of #main-content before any real tab click
+  (skipping href="#" demo links like this page's) and restores it once the
+  new page loads. Nothing to wire up per-page; do not build a second
+  scroll-preservation mechanism for a page using this macro.
 
   Usage:
     {% from 'macros/filter_tabs.html' import filter_tabs %}
@@ -21,14 +39,22 @@
     ]) }}
 
   Parameters:
-    - tabs: list of {label, url, count (optional), active (bool)} dicts
+    - tabs: list of {label, url, count (optional), active (bool),
+      hide_on_mobile (optional bool)} dicts. hide_on_mobile drops that one
+      tab below the same ~768px container width the toolbar's own
+      search/tabs behavior already keys off (macros/data_table.html's
+      table_toolbar()) — for a tab list that fits fine at full width but
+      has one lower-priority entry worth cutting once space gets tight,
+      instead of every tab scrolling/shrinking equally. Omit for a tab list
+      that should render identically at every width (the common case).
     - aria_label: optional, default "Filter buttons"
 #}
 
 {% macro filter_tabs(tabs, aria_label="Filter buttons") %}
 <div class="mp-filter-tabs" role="group" aria-label="{{ aria_label }}">
+  <span class="mp-filter-tabs__indicator" aria-hidden="true"></span>
   {%- for tab in tabs %}
-  <a href="{{ tab.url }}" class="mp-filter-btn{% if tab.active %} active{% endif %}">{{ tab.label }}{% if tab.count is defined and tab.count is not none %} <span class="mp-filter-count">({{ tab.count }})</span>{% endif %}</a>
+  <a href="{{ tab.url }}" class="mp-filter-btn{% if tab.active %} active{% endif %}"{% if tab.hide_on_mobile %} data-hide-narrow{% endif %}>{{ tab.label }}{% if tab.count is defined and tab.count is not none %} <span class="mp-filter-count">({{ tab.count }})</span>{% endif %}</a>
   {%- endfor %}
 </div>
 {% endmacro %}

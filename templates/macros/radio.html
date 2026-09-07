@@ -1,0 +1,41 @@
+{#
+  Radio group, ported from KDUI (flask-shadcn-starter).
+
+  Usage:
+    {% from 'macros/radio.html' import radio_group %}
+    {{ radio_group(name="pass-type", label="Choose a pass type", options=[
+      {"value": "single", "label": "Single entry", "description": "One redemption."},
+      {"value": "season", "label": "Season pass", "description": "Unlimited entries for the season."}
+    ], selected="season") }}
+
+  Parameters:
+    - name: radio input name (shared by all options)
+    - label: accessible label for the group
+    - options: list of {value, label, description (optional), disabled (optional)}
+    - selected: value that should be checked by default
+    - class_: extra classes for the group wrapper
+    - attrs: dict of extra attributes for the group wrapper
+#}
+
+{% macro radio_group(name, label=None, options=[], selected=None, class_='', attrs={}) %}
+<div role="radiogroup" aria-label="{{ label or name }}" class="mp-radio-group{% if class_ %} {{ class_ }}{% endif %}"{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>
+  {% for opt in options %}
+  {% set opt_id = name ~ '-' ~ loop.index %}
+  <div class="mp-field" data-orientation="horizontal">
+    <input
+      type="radio"
+      id="{{ opt_id }}"
+      name="{{ name }}"
+      value="{{ opt.value }}"
+      class="mp-radio"
+      {% if selected == opt.value %}checked{% endif %}
+      {% if opt.disabled %}disabled{% endif %}
+    />
+    <div>
+      <label class="mp-label" for="{{ opt_id }}">{{ opt.label }}</label>
+      {% if opt.description %}<p class="mp-field__description">{{ opt.description }}</p>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}

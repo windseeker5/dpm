@@ -1,0 +1,48 @@
+{#
+  Textarea, ported from KDUI (flask-shadcn-starter).
+
+  Usage:
+    {% from 'macros/textarea.html' import textarea %}
+    {{ textarea(id="message", label="Message", placeholder="Type your message…") }}
+
+  Parameters:
+    - id: textarea id
+    - name: textarea name; defaults to id
+    - label: optional label text
+    - description: optional helper text
+    - placeholder: placeholder text
+    - value: pre-filled content
+    - rows: number of rows (default 4)
+    - disabled: default False
+    - class_: extra classes for the wrapper (or textarea, if no label/description)
+    - attrs: dict of extra attributes for the textarea
+#}
+
+{% macro textarea(id, name=None, label=None, description=None, placeholder=None, value=None, rows=4, disabled=False, class_='', attrs={}) %}
+{% set input_name = name or id %}
+{% if label or description %}
+<div class="mp-field{% if class_ %} {{ class_ }}{% endif %}">
+  {% if label %}<label class="mp-label" for="{{ id }}">{{ label }}</label>{% endif %}
+  <textarea
+    id="{{ id }}"
+    name="{{ input_name }}"
+    class="mp-textarea"
+    rows="{{ rows }}"
+    {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+    {% if disabled %}disabled{% endif %}
+    {% for key, val in attrs.items() %}{{ key }}="{{ val }}"{% endfor %}
+  >{{ value or '' }}</textarea>
+  {% if description %}<p class="mp-field__description">{{ description }}</p>{% endif %}
+</div>
+{% else %}
+<textarea
+  id="{{ id }}"
+  name="{{ input_name }}"
+  class="mp-textarea{% if class_ %} {{ class_ }}{% endif %}"
+  rows="{{ rows }}"
+  {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+  {% if disabled %}disabled{% endif %}
+  {% for key, val in attrs.items() %}{{ key }}="{{ val }}"{% endfor %}
+>{{ value or '' }}</textarea>
+{% endif %}
+{% endmacro %}

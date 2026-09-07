@@ -20,6 +20,20 @@ class WayneRouterTests(unittest.TestCase):
     def setUp(self):
         clear_decision_cache()
 
+    def test_french_most_participants_routes_locally(self):
+        decision = route_question("Quelle est mon activité où j'ai eu le plus de participants?")
+        self.assertEqual("activity_registration_summary", decision.skill)
+        self.assertEqual({"mode": "top"}, decision.arguments)
+        self.assertEqual("fr", decision.language)
+        self.assertEqual("local", decision.source)
+
+    def test_french_most_passports_created_routes_locally(self):
+        decision = route_question("Quel est mon activité où j'ai lu le plus de passeports créés?")
+        self.assertEqual("passport_sales_summary", decision.skill)
+        self.assertEqual({"mode": "top"}, decision.arguments)
+        self.assertEqual("fr", decision.language)
+        self.assertEqual("local", decision.source)
+
     @patch("wayne.router.select_skill")
     def test_common_question_does_not_call_openrouter(self, select_skill):
         decision = route_question("How many participants?")

@@ -204,6 +204,8 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
         return RouteDecision(status="skill", language=language, skill="low_credit_passports", arguments=low_args)
 
     if "passport" in q or "passeport" in q:
+        if any(term in q for term in ("most", "le plus", "plus de")) and any(term in q for term in ("created", "crees", "cree", "vendus", "vendu", "sold")):
+            return RouteDecision(status="skill", language=language, skill="passport_sales_summary", arguments={"mode": "top", **time_args})
         if any(term in q for term in ("sold", "sell", "sales", "vendu", "vente", "se vend")):
             return RouteDecision(status="skill", language=language, skill="passport_sales_summary", arguments={**args, **time_args})
         if any(term in q for term in ("never been used", "never used", "jamais ete utilise", "jamais utilise", "jamais servi")):
@@ -228,6 +230,8 @@ def _local_decision(question: str, language: str) -> RouteDecision | None:
             return RouteDecision(status="skill", language=language, skill="count_signups", arguments={**args, **time_args})
         if any(term in q for term in ("who", "list", "show", "new", "qui", "liste", "nouvelles")):
             return RouteDecision(status="skill", language=language, skill="list_signups", arguments={**args, **time_args})
+    if participant_question and any(term in q for term in ("most", "le plus", "la plus")):
+        return RouteDecision(status="skill", language=language, skill="activity_registration_summary", arguments={"mode": "top", **time_args})
     if participant_question and count:
         return RouteDecision(status="skill", language=language, skill="count_participants", arguments={**args, **time_args})
 

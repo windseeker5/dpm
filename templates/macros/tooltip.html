@@ -1,0 +1,28 @@
+{#
+  Tooltip, ported from KDUI (flask-shadcn-starter). Pure CSS — the wrapper
+  span's data-mp-tooltip attribute is rendered as the tooltip body via
+  ::before { content: attr(...) } (see static/css/mp-components.css). No JS.
+  Keep content as plain text; for richer HTML content this isn't the right
+  component.
+
+  Usage:
+    {% from 'macros/tooltip.html' import tooltip %}
+    {% call tooltip(content="Delete") %}
+      {{ button("", variant="ghost", size="icon", icon="ti-trash") }}
+    {% endcall %}
+
+  Parameters:
+    - content: plain-text tooltip body
+    - side: top (default) | bottom | left | right
+    - class_: extra classes for the wrapper span
+    - attrs: dict of extra attributes for the wrapper span
+#}
+
+{% macro tooltip(content=None, side='top', class_='', attrs={}) %}
+<span
+  class="mp-tooltip-wrap{% if class_ %} {{ class_ }}{% endif %}"
+  {% if content is not none %}data-mp-tooltip="{{ content }}"{% endif %}
+  data-side="{{ side }}"
+  {% for key, value in attrs.items() %}{{ key }}="{{ value }}"{% endfor %}
+>{% if caller is defined %}{{ caller() }}{% endif %}</span>
+{% endmacro %}

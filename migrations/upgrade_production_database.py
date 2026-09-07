@@ -3652,6 +3652,21 @@ def task47_drop_legacy_chat_tables(cursor):
     return True
 
 
+def task48_add_user_autocomplete_index(cursor):
+    """Index customer names for bounded, case-insensitive autocomplete searches."""
+    log("🔎", "TASK 48: Adding customer autocomplete index", Colors.BLUE)
+
+    if not check_table_exists(cursor, "user"):
+        log("⏭️ ", "  user table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS ix_user_name_nocase ON user (name COLLATE NOCASE)"
+    )
+    log("✅", "  Customer autocomplete index is ready", Colors.GREEN)
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -3719,6 +3734,7 @@ def main():
         ("Clear Unmodified Email Copy", task45_clear_unmodified_email_copy),
         ("Consolidate Admin Message", task46_consolidate_admin_message),
         ("Remove Legacy Chat Tables", task47_drop_legacy_chat_tables),
+        ("Customer Autocomplete Index", task48_add_user_autocomplete_index),
     ]
 
     completed = 0
