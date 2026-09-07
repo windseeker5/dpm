@@ -13,6 +13,13 @@
         narrow (<768px):  collapsed to just the icon; clicking it replaces
                  the tab row entirely with a full-width input; clearing/
                  closing restores the tabs.
+      A page filtering/searching via real navigation (a <form method="get">
+      wrapping this, like every live caller today) gets scroll-position
+      preservation across the resulting reload for free — see
+      macros/filter_tabs.html's doc comment (static/js/mp-scroll-restore.js,
+      loaded globally, handles both the tab clicks and this form's submit).
+      Nothing to add here; it's automatic as long as the search input sits
+      inside a real <form>, same as the Usage example below.
     - table_desktop() / table_mobile(): two distinct macros for the row
       list itself, same reasoning as kpi_card_desktop()/kpi_card_mobile()
       (macros/kpi_card.html) — table_mobile() is a real card list, not a

@@ -58,6 +58,21 @@
 
 {% block content %}
 {% from 'macros/buttons.html' import button %}
+{% from 'macros/badge.html' import badge %}
+{% from 'macros/avatar.html' import avatar_initials, avatar_group %}
+{% from 'macros/progress.html' import progress %}
+{% from 'macros/skeleton.html' import skeleton %}
+{% from 'macros/breadcrumb.html' import breadcrumb %}
+{% from 'macros/kbd.html' import kbd, kbd_combo %}
+{% from 'macros/input.html' import text_input %}
+{% from 'macros/switch.html' import switch %}
+{% from 'macros/checkbox.html' import checkbox %}
+{% from 'macros/radio.html' import radio_group %}
+{% from 'macros/textarea.html' import textarea %}
+{% from 'macros/tooltip.html' import tooltip %}
+{% from 'macros/accordion.html' import accordion %}
+{% from 'macros/button_group.html' import button_group %}
+{% from 'macros/alert_dialog.html' import alert_dialog %}
 {% from 'macros/action_menu.html' import action_menu %}
 {% from 'macros/filter_tabs.html' import filter_tabs %}
 {% from 'macros/settings_nav.html' import settings_nav %}
@@ -138,6 +153,400 @@
         </div>
       </div>
 
+      <div class="card mb-4" id="badge">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Badge</h3>
+            <div class="text-muted small mt-1">Small status/label pill, ported from KDUI. Separate from the raw Tabler <code>badge bg-*-lt</code> spans still used inline elsewhere (e.g. the Data Table below) — use this on pages being redesigned onto the mp-* system.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {{ badge("Default") }}
+            {{ badge("Secondary", variant="secondary") }}
+            {{ badge("Destructive", variant="destructive") }}
+            {{ badge("Outline", variant="outline") }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/badge.html' import badge %}
+
+{{ badge("Paid") }}
+{{ badge("Draft", variant="secondary") }}
+{{ badge("Overdue", variant="destructive") }}
+{{ badge("Archived", variant="outline") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="avatar-group">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Avatar Group</h3>
+            <div class="text-muted small mt-1">Stacked Avatar (Initials) circles with a "+N" overflow bubble — built on the existing avatar_initials() macro, same deterministic colors, no new palette.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {{ avatar_group(names=["Samuel Gendreau", "Marco Henry", "Ken Dresdell", "Jean Martin Morin", "Marie Tremblay"], max=3) }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/avatar.html' import avatar_group %}
+
+{{ avatar_group(names=recent_signups | map(attribute='name') | list, max=3) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="progress">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Progress</h3>
+            <div class="text-muted small mt-1">Progress bar. Percent is computed server-side and set as an inline width style — no JS.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview" style="flex-direction: column; align-items: stretch;">
+            {{ progress(value=66, label="Upload progress", show_value=true) }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/progress.html' import progress %}
+
+{{ progress(value=passport.uses_remaining, max=passport.uses_total, label="Uses remaining", show_value=true) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="skeleton">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Skeleton</h3>
+            <div class="text-muted small mt-1">Loading placeholder. Width/height are set per instance.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            <div class="d-flex align-items-center gap-3">
+              {{ skeleton(width="2.5rem", height="2.5rem", circle=true) }}
+              <div class="d-flex flex-column gap-2">
+                {{ skeleton(width="200px", height="1rem") }}
+                {{ skeleton(width="150px", height="1rem") }}
+              </div>
+            </div>
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/skeleton.html' import skeleton %}
+
+{{ skeleton(width="2.5rem", height="2.5rem", circle=true) }}
+{{ skeleton(width="200px", height="1rem") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="breadcrumb">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Breadcrumb</h3>
+            <div class="text-muted small mt-1">Page-location trail. Uses Tabler's own icon font for the separator.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {{ breadcrumb(items=[
+              {"label": "Dashboard", "url": "#"},
+              {"label": "Passports", "url": "#"},
+              {"label": "MP-fcd275d8b0c1", "current": true}
+            ]) }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/breadcrumb.html' import breadcrumb %}
+
+{{ breadcrumb(items=[
+  {"label": "Dashboard", "url": url_for('dashboard')},
+  {"label": "Passports", "url": url_for('list_passports')},
+  {"label": passport.pass_code, "current": true}
+]) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="kbd">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">KBD</h3>
+            <div class="text-muted small mt-1">Keyboard key / shortcut hint.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {{ kbd_combo(["Ctrl", "K"]) }}
+            <span class="d-inline-flex align-items-center gap-1">{{ kbd("⌘") }}{{ kbd("Shift") }}{{ kbd("P") }}</span>
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/kbd.html' import kbd, kbd_combo %}
+
+{{ kbd_combo(["Ctrl", "K"]) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="input">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Input / Field</h3>
+            <div class="text-muted small mt-1">Text input with optional label/description, sharing the same field shell as Switch, Checkbox, Radio Group and Textarea below.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview" style="align-items: flex-start;">
+            <div style="width: 260px;">{{ text_input(id="sg-search", label="Search", placeholder="Search passports…") }}</div>
+            <div style="width: 260px;">{{ text_input(id="sg-email", label="Email", type="email", description="We'll only use this to send the pass.") }}</div>
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/input.html' import text_input %}
+
+{{ text_input(id="email", label="Email", type="email", name="email", value=user.email) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="switch">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Switch</h3>
+            <div class="text-muted small mt-1">Native checkbox styled as a toggle — pure CSS :checked state, no JS.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
+            {{ switch(id="sg-notify-email", label="Email notifications") }}
+            {{ switch(id="sg-notify-sms", label="SMS reminders", description="Sent 24h before the event.", checked=true) }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/switch.html' import switch %}
+
+{{ switch(id="notify-sms", name="notify_sms", label="SMS reminders", checked=user.notify_sms) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="checkbox">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Checkbox</h3>
+            <div class="text-muted small mt-1">Standard checkbox, appearance:none with a CSS-drawn checkmark.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
+            {{ checkbox(id="sg-terms", label="Accept terms and conditions") }}
+            {{ checkbox(id="sg-newsletter", label="Email me weekly updates", description="You can unsubscribe anytime.", checked=true) }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/checkbox.html' import checkbox %}
+
+{{ checkbox(id="terms", name="terms", label="Accept terms and conditions") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="radio-group">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Radio Group</h3>
+            <div class="text-muted small mt-1">Mutually-exclusive option list with optional per-option description.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {{ radio_group(name="sg-pass-type", label="Choose a pass type", options=[
+              {"value": "single", "label": "Single entry", "description": "One redemption."},
+              {"value": "season", "label": "Season pass", "description": "Unlimited entries for the season."}
+            ], selected="season") }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/radio.html' import radio_group %}
+
+{{ radio_group(name="pass_type", label="Choose a pass type", options=[
+  {"value": "single", "label": "Single entry"},
+  {"value": "season", "label": "Season pass"}
+], selected=activity.default_pass_type) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="textarea">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Textarea</h3>
+            <div class="text-muted small mt-1">Multi-line text field, same field shell and focus ring as Input.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            <div style="width: 320px;">{{ textarea(id="sg-message", label="Message", description="Shown to the customer on their receipt.", placeholder="Type a message…") }}</div>
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/textarea.html' import textarea %}
+
+{{ textarea(id="message", label="Message", placeholder="Type a message…") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="tooltip">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Tooltip</h3>
+            <div class="text-muted small mt-1">Pure CSS hover hint via attr()-content — no JS, no library. Keep content as plain text.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {% call tooltip(content="This can't be undone") %}{{ button("Delete", variant="destructive", size="sm") }}{% endcall %}
+            {% call tooltip(content="Shown below the trigger", side="bottom") %}{{ button("Hover me", variant="outline", size="sm") }}{% endcall %}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/tooltip.html' import tooltip %}
+
+{% call tooltip(content="This can't be undone") %}
+  {{ button("Delete", variant="destructive", size="sm") }}
+{% endcall %}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="accordion">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Accordion</h3>
+            <div class="text-muted small mt-1">Native &lt;details&gt;/&lt;summary&gt; — each item toggles independently.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview" style="display: block;">
+            {{ accordion(items=[
+              {"title": "How do I redeem a pass?", "content": "Scan the QR code at check-in."},
+              {"title": "Can I get a refund?", "content": "Refunds are available up to 48h before the event.", "open": true},
+              {"title": "How do I contact support?", "content": "Email support@minipass.me."}
+            ]) }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/accordion.html' import accordion %}
+
+{{ accordion(items=[
+  {"title": "How do I redeem a pass?", "content": "Scan the QR code at check-in."},
+  {"title": "Can I get a refund?", "content": "Refunds are available up to 48h before the event."}
+]) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="button-group">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Button Group</h3>
+            <div class="text-muted small mt-1">Fuses adjacent buttons.html buttons into one control — shared border, no doubled edges.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {{ button_group(buttons=[
+              {"text": "Day", "variant": "outline"},
+              {"text": "Week", "variant": "outline"},
+              {"text": "Month", "variant": "outline"}
+            ], aria_label="View range") }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/button_group.html' import button_group %}
+
+{{ button_group(buttons=[
+  {"text": "Day", "variant": "outline"},
+  {"text": "Week", "variant": "outline"},
+  {"text": "Month", "variant": "outline"}
+], aria_label="View range") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="alert-dialog">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Alert Dialog</h3>
+            <div class="text-muted small mt-1">Confirm-before-destructive-action modal. Uses the native &lt;dialog&gt; element's own showModal()/close() API — no JS file, no library.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {{ alert_dialog(
+              id="sg-delete-dialog",
+              trigger_text="Delete Passport",
+              trigger_variant="destructive",
+              title="Delete this passport?",
+              description="This action cannot be undone.",
+              confirm_label="Delete",
+              confirm_variant="destructive"
+            ) }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/alert_dialog.html' import alert_dialog %}
+
+{{ alert_dialog(
+  id="delete-passport-" ~ passport.id,
+  trigger_text="Delete",
+  trigger_variant="destructive",
+  title="Delete this passport?",
+  description="This action cannot be undone.",
+  confirm_label="Delete",
+  confirm_variant="destructive",
+  confirm_href=url_for('delete_passport', passport_id=passport.id)
+) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="theme-switcher">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Theme Switcher</h3>
+            <div class="text-muted small mt-1">Demo only — MiniPass has no site-wide dark mode today. This shows the light/dark toggle interaction pattern scoped to its own preview box; a real global dark mode is future work, not part of this component.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview">
+            <div class="mp-theme-demo" id="sg-theme-demo" data-theme="light">
+              <span>Preview surface</span>
+              <button type="button" class="mp-btn" data-variant="outline" data-size="icon-sm" aria-label="Toggle theme" onclick="var el=document.getElementById('sg-theme-demo'); el.setAttribute('data-theme', el.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');">
+                <i class="ti ti-moon"></i>
+              </button>
+            </div>
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}&lt;div class="mp-theme-demo" data-theme="light"&gt;
+  ...
+  &lt;button type="button" class="mp-btn" data-variant="outline" data-size="icon-sm" onclick="..."&gt;
+    &lt;i class="ti ti-moon"&gt;&lt;/i&gt;
+  &lt;/button&gt;
+&lt;/div&gt;{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
       <div class="card mb-4">
         <div class="card-header">
           <div>
@@ -172,7 +581,7 @@
         <div class="card-header">
           <div>
             <h3 class="card-title mb-0">Filter Tabs</h3>
-            <div class="text-muted small mt-1">Segmented filter control for table/list pages. Not yet wired into any real page — see AGENTS.md rule 13. Also used inside the Data Table component's toolbar below.</div>
+            <div class="text-muted small mt-1">Segmented filter control for table/list pages, matched to GitHub's Preview/Code/Blame file-view tabs (track, active pill, hairline separators, sliding indicator). Used inside the Data Table component's toolbar below, and live on the Dashboard's History section. Scroll position across a real tab click's page reload is preserved automatically (static/js/mp-scroll-restore.js, loaded globally) — nothing to wire up per page.</div>
           </div>
         </div>
         <div class="card-body">
@@ -285,7 +694,7 @@
           <div>
             <h3 class="card-title mb-0">Pagination</h3>
             <div class="text-muted small mt-1">
-              Desktop keeps numbered pages + prev/next (structurally unchanged from today, just restyled). Mobile drops individual page-number buttons entirely — "‹ Page 2 of 5 ›" with large tap targets instead. The current-page indicator uses <code>--mp-brand-primary</code>, ready for the planned per-tenant branding color. Not yet wired into any real page.
+              Desktop keeps numbered pages + prev/next (structurally unchanged from today, just restyled). Mobile drops individual page-number buttons entirely — "‹ Page 2 of 5 ›" with large tap targets instead. The current-page indicator uses <code>--mp-brand-primary</code>, ready for the planned per-tenant branding color. Live on the Dashboard's History section. Scroll position across a page-link reload is preserved automatically (static/js/mp-scroll-restore.js, loaded globally) — nothing to wire up per page.
             </div>
           </div>
         </div>
@@ -332,7 +741,7 @@
           <div>
             <h3 class="card-title mb-0">Data Table</h3>
             <div class="text-muted small mt-1">
-              The shared shape behind the Passports/Sign-ups/Activities list pages: a toolbar (filter tabs centered, search icon collapsed to the left — expands inline on desktop, replaces the tabs entirely on mobile), <code>table_desktop()</code>/<code>table_mobile()</code> for the row list, and <code>table_empty_state()</code> for when there's nothing to show. Not yet wired into any real page — same status as Filter Tabs above.
+              The shared shape behind the Passports/Sign-ups/Activities list pages: a toolbar (filter tabs centered, search icon collapsed to the left — expands inline on desktop, replaces the tabs entirely on mobile), <code>table_desktop()</code>/<code>table_mobile()</code> for the row list, and <code>table_empty_state()</code> for when there's nothing to show. Live on the Dashboard's History section (Passports/Sign-ups/Activities themselves still hand-roll the old version as of this writing). Wrap the toolbar in a real <code>&lt;form method="get"&gt;</code> and scroll position across a filter/search reload is preserved automatically — see Filter Tabs above.
             </div>
           </div>
         </div>
@@ -487,13 +896,18 @@
   // Demo-only: the real filter_tabs() macro renders real <a href> links whose
   // "active" state comes from the current URL's query string (server-side),
   // not from JS. This page's tabs point at "#" since there's no real filtered
-  // list behind them, so this just fakes the active-state toggle for the demo.
+  // list behind them, so this just fakes the active-state toggle for the demo
+  // — which is also the only place the sliding indicator (mp-filter-tabs.js)
+  // actually animates a slide: a real page navigates on click instead, so
+  // there's no "from" state within that page load to animate from.
   document.querySelectorAll('.mp-filter-tabs a.mp-filter-btn').forEach(function (tab) {
     if (tab.getAttribute('href') !== '#') return;
     tab.addEventListener('click', function (e) {
       e.preventDefault();
-      tab.parentElement.querySelectorAll('.mp-filter-btn').forEach(function (t) { t.classList.remove('active'); });
+      var root = tab.parentElement;
+      root.querySelectorAll('.mp-filter-btn').forEach(function (t) { t.classList.remove('active'); });
       tab.classList.add('active');
+      if (window.mpFilterTabs) window.mpFilterTabs.reposition(root);
     });
   });
 

@@ -1,0 +1,23 @@
+{#
+  Skeleton loading placeholder, ported from KDUI (flask-shadcn-starter).
+
+  Usage:
+    {% from 'macros/skeleton.html' import skeleton %}
+    {{ skeleton(width="250px", height="1rem") }}
+    {{ skeleton(width="2.5rem", height="2.5rem", circle=true) }}
+
+  Parameters:
+    - width: CSS width (e.g. "250px", "100%")
+    - height: CSS height (e.g. "1rem", "2.5rem")
+    - circle: fully round it
+    - class_: extra classes
+    - attrs: dict of extra attributes
+#}
+
+{% macro skeleton(width="100%", height="1rem", circle=False, class_='', attrs={}) %}
+<div
+  class="mp-skeleton{% if circle %} mp-skeleton--circle{% endif %}{% if class_ %} {{ class_ }}{% endif %}"
+  style="width: {{ width }}; height: {{ height }};"
+  {% for key, value in attrs.items() %}{{ key }}="{{ value }}"{% endfor %}
+></div>
+{% endmacro %}

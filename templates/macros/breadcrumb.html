@@ -1,0 +1,40 @@
+{#
+  Breadcrumb navigation, ported from KDUI (flask-shadcn-starter). Uses
+  Tabler's own icon font (ti-chevron-right) for the separator instead of an
+  inline SVG, since tabler-icons is already loaded globally.
+
+  Usage:
+    {% from 'macros/breadcrumb.html' import breadcrumb %}
+    {{ breadcrumb(items=[
+      {"label": "Home", "url": url_for('dashboard')},
+      {"label": "Passports", "url": url_for('list_passports')},
+      {"label": "MP-fcd275d8b0c1", "current": true}
+    ]) }}
+
+  Parameters:
+    - items: list of {label, url (optional), current (bool, optional)}
+    - aria_label: accessible label for the nav element (default "Breadcrumb")
+    - class_: extra classes for the nav element
+    - attrs: dict of extra attributes for the nav element
+#}
+
+{% macro breadcrumb(items=[], aria_label="Breadcrumb", class_='', attrs={}) %}
+<nav class="mp-breadcrumb{% if class_ %} {{ class_ }}{% endif %}" aria-label="{{ aria_label }}"{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>
+  <ol>
+    {% for item in items %}
+      <li>
+        {% if item.current %}
+          <span aria-current="page">{{ item.label }}</span>
+        {% elif item.url %}
+          <a href="{{ item.url }}">{{ item.label }}</a>
+        {% else %}
+          <span>{{ item.label }}</span>
+        {% endif %}
+      </li>
+      {% if not loop.last %}
+        <li aria-hidden="true"><i class="ti ti-chevron-right"></i></li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+{% endmacro %}

@@ -1,0 +1,25 @@
+{#
+  Badge — small status/label pill, ported from KDUI (flask-shadcn-starter).
+  Separate from the raw Tabler `badge bg-{color}-lt` spans still used inline
+  across the app (e.g. data_table.html row cells) — this is the newer
+  shadcn-style pill for pages being redesigned onto the mp-* system. Both
+  will coexist until those pages migrate; do not rename either one to
+  "unify" them without doing that migration first.
+
+  Usage:
+    {% from 'macros/badge.html' import badge %}
+    {{ badge("Default") }}
+    {{ badge("Paid", variant="secondary") }}
+    {{ badge("Overdue", variant="destructive") }}
+    {{ badge("Draft", variant="outline") }}
+
+  Parameters:
+    - text: badge label
+    - variant: default (default) | secondary | destructive | outline
+    - class_: extra classes
+    - attrs: dict of extra attributes
+#}
+
+{% macro badge(text, variant="default", class_='', attrs={}) %}
+<span class="mp-badge{% if class_ %} {{ class_ }}{% endif %}" data-variant="{{ variant }}"{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>{{ text }}</span>
+{% endmacro %}

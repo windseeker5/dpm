@@ -1,0 +1,39 @@
+{#
+  Checkbox, ported from KDUI (flask-shadcn-starter).
+
+  Usage:
+    {% from 'macros/checkbox.html' import checkbox %}
+    {{ checkbox(id="terms", label="Accept terms and conditions") }}
+    {{ checkbox(id="newsletter", label="Email me weekly updates", description="You can unsubscribe anytime.", checked=true) }}
+
+  Parameters:
+    - id: input id
+    - name: input name; defaults to id
+    - label: label text
+    - description: optional helper text below the label
+    - checked: default False
+    - disabled: default False
+    - class_: extra classes for the wrapper
+    - attrs: dict of extra attributes for the input
+#}
+
+{% macro checkbox(id, name=None, label=None, description=None, checked=False, disabled=False, class_='', attrs={}) %}
+{% set input_name = name or id %}
+<div class="mp-field" data-orientation="horizontal"{% if class_ %} {{ class_ }}{% endif %}>
+  <input
+    type="checkbox"
+    id="{{ id }}"
+    name="{{ input_name }}"
+    class="mp-checkbox"
+    {% if checked %}checked{% endif %}
+    {% if disabled %}disabled{% endif %}
+    {% for key, value in attrs.items() %}{{ key }}="{{ value }}"{% endfor %}
+  />
+  {% if label or description %}
+  <div>
+    {% if label %}<label class="mp-label" for="{{ id }}">{{ label }}</label>{% endif %}
+    {% if description %}<p class="mp-field__description">{{ description }}</p>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

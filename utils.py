@@ -1827,30 +1827,29 @@ def get_kpi_data(activity_id=None, period='7d'):
             current_start = now - timedelta(days=7)
             prev_start = now - timedelta(days=14)
             prev_end = now - timedelta(days=7)
-            trend_days = 7
         elif period == '30d':
             current_start = now - timedelta(days=30)
             prev_start = now - timedelta(days=60)
             prev_end = now - timedelta(days=30)
-            trend_days = 30
         elif period == '90d':
             current_start = now - timedelta(days=90)
             prev_start = now - timedelta(days=180)
             prev_end = now - timedelta(days=90)
-            trend_days = 30  # Show last 30 days for trend
         elif period == 'fy':
             # Fiscal year period
             current_start, current_end_fy = get_fiscal_year_range()
-            # Get previous fiscal year for comparison
+            # Compare to the *same elapsed portion* of the previous fiscal
+            # year, not its full 12 months — otherwise a partial current FY
+            # (e.g. 8 months in) gets compared against a full prior FY (12
+            # months), which is not an equal-length "period vs period"
+            # comparison and skews the % change misleadingly negative.
             prev_fy_start, prev_fy_end = get_fiscal_year_range(current_start - timedelta(days=1))
             prev_start = prev_fy_start
-            prev_end = prev_fy_end
-            trend_days = 30  # Show last 30 days for trend
+            prev_end = min(prev_fy_start + (now - current_start), prev_fy_end)
         elif period == 'all':
             current_start = datetime.min.replace(tzinfo=timezone.utc)
             prev_start = None  # No comparison for 'all'
             prev_end = None
-            trend_days = 30  # Show last 30 days for trend
         else:
             raise ValueError(f"Invalid period: {period}")
             
@@ -2032,10 +2031,85 @@ def get_kpi_data(activity_id=None, period='7d'):
             prev_passports_redeemed = None
             passports_redeemed_change = None
 
-        # Build trend data (optimized - single query with grouping)
-        def build_trend(days):
-            trend_start = now - timedelta(days=days)
-            
+        # Trend window + granularity: the sparkline on each KPI card should
+        # cover the same span the period represents, not always "last 30
+        # days" — otherwise 90d/fy/all render an identical chart that has
+        # no relation to their (much larger) totals. Longer spans use a
+        # coarser bucket so the bar count stays readable.
+        if period == '7d':
+            trend_window_start = now - timedelta(days=6)  # 7 buckets incl. today
+            trend_granularity = 'day'
+        elif period == '30d':
+            trend_window_start = now - timedelta(days=29)  # 30 buckets incl. today
+            trend_granularity = 'day'
+        elif period == '90d':
+            trend_window_start = now - timedelta(days=90)
+            trend_granularity = 'week'
+        elif period == 'fy':
+            trend_window_start = current_start  # fiscal year start
+            trend_granularity = 'month'
+        else:  # 'all'
+            trend_granularity = 'month'
+            earliest_candidates = []
+            passport_min = get_base_passport_query().with_entities(func.min(Passport.created_dt)).scalar()
+            if passport_min:
+                earliest_candidates.append(passport_min)
+            income_min = get_base_income_query().with_entities(func.min(Income.date)).scalar()
+            if income_min:
+                earliest_candidates.append(income_min)
+            redemption_min_query = db.session.query(func.min(Redemption.date_used)).join(Passport)
+            if activity_id:
+                redemption_min_query = redemption_min_query.filter(Passport.activity_id == activity_id)
+            redemption_min = redemption_min_query.scalar()
+            if redemption_min:
+                earliest_candidates.append(redemption_min)
+
+            trend_window_start = min(earliest_candidates) if earliest_candidates else (now - timedelta(days=365))
+            if trend_window_start.tzinfo is None:
+                trend_window_start = trend_window_start.replace(tzinfo=timezone.utc)
+
+        def bucket_key(d, granularity):
+            """Group key for a date, coarsened to the given granularity."""
+            if granularity == 'day':
+                return d.isoformat()
+            elif granularity == 'week':
+                iso_year, iso_week, _ = d.isocalendar()
+                return f"{iso_year}-W{iso_week:02d}"
+            else:  # 'month'
+                return f"{d.year:04d}-{d.month:02d}"
+
+        def bucket_sequence(window_start_dt, end_dt, granularity):
+            """Ordered list of bucket keys spanning window_start_dt..end_dt inclusive."""
+            start_date = window_start_dt.date()
+            end_date = end_dt.date()
+            keys = []
+            if granularity == 'day':
+                d = start_date
+                while d <= end_date:
+                    keys.append(bucket_key(d, 'day'))
+                    d += timedelta(days=1)
+            elif granularity == 'week':
+                d = start_date - timedelta(days=start_date.weekday())  # Monday of that week
+                end_key = bucket_key(end_date, 'week')
+                while True:
+                    key = bucket_key(d, 'week')
+                    keys.append(key)
+                    if key == end_key:
+                        break
+                    d += timedelta(days=7)
+            else:  # 'month'
+                year, month = start_date.year, start_date.month
+                while (year, month) <= (end_date.year, end_date.month):
+                    keys.append(f"{year:04d}-{month:02d}")
+                    month += 1
+                    if month > 12:
+                        month = 1
+                        year += 1
+            return keys
+
+        # Build trend data (optimized - single per-day query, then re-bucketed
+        # to the target granularity in Python)
+        def build_trend(window_start, granularity):
             # Single query for passport revenue by day
             passport_daily = db.session.query(
                 func.date(Passport.created_dt).label('day'),
@@ -2044,10 +2118,10 @@ def get_kpi_data(activity_id=None, period='7d'):
             if activity_id:
                 passport_daily = passport_daily.filter(Passport.activity_id == activity_id)
             passport_daily = passport_daily.filter(
-                Passport.created_dt >= trend_start,
+                Passport.created_dt >= window_start,
                 Passport.created_dt <= now
             ).group_by(func.date(Passport.created_dt)).all()
-            
+
             # Single query for income revenue by day
             income_daily = db.session.query(
                 func.date(Income.date).label('day'),
@@ -2056,29 +2130,26 @@ def get_kpi_data(activity_id=None, period='7d'):
             if activity_id:
                 income_daily = income_daily.filter(Income.activity_id == activity_id)
             income_daily = income_daily.filter(
-                Income.date >= trend_start,
+                Income.date >= window_start,
                 Income.date <= now
             ).group_by(func.date(Income.date)).all()
-            
-            # Convert to dictionaries for fast lookup
-            passport_dict = {str(row.day): float(row.revenue or 0) for row in passport_daily}
-            income_dict = {str(row.day): float(row.revenue or 0) for row in income_daily}
-            
-            # Build trend array
-            trend = []
-            for i in reversed(range(days)):
-                day = (now - timedelta(days=i)).date()
-                day_str = str(day)
-                daily_revenue = passport_dict.get(day_str, 0) + income_dict.get(day_str, 0)
-                trend.append(daily_revenue)
-            return trend
-        
-        revenue_trend = build_trend(trend_days)
-        
-        # Build trends for other KPIs (optimized - single query with grouping)
-        def build_count_trend(model, filter_condition, days):
-            trend_start = now - timedelta(days=days)
-            
+
+            # Re-bucket daily rows into the target granularity
+            bucket_totals = {}
+            for row in passport_daily:
+                key = bucket_key(datetime.strptime(str(row.day), '%Y-%m-%d').date(), granularity)
+                bucket_totals[key] = bucket_totals.get(key, 0) + float(row.revenue or 0)
+            for row in income_daily:
+                key = bucket_key(datetime.strptime(str(row.day), '%Y-%m-%d').date(), granularity)
+                bucket_totals[key] = bucket_totals.get(key, 0) + float(row.revenue or 0)
+
+            return [bucket_totals.get(key, 0) for key in bucket_sequence(window_start, now, granularity)]
+
+        revenue_trend = build_trend(trend_window_start, trend_granularity)
+
+        # Build trends for other KPIs (optimized - single per-day query, then
+        # re-bucketed to the target granularity in Python)
+        def build_count_trend(model, filter_condition, window_start, granularity):
             # Determine date column
             date_col = None
             if hasattr(model, 'created_dt'):
@@ -2086,47 +2157,42 @@ def get_kpi_data(activity_id=None, period='7d'):
             elif hasattr(model, 'signed_up_at'):
                 date_col = model.signed_up_at
             else:
-                # Fallback to per-day queries if no date column
-                return [0] * days
-            
+                # Fallback if no date column
+                return [0] * len(bucket_sequence(window_start, now, granularity))
+
             # Single query with grouping
             query = db.session.query(
                 func.date(date_col).label('day'),
                 func.count().label('count')
             )
-            
+
             if activity_id and hasattr(model, 'activity_id'):
                 query = query.filter(model.activity_id == activity_id)
-            
+
             query = query.filter(
-                date_col >= trend_start,
+                date_col >= window_start,
                 date_col <= now
             )
-            
+
             if filter_condition is not None:
                 query = query.filter(filter_condition)
-            
+
             daily_counts = query.group_by(func.date(date_col)).all()
-            
-            # Convert to dictionary for fast lookup
-            count_dict = {str(row.day): row.count for row in daily_counts}
-            
-            # Build trend array
-            trend = []
-            for i in reversed(range(days)):
-                day = (now - timedelta(days=i)).date()
-                day_str = str(day)
-                trend.append(count_dict.get(day_str, 0))
-            return trend
-        
-        active_users_trend = build_count_trend(Passport, None, trend_days)
-        passports_created_trend = build_count_trend(Passport, None, trend_days)
-        unpaid_trend = build_count_trend(Passport, Passport.paid == False, trend_days)
+
+            # Re-bucket daily rows into the target granularity
+            bucket_counts = {}
+            for row in daily_counts:
+                key = bucket_key(datetime.strptime(str(row.day), '%Y-%m-%d').date(), granularity)
+                bucket_counts[key] = bucket_counts.get(key, 0) + row.count
+
+            return [bucket_counts.get(key, 0) for key in bucket_sequence(window_start, now, granularity)]
+
+        active_users_trend = build_count_trend(Passport, None, trend_window_start, trend_granularity)
+        passports_created_trend = build_count_trend(Passport, None, trend_window_start, trend_granularity)
+        unpaid_trend = build_count_trend(Passport, Passport.paid == False, trend_window_start, trend_granularity)
 
         # Build redemptions trend (requires join with Passport for activity filtering)
-        def build_redemptions_trend(days):
-            trend_start = now - timedelta(days=days)
-
+        def build_redemptions_trend(window_start, granularity):
             query = db.session.query(
                 func.date(Redemption.date_used).label('day'),
                 func.count().label('count')
@@ -2136,24 +2202,21 @@ def get_kpi_data(activity_id=None, period='7d'):
                 query = query.filter(Passport.activity_id == activity_id)
 
             query = query.filter(
-                Redemption.date_used >= trend_start,
+                Redemption.date_used >= window_start,
                 Redemption.date_used <= now
             )
 
             daily_counts = query.group_by(func.date(Redemption.date_used)).all()
 
-            # Convert to dictionary for fast lookup
-            count_dict = {str(row.day): row.count for row in daily_counts}
+            # Re-bucket daily rows into the target granularity
+            bucket_counts = {}
+            for row in daily_counts:
+                key = bucket_key(datetime.strptime(str(row.day), '%Y-%m-%d').date(), granularity)
+                bucket_counts[key] = bucket_counts.get(key, 0) + row.count
 
-            # Build trend array
-            trend = []
-            for i in reversed(range(days)):
-                day = (now - timedelta(days=i)).date()
-                day_str = str(day)
-                trend.append(count_dict.get(day_str, 0))
-            return trend
+            return [bucket_counts.get(key, 0) for key in bucket_sequence(window_start, now, granularity)]
 
-        passports_redeemed_trend = build_redemptions_trend(trend_days)
+        passports_redeemed_trend = build_redemptions_trend(trend_window_start, trend_granularity)
 
         return {
             'revenue': {

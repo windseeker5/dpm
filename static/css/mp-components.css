@@ -397,36 +397,104 @@
 }
 
 /*
-  Filter Tabs — same segmented-control pattern as the old .github-filter-*
-  classes (static/css/filter-component.css), rebuilt on the --mp-* tokens
-  so it matches Button/Action Menu instead of GitHub's old blue-tinted
-  Primer palette (#f6f8fa/#d1d5da/#24292e/#0969da focus ring). Namespaced
-  .mp-filter-* — .github-filter-* is untouched and still used by the 9
-  live pages that hand-roll it; this is a separate, not-yet-adopted class
-  family, same reasoning as .mp-btn vs .btn.
+  Filter Tabs — GitHub's file-view segmented control (Preview/Code/Blame).
+  Verified against the live github.com DOM two ways: computed styles for
+  layout/typography, and — because the active pill's own background/border
+  read back as fully transparent from getComputedStyle no matter which
+  element in the tree was checked, seemingly a CSS Modules scoping quirk
+  that keeps the actual rule out of reach of introspection — cross-checking
+  against Primer's own source custom properties instead, which resolve
+  correctly even when the rule using them doesn't:
+    --controlKnob-bgColor-rest:            #fff      (active pill background)
+    --controlKnob-borderColor-rest:        #d1d9e0   (active pill border — a
+                                                       full ring, not just a
+                                                       bottom hairline: this
+                                                       app's earlier version
+                                                       of this component only
+                                                       had the hairline, which
+                                                       is the "no border"
+                                                       complaint this fixed)
+  plus direct pixel sampling of a screenshot, which confirmed both the pill
+  and the fact that inactive-tab text renders visibly lighter than active —
+  contradicting a same-weight/same-color reading computed styles gave for
+  the text too. Given getComputedStyle was demonstrably unreliable for the
+  background/border on this component, the font-weight/color split below
+  (600/foreground active, 400/muted-foreground inactive) follows that pixel
+  evidence rather than the text computed-style reading.
+
+  Colors are still --mp-* tokens (not GitHub's literal hex), matching
+  Button/Action Menu instead of GitHub's own Primer palette — they land
+  within a couple RGB points of GitHub's regardless (e.g. --mp-border
+  #dce1e7 vs GitHub's #d1d9e0). Namespaced .mp-filter-* — .github-filter-*
+  (static/css/filter-component.css) is a separate, older, off-system class
+  family still hand-rolled by 9 live pages; not touched here.
+
+  The active pill's border/background use box-shadow (inset ring) rather
+  than the `border` property — with the container's own flush, zero-padding
+  layout (see below), a real `border` would add to the button's box size
+  and either overlap the track's outer 1px border into a doubled line at
+  the two end tabs, or require GitHub's own negative-margin-per-position
+  trick to compensate. An inset box-shadow paints the same ring with zero
+  layout impact, which is simpler here since our tabs are flat <a> siblings
+  rather than GitHub's own <li>-wrapped items (no place to hang a
+  position-dependent margin correction even if we wanted the real property).
+
+  A sliding indicator (.mp-filter-tabs__indicator, positioned by
+  static/js/mp-filter-tabs.js) is layered on top of the static per-button
+  .active styling above — the static styling is what actually renders (no
+  JS dependency, no flash), and the indicator animates a smooth slide when
+  .active moves from one button to another without a page navigation (see
+  style_guide.html's demo). On a real filtered page, where clicking a tab
+  is a normal <a href> navigation, there's no "from" state to animate from
+  within that page load, so the indicator just lands silently in place —
+  the slide is a same-page (SPA-like) enhancement, not something a hard
+  navigation can show.
 */
 .mp-filter-tabs {
   display: inline-flex;
   align-items: center;
+  position: relative;
   background: var(--mp-secondary);
   border: 1px solid var(--mp-border);
   border-radius: var(--mp-radius-md);
   /* padding: 0 (not 2px) is deliberate — with padding, the buttons sit
      inset from the container's own edges, leaving a visible ring of the
      container's background color around the active pill (most obvious
-     along the bottom edge). The old GitHub-Primer version this replaced
-     had zero padding for the same reason: buttons fill the container's
-     full height, so the active pill sits flush against the outer border
-     with no seam. Button radius below matches this container's radius
-     (not radius-2px) for the same reason — with no padding gap, they need
-     to nest at the same radius, not a smaller one. */
+     along the bottom edge). GitHub's own version has zero padding for the
+     same reason: buttons fill the container's full height, so the active
+     pill sits flush against the outer border with no seam. Button radius
+     below matches this container's radius (not radius-2px) for the same
+     reason — with no padding gap, they need to nest at the same radius,
+     not a smaller one. No flex `gap` either — buttons sit flush so each
+     one's ::after separator lands exactly on the shared boundary. */
   padding: 0;
-  gap: 2px;
+}
+
+.mp-filter-tabs__indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: var(--mp-background);
+  box-shadow: inset 0 0 0 1px var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 200ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 150ms ease;
+}
+
+.mp-filter-tabs__indicator.is-ready {
+  opacity: 1;
 }
 
 .mp-filter-btn {
   display: inline-flex;
   align-items: center;
+  position: relative;
+  z-index: 1;
   height: 2rem;
   padding-inline: 0.75rem;
   border: none;
@@ -434,12 +502,49 @@
   background: transparent;
   color: var(--mp-muted-foreground);
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 150ms, color 150ms;
+  transition: color 150ms;
+  /* Every button (not just .active) overlaps the track's own 1px border by
+     exactly 1px on whichever edges it touches — top/bottom always, left on
+     the first button, right on the last. Applied unconditionally rather
+     than only on .active so whichever tab becomes active is already
+     correctly positioned: without this, the active pill's own inset-ring
+     border sits *next to* the track's border instead of on top of it,
+     reading as a 2px-thick edge instead of GitHub's crisp 1px. Harmless on
+     inactive buttons (transparent, nothing to misalign). */
+  margin-block: -1px;
+}
+
+.mp-filter-btn:first-child {
+  margin-left: -1px;
+}
+
+.mp-filter-btn:last-child {
+  margin-right: -1px;
+}
+
+/* One hairline per button, on its trailing edge — cheaper than a separate
+   separator element per gap, and :has() below can reach across it to hide
+   the one belonging to (or following) the active tab, so no seam ever
+   runs against the active pill on either side — same as GitHub's. */
+.mp-filter-btn:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 0.75rem;
+  background: var(--mp-border);
+}
+
+.mp-filter-btn.active::after,
+.mp-filter-btn:has(+ .mp-filter-btn.active)::after {
+  display: none;
 }
 
 .mp-filter-btn:hover {
@@ -460,12 +565,9 @@
 
 .mp-filter-btn.active {
   background: var(--mp-background);
+  box-shadow: inset 0 0 0 1px var(--mp-border);
   color: var(--mp-foreground);
   font-weight: 600;
-  /* Crisp bottom-only hairline (not a soft all-around shadow) — matches
-     the old version's precisely-cut look instead of a softer floating
-     pill. Same idea as the old rgba(27,31,35,0.04), retinted. */
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
 }
 
 .mp-filter-count {
@@ -1002,6 +1104,40 @@
     opacity: 0;
     pointer-events: none;
   }
+  /* A tab set can outgrow the container at narrow widths (e.g. 5+ History
+     filter tabs on a phone) — with justify-content:center on the parent
+     and no overflow handling, the excess renders equally off both edges
+     with no way to scroll to it. padding-left clears the absolutely-
+     positioned search icon (so flex layout never starts tabs under it,
+     whether they end up centered or filling the row), and min-width:0 lets
+     flex-shrink actually clamp .mp-filter-tabs to the remaining width
+     instead of refusing to shrink below its content size — which is what
+     makes overflow-x:auto able to create a real scrollport at all.
+     Deliberately NOT flex-grow:1 — a tab set that already fits (the
+     common case) must stay at its own natural width and stay centered,
+     not get stretched into a big empty box just because it *could* grow. */
+  .mp-table-toolbar {
+    padding-left: 2.25rem;
+  }
+  .mp-filter-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    min-width: 0;
+  }
+  .mp-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  /* filter_tabs()'s optional per-tab hide_on_mobile — a lower-priority tab
+     that's fine to carry on desktop but not worth the width it costs once
+     the toolbar's own container gets this narrow (see that macro's doc
+     comment). Scoped to this same @container block (not a separate
+     viewport @media query) so it tracks the toolbar's actual rendered
+     width, consistent with every other rule here. */
+  .mp-filter-btn[data-hide-narrow] {
+    display: none;
+  }
   .mp-table-toolbar[data-search-open] .mp-filter-tabs {
     display: none;
   }
@@ -1165,10 +1301,21 @@
 
 /*
   Pagination — Desktop (macros/pagination.html's pagination_desktop()).
-  Rounded pill buttons matching .mp-filter-btn's recipe, not Bootstrap's
-  boxy .page-link squares. The current page uses --mp-brand-primary (see
-  its own comment in :root above) — the one place in this component that
-  carries color, marking "you are here."
+  Matched to shadcn/ui's <Pagination> (ui.shadcn.com/docs/components/base/
+  pagination): number buttons are "ghost" by default (transparent, no
+  border, a soft hover fill) and switch to "outline" for the current page
+  (a bordered square, not a solid color fill) — not the filled-pill look
+  this component had before. Previous/Next are ghost buttons with an
+  icon + text label (.mp-page-btn--nav) rather than icon-only squares —
+  safe to always show the label here because pagination_mobile() below is
+  what actually renders under the md breakpoint (see data_table.html's
+  d-none d-md-block / d-md-none split), so this variant never has to
+  survive on a narrow screen itself.
+
+  The current page uses a plain --mp-border/--mp-foreground outline,
+  matching shadcn's own neutral gray exactly (an earlier version of this
+  tried keeping --mp-brand-primary as the border/text color instead — user
+  feedback: too colorful, wanted the light gray shadcn actually uses).
 */
 .mp-pagination {
   display: flex;
@@ -1180,14 +1327,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2rem;
-  height: 2rem;
-  padding-inline: 0.375rem;
-  border: 1px solid var(--mp-border);
+  gap: 0.375rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding-inline: 0.5rem;
+  border: 1px solid transparent;
   border-radius: var(--mp-radius-md);
-  background: var(--mp-background);
+  background: transparent;
   color: var(--mp-foreground);
   font-size: 0.875rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   text-decoration: none;
   cursor: pointer;
@@ -1198,7 +1347,8 @@ a.mp-page-btn:hover {
   /* Beats Tabler's a:hover{text-decoration:underline} — same fix
      .mp-filter-btn:hover already needed, just missed here initially. */
   text-decoration: none;
-  background: var(--mp-muted);
+  background: var(--mp-accent);
+  color: var(--mp-accent-foreground);
 }
 
 .mp-page-btn:focus-visible {
@@ -1210,22 +1360,31 @@ a.mp-page-btn:hover {
 .mp-page-btn[aria-disabled="true"] {
   opacity: 0.4;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .mp-page-btn.active {
-  background: var(--mp-brand-primary);
-  border-color: var(--mp-brand-primary);
-  color: #fff;
-  font-weight: 600;
+  border-color: var(--mp-border);
+  background: var(--mp-background);
+  color: var(--mp-foreground);
   cursor: default;
+}
+
+/* Previous/Next — auto-width ghost button with an icon + text label,
+   instead of an icon-only square (see this section's own comment above
+   for why the label can always be shown here). */
+.mp-page-btn--nav {
+  width: auto;
+  min-width: auto;
+  padding-inline: 0.75rem;
 }
 
 .mp-page-ellipsis {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2rem;
-  height: 2rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
   color: var(--mp-muted-foreground);
   font-size: 0.875rem;
 }
@@ -1267,4 +1426,682 @@ a.mp-page-btn:hover {
 .mp-pagination-mobile__label strong {
   color: var(--mp-brand-primary);
   font-weight: 600;
+}
+
+/*
+  Badge — port of KDUI's badge()/.badge component. Namespaced .mp-badge, not
+  .badge — Tabler already owns .badge globally (the bg-{color}-lt spans used
+  everywhere today, e.g. data_table.html row cells). Both coexist: .mp-badge
+  is the shadcn-style pill for pages redesigned onto the mp-* system; the
+  raw Tabler badges are unchanged until those pages migrate.
+*/
+.mp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: fit-content;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+.mp-badge:not([data-variant]),
+.mp-badge[data-variant="default"] {
+  background: var(--mp-primary);
+  color: var(--mp-primary-foreground);
+}
+
+.mp-badge[data-variant="secondary"] {
+  background: var(--mp-secondary);
+  color: var(--mp-secondary-foreground);
+}
+
+.mp-badge[data-variant="destructive"] {
+  background: color-mix(in oklch, var(--mp-destructive) 10%, transparent);
+  color: var(--mp-destructive);
+}
+
+.mp-badge[data-variant="outline"] {
+  background: transparent;
+  border-color: var(--mp-border);
+  color: var(--mp-foreground);
+}
+
+/*
+  Progress — port of KDUI's progress(). Percent width is computed
+  server-side in the macro and set as an inline style — no JS.
+*/
+.mp-progress-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.mp-progress-label-row output {
+  margin-left: auto;
+  color: var(--mp-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-progress {
+  display: block;
+  width: 100%;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--mp-muted);
+}
+
+.mp-progress__bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mp-brand-primary);
+  transition: width 300ms ease;
+}
+
+/*
+  Skeleton — port of KDUI's skeleton(). Pulse animation only; width/height
+  are set inline per-instance by the macro.
+*/
+@keyframes mp-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.mp-skeleton {
+  display: block;
+  border-radius: var(--mp-radius-sm);
+  background: var(--mp-muted);
+  animation: mp-skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.mp-skeleton--circle {
+  border-radius: 50%;
+}
+
+/*
+  Breadcrumb — port of KDUI's breadcrumb(). Uses Tabler's own icon font
+  (ti-chevron-right) for the separator instead of an inline SVG.
+*/
+.mp-breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.mp-breadcrumb li {
+  display: inline-flex;
+  align-items: center;
+  color: var(--mp-muted-foreground);
+}
+
+.mp-breadcrumb a {
+  color: var(--mp-muted-foreground);
+  text-decoration: none;
+}
+
+.mp-breadcrumb a:hover {
+  color: var(--mp-foreground);
+  text-decoration: underline;
+}
+
+.mp-breadcrumb [aria-current="page"] {
+  color: var(--mp-foreground);
+  font-weight: 500;
+}
+
+.mp-breadcrumb li[aria-hidden="true"] {
+  display: inline-flex;
+  align-items: center;
+  color: var(--mp-border);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/*
+  KBD — port of KDUI's kbd()/kbd_combo().
+*/
+.mp-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding-inline: 0.375rem;
+  border-radius: var(--mp-radius-sm);
+  background: var(--mp-muted);
+  color: var(--mp-muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.mp-kbd-combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--mp-muted-foreground);
+}
+
+/*
+  Field shell — shared label/description layout for Input, Switch,
+  Checkbox, Radio Group and Textarea. Vertical stack by default (Input,
+  Textarea); [data-orientation="horizontal"] puts the control first with
+  the label/description block beside it (Switch, Checkbox, Radio Group
+  option rows) — same shape KDUI's own .field wrapper uses.
+*/
+.mp-field {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.mp-field[data-orientation="horizontal"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.mp-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--mp-foreground);
+}
+
+.mp-field__description {
+  margin: 0;
+  color: var(--mp-muted-foreground);
+  font-size: 0.8125rem;
+}
+
+/*
+  Input / Textarea — port of KDUI's .input/.textarea. Shared border/focus
+  recipe (same focus-visible ring as .mp-btn/.mp-page-btn above).
+*/
+.mp-input,
+.mp-textarea {
+  width: 100%;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-background);
+  padding: 0.375rem 0.625rem;
+  color: var(--mp-foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-family: inherit;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.mp-input::placeholder,
+.mp-textarea::placeholder {
+  color: var(--mp-muted-foreground);
+}
+
+.mp-input:focus-visible,
+.mp-textarea:focus-visible {
+  outline: none;
+  border-color: var(--mp-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-input:disabled,
+.mp-textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.mp-textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+@media (pointer: coarse) {
+  .mp-input {
+    min-height: 44px;
+  }
+}
+
+/*
+  Switch — port of KDUI's switch(). A native input[type=checkbox][role=
+  switch] with appearance:none — the track and thumb (::before) are pure
+  CSS, toggled entirely by :checked. No JS.
+*/
+.mp-switch {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--mp-border);
+  border-radius: 999px;
+  background: var(--mp-muted);
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.mp-switch::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--mp-background);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  transition: transform 150ms;
+}
+
+.mp-switch:checked {
+  background: var(--mp-primary);
+  border-color: var(--mp-primary);
+}
+
+.mp-switch:checked::before {
+  transform: translateX(1rem);
+}
+
+.mp-switch[data-size="sm"] {
+  width: 1.75rem;
+  height: 1rem;
+}
+
+.mp-switch[data-size="sm"]::before {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.mp-switch[data-size="sm"]:checked::before {
+  transform: translateX(0.75rem);
+}
+
+.mp-switch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/*
+  Checkbox — port of KDUI's checkbox(). appearance:none square + a
+  border-rotate checkmark on ::after (no icon asset needed).
+*/
+.mp-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.125rem;
+  border: 1px solid var(--mp-border);
+  border-radius: 4px;
+  background: var(--mp-background);
+  cursor: pointer;
+}
+
+.mp-checkbox:checked {
+  border-color: var(--mp-primary);
+  background: var(--mp-primary);
+}
+
+.mp-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--mp-primary-foreground);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.mp-checkbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/*
+  Radio Group — port of KDUI's radio_group(). appearance:none circle + a
+  filled-dot ::after on :checked.
+*/
+.mp-radio-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mp-radio {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.125rem;
+  border: 1px solid var(--mp-border);
+  border-radius: 50%;
+  background: var(--mp-background);
+  cursor: pointer;
+}
+
+.mp-radio:checked {
+  border-color: var(--mp-primary);
+}
+
+.mp-radio:checked::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--mp-primary);
+}
+
+.mp-radio:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-radio:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/*
+  Tooltip — port of KDUI's tooltip(). Pure CSS attr()-content tooltip via
+  ::before on a [data-mp-tooltip] wrapper span — no JS, no library. Content
+  is set from the macro's data-mp-tooltip attribute; data-side picks which
+  edge it opens from.
+*/
+[data-mp-tooltip] {
+  position: relative;
+  display: inline-flex;
+}
+
+[data-mp-tooltip]::before {
+  content: attr(data-mp-tooltip);
+  position: absolute;
+  z-index: 1070;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--mp-radius-sm);
+  background: var(--mp-foreground);
+  color: var(--mp-background);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+[data-mp-tooltip]:not([data-side]),
+[data-mp-tooltip][data-side="top"] {
+  &::before {
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translate(-50%, 2px) scale(0.97);
+  }
+  &:hover::before,
+  &:focus-visible::before {
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+[data-mp-tooltip][data-side="bottom"] {
+  &::before {
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translate(-50%, -2px) scale(0.97);
+  }
+  &:hover::before,
+  &:focus-visible::before {
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+[data-mp-tooltip][data-side="left"] {
+  &::before {
+    right: calc(100% + 6px);
+    top: 50%;
+    transform: translate(2px, -50%) scale(0.97);
+  }
+  &:hover::before,
+  &:focus-visible::before {
+    transform: translate(0, -50%) scale(1);
+  }
+}
+
+[data-mp-tooltip][data-side="right"] {
+  &::before {
+    left: calc(100% + 6px);
+    top: 50%;
+    transform: translate(-2px, -50%) scale(0.97);
+  }
+  &:hover::before,
+  &:focus-visible::before {
+    transform: translate(0, -50%) scale(1);
+  }
+}
+
+[data-mp-tooltip]:hover::before,
+[data-mp-tooltip]:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/*
+  Accordion — port of KDUI's accordion(). Native <details>/<summary> — the
+  chevron rotate and marker removal are pure CSS; each item toggles
+  independently (no "only one open" JS behavior).
+*/
+.mp-accordion {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  overflow: hidden;
+}
+
+.mp-accordion details {
+  border-bottom: 1px solid var(--mp-border);
+}
+
+.mp-accordion details:last-child {
+  border-bottom: none;
+}
+
+.mp-accordion summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  color: var(--mp-foreground);
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mp-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.mp-accordion summary i {
+  flex-shrink: 0;
+  color: var(--mp-muted-foreground);
+  transition: transform 150ms ease;
+}
+
+.mp-accordion details[open] summary i {
+  transform: rotate(180deg);
+}
+
+.mp-accordion summary:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--mp-ring);
+}
+
+.mp-accordion__content {
+  padding: 0 1rem 1rem;
+  color: var(--mp-muted-foreground);
+  font-size: 0.875rem;
+}
+
+/*
+  Button Group — port of KDUI's button_group(). Fuses adjacent .mp-btn
+  elements into one control: shared radius on the ends only, 1px overlap so
+  no doubled borders between buttons (same sibling-radius-stripping trick
+  the source used, adapted from :has()-based to plain :not(:first/last-
+  child) since no dropdown/popover children need accounting for here).
+*/
+.mp-button-group {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.mp-button-group:not([data-orientation="vertical"]) > .mp-btn:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+
+.mp-button-group:not([data-orientation="vertical"]) > .mp-btn:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.mp-button-group[data-orientation="vertical"] {
+  flex-direction: column;
+}
+
+.mp-button-group[data-orientation="vertical"] > .mp-btn:not(:first-child) {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-top: -1px;
+}
+
+.mp-button-group[data-orientation="vertical"] > .mp-btn:not(:last-child) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.mp-button-group > .mp-btn:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+  Alert Dialog — port of KDUI's alert_dialog(). Native <dialog> element +
+  ::backdrop — open/close is handled by the macro's inline onclick calling
+  showModal()/close() directly, no JS file.
+*/
+.mp-alert-dialog {
+  width: min(24rem, calc(100vw - 2rem));
+  border: none;
+  border-radius: var(--mp-radius-md);
+  padding: 0;
+  color: var(--mp-foreground);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.mp-alert-dialog[data-size="sm"] {
+  width: min(20rem, calc(100vw - 2rem));
+}
+
+.mp-alert-dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.mp-alert-dialog__body {
+  padding: 1.5rem;
+}
+
+.mp-alert-dialog__title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mp-foreground);
+}
+
+.mp-alert-dialog__description {
+  margin: 0;
+  color: var(--mp-muted-foreground);
+  font-size: 0.875rem;
+}
+
+.mp-alert-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+/*
+  Avatar Group — port of KDUI's avatar_group(). Stacks avatar_initials()
+  circles with a negative-margin overlap and a ring matching the page
+  background so the overlap reads as layered, not overlapping flatly.
+*/
+.mp-avatar-group {
+  display: flex;
+}
+
+.mp-avatar-group > .mp-avatar-initials {
+  box-shadow: 0 0 0 2px var(--mp-background);
+}
+
+.mp-avatar-group > .mp-avatar-initials:not(:first-child) {
+  margin-left: -0.5rem;
+}
+
+.mp-avatar-group__more {
+  background: var(--mp-muted);
+  color: var(--mp-muted-foreground);
+}
+
+/*
+  Theme Switcher — demo only. MiniPass has no site-wide dark mode today
+  (see :root's own comment at the top of this file), so this does not use
+  a global .dark class the way KDUI's does — it toggles data-theme on its
+  own small preview box only, to demonstrate the interaction pattern
+  without implying a real dark mode exists elsewhere in the app. Wiring
+  this up for real (global .dark tokens, anti-flash inline script,
+  localStorage persistence) is future work, not part of this component.
+*/
+.mp-theme-demo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-background);
+  color: var(--mp-foreground);
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+
+.mp-theme-demo[data-theme="dark"] {
+  background: #0b0f19;
+  border-color: #1f2937;
+  color: #e5e7eb;
 }

@@ -207,8 +207,9 @@
           <div class="mb-3 position-relative input-icon">
             <span class="input-icon-addon"><i class="ti ti-user"></i></span>
             <input type="text" name="user_name" id="user_name" class="form-control" placeholder="Full Name" autocomplete="off" required
+                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions"
                    value="{{ passport.user.name if passport and passport.user else '' }}" />
-            <div id="suggestions" class="list-group position-absolute w-100 shadow bg-white border rounded" style="top: 100%; z-index: 10;"></div>
+            <div id="suggestions" class="list-group position-absolute w-100 shadow bg-white border rounded" role="listbox" style="top: 100%; z-index: 10;"></div>
           </div>
 
           <!-- Email -->
@@ -337,52 +338,101 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    let userCache = [];
     const nameInput = document.getElementById("user_name");
     const emailInput = document.getElementById("user_email");
     const phoneInput = document.getElementById("mobile_phone");
     const suggestionBox = document.getElementById("suggestions");
+    let searchTimer = null;
+    let searchController = null;
 
-    fetch("/users.json")
-      .then(response => response.json())
-      .then(data => userCache = data)
-      .catch(err => console.error("❌ Failed to load user cache:", err));
+    function closeSuggestions() {
+      suggestionBox.classList.remove("show");
+      suggestionBox.replaceChildren();
+      nameInput.setAttribute("aria-expanded", "false");
+    }
+
+    function showSuggestions(users) {
+      suggestionBox.replaceChildren();
+      users.slice(0, 5).forEach((user, index) => {
+        const option = document.createElement("div");
+        option.id = `customer-suggestion-${index}`;
+        option.className = "list-group-item list-group-item-action text-start";
+        option.setAttribute("role", "option");
+        option.tabIndex = -1;
+        option.textContent = user.name;
+        option.addEventListener("click", () => {
+          nameInput.value = user.name;
+          emailInput.value = user.email || "";
+          phoneInput.value = user.phone || "";
+          closeSuggestions();
+          emailInput.focus();
+        });
+        suggestionBox.appendChild(option);
+      });
+
+      const hasSuggestions = users.length > 0;
+      suggestionBox.classList.toggle("show", hasSuggestions);
+      nameInput.setAttribute("aria-expanded", hasSuggestions ? "true" : "false");
+    }
 
     nameInput.addEventListener("input", () => {
-      const input = nameInput.value.trim().toLowerCase();
-      if (input.length < 2) return suggestionBox.classList.remove("show");
+      const query = nameInput.value.trim();
+      window.clearTimeout(searchTimer);
+      if (searchController) searchController.abort();
 
-      const matches = userCache.filter(user =>
-        user.name && user.name.toLowerCase().startsWith(input)
-      ).slice(0, 5);
+      if (query.length < 2) {
+        closeSuggestions();
+        return;
+      }
 
-      suggestionBox.innerHTML = "";
-      if (matches.length > 0) {
-        matches.forEach(user => {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "list-group-item list-group-item-action text-start";
-          btn.textContent = user.name;
-          btn.dataset.email = user.email;
-          btn.dataset.phone = user.phone;
-          btn.addEventListener("click", () => {
-            nameInput.value = user.name;
-            emailInput.value = user.email;
-            phoneInput.value = user.phone;
-            suggestionBox.classList.remove("show");
+      searchTimer = window.setTimeout(async () => {
+        searchController = new AbortController();
+        try {
+          const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
+            signal: searchController.signal
           });
-          suggestionBox.appendChild(btn);
-        });
-        suggestionBox.classList.add("show");
-      } else {
-        suggestionBox.classList.remove("show");
+          if (!response.ok) throw new Error(`Customer search failed (${response.status})`);
+          showSuggestions(await response.json());
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            console.error("Failed to search customers:", error);
+            closeSuggestions();
+          }
+        }
+      }, 200);
+    });
+
+    nameInput.addEventListener("keydown", (event) => {
+      const options = Array.from(suggestionBox.querySelectorAll('[role="option"]'));
+      if (event.key === "ArrowDown" && options.length) {
+        event.preventDefault();
+        options[0].focus();
+      } else if (event.key === "Escape") {
+        closeSuggestions();
       }
     });
 
-    document.addEventListener("click", (e) => {
-      if (!suggestionBox.contains(e.target) && e.target !== nameInput) {
-        suggestionBox.classList.remove("show");
+    suggestionBox.addEventListener("keydown", (event) => {
+      const options = Array.from(suggestionBox.querySelectorAll('[role="option"]'));
+      const currentIndex = options.indexOf(document.activeElement);
+      if (event.key === "ArrowDown" && currentIndex < options.length - 1) {
+        event.preventDefault();
+        options[currentIndex + 1].focus();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        if (currentIndex > 0) options[currentIndex - 1].focus();
+        else nameInput.focus();
+      } else if (event.key === "Enter" && currentIndex >= 0) {
+        event.preventDefault();
+        options[currentIndex].click();
+      } else if (event.key === "Escape") {
+        closeSuggestions();
+        nameInput.focus();
       }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!suggestionBox.contains(event.target) && event.target !== nameInput) closeSuggestions();
     });
   });
 

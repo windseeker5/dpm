@@ -1,0 +1,25 @@
+{#
+  Keyboard key / shortcut, ported from KDUI (flask-shadcn-starter).
+
+  Usage:
+    {% from 'macros/kbd.html' import kbd, kbd_combo %}
+    {{ kbd("⌘") }} {{ kbd("K") }}
+    {{ kbd_combo(["Ctrl", "B"]) }}
+
+  Parameters for kbd:
+    - key: the key label
+    - class_: extra classes
+    - attrs: dict of extra attributes
+
+  Parameters for kbd_combo:
+    - keys: list of key strings, joined with "+"
+    - class_: extra classes for the wrapper
+#}
+
+{% macro kbd(key, class_='', attrs={}) %}<kbd class="mp-kbd{% if class_ %} {{ class_ }}{% endif %}"{% for attr_key, value in attrs.items() %} {{ attr_key }}="{{ value }}"{% endfor %}>{{ key }}</kbd>{% endmacro %}
+
+{% macro kbd_combo(keys=[], class_='') %}
+<span class="mp-kbd-combo{% if class_ %} {{ class_ }}{% endif %}">
+  {% for key in keys %}{{ kbd(key) }}{% if not loop.last %}<span>+</span>{% endif %}{% endfor %}
+</span>
+{% endmacro %}

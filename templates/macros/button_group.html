@@ -1,0 +1,34 @@
+{#
+  Button group, ported from KDUI (flask-shadcn-starter). Renders a row (or
+  column) of macros/buttons.html buttons fused into one control — shared
+  border, no double edges between adjacent buttons.
+
+  Usage:
+    {% from 'macros/button_group.html' import button_group %}
+    {{ button_group(buttons=[
+      {"text": "Day", "variant": "outline"},
+      {"text": "Week", "variant": "outline"},
+      {"text": "Month", "variant": "outline"}
+    ], aria_label="View range") }}
+
+  Parameters:
+    - buttons: list of kwarg dicts, each passed straight to buttons.html's button() macro
+    - aria_label: accessible label for the group
+    - vertical: stack vertically (default False)
+    - class_: extra classes for the group wrapper
+    - attrs: dict of extra attributes for the group wrapper
+#}
+
+{% from 'macros/buttons.html' import button %}
+
+{% macro button_group(buttons=[], aria_label=None, vertical=False, class_='', attrs={}) %}
+<div
+  role="group"
+  {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+  class="mp-button-group{% if class_ %} {{ class_ }}{% endif %}"
+  {% if vertical %}data-orientation="vertical"{% endif %}
+  {% for key, value in attrs.items() %}{{ key }}="{{ value }}"{% endfor %}
+>
+  {% for btn in buttons %}{{ button(**btn) }}{% endfor %}
+</div>
+{% endmacro %}

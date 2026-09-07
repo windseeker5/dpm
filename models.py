@@ -84,7 +84,10 @@ class User(db.Model):
     signups = db.relationship("Signup", backref="user", lazy=True)
     passports = db.relationship("Passport", backref="user", lazy=True)
 
-
+    # Supports the admin customer autocomplete without scanning the full user table.
+    __table_args__ = (
+        db.Index("ix_user_name_nocase", name.collate("NOCASE")),
+    )
 
 
 class Activity(db.Model):

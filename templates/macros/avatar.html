@@ -13,14 +13,22 @@
   new color system.
 
   Usage:
-    {% from 'macros/avatar.html' import avatar_initials %}
+    {% from 'macros/avatar.html' import avatar_initials, avatar_group %}
     {{ avatar_initials(passport.user.name or 'Anonymous') }}
     {{ avatar_initials(row.primary, size="sm") }}
+    {{ avatar_group(names=["Samuel Gendreau", "Marco Henry", "Ken Dresdell", "Jean Martin Morin"], max=3) }}
 
-  Parameters:
+  Parameters for avatar_initials:
     - name: full name (or any string) to derive initials + color from
     - size: "sm" (2rem) | "md" (default, 2.5rem) | "lg" (3rem)
     - attrs: dict of extra attributes on the outer element
+
+  Parameters for avatar_group:
+    - names: list of names, each rendered via avatar_initials()
+    - max: maximum avatars to show before collapsing the rest into a "+N" bubble
+    - size: size passed down to each avatar_initials()
+    - class_: extra classes for the group wrapper
+    - attrs: dict of extra attributes for the group wrapper
 #}
 
 {% set avatar_palette = ["blue", "azure", "purple", "pink", "orange", "teal", "green", "indigo"] %}
@@ -37,4 +45,15 @@
   aria-hidden="true"
   {% for attr_key, attr_value in attrs.items() %}{{ attr_key }}="{{ attr_value }}" {% endfor %}
 >{{ initials }}</div>
+{% endmacro %}
+
+{% macro avatar_group(names=[], max=4, size="md", class_='', attrs={}) %}
+{% set shown = names[:max] %}
+{% set remaining = names | length - shown | length %}
+<div class="mp-avatar-group{% if class_ %} {{ class_ }}{% endif %}"{% for key, value in attrs.items() %} {{ key }}="{{ value }}"{% endfor %}>
+  {% for name in shown %}{{ avatar_initials(name, size=size) }}{% endfor %}
+  {% if remaining > 0 %}
+  <div class="mp-avatar-initials mp-avatar-group__more" data-size="{{ size }}" aria-label="{{ remaining }} more">+{{ remaining }}</div>
+  {% endif %}
+</div>
 {% endmacro %}

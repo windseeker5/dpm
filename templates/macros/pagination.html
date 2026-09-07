@@ -26,6 +26,11 @@
   not a hardcoded color — see that variable's own comment for why (future
   per-tenant branding color, same pattern as --mp-chart-1).
 
+  Scroll position across the resulting page reload is handled automatically
+  by static/js/mp-scroll-restore.js (loaded globally in base.html, targets
+  a.mp-page-btn) — same mechanism as macros/filter_tabs.html, see that
+  macro's doc comment. Nothing to wire up per page.
+
   Usage:
     {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
     {{ pagination_desktop(page=2, pages=9, per_page=5, total=43, items_count=5,
@@ -55,9 +60,9 @@
     <nav aria-label="Pagination">
       <div class="mp-pagination">
         {% if page > 1 %}
-        <a class="mp-page-btn" href="{{ base_path }}?{{ page_param }}={{ page - 1 }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}" aria-label="Previous page"><i class="ti ti-chevron-left"></i></a>
+        <a class="mp-page-btn mp-page-btn--nav" href="{{ base_path }}?{{ page_param }}={{ page - 1 }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}" aria-label="Previous page"><i class="ti ti-chevron-left"></i><span>Previous</span></a>
         {% else %}
-        <span class="mp-page-btn" aria-disabled="true" aria-label="Previous page"><i class="ti ti-chevron-left"></i></span>
+        <span class="mp-page-btn mp-page-btn--nav" aria-disabled="true" aria-label="Previous page"><i class="ti ti-chevron-left"></i><span>Previous</span></span>
         {% endif %}
 
         {% set ns = namespace(last_shown=0) %}
@@ -75,9 +80,9 @@
         {% endfor %}
 
         {% if page < pages %}
-        <a class="mp-page-btn" href="{{ base_path }}?{{ page_param }}={{ page + 1 }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}" aria-label="Next page"><i class="ti ti-chevron-right"></i></a>
+        <a class="mp-page-btn mp-page-btn--nav" href="{{ base_path }}?{{ page_param }}={{ page + 1 }}{% for k, v in filters.items() %}&{{ k }}={{ v }}{% endfor %}" aria-label="Next page"><span>Next</span><i class="ti ti-chevron-right"></i></a>
         {% else %}
-        <span class="mp-page-btn" aria-disabled="true" aria-label="Next page"><i class="ti ti-chevron-right"></i></span>
+        <span class="mp-page-btn mp-page-btn--nav" aria-disabled="true" aria-label="Next page"><span>Next</span><i class="ti ti-chevron-right"></i></span>
         {% endif %}
       </div>
     </nav>

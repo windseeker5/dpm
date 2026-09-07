@@ -352,8 +352,9 @@
             <div class="col-md-6">
               <label class="form-label required">Name</label>
               <div class="position-relative">
-                <input type="text" class="form-control" id="cpName" name="name" required autocomplete="off">
-                <div id="cpNameSuggestions" class="autocomplete-suggestions" style="display: none;"></div>
+                <input type="text" class="form-control" id="cpName" name="name" required autocomplete="off"
+                       role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="cpNameSuggestions">
+                <div id="cpNameSuggestions" class="autocomplete-suggestions" role="listbox" style="display: none;"></div>
               </div>
               <small class="text-muted">Pre-filled from payment sender</small>
             </div>
@@ -689,36 +690,73 @@ document.addEventListener('click', function(e) {
 // ========================================
 // Create Passport from Payment functionality
 // ========================================
-let userCache = [];
 let currentCreatePassportData = null;
+let customerSearchTimer = null;
+let customerSearchController = null;
 
-// Load user cache on page load
-async function loadUserCache() {
-  try {
-    const response = await fetch('/users.json');
-    if (response.ok) {
-      userCache = await response.json();
-      console.log('User cache loaded:', userCache.length, 'users');
+async function searchCustomers(query, signal) {
+  if (!query || query.trim().length < 2) return [];
+  const response = await fetch(`/api/users/search?q=${encodeURIComponent(query.trim())}`, { signal });
+  if (!response.ok) throw new Error(`Customer search failed (${response.status})`);
+  return response.json();
+}
+
+function closeCustomerSuggestions() {
+  const suggestions = document.getElementById('cpNameSuggestions');
+  suggestions.replaceChildren();
+  suggestions.style.display = 'none';
+  document.getElementById('cpName').setAttribute('aria-expanded', 'false');
+}
+
+function renderCustomerSuggestions(users) {
+  const suggestions = document.getElementById('cpNameSuggestions');
+  suggestions.replaceChildren();
+
+  users.slice(0, 5).forEach((user, index) => {
+    const option = document.createElement('div');
+    option.className = 'suggestion-item';
+    option.setAttribute('role', 'option');
+    option.tabIndex = -1;
+    option.id = `payment-customer-suggestion-${index}`;
+    option.dataset.name = user.name;
+    option.dataset.email = user.email || '';
+    option.dataset.phone = user.phone || '';
+
+    const name = document.createElement('strong');
+    name.textContent = user.name;
+    option.appendChild(name);
+
+    if (user.email) {
+      const email = document.createElement('small');
+      email.className = 'text-muted ms-2';
+      email.textContent = user.email;
+      option.appendChild(email);
     }
+    suggestions.appendChild(option);
+  });
+
+  const hasSuggestions = users.length > 0;
+  suggestions.style.display = hasSuggestions ? 'block' : 'none';
+  document.getElementById('cpName').setAttribute('aria-expanded', hasSuggestions ? 'true' : 'false');
+}
+
+async function prefillCustomerFromSearch(name, paymentId) {
+  try {
+    const users = await searchCustomers(name);
+    const normalizedName = name.toLowerCase().trim();
+    const matchedUser = users.find(user =>
+      user.name && user.name.toLowerCase().trim() === normalizedName
+    );
+    if (!matchedUser || currentCreatePassportData?.paymentId !== paymentId) return;
+
+    if (matchedUser.email) {
+      document.getElementById('cpEmail').value = matchedUser.email;
+      document.getElementById('cpEmailHint').innerHTML = '<i class="ti ti-check text-success"></i> Found in customer records';
+    }
+    if (matchedUser.phone) document.getElementById('cpPhone').value = matchedUser.phone;
   } catch (error) {
-    console.error('Failed to load user cache:', error);
+    console.error('Failed to search customers:', error);
   }
-}
-
-// Search user cache for matching name
-function findUserByName(name) {
-  if (!name || !userCache.length) return null;
-  const normalizedName = name.toLowerCase().trim();
-  return userCache.find(u => u.name && u.name.toLowerCase().trim() === normalizedName);
-}
-
-// Get name suggestions from cache
-function getNameSuggestions(query) {
-  if (!query || query.length < 2 || !userCache.length) return [];
-  const normalizedQuery = query.toLowerCase().trim();
-  return userCache.filter(u =>
-    u.name && u.name.toLowerCase().includes(normalizedQuery)
-  ).slice(0, 5);
 }
 
 // Open Create Passport modal
@@ -743,61 +781,89 @@ function openCreatePassportModal(paymentId, name, amount, replyToEmail) {
     document.getElementById('cpEmail').value = replyToEmail;
     document.getElementById('cpEmailHint').innerHTML = '<i class="ti ti-check text-success"></i> From payment sender';
   } else {
-    // PRIORITY 2: Fallback to user cache lookup
+    // PRIORITY 2: Fall back to a bounded server-side customer lookup.
     document.getElementById('cpEmailHint').textContent = 'Required for passport confirmation';
-    const matchedUser = findUserByName(name);
-    if (matchedUser && matchedUser.email) {
-      document.getElementById('cpEmail').value = matchedUser.email;
-      document.getElementById('cpEmailHint').innerHTML = '<i class="ti ti-check text-success"></i> Found in user cache';
-    }
-    if (matchedUser && matchedUser.phone) {
-      document.getElementById('cpPhone').value = matchedUser.phone;
-    }
+    prefillCustomerFromSearch(name, paymentId);
   }
 
+  closeCustomerSuggestions();
   const modal = new bootstrap.Modal(document.getElementById('createPassportModal'));
   modal.show();
 }
 
-// Handle name input for autocomplete suggestions
-document.getElementById('cpName').addEventListener('input', function(e) {
-  const query = e.target.value;
-  const suggestions = getNameSuggestions(query);
-  const suggestionsDiv = document.getElementById('cpNameSuggestions');
+// Search customer records only after the administrator pauses typing.
+document.getElementById('cpName').addEventListener('input', function(event) {
+  const query = event.target.value.trim();
+  window.clearTimeout(customerSearchTimer);
+  if (customerSearchController) customerSearchController.abort();
 
-  if (suggestions.length > 0) {
-    suggestionsDiv.innerHTML = suggestions.map(u =>
-      `<div class="suggestion-item" data-name="${u.name}" data-email="${u.email || ''}" data-phone="${u.phone || ''}">
-        <strong>${u.name}</strong>
-        ${u.email ? `<small class="text-muted ms-2">${u.email}</small>` : ''}
-      </div>`
-    ).join('');
-    suggestionsDiv.style.display = 'block';
-  } else {
-    suggestionsDiv.style.display = 'none';
+  if (query.length < 2) {
+    closeCustomerSuggestions();
+    return;
+  }
+
+  customerSearchTimer = window.setTimeout(async () => {
+    customerSearchController = new AbortController();
+    try {
+      renderCustomerSuggestions(await searchCustomers(query, customerSearchController.signal));
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('Failed to search customers:', error);
+        closeCustomerSuggestions();
+      }
+    }
+  }, 200);
+});
+
+// Handle suggestion click.
+document.getElementById('cpNameSuggestions').addEventListener('click', function(event) {
+  const item = event.target.closest('.suggestion-item');
+  if (!item) return;
+
+  document.getElementById('cpName').value = item.dataset.name;
+  if (item.dataset.email) {
+    document.getElementById('cpEmail').value = item.dataset.email;
+    document.getElementById('cpEmailHint').innerHTML = '<i class="ti ti-check text-success"></i> Found in customer records';
+  }
+  if (item.dataset.phone) document.getElementById('cpPhone').value = item.dataset.phone;
+  closeCustomerSuggestions();
+  document.getElementById('cpEmail').focus();
+});
+
+// Support keyboard navigation through customer matches.
+document.getElementById('cpName').addEventListener('keydown', function(event) {
+  const options = Array.from(document.querySelectorAll('#cpNameSuggestions [role="option"]'));
+  if (event.key === 'ArrowDown' && options.length) {
+    event.preventDefault();
+    options[0].focus();
+  } else if (event.key === 'Escape') {
+    closeCustomerSuggestions();
   }
 });
 
-// Handle suggestion click
-document.getElementById('cpNameSuggestions').addEventListener('click', function(e) {
-  const item = e.target.closest('.suggestion-item');
-  if (item) {
-    document.getElementById('cpName').value = item.dataset.name;
-    if (item.dataset.email) {
-      document.getElementById('cpEmail').value = item.dataset.email;
-      document.getElementById('cpEmailHint').innerHTML = '<i class="ti ti-check text-success"></i> Found in user cache';
-    }
-    if (item.dataset.phone) {
-      document.getElementById('cpPhone').value = item.dataset.phone;
-    }
-    document.getElementById('cpNameSuggestions').style.display = 'none';
+document.getElementById('cpNameSuggestions').addEventListener('keydown', function(event) {
+  const options = Array.from(this.querySelectorAll('[role="option"]'));
+  const currentIndex = options.indexOf(document.activeElement);
+  if (event.key === 'ArrowDown' && currentIndex < options.length - 1) {
+    event.preventDefault();
+    options[currentIndex + 1].focus();
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    if (currentIndex > 0) options[currentIndex - 1].focus();
+    else document.getElementById('cpName').focus();
+  } else if (event.key === 'Enter' && currentIndex >= 0) {
+    event.preventDefault();
+    options[currentIndex].click();
+  } else if (event.key === 'Escape') {
+    closeCustomerSuggestions();
+    document.getElementById('cpName').focus();
   }
 });
 
-// Hide suggestions when clicking outside
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#cpName') && !e.target.closest('#cpNameSuggestions')) {
-    document.getElementById('cpNameSuggestions').style.display = 'none';
+// Hide suggestions when clicking outside.
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('#cpName') && !event.target.closest('#cpNameSuggestions')) {
+    closeCustomerSuggestions();
   }
 });
 
@@ -986,9 +1052,6 @@ document.getElementById('confirmCreatePassportBtn').addEventListener('click', as
     btn.innerHTML = originalText;
   }
 });
-
-// Load user cache when page loads
-loadUserCache();
 
 // Handle archive confirmation
 document.getElementById('confirmArchiveBtn').addEventListener('click', async function() {
