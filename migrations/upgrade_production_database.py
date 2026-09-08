@@ -3667,6 +3667,111 @@ def task48_add_user_autocomplete_index(cursor):
     return True
 
 
+def task49_add_activity_show_in_shop(cursor):
+    """Add show_in_shop to activity table (controls visibility on the public /shop page)"""
+    log("🛍️ ", "TASK 49: Adding show_in_shop to activity table", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'activity'):
+        log("⏭️ ", "  activity table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'activity', 'show_in_shop'):
+        log("⏭️ ", "  Column 'show_in_shop' already exists", Colors.YELLOW)
+        return True
+
+    cursor.execute("ALTER TABLE activity ADD COLUMN show_in_shop BOOLEAN NOT NULL DEFAULT 0")
+    log("✅", "  Added column 'show_in_shop'", Colors.GREEN)
+    return True
+
+
+def task50_add_product_table(cursor):
+    """Add product table (simple shop items: name, photo, price — no inventory tracking)"""
+    log("🛍️ ", "TASK 50: Adding product table", Colors.BLUE)
+
+    if check_table_exists(cursor, 'product'):
+        log("⏭️ ", "  product table already exists", Colors.YELLOW)
+        return True
+
+    cursor.execute("""
+        CREATE TABLE product (
+            id INTEGER NOT NULL PRIMARY KEY,
+            name VARCHAR(150) NOT NULL,
+            description TEXT,
+            photo_filename VARCHAR(255),
+            price FLOAT NOT NULL DEFAULT 0.0,
+            size_label VARCHAR(100),
+            active BOOLEAN NOT NULL DEFAULT 1,
+            created_by INTEGER,
+            created_dt DATETIME,
+            FOREIGN KEY(created_by) REFERENCES admin (id)
+        )
+    """)
+    log("✅", "  Created product table", Colors.GREEN)
+    return True
+
+
+def task51_add_order_table(cursor):
+    """Add shop_order table (a purchase of a Product — product name/price snapshotted at order time).
+
+    Named shop_order, not order: "order" is a reserved SQL keyword and Wayne (the AI
+    chatbot) generates raw SQL against these table names.
+    """
+    log("🧾", "TASK 51: Adding shop_order table", Colors.BLUE)
+
+    if check_table_exists(cursor, 'shop_order'):
+        log("⏭️ ", "  shop_order table already exists", Colors.YELLOW)
+        if not check_column_exists(cursor, 'shop_order', 'size'):
+            cursor.execute("ALTER TABLE shop_order ADD COLUMN size VARCHAR(50)")
+            log("✅", "  Added column 'size' to existing shop_order table", Colors.GREEN)
+        return True
+
+    cursor.execute("""
+        CREATE TABLE shop_order (
+            id INTEGER NOT NULL PRIMARY KEY,
+            order_code VARCHAR(20) UNIQUE,
+            product_id INTEGER,
+            product_name VARCHAR(150) NOT NULL,
+            unit_price FLOAT NOT NULL DEFAULT 0.0,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            amount FLOAT NOT NULL DEFAULT 0.0,
+            size VARCHAR(50),
+            buyer_name VARCHAR(150) NOT NULL,
+            buyer_email VARCHAR(150),
+            buyer_phone VARCHAR(20),
+            notes TEXT,
+            payment_method VARCHAR(20) DEFAULT 'interac',
+            stripe_checkout_session_id VARCHAR(255),
+            status VARCHAR(20) DEFAULT 'awaiting_payment',
+            created_dt DATETIME,
+            paid_at DATETIME,
+            FOREIGN KEY(product_id) REFERENCES product (id) ON DELETE SET NULL
+        )
+    """)
+    log("✅", "  Created shop_order table", Colors.GREEN)
+
+    cursor.execute("CREATE INDEX ix_shop_order_status ON shop_order (status)")
+    cursor.execute("CREATE INDEX ix_shop_order_product_id ON shop_order (product_id)")
+    log("✅", "  Created shop_order indexes", Colors.GREEN)
+    return True
+
+
+def task52_add_ebank_payment_matched_order(cursor):
+    """Add matched_order_id to ebank_payment (lets the Interac bot match shop orders too)"""
+    log("🔗", "TASK 52: Adding matched_order_id to ebank_payment table", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'ebank_payment'):
+        log("⏭️ ", "  ebank_payment table doesn't exist, skipping", Colors.YELLOW)
+        return True
+
+    if check_column_exists(cursor, 'ebank_payment', 'matched_order_id'):
+        log("⏭️ ", "  Column 'matched_order_id' already exists", Colors.YELLOW)
+        return True
+
+    cursor.execute("ALTER TABLE ebank_payment ADD COLUMN matched_order_id INTEGER REFERENCES shop_order (id)")
+    log("✅", "  Added column 'matched_order_id'", Colors.GREEN)
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -3735,6 +3840,10 @@ def main():
         ("Consolidate Admin Message", task46_consolidate_admin_message),
         ("Remove Legacy Chat Tables", task47_drop_legacy_chat_tables),
         ("Customer Autocomplete Index", task48_add_user_autocomplete_index),
+        ("Shop: Activity Visibility Flag", task49_add_activity_show_in_shop),
+        ("Shop: Product Table", task50_add_product_table),
+        ("Shop: Order Table", task51_add_order_table),
+        ("Shop: Ebank Payment Order Matching", task52_add_ebank_payment_matched_order),
     ]
 
     completed = 0

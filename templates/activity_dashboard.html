@@ -892,7 +892,7 @@ div.dropdown-divider {
           <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_redeemed" data-kpi-id="passports-redeemed-default">
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">REDEEMED</div>
+                <div class="text-muted small text-uppercase">CHECK-INS</div>
                 <div class="dropdown">
                   <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports_redeemed">
                     Last 7 days
@@ -1029,7 +1029,7 @@ div.dropdown-divider {
           <div class="mobile-kpi-card">
             <div class="card" style="border-radius: 12px; min-height: 130px;">
               <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">REDEEMED</div>
+                <div class="text-muted small text-uppercase mb-2">CHECK-INS</div>
                 <div class="h1 mb-2" id="mobile-redeemed-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
                   {% if mobile_kpi_data and mobile_kpi_data['passports_redeemed'] %}
                     {{ "{:,.0f}".format(mobile_kpi_data['passports_redeemed']['current']) }}

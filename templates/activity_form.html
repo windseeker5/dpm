@@ -541,6 +541,14 @@
                         </label>
                       </div>
 
+                      <div class="setting-row">
+                        <label class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" name="show_in_shop"
+                                 {{ 'checked' if activity and activity.show_in_shop else '' }}>
+                          <span class="form-check-label">Show in shop</span>
+                        </label>
+                      </div>
+
                       {% if stripe_configured %}
                       <div class="setting-row">
                         <label class="form-check form-switch">

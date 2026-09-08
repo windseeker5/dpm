@@ -137,6 +137,9 @@ class Activity(db.Model):
     discord_webhook_url = db.Column(db.String(500), nullable=True)
     discord_invite_url = db.Column(db.String(500), nullable=True)
 
+    # Shop: shown on the public /shop page when True (links to the existing signup flow)
+    show_in_shop = db.Column(db.Boolean, default=False, nullable=False, server_default="0")
+
     signups = db.relationship("Signup", backref="activity", lazy=True)
     passports = db.relationship("Passport", backref="activity", lazy=True)
 
@@ -189,6 +192,54 @@ class PassportType(db.Model):
     archived_by = db.Column(db.String(120), nullable=True)
     
     activity = db.relationship("Activity", backref="passport_types")
+
+
+class Product(db.Model):
+    """A simple shop item: name, photo, price. No stock/inventory tracking (deferred to a
+    later phase) — `active` just controls whether it shows on the public /shop page."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    photo_filename = db.Column(db.String(255), nullable=True)
+    price = db.Column(db.Float, nullable=False, default=0.0)
+    size_label = db.Column(db.String(100), nullable=True)  # Free text, e.g. "S, M, L" — informational only
+    active = db.Column(db.Boolean, default=True, nullable=False, server_default="1")
+    created_by = db.Column(db.Integer, db.ForeignKey("admin.id"), nullable=True)
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Order(db.Model):
+    """A shop purchase of a Product. Product name/price are snapshotted at order time so
+    the order stays correct if the product is later edited or removed."""
+    # Explicit table name: "order" is a reserved SQL keyword (and Wayne, the AI chatbot,
+    # generates raw SQL against these table names — a reserved word invites broken queries).
+    __tablename__ = "shop_order"
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_code = db.Column(db.String(20), unique=True, nullable=True)  # format: MP-ORD-0001234
+
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id", ondelete="SET NULL"), nullable=True)
+    product_name = db.Column(db.String(150), nullable=False)
+    unit_price = db.Column(db.Float, nullable=False, default=0.0)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    amount = db.Column(db.Float, nullable=False, default=0.0)  # unit_price * quantity
+    size = db.Column(db.String(50), nullable=True)  # Buyer's chosen size, if the product offers one
+
+    buyer_name = db.Column(db.String(150), nullable=False)
+    buyer_email = db.Column(db.String(150), nullable=True)
+    buyer_phone = db.Column(db.String(20), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    payment_method = db.Column(db.String(20), default="interac")  # "interac" or "stripe"
+    stripe_checkout_session_id = db.Column(db.String(255), nullable=True)
+
+    status = db.Column(db.String(20), default="awaiting_payment")
+    # Values: "awaiting_payment", "paid", "ready", "picked_up", "cancelled"
+
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    paid_at = db.Column(db.DateTime, nullable=True)
+
+    product = db.relationship("Product", backref="orders")
 
 
 class Expense(db.Model):
@@ -488,6 +539,7 @@ class EbankPayment(db.Model):
     bank_info_name = db.Column(db.String(100))
     bank_info_amt = db.Column(db.Float)
     matched_pass_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"), nullable=True)  # ✅ Fixed to reference passport table
+    matched_order_id = db.Column(db.Integer, db.ForeignKey("shop_order.id", ondelete="SET NULL"), nullable=True)  # Shop order match
     matched_name = db.Column(db.String(100))
     matched_amt = db.Column(db.Float)
     name_score = db.Column(db.Integer)

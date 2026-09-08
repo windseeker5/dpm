@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Orders{% endblock %}
+
+{% block content %}
+{% from 'macros/breadcrumb.html' import breadcrumb %}
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+
+<div class="page-wrapper">
+  <div class="page-header d-print-none">
+    <div class="dashboard-container">
+      {{ breadcrumb(items=[
+        {"label": "Dashboard", "url": url_for('dashboard')},
+        {"label": "Orders", "current": true}
+      ]) }}
+      <h2 class="page-title mt-1">Orders</h2>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <div class="dashboard-container">
+      <div class="card mp-data-table">
+        <div class="card-header">
+          <form method="get" action="{{ url_for('list_orders') }}" style="display: contents;">
+            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            {{ table_toolbar(id="orders-toolbar", tabs=tabs, search_value=q, search_placeholder="Search orders…") }}
+          </form>
+        </div>
+
+        {% if not rows %}
+          {{ table_empty_state(icon="ti-shopping-bag" if not (q or status_filter) else "ti-search",
+             title="No orders yet" if not (q or status_filter) else "No orders match your filters",
+             description="Orders appear here once a customer checks out from the shop." if not (q or status_filter) else "Try adjusting your search or filter selection.",
+             action_label="Clear all filters" if (q or status_filter) else none,
+             action_url=url_for('list_orders') if (q or status_filter) else none) }}
+        {% else %}
+          {% set columns = [
+            {"label": "Order", "class": "d-none d-md-table-cell"},
+            {"label": "Item"},
+            {"label": "Amount", "class": "d-none d-md-table-cell text-center"},
+            {"label": "Payment", "class": "d-none d-lg-table-cell"},
+            {"label": "Status", "class": "d-none d-md-table-cell text-center"}
+          ] %}
+          <div class="d-none d-md-block">
+            {{ table_desktop(id="orders-table", columns=columns, rows=rows) }}
+            {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+               total=pagination.total, items_count=rows|length, base_path=url_for('list_orders'), filters=current_filters) }}
+          </div>
+          <div class="d-md-none">
+            {{ table_mobile(id="orders-table-mobile", rows=rows) }}
+            {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+               total=pagination.total, items_count=rows|length, base_path=url_for('list_orders'), filters=current_filters) }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

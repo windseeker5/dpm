@@ -118,10 +118,15 @@
       max-width: 540px;
     }
 
+    .brand-lockup {
+      width: max-content;
+      max-width: 100%;
+    }
+
     .brand-logo {
       display: block;
       width: max-content;
-      margin-bottom: 1.5rem;
+      margin: 0 auto 1.5rem;
     }
 
     .brand-logo img {
@@ -363,10 +368,14 @@
       transition: color 0.15s ease, background 0.15s ease;
     }
 
-    .forgot-link:hover,
+    .forgot-link:hover {
+      color: var(--mp-green);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+
     .forgot-link:focus-visible {
       color: var(--mp-green);
-      background: rgba(0, 171, 102, 0.05);
       outline: 2px solid var(--mp-green);
       outline-offset: 2px;
     }
@@ -499,12 +508,14 @@
 
       <!-- Desktop brand content -->
       <div class="brand-content">
-        <div class="brand-logo">
-          <img src="{{ url_for('static', filename='minipass_logo.png') }}" alt="Minipass" width="613" height="109">
-        </div>
         <div class="brand-copy">
-          <h2 class="brand-headline">YOU CREATE. EVERYTHING AUTOMATES.</h2>
-          <p class="brand-tagline">Set up your activity once, and Minipass puts it online automatically: signups, payments, tracking, and finances run almost by themselves.</p>
+          <div class="brand-lockup">
+            <div class="brand-logo">
+              <img src="{{ url_for('static', filename='minipass_logo.png') }}" alt="minipass" width="613" height="109">
+            </div>
+            <h2 class="brand-headline">YOU CREATE. EVERYTHING AUTOMATES.</h2>
+          </div>
+          <p class="brand-tagline">Set up your activity once, and minipass puts it online automatically: signups, payments, tracking, and finances run almost by themselves.</p>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 {% from 'macros/buttons.html' import button %}
-{% from 'macros/action_menu.html' import action_menu %}
+{% from 'macros/data_table.html' import table_desktop, table_mobile, table_empty_state %}
 <!-- Gravatar Information Panel (shown only when needed) -->
 <div class="alert alert-info mb-4 d-none" id="gravatar-info-panel" role="alert">
   <div class="d-flex">
@@ -7,92 +7,200 @@
       <i class="ti ti-info-circle me-2"></i>
     </div>
     <div>
-      <h4 class="alert-title">About Admin Avatars</h4>
+      <h4 class="alert-title">About User Avatars</h4>
       <div class="text-muted">
-        Some admin accounts don't have a Gravatar profile picture. You can either:
+        Some accounts don't have a Gravatar profile picture. You can either:
         <a href="https://gravatar.com/connect" target="_blank" class="alert-link">
           Create a free Gravatar account
-        </a> or upload a custom avatar image below.
+        </a> or upload a custom avatar image from Edit.
       </div>
     </div>
   </div>
 </div>
 
-<!-- Admin List -->
+<!-- User directory: avatar, email (login), name, type, actions. Editing
+     happens in a modal opened from the row's Actions menu — rows stay a
+     fixed, compact height regardless of how many users exist or are being
+     edited, so "Save User Settings" below never moves around. -->
+{% if not admin_rows %}
+  {{ table_empty_state(icon="ti-users", title="No users yet", description="Add a user to give them access to minipass.") }}
+{% else %}
+  {% set user_columns = [{"label": "Type"}] %}
+  <div class="card mp-data-table mb-3 d-none d-md-block">
+    {{ table_desktop(id="users-table", columns=user_columns, rows=admin_rows) }}
+  </div>
+  <div class="d-md-none mb-3">
+    {{ table_mobile(id="users-table-mobile", rows=admin_rows) }}
+  </div>
+{% endif %}
+
+<!-- Edit modals — one per existing user, opened from the row's Actions menu. -->
 <div id="admin-list">
   {% for admin in admins %}
-  <div class="card admin-block mb-3" data-loaded="true">
-    <div class="card-body">
-      <div class="row g-3 align-items-start">
-        <!-- Avatar Section -->
-        <div class="col-12 col-md-2 text-center">
-          <div class="avatar avatar-xl mx-auto mb-2" id="avatar-{{ loop.index }}" 
-               data-email="{{ admin.email }}" 
-               data-first-name="{{ admin.first_name or '' }}" 
-               data-last-name="{{ admin.last_name or '' }}"
-               data-avatar-filename="{{ admin.avatar_filename or '' }}">
-            <!-- Avatar will be loaded via JavaScript -->
-          </div>
-          <div class="small text-muted admin-name-display" id="name-display-{{ loop.index }}">
-            {% if admin.first_name or admin.last_name %}
-              {{ admin.first_name or '' }} {{ admin.last_name or '' }}
-            {% else %}
-              <i class="ti ti-user me-1"></i>
-              Admin
-            {% endif %}
-          </div>
-          <!-- Avatar upload section (hidden by default) -->
-          <div class="avatar-upload-section mt-2 d-none" style="font-size: 0.875rem;">
-            <label class="btn btn-sm btn-outline-primary" style="cursor: pointer;">
-              <i class="ti ti-upload me-1"></i> Upload
-              <input type="file" name="admin_avatar_{{ loop.index }}" 
-                     accept="image/*" class="d-none avatar-upload-input" 
-                     data-index="{{ loop.index }}">
-            </label>
-            <div class="avatar-preview mt-2 d-none">
-              <img src="" alt="Preview" class="img-thumbnail" style="max-width: 80px; max-height: 80px;">
+  <div class="modal modal-blur fade" id="user-edit-modal-{{ admin.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="admin-block" data-loaded="true">
+            <div class="row g-3 align-items-start">
+              <!-- Avatar Section -->
+              <div class="col-12 col-md-4 text-center">
+                <div class="avatar avatar-xl mx-auto mb-2" id="avatar-{{ admin.id }}"
+                     data-email="{{ admin.email }}"
+                     data-first-name="{{ admin.first_name or '' }}"
+                     data-last-name="{{ admin.last_name or '' }}"
+                     data-avatar-filename="{{ admin.avatar_filename or '' }}">
+                  <!-- Avatar will be loaded via JavaScript -->
+                </div>
+                <div class="small text-muted admin-name-display" id="name-display-{{ admin.id }}">
+                  {% if admin.first_name or admin.last_name %}
+                    {{ admin.first_name or '' }} {{ admin.last_name or '' }}
+                  {% else %}
+                    <i class="ti ti-user me-1"></i>
+                    User
+                  {% endif %}
+                </div>
+                <!-- Avatar upload section (hidden by default) -->
+                <div class="avatar-upload-section mt-2 d-none" style="font-size: 0.875rem;">
+                  <label class="btn btn-sm btn-outline-primary" style="cursor: pointer;">
+                    <i class="ti ti-upload me-1"></i> Upload
+                    <input type="file" name="admin_avatar_{{ loop.index }}"
+                           accept="image/*" class="d-none avatar-upload-input"
+                           data-index="{{ loop.index }}">
+                  </label>
+                  <div class="avatar-preview mt-2 d-none">
+                    <img src="" alt="Preview" class="img-thumbnail" style="max-width: 80px; max-height: 80px;">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Fields -->
+              <div class="col-12 col-md-8">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" name="admin_email[]" value="{{ admin.email }}"
+                           class="form-control admin-email" required>
+                    <div class="form-hint">Used for login and Gravatar avatar</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">First Name</label>
+                    <input type="text" name="admin_first_name[]" value="{{ admin.first_name or '' }}"
+                           class="form-control admin-first-name" placeholder="John">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" name="admin_last_name[]" value="{{ admin.last_name or '' }}"
+                           class="form-control admin-last-name" placeholder="Doe">
+                  </div>
+                  <!-- Password placeholder to keep array alignment with new user entries -->
+                  <input type="hidden" name="admin_password[]" value="********">
+                  {% if admin.email == session.get('admin') %}
+                  <div class="col-12">
+                    <!-- Self-service Change Password -->
+                    {{ button("Change Password", variant="outline", icon="ti-key", attrs={"class": "btn-change-password", "data-admin-id": admin.id}) }}
+                    <div class="change-password-section mt-3 d-none" data-admin-id="{{ admin.id }}">
+                      <div class="card card-body bg-muted-lt">
+                        <div class="mb-3">
+                          <label class="form-label">Current Password</label>
+                          <input type="password" class="form-control current-password" placeholder="Enter current password" autocomplete="off">
+                          <div class="form-hint">Enter your current password to confirm your identity</div>
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">New Password</label>
+                          <div class="input-group">
+                            <input type="password" class="form-control new-password" placeholder="Enter new password">
+                            <button class="btn btn-outline-secondary toggle-password" type="button">
+                              <i class="ti ti-eye"></i>
+                            </button>
+                          </div>
+                          <div class="password-strength mt-2 d-none">
+                            <div class="progress progress-sm">
+                              <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div class="form-hint password-strength-text"></div>
+                          </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                          <button type="button" class="btn btn-primary btn-save-password" data-admin-id="{{ admin.id }}">
+                            <i class="ti ti-check me-1"></i>Save
+                          </button>
+                          <button type="button" class="btn btn-outline-secondary btn-cancel-password">Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        
-        <!-- Form Fields -->
-        <div class="col-12 col-md-8">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label">Email Address</label>
-              <input type="email" name="admin_email[]" value="{{ admin.email }}" 
-                     class="form-control admin-email" required>
-              <div class="form-hint">Used for login and Gravatar avatar</div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">First Name</label>
-              <input type="text" name="admin_first_name[]" value="{{ admin.first_name or '' }}" 
-                     class="form-control admin-first-name" placeholder="John">
-              <div class="form-hint">Used for display name and avatar initials</div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Last Name</label>
-              <input type="text" name="admin_last_name[]" value="{{ admin.last_name or '' }}"
-                     class="form-control admin-last-name" placeholder="Doe">
-              <div class="form-hint">Used for display name and avatar initials</div>
-            </div>
-            <!-- Password placeholder to keep array alignment with new admin entries -->
-            <input type="hidden" name="admin_password[]" value="********">
-            <div class="col-12">
-              {% if admin.email == session.get('admin') %}
-              <!-- Self-service Change Password -->
-              {{ button("Change Password", variant="outline", icon="ti-key", attrs={"class": "btn-change-password", "data-admin-id": admin.id}) }}
-              <div class="change-password-section mt-3 d-none" data-admin-id="{{ admin.id }}">
-                <div class="card card-body bg-muted-lt">
-                  <div class="mb-3">
-                    <label class="form-label">Current Password</label>
-                    <input type="password" class="form-control current-password" placeholder="Enter current password" autocomplete="off">
-                    <div class="form-hint">Enter your current password to confirm your identity</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Template for a new (unsaved) user — cloned into #admin-list and shown
+     as a modal each time "Add user" is clicked. -->
+<template id="new-user-template">
+  <div class="modal modal-blur fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="admin-block">
+            <div class="row g-3 align-items-start">
+              <div class="col-12 col-md-4 text-center">
+                <div class="avatar avatar-xl mx-auto mb-2 avatar-initials"
+                     data-email="" data-first-name="" data-last-name="" data-avatar-filename="">AD</div>
+                <div class="small text-muted admin-name-display">
+                  <i class="ti ti-user me-1"></i>New User
+                </div>
+                <div class="avatar-upload-section mt-2" style="font-size: 0.875rem;">
+                  <label class="btn btn-sm btn-outline-primary" style="cursor: pointer;">
+                    <i class="ti ti-upload me-1"></i> Upload
+                    <input type="file" accept="image/*" class="d-none avatar-upload-input">
+                  </label>
+                  <div class="avatar-preview mt-2 d-none">
+                    <img src="" alt="Preview" class="img-thumbnail" style="max-width: 80px; max-height: 80px;">
                   </div>
-                  <div class="mb-3">
-                    <label class="form-label">New Password</label>
+                </div>
+              </div>
+              <div class="col-12 col-md-8">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" name="admin_email[]" autocomplete="off"
+                           class="form-control admin-email" required placeholder="user@example.com">
+                    <div class="form-hint">Used for login and Gravatar avatar</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">First Name <span class="text-danger">*</span></label>
+                    <input type="text" name="admin_first_name[]" autocomplete="off"
+                           class="form-control admin-first-name" placeholder="John" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" name="admin_last_name[]" autocomplete="off"
+                           class="form-control admin-last-name" placeholder="Doe">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Password</label>
                     <div class="input-group">
-                      <input type="password" class="form-control new-password" placeholder="Enter new password">
+                      <input type="password" name="admin_password[]" autocomplete="new-password"
+                             class="form-control admin-password" required placeholder="Enter password">
                       <button class="btn btn-outline-secondary toggle-password" type="button">
                         <i class="ti ti-eye"></i>
                       </button>
@@ -101,44 +209,29 @@
                       <div class="progress progress-sm">
                         <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                       </div>
-                      <div class="form-hint password-strength-text"></div>
+                      <div class="form-hint password-strength-text">Enter a strong password</div>
                     </div>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-primary btn-save-password" data-admin-id="{{ admin.id }}">
-                      <i class="ti ti-check me-1"></i>Save
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-cancel-password">Cancel</button>
                   </div>
                 </div>
               </div>
-              {% endif %}
             </div>
           </div>
         </div>
-        
-        <!-- Actions -->
-        <div class="col-12 col-md-2 text-end">
-          {% if admin.email != session.get('admin') %}
-            {{ action_menu(id="admin-actions-" ~ admin.id, label="Actions", items=[
-              {"label": "Reset Password", "url": "#reset-password-modal-" ~ loop.index, "attrs": {"data-bs-toggle": "modal"}},
-              {"type": "separator"},
-              {"label": "Remove Administrator", "url": "#delete-admin-modal-" ~ loop.index, "attrs": {"data-bs-toggle": "modal", "data-variant": "destructive"}}
-            ]) }}
-          {% else %}
-            <span class="badge bg-blue-lt">This is you</span>
-          {% endif %}
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-danger remove-pending-user-btn">
+            <i class="ti ti-trash me-1"></i>Remove
+          </button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
         </div>
       </div>
     </div>
   </div>
-  {% endfor %}
-</div>
+</template>
 
-<!-- Delete Confirmation Modals (one per admin) -->
+<!-- Delete Confirmation Modals (one per user, keyed by id) -->
 {% for admin in admins %}
 {% if admin.email != session.get('admin') %}
-<div class="modal modal-blur fade" id="delete-admin-modal-{{ loop.index }}" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur fade" id="delete-admin-modal-{{ admin.id }}" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-status bg-danger"></div>
@@ -151,7 +244,7 @@
       </div>
 
       <div class="modal-body text-center">
-        <p class="text-muted mb-3">Are you sure you want to remove admin:</p>
+        <p class="text-muted mb-3">Are you sure you want to remove user:</p>
         <p class="fw-bold">{{ admin.email }}</p>
       </div>
 
@@ -159,7 +252,7 @@
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-danger confirm-delete-admin-btn"
                 data-admin-email="{{ admin.email }}"
-                data-admin-index="{{ loop.index }}">
+                data-admin-id="{{ admin.id }}">
           <i class="ti ti-trash me-2"></i>Delete
         </button>
       </div>
@@ -169,14 +262,14 @@
 {% endif %}
 {% endfor %}
 
-<!-- Remove Unsaved Admin Confirmation Modal (for admins added client-side, not yet saved) -->
+<!-- Remove Unsaved User Confirmation Modal (for users added client-side, not yet saved) -->
 <div class="modal modal-blur fade" id="removeNewAdminModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-status bg-danger"></div>
       <div class="modal-body text-center py-4">
         <i class="ti ti-trash mb-2 text-danger" style="font-size: 2rem;" aria-hidden="true"></i>
-        <h3>Remove this admin?</h3>
+        <h3>Remove this user?</h3>
         <div class="text-muted" id="removeNewAdminEmail"></div>
       </div>
       <div class="modal-footer">
@@ -187,10 +280,10 @@
   </div>
 </div>
 
-<!-- Reset Password Modals (one per non-self admin) -->
+<!-- Reset Password Modals (one per non-self user, keyed by id) -->
 {% for admin in admins %}
 {% if admin.email != session.get('admin') %}
-<div class="modal modal-blur fade" id="reset-password-modal-{{ loop.index }}" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur fade" id="reset-password-modal-{{ admin.id }}" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-status bg-warning"></div>
@@ -267,8 +360,8 @@
 </div>
 
 <!-- Save Settings Button -->
-<div class="d-flex justify-content-end mt-3">
-  {{ button("Save Team Settings", type="submit", icon="ti-device-floppy", attrs={"form": "settings-form"}) }}
+<div class="mp-settings-actions">
+  {{ button("Save User Settings", type="submit", attrs={"form": "settings-form"}) }}
 </div>
 
 <!-- Deletion tracking -->
@@ -325,7 +418,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function rotateLeft(n, s) {
       return (n << s) | (n >>> (32 - s));
     }
-    
+
     function addUnsigned(x, y) {
       const x4 = (x & 0x40000000);
       const y4 = (y & 0x40000000);
@@ -338,32 +431,32 @@ document.addEventListener("DOMContentLoaded", function () {
         else return (result ^ 0x40000000 ^ x8 ^ y8);
       } else return (result ^ x8 ^ y8);
     }
-    
+
     function f(x, y, z) { return (x & y) | ((~x) & z); }
     function g(x, y, z) { return (x & z) | (y & (~z)); }
     function h(x, y, z) { return (x ^ y ^ z); }
     function i(x, y, z) { return (y ^ (x | (~z))); }
-    
+
     function ff(a, b, c, d, x, s, ac) {
       a = addUnsigned(a, addUnsigned(addUnsigned(f(b, c, d), x), ac));
       return addUnsigned(rotateLeft(a, s), b);
     }
-    
+
     function gg(a, b, c, d, x, s, ac) {
       a = addUnsigned(a, addUnsigned(addUnsigned(g(b, c, d), x), ac));
       return addUnsigned(rotateLeft(a, s), b);
     }
-    
+
     function hh(a, b, c, d, x, s, ac) {
       a = addUnsigned(a, addUnsigned(addUnsigned(h(b, c, d), x), ac));
       return addUnsigned(rotateLeft(a, s), b);
     }
-    
+
     function ii(a, b, c, d, x, s, ac) {
       a = addUnsigned(a, addUnsigned(addUnsigned(i(b, c, d), x), ac));
       return addUnsigned(rotateLeft(a, s), b);
     }
-    
+
     function convertToWordArray(str) {
       let lWordCount;
       const lMessageLength = str.length;
@@ -386,7 +479,7 @@ document.addEventListener("DOMContentLoaded", function () {
       lWordArray[lNumberOfWords - 1] = lMessageLength >>> 29;
       return lWordArray;
     }
-    
+
     function wordToHex(lValue) {
       let wordToHexValue = '', wordToHexValue_temp = '', lByte, lCount;
       for (lCount = 0; lCount <= 3; lCount++) {
@@ -396,14 +489,14 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       return wordToHexValue;
     }
-    
+
     const x = convertToWordArray(str);
     let a = 0x67452301, b = 0xEFCDAB89, c = 0x98BADCFE, d = 0x10325476;
     const S11 = 7, S12 = 12, S13 = 17, S14 = 22;
     const S21 = 5, S22 = 9, S23 = 14, S24 = 20;
     const S31 = 4, S32 = 11, S33 = 16, S34 = 23;
     const S41 = 6, S42 = 10, S43 = 15, S44 = 21;
-    
+
     for (let k = 0; k < x.length; k += 16) {
       const AA = a, BB = b, CC = c, DD = d;
       a = ff(a, b, c, d, x[k], S11, 0xD76AA478);
@@ -475,7 +568,7 @@ document.addEventListener("DOMContentLoaded", function () {
       c = addUnsigned(c, CC);
       d = addUnsigned(d, DD);
     }
-    
+
     const temp = wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d);
     return temp.toLowerCase();
   }
@@ -484,20 +577,20 @@ document.addEventListener("DOMContentLoaded", function () {
   function generateInitials(firstName, lastName) {
     const first = (firstName || '').trim();
     const last = (lastName || '').trim();
-    
+
     if (!first && !last) return 'AD'; // Admin Default
     if (!last) return first.charAt(0).toUpperCase();
     return (first.charAt(0) + last.charAt(0)).toUpperCase();
   }
 
-  // Track which admins have no Gravatar
+  // Track which users have no Gravatar
   let adminsWithoutGravatar = new Set();
-  
+
   // Load avatars with smart detection
   function loadAvatars() {
     let hasAnyWithoutGravatar = false;
     const promises = [];
-    
+
     document.querySelectorAll('[id^="avatar-"]').forEach(avatarDiv => {
       const adminBlock = avatarDiv.closest('.admin-block');
       const email = avatarDiv.dataset.email || adminBlock.querySelector('.admin-email')?.value;
@@ -505,11 +598,11 @@ document.addEventListener("DOMContentLoaded", function () {
       const lastName = avatarDiv.dataset.lastName || adminBlock.querySelector('.admin-last-name')?.value || '';
       const avatarFilename = avatarDiv.dataset.avatarFilename;
       const uploadSection = adminBlock.querySelector('.avatar-upload-section');
-      
+
       // Generate initials for fallback
       const initials = generateInitials(firstName, lastName);
       avatarDiv.dataset.initials = initials;
-      
+
       // Check if custom avatar exists
       if (avatarFilename && avatarFilename !== '') {
         // Use custom uploaded avatar
@@ -521,7 +614,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Try Gravatar
         const emailLower = email.trim().toLowerCase();
         const gravatarHash = md5(emailLower);
-        
+
         const promise = new Promise((resolve) => {
           const testImg = new Image();
           testImg.onload = function() {
@@ -552,7 +645,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (uploadSection) uploadSection.classList.remove('d-none');
       }
     });
-    
+
     // After all checks, show/hide the info panel
     Promise.all(promises).then(() => {
       const infoPanel = document.getElementById('gravatar-info-panel');
@@ -571,12 +664,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const firstName = adminBlock.querySelector('.admin-first-name')?.value?.trim() || '';
     const lastName = adminBlock.querySelector('.admin-last-name')?.value?.trim() || '';
     const nameDisplay = adminBlock.querySelector('.admin-name-display');
-    
+
     if (nameDisplay) {
       if (firstName || lastName) {
         nameDisplay.innerHTML = `${firstName} ${lastName}`.trim();
       } else {
-        nameDisplay.innerHTML = '<i class="ti ti-user me-1"></i>Admin';
+        nameDisplay.innerHTML = '<i class="ti ti-user me-1"></i>User';
       }
     }
   }
@@ -637,7 +730,7 @@ document.addEventListener("DOMContentLoaded", function () {
           dt.items.add(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
           activeAvatarInput.files = dt.files;
 
-          // Update avatar display and preview for this admin block
+          // Update avatar display and preview for this user block
           const adminBlock = activeAvatarInput.closest('.admin-block');
           const avatarDiv = adminBlock ? adminBlock.querySelector('[id^="avatar-"]') : null;
           const previewSection = adminBlock ? adminBlock.querySelector('.avatar-preview') : null;
@@ -657,42 +750,42 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 'image/jpeg', 0.92);
     });
   }
-  
+
   // Update avatar and display name on input changes
   document.addEventListener('input', function(e) {
-    if (e.target.classList.contains('admin-email') || 
-        e.target.classList.contains('admin-first-name') || 
+    if (e.target.classList.contains('admin-email') ||
+        e.target.classList.contains('admin-first-name') ||
         e.target.classList.contains('admin-last-name')) {
       const adminBlock = e.target.closest('.admin-block');
       const avatarDiv = adminBlock.querySelector('[id^="avatar-"]');
       const uploadSection = adminBlock.querySelector('.avatar-upload-section');
-      
+
       if (avatarDiv) {
         const email = adminBlock.querySelector('.admin-email')?.value || '';
         const firstName = adminBlock.querySelector('.admin-first-name')?.value || '';
         const lastName = adminBlock.querySelector('.admin-last-name')?.value || '';
         const avatarFilename = avatarDiv.dataset.avatarFilename;
-        
+
         // Update avatar data attributes
         avatarDiv.dataset.email = email;
         avatarDiv.dataset.firstName = firstName;
         avatarDiv.dataset.lastName = lastName;
-        
+
         // Generate initials
         const initials = generateInitials(firstName, lastName);
         avatarDiv.dataset.initials = initials;
-        
+
         // Only update avatar if no custom upload
         const fileInput = adminBlock.querySelector('.avatar-upload-input');
         if (!fileInput?.files?.length && !avatarFilename) {
           avatarDiv.textContent = initials;
           avatarDiv.classList.add('avatar-initials');
-          
+
           // Try Gravatar if email exists
           if (email) {
             const emailLower = email.trim().toLowerCase();
             const gravatarHash = md5(emailLower);
-            
+
             const testImg = new Image();
             testImg.onload = function() {
               avatarDiv.style.backgroundImage = `url(https://www.gravatar.com/avatar/${gravatarHash}?s=96)`;
@@ -718,13 +811,17 @@ document.addEventListener("DOMContentLoaded", function () {
             if (uploadSection) uploadSection.classList.remove('d-none');
           }
         }
-        
+
         // Update display name
         updateDisplayName(adminBlock);
+
+        // Live-sync a pending (unsaved) row's summary text, if this block belongs to one
+        const pendingId = adminBlock.closest('[data-pending-id]')?.dataset.pendingId;
+        if (pendingId) syncPendingRow(pendingId);
       }
     }
   });
-  
+
   // Helper to update Gravatar info panel visibility
   function updateGravatarInfoPanel() {
     const infoPanel = document.getElementById('gravatar-info-panel');
@@ -787,7 +884,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const group = button.closest(".input-group");
       const input = group.querySelector("input");
       const icon = button.querySelector("i");
-      
+
       if (input.type === "password") {
         input.type = "text";
         icon.classList.replace("ti-eye", "ti-eye-off");
@@ -798,160 +895,164 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Handle modal delete confirmation
+  // Handle modal delete confirmation for an existing (already-saved) user —
+  // marks them for deletion (actually removed server-side on Save) and
+  // removes their row from both the desktop table and the mobile list.
   document.addEventListener('click', function(e) {
     if (e.target.closest('.confirm-delete-admin-btn')) {
       const button = e.target.closest('.confirm-delete-admin-btn');
       const email = button.dataset.adminEmail;
-      const adminIndex = button.dataset.adminIndex;
+      const adminId = button.dataset.adminId;
 
-      // Find the admin block by index
-      const adminBlocks = document.querySelectorAll('.admin-block[data-loaded="true"]');
-      const block = adminBlocks[adminIndex - 1]; // loop.index is 1-based
-
-      if (block) {
-        // Track deletion
-        const deletedField = document.getElementById("deleted_admins");
-        let current = deletedField.value ? deletedField.value.split(",") : [];
-        if (email && !current.includes(email)) {
-          current.push(email);
-          deletedField.value = current.join(",");
-        }
-
-        // Close modal
-        const modal = button.closest('.modal');
-        const bsModal = bootstrap.Modal.getInstance(modal);
-        if (bsModal) bsModal.hide();
-
-        // Animate removal
-        block.style.transition = 'opacity 0.3s, transform 0.3s';
-        block.style.opacity = '0';
-        block.style.transform = 'translateX(-20px)';
-        setTimeout(() => block.remove(), 300);
+      // Track deletion
+      const deletedField = document.getElementById("deleted_admins");
+      let current = deletedField.value ? deletedField.value.split(",") : [];
+      if (email && !current.includes(email)) {
+        current.push(email);
+        deletedField.value = current.join(",");
       }
-    }
 
-    // Handle remove button for new admins (dynamically added, not yet saved)
-    if (e.target.closest('.remove-admin-btn')) {
-      const button = e.target.closest('.remove-admin-btn');
-      const block = button.closest(".admin-block");
-      const email = block.querySelector('.admin-email').value;
+      // Close modal
+      const modal = button.closest('.modal');
+      const bsModal = bootstrap.Modal.getInstance(modal);
+      if (bsModal) bsModal.hide();
 
-      pendingNewAdminBlock = block;
-      document.getElementById('removeNewAdminEmail').textContent = email || 'this admin';
-      new bootstrap.Modal(document.getElementById('removeNewAdminModal')).show();
+      // Animate removal of the row (desktop + mobile share the same action-menu id suffix)
+      document.querySelectorAll(`[id$="-actions-${adminId}"]`).forEach(function (actionsEl) {
+        const row = actionsEl.closest('tr') || actionsEl.closest('.mp-table-mobile-card');
+        if (row) {
+          row.style.transition = 'opacity 0.3s, transform 0.3s';
+          row.style.opacity = '0';
+          row.style.transform = 'translateX(-20px)';
+          setTimeout(() => row.remove(), 300);
+        }
+      });
+
+      const editModal = document.getElementById('user-edit-modal-' + adminId);
+      if (editModal) editModal.remove();
     }
   });
 
-  let pendingNewAdminBlock = null;
+  // Add a pending (unsaved) row to both the desktop table and the mobile
+  // list, linked to the given modal id.
+  function addPendingRow(uid, modalId) {
+    const desktopTable = document.getElementById('users-table');
+    if (desktopTable) {
+      const tbody = desktopTable.querySelector('tbody');
+      const tr = document.createElement('tr');
+      tr.dataset.pendingId = uid;
+      tr.innerHTML = `
+        <td style="vertical-align: middle;">
+          <div class="d-flex align-items-center gap-3">
+            <div class="mp-avatar-initials bg-blue-lt text-blue-lt-fg" data-size="md" aria-hidden="true"><i class="ti ti-user"></i></div>
+            <div style="min-width: 0;">
+              <div class="fw-bold pending-row-email">New user</div>
+              <div class="text-muted small pending-row-name"></div>
+            </div>
+          </div>
+        </td>
+        <td style="vertical-align: middle;"><span class="mp-badge" data-variant="outline">Pending</span></td>
+        <td class="text-center" style="vertical-align: middle;">
+          <div class="d-inline-flex gap-1">
+            <button type="button" class="mp-btn" data-variant="outline" data-size="icon-sm" data-bs-toggle="modal" data-bs-target="#${modalId}" aria-label="Edit user"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+            <button type="button" class="mp-btn remove-pending-user-btn" data-variant="outline" data-size="icon-sm" aria-label="Remove user"><i class="ti ti-trash" aria-hidden="true"></i></button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    } else {
+      // No users existed yet (table_empty_state was rendered instead) — nothing to append to.
+    }
+
+    const mobileList = document.getElementById('users-table-mobile');
+    if (mobileList) {
+      const card = document.createElement('div');
+      card.className = 'mp-table-mobile-card';
+      card.dataset.pendingId = uid;
+      card.innerHTML = `
+        <div class="mp-avatar-initials bg-blue-lt text-blue-lt-fg" data-size="md" aria-hidden="true"><i class="ti ti-user"></i></div>
+        <div class="mp-table-mobile-card__body">
+          <div class="mp-table-mobile-card__primary pending-row-email">New user</div>
+          <div class="mp-table-mobile-card__secondary pending-row-name"></div>
+          <div class="mp-table-mobile-card__badges"><span class="badge bg-blue-lt">Pending</span></div>
+        </div>
+        <div class="d-inline-flex gap-1 flex-shrink-0">
+          <button type="button" class="mp-btn" data-variant="outline" data-size="icon-sm" data-bs-toggle="modal" data-bs-target="#${modalId}" aria-label="Edit user"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+          <button type="button" class="mp-btn remove-pending-user-btn" data-variant="outline" data-size="icon-sm" aria-label="Remove user"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        </div>`;
+      mobileList.appendChild(card);
+    }
+  }
+
+  // Refresh a pending row's displayed email/name from its modal's current field values.
+  function syncPendingRow(uid) {
+    const modalEl = document.getElementById('user-add-modal-' + uid);
+    if (!modalEl) return;
+    const email = modalEl.querySelector('.admin-email')?.value.trim();
+    const first = modalEl.querySelector('.admin-first-name')?.value.trim() || '';
+    const last = modalEl.querySelector('.admin-last-name')?.value.trim() || '';
+    document.querySelectorAll(`[data-pending-id="${uid}"]`).forEach(function (el) {
+      const emailEl = el.querySelector('.pending-row-email');
+      const nameEl = el.querySelector('.pending-row-name');
+      if (emailEl) emailEl.textContent = email || 'New user';
+      if (nameEl) nameEl.textContent = `${first} ${last}`.trim();
+    });
+  }
+
+  function removePendingUser(uid) {
+    document.querySelectorAll(`[data-pending-id="${uid}"]`).forEach(el => el.remove());
+    const modalEl = document.getElementById('user-add-modal-' + uid);
+    if (modalEl) {
+      const inst = bootstrap.Modal.getInstance(modalEl);
+      if (inst) inst.hide();
+      modalEl.remove();
+    }
+  }
+
+  // Handle "Remove" for a pending (unsaved) user — from either the table
+  // row's icon button or the Add User modal's own footer button.
+  let pendingRemoveUid = null;
+  document.addEventListener('click', function (e) {
+    const removeBtn = e.target.closest('.remove-pending-user-btn');
+    if (!removeBtn) return;
+    const scope = removeBtn.closest('[data-pending-id]');
+    if (!scope) return;
+    pendingRemoveUid = scope.dataset.pendingId;
+    const emailText = scope.querySelector('.pending-row-email')?.textContent
+      || scope.querySelector('.admin-email')?.value
+      || 'this user';
+    document.getElementById('removeNewAdminEmail').textContent = emailText;
+    new bootstrap.Modal(document.getElementById('removeNewAdminModal')).show();
+  });
+
   document.getElementById('confirmRemoveNewAdminBtn').addEventListener('click', function () {
-    if (pendingNewAdminBlock) {
-      const block = pendingNewAdminBlock;
-      pendingNewAdminBlock = null;
-      block.style.transition = 'opacity 0.3s, transform 0.3s';
-      block.style.opacity = '0';
-      block.style.transform = 'translateX(-20px)';
-      setTimeout(() => block.remove(), 300);
+    if (pendingRemoveUid) {
+      removePendingUser(pendingRemoveUid);
+      pendingRemoveUid = null;
     }
     bootstrap.Modal.getInstance(document.getElementById('removeNewAdminModal')).hide();
   });
 
-  // Add new admin
+  // Add new user — clone the template modal, wire it up, and open it immediately.
   document.getElementById('add-admin-btn').addEventListener('click', function() {
-    const adminList = document.getElementById("admin-list");
-    const newIndex = adminList.children.length + 1;
-    
-    const newCard = document.createElement("div");
-    newCard.className = "card admin-block mb-3";
-    newCard.style.opacity = '0';
-    newCard.innerHTML = `
-      <div class="card-body">
-        <div class="row g-3 align-items-start">
-          <!-- Avatar Section -->
-          <div class="col-12 col-md-2 text-center">
-            <div class="avatar avatar-xl mx-auto mb-2 avatar-initials" id="avatar-${newIndex}" 
-                 data-email="" data-first-name="" data-last-name="" data-avatar-filename="">
-              AD
-            </div>
-            <div class="small text-muted admin-name-display">
-              <i class="ti ti-user me-1"></i>
-              New Admin
-            </div>
-            <!-- Avatar upload section -->
-            <div class="avatar-upload-section mt-2" style="font-size: 0.875rem;">
-              <label class="btn btn-sm btn-outline-primary" style="cursor: pointer;">
-                <i class="ti ti-upload me-1"></i> Upload
-                <input type="file" name="admin_avatar_${newIndex}" 
-                       accept="image/*" class="d-none avatar-upload-input" 
-                       data-index="${newIndex}">
-              </label>
-              <div class="avatar-preview mt-2 d-none">
-                <img src="" alt="Preview" class="img-thumbnail" style="max-width: 80px; max-height: 80px;">
-              </div>
-            </div>
-          </div>
-          
-          <!-- Form Fields -->
-          <div class="col-12 col-md-8">
-            <div class="row g-3">
-              <div class="col-12">
-                <label class="form-label">Email Address</label>
-                <input type="email" name="admin_email[]" 
-                       class="form-control admin-email" required placeholder="admin@example.com">
-                <div class="form-hint">Used for login and Gravatar avatar</div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">First Name <span class="text-danger">*</span></label>
-                <input type="text" name="admin_first_name[]" 
-                       class="form-control admin-first-name" placeholder="John" required>
-                <div class="form-hint">Required for new admins</div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Last Name</label>
-                <input type="text" name="admin_last_name[]" 
-                       class="form-control admin-last-name" placeholder="Doe">
-                <div class="form-hint">Used for display name and avatar initials</div>
-              </div>
-              <div class="col-12">
-                <label class="form-label">Password</label>
-                <div class="input-group">
-                  <input type="password" name="admin_password[]" 
-                         class="form-control admin-password" required placeholder="Enter password">
-                  <button class="btn btn-outline-secondary toggle-password" type="button">
-                    <i class="ti ti-eye"></i>
-                  </button>
-                </div>
-                <div class="password-strength mt-2 d-none">
-                  <div class="progress progress-sm">
-                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                  </div>
-                  <div class="form-hint password-strength-text">Enter a strong password</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Actions -->
-          <div class="col-12 col-md-2 text-end">
-            <button type="button" class="btn btn-outline-danger remove-admin-btn">
-              <i class="ti ti-trash"></i>
-              <span class="d-none d-md-inline ms-1">Remove</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    adminList.appendChild(newCard);
-    
-    // Animate appearance
-    setTimeout(() => {
-      newCard.style.transition = 'opacity 0.3s';
-      newCard.style.opacity = '1';
-    }, 10);
-    
-    // Focus on email field
-    newCard.querySelector('.admin-email').focus();
+    const tpl = document.getElementById('new-user-template');
+    const modalEl = tpl.content.firstElementChild.cloneNode(true);
+    const uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    modalEl.id = 'user-add-modal-' + uid;
+    modalEl.dataset.pendingId = uid;
+
+    const avatarDiv = modalEl.querySelector('.avatar-initials');
+    if (avatarDiv) avatarDiv.id = 'avatar-' + uid;
+
+    document.getElementById('admin-list').appendChild(modalEl);
+    addPendingRow(uid, modalEl.id);
+
+    modalEl.addEventListener('hidden.bs.modal', function () { syncPendingRow(uid); });
+
+    const bsModal = new bootstrap.Modal(modalEl);
+    modalEl.addEventListener('shown.bs.modal', function () {
+      modalEl.querySelector('.admin-email').focus();
+    }, { once: true });
+    bsModal.show();
   });
 
   // Toggle change password section
@@ -1111,7 +1212,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Generate password (admin resets another admin)
+  // Generate password (admin resets another user's password)
   document.addEventListener('click', function(e) {
     if (e.target.closest('.btn-generate-password')) {
       const btn = e.target.closest('.btn-generate-password');
@@ -1166,6 +1267,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Enhanced form validation
   document.querySelector("form").addEventListener("submit", function (e) {
+    // Renumber avatar file inputs to match their position in admin_email[]
+    // so the backend's admin_avatar_{i+1} lookup stays aligned regardless
+    // of the client-side id a user's block was created with.
+    document.querySelectorAll('#admin-list .admin-block').forEach(function (block, idx) {
+      const fileInput = block.querySelector('.avatar-upload-input');
+      if (fileInput) fileInput.name = `admin_avatar_${idx + 1}`;
+    });
+
     // Clear previous errors
     const existingErrors = document.querySelector('.alert-danger');
     if (existingErrors) existingErrors.remove();
@@ -1186,19 +1295,19 @@ document.addEventListener("DOMContentLoaded", function () {
         emails.add(email.toLowerCase());
       }
 
-      // Check if new admin has password and first name
+      // Check if new user has password and first name
       if (!block.dataset.loaded) {
         const passwordInput = block.querySelector('input[name="admin_password[]"]');
         const password = passwordInput ? passwordInput.value.trim() : '';
         const firstName = block.querySelector('input[name="admin_first_name[]"]').value.trim();
 
         if (email && !password) {
-          errors.push(`Please enter a password for new admin: ${email}`);
+          errors.push(`Please enter a password for new user: ${email}`);
           valid = false;
         }
 
         if (email && !firstName) {
-          errors.push(`Please enter a first name for new admin: ${email}`);
+          errors.push(`Please enter a first name for new user: ${email}`);
           valid = false;
         }
       }

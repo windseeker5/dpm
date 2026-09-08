@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% from 'macros/settings_nav.html' import settings_nav %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/badge.html' import badge %}
+{% from 'macros/progress.html' import progress %}
 {% block title %}Plan & Billing | minipass{% endblock %}
 {% block content %}
 
@@ -27,8 +30,8 @@
       {% set expired = subscription_details and subscription_details.status == 'canceled' %}
 
       <!-- Subscription Card -->
-      <div class="card" style="max-width: 680px;">
-        <div class="card-body p-3">
+      <div class="mp-settings-surface mp-plan-summary">
+        <div class="card-body">
 
           <!-- Plan -->
           <div class="row mb-2 align-items-center">
@@ -52,10 +55,11 @@
           <div class="row mb-2 align-items-center">
             <div class="col-sm-3 text-muted"><i class="ti ti-activity me-1" style="color: #667085;"></i>Activities</div>
             <div class="col-sm-9">
-              {{ usage_info.current }} / {{ usage_info.limit }}
-              <span class="text-muted ms-2">
-                {% if usage_info.percentage >= 100 %}(Limit reached){% else %}({{ usage_info.limit - usage_info.current }} remaining){% endif %}
-              </span>
+              <div class="mp-plan-usage">
+                <div>{{ usage_info.current }} of {{ usage_info.limit }} active</div>
+                {{ progress(value=usage_info.current, max=usage_info.limit, label="Activity usage", show_value=true) }}
+                <div class="mp-text-body mt-1">{% if usage_info.percentage >= 100 %}Limit reached{% else %}{{ usage_info.limit - usage_info.current }} remaining{% endif %}</div>
+              </div>
             </div>
           </div>
 
@@ -89,13 +93,13 @@
             <div class="col-sm-3 text-muted"><i class="ti ti-circle-check me-1" style="color: #667085;"></i>Status</div>
             <div class="col-sm-9">
               {% if expired %}
-                <span class="badge bg-danger-lt">Expired</span>
-                <a href="https://minipass.me" class="btn btn-sm btn-outline-primary ms-2">View Plans</a>
+                {{ badge("Expired", variant="destructive") }}
+                {{ button("View plans", href="https://minipass.me", variant="outline", size="sm", attrs={"class": "ms-2"}) }}
               {% elif cancelling %}
-                <span class="badge bg-warning-lt">Cancelled</span>
+                {{ badge("Cancelled", variant="secondary") }}
                 <span class="text-muted ms-2 small">Access until {{ billing_date }}</span>
               {% else %}
-                <span class="badge bg-success-lt">Active</span>
+                {{ badge("Active") }}
               {% endif %}
             </div>
           </div>
@@ -106,7 +110,7 @@
           <div class="row mb-2 align-items-center">
             <div class="col-sm-3 text-muted"><i class="ti ti-calendar-event me-1" style="color: #667085;"></i>Scheduled</div>
             <div class="col-sm-9">
-              <span class="badge bg-warning-lt me-2">Downgrade pending</span>
+              {{ badge("Downgrade pending", variant="secondary", class_="me-2") }}
               Changing to <strong>{{ pending.plan_name }} ({{ pending.freq }})</strong> on <strong>{{ pending.date }}</strong>
             </div>
           </div>
@@ -120,33 +124,25 @@
             <div class="col-sm-3 text-muted"><i class="ti ti-settings me-1" style="color: #667085;"></i>Actions</div>
             <div class="col-sm-9 d-flex gap-2 flex-wrap">
 
-              <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#changePlanModal">
-                <i class="ti ti-arrows-exchange me-1"></i>Change Plan
-              </button>
+              {{ button("Change plan", variant="outline", attrs={"data-bs-toggle": "modal", "data-bs-target": "#changePlanModal"}) }}
 
               {% if pending %}
               <form method="POST" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="cancel_downgrade">
-                <button type="submit" class="btn btn-outline-warning">
-                  <i class="ti ti-x me-1"></i>Cancel Downgrade
-                </button>
+                {{ button("Cancel downgrade", variant="outline", type="submit") }}
               </form>
               {% elif cancelling %}
               <form method="POST" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="reactivate">
-                <button type="submit" class="btn btn-success">
-                  <i class="ti ti-player-play me-1"></i>Reactivate Auto-Renewal
-                </button>
+                {{ button("Reactivate auto-renewal", type="submit") }}
               </form>
               {% else %}
               <form method="POST" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="cancel">
-                <button type="submit" class="btn btn-outline-danger">
-                  <i class="ti ti-x me-1"></i>Cancel Auto-Renewal
-                </button>
+                {{ button("Cancel auto-renewal", variant="destructive", type="submit") }}
               </form>
               {% endif %}
 
@@ -157,7 +153,7 @@
           {% else %}
           <!-- Not a paid subscriber -->
           {% if is_beta %}
-          <div class="alert alert-info mt-2 mb-0" role="alert">
+          <div class="alert alert-info mt-2 mb-0 mp-plan-message" role="alert">
             <h4 class="alert-title">Thank you for being a Beta Tester!</h4>
             <div class="text-secondary">You have full Enterprise access as our thank you. Contact us if you'd like to subscribe after the beta period.</div>
           </div>

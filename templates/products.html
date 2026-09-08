@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if product else "Add" }} Product{% endblock %}
+
+{% block content %}
+{% from 'macros/breadcrumb.html' import breadcrumb %}
+{% from 'macros/badge.html' import badge %}
+{% from 'macros/input.html' import text_input %}
+{% from 'macros/textarea.html' import textarea %}
+{% from 'macros/checkbox.html' import checkbox %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/data_table.html' import table_toolbar, table_empty_state %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+{% from 'macros/action_menu.html' import action_menu %}
+
+<div class="page-wrapper">
+  <div class="page-header d-print-none">
+    <div class="dashboard-container">
+      {{ breadcrumb(items=[
+        {"label": "Dashboard", "url": url_for('dashboard')},
+        {"label": "Products", "current": true}
+      ]) }}
+      <div class="row g-2 align-items-center mt-1">
+        <div class="col">
+          <h2 class="page-title">{{ "Edit Product" if product else "Add Product" }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <div class="dashboard-container">
+      <form method="POST" class="card" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="card-body">
+          <div class="mp-form-content">
+            <div class="mb-3">
+              {{ text_input(id="name", label="Name", name="name", placeholder="e.g. Team T-Shirt",
+                 value=product.name if product else '', attrs={"required": "required"}) }}
+            </div>
+
+            <div class="mb-3">
+              {{ textarea(id="description", label="Description (optional)", name="description",
+                 value=product.description if product else '', rows=2) }}
+            </div>
+
+            <div class="row">
+              <div class="col-12 col-sm-6 mb-3">
+                {{ text_input(id="price", label="Price ($)", name="price", type="number",
+                   value=product.price if product else '',
+                   attrs={"step": "0.01", "min": "0", "required": "required"}) }}
+              </div>
+              <div class="col-12 col-sm-6 mb-3">
+                {{ text_input(id="size_label", label="Sizes (optional)", name="size_label",
+                   placeholder="e.g. S, M, L",
+                   value=product.size_label if product else '') }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="photo">Photo</label>
+              {% if product and product.photo_filename %}
+                <div class="mb-2">
+                  <img src="{{ url_for('static', filename='uploads/product_images/' ~ product.photo_filename) }}"
+                       alt="{{ product.name }}" class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
+                </div>
+              {% endif %}
+              <input type="file" id="photo" name="photo" accept="image/*" class="form-control">
+            </div>
+
+            <div class="mb-2">
+              {{ checkbox(id="active", name="active", label="Show in shop",
+                 checked=product.active if product else true) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="mp-form-content">
+            <div class="d-flex justify-content-start gap-2">
+              {{ button("Update Product" if product else "Add Product", type="submit") }}
+              {% if product %}
+                {{ button("Cancel", variant="outline", href=url_for('list_products')) }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="card mp-data-table mt-4">
+        <div class="card-header">
+          <form method="get" action="{{ url_for('list_products') }}" style="display: contents;">
+            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            {{ table_toolbar(id="products-toolbar", tabs=tabs, search_value=q, search_placeholder="Search products…") }}
+          </form>
+        </div>
+
+        {% if not products %}
+          {{ table_empty_state(icon="ti-shopping-bag" if not (q or status_filter) else "ti-search",
+             title="No products yet" if not (q or status_filter) else "No products match your filters",
+             description="Add your first product above." if not (q or status_filter) else "Try adjusting your search or filter selection.",
+             action_label="Clear all filters" if (q or status_filter) else none,
+             action_url=url_for('list_products') if (q or status_filter) else none) }}
+        {% else %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 56px;"></th>
+                  <th>Name</th>
+                  <th class="d-none d-md-table-cell">Price</th>
+                  <th class="d-none d-md-table-cell">Sizes</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in products %}
+                <tr>
+                  <td style="vertical-align: middle;">
+                    {% if p.photo_filename %}
+                      <img src="{{ url_for('static', filename='uploads/product_images/' ~ p.photo_filename) }}"
+                           alt="{{ p.name }}" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
+                    {% else %}
+                      <div class="rounded bg-secondary-lt d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="ti ti-photo text-muted"></i>
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td style="vertical-align: middle;">
+                    <div class="fw-bold">{{ p.name }}</div>
+                    <div class="text-muted small d-md-none">${{ "%.2f"|format(p.price) }}{% if p.size_label %} · {{ p.size_label }}{% endif %}</div>
+                  </td>
+                  <td class="d-none d-md-table-cell" style="vertical-align: middle;">${{ "%.2f"|format(p.price) }}</td>
+                  <td class="d-none d-md-table-cell" style="vertical-align: middle;">{{ p.size_label or "-" }}</td>
+                  <td class="text-center" style="vertical-align: middle;">
+                    {{ badge("Visible" if p.active else "Hidden", variant="default" if p.active else "secondary") }}
+                  </td>
+                  <td class="text-center" style="vertical-align: middle;">
+                    {{ action_menu(id="product-actions-" ~ p.id, items=[
+                      {"label": "Edit", "url": url_for('list_products', product_id=p.id)},
+                      {"type": "separator"},
+                      {"label": "Delete", "attrs": {"data-variant": "destructive",
+                        "onclick": "if(confirm('Delete this product?')) document.getElementById('delete-product-form-' + " ~ p.id ~ ").submit();"}}
+                    ]) }}
+                    <form id="delete-product-form-{{ p.id }}" method="POST" action="{{ url_for('delete_product', product_id=p.id) }}" class="d-none">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="d-none d-md-block">
+            {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+               total=pagination.total, items_count=products|length, base_path=url_for('list_products'), filters=current_filters) }}
+          </div>
+          <div class="d-md-none">
+            {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+               total=pagination.total, items_count=products|length, base_path=url_for('list_products'), filters=current_filters) }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

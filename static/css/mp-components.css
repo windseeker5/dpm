@@ -103,6 +103,14 @@
   height: 1rem;
 }
 
+.mp-btn:hover {
+  /* Beats Tabler's a:hover{text-decoration:underline} — same fix
+     .mp-filter-btn:hover/a.mp-page-btn:hover already needed. Only bites
+     when the button is a real <a> with an href, e.g. settings_nav.html's
+     button_group() links; a plain <button> was never affected. */
+  text-decoration: none;
+}
+
 .mp-btn:focus-visible {
   border-color: var(--mp-ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
@@ -789,7 +797,17 @@
 /* Settings shell — shared horizontal navigation and calm form surface. */
 .mp-settings-nav {
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid var(--mp-border);
+}
+
+.mp-settings-nav .mp-button-group {
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.mp-settings-nav .mp-button-group .mp-btn {
+  flex: 0 0 auto;
 }
 
 .mp-settings-tabs {
@@ -856,6 +874,40 @@
   box-shadow: var(--minipass-shadow-sm, 0 1px 2px rgb(0 0 0 / 0.05));
 }
 
+/* Transitional shell for the Team/Data pages while their existing server
+   behaviour remains intact. It gives both tabs the same visual boundary as
+   General, Email, and Payments without introducing a second card system. */
+.mp-settings-legacy-surface {
+  max-width: 880px;
+}
+
+.mp-settings-legacy-surface > .card-body {
+  padding: 0;
+}
+
+.mp-settings-legacy-surface .tab-pane > .mp-settings-section > .row {
+  margin: 0;
+}
+
+.mp-settings-legacy-surface .tab-pane > .mp-settings-section > .row > [class*="col-"] {
+  width: 100%;
+  padding: 0;
+}
+
+.mp-settings-legacy-surface .admin-block,
+.mp-settings-legacy-surface .tab-pane > .mp-settings-section > .row .card {
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.mp-settings-legacy-surface .admin-block:first-child,
+.mp-settings-legacy-surface .tab-pane > .mp-settings-section > .row .card:first-child {
+  border-top: 0;
+}
+
 .mp-settings-heading,
 .mp-settings-section,
 .mp-settings-actions {
@@ -875,13 +927,19 @@
 }
 
 .mp-settings-fields {
-  max-width: 640px;
+  display: grid;
+  max-width: 40rem;
   margin-top: 1.25rem;
+  gap: 1rem;
+}
+
+.mp-settings-fields > .mb-3 {
+  margin-bottom: 0 !important;
 }
 
 .mp-settings-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   border-top: 1px solid var(--mp-border);
   background: var(--mp-muted);
 }
@@ -892,17 +950,51 @@
 }
 
 .mp-settings-advanced > summary {
+  display: flex;
+  align-items: center;
   min-height: 44px;
   padding: 0.75rem 0;
   color: var(--mp-foreground);
   font-weight: 500;
   cursor: pointer;
+  list-style: none;
+}
+
+.mp-settings-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mp-settings-advanced > summary > .ti {
+  margin-left: auto;
+  color: var(--mp-muted-foreground);
+  transition: transform 150ms ease-out;
+}
+
+.mp-settings-advanced[open] > summary > .ti {
+  transform: rotate(180deg);
+}
+
+.mp-settings-advanced > summary:hover {
+  color: var(--mp-brand-primary, var(--mp-primary));
 }
 
 .mp-settings-advanced > summary:focus-visible {
   border-radius: var(--mp-radius-sm);
   outline: 2px solid var(--mp-ring);
   outline-offset: 2px;
+}
+
+.mp-settings-advanced[open] {
+  padding-bottom: 1rem;
+  background: var(--mp-muted);
+  border-radius: var(--mp-radius-md);
+  border-top-color: transparent;
+}
+
+.mp-settings-advanced[open] > summary,
+.mp-settings-advanced[open] > .mp-settings-fields {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
 }
 
 .mp-settings-status-row {
@@ -917,17 +1009,6 @@
   max-width: 65ch;
 }
 
-.mp-brand-preview {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--mp-border);
-  border-radius: var(--mp-radius-sm);
-  background: var(--mp-muted);
-}
 
 .mp-brand-color-input {
   width: 3rem;
@@ -936,9 +1017,78 @@
   padding: 0.2rem;
 }
 
+.mp-plan-summary .row {
+  padding: 1rem 1.5rem;
+  margin: 0;
+  border-bottom: 1px solid var(--mp-border);
+}
+
+.mp-plan-summary .row:last-child {
+  border-bottom: 0;
+}
+
+.mp-plan-summary .row > [class*="col-sm-"] {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.mp-plan-usage {
+  display: grid;
+  max-width: 20rem;
+  gap: 0.375rem;
+}
+
+.mp-plan-message {
+  display: block;
+  margin: 0 !important;
+  padding: 1rem 1.5rem;
+  border: 0;
+  border-top: 1px solid var(--mp-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mp-plan-message .alert-title {
+  margin-bottom: 0.5rem;
+}
+
 @media (max-width: 767.98px) {
+  .mp-plan-summary .row {
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+  }
+
   .mp-settings-nav {
     border-bottom: 0;
+  }
+
+  /* Keep the canonical Button Group on small screens without requiring a
+     horizontal scroll target: the same controls become one touch-friendly
+     vertical group. */
+  .mp-settings-nav .mp-button-group {
+    display: flex;
+    overflow: visible;
+    padding-bottom: 0;
+    flex-direction: column;
+  }
+
+  .mp-settings-nav .mp-button-group .mp-btn {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .mp-settings-nav .mp-button-group .mp-btn:not(:first-child) {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: var(--mp-radius-md);
+    border-bottom-right-radius: var(--mp-radius-md);
+    margin-top: -1px;
+  }
+
+  .mp-settings-nav .mp-button-group .mp-btn:not(:last-child) {
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
   }
 
   .mp-settings-tabs {
@@ -959,8 +1109,18 @@
     flex-direction: column;
   }
 
+  /* The app shell has a fixed mobile navigation bar. Reserve its height so
+     the final Save action never ends beneath it at the end of a long form. */
+  .mp-settings-surface {
+    margin-bottom: 5.5rem;
+  }
+
   .mp-settings-actions .mp-btn {
     width: 100%;
+  }
+
+  .mp-settings-fields {
+    max-width: none;
   }
 }
 
@@ -1596,6 +1756,20 @@ a.mp-page-btn:hover {
 }
 
 /*
+  Form content column — caps a single-column form's actual fields/buttons
+  to a comfortable reading width even when the surrounding .card/.dashboard-
+  container is full page width. Without this, an input stretches edge-to-
+  edge on a wide monitor (a 1300px+ text field has no basis in any form-
+  usability guidance) and a right-aligned submit button ends up 1000px+
+  from the field the user just filled — a Fitts's-law/proximity violation
+  that only shows up on wide viewports. Left-anchored (no auto margin): it
+  hugs the card's own left padding, same edge as everything above it.
+*/
+.mp-form-content {
+  max-width: 40rem;
+}
+
+/*
   Field shell — shared label/description layout for Input, Switch,
   Checkbox, Radio Group and Textarea. Vertical stack by default (Input,
   Textarea); [data-orientation="horizontal"] puts the control first with
@@ -1668,6 +1842,61 @@ a.mp-page-btn:hover {
 
 @media (pointer: coarse) {
   .mp-input {
+    min-height: 44px;
+  }
+}
+
+.mp-field__required {
+  color: var(--mp-destructive);
+}
+
+/*
+  Select — native <select> styled to match .mp-input/.mp-textarea (same
+  border/radius/focus-ring tokens), appearance:none with a chevron icon
+  drawn on top since native select arrows can't be restyled directly.
+*/
+.mp-select-wrap {
+  position: relative;
+}
+
+.mp-select {
+  width: 100%;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-background);
+  padding: 0.375rem 2rem 0.375rem 0.625rem;
+  color: var(--mp-foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-family: inherit;
+  transition: border-color 150ms, box-shadow 150ms;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.mp-select:focus-visible {
+  outline: none;
+  border-color: var(--mp-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
+}
+
+.mp-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.mp-select-chevron {
+  position: absolute;
+  top: 50%;
+  right: 0.625rem;
+  transform: translateY(-50%);
+  color: var(--mp-muted-foreground);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .mp-select {
     min-height: 44px;
   }
 }
@@ -1918,6 +2147,7 @@ a.mp-page-btn:hover {
 .mp-accordion {
   display: flex;
   flex-direction: column;
+  background: var(--mp-background);
   border: 1px solid var(--mp-border);
   border-radius: var(--mp-radius-md);
   overflow: hidden;

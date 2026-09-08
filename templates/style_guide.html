@@ -69,6 +69,7 @@
 {% from 'macros/checkbox.html' import checkbox %}
 {% from 'macros/radio.html' import radio_group %}
 {% from 'macros/textarea.html' import textarea %}
+{% from 'macros/select.html' import select %}
 {% from 'macros/tooltip.html' import tooltip %}
 {% from 'macros/accordion.html' import accordion %}
 {% from 'macros/button_group.html' import button_group %}
@@ -81,7 +82,7 @@
 {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state %}
 <div class="page-wrapper">
   <div class="page-header d-print-none">
-    <div class="container-xl">
+    <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
           <h2 class="page-title">Style Guide</h2>
@@ -92,7 +93,96 @@
   </div>
 
   <div class="page-body">
-    <div class="container-xl">
+    <div class="dashboard-container">
+
+      <div class="card mb-4" id="page-layout">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Page Layout</h3>
+            <div class="text-muted small mt-1">The container every real page-header/page-body actually renders with margins on. Get this wrong and a page looks fine on a quick desktop screenshot but is broken on mobile and misaligned on wide screens — this bit the Create Passport redesign (2026-09-07) before it was caught.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="mp-text-body">
+            Use <code>.dashboard-container</code> for page-header and page-body content —
+            <strong>never</strong> Bootstrap's own <code>.container-xl</code>. An app-wide
+            <code>!important</code> override in <code>static/minipass.css</code> ("Fix Bootstrap
+            container constraints in the new layout") strips all padding and max-width from
+            <code>.container-xl</code> everywhere, so it renders completely edge-to-edge with
+            zero gutter at every breakpoint. It's invisible on a wide desktop screenshot (the
+            page just looks "full width") and very visible on mobile (text touches the screen
+            edge). <code>.dashboard-container</code> (also in <code>static/minipass.css</code>)
+            is the real, working primitive — <code>max-width: 1400px</code>, centered, with a
+            responsive gutter (1.5rem desktop / 1rem mobile). Dashboard, Passports, and Activity
+            Dashboard all use it; this style guide page didn't until this was found, which is
+            exactly how the mistake propagated.
+          </p>
+          <p class="mp-text-body">
+            For a single-card form/detail page, don't center the card in a Bootstrap
+            <code>row.justify-content-center &gt; col-lg-*</code> — that centers a narrow column
+            inside the container while the page-header's breadcrumb/title stay flush left, so the
+            card ends up looking disconnected from the page above it (a big dead gap on one or
+            both sides). Make the card a direct, full-width child of
+            <code>.dashboard-container</code> instead, exactly like <code>edit_signup.html</code>
+            and the redesigned <code>passport_form.html</code> — it then shares the same left
+            edge and width as the header on every breakpoint, with no extra width decision to
+            get wrong.
+          </p>
+          <p class="mp-text-body">
+            That full-width card fixes the header/card alignment, but on a wide monitor it
+            introduces a different problem if the fields inside are left to stretch: an
+            1300px+ single-line text input (no basis in any form-usability guidance), and a
+            submit button that ends up 1000px+ from the field the user just filled — a
+            Fitts's-law/proximity violation that's easy to miss because it only shows up on a
+            genuinely wide viewport (found on the Create Passport page, 2026-09-07). Fix:
+            wrap the actual fields (and the footer's buttons, in the same wrapper) in
+            <code>.mp-form-content</code> (<code>max-width: 40rem</code>, left-anchored, no
+            auto margin) — the card surface stays full width and aligned with the header,
+            but the content and the submit button both land in a sane, proximate column
+            instead of sprawling edge to edge.
+          </p>
+          <p class="mp-text-body">
+            <strong>Submit-button placement:</strong> in the card footer, keep the button group
+            inside the same <code>.mp-form-content</code> wrapper so it aligns with the
+            fields above. Avoid pushing the buttons to the far right edge of the card — that
+            breaks the form's visual boundary on wide viewports. Place the
+            <strong>primary action first</strong>, then the secondary/cancel action next to
+            it. Do <strong>not</strong> put Cancel first; the primary submit is the action the
+            user is most likely to take and should lead the reading order. The left-to-right
+            order is: primary action, then Cancel. (This exact mistake, Cancel-then-Submit,
+            burned an hour on the Create Passport redesign on 2026-09-07.)
+          </p>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}&lt;div class="page-wrapper"&gt;
+  &lt;div class="page-header d-print-none"&gt;
+    &lt;div class="dashboard-container"&gt;
+      {{ breadcrumb(items=[...]) }}
+      &lt;h2 class="page-title"&gt;Page Title&lt;/h2&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class="page-body"&gt;
+    &lt;div class="dashboard-container"&gt;
+      &lt;form class="card"&gt;   &lt;!-- full width, no row/col-lg wrapper --&gt;
+        &lt;div class="card-body"&gt;
+          &lt;div class="mp-form-content"&gt;...fields...&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="card-footer"&gt;
+          &lt;div class="mp-form-content"&gt;
+            &lt;div class="d-flex justify-content-start gap-2"&gt;
+              {{ button("Save", type="submit") }}
+              {{ button("Cancel", variant="outline") }}
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
 
       <div class="card mb-4">
         <div class="card-header">
@@ -126,7 +216,7 @@
         <div class="card-header">
           <div>
             <h3 class="card-title mb-0">Button</h3>
-            <div class="text-muted small mt-1">Core interactive element. Use data-variant and data-size.</div>
+            <div class="text-muted small mt-1">Core interactive element. Use data-variant and data-size. Keep standard actions (Save, Submit, Cancel, Update) plain text — no icon. Reserve the <code>icon</code> param for icon-only buttons or a well-established idiom (e.g. a "+" on an Add button); a decorative icon in front of an ordinary label reads as clutter, not affordance.</div>
           </div>
         </div>
         <div class="card-body">
@@ -179,6 +269,29 @@
         </div>
       </div>
 
+      <div class="card mb-4" id="avatar">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Avatar</h3>
+            <div class="text-muted small mt-1">Colored-circle initials avatar generated from a name — no network request. Color is picked deterministically from a hash of the name, reusing the same palette as the Paid/Unpaid badges. Same component the Avatar Group below is built from — the white ring there is a stacking-overlap effect, not a base avatar style, so a single avatar has no ring, same as it renders unstacked elsewhere (e.g. passport/signup tables).</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview align-items-center">
+            {{ avatar_initials("Samuel Gendreau", size="sm") }}
+            {{ avatar_initials("Marco Henry") }}
+            {{ avatar_initials("Ken Dresdell", size="lg") }}
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/avatar.html' import avatar_initials %}
+
+{{ avatar_initials(passport.user.name or 'Anonymous') }}
+{{ avatar_initials(row.primary, size="sm") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
       <div class="card mb-4" id="avatar-group">
         <div class="card-header">
           <div>
@@ -227,7 +340,11 @@
           </div>
         </div>
         <div class="card-body">
-          <div class="sg-preview">
+          <!-- Plain white, not .sg-preview's gray box — .mp-skeleton's fill
+               is var(--mp-muted), the same gray as .sg-preview's background,
+               so it disappears there. A real page places it on a white
+               card, same as here. -->
+          <div class="border rounded p-4">
             <div class="d-flex align-items-center gap-3">
               {{ skeleton(width="2.5rem", height="2.5rem", circle=true) }}
               <div class="d-flex flex-column gap-2">
@@ -400,6 +517,40 @@
             <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/textarea.html' import textarea %}
 
 {{ textarea(id="message", label="Message", placeholder="Type a message…") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="select">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Select</h3>
+            <div class="text-muted small mt-1">Native &lt;select&gt; restyled to match Input/Textarea, with a chevron icon. Options are passed as raw markup via a call block, so callers can attach data-* attributes for page-level JS (e.g. cascading filters).</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview" style="align-items: flex-start;">
+            <div style="width: 260px;">
+              {% call select(id="sg-activity", label="Activity", placeholder="-- Select Activity --", required=true) %}
+                <option value="1">Surf Camp — Summer 2026</option>
+                <option value="2">Wing Foil Lessons</option>
+              {% endcall %}
+            </div>
+            <div style="width: 260px;">
+              {% call select(id="sg-disabled", label="Disabled", disabled=true) %}
+                <option value="1">Surf Camp — Summer 2026</option>
+              {% endcall %}
+            </div>
+          </div>
+          <details>
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/select.html' import select %}
+
+{% call select(id="activity_select", label="Activity", placeholder="-- Select Activity --", required=true, attrs={"onchange": "updateActivityDetails(this)"}) %}
+  {% for activity in activity_list %}
+    <option value="{{ activity.id }}" data-price="{{ activity.price_per_user }}">{{ activity.name }}</option>
+  {% endfor %}
+{% endcall %}{% endraw %}</code></pre>
           </details>
         </div>
       </div>
@@ -643,7 +794,7 @@
                change=12.4, trend_data=[900, 940, 880, 1010, 1090, 1150, 1248], chart_type="area") }}
             {{ kpi_card_desktop(id="sg-kpi-active", label="Active Passes", value=57,
                change=-4.0, trend_data=[62, 60, 58, 61, 59, 58, 57], chart_type="bar") }}
-            {{ kpi_card_desktop(id="sg-kpi-redeemed", label="Redeemed", value=41,
+            {{ kpi_card_desktop(id="sg-kpi-redeemed", label="Check-ins", value=41,
                change=6.0, trend_data=[30, 32, 35, 33, 38, 40, 41], chart_type="bar") }}
             {{ kpi_card_desktop(id="sg-kpi-signups", label="Signups", value=12,
                change=0, trend_data=[10, 11, 9, 12, 11, 13, 12], chart_type="bar") }}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>{{ product.name }} — {{ ORG_NAME }}</title>
+
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet">
+</head>
+<body class="bg-white">
+  <div class="container py-4 py-lg-5" style="max-width: 640px;">
+    <a href="{{ url_for('shop') }}" class="text-secondary small d-inline-flex align-items-center gap-1 mb-3">
+      <i class="ti ti-arrow-left"></i> Retour à la boutique
+    </a>
+
+    <div class="card">
+      {% if product.photo_filename %}
+      <img src="{{ url_for('static', filename='uploads/product_images/' + product.photo_filename) }}"
+           class="card-img-top" style="height: 240px; object-fit: cover;" alt="{{ product.name }}">
+      {% endif %}
+      <div class="card-body">
+        <h1 class="h3">{{ product.name }}</h1>
+        {% if product.description %}<p class="text-secondary">{{ product.description }}</p>{% endif %}
+        <div class="h2 mb-0">{{ "%.2f"|format(product.price) }} $</div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} mt-3" role="alert">
+          {{ message }}
+        </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="card mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-body">
+        <h2 class="h4 mb-3">Vos informations</h2>
+
+        <div class="mb-3">
+          <label class="form-label">Nom complet</label>
+          <input type="text" name="buyer_name" class="form-control" required autocomplete="name">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Courriel</label>
+          <input type="email" name="buyer_email" class="form-control" required autocomplete="email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Téléphone (optionnel)</label>
+          <input type="tel" name="buyer_phone" class="form-control" autocomplete="tel">
+        </div>
+
+        {% if product.size_label %}
+        <div class="mb-3">
+          <label class="form-label">Taille</label>
+          <select name="size" class="form-select">
+            {% for size in product.size_label.split(',') %}
+            <option value="{{ size.strip() }}">{{ size.strip() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+
+        <div class="mb-3" style="max-width: 140px;">
+          <label class="form-label">Quantité</label>
+          <input type="number" name="quantity" class="form-control" value="1" min="1" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Notes (optionnel)</label>
+          <textarea name="notes" class="form-control" rows="2"></textarea>
+        </div>
+
+        <hr class="my-4">
+
+        <h2 class="h4 mb-3">Paiement</h2>
+        <div class="mb-2">
+          <label class="form-selectgroup-item">
+            <input type="radio" name="payment_method" value="interac" class="form-selectgroup-input" checked>
+            <span class="form-selectgroup-label d-flex align-items-center">
+              <i class="ti ti-building-bank me-2"></i> Virement Interac
+            </span>
+          </label>
+        </div>
+        {% if stripe_enabled %}
+        <div class="mb-2">
+          <label class="form-selectgroup-item">
+            <input type="radio" name="payment_method" value="stripe" class="form-selectgroup-input">
+            <span class="form-selectgroup-label d-flex align-items-center">
+              <i class="ti ti-credit-card me-2"></i> Carte de crédit
+            </span>
+          </label>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer text-end">
+        <button type="submit" class="btn btn-primary">Commander</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

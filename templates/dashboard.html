@@ -41,20 +41,24 @@
       <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
 
       <!-- Desktop Version -->
-      <div class="row mb-4 d-none d-md-flex">
-        <div class="col-md-3 mb-3">
+      <div class="row row-cols-md-3 row-cols-xl-5 mb-4 d-none d-md-flex">
+        <div class="col mb-3">
           {{ kpi_card_desktop(id="kpi-revenue", label="Revenue", value=kpi_data['revenue']['current'], format="currency",
              change=kpi_data['revenue']['change'], trend_data=kpi_data['revenue']['trend_data'], chart_type="area") }}
         </div>
-        <div class="col-md-3 mb-3">
+        <div class="col mb-3">
           {{ kpi_card_desktop(id="kpi-active-passes", label="Active Passes", value=kpi_data['active_users']['current'],
              change=kpi_data['active_users']['change'], trend_data=kpi_data['active_users']['trend_data'], chart_type="bar") }}
         </div>
-        <div class="col-md-3 mb-3">
-          {{ kpi_card_desktop(id="kpi-redeemed", label="Redeemed", value=kpi_data['passports_redeemed']['current'],
+        <div class="col mb-3">
+          {{ kpi_card_desktop(id="kpi-redeemed", label="Check-ins", value=kpi_data['passports_redeemed']['current'],
              change=kpi_data['passports_redeemed']['change'], trend_data=kpi_data['passports_redeemed']['trend_data'], chart_type="bar") }}
         </div>
-        <div class="col-md-3 mb-3">
+        <div class="col mb-3">
+          {{ kpi_card_desktop(id="kpi-emails-sent", label="Emails Sent", value=kpi_data['emails_sent']['current'],
+             change=kpi_data['emails_sent']['change'], trend_data=kpi_data['emails_sent']['trend_data'], chart_type="bar") }}
+        </div>
+        <div class="col mb-3">
           {{ kpi_card_desktop(id="kpi-unpaid", label="Unpaid", value=kpi_data['unpaid_passports']['current'],
              change=kpi_data['unpaid_passports']['change'], trend_data=kpi_data['unpaid_passports']['trend_data'], chart_type="bar") }}
         </div>
@@ -73,8 +77,12 @@
                change=mobile_kpi_data['active_users']['change']) }}
           </div>
           <div class="mobile-kpi-card">
-            {{ kpi_card_mobile(id="kpi-redeemed-m", label="Redeemed", value=mobile_kpi_data['passports_redeemed']['current'] if mobile_kpi_data['passports_redeemed'] else 0,
+            {{ kpi_card_mobile(id="kpi-redeemed-m", label="Check-ins", value=mobile_kpi_data['passports_redeemed']['current'] if mobile_kpi_data['passports_redeemed'] else 0,
                change=mobile_kpi_data['passports_redeemed']['change'] if mobile_kpi_data['passports_redeemed'] else none) }}
+          </div>
+          <div class="mobile-kpi-card">
+            {{ kpi_card_mobile(id="kpi-emails-sent-m", label="Emails Sent", value=mobile_kpi_data['emails_sent']['current'],
+               change=mobile_kpi_data['emails_sent']['change']) }}
           </div>
           <div class="mobile-kpi-card">
             {{ kpi_card_mobile(id="kpi-unpaid-m", label="Unpaid", value=mobile_kpi_data['unpaid_passports']['current'],
@@ -88,6 +96,7 @@
           <div class="mobile-dot" data-index="1"></div>
           <div class="mobile-dot" data-index="2"></div>
           <div class="mobile-dot" data-index="3"></div>
+          <div class="mobile-dot" data-index="4"></div>
         </div>
       </div>
       {% endif %}
@@ -439,6 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'kpi-active-passes': 'active_users',
     'kpi-redeemed': 'passports_redeemed',
     'kpi-unpaid': 'unpaid_passports',
+    'kpi-emails-sent': 'emails_sent',
   };
 
   Object.keys(KPI_API_KEYS).forEach((cardId) => {
