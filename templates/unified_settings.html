@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% from 'macros/buttons.html' import button %}
+{% from 'macros/input.html' import text_input %}
+{% from 'macros/select.html' import select %}
+{% from 'macros/switch.html' import switch %}
 {% from 'macros/settings_nav.html' import settings_nav %}
 {% block title %}Settings | minipass{% endblock %}
 
@@ -30,14 +33,12 @@
           <h3 class="mp-settings-section-title" id="organization-heading">Organization</h3>
           <p class="mp-text-body mb-0">This name and logo appear on customer-facing pages and emails.</p>
           <div class="mp-settings-fields">
-            <div class="mb-3">
-              <label class="form-label" for="organization-name">Organization Name</label>
-              <input type="text" id="organization-name" name="ORG_NAME" class="form-control"
-                     value="{{ settings.get('ORG_NAME', '') }}" autocomplete="organization" required>
-            </div>
+            {{ text_input(id="organization-name", name="ORG_NAME", label="Organization Name",
+                          value=settings.get('ORG_NAME', ''), attrs={"autocomplete": "organization", "required": "required"}) }}
 
             <div>
               <label class="form-label">Organization Logo</label>
+              <p class="mp-field__description mb-2">Select the logo to replace it or choose another image source.</p>
               <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden org-logo-tool">
                 <button class="org-logo-preview" type="button" id="orgLogoWrapper" aria-label="Change organization logo">
                   {% if settings.get('LOGO_FILENAME') %}
@@ -64,7 +65,7 @@
                     <div class="input-group">
                       <input type="text" id="orgLogoSearchInput" class="form-control"
                              placeholder="Search by organization or sport…" autocomplete="off">
-                      {{ button("Search", id="orgLogoSearchBtn", size="icon", icon="ti-search", attrs={"aria-label": "Search for a logo"}) }}
+                      {{ button("", id="orgLogoSearchBtn", size="icon", icon="ti-search", attrs={"aria-label": "Search for a logo"}) }}
                     </div>
                   </div>
                   <div id="orgLogoUploadContent">
@@ -95,33 +96,22 @@
               {{ button("Reset", variant="outline", id="reset-brand-color") }}
             </div>
             <div class="form-text">Use a 6-digit color value such as #066FD1.</div>
-
-            <div class="mt-3">
-              <div class="form-label">Preview</div>
-              <div class="mp-brand-preview" id="brand-preview">
-                {{ button("Primary Button") }}
-                <div class="mp-brand-pagination" aria-label="Pagination preview">
-                  <span>1</span><span class="active">2</span><span>3</span>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
         <section class="mp-settings-section" aria-labelledby="business-defaults-heading">
           <h3 class="mp-settings-section-title" id="business-defaults-heading">Business Defaults</h3>
           <div class="mp-settings-fields">
-            <label class="form-label" for="fiscal-year-start">Fiscal Year Starts</label>
-            <select name="FISCAL_YEAR_START_MONTH" id="fiscal-year-start" class="form-select">
+            {% call select(id="fiscal-year-start", name="FISCAL_YEAR_START_MONTH", label="Fiscal Year Starts") %}
               {% for number, month in [(1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'), (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'), (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')] %}
                 <option value="{{ number }}"{% if settings.get('FISCAL_YEAR_START_MONTH', '1')|int == number %} selected{% endif %}>{{ month }}{% if number == 1 %} (Calendar Year){% endif %}</option>
               {% endfor %}
-            </select>
+            {% endcall %}
           </div>
         </section>
 
         <div class="mp-settings-actions">
-          {{ button("Save General Settings", type="submit", icon="ti-device-floppy") }}
+          {{ button("Save General Settings", type="submit") }}
         </div>
       </form>
 
@@ -139,17 +129,12 @@
           <h3 class="mp-settings-section-title" id="sender-heading">Email Identity</h3>
           <p class="mp-text-body mb-0">Customers see this name and address on outgoing email.</p>
           <div class="mp-settings-fields">
-            <div class="mb-3">
-              <label class="form-label" for="sender-name">Sender Name</label>
-              <input type="text" class="form-control" id="sender-name" name="mail_sender_name"
-                     value="{{ settings.get('MAIL_SENDER_NAME', '') }}" autocomplete="organization"
-                     placeholder="Your organization name…">
-            </div>
-            <div>
-              <label class="form-label" for="sender-email">Sender Email</label>
-              <input type="email" class="form-control" id="sender-email" name="mail_default_sender"
-                     value="{{ settings.get('MAIL_DEFAULT_SENDER', '') }}" autocomplete="email" spellcheck="false" required>
-            </div>
+            {{ text_input(id="sender-name", name="mail_sender_name", label="Sender Name",
+                          value=settings.get('MAIL_SENDER_NAME', ''), placeholder="Your organization name…",
+                          attrs={"autocomplete": "organization"}) }}
+            {{ text_input(id="sender-email", name="mail_default_sender", label="Sender Email", type="email",
+                          value=settings.get('MAIL_DEFAULT_SENDER', ''),
+                          attrs={"autocomplete": "email", "spellcheck": "false", "required": "required"}) }}
           </div>
         </section>
 
@@ -160,10 +145,7 @@
               <p class="mp-text-body mb-0">Receive alerts on this device for signups and payment activity.</p>
               <div id="push-status" class="mp-text-body mt-2" aria-live="polite"></div>
             </div>
-            <label class="form-check form-switch mb-0">
-              <input class="form-check-input" type="checkbox" id="push-notifications-toggle">
-              <span class="form-check-label">Enable</span>
-            </label>
+            {{ switch(id="push-notifications-toggle", label="Enable") }}
           </div>
           <div id="ios-push-warning" class="alert alert-warning mt-3 d-none">
             Push notifications require iOS 16.4 or newer and minipass must be added to your Home Screen.
@@ -174,7 +156,7 @@
           <h3 class="mp-settings-section-title" id="delivery-heading">Email Delivery</h3>
           <p class="mp-text-body mb-0">Most organizations do not need to change these technical connection details.</p>
           <details class="mp-settings-advanced">
-            <summary>Advanced Email Settings</summary>
+            <summary>Advanced Email Settings<i class="ti ti-chevron-down" aria-hidden="true"></i></summary>
             <div class="mp-settings-fields mt-2">
               <div class="mb-3">
                 <label class="form-label" for="mail-server">Mail Server</label>
@@ -205,7 +187,7 @@
         </section>
 
         <div class="mp-settings-actions">
-          {{ button("Save Email Settings", type="submit", icon="ti-device-floppy") }}
+          {{ button("Save Email Settings", type="submit") }}
         </div>
       </form>
 
@@ -241,16 +223,13 @@
               <h3 class="mp-settings-section-title" id="interac-heading">Interac Automatic Matching</h3>
               <p class="mp-text-body mb-0">Automatically match Interac email notifications with customer payments.</p>
             </div>
-            <label class="form-check form-switch mb-0">
-              <input class="form-check-input" type="checkbox" name="enable_email_payment_bot"
-                     id="enable_email_payment_bot"{% if settings.get('ENABLE_EMAIL_PAYMENT_BOT') == 'True' %} checked{% endif %}>
-              <span class="form-check-label">Enable</span>
-            </label>
+            {{ switch(id="enable_email_payment_bot", name="enable_email_payment_bot", label="Enable",
+                      checked=settings.get('ENABLE_EMAIL_PAYMENT_BOT') == 'True') }}
           </div>
 
           <div id="bot-enabled-content"{% if settings.get('ENABLE_EMAIL_PAYMENT_BOT') != 'True' %} class="d-none"{% endif %}>
             <details class="mp-settings-advanced">
-              <summary>Advanced Interac Settings</summary>
+              <summary>Advanced Interac Settings<i class="ti ti-chevron-down" aria-hidden="true"></i></summary>
               <div class="mp-settings-fields mt-2">
                 <div class="mb-3">
                   <label class="form-label" for="payment-inbox">Payment Inbox</label>
@@ -292,16 +271,13 @@
               <p class="mp-text-body mb-0">Let customers pay by credit card when they register.</p>
               <a href="https://minipass.me/docs/how-to-setup-stripe" target="_blank" rel="noopener" class="d-inline-block mt-2">View the Stripe Setup Guide <span class="visually-hidden">(opens in a new tab)</span></a>
             </div>
-            <label class="form-check form-switch mb-0">
-              <input class="form-check-input" type="checkbox" name="stripe_payments_enabled"
-                     id="stripe_payments_enabled"{% if stripe_payments_enabled %} checked{% endif %}>
-              <span class="form-check-label">Enable</span>
-            </label>
+            {{ switch(id="stripe_payments_enabled", name="stripe_payments_enabled", label="Enable",
+                      checked=stripe_payments_enabled) }}
           </div>
 
           <div id="stripe-enabled-content"{% if not stripe_payments_enabled %} class="d-none"{% endif %}>
             <details class="mp-settings-advanced">
-              <summary>Advanced Stripe Settings</summary>
+              <summary>Advanced Stripe Settings<i class="ti ti-chevron-down" aria-hidden="true"></i></summary>
               <div class="mp-settings-fields mt-2">
                 {% if stripe_payments_enabled and not settings.get('STRIPE_PAYMENTS_SECRET_KEY') %}
                   <div class="alert alert-warning">Add a Stripe secret key to finish setting up card payments.</div>
@@ -310,7 +286,7 @@
                   <label class="form-label" for="stripeWebhookUrl">Webhook URL</label>
                   <div class="input-group">
                     <input type="text" class="form-control" id="stripeWebhookUrl" value="{{ webhook_url }}" readonly>
-                    {{ button("Copy", variant="outline", id="copy-stripe-webhook", size="icon", icon="ti-copy", attrs={"aria-label": "Copy Stripe webhook URL"}) }}
+                    {{ button("", variant="outline", id="copy-stripe-webhook", size="icon", icon="ti-copy", attrs={"aria-label": "Copy Stripe webhook URL"}) }}
                   </div>
                 </div>
                 <div class="mb-3">
@@ -331,7 +307,47 @@
         </section>
 
         <div class="mp-settings-actions">
-          {{ button("Save Payment Settings", type="submit", icon="ti-device-floppy") }}
+          {{ button("Save Payment Settings", type="submit") }}
+        </div>
+      </form>
+
+      {# Shop #}
+      <form method="POST" class="mp-settings-surface{% if current_section != 'shop' %} d-none{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="settings_section" value="shop">
+
+        <div class="mp-settings-heading">
+          <h2 class="mb-1">Shop</h2>
+          <p class="mp-text-body mb-0">Sell activities and simple products from one public page.</p>
+        </div>
+
+        <section class="mp-settings-section" aria-labelledby="shop-heading">
+          <div class="mp-settings-status-row">
+            <div class="mp-settings-status-copy">
+              <h3 class="mp-settings-section-title" id="shop-heading">Enable My Shop</h3>
+              <p class="mp-text-body mb-0">Turn on the public shop page for this organization.</p>
+            </div>
+            {{ switch(id="shop_enabled", name="shop_enabled", label="Enable",
+                      checked=settings.get('SHOP_ENABLED') == 'True') }}
+          </div>
+
+          <div id="shop-enabled-content"{% if settings.get('SHOP_ENABLED') != 'True' %} class="d-none"{% endif %}>
+            <div class="mp-settings-fields">
+              <label class="form-label" for="shopUrl">Shop Link</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="shopUrl" value="{{ url_for('shop', _external=True) }}" readonly>
+                {{ button("", variant="outline", id="copy-shop-url", size="icon", icon="ti-copy", attrs={"aria-label": "Copy shop URL"}) }}
+              </div>
+              <div class="form-text">
+                Choose which activities appear in the shop from each activity's edit page.
+                Add or edit products from <a href="{{ url_for('list_products') }}">Manage Products</a>.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="mp-settings-actions">
+          {{ button("Save Shop Settings", type="submit") }}
         </div>
       </form>
     </div>
@@ -400,31 +416,25 @@ document.getElementById('deleteLogoFlag').value = '';
 document.addEventListener('DOMContentLoaded', function () {
   var picker = document.getElementById('brand-color-picker');
   var text = document.getElementById('brand-color-text');
-  var preview = document.getElementById('brand-preview');
   var reset = document.getElementById('reset-brand-color');
 
-  function updateBrandPreview(value) {
-    if (/^#[0-9a-f]{6}$/i.test(value)) {
-      picker.value = value;
-      var channels = [1, 3, 5].map(function (index) { return parseInt(value.slice(index, index + 2), 16) / 255; });
-      var linear = channels.map(function (channel) { return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4); });
-      var luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-      var foreground = ((luminance + 0.05) / 0.05 >= 4.5) ? '#000000' : '#ffffff';
-      preview.style.setProperty('--mp-primary', value);
-      preview.style.setProperty('--mp-brand-primary', value);
-      preview.style.setProperty('--mp-primary-foreground', foreground);
-    }
-  }
-  picker.addEventListener('input', function () { text.value = picker.value.toUpperCase(); updateBrandPreview(picker.value); });
-  text.addEventListener('input', function () { updateBrandPreview(text.value); });
-  reset.addEventListener('click', function () { text.value = '#066FD1'; updateBrandPreview('#066FD1'); });
-  updateBrandPreview(text.value);
+  picker.addEventListener('input', function () { text.value = picker.value.toUpperCase(); });
+  text.addEventListener('input', function () { if (/^#[0-9a-f]{6}$/i.test(text.value)) picker.value = text.value; });
+  reset.addEventListener('click', function () { text.value = '#066FD1'; picker.value = '#066FD1'; });
 
   var copyButton = document.getElementById('copy-stripe-webhook');
   if (copyButton) {
     copyButton.addEventListener('click', function () {
       navigator.clipboard.writeText(document.getElementById('stripeWebhookUrl').value);
       copyButton.setAttribute('aria-label', 'Webhook URL copied');
+    });
+  }
+
+  var copyShopButton = document.getElementById('copy-shop-url');
+  if (copyShopButton) {
+    copyShopButton.addEventListener('click', function () {
+      navigator.clipboard.writeText(document.getElementById('shopUrl').value);
+      copyShopButton.setAttribute('aria-label', 'Shop link copied');
     });
   }
 
@@ -445,9 +455,6 @@ document.addEventListener('DOMContentLoaded', function () {
 .org-logo-preview:focus-visible { outline: 2px solid var(--mp-ring); outline-offset: -2px; }
 .org-logo-preview img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .org-logo-options { display: none; min-width: 260px; border-left: 1px solid var(--mp-border); }
-.mp-brand-pagination { display: flex; align-items: center; gap: .25rem; }
-.mp-brand-pagination span { display: inline-flex; width: 2rem; height: 2rem; align-items: center; justify-content: center; border-radius: var(--mp-radius-sm); }
-.mp-brand-pagination .active { background: var(--mp-brand-primary); color: var(--mp-primary-foreground); }
 .org-logo-crop-body { background: var(--mp-muted); }
 .org-logo-crop-stage { display: flex; max-height: 60vh; overflow: hidden; align-items: center; justify-content: center; }
 .org-logo-crop-stage img { display: block; max-width: 100%; max-height: 60vh; }

@@ -1,255 +1,72 @@
 {% extends "base.html" %}
 {% block title %}{{ "Edit" if passport else "Create" }} Passport{% endblock %}
 
-{% block head %}
-<!-- Google Fonts Import for Roboto Slab -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-<style>
-/* Modern Form Styling */
-:root {
-  --form-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --form-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-  --form-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
-  --form-border-radius: 12px;
-  --form-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --form-focus-color: #667eea;
-  --form-text-primary: #2d3748;
-  --form-text-secondary: #718096;
-}
-
-/* Enhanced Card Styling */
-.passport-form-card {
-  box-shadow: var(--form-shadow);
-  border-radius: var(--form-border-radius);
-  transition: var(--form-transition);
-  border: none;
-}
-
-.passport-form-card:hover {
-  box-shadow: var(--form-shadow-hover);
-}
-
-/* Typography — uses the global h3 scale from base.html, see /style-guide */
-.passport-form-title {
-  margin-bottom: 0;
-}
-
-.passport-form-legend {
-  font-family: 'Roboto Slab', serif;
-  font-weight: 500;
-  font-size: 1.1rem;
-  color: var(--form-text-primary);
-  margin-bottom: 1rem;
-}
-
-/* Enhanced Input Styling */
-.passport-form .form-control {
-  transition: var(--form-transition);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  border: 1.5px solid #e2e8f0;
-}
-
-.passport-form .form-control:hover {
-  background-color: #f8f9fa;
-  border-color: #cbd5e0;
-}
-
-.passport-form .form-control:focus {
-  border-color: var(--form-focus-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  background-color: #fff;
-}
-
-.passport-form .input-icon .form-control {
-  padding-left: 2.75rem;
-}
-
-.passport-form .input-icon-addon {
-  color: var(--form-text-secondary);
-  transition: var(--form-transition);
-}
-
-.passport-form .input-icon:hover .input-icon-addon {
-  color: var(--form-focus-color);
-}
-
-/* Enhanced Select Styling */
-.passport-form .form-select {
-  transition: var(--form-transition);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  border: 1.5px solid #e2e8f0;
-}
-
-.passport-form .form-select:hover {
-  background-color: #f8f9fa;
-  border-color: #cbd5e0;
-}
-
-.passport-form .form-select:focus {
-  border-color: var(--form-focus-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-/* Passport Icon Styling */
-.passport-icon {
-  color: #6c757d;
-  font-size: 2rem;
-}
-
-/* Fieldset Enhancement */
-.passport-form .form-fieldset {
-  border-radius: 10px;
-  border: 1.5px solid #e2e8f0;
-  transition: var(--form-transition);
-  position: relative;
-}
-
-.passport-form .form-fieldset:hover {
-  border-color: #cbd5e0;
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-  .btn-success {
-    width: 100%;
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
-  }
-  
-  .passport-form .form-control,
-  .passport-form .form-select {
-    padding: 1rem 1.25rem;
-    font-size: 1rem;
-  }
-  
-  .passport-form .input-icon .form-control {
-    padding-left: 3rem;
-  }
-}
-
-/* Subtle Animation */
-.passport-form .form-fieldset {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-.passport-form .form-fieldset:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Collapsible Notes Styling */
-.notes-header:hover {
-  color: var(--form-focus-color);
-}
-
-.notes-header:hover .notes-chevron {
-  color: var(--form-focus-color) !important;
-}
-
-.notes-chevron {
-  transition: transform 0.3s ease, color 0.3s ease;
-  font-size: 1.1rem;
-}
-
-.notes-collapse {
-  transition: opacity 0.3s ease, max-height 0.3s ease;
-  overflow: hidden;
-}
-
-.notes-collapse.show {
-  opacity: 1;
-  max-height: 200px;
-}
-
-.notes-collapse.hide {
-  opacity: 0;
-  max-height: 0;
-}
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="row justify-content-center mt-4">
-  <div class="col-lg-8">
-    <form method="POST" class="card passport-form-card bg-white passport-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% from 'macros/breadcrumb.html' import breadcrumb %}
+{% from 'macros/badge.html' import badge %}
+{% from 'macros/input.html' import text_input %}
+{% from 'macros/textarea.html' import textarea %}
+{% from 'macros/checkbox.html' import checkbox %}
+{% from 'macros/select.html' import select %}
+{% from 'macros/buttons.html' import button %}
 
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <h3 class="passport-form-title">
-          {{ "Update Passport" if passport else "Create a New Passport" }}
-        </h3>
-        <i class="ti ti-ticket passport-icon"></i>
+{% set back_url = url_for('activity_dashboard', activity_id=selected_activity.id) if selected_activity else url_for('list_passports') %}
+
+<div class="page-wrapper">
+  <div class="page-header d-print-none">
+    <div class="dashboard-container">
+      {{ breadcrumb(items=[
+        {"label": "Dashboard", "url": url_for('dashboard')},
+        {"label": selected_activity.name if selected_activity else "Passports", "url": back_url},
+        {"label": "Update Passport" if passport else "Create Passport", "current": true}
+      ]) }}
+      <div class="row g-2 align-items-center mt-1">
+        <div class="col">
+          <h2 class="page-title">{{ "Update Passport" if passport else "Create Passport" }}</h2>
+        </div>
+        {% if passport %}
+          <div class="col-auto">
+            {{ badge("Paid" if passport.paid else "Unpaid", variant="default" if passport.paid else "destructive") }}
+          </div>
+        {% endif %}
       </div>
+    </div>
+  </div>
 
+  <div class="page-body">
+    <div class="dashboard-container">
+      <form method="POST" class="card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-      <div class="card-body">
-
-        <!-- 🧑 User Info -->
-        <fieldset class="form-fieldset mb-4">
-          <legend class="passport-form-legend">User Information</legend>
-
-          <!-- Name -->
-          <div class="mb-3 position-relative input-icon">
-            <span class="input-icon-addon"><i class="ti ti-user"></i></span>
-            <input type="text" name="user_name" id="user_name" class="form-control" placeholder="Full Name" autocomplete="off" required
-                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions"
-                   value="{{ passport.user.name if passport and passport.user else '' }}" />
+        <div class="card-body">
+          <div class="mp-form-content">
+          <h5 class="mb-3">User Information</h5>
+          <div class="mb-3 position-relative">
+            {{ text_input(id="user_name", label="Full Name", name="user_name", placeholder="Full Name",
+               value=passport.user.name if passport and passport.user else '',
+               attrs={"autocomplete": "off", "required": "required", "role": "combobox",
+                      "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "suggestions"}) }}
             <div id="suggestions" class="list-group position-absolute w-100 shadow bg-white border rounded" role="listbox" style="top: 100%; z-index: 10;"></div>
           </div>
 
-          <!-- Email -->
-          <div class="mb-3 input-icon">
-            <span class="input-icon-addon"><i class="ti ti-mail"></i></span>
-            <input type="email" name="user_email" id="user_email" class="form-control" placeholder="Email" required
-                   value="{{ passport.user.email if passport and passport.user else '' }}" />
-          </div>
-
-          <!-- Phone -->
-          <div class="mb-3 input-icon">
-            <span class="input-icon-addon"><i class="ti ti-phone"></i></span>
-            <input type="tel" name="phone_number" id="mobile_phone" class="form-control" placeholder="Phone Number"
-                   value="{{ passport.user.phone_number if passport and passport.user else '' }}" />
-          </div>
-        </fieldset>
-
-        <!-- 🎟️ Passport Info -->
-        <fieldset class="form-fieldset mb-4">
-          <legend class="passport-form-legend d-flex justify-content-between align-items-center">
-            Passport Details
-            {% if passport %}
-              {% if passport.paid %}
-                <span class="badge badge-sm bg-green-lt">Paid</span>
-              {% else %}
-                <span class="badge badge-sm bg-red-lt">Unpaid</span>
-              {% endif %}
-            {% endif %}
-          </legend>
-        
-        
-
-
-
-
-          <!-- Activity -->
           <div class="mb-3">
-            <label class="form-label">Activity <span class="text-danger">*</span></label>
-            <select name="activity_id" class="form-select" required onchange="updateActivityDetails(this)" id="activity_select">
-              <option value="">-- Select Activity --</option>
+            {{ text_input(id="user_email", label="Email", name="user_email", type="email", placeholder="Email",
+               value=passport.user.email if passport and passport.user else '',
+               attrs={"required": "required"}) }}
+          </div>
+
+          <div class="mb-4">
+            {{ text_input(id="mobile_phone", label="Phone Number", name="phone_number", type="tel", placeholder="Phone Number",
+               value=passport.user.phone_number if passport and passport.user else '') }}
+          </div>
+
+          <hr class="my-4">
+
+          <h5 class="mb-3">Passport Details</h5>
+
+          <div class="mb-3">
+            {% call select(id="activity_select", label="Activity", name="activity_id", placeholder="-- Select Activity --", required=true,
+               attrs={"onchange": "updateActivityDetails(this)"}) %}
               {% for activity in activity_list %}
                 <option value="{{ activity.id }}"
                   data-price="{{ activity.price_per_user }}"
@@ -258,14 +75,12 @@
                   {{ activity.name }}
                 </option>
               {% endfor %}
-            </select>
+            {% endcall %}
           </div>
 
-          <!-- Passport Type -->
           <div class="mb-3">
-            <label class="form-label">Passport Type <span class="text-danger">*</span></label>
-            <select name="passport_type_id" id="passport_type_select" class="form-select" required onchange="updatePassportTypeDetails(this)">
-              <option value="">-- Select Passport Type --</option>
+            {% call select(id="passport_type_select", label="Passport Type", name="passport_type_id", placeholder="-- Select Passport Type --", required=true,
+               attrs={"onchange": "updatePassportTypeDetails(this)"}) %}
               {% for passport_type in passport_types %}
                 <option value="{{ passport_type.id }}"
                   data-activity="{{ passport_type.activity_id }}"
@@ -275,42 +90,49 @@
                   {{ passport_type.name }} ({{ passport_type.type }})
                 </option>
               {% endfor %}
-            </select>
+            {% endcall %}
           </div>
 
-          <!-- Price -->
-          <div class="mb-3 input-icon">
-            <span class="input-icon-addon"><i class="ti ti-currency-dollar"></i></span>
-            <input type="number" name="sold_amt" step="0.01" class="form-control" placeholder="Price" required
-                   id="sold_amt" value="{{ passport.sold_amt if passport else default_amt }}" />
+          <div class="row">
+            <div class="col-12 col-sm-6 mb-3">
+              {{ text_input(id="sold_amt", label="Price", name="sold_amt", type="number", placeholder="Price",
+                 value=passport.sold_amt if passport else default_amt,
+                 attrs={"step": "0.01", "required": "required"}) }}
+            </div>
+            <div class="col-12 col-sm-6 mb-3">
+              {{ text_input(id="uses_remaining", label="Number of Sessions", name="uses_remaining", type="number", placeholder="Number of Sessions",
+                 value=passport.uses_remaining if passport else default_qt,
+                 attrs={"required": "required"}) }}
+            </div>
           </div>
 
-          <!-- Sessions -->
-          <div class="mb-3 input-icon">
-            <span class="input-icon-addon"><i class="ti ti-list-numbers"></i></span>
-            <input type="number" name="uses_remaining" class="form-control" placeholder="Number of Sessions" required
-                   id="uses_remaining" value="{{ passport.uses_remaining if passport else default_qt }}" />
+          <div class="mb-4">
+            {{ checkbox(id="paid_ind", name="paid_ind", label="Mark as paid",
+               checked=passport.paid if passport else false) }}
           </div>
 
-          <!-- Notes - Collapsible -->
-          <div class="mb-3">
+          <div class="mb-2">
             <div class="notes-header d-flex align-items-center" onclick="toggleNotes()" style="cursor: pointer; user-select: none;">
-              <label class="form-label mb-0">Notes</label>
+              <span class="mp-label mb-0">Notes</span>
               <i id="notes-chevron" class="ti ti-chevron-down ms-2 text-muted notes-chevron"></i>
             </div>
-            <div id="notes-collapse" class="notes-collapse" style="display: none; margin-top: 0.75rem;">
-              <textarea name="notes" id="notes" rows="3" class="form-control">{{ passport.notes if passport else '' }}</textarea>
+            <div id="notes-collapse" style="display: none; margin-top: 0.5rem;">
+              {{ textarea(id="notes", name="notes", value=passport.notes if passport else '', rows=3) }}
             </div>
           </div>
-        </fieldset>
-      </div>
+          </div>
+        </div>
 
-      <div class="card-footer text-start">
-        <button type="submit" class="btn btn-success">
-          <i class="ti ti-ticket me-2"></i>{{ "Update Passport" if passport else "Create Passport" }}
-        </button>
-      </div>
-    </form>
+        <div class="card-footer">
+          <div class="mp-form-content">
+            <div class="d-flex justify-content-start gap-2">
+              {{ button("Update Passport" if passport else "Create Passport", type="submit") }}
+              {{ button("Cancel", variant="outline", href=back_url) }}
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -321,17 +143,13 @@
   function toggleNotes() {
     const notesField = document.getElementById('notes-collapse');
     const chevron = document.getElementById('notes-chevron');
-    
+
     if (notesField.style.display === 'none' || !notesField.style.display) {
       notesField.style.display = 'block';
       chevron.style.transform = 'rotate(180deg)';
-      notesField.classList.add('show');
-      notesField.classList.remove('hide');
     } else {
       notesField.style.display = 'none';
       chevron.style.transform = 'rotate(0deg)';
-      notesField.classList.add('hide');
-      notesField.classList.remove('show');
     }
   }
 </script>
@@ -442,17 +260,17 @@
     const sessions = selected.getAttribute("data-sessions");
     if (price) document.getElementById("sold_amt").value = price;
     if (sessions) document.getElementById("uses_remaining").value = sessions;
-    
+
     // Filter passport types by activity
     const activityId = select.value;
     const passportTypeSelect = document.getElementById("passport_type_select");
     const currentPassportType = passportTypeSelect.value; // Preserve current selection
-    
+
     for (let option of passportTypeSelect.options) {
       if (option.value === "") continue;
       option.style.display = option.getAttribute("data-activity") === activityId ? "" : "none";
     }
-    
+
     // Only reset selection if current passport type is not valid for this activity
     let currentTypeStillVisible = false;
     for (let option of passportTypeSelect.options) {
@@ -461,21 +279,21 @@
         break;
       }
     }
-    
+
     if (!currentTypeStillVisible) {
       passportTypeSelect.value = ""; // Reset only if current selection is no longer valid
-      
+
       // Auto-select if only one passport type available
       let visibleOptions = 0;
       let singleOptionValue = null;
-      
+
       for (let option of passportTypeSelect.options) {
         if (option.value !== "" && option.style.display !== "none") {
           visibleOptions++;
           singleOptionValue = option.value;
         }
       }
-      
+
       // If only one passport type exists, auto-select it
       if (visibleOptions === 1 && singleOptionValue) {
         passportTypeSelect.value = singleOptionValue;
@@ -483,7 +301,7 @@
       }
     }
   }
-  
+
   function updatePassportTypeDetails(select) {
     const selected = select.options[select.selectedIndex];
     const price = selected.getAttribute("data-price");
@@ -491,7 +309,7 @@
     if (price) document.getElementById("sold_amt").value = price;
     if (sessions) document.getElementById("uses_remaining").value = sessions;
   }
-  
+
   // Auto-populate activity details on page load if activity is pre-selected
   document.addEventListener("DOMContentLoaded", function() {
     const activitySelect = document.getElementById("activity_select");

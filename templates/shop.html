@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Boutique — {{ ORG_NAME }}</title>
+
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet">
+</head>
+<body class="bg-white">
+  <div class="container py-4 py-lg-5" style="max-width: 960px;">
+    <header class="d-flex align-items-center gap-3 mb-4">
+      {% if settings and settings["LOGO_FILENAME"] %}
+      <img src="{{ url_for('static', filename='uploads/' + settings['LOGO_FILENAME']) }}"
+           alt="{{ ORG_NAME }}" width="64" height="64" class="object-fit-contain">
+      {% else %}
+      <span class="avatar avatar-lg bg-primary-lt text-primary fw-bold" aria-hidden="true">
+        {{ placeholder_letter(ORG_NAME) }}
+      </span>
+      {% endif %}
+      <div>
+        <h1 class="h2 mb-0">Boutique {{ ORG_NAME }}</h1>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }}" role="alert">
+          {{ message }}
+        </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% if activities %}
+    <section class="mb-5">
+      <h2 class="h3 mb-3">Activités</h2>
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+        {% for activity in activities %}
+        <div class="col">
+          <a href="{{ url_for('signup', activity_id=activity.id) }}" class="card card-link h-100 text-reset">
+            {% if activity.image_filename %}
+            <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+                 class="card-img-top" style="height: 160px; object-fit: cover;" alt="{{ activity.name }}">
+            {% endif %}
+            <div class="card-body">
+              <h3 class="card-title h4">{{ activity.name }}</h3>
+              {% if activity.description %}
+              <p class="text-secondary small mb-0">{{ activity.description|truncate(90) }}</p>
+              {% endif %}
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if products %}
+    <section class="mb-5">
+      <h2 class="h3 mb-3">Produits</h2>
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+        {% for product in products %}
+        <div class="col">
+          <a href="{{ url_for('shop_product', product_id=product.id) }}" class="card card-link h-100 text-reset">
+            {% if product.photo_filename %}
+            <img src="{{ url_for('static', filename='uploads/product_images/' + product.photo_filename) }}"
+                 class="card-img-top" style="height: 160px; object-fit: cover;" alt="{{ product.name }}">
+            {% else %}
+            <div class="card-img-top bg-secondary-lt d-flex align-items-center justify-content-center" style="height: 160px;">
+              <i class="ti ti-photo text-muted fs-1"></i>
+            </div>
+            {% endif %}
+            <div class="card-body">
+              <h3 class="card-title h4">{{ product.name }}</h3>
+              <div class="fw-bold">{{ "%.2f"|format(product.price) }} $</div>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if not activities and not products %}
+    <div class="text-center text-secondary py-5">
+      <i class="ti ti-shopping-bag-off fs-1 mb-2 d-block"></i>
+      Rien à afficher pour le moment.
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>

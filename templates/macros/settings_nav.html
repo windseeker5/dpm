@@ -1,26 +1,25 @@
-{# Shared navigation for the settings area. #}
+{# Shared Settings navigation, rendered with the canonical Button Group. #}
+{% from 'macros/button_group.html' import button_group %}
 {% macro settings_nav(active) %}
   {% set items = [
     ('general', 'General', url_for('unified_settings', section='general')),
-    ('team', 'Team', url_for('setup', section='team')),
+    ('team', 'User', url_for('setup', section='team')),
     ('email', 'Email & Alerts', url_for('unified_settings', section='email')),
     ('payments', 'Payments', url_for('unified_settings', section='payments')),
+    ('shop', 'Shop', url_for('unified_settings', section='shop')),
     ('data', 'Data', url_for('setup', section='data')),
     ('plan', 'Plan & Billing', url_for('current_plan'))
   ] %}
+  {% set buttons = [] %}
+  {% for key, label, href in items %}
+    {% set _ = buttons.append({
+      "text": label,
+      "href": href,
+      "variant": "secondary" if active == key else "outline",
+      "attrs": {"aria-current": "page"} if active == key else {}
+    }) %}
+  {% endfor %}
   <nav class="mp-settings-nav" aria-label="Settings sections">
-    <div class="mp-settings-tabs" role="list">
-      {% for key, label, href in items %}
-        <a href="{{ href }}" class="mp-settings-tab{% if active == key %} active{% endif %}"{% if active == key %} aria-current="page"{% endif %}>{{ label }}</a>
-      {% endfor %}
-    </div>
-    <div class="mp-settings-select-wrap">
-      <label for="mp-settings-section" class="form-label">Settings Section</label>
-      <select id="mp-settings-section" class="form-select" data-mp-settings-nav>
-        {% for key, label, href in items %}
-          <option value="{{ href }}"{% if active == key %} selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
+    {{ button_group(buttons=buttons, aria_label="Settings sections") }}
   </nav>
 {% endmacro %}

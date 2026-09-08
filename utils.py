@@ -1815,7 +1815,7 @@ def get_kpi_data(activity_id=None, period='7d'):
         dict: KPI data with current values, previous values, changes, and trends
     """
     from datetime import datetime, timedelta, timezone
-    from models import Passport, Signup, Income, Redemption, db
+    from models import Passport, Signup, Income, Redemption, EmailLog, db
     from flask import current_app
     from sqlalchemy import func, and_, or_
     
@@ -2031,6 +2031,30 @@ def get_kpi_data(activity_id=None, period='7d'):
             prev_passports_redeemed = None
             passports_redeemed_change = None
 
+        # KPI 6: Successfully sent emails. EmailLog records one row per
+        # recipient, so this measures individual messages rather than campaigns.
+        current_emails_sent = EmailLog.query.filter(
+            EmailLog.result == 'SENT',
+            EmailLog.timestamp >= current_start,
+            EmailLog.timestamp <= current_end
+        ).count()
+
+        if period != 'all':
+            prev_emails_sent = EmailLog.query.filter(
+                EmailLog.result == 'SENT',
+                EmailLog.timestamp >= prev_start,
+                EmailLog.timestamp <= prev_end
+            ).count()
+            if prev_emails_sent > 0:
+                emails_sent_change = ((current_emails_sent - prev_emails_sent) / prev_emails_sent * 100)
+            elif current_emails_sent > 0:
+                emails_sent_change = 100.0
+            else:
+                emails_sent_change = 0
+        else:
+            prev_emails_sent = None
+            emails_sent_change = None
+
         # Trend window + granularity: the sparkline on each KPI card should
         # cover the same span the period represents, not always "last 30
         # days" — otherwise 90d/fy/all render an identical chart that has
@@ -2063,6 +2087,11 @@ def get_kpi_data(activity_id=None, period='7d'):
             redemption_min = redemption_min_query.scalar()
             if redemption_min:
                 earliest_candidates.append(redemption_min)
+            email_min = EmailLog.query.filter(EmailLog.result == 'SENT').with_entities(
+                func.min(EmailLog.timestamp)
+            ).scalar()
+            if email_min:
+                earliest_candidates.append(email_min)
 
             trend_window_start = min(earliest_candidates) if earliest_candidates else (now - timedelta(days=365))
             if trend_window_start.tzinfo is None:
@@ -2156,6 +2185,8 @@ def get_kpi_data(activity_id=None, period='7d'):
                 date_col = model.created_dt
             elif hasattr(model, 'signed_up_at'):
                 date_col = model.signed_up_at
+            elif hasattr(model, 'timestamp'):
+                date_col = model.timestamp
             else:
                 # Fallback if no date column
                 return [0] * len(bucket_sequence(window_start, now, granularity))
@@ -2217,6 +2248,9 @@ def get_kpi_data(activity_id=None, period='7d'):
             return [bucket_counts.get(key, 0) for key in bucket_sequence(window_start, now, granularity)]
 
         passports_redeemed_trend = build_redemptions_trend(trend_window_start, trend_granularity)
+        emails_sent_trend = build_count_trend(
+            EmailLog, EmailLog.result == 'SENT', trend_window_start, trend_granularity
+        )
 
         return {
             'revenue': {
@@ -2249,6 +2283,12 @@ def get_kpi_data(activity_id=None, period='7d'):
                 'previous': prev_passports_redeemed,
                 'change': round(passports_redeemed_change, 1) if passports_redeemed_change is not None else None,
                 'trend_data': passports_redeemed_trend
+            },
+            'emails_sent': {
+                'current': current_emails_sent,
+                'previous': prev_emails_sent,
+                'change': round(emails_sent_change, 1) if emails_sent_change is not None else None,
+                'trend_data': emails_sent_trend
             }
         }
 
@@ -2360,8 +2400,8 @@ def cleanup_duplicate_payment_logs_auto():
 
 
 def match_gmail_payments_to_passes():
-    from utils import extract_interac_transfers, get_setting, notify_pass_event
-    from models import EbankPayment, Passport, Signup, db
+    from utils import extract_interac_transfers, get_setting, notify_pass_event, notify_order_event
+    from models import EbankPayment, Passport, Signup, Order, db
     from datetime import datetime, timezone, timedelta
     from flask import current_app
     from rapidfuzz import fuzz
@@ -2992,6 +3032,80 @@ def match_gmail_payments_to_passes():
             else:
                 # NO MATCH FOUND in unpaid passports - Check if this is a duplicate payment for an already-paid passport
                 print(f"\n❌ NO MATCH FOUND in unpaid passports")
+
+                # Shop order matching: tried only when nothing above (unpaid passport or
+                # payment-first signup) already matched. Purely additive — if no order
+                # matches, everything below falls through unchanged to the existing
+                # NO_MATCH diagnostics.
+                matched_order = None
+                pending_orders = Order.query.filter_by(
+                    status="awaiting_payment", payment_method="interac"
+                ).filter(Order.amount == payment_amount).all()
+
+                if pending_orders:
+                    order_code_match = None
+                    for pattern_src in (transfer_message, email_body):
+                        if pattern_src:
+                            code_search = re.search(r'MP-ORD-(\d{7})', pattern_src)
+                            if code_search:
+                                order_code_match = f"MP-ORD-{code_search.group(1)}"
+                                break
+
+                    if order_code_match:
+                        matched_order = next(
+                            (o for o in pending_orders if o.order_code == order_code_match), None
+                        )
+
+                    order_best_score = 100
+                    if not matched_order:
+                        order_scores = sorted(
+                            ((o, fuzz.ratio(normalized_payment_name, normalize_name(o.buyer_name)))
+                             for o in pending_orders),
+                            key=lambda pair: pair[1], reverse=True
+                        )
+                        if order_scores and order_scores[0][1] >= threshold and (
+                            len(order_scores) == 1 or (order_scores[0][1] - order_scores[1][1]) >= 5
+                        ):
+                            matched_order, order_best_score = order_scores[0]
+
+                if matched_order:
+                    matched_order.status = "paid"
+                    matched_order.paid_at = datetime.now(timezone.utc)
+                    db.session.add(matched_order)
+                    db.session.add(EbankPayment(
+                        from_email=from_email,
+                        reply_to_email=reply_to_email,
+                        subject=subject,
+                        bank_info_name=name,
+                        bank_info_amt=amt,
+                        matched_order_id=matched_order.id,
+                        matched_name=matched_order.buyer_name,
+                        matched_amt=matched_order.amount,
+                        name_score=int(order_best_score),
+                        result="MATCHED",
+                        mark_as_paid=True,
+                        email_received_date=email_received_date,
+                        email_uid=uid,
+                    ))
+                    db.session.commit()
+
+                    if uid:
+                        try:
+                            mail.uid("COPY", uid, processed_folder)
+                            mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                        except Exception as move_err:
+                            print(f"   Could not move matched shop-order email: {move_err}")
+
+                    try:
+                        notify_order_event(current_app._get_current_object(), order=matched_order,
+                                          event_type="order_paid")
+                    except Exception as e:
+                        print(f"   Order confirmation email failed: {e}")
+
+                    results["matched"] += 1
+                    print(f"   ✅ Matched shop order {matched_order.order_code} for {matched_order.buyer_name} (${amt})")
+                    continue
+
                 results["no_match"] += 1
 
                 # Normalize payment name for comparison
@@ -4371,6 +4485,42 @@ def _fr_money(amount):
     so a single email never shows both "$50.00" and "50,00 $".
     """
     return f"{amount or 0:.2f}".replace(".", ",") + " $"
+
+
+def notify_order_event(app, *, order, event_type):
+    """Send a shop order email. event_type: 'order_placed' (Interac instructions,
+    sent right after checkout) or 'order_paid' (payment confirmed)."""
+    from utils import send_email_async, get_setting
+
+    if not order.buyer_email:
+        return
+
+    item_label = order.product_name
+    if order.size:
+        item_label += f" ({order.size})"
+    if order.quantity and order.quantity > 1:
+        item_label += f" × {order.quantity}"
+
+    display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+    payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
+
+    if event_type == "order_paid":
+        subject = f"Paiement reçu - Commande {order.order_code}"
+        template_name = "email/order_paid.html"
+    else:
+        subject = f"Commande reçue - {order.order_code}"
+        template_name = "email/order_placed.html"
+
+    context = {
+        "order_code": order.order_code,
+        "item_label": item_label,
+        "amount": order.amount,
+        "payment_method": order.payment_method,
+        "payment_email": payment_email,
+    }
+
+    send_email_async(app, subject=subject, to_email=order.buyer_email,
+                      template_name=template_name, context=context)
 
 
 def notify_signup_event(app, *, signup, activity, timestamp=None):

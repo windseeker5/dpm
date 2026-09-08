@@ -1,0 +1,51 @@
+{#
+  Select, ported from KDUI's field shell (same mp-field/mp-label as Input,
+  Textarea, Switch, Checkbox and Radio Group) with a native <select> styled
+  to match .mp-input, plus a chevron icon.
+
+  Options are provided by the caller as raw <option> markup (via
+  {% call %}...{% endcall %}, same pattern as macros/tooltip.html) rather
+  than a value/label list, so callers can attach arbitrary data-* attributes
+  (e.g. data-price, data-activity) consumed by page-level JS.
+
+  Usage:
+    {% from 'macros/select.html' import select %}
+    {% call select(id="activity_select", label="Activity", placeholder="-- Select Activity --", required=true) %}
+      {% for activity in activity_list %}
+        <option value="{{ activity.id }}">{{ activity.name }}</option>
+      {% endfor %}
+    {% endcall %}
+
+  Parameters:
+    - id: select id (also used for label association)
+    - label: optional label text
+    - name: select name; defaults to id
+    - placeholder: optional first disabled-value option (e.g. "-- Select --")
+    - description: optional helper text below the select
+    - required: default False — adds required attribute and a "*" to the label
+    - disabled: default False
+    - class_: extra classes for the wrapper
+    - attrs: dict of extra attributes for the select (onchange, data-*, etc.)
+#}
+
+{% macro select(id, label=None, name=None, placeholder=None, description=None, required=False, disabled=False, class_='', attrs={}) %}
+{% set select_name = name or id %}
+<div class="mp-field{% if class_ %} {{ class_ }}{% endif %}">
+  {% if label %}<label class="mp-label" for="{{ id }}">{{ label }}{% if required %} <span class="mp-field__required">*</span>{% endif %}</label>{% endif %}
+  <div class="mp-select-wrap">
+    <select
+      id="{{ id }}"
+      name="{{ select_name }}"
+      class="mp-select"
+      {% if required %}required{% endif %}
+      {% if disabled %}disabled{% endif %}
+      {% for key, val in attrs.items() %}{{ key }}="{{ val }}"{% endfor %}
+    >
+      {% if placeholder %}<option value="">{{ placeholder }}</option>{% endif %}
+      {{ caller() }}
+    </select>
+    <i class="ti ti-chevron-down mp-select-chevron" aria-hidden="true"></i>
+  </div>
+  {% if description %}<p class="mp-field__description">{{ description }}</p>{% endif %}
+</div>
+{% endmacro %}

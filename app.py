@@ -58,6 +58,7 @@ from models import Activity, User, Signup, Passport, PassportType, AdminActionLo
 from models import SurveyTemplate, Survey, SurveyResponse
 from models import QueryLog
 from models import StripeTransaction
+from models import Product, Order
 
 
 # ⚙️ Config
@@ -2725,7 +2726,8 @@ def create_activity():
             is_quantity_limited=is_quantity_limited,
             max_sessions=max_sessions,
             show_remaining_quantity=show_remaining_quantity,
-            uses_scheduling=uses_scheduling
+            uses_scheduling=uses_scheduling,
+            show_in_shop=("show_in_shop" in request.form)
         )
 
         db.session.add(new_activity)
@@ -2937,6 +2939,7 @@ def edit_activity(activity_id):
         activity.max_sessions = int(max_sessions_str) if max_sessions_str else None
         activity.show_remaining_quantity = "show_remaining_quantity" in request.form
         activity.uses_scheduling = "uses_scheduling" in request.form
+        activity.show_in_shop = "show_in_shop" in request.form
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
@@ -3473,6 +3476,266 @@ def signup_thank_you(signup_id):
                           format_slot_label=format_slot_label)
 
 
+@app.route("/shop")
+def shop():
+    """Public shop: selected activities (linked to the existing signup flow) plus simple
+    products. No cart, no inventory — one-item checkout only."""
+    from utils import get_setting
+    if get_setting("SHOP_ENABLED", "False") != "True":
+        return render_template("shop_unavailable.html"), 404
+
+    settings = {s.key: s.value for s in Setting.query.all()}
+    activities = Activity.query.filter_by(show_in_shop=True, status="active").order_by(Activity.name).all()
+    products = Product.query.filter_by(active=True).order_by(Product.name).all()
+
+    return render_template("shop.html", settings=settings, activities=activities, products=products)
+
+
+@app.route("/shop/product/<int:product_id>", methods=["GET", "POST"])
+def shop_product(product_id):
+    from utils import get_setting
+    if get_setting("SHOP_ENABLED", "False") != "True":
+        return render_template("shop_unavailable.html"), 404
+
+    product = db.session.get(Product, product_id)
+    if not product or not product.active:
+        return render_template("shop_unavailable.html"), 404
+
+    settings = {s.key: s.value for s in Setting.query.all()}
+    stripe_enabled = get_setting("STRIPE_PAYMENTS_ENABLED", "False") == "True"
+
+    if request.method == "POST":
+        buyer_name = request.form.get("buyer_name", "").strip()
+        buyer_email = request.form.get("buyer_email", "").strip()
+        buyer_phone = request.form.get("buyer_phone", "").strip()
+        notes = request.form.get("notes", "").strip()
+        size = request.form.get("size", "").strip()
+
+        try:
+            quantity = max(1, int(request.form.get("quantity", 1)))
+        except (TypeError, ValueError):
+            quantity = 1
+
+        payment_method = request.form.get("payment_method", "interac")
+        if payment_method not in ("interac", "stripe") or (payment_method == "stripe" and not stripe_enabled):
+            payment_method = "interac"
+
+        if not buyer_name or not buyer_email:
+            flash("Le nom et le courriel sont requis.", "error")
+            return redirect(url_for("shop_product", product_id=product.id))
+
+        amount = round(product.price * quantity, 2)
+
+        order = Order(
+            product_id=product.id,
+            product_name=product.name,
+            unit_price=product.price,
+            quantity=quantity,
+            amount=amount,
+            size=size or None,
+            buyer_name=buyer_name,
+            buyer_email=buyer_email,
+            buyer_phone=buyer_phone or None,
+            notes=notes or None,
+            payment_method=payment_method,
+            status="awaiting_payment",
+        )
+        db.session.add(order)
+        db.session.flush()
+        order.order_code = f"MP-ORD-{order.id:07d}"
+        db.session.commit()
+
+        if payment_method == "stripe":
+            try:
+                stripe_secret_key = get_setting('STRIPE_PAYMENTS_SECRET_KEY', '')
+                if not stripe_secret_key:
+                    flash("Le paiement par carte n'est pas configuré. Veuillez utiliser Interac.", "error")
+                    return redirect(url_for("shop_product", product_id=product.id))
+
+                checkout_session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    line_items=[{
+                        'price_data': {
+                            'currency': 'cad',
+                            'product_data': {'name': f"{product.name} x{quantity}"},
+                            'unit_amount': int(round(amount * 100)),
+                        },
+                        'quantity': 1,
+                    }],
+                    mode='payment',
+                    success_url=url_for('shop_order_thank_you', order_id=order.id, _external=True),
+                    cancel_url=url_for('shop_product', product_id=product.id, _external=True),
+                    metadata={'order_id': str(order.id)},
+                    customer_email=buyer_email,
+                    api_key=stripe_secret_key,
+                )
+                order.stripe_checkout_session_id = checkout_session.id
+                db.session.commit()
+                return redirect(checkout_session.url, code=303)
+            except Exception as e:
+                print(f"[Shop Stripe Checkout] Error creating session: {e}")
+                flash("Erreur lors de la création du paiement. Veuillez réessayer ou utiliser Interac.", "error")
+                return redirect(url_for("shop_product", product_id=product.id))
+        else:
+            from utils import notify_order_event
+            try:
+                notify_order_event(app, order=order, event_type="order_placed")
+            except Exception as e:
+                print(f"[Shop] order_placed email failed: {e}")
+
+            return redirect(url_for("shop_order_thank_you", order_id=order.id))
+
+    return render_template("shop_product.html", product=product, settings=settings, stripe_enabled=stripe_enabled)
+
+
+@app.route("/shop/order/thank-you/<int:order_id>")
+def shop_order_thank_you(order_id):
+    order = db.session.get(Order, order_id)
+    if not order:
+        flash("Order not found.", "error")
+        return redirect(url_for("shop"))
+
+    settings = {s.key: s.value for s in Setting.query.all()}
+    return render_template("shop_order_confirmation.html", order=order, settings=settings)
+
+
+ORDER_STATUS_LABELS = {
+    "awaiting_payment": "Awaiting Payment", "paid": "Paid", "ready": "Ready",
+    "picked_up": "Picked Up", "cancelled": "Cancelled",
+}
+ORDER_STATUS_COLORS = {
+    "awaiting_payment": "yellow", "paid": "green", "ready": "azure",
+    "picked_up": "secondary", "cancelled": "red",
+}
+
+
+@app.route("/admin/orders")
+def list_orders():
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from markupsafe import escape
+    from flask_wtf.csrf import generate_csrf
+
+    q = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "")
+    page = request.args.get("page", 1, type=int)
+    per_page = 10
+
+    query = Order.query
+    if q:
+        query = query.filter(db.or_(
+            Order.buyer_name.ilike(f"%{q}%"),
+            Order.buyer_email.ilike(f"%{q}%"),
+            Order.order_code.ilike(f"%{q}%"),
+        ))
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+
+    pagination = query.order_by(Order.created_dt.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    orders = pagination.items
+
+    counts = {
+        "all": Order.query.count(),
+        "awaiting_payment": Order.query.filter_by(status="awaiting_payment").count(),
+        "paid": Order.query.filter_by(status="paid").count(),
+        "ready": Order.query.filter_by(status="ready").count(),
+        "picked_up": Order.query.filter_by(status="picked_up").count(),
+        "cancelled": Order.query.filter_by(status="cancelled").count(),
+    }
+
+    current_filters = {}
+    if q:
+        current_filters["q"] = q
+    if status_filter:
+        current_filters["status"] = status_filter
+
+    tabs = [{"label": "All", "url": url_for("list_orders", q=q or None),
+             "count": counts["all"], "active": status_filter == ""}]
+    for key, label in ORDER_STATUS_LABELS.items():
+        tabs.append({
+            "label": label, "url": url_for("list_orders", status=key, q=q or None),
+            "count": counts[key], "active": status_filter == key,
+        })
+
+    csrf_value = generate_csrf()
+    rows = []
+    for order in orders:
+        item_label = f"{order.product_name}{' (' + str(escape(order.size)) + ')' if order.size else ''} × {order.quantity}"
+        color = ORDER_STATUS_COLORS.get(order.status, "secondary")
+        label = ORDER_STATUS_LABELS.get(order.status, order.status)
+
+        other_statuses = [s for s in ORDER_STATUS_LABELS if s != order.status]
+        actions = [
+            {"label": f"Mark as {ORDER_STATUS_LABELS[s]}", "attrs": {
+                "onclick": (f"document.getElementById('order-status-input-{order.id}').value='{s}';"
+                            f"document.getElementById('order-status-form-{order.id}').submit();")
+            }} for s in other_statuses
+        ]
+
+        status_cell = (
+            f'<span class="badge bg-{color}-lt text-{color}-lt-fg">{escape(label)}</span>'
+            f'<form id="order-status-form-{order.id}" method="POST" '
+            f'action="{url_for("update_order_status", order_id=order.id)}" class="d-none">'
+            f'<input type="hidden" name="csrf_token" value="{csrf_value}">'
+            f'<input type="hidden" name="return_status" value="{escape(status_filter)}">'
+            f'<input type="hidden" name="status" id="order-status-input-{order.id}">'
+            f'</form>'
+        )
+
+        rows.append({
+            "id": order.id,
+            "avatar_name": order.buyer_name,
+            "primary": order.buyer_name,
+            "secondary": order.buyer_email,
+            "mobile_secondary": item_label,
+            "cells": [
+                f'<div class="fw-bold">{escape(order.order_code or ("#" + str(order.id)))}</div>',
+                escape(item_label),
+                f'${order.amount:.2f}',
+                escape(order.payment_method),
+                status_cell,
+            ],
+            "badges": [
+                {"text": label, "variant": color},
+                {"text": f"${order.amount:.2f}", "variant": "secondary"},
+            ],
+            "actions": actions,
+        })
+
+    return render_template("orders.html", orders=orders, rows=rows, tabs=tabs, q=q,
+                            status_filter=status_filter, pagination=pagination,
+                            current_filters=current_filters)
+
+
+@app.route("/admin/orders/<int:order_id>/status", methods=["POST"])
+def update_order_status(order_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    order = db.session.get(Order, order_id)
+    if not order:
+        flash("Order not found.", "error")
+        return redirect(url_for("list_orders"))
+
+    new_status = request.form.get("status")
+    if new_status not in ORDER_STATUS_LABELS:
+        flash("Invalid status.", "error")
+        return redirect(url_for("list_orders"))
+
+    order.status = new_status
+    if new_status == "paid" and not order.paid_at:
+        order.paid_at = datetime.now(timezone.utc)
+
+    db.session.add(AdminActionLog(
+        admin_email=session.get("admin"),
+        action=f"Order {order.order_code} status changed to {new_status}"
+    ))
+    db.session.commit()
+    flash("Order updated.", "success")
+    return redirect(url_for("list_orders", status=request.form.get("return_status", "")))
+
+
 @app.route("/stripe/webhook", methods=["POST"])
 @csrf.exempt
 def stripe_webhook():
@@ -3499,7 +3762,41 @@ def stripe_webhook():
 
     if event['type'] == 'checkout.session.completed':
         session_data = event['data']['object']
+        order_id = session_data.get('metadata', {}).get('order_id')
         signup_id = session_data.get('metadata', {}).get('signup_id')
+
+        if order_id:
+            try:
+                order_id_int = int(order_id)
+            except (ValueError, TypeError):
+                print(f"[Stripe Webhook] Invalid order_id format: {order_id}")
+                return jsonify({"status": "ignored"}), 200
+
+            order = db.session.get(Order, order_id_int)
+            if not order:
+                print(f"[Stripe Webhook] Order {order_id} not found")
+                return jsonify({"status": "ignored"}), 200
+
+            if order.status == "paid":
+                print(f"[Stripe Webhook] Order {order_id} already paid, skipping")
+                return jsonify({"status": "already_processed"}), 200
+
+            order.status = "paid"
+            order.paid_at = datetime.now(timezone.utc)
+            db.session.add(AdminActionLog(
+                admin_email="stripe-bot@system",
+                action=f"Stripe Payment Received: ${order.amount:.2f} from {order.buyer_name} for Order {order.order_code}"
+            ))
+            db.session.commit()
+
+            try:
+                from utils import notify_order_event
+                notify_order_event(app, order=order, event_type="order_paid")
+            except Exception as e:
+                print(f"[Stripe Webhook] Order confirmation email failed: {e}")
+
+            print(f"[Stripe Webhook] Order {order_id} marked paid")
+            return jsonify({"status": "ok"}), 200
 
         if not signup_id:
             print("[Stripe Webhook] No signup_id in metadata")
@@ -5360,6 +5657,33 @@ def setup():
     if current_section not in {"team", "data"}:
         current_section = "team"
     admins = Admin.query.all()
+
+    # Row data for the Users table (macros/data_table.html) — Type is
+    # cosmetic-only for now, every account is a full admin (no Viewer role
+    # exists in the data model yet).
+    admin_rows = []
+    for a in admins:
+        is_self = a.email == session.get("admin")
+        type_cell = '<span class="mp-badge" data-variant="outline">Admin</span>'
+        if is_self:
+            type_cell += ' <span class="mp-badge" data-variant="secondary">You</span>'
+        actions = [{"label": "Edit", "url": f"#user-edit-modal-{a.id}", "attrs": {"data-bs-toggle": "modal"}}]
+        if not is_self:
+            actions += [
+                {"label": "Reset Password", "url": f"#reset-password-modal-{a.id}", "attrs": {"data-bs-toggle": "modal"}},
+                {"type": "separator"},
+                {"label": "Remove User", "url": f"#delete-admin-modal-{a.id}", "attrs": {"data-bs-toggle": "modal", "data-variant": "destructive"}},
+            ]
+        admin_rows.append({
+            "id": a.id,
+            "avatar_name": a.full_name,
+            "primary": a.email,
+            "secondary": (f"{a.first_name or ''} {a.last_name or ''}".strip() or None),
+            "cells": [type_cell],
+            "actions": actions,
+            "is_self": is_self,
+        })
+
     backup_file = request.args.get("backup_file")
 
     backup_dir = os.path.join("static", "backups")
@@ -5392,6 +5716,7 @@ def setup():
         "setup.html",
         settings=settings,
         admins=admins,
+        admin_rows=admin_rows,
         backup_file=backup_file,
         backup_files=backup_files,
         email_templates=email_templates,
@@ -5465,7 +5790,7 @@ def unified_settings():
         # Redirect back to payment_bot_matches if that's where they came from
         return redirect(url_for("payment_bot_matches"))
     
-    valid_sections = {"general", "email", "payments"}
+    valid_sections = {"general", "email", "payments", "shop"}
     current_section = request.args.get("section", "general")
     if current_section not in valid_sections:
         current_section = "general"
@@ -5643,6 +5968,15 @@ def unified_settings():
                     else:
                         db.session.add(Setting(key=key, value=value))
 
+            # Shop settings belong only to the Shop section.
+            if posted_section == "shop":
+                shop_enabled_value = str("shop_enabled" in request.form)
+                existing_shop_enabled = Setting.query.filter_by(key="SHOP_ENABLED").first()
+                if existing_shop_enabled:
+                    existing_shop_enabled.value = shop_enabled_value
+                else:
+                    db.session.add(Setting(key="SHOP_ENABLED", value=shop_enabled_value))
+
             # Step 5: Save all changes
             db.session.commit()
 
@@ -5651,7 +5985,7 @@ def unified_settings():
             log_admin_action(f"Unified Settings Updated by {session.get('admin', 'Unknown')}")
 
             # Always use standard flash messages and redirect
-            section_names = {"general": "General", "email": "Email", "payments": "Payment"}
+            section_names = {"general": "General", "email": "Email", "payments": "Payment", "shop": "Shop"}
             flash(f"{section_names[posted_section]} settings saved successfully!", "success")
             return redirect(url_for("unified_settings", section=posted_section))
 
@@ -7149,7 +7483,8 @@ def edit_passport(passport_id):
         passport=passport,
         activity_list=activity_list,
         passport_types=passport_types,
-        selected_activity_id=passport.activity_id
+        selected_activity_id=passport.activity_id,
+        selected_activity=passport.activity
     )
 
 
@@ -7310,6 +7645,128 @@ def archive_activity_from_limit(activity_id):
 
     # Redirect back to tier_limit_exceeded which will auto-redirect to dashboard if now within limit
     return redirect(url_for("tier_limit_exceeded"))
+
+
+@app.route("/admin/products", methods=["GET", "POST"])
+@app.route("/admin/products/edit/<int:product_id>", methods=["GET", "POST"])
+def list_products(product_id=None):
+    """Simple shop product management: name, photo, price. No inventory tracking."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    product = db.session.get(Product, product_id) if product_id else None
+
+    if request.method == "POST":
+        is_update = product is not None
+        name = request.form.get("name", "").strip()
+
+        if not name:
+            flash("Product name is required.", "error")
+            return redirect(url_for("list_products", product_id=product_id) if product_id else url_for("list_products"))
+
+        try:
+            price = float(request.form.get("price", "0") or 0)
+        except ValueError:
+            price = 0.0
+
+        description = request.form.get("description", "").strip()
+        size_label = request.form.get("size_label", "").strip()
+        active = "active" in request.form
+
+        if product:
+            product.name = name
+            product.description = description or None
+            product.price = price
+            product.size_label = size_label or None
+            product.active = active
+        else:
+            admin = Admin.query.filter_by(email=session.get("admin")).first()
+            product = Product(
+                name=name,
+                description=description or None,
+                price=price,
+                size_label=size_label or None,
+                active=active,
+                created_by=admin.id if admin else None,
+            )
+            db.session.add(product)
+            db.session.flush()
+
+        photo_file = request.files.get("photo")
+        if photo_file and photo_file.filename:
+            upload_folder = os.path.join("static", "uploads", "product_images")
+            try:
+                product.photo_filename = _save_optimized_image(
+                    photo_file.stream, upload_folder, prefix="product", max_size=(800, 800)
+                )
+            except Exception as e:
+                app.logger.error(f"Product photo optimization failed: {e}")
+
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin"),
+            action=f"{'Updated' if is_update else 'Added'} Product: {product.name} (${product.price:.2f})"
+        ))
+        db.session.commit()
+        flash("Product saved successfully!", "success")
+        return redirect(url_for("list_products"))
+
+    q = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "")
+    page = request.args.get("page", 1, type=int)
+    per_page = 10
+
+    query = Product.query
+    if q:
+        query = query.filter(Product.name.ilike(f"%{q}%"))
+    if status_filter == "visible":
+        query = query.filter_by(active=True)
+    elif status_filter == "hidden":
+        query = query.filter_by(active=False)
+
+    pagination = query.order_by(Product.created_dt.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    products = pagination.items
+
+    counts = {
+        "all": Product.query.count(),
+        "visible": Product.query.filter_by(active=True).count(),
+        "hidden": Product.query.filter_by(active=False).count(),
+    }
+
+    current_filters = {}
+    if q:
+        current_filters["q"] = q
+    if status_filter:
+        current_filters["status"] = status_filter
+
+    tabs = [
+        {"label": "All", "url": url_for("list_products", q=q or None),
+         "count": counts["all"], "active": status_filter == ""},
+        {"label": "Visible", "url": url_for("list_products", status="visible", q=q or None),
+         "count": counts["visible"], "active": status_filter == "visible"},
+        {"label": "Hidden", "url": url_for("list_products", status="hidden", q=q or None),
+         "count": counts["hidden"], "active": status_filter == "hidden"},
+    ]
+
+    return render_template("products.html", product=product, products=products, tabs=tabs,
+                            q=q, status_filter=status_filter, pagination=pagination,
+                            current_filters=current_filters)
+
+
+@app.route("/admin/products/delete/<int:product_id>", methods=["POST"])
+def delete_product(product_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    product = db.session.get(Product, product_id)
+    if product:
+        db.session.add(AdminActionLog(
+            admin_email=session.get("admin"),
+            action=f"Deleted Product: {product.name}"
+        ))
+        db.session.delete(product)
+        db.session.commit()
+        flash("Product deleted.", "success")
+    return redirect(url_for("list_products"))
 
 
 @app.route("/activities")
@@ -10634,7 +11091,8 @@ def create_passport():
 
     # Get activity_id from URL parameters if provided
     selected_activity_id = request.args.get('activity_id', type=int)
-    
+    selected_activity = db.session.get(Activity, selected_activity_id) if selected_activity_id else None
+
     # Load passport types for the selected activity or all activities
     from models import PassportType
     if selected_activity_id:
@@ -10658,6 +11116,7 @@ def create_passport():
         activity_list=activity_list,
         passport_types=passport_types,
         selected_activity_id=selected_activity_id,
+        selected_activity=selected_activity,
         single_passport_type_id=single_passport_type_id
     )
 

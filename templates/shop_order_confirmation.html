@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Commande confirmée — {{ ORG_NAME }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet">
+</head>
+<body class="bg-white">
+  <div class="container py-4 py-lg-5" style="max-width: 560px;">
+    <div class="text-center mb-4">
+      <i class="ti ti-circle-check fs-1 text-success d-block mb-2"></i>
+      <h1 class="h2">Merci, {{ order.buyer_name.split(' ')[0] }}!</h1>
+      <p class="text-secondary">Commande {{ order.order_code }}</p>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-secondary">Article</span>
+          <span>{{ order.product_name }}{% if order.size %} ({{ order.size }}){% endif %} × {{ order.quantity }}</span>
+        </div>
+        <div class="d-flex justify-content-between fw-bold">
+          <span>Total</span>
+          <span>{{ "%.2f"|format(order.amount) }} $</span>
+        </div>
+      </div>
+    </div>
+
+    {% if order.status == 'paid' %}
+    <div class="alert alert-success mt-3">
+      <i class="ti ti-check me-1"></i> Paiement reçu. Nous vous aviserons quand votre commande sera prête.
+    </div>
+    {% elif order.payment_method == 'interac' %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <h2 class="h4">Instructions de paiement</h2>
+        <p class="mb-1">Envoyez un virement Interac de <strong>{{ "%.2f"|format(order.amount) }} $</strong> à
+          <strong>{{ payment_email }}</strong>.</p>
+        <p class="text-secondary small mb-0">
+          Inscrivez le code <strong>{{ order.order_code }}</strong> dans le message au destinataire.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-4">
+      <a href="{{ url_for('shop') }}" class="btn btn-outline-secondary">Retour à la boutique</a>
+    </div>
+  </div>
+</body>
+</html>

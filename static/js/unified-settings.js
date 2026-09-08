@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeLogoPreview();
     initializePaymentBotToggle();
     initializeStripeToggle();
+    initializeShopToggle();
     initializeFuzzyThreshold();
 
     console.log('Unified Settings JS initialized');
@@ -78,6 +79,20 @@ function initializeStripeToggle() {
     if (toggle && keyFields) {
         toggle.addEventListener('change', function() {
             keyFields.classList.toggle('d-none', !this.checked);
+        });
+    }
+}
+
+/**
+ * Shop Toggle
+ */
+function initializeShopToggle() {
+    const toggle = document.getElementById('shop_enabled');
+    const content = document.getElementById('shop-enabled-content');
+
+    if (toggle && content) {
+        toggle.addEventListener('change', function() {
+            content.classList.toggle('d-none', !this.checked);
         });
     }
 }
