@@ -335,6 +335,26 @@
   text-decoration: none;
 }
 
+/* Touch-target size (WCAG 2.5.5/2.5.8, Apple HIG 44x44pt, Material 48x48dp):
+   .mp-btn already gets a coarse-pointer min-height bump above (line ~242),
+   but that only covers the action menu's own trigger button — the opened
+   menu's rows had no such accommodation and stayed at their ~32px mouse
+   height even on a touchscreen. Match the same bump here. The trigger
+   itself gets a second, narrower rule: the general .mp-btn bump only sets
+   min-height (a text trigger is already wide enough), but action_menu()'s
+   icon_only=True trigger (macros/action_menu.html) is a square icon button
+   with no text to keep it wide, so it also needs min-width here to reach a
+   true 44x44 square instead of just growing taller. */
+@media (pointer: coarse) {
+  .mp-action-menu [role="menuitem"] {
+    min-height: 44px;
+  }
+  .mp-action-menu > button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 .mp-action-menu [role="menuitem"] svg {
   pointer-events: none;
   flex-shrink: 0;
@@ -527,7 +547,12 @@
   margin-block: -1px;
 }
 
-.mp-filter-btn:first-child {
+/* Targets the first real tab, not .mp-filter-tabs's own :first-child (that's
+   .mp-filter-tabs__indicator, always rendered before the tabs — see
+   macros/filter_tabs.html — so :first-child on .mp-filter-btn never matched
+   anything, silently no-oping this overlap correction and leaving a doubled
+   ~2px edge on the leftmost tab whenever it's the active one). */
+.mp-filter-tabs__indicator + .mp-filter-btn {
   margin-left: -1px;
 }
 
@@ -1157,6 +1182,33 @@
   width: 3rem;
   height: 3rem;
   font-size: 0.9375rem;
+}
+
+/* avatar_photo() (macros/avatar.html) — same size steps as the initials
+   avatar above so a row's photo and no-photo cases line up, but a rounded
+   square (var(--mp-radius-sm)) instead of a circle, matching how uploaded
+   cover/product photos have always been cropped in this app. */
+.mp-avatar-photo {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: var(--mp-radius-sm);
+  object-fit: cover;
+}
+
+.mp-avatar-photo[data-size="sm"] {
+  width: 2rem;
+  height: 2rem;
+}
+
+.mp-avatar-photo:not([data-size]),
+.mp-avatar-photo[data-size="md"] {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.mp-avatar-photo[data-size="lg"] {
+  width: 3rem;
+  height: 3rem;
 }
 
 /*

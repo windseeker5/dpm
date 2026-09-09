@@ -13,13 +13,14 @@
   new color system.
 
   Usage:
-    {% from 'macros/avatar.html' import avatar_initials, avatar_group %}
+    {% from 'macros/avatar.html' import avatar_initials, avatar_group, avatar_photo %}
     {{ avatar_initials(passport.user.name or 'Anonymous') }}
     {{ avatar_initials(row.primary, size="sm") }}
     {{ avatar_group(names=["Samuel Gendreau", "Marco Henry", "Ken Dresdell", "Jean Martin Morin"], max=3) }}
+    {{ avatar_photo(activity.cover_url, alt=activity.name) }}
 
   Parameters for avatar_initials:
-    - name: full name (or any string) to derive initials + color from
+    - name: full string to derive initials + color from
     - size: "sm" (2rem) | "md" (default, 2.5rem) | "lg" (3rem)
     - attrs: dict of extra attributes on the outer element
 
@@ -29,6 +30,18 @@
     - size: size passed down to each avatar_initials()
     - class_: extra classes for the group wrapper
     - attrs: dict of extra attributes for the group wrapper
+
+  avatar_photo() — a rounded-square image avatar (not the circular initials
+  shape) for rows backed by a real uploaded picture (activity cover photos,
+  product photos), same sizes as avatar_initials() so the two drop into the
+  same row height. Falls back to avatar_initials() at the call site when
+  there's no photo — this macro itself always renders an <img>.
+
+  Parameters for avatar_photo:
+    - url: image src
+    - alt: alt text, default ""
+    - size: "sm" (2rem) | "md" (default, 2.5rem) | "lg" (3rem)
+    - attrs: dict of extra attributes on the <img>
 #}
 
 {% set avatar_palette = ["blue", "azure", "purple", "pink", "orange", "teal", "green", "indigo"] %}
@@ -45,6 +58,16 @@
   aria-hidden="true"
   {% for attr_key, attr_value in attrs.items() %}{{ attr_key }}="{{ attr_value }}" {% endfor %}
 >{{ initials }}</div>
+{% endmacro %}
+
+{% macro avatar_photo(url, alt="", size="md", attrs={}) %}
+<img
+  src="{{ url }}"
+  alt="{{ alt }}"
+  class="mp-avatar-photo"
+  data-size="{{ size }}"
+  {% for attr_key, attr_value in attrs.items() %}{{ attr_key }}="{{ attr_value }}" {% endfor %}
+>
 {% endmacro %}
 
 {% macro avatar_group(names=[], max=4, size="md", class_='', attrs={}) %}

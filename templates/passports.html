@@ -3,6 +3,8 @@
 {% block title %}Passports{% endblock %}
 
 {% block content %}
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 
 <div class="page-wrapper">
   <!-- Page Header -->
@@ -27,236 +29,52 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-    <!-- Enhanced Dynamic Search -->
-    <form method="GET" action="{{ url_for('list_passports') }}" class="mb-4" id="dynamicSearchForm">
-      <div class="input-icon position-relative">
-        <span class="input-icon-addon">
-          <i class="ti ti-search fs-3"></i>
-        </span>
-        <input type="text"
-               name="q"
-               id="enhancedSearchInput"
-               class="form-control form-control-lg shadow-sm"
-               placeholder="Search passports…"
-               value="{{ current_filters.q or '' }}"
-               style="padding-right: 100px; border-radius: 0.5rem;"
-               autocomplete="off"
-               data-bs-toggle="false">
-        <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
-          <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
-          <kbd id="searchKbdHint" class="text-muted d-none d-md-inline">Ctrl</kbd>
-          <kbd class="text-muted d-none d-md-inline">K</kbd>
-          <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
-            <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
-          </button>
-        </div>
-      </div>
-    </form>
-
-
-    <!-- Main Table -->
-    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+    <!-- Passports Data Table -->
+    <div class="card mp-data-table">
       <div class="card-header">
-        <div class="d-flex justify-content-center align-items-center w-100">
-          <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-            <a href="{{ url_for('list_passports', status='active') }}"
-               class="github-filter-btn {% if current_filters.status == 'active' and not current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.status == 'active' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              Active <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.active_passports|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('list_passports', payment_status='unpaid') }}"
-               class="github-filter-btn {% if current_filters.payment_status == 'unpaid' %}active{% endif %}"
-               style="{% if current_filters.payment_status == 'unpaid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              Unpaid <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.unpaid_passports|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('list_passports', show_all='true') }}"
-               class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_passports|default(0) }})</span>
-            </a>
-          </div>
-        </div>
+        <form method="get" action="{{ url_for('list_passports') }}" style="display: contents;">
+          {{ preserve_filters(current_filters) }}
+          {{ table_toolbar(id="passports-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search passports…") }}
+        </form>
       </div>
 
       {% if is_first_time_empty %}
-        <!-- First-Time Empty State -->
-        <div class="empty-state-container text-center py-5">
-          <div class="empty-state-icon mb-3">
-            <i class="ti ti-ticket" style="font-size: 48px; color: #ae3ec9;"></i>
-          </div>
-          <h3 class="empty-state-title mb-2">No passports yet</h3>
-          <p class="empty-state-description text-muted mb-3">
-            Passports are created automatically when users complete signups and payment is confirmed.
-          </p>
-        </div>
+        {{ table_empty_state(icon="ti-ticket", icon_color="#ae3ec9",
+           title="No passports yet",
+           description="Passports are created automatically when users complete signups and payment is confirmed.") }}
 
       {% elif is_zero_results %}
-        <!-- Zero Results Empty State -->
-        <div class="empty-state-container text-center py-5">
-          <div class="empty-state-icon mb-3">
-            <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
-          </div>
-          <h3 class="empty-state-title mb-2">No passports match your filters</h3>
-          <p class="empty-state-description text-muted mb-3">
-            Try adjusting your search or filter criteria.
-          </p>
-          <a href="{{ url_for('list_passports', show_all='true') }}" class="btn btn-link">
-            Clear all filters
-          </a>
-        </div>
+        {% if other_tab_matches %}
+          {{ table_empty_state(icon="ti-search",
+             title="No matches for “%s” in this tab"|format(current_filters.q),
+             other_matches_count=other_tab_matches,
+             action_label="Show all passports", action_url=show_all_url) }}
+        {% else %}
+          {{ table_empty_state(icon="ti-search",
+             title="No passports match your filters",
+             description="Try adjusting your search or filter criteria.",
+             action_label="Clear all filters", action_url=url_for('list_passports', show_all='true')) }}
+        {% endif %}
 
       {% else %}
-        <!-- Normal Table View -->
-        <div class="table-responsive">
-          <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th class="d-none d-md-table-cell">Activity</th>
-              <th class="d-none d-lg-table-cell">Passport Type</th>
-              <th class="d-none d-md-table-cell text-center">Amount</th>
-              <th class="d-none d-lg-table-cell text-center">Status</th>
-              <th class="d-none d-md-table-cell text-center">Uses Remaining</th>
-              <th class="d-none d-md-table-cell">Created</th>
-              <th class="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for passport in passports %}
-          <tr>
-            <td style="vertical-align: middle;">
-              <div class="d-flex align-items-center">
-                <!-- Desktop: User Gravatar (circular) -->
-                <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40"
-                     class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
-                <!-- Mobile: Activity Logo (square with rounded corners) -->
-                {% if passport.activity and (passport.activity.image_filename or passport.activity.logo_filename) %}
-                  <img src="{{ url_for('static', filename='uploads/activity_images/' + (passport.activity.image_filename or passport.activity.logo_filename)) }}"
-                       class="rounded me-3 user-avatar d-md-none" alt="{{ passport.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
-                {% else %}
-                  <div class="rounded me-3 d-md-none bg-light d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #6c757d;">
-                    {{ passport.activity.name[0] if passport.activity and passport.activity.name else 'A' }}
-                  </div>
-                {% endif %}
-                <div>
-                  <div class="fw-bold">{{ passport.user.name or 'Anonymous' }}</div>
-                  <div class="text-muted small d-none d-md-block">{{ passport.user.email or 'No email' }}</div>
-                  <!-- Mobile-only metrics -->
-                  <div class="d-md-none mt-1">
-                    {% if passport.paid %}
-                      <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
-                    {% else %}
-                      <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
-                    {% endif %}
-                    <span class="badge bg-blue-lt ms-1">{{ passport.uses_remaining or 0 }} left</span>
-                    {% if passport.sold_amt %}
-                      <span class="badge bg-secondary-lt ms-1">${{ "%.0f"|format(passport.sold_amt) }}</span>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              <div>
-                <div class="fw-bold">{{ passport.activity.name if passport.activity else 'Unknown' }}</div>
-                <div class="text-muted small">{{ passport.pass_code or 'No code' }}</div>
-              </div>
-            </td>
-            <td class="d-none d-lg-table-cell" style="vertical-align: middle;">
-              <span style="color: #6c757d;">{{ passport.passport_type.name if passport.passport_type else 'Standard' }}</span>
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              {% if passport.sold_amt %}
-                ${{ "%.0f"|format(passport.sold_amt) }}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
-              {% if passport.paid %}
-                <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
-              {% else %}
-                <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              <span style="color: #6c757d;">
-                {{ passport.uses_remaining or 0 }}
-              </span>
-            </td>
-            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {% set display_date = passport.created_dt|utc_to_local %}
-              {% if display_date %}
-                {{ display_date.strftime('%Y-%m-%d') }}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-            <td class="text-center" style="vertical-align: middle;">
-              <div class="dropdown d-inline-block">
-                <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
-                  <i class="ti ti-dots-vertical"></i>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                  {% if passport.uses_remaining > 0 %}
-                  <button type="button" class="dropdown-item text-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#redeem-modal"
-                          data-user-name="{{ passport.user.name if passport.user else 'Unknown' }}"
-                          data-redeem-url="{{ url_for('redeem_passport', pass_code=passport.pass_code) }}">
-                    <i class="ti ti-login me-2"></i>Check In
-                  </button>
-                  {% endif %}
-                  <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
-                    <i class="ti ti-pencil me-2"></i>Edit
-                  </a>
-                  {% if not passport.paid %}
-                  <button type="button" class="dropdown-item text-success"
-                          data-bs-toggle="modal"
-                          data-bs-target="#mark-paid-modal"
-                          data-user-name="{{ passport.user.name if passport.user else 'Unknown' }}"
-                          data-mark-paid-url="{{ url_for('mark_passport_paid', passport_id=passport.id) }}">
-                    <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-                  </button>
-                  {% endif %}
-                  <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
-                    <i class="ti ti-qrcode me-2"></i>View
-                  </a>
-                  {% if not passport.paid %}
-                  <button type="button" class="dropdown-item text-warning"
-                          data-bs-toggle="modal"
-                          data-bs-target="#send-reminder-modal"
-                          data-user-name="{{ passport.user.name if passport.user else 'Unknown' }}"
-                          data-reminder-url="{{ url_for('send_passport_reminder', passport_id=passport.id) }}">
-                    <i class="ti ti-mail me-2"></i>Send Reminder
-                  </button>
-                  {% endif %}
-                  <a class="dropdown-item text-danger delete-passport-btn" href="#"
-                     data-passport-id="{{ passport.id }}"
-                     data-passport-name="{{ passport.user.name or 'Anonymous' }}"
-                     data-uses-remaining="{{ passport.uses_remaining or 0 }}">
-                    <i class="ti ti-trash me-2"></i>Delete
-                  </a>
-                </div>
-              </div>
-              <!-- Hidden delete form - removed, using modal instead -->
-              <form id="deleteForm{{ passport.id }}" method="POST" action="{{ url_for('passports_bulk_action') }}" style="display: none;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="selected_passports" value="{{ passport.id }}">
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      </div>
-
-      <!-- Pagination -->
-      {% from 'macros/pagination.html' import render_pagination %}
-      {{ render_pagination(pagination, current_filters, passports) }}
-      </div>
+        {% set columns = [
+          {"label": "Activity", "class": "d-none d-md-table-cell"},
+          {"label": "Passport Type", "class": "d-none d-lg-table-cell"},
+          {"label": "Amount", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Status", "class": "d-none d-lg-table-cell text-center"},
+          {"label": "Uses Remaining", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Created", "class": "d-none d-md-table-cell"}
+        ] %}
+        <div class="d-none d-md-block">
+          {{ table_desktop(id="passports-table", columns=columns, rows=rows) }}
+          {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+             total=pagination.total, items_count=rows|length, base_path=url_for('list_passports'), filters=current_filters) }}
+        </div>
+        <div class="d-md-none">
+          {{ table_mobile(id="passports-table-mobile", rows=rows) }}
+          {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+             total=pagination.total, items_count=rows|length, base_path=url_for('list_passports'), filters=current_filters) }}
+        </div>
       {% endif %}
     </div>
 
@@ -348,45 +166,8 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize search component
-    if (window.SearchComponent) {
-        window.SearchComponent.init({
-            formId: 'dynamicSearchForm',
-            inputId: 'enhancedSearchInput',
-            preserveParams: ['payment_status', 'status']
-        });
-    }
-    
-    // Initialize filter component
-    if (window.FilterComponent) {
-        window.FilterComponent.init({
-            filterClass: 'github-filter-btn',
-            mode: 'server',
-            preserveScrollPosition: true,
-            enableSearchPreservation: true
-        });
-    }
-
-    // Note: Dropdown management is now handled by the global dropdown-fix.js
-    // All dropdown behavior (closing on click outside, ESC key, single dropdown) 
-    // is managed by the global system - no local management needed
-    
-    // Validation for debugging
-    console.log('🎫 Passports page loaded');
-    console.log('🔧 Global dropdown fix available:', typeof window.dropdownFix !== 'undefined');
-    console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
-    console.log('🔍 Dropdown toggles found:', document.querySelectorAll('[data-bs-toggle="dropdown"]').length);
-
-    // Debug: Check if Bootstrap is properly loaded
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded! Dropdown functionality may not work.');
-    } else {
-        console.log('Bootstrap is loaded. Dropdown functionality should work.');
-    }
-});
-
 // Passport delete confirmation
 function confirmPassportDelete(passportId, passportName, usesRemaining) {
   document.getElementById('deletePassportName').textContent = passportName;
@@ -431,18 +212,6 @@ document.getElementById('mark-paid-modal').addEventListener('show.bs.modal', fun
   // Reset radio to cash default
   document.querySelector('#mark-paid-modal input[value="cash"]').checked = true;
   document.getElementById('mark-paid-payment-method').value = 'cash';
-});
-
-// Event listener for delete buttons with data attributes
-document.addEventListener('click', function(e) {
-  if (e.target.closest('.delete-passport-btn')) {
-    e.preventDefault();
-    const btn = e.target.closest('.delete-passport-btn');
-    const passportId = parseInt(btn.dataset.passportId);
-    const passportName = btn.dataset.passportName;
-    const usesRemaining = parseInt(btn.dataset.usesRemaining);
-    confirmPassportDelete(passportId, passportName, usesRemaining);
-  }
 });
 </script>
 {% endblock %}

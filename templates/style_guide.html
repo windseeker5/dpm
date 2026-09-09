@@ -702,7 +702,10 @@
         <div class="card-header">
           <div>
             <h3 class="card-title mb-0">Action Menu</h3>
-            <div class="text-muted small mt-1">Compact row/card actions dropdown. Replaces loose rows of View/Edit/Delete buttons.</div>
+            <div class="text-muted small mt-1">Compact row/card actions dropdown. Replaces loose rows of View/Edit/Delete buttons. Default trigger is a plain three-dot (kebab) icon button — the standard "more options" pattern (Gmail/Drive/Notion/Linear/Airtable, and what this app used before the mp-* redesign), adopted here after trialing it live on Activities. No chevron alongside it: a chevron means "pick a value" or "expand," the kebab already means "menu of actions" on its own, and combining them mixes two different signifiers for one control. Also gets a coarse-pointer (real touchscreen) minimum 44×44px tap target automatically, both for this trigger and for the menu's own rows once open — see <code>mp-components.css</code>'s <code>@media (pointer: coarse)</code> rules.</div>
+            <div class="text-muted small mt-2">
+              <strong>Rule: a destructive action (Delete, Remove, Cancel-permanently, etc.) is always styled red</strong> — a near-universal convention (macOS, Windows, GitHub, Gmail, Slack, Trello, Notion all do this), paired with a distinguishing icon and a confirmation step for anything non-trivial. In <code>action_menu()</code> items, set <code>"attrs": {"data-variant": "destructive"}</code> (see the Delete item in the demo below). In any remaining old-style <code>&lt;a class="dropdown-item"&gt;</code> markup, add Bootstrap's <code>text-danger</code> class the same way. Don't leave a delete action the same color as everything else in the menu.
+            </div>
           </div>
         </div>
         <div class="card-body">
@@ -723,7 +726,9 @@
   {"label": "Edit", "url": url_for('edit_x', item_id=row.id)},
   {"type": "separator"},
   {"label": "Delete", "attrs": {"data-variant": "destructive", "onclick": "..."}}
-]) }}{% endraw %}</code></pre>
+]) }}
+{# icon_only defaults to True (the three-dot trigger shown above).
+   Pass icon_only=False for the older "Action ⌄" text trigger instead. #}{% endraw %}</code></pre>
           </details>
         </div>
       </div>
@@ -892,7 +897,10 @@
           <div>
             <h3 class="card-title mb-0">Data Table</h3>
             <div class="text-muted small mt-1">
-              The shared shape behind the Passports/Sign-ups/Activities list pages: a toolbar (filter tabs centered, search icon collapsed to the left — expands inline on desktop, replaces the tabs entirely on mobile), <code>table_desktop()</code>/<code>table_mobile()</code> for the row list, and <code>table_empty_state()</code> for when there's nothing to show. Live on the Dashboard's History section (Passports/Sign-ups/Activities themselves still hand-roll the old version as of this writing). Wrap the toolbar in a real <code>&lt;form method="get"&gt;</code> and scroll position across a filter/search reload is preserved automatically — see Filter Tabs above.
+              The shared shape behind the Orders/Products/Dashboard-history/Activities/Passports/Sign-ups/Interac Inbox/Surveys list pages: a toolbar (filter tabs centered, search icon collapsed to the left — expands inline on desktop, replaces the tabs entirely on mobile), <code>table_desktop()</code>/<code>table_mobile()</code> for the row list, and <code>table_empty_state()</code> for when there's nothing to show. <strong>Any new list/table page should adopt the recipe below rather than hand-rolling its own.</strong> Wrap the toolbar in a real <code>&lt;form method="get"&gt;</code> and scroll position across a filter/search reload is preserved automatically — see Filter Tabs above.
+            </div>
+            <div class="text-muted small mt-2">
+              <strong>The full search + tabs recipe</strong> — this is what made Activities' search silently reset to its default tab until it was fixed; don't hand-roll this part again: build <code>tabs</code> with <code>utils.py</code>'s <code>tab_url(endpoint, current_filters, **overrides)</code> instead of calling <code>url_for()</code> directly, so every tab link carries the current search/filters forward automatically. Then wrap the toolbar's <code>&lt;form&gt;</code> with <code>{{ '{{ preserve_filters(current_filters) }}' }}</code> so submitting a search carries the current tab forward too. If a scoped search comes up empty but matches exist on another tab, pass <code>other_matches_count</code>/compute a <code>tab_url(..., status=None, show_all='true')</code> link into <code>table_empty_state()</code> instead of leaving a dead end.
             </div>
           </div>
         </div>
@@ -990,25 +998,39 @@
 
           <details class="mt-3">
             <summary class="sg-code-summary">Show Jinja usage</summary>
-            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state %}
+            <pre class="sg-code mt-2"><code>{% raw %}# app.py — build tabs with tab_url() (from utils.py), not url_for() directly,
+# so every tab link carries current_filters (q, dates, etc.) forward:
+from utils import tab_url
+
+current_filters = {}
+if q: current_filters['q'] = q
+if status: current_filters['status'] = status
+# ...
+
+tabs = [
+  {"label": "Active", "url": tab_url('list_passports', current_filters, status='active'),
+   "count": statistics.active_passports, "active": current_filters.get('status') == 'active'},
+  {"label": "Unpaid", "url": tab_url('list_passports', current_filters, status='unpaid'),
+   "count": statistics.unpaid_passports, "active": current_filters.get('status') == 'unpaid'},
+  {"label": "All", "url": tab_url('list_passports', current_filters, status=None),
+   "count": statistics.total_passports, "active": 'status' not in current_filters},
+]{% endraw %}</code></pre>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 
 <div class="card mp-data-table">
   <div class="card-header">
-    {{ table_toolbar(id="passports-toolbar", tabs=[
-      {"label": "Active", "url": url_for('list_passports', status='active'),
-       "count": statistics.active_passports, "active": current_filters.status == 'active'},
-      {"label": "Unpaid", "url": url_for('list_passports', payment_status='unpaid'),
-       "count": statistics.unpaid_passports, "active": current_filters.payment_status == 'unpaid'},
-      {"label": "All", "url": url_for('list_passports', show_all='true'),
-       "count": statistics.total_passports, "active": current_filters.show_all}
-    ], search_value=current_filters.q, search_placeholder="Search passports…") }}
+    <form method="get" action="{{ url_for('list_passports') }}" style="display: contents;">
+      {{ preserve_filters(current_filters) }}
+      {{ table_toolbar(id="passports-toolbar", tabs=tabs,
+         search_value=current_filters.q, search_placeholder="Search passports…") }}
+    </form>
   </div>
 
   {% if not rows %}
     {{ table_empty_state(icon="ti-search", title="No passports match your filters",
        description="Try adjusting your search or filter criteria.",
-       action_label="Clear all filters", action_url=url_for('list_passports', show_all='true')) }}
+       action_label="Clear all filters", action_url=tab_url('list_passports', current_filters, status=None)) }}
   {% else %}
     {% set columns = [
       {"label": "Activity", "class": "d-none d-md-table-cell"},

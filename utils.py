@@ -93,6 +93,49 @@ def normalize_name(text):
     return without_accents.lower().strip()
 
 
+def js_str(value):
+    """
+    Escape a value for embedding inside a single-quoted JS string literal
+    within an f-string built for an onclick="..." HTML attribute — e.g.
+    f"confirmDelete({row.id}, '{js_str(row.name)}')".
+
+    Do NOT use markupsafe.escape() for this: it returns a Markup object,
+    but an f-string interpolation collapses that back to a plain str, so
+    Jinja's own autoescape re-escapes it when the attribute is rendered
+    (action_menu()'s {{ value }}) — turning "d'Activité" into "d&#39;Activité"
+    and then, on the second pass, "d&amp;#39;Activité" (visibly broken,
+    literal "&#39;" shown to the user). js_str() only neutralizes what would
+    break the JS string (backslash, single quote) and leaves everything else
+    alone, so Jinja's single real escape pass handles HTML-attribute safety.
+    """
+    return (value or '').replace('\\', '\\\\').replace("'", "\\'")
+
+
+def tab_url(endpoint, current_filters, **overrides):
+    """
+    Build a url_for(endpoint, ...) call for one filter tab, starting from the
+    page's current_filters dict so any active filter (search text, date
+    range, etc.) carries forward onto every tab link instead of being
+    dropped when the user switches tabs.
+
+    An override value of None removes that key instead of setting it — use
+    this to clear a sibling dimension a tab doesn't apply (e.g. show_all
+    when a tab sets status, or status when a tab sets show_all).
+
+    Usage: tabs = [
+        {"label": "Active", "url": tab_url('list_activities', current_filters, status='active', show_all=None), ...},
+        {"label": "All", "url": tab_url('list_activities', current_filters, status=None, show_all='true'), ...},
+    ]
+    """
+    params = dict(current_filters)
+    for key, value in overrides.items():
+        if value is None:
+            params.pop(key, None)
+        else:
+            params[key] = value
+    return url_for(endpoint, **params)
+
+
 def has_conflicting_unpaid_signup(signup, activity):
     """
     Check if there are OTHER unpaid signups for this activity

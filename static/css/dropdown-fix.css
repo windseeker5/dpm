@@ -172,6 +172,18 @@ html body .dropdown.show .dropdown-menu {
     transition: all 0.1s ease !important;
 }
 
+/* The blanket color !important above was winning a same-specificity tie
+   against Bootstrap/Tabler's own .text-danger/.text-success/etc (both use
+   !important; this file just loads later), silently turning every
+   semantic-colored dropdown item (delete, mark paid, reminder, check-in)
+   grey. Two classes beats one on specificity regardless of load order, so
+   these restore the intended color without touching the plain default. */
+.dropdown-item.text-danger { color: var(--tblr-danger) !important; }
+.dropdown-item.text-success { color: var(--tblr-success) !important; }
+.dropdown-item.text-warning { color: var(--tblr-warning) !important; }
+.dropdown-item.text-primary { color: var(--tblr-primary) !important; }
+.dropdown-item.text-azure { color: var(--tblr-azure) !important; }
+
 .dropdown-item:hover,
 .dropdown-item:focus {
     color: #1f2937 !important;

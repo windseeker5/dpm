@@ -90,7 +90,9 @@ from utils import (
     generate_pass_code,
     generate_survey_token,
     generate_response_token,
-    format_slot_label           # Session scheduling: French label for a dated slot
+    format_slot_label,          # Session scheduling: French label for a dated slot
+    tab_url,                    # Filter-tab URL builder that carries current_filters forward
+    js_str                      # Safe single-quoted JS string literal for onclick="..." attrs
 )
 
 # 🧠 Data Tools
@@ -1803,7 +1805,7 @@ def dashboard():
         raw_count = log_total_count if tab['key'] == 'all' else log_category_counts.get(tab['key'], 0)
         tab['count'] = format_compact_count(raw_count)
         tab['active'] = log_tab == tab['key']
-        tab['url'] = url_for('dashboard', tab=tab['key'], q=log_q or None)
+        tab['url'] = tab_url('dashboard', log_current_filters, tab=tab['key'])
 
     # "View full log" carries the current tab/search over to /activity-log's
     # own (unrelated) filter params, so e.g. the Email tab deep-links into
@@ -1974,16 +1976,156 @@ def list_signups():
 
     # Get all activities for filter dropdown
     activities = Activity.query.order_by(Activity.name).all()
-    
+
     # Get unique statuses for filter dropdown
     statuses = db.session.query(Signup.status.distinct()).filter(Signup.status.isnot(None)).all()
     statuses = [status[0] for status in statuses]
-    
+
     # Get all passport types for display
     passport_types = PassportType.query.all()
-    
+
+    show_all = show_all_param == "true"
+
+    current_filters = {}
+    if q:
+        current_filters['q'] = q
+    if activity_id:
+        current_filters['activity_id'] = activity_id
+    if signup_status:
+        current_filters['status'] = signup_status
+    if start_date:
+        current_filters['start_date'] = start_date
+    if end_date:
+        current_filters['end_date'] = end_date
+    if show_all:
+        current_filters['show_all'] = "true"
+
+    # If a search on the current tab comes up empty, check whether it would
+    # match on another tab (i.e. without the status filter) so the empty
+    # state can point the user there instead of leaving them guessing.
+    other_tab_matches = 0
+    show_all_url = None
+    if is_zero_results and q:
+        escaped_q = q.replace('%', '\\%').replace('_', '\\_')
+        other_query = Signup.query.join(User).join(Activity).filter(db.or_(
+            User.name.ilike(f'%{escaped_q}%', escape='\\'),
+            User.email.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.subject.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.description.ilike(f'%{escaped_q}%', escape='\\'),
+            Signup.form_data.ilike(f'%{escaped_q}%', escape='\\'),
+            Activity.name.ilike(f'%{escaped_q}%', escape='\\')
+        ))
+        if activity_id:
+            other_query = other_query.filter(Signup.activity_id == activity_id)
+        if payment_status == 'paid':
+            other_query = other_query.filter(Signup.paid == True)
+        elif payment_status == 'unpaid':
+            other_query = other_query.filter(Signup.paid == False)
+        if start_date:
+            try:
+                other_query = other_query.filter(Signup.signed_up_at >= datetime.strptime(start_date, '%Y-%m-%d'))
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                other_end = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+                other_query = other_query.filter(Signup.signed_up_at <= other_end)
+            except ValueError:
+                pass
+        other_tab_matches = other_query.count()
+        if other_tab_matches:
+            show_all_url = tab_url('list_signups', current_filters, status=None, show_all='true')
+
+    tabs = [
+        {"label": "Pending", "url": tab_url('list_signups', current_filters, status='pending', show_all=None),
+         "count": statistics['pending'], "active": signup_status == 'pending' and not show_all},
+        {"label": "Approved", "url": tab_url('list_signups', current_filters, status='approved', show_all=None),
+         "count": statistics['approved'], "active": signup_status == 'approved' and not show_all, "hide_on_mobile": True},
+        {"label": "All", "url": tab_url('list_signups', current_filters, status=None, show_all='true'),
+         "count": statistics['total'], "active": show_all},
+    ]
+
+    from markupsafe import escape
+
+    rows = []
+    for signup in signups:
+        s_status = signup.status or 'pending'
+        is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first'
+
+        if s_status == 'approved':
+            status_cell = '<span class="badge bg-green-lt text-green-lt-fg">Approved</span>'
+            status_badge = {"text": "Approved", "variant": "green"}
+        elif s_status == 'pending' and is_payment_first:
+            status_cell = '<span class="badge bg-azure-lt text-azure-lt-fg" title="Awaiting Interac payment">Awaiting Payment</span>'
+            status_badge = {"text": "Awaiting Payment", "variant": "azure"}
+        elif s_status == 'pending':
+            status_cell = '<span class="badge bg-yellow-lt text-yellow-lt-fg">Pending Approval</span>'
+            status_badge = {"text": "Pending", "variant": "yellow"}
+        elif s_status == 'rejected':
+            status_cell = '<span class="badge bg-red-lt text-red-lt-fg">Rejected</span>'
+            status_badge = {"text": "Rejected", "variant": "red"}
+        else:
+            status_cell = f'<span class="badge bg-secondary-lt">{escape(s_status.title())}</span>'
+            status_badge = {"text": s_status.title(), "variant": "secondary"}
+
+        display_date = utc_to_local(signup.signed_up_at) if signup.signed_up_at else None
+        created_cell = display_date.strftime('%Y-%m-%d') if display_date else '<span class="text-muted">Unknown</span>'
+
+        activity_cell = escape(signup.activity.name) if signup.activity else 'Unknown'
+
+        if signup.requested_amount:
+            amount_cell = f'${signup.requested_amount:.0f}'
+        else:
+            amount_cell = '<span class="text-muted">-</span>'
+
+        qty_cell = '<span class="text-muted">-</span>'
+        if signup.passport_type_id:
+            passport_type = next((pt for pt in passport_types if pt.id == signup.passport_type_id), None)
+            if passport_type:
+                qty_cell = str(signup.requested_sessions or passport_type.sessions_included)
+
+        mobile_badges = [status_badge]
+        if signup.requested_amount:
+            mobile_badges.append({"text": f"${signup.requested_amount:.0f}", "variant": "secondary"})
+
+        actions = []
+        if s_status == 'pending':
+            user_name = escape(signup.user.name or 'this user')
+            approve_url = url_for('approve_and_create_pass', signup_id=signup.id)
+            if is_payment_first:
+                actions.append({"label": "Mark Paid & Create Passport", "icon": '<i class="ti ti-cash"></i>', "attrs": {
+                    "data-bs-toggle": "modal", "data-bs-target": "#approveSignupModal",
+                    "data-user-name": user_name, "data-approve-url": approve_url,
+                    "data-workflow-type": "payment_first",
+                }})
+            else:
+                actions.append({"label": "Approve & Create Passport", "icon": '<i class="ti ti-check"></i>', "attrs": {
+                    "data-bs-toggle": "modal", "data-bs-target": "#approveSignupModal",
+                    "data-user-name": user_name, "data-approve-url": approve_url,
+                    "data-workflow-type": "standard",
+                }})
+            actions.append({"type": "separator"})
+        delete_name = escape(signup.user.email or signup.user.name or 'Unknown user')
+        actions.append({"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {
+            "data-variant": "destructive",
+            "onclick": f"confirmSignupDelete({signup.id}, '{delete_name}'); return false;"
+        }})
+
+        rows.append({
+            "id": signup.id,
+            "avatar_name": signup.user.name or 'Anonymous',
+            "primary": signup.user.name or 'Anonymous',
+            "secondary": signup.user.email or 'No email',
+            "mobile_secondary": signup.activity.name if signup.activity else 'Unknown',
+            "mobile_badges": mobile_badges,
+            "cells": [created_cell, activity_cell, status_cell, amount_cell, qty_cell],
+            "actions": actions,
+        })
+
     return render_template('signups.html',
                          signups=signups,
+                         rows=rows,
+                         tabs=tabs,
                          pagination=signups_pagination,
                          activities=activities,
                          statuses=statuses,
@@ -1991,14 +2133,9 @@ def list_signups():
                          statistics=statistics,
                          is_first_time_empty=is_first_time_empty,
                          is_zero_results=is_zero_results,
-                         current_filters={
-                             'q': q,
-                             'activity_id': activity_id,
-                             'status': signup_status,
-                             'start_date': start_date,
-                             'end_date': end_date,
-                             'show_all': "true" if show_all_param == "true" else None
-                         })
+                         other_tab_matches=other_tab_matches,
+                         show_all_url=show_all_url,
+                         current_filters=current_filters)
 
 
 @app.route("/signups/bulk-action", methods=["POST"])
@@ -3650,11 +3787,11 @@ def list_orders():
     if status_filter:
         current_filters["status"] = status_filter
 
-    tabs = [{"label": "All", "url": url_for("list_orders", q=q or None),
+    tabs = [{"label": "All", "url": tab_url("list_orders", current_filters, status=None),
              "count": counts["all"], "active": status_filter == ""}]
     for key, label in ORDER_STATUS_LABELS.items():
         tabs.append({
-            "label": label, "url": url_for("list_orders", status=key, q=q or None),
+            "label": label, "url": tab_url("list_orders", current_filters, status=key),
             "count": counts[key], "active": status_filter == key,
         })
 
@@ -3696,7 +3833,10 @@ def list_orders():
                 escape(order.payment_method),
                 status_cell,
             ],
-            "badges": [
+            # mobile_badges, not badges — desktop already shows Amount/Status
+            # as columns, so a plain badges= here would duplicate them under
+            # the name on desktop too (table_desktop() renders badges now).
+            "mobile_badges": [
                 {"text": label, "variant": color},
                 {"text": f"${order.amount:.2f}", "variant": "secondary"},
             ],
@@ -4668,7 +4808,7 @@ def link_payment_to_passport_form():
         passport.notes = (
             f"Interac manual match — Payer: {payer_name} (${payer_amt:.2f})."
             f" Note: {reason}."
-            f" Linked by {admin_email} on {date_str}."
+            f" Matched on {date_str}."
         )
 
         # Update EbankPayment
@@ -4831,7 +4971,7 @@ def link_payment_to_signup_form():
         passport.notes = (
             f"Interac manual match — Payer: {payer_name} (${payer_amt:.2f})."
             f" Note: {reason}."
-            f" Linked by {admin_email} on {date_str}."
+            f" Matched on {date_str}."
         )
 
         # Update EbankPayment
@@ -4993,7 +5133,7 @@ def api_link_payment_to_passport():
         passport_note = (
             f"Interac manual match — Payer: {payer_name} (${payer_amt:.2f})."
             f" Note: {reason}."
-            f" Linked by {admin_email} on {date_str}."
+            f" Matched on {date_str}."
         )
         passport.notes = passport_note
 
@@ -6909,6 +7049,9 @@ def login():
                 if bcrypt.checkpw(password.encode(), stored_hash.encode()):
                     print("Password matched.")
                     session["admin"] = email
+                    if SurveyTemplate.query.count() == 0:
+                        create_default_survey_template()
+                        create_french_simple_survey_template()
                     return redirect(url_for("dashboard"))
                 else:
                     print("Password does NOT match.")
@@ -7739,11 +7882,11 @@ def list_products(product_id=None):
         current_filters["status"] = status_filter
 
     tabs = [
-        {"label": "All", "url": url_for("list_products", q=q or None),
+        {"label": "All", "url": tab_url("list_products", current_filters, status=None),
          "count": counts["all"], "active": status_filter == ""},
-        {"label": "Visible", "url": url_for("list_products", status="visible", q=q or None),
+        {"label": "Visible", "url": tab_url("list_products", current_filters, status="visible"),
          "count": counts["visible"], "active": status_filter == "visible"},
-        {"label": "Hidden", "url": url_for("list_products", status="hidden", q=q or None),
+        {"label": "Hidden", "url": tab_url("list_products", current_filters, status="hidden"),
          "count": counts["hidden"], "active": status_filter == "hidden"},
     ]
 
@@ -7878,21 +8021,136 @@ def list_activities():
     is_first_time_empty = all_activities_count == 0
     is_zero_results = len(activities) == 0 and not is_first_time_empty
 
+    current_filters = {}
+    if q:
+        current_filters['q'] = q
+    if status:
+        current_filters['status'] = status
+    if activity_type:
+        current_filters['type'] = activity_type
+    if start_date:
+        current_filters['start_date'] = start_date
+    if end_date:
+        current_filters['end_date'] = end_date
+    if show_all_param == "true":
+        current_filters['show_all'] = "true"
+
+    # If a search on the current tab comes up empty, check whether it would
+    # match on another tab (i.e. without the status filter) so the empty
+    # state can point the user there instead of leaving them guessing.
+    other_tab_matches = 0
+    show_all_url = None
+    if is_zero_results and q:
+        other_query = Activity.query.filter(
+            db.or_(
+                Activity.name.ilike(f"%{q}%"),
+                Activity.description.ilike(f"%{q}%"),
+                Activity.type.ilike(f"%{q}%")
+            )
+        )
+        if activity_type:
+            other_query = other_query.filter(Activity.type.ilike(f"%{activity_type}%"))
+        if start_date:
+            try:
+                other_query = other_query.filter(Activity.start_date >= datetime.strptime(start_date, "%Y-%m-%d"))
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                other_query = other_query.filter(Activity.end_date <= datetime.strptime(end_date, "%Y-%m-%d"))
+            except ValueError:
+                pass
+        other_tab_matches = other_query.count()
+        if other_tab_matches:
+            show_all_url = tab_url('list_activities', current_filters, status=None, show_all='true')
+
+    tabs = [
+        {"label": "Active", "url": tab_url('list_activities', current_filters, status='active', show_all=None),
+         "count": statistics['active_activities'], "active": status == 'active' and not show_all},
+        {"label": "Archived", "url": tab_url('list_activities', current_filters, status='not_active', show_all=None),
+         "count": statistics['inactive_activities'], "active": status == 'not_active', "hide_on_mobile": True},
+        {"label": "All", "url": tab_url('list_activities', current_filters, status=None, show_all='true'),
+         "count": statistics['total_activities'], "active": show_all},
+    ]
+
+    from markupsafe import escape
+
+    rows = []
+    for activity in activities:
+        a_status = activity.status or 'active'
+        if a_status == 'active':
+            status_cell = '<span class="badge bg-green-lt text-green-lt-fg">Active</span>'
+        elif a_status in ('archived', 'inactive'):
+            status_cell = '<span class="badge bg-yellow-lt text-yellow-lt-fg">Archived</span>'
+        elif a_status == 'draft':
+            status_cell = '<span class="badge bg-gray-lt text-gray-lt-fg">Draft</span>'
+        else:
+            status_cell = f'<span class="badge bg-secondary-lt">{escape(a_status.title())}</span>'
+
+        workflow_label = "Pay First" if activity.workflow_type == 'payment_first' else "Review First"
+        created_cell = utc_to_local(activity.created_dt).strftime('%Y-%m-%d') if activity.created_dt else '—'
+
+        # Desktop already shows Status/Active/Signups/Revenue as columns, so
+        # its badge row under the name only needs what isn't already a
+        # column (workflow). Mobile has no columns at all, so mobile_badges
+        # restores the fuller summary the old d-md-none block used to show.
+        badges = [{"text": workflow_label, "variant": "secondary"}]
+        mobile_badges = list(badges)
+        if a_status in ('archived', 'inactive'):
+            mobile_badges.append({"text": "Archived", "variant": "yellow"})
+        elif a_status == 'draft':
+            mobile_badges.append({"text": "Draft", "variant": "gray"})
+        if activity.active_passports_count:
+            mobile_badges.append({"text": f"{activity.active_passports_count} active", "variant": "blue"})
+        if activity.total_revenue:
+            mobile_badges.append({"text": f"${activity.total_revenue:.0f}", "variant": "secondary"})
+
+        actions = [
+            {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>', "url": url_for('edit_activity', activity_id=activity.id)},
+            {"label": "View", "icon": '<i class="ti ti-eye"></i>', "url": url_for('activity_dashboard', activity_id=activity.id)},
+        ]
+        if a_status != 'active':
+            actions.append({"label": "Restore", "icon": '<i class="ti ti-refresh"></i>', "url": url_for('edit_activity', activity_id=activity.id)})
+        if a_status == 'active':
+            actions.append({"label": "Archive", "icon": '<i class="ti ti-archive"></i>', "attrs": {
+                "onclick": f"checkAndArchiveActivity({activity.id}, '{escape(activity.name)}'); return false;"
+            }})
+        actions.append({"type": "separator"})
+        actions.append({"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {
+            "data-variant": "destructive",
+            "onclick": f"checkAndDeleteActivity({activity.id}, '{escape(activity.name)}'); return false;"
+        }})
+
+        rows.append({
+            "id": activity.id,
+            "avatar_name": activity.name,
+            "avatar_url": url_for('static', filename='uploads/activity_images/' + activity.image_filename) if activity.image_filename else None,
+            "primary": activity.name,
+            "secondary": (activity.description or '')[:50] + ('...' if activity.description and len(activity.description) > 50 else ''),
+            "badges": badges,
+            "mobile_badges": mobile_badges,
+            "cells": [
+                status_cell,
+                str(activity.active_passports_count or 0),
+                str(activity.signup_count or 0),
+                f"${activity.total_revenue or 0:.2f}",
+                created_cell,
+            ],
+            "actions": actions,
+        })
+
     return render_template("activities.html",
                          activities=activities,
+                         rows=rows,
+                         tabs=tabs,
                          pagination=pagination,
                          activity_types=activity_types,
                          statistics=statistics,
                          is_first_time_empty=is_first_time_empty,
                          is_zero_results=is_zero_results,
-                         current_filters={
-                             'q': q,
-                             'status': status,
-                             'type': activity_type,
-                             'start_date': start_date,
-                             'end_date': end_date,
-                             'show_all': "true" if show_all_param == "true" else None
-                         })
+                         other_tab_matches=other_tab_matches,
+                         show_all_url=show_all_url,
+                         current_filters=current_filters)
 
 
 @app.route("/surveys")
@@ -7968,6 +8226,11 @@ def list_surveys():
     # Get activities and templates for filter dropdowns
     activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
     survey_templates = SurveyTemplate.query.order_by(SurveyTemplate.name).all()
+    for template in survey_templates:
+        try:
+            template.question_count = len(json.loads(template.questions).get('questions', []))
+        except Exception:
+            template.question_count = 0
 
     # Calculate KPI statistics for displayed surveys only (using paginated results)
     total_surveys = len(surveys)
@@ -7997,27 +8260,154 @@ def list_surveys():
         'avg_completion_rate': avg_completion_rate
     }
 
+    # Determine if showing all (explicitly requested)
+    show_all = show_all_param == "true"
+
     # Determine empty state type
     is_first_time_empty = total_surveys_count == 0
     is_zero_results = len(surveys) == 0 and not is_first_time_empty
 
+    current_filters = {}
+    if q:
+        current_filters['q'] = q
+    if activity_id:
+        current_filters['activity'] = activity_id
+    if template_id:
+        current_filters['template'] = template_id
+    if start_date:
+        current_filters['start_date'] = start_date
+    if end_date:
+        current_filters['end_date'] = end_date
+    if status:
+        current_filters['status'] = status
+    if show_all:
+        current_filters['show_all'] = "true"
+
+    # If a search on the current tab comes up empty, check whether it would
+    # match on another tab (i.e. without the status filter) so the empty
+    # state can point the user there instead of leaving them guessing.
+    other_tab_matches = 0
+    show_all_url = None
+    if is_zero_results and q:
+        other_query = Survey.query.filter(
+            db.or_(
+                Survey.name.ilike(f"%{q}%"),
+                Survey.description.ilike(f"%{q}%")
+            )
+        )
+        if activity_id:
+            other_query = other_query.filter(Survey.activity_id == activity_id)
+        if template_id:
+            other_query = other_query.filter(Survey.template_id == template_id)
+        if start_date:
+            try:
+                other_query = other_query.filter(Survey.created_dt >= datetime.strptime(start_date, "%Y-%m-%d"))
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                other_query = other_query.filter(Survey.created_dt <= datetime.strptime(end_date, "%Y-%m-%d"))
+            except ValueError:
+                pass
+        other_tab_matches = other_query.count()
+        if other_tab_matches:
+            show_all_url = tab_url('list_surveys', current_filters, status=None, show_all='true')
+
+    tabs = [
+        {"label": "Active", "url": tab_url('list_surveys', current_filters, status='active', show_all=None),
+         "count": statistics['active_surveys'], "active": status == 'active' and not show_all},
+        {"label": "Closed", "url": tab_url('list_surveys', current_filters, status='closed', show_all=None),
+         "count": statistics['closed_surveys'], "active": status == 'closed' and not show_all, "hide_on_mobile": True},
+        {"label": "All", "url": tab_url('list_surveys', current_filters, status=None, show_all='true'),
+         "count": statistics['total_surveys'], "active": show_all},
+    ]
+
+    from markupsafe import escape
+
+    rows = []
+    for survey in surveys:
+        activity_name = survey.activity.name if survey.activity else '-'
+        activity_cell = f'<div><div class="fw-bold">{escape(activity_name)}</div>'
+        if survey.passport_type:
+            activity_cell += f'<div class="text-muted small">{escape(survey.passport_type.name)} participants</div>'
+        activity_cell += '</div>'
+
+        created_display = utc_to_local(survey.created_dt) if survey.created_dt else None
+        created_cell = created_display.strftime('%Y-%m-%d') if created_display else '<span class="text-muted">-</span>'
+
+        if survey.status == 'active':
+            status_cell = '<span class="badge bg-green-lt text-green-lt-fg">Active</span>'
+        elif survey.status == 'closed':
+            status_cell = '<span class="badge bg-red-lt text-red-lt-fg">Closed</span>'
+        else:
+            status_cell = f'<span class="badge bg-gray-lt text-gray-lt-fg">{escape(survey.status.title())}</span>'
+
+        sent_cell = f'<strong>{survey.invitation_count}</strong> invited'
+        if survey.completed_count > 0:
+            sent_cell += f'<div class="text-success small">{survey.completed_count} completed</div>'
+
+        if survey.invitation_count > 0:
+            rate_cell = f'{survey.completion_rate:.1f}%'
+        else:
+            rate_cell = '<span class="text-muted">No invitations</span>'
+
+        mobile_badges = [{"text": survey.status.title(), "variant": "green" if survey.status == 'active' else ("red" if survey.status == 'closed' else "gray")}]
+        if survey.invitation_count:
+            mobile_badges.append({"text": f"{survey.invitation_count} invited", "variant": "blue"})
+        if survey.completed_count:
+            mobile_badges.append({"text": f"{survey.completed_count} completed", "variant": "secondary"})
+
+        survey_name_js = js_str(survey.name)
+        actions = [
+            {"label": "View Survey", "icon": '<i class="ti ti-external-link"></i>', "url": url_for('take_survey', survey_token=survey.survey_token), "attrs": {"target": "_blank"}},
+            {"label": "View Results", "icon": '<i class="ti ti-chart-bar"></i>', "url": url_for('survey_results', survey_id=survey.id)},
+        ]
+        if survey.status == 'active':
+            actions.append({"label": "Send Invitations", "icon": '<i class="ti ti-mail"></i>', "attrs": {
+                "onclick": f"confirmSendInvitations({survey.id}, '{survey_name_js}', '{js_str(activity_name)}'); return false;"
+            }})
+            actions.append({"label": "Resend All Invitations", "icon": '<i class="ti ti-refresh"></i>', "attrs": {
+                "onclick": f"confirmResendAll({survey.id}, '{survey_name_js}'); return false;"
+            }})
+            actions.append({"label": "Close Survey", "icon": '<i class="ti ti-player-pause"></i>', "attrs": {
+                "onclick": f"confirmCloseSurvey({survey.id}, '{survey_name_js}'); return false;"
+            }})
+        elif survey.status == 'closed':
+            actions.append({"label": "Reopen Survey", "icon": '<i class="ti ti-player-play"></i>', "attrs": {
+                "onclick": f"confirmReopenSurvey({survey.id}, '{survey_name_js}'); return false;"
+            }})
+        if survey.responses:
+            actions.append({"label": "Export Results", "icon": '<i class="ti ti-download"></i>', "url": url_for('export_survey_results', survey_id=survey.id)})
+        actions.append({"type": "separator"})
+        actions.append({"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {
+            "data-variant": "destructive",
+            "onclick": f"confirmDelete({survey.id}, '{survey_name_js}'); return false;"
+        }})
+
+        rows.append({
+            "id": survey.id,
+            "avatar_name": activity_name if survey.activity else survey.name,
+            "avatar_url": url_for('static', filename='uploads/activity_images/' + survey.activity.image_filename) if survey.activity and survey.activity.image_filename else None,
+            "primary": survey.name,
+            "secondary": survey.template.name if survey.template else 'No template',
+            "mobile_badges": mobile_badges,
+            "cells": [created_cell, activity_cell, status_cell, sent_cell, rate_cell],
+            "actions": actions,
+        })
+
     return render_template("surveys.html",
                          surveys=surveys,
+                         rows=rows,
+                         tabs=tabs,
                          pagination=pagination,
                          activities=activities,
                          survey_templates=survey_templates,
                          statistics=statistics,
                          is_first_time_empty=is_first_time_empty,
                          is_zero_results=is_zero_results,
-                         current_filters={
-                             'q': q,
-                             'status': status,
-                             'show_all': "true" if show_all_param == "true" else None,
-                             'activity': activity_id,
-                             'template': template_id,
-                             'start_date': start_date,
-                             'end_date': end_date
-                         })
+                         other_tab_matches=other_tab_matches,
+                         show_all_url=show_all_url,
+                         current_filters=current_filters)
 
 
 @app.route("/passports")
@@ -8139,24 +8529,163 @@ def list_passports():
     is_first_time_empty = all_passports_count == 0
     is_zero_results = len(passports) == 0 and not is_first_time_empty
 
+    current_filters = {}
+    if q:
+        current_filters['q'] = q
+    if activity_id:
+        current_filters['activity'] = activity_id
+    if payment_status:
+        current_filters['payment_status'] = payment_status
+    if status:
+        current_filters['status'] = status
+    if start_date:
+        current_filters['start_date'] = start_date
+    if end_date:
+        current_filters['end_date'] = end_date
+    if min_amount:
+        current_filters['min_amount'] = min_amount
+    if max_amount:
+        current_filters['max_amount'] = max_amount
+    if show_all:
+        current_filters['show_all'] = "true"
+
+    # If a search on the current tab comes up empty, check whether it would
+    # match on another tab (i.e. without the status/payment_status filter)
+    # so the empty state can point the user there instead of leaving them
+    # guessing.
+    other_tab_matches = 0
+    show_all_url = None
+    if is_zero_results and q:
+        other_query = Passport.query.join(User).filter(
+            db.or_(
+                User.name.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%"),
+                Passport.pass_code.ilike(f"%{q}%"),
+                Passport.notes.ilike(f"%{q}%")
+            )
+        )
+        if activity_id:
+            other_query = other_query.filter(Passport.activity_id == activity_id)
+        if start_date:
+            try:
+                other_query = other_query.filter(Passport.created_dt >= datetime.strptime(start_date, "%Y-%m-%d"))
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                other_query = other_query.filter(Passport.created_dt <= datetime.strptime(end_date, "%Y-%m-%d"))
+            except ValueError:
+                pass
+        if min_amount:
+            try:
+                other_query = other_query.filter(Passport.sold_amt >= float(min_amount))
+            except ValueError:
+                pass
+        if max_amount:
+            try:
+                other_query = other_query.filter(Passport.sold_amt <= float(max_amount))
+            except ValueError:
+                pass
+        other_tab_matches = other_query.count()
+        if other_tab_matches:
+            show_all_url = tab_url('list_passports', current_filters, status=None, payment_status=None, show_all='true')
+
+    tabs = [
+        {"label": "Active", "url": tab_url('list_passports', current_filters, status='active', payment_status=None, show_all=None),
+         "count": statistics['active_passports'], "active": status == 'active' and not show_all},
+        {"label": "Unpaid", "url": tab_url('list_passports', current_filters, payment_status='unpaid', status=None, show_all=None),
+         "count": statistics['unpaid_passports'], "active": payment_status == 'unpaid' and not show_all, "hide_on_mobile": True},
+        {"label": "All", "url": tab_url('list_passports', current_filters, status=None, payment_status=None, show_all='true'),
+         "count": statistics['total_passports'], "active": show_all},
+    ]
+
+    from markupsafe import escape
+
+    rows = []
+    for passport in passports:
+        activity_name = passport.activity.name if passport.activity else 'Unknown'
+        pass_code = passport.pass_code or 'No code'
+        activity_cell = (f'<div><div class="fw-bold">{escape(activity_name)}</div>'
+                          f'<div class="text-muted small">{escape(pass_code)}</div></div>')
+
+        passport_type_cell = escape(passport.passport_type.name) if passport.passport_type else 'Standard'
+
+        if passport.sold_amt:
+            amount_cell = f'${passport.sold_amt:.0f}'
+        else:
+            amount_cell = '<span class="text-muted">-</span>'
+
+        if passport.paid:
+            status_cell = '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>'
+        else:
+            status_cell = '<span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>'
+
+        uses_remaining = passport.uses_remaining or 0
+        uses_cell = str(uses_remaining)
+
+        display_date = utc_to_local(passport.created_dt) if passport.created_dt else None
+        created_cell = display_date.strftime('%Y-%m-%d') if display_date else '<span class="text-muted">-</span>'
+
+        mobile_badges = [
+            {"text": "Paid" if passport.paid else "Unpaid", "variant": "green" if passport.paid else "yellow"},
+            {"text": f"{uses_remaining} left", "variant": "blue"},
+        ]
+        if passport.sold_amt:
+            mobile_badges.append({"text": f"${passport.sold_amt:.0f}", "variant": "secondary"})
+
+        user_name = escape(passport.user.name or 'this user')
+
+        actions = []
+        if uses_remaining > 0:
+            actions.append({"label": "Check In", "icon": '<i class="ti ti-login"></i>', "attrs": {
+                "data-bs-toggle": "modal", "data-bs-target": "#redeem-modal",
+                "data-user-name": user_name,
+                "data-redeem-url": url_for('redeem_passport', pass_code=passport.pass_code),
+            }})
+        actions.append({"label": "Edit", "icon": '<i class="ti ti-pencil"></i>', "url": url_for('edit_passport', passport_id=passport.id)})
+        if not passport.paid:
+            actions.append({"label": "Mark as Paid", "icon": '<i class="ti ti-currency-dollar"></i>', "attrs": {
+                "data-bs-toggle": "modal", "data-bs-target": "#mark-paid-modal",
+                "data-user-name": user_name,
+                "data-mark-paid-url": url_for('mark_passport_paid', passport_id=passport.id),
+            }})
+        actions.append({"label": "View", "icon": '<i class="ti ti-qrcode"></i>', "url": url_for('show_pass', pass_code=passport.pass_code)})
+        if not passport.paid:
+            actions.append({"label": "Send Reminder", "icon": '<i class="ti ti-mail"></i>', "attrs": {
+                "data-bs-toggle": "modal", "data-bs-target": "#send-reminder-modal",
+                "data-user-name": user_name,
+                "data-reminder-url": url_for('send_passport_reminder', passport_id=passport.id),
+            }})
+        actions.append({"type": "separator"})
+        delete_name = escape(passport.user.name or 'Anonymous')
+        actions.append({"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {
+            "data-variant": "destructive",
+            "onclick": f"confirmPassportDelete({passport.id}, '{delete_name}', {uses_remaining}); return false;"
+        }})
+
+        rows.append({
+            "id": passport.id,
+            "avatar_name": passport.user.name or 'Anonymous',
+            "primary": passport.user.name or 'Anonymous',
+            "secondary": passport.user.email or 'No email',
+            "mobile_secondary": activity_name,
+            "mobile_badges": mobile_badges,
+            "cells": [activity_cell, passport_type_cell, amount_cell, status_cell, uses_cell, created_cell],
+            "actions": actions,
+        })
+
     return render_template("passports.html",
                          passports=passports,
+                         rows=rows,
+                         tabs=tabs,
                          pagination=pagination,
                          activities=activities,
                          statistics=statistics,
                          is_first_time_empty=is_first_time_empty,
                          is_zero_results=is_zero_results,
-                         current_filters={
-                             'q': q,
-                             'activity': activity_id,
-                             'payment_status': payment_status,
-                             'status': status,
-                             'start_date': start_date,
-                             'end_date': end_date,
-                             'min_amount': min_amount,
-                             'max_amount': max_amount,
-                             'show_all': "true" if show_all_param == "true" else None
-                         })
+                         other_tab_matches=other_tab_matches,
+                         show_all_url=show_all_url,
+                         current_filters=current_filters)
 
 
 # ================================
@@ -8741,6 +9270,57 @@ def payment_bot_matches():
                 pending_signups_by_amount[key] = []
             pending_signups_by_amount[key].append(s)
 
+    # Build each row's action_menu() items server-side (same dynamic-attribute
+    # pattern already used above for unpaid_count) — the modals these open
+    # (checkUnpaidPassportsModal, linkPassportModal-<id>, linkSignupModal-<id>,
+    # the create-passport/archive flows) are untouched; only the trigger
+    # moves from a hand-rolled Bootstrap .dropdown to the shared action_menu().
+    for payment in payments:
+        if payment.result == 'NO_MATCH':
+            actions = []
+            if payment.unpaid_count > 0:
+                actions.append({
+                    "label": f'{payment.unpaid_count} unpaid at ${payment.bank_info_amt:.0f}',
+                    "icon": '<i class="ti ti-search"></i>',
+                    "attrs": {
+                        "class": "check-unpaid-btn",
+                        "data-bs-toggle": "modal", "data-bs-target": "#checkUnpaidPassportsModal",
+                        "data-amount": payment.bank_info_amt, "data-payment-name": payment.bank_info_name,
+                    },
+                })
+                actions.append({"type": "separator"})
+            actions.append({
+                "label": "Create Passport", "icon": '<i class="ti ti-ticket"></i>',
+                "attrs": {
+                    "class": "create-passport-btn",
+                    "data-payment-id": payment.id, "data-name": payment.bank_info_name,
+                    "data-amount": payment.bank_info_amt, "data-reply-to-email": payment.reply_to_email or '',
+                },
+            })
+            actions.append({
+                "label": "Link to Existing Passport", "icon": '<i class="ti ti-link"></i>',
+                "attrs": {"data-bs-toggle": "modal", "data-bs-target": f"#linkPassportModal-{payment.id}"},
+            })
+            if pending_signups_by_amount.get(payment.bank_info_amt):
+                actions.append({
+                    "label": "Link to Pending Signup", "icon": '<i class="ti ti-link"></i>',
+                    "attrs": {"data-bs-toggle": "modal", "data-bs-target": f"#linkSignupModal-{payment.id}"},
+                })
+            actions.append({"type": "separator"})
+            actions.append({
+                "label": "Archive Email", "icon": '<i class="ti ti-archive"></i>',
+                "attrs": {
+                    "class": "archive-payment-btn",
+                    "data-name": payment.bank_info_name, "data-amount": payment.bank_info_amt,
+                    "data-email": payment.from_email, "data-reply-to-email": payment.reply_to_email or '',
+                },
+            })
+            payment.action_items = actions
+        elif payment.result == 'MANUAL_PROCESSED':
+            payment.action_items = [{"label": "Archived", "icon": '<i class="ti ti-check"></i>', "attrs": {"aria-disabled": "true"}}]
+        else:
+            payment.action_items = [{"label": "No actions", "attrs": {"aria-disabled": "true"}}]
+
     # Calculate statistics from ALL records (not filtered)
     total_payments = db.session.query(EbankPayment.id).filter(
         EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id))
@@ -8777,21 +9357,89 @@ def payment_bot_matches():
         and bool(get_setting("STRIPE_PAYMENTS_SECRET_KEY", ""))
     )
 
+    show_all = show_all_param == "true"
+
+    current_filters = {}
+    if q:
+        current_filters['q'] = q
+    if status_filter:
+        current_filters['status'] = status_filter
+    if show_all:
+        current_filters['show_all'] = "true"
+
+    # If a search on the current tab comes up empty, check whether it would
+    # match on another tab (i.e. without the status filter) so the empty
+    # state can point the user there instead of leaving them guessing.
+    other_tab_matches = 0
+    show_all_url = None
+    if is_zero_results and q:
+        other_query = db.session.query(EbankPayment).filter(
+            EbankPayment.id.in_(db.session.query(latest_payment_ids.c.max_id)),
+            db.or_(
+                EbankPayment.bank_info_name.ilike(f"%{q}%"),
+                db.cast(EbankPayment.bank_info_amt, db.String).ilike(f"%{q}%")
+            )
+        )
+        other_tab_matches = other_query.count()
+        if other_tab_matches:
+            show_all_url = tab_url('payment_bot_matches', current_filters, status=None, show_all='true')
+
+    tabs = [
+        {"label": "Unmatched", "url": tab_url('payment_bot_matches', current_filters, status='no_match', show_all=None),
+         "count": statistics['no_match_count'], "active": status_filter == 'no_match' and not show_all},
+        {"label": "Matched", "url": tab_url('payment_bot_matches', current_filters, status='matched', show_all=None),
+         "count": statistics['matched_count'], "active": status_filter == 'matched' and not show_all, "hide_on_mobile": True},
+        {"label": "All", "url": tab_url('payment_bot_matches', current_filters, status=None, show_all='true'),
+         "count": statistics['total_payments'], "active": show_all},
+    ]
+
     return render_template("payment_bot_matches.html",
                          payments=payments,
+                         tabs=tabs,
                          pagination=pagination,
                          statistics=statistics,
                          is_first_time_empty=is_first_time_empty,
                          is_zero_results=is_zero_results,
+                         other_tab_matches=other_tab_matches,
+                         show_all_url=show_all_url,
                          activities=activities,
                          stripe_configured=stripe_configured,
                          unpaid_passports_by_amount=unpaid_passports_by_amount,
                          pending_signups_by_amount=pending_signups_by_amount,
-                         current_filters={
-                             'q': q,
-                             'status': status_filter,
-                             'show_all': "true" if show_all_param == "true" else None
-                         })
+                         current_filters=current_filters)
+
+
+@app.route("/payment-bot-matches/run")
+def run_payment_bot_now():
+    """Manually trigger the Gmail payment-matching bot from the Interac Inbox
+    page and land back on it (with the result as a flash message), instead of
+    the old Refresh button's behavior of bouncing to the Settings page."""
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    from utils import match_gmail_payments_to_passes, log_admin_action
+    try:
+        log_admin_action(f"Manual payment bot run by {session.get('admin', 'Unknown')}")
+        result = match_gmail_payments_to_passes()
+        if result and isinstance(result, dict):
+            matched = result.get('matched', 0)
+            no_match = result.get('no_match', 0)
+            skipped = result.get('skipped', 0)
+            emails_found = result.get('emails_found', 0)
+            if matched > 0:
+                flash(f"Found {matched} payment(s) matched to passports!", "success")
+            elif no_match > 0:
+                flash(f"Found {no_match} payment(s) - needs manual review (no matching passport)", "warning")
+            elif emails_found > 0 and skipped > 0:
+                flash(f"{skipped} payment(s) already processed - no new payments.", "info")
+            else:
+                flash("No new payments found in inbox.", "info")
+        else:
+            flash("Payment bot completed. No emails to process.", "info")
+    except Exception as e:
+        flash(f"Payment bot run failed: {str(e)}", "error")
+
+    return redirect(url_for('payment_bot_matches'))
 
 
 @app.route("/passports/bulk-action", methods=["POST"])
@@ -11578,70 +12226,6 @@ def test_email_connection():
 # 📋 SURVEY SYSTEM ROUTES
 # ================================
 
-@app.route("/create-survey", methods=["POST"])
-def create_survey():
-    """Create a new survey for an activity"""
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        activity_id = request.form.get("activity_id")
-        survey_name = request.form.get("survey_name")
-        survey_description = request.form.get("survey_description", "")
-        template_id = request.form.get("template_id")
-        passport_type_id = request.form.get("passport_type_id")
-        
-        # Validate required fields
-        if not activity_id or not survey_name or not template_id:
-            flash("Missing required fields", "error")
-            return redirect(url_for("activity_dashboard", activity_id=activity_id))
-        
-        # Verify activity exists
-        activity = Activity.query.get_or_404(activity_id)
-        
-        # Get template from database or use hardcoded fallback
-        if template_id.isdigit():
-            # Numeric template ID - get from database
-            template = db.session.get(SurveyTemplate, int(template_id))
-            if not template:
-                flash("Invalid survey template", "error")
-                return redirect(url_for("activity_dashboard", activity_id=activity_id))
-        else:
-            # String template ID - get hardcoded template
-            template_questions = get_survey_template_questions(template_id)
-            if not template_questions:
-                flash("Invalid survey template", "error")
-                return redirect(url_for("activity_dashboard", activity_id=activity_id))
-            
-            # Create survey template in database if it doesn't exist
-            template = get_or_create_survey_template(template_id, template_questions)
-        
-        # Generate unique survey token
-        survey_token = generate_survey_token()
-        
-        # Create the survey
-        survey = Survey(
-            activity_id=activity_id,
-            template_id=template.id,
-            passport_type_id=passport_type_id if passport_type_id else None,
-            name=survey_name,
-            description=survey_description,
-            survey_token=survey_token,
-            created_by=session.get("admin_id"),
-            status="active"
-        )
-        
-        db.session.add(survey)
-        db.session.commit()
-        
-        flash(f"Survey '{survey_name}' created successfully!", "success")
-        return redirect(url_for("activity_dashboard", activity_id=activity_id))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error creating survey: {str(e)}", "error")
-        return redirect(url_for("activity_dashboard", activity_id=activity_id))
-
 
 @app.route("/api/survey-template/<int:template_id>", methods=["GET"])
 def api_get_survey_template(template_id):
@@ -11848,98 +12432,6 @@ def submit_survey_response(survey_token):
         return redirect(url_for("take_survey", survey_token=survey_token))
 
 
-def get_survey_template_questions(template_id):
-    """Get questions for a survey template"""
-    templates = {
-        "default": {
-            "name": "Activity Feedback Survey",
-            "questions": [
-                {
-                    "id": 1,
-                    "type": "multiple_choice",
-                    "question": "How would you rate your overall experience?",
-                    "options": ["Excellent", "Good", "Fair", "Poor"],
-                    "required": True
-                },
-                {
-                    "id": 2,
-                    "type": "multiple_choice",
-                    "question": "How likely are you to recommend this activity to others?",
-                    "options": ["Very likely", "Likely", "Unlikely", "Very unlikely"],
-                    "required": True
-                },
-                {
-                    "id": 3,
-                    "type": "multiple_choice",
-                    "question": "What did you like most about this activity?",
-                    "options": ["Instruction quality", "Facilities", "Organization", "Other participants"],
-                    "required": False
-                },
-                {
-                    "id": 4,
-                    "type": "multiple_choice",
-                    "question": "Would you participate in this activity again?",
-                    "options": ["Definitely", "Probably", "Maybe", "No"],
-                    "required": True
-                },
-                {
-                    "id": 5,
-                    "type": "open_ended",
-                    "question": "Any additional feedback or suggestions for improvement?",
-                    "required": False,
-                    "max_length": 500
-                }
-            ]
-        },
-        "quick": {
-            "name": "Quick Feedback Survey",
-            "questions": [
-                {
-                    "id": 1,
-                    "type": "multiple_choice",
-                    "question": "How satisfied were you with this activity?",
-                    "options": ["Very satisfied", "Satisfied", "Neutral", "Dissatisfied"],
-                    "required": True
-                },
-                {
-                    "id": 2,
-                    "type": "multiple_choice",
-                    "question": "Would you recommend this to a friend?",
-                    "options": ["Yes", "Maybe", "No"],
-                    "required": True
-                },
-                {
-                    "id": 3,
-                    "type": "open_ended",
-                    "question": "What could we improve?",
-                    "required": False,
-                    "max_length": 300
-                }
-            ]
-        }
-    }
-    
-    return templates.get(template_id)
-
-
-def get_or_create_survey_template(template_id, template_data):
-    """Get existing template or create new one"""
-    # Check if template already exists
-    template = SurveyTemplate.query.filter_by(name=template_data["name"]).first()
-    
-    if not template:
-        template = SurveyTemplate(
-            name=template_data["name"],
-            description=f"Default {template_data['name'].lower()}",
-            questions=json.dumps(template_data),
-            status="active"
-        )
-        db.session.add(template)
-        db.session.flush()  # To get the ID
-    
-    return template
-
-
 def create_default_survey_template():
     """Create and seed the default Post-Activity Feedback survey template"""
     template_name = "Post-Activity Feedback"
@@ -12018,7 +12510,8 @@ def create_default_survey_template():
         name=template_name,
         description="Standard post-activity feedback survey with ratings, open feedback, and recommendation questions",
         questions=json.dumps({"questions": default_questions}),
-        status="active"
+        status="active",
+        is_default=True
     )
     
     try:
@@ -12153,7 +12646,8 @@ def create_french_simple_survey_template():
         name=template_name,
         description="Sondage simple en français pour recueillir les retours après une activité ponctuelle (tournoi de golf, événement sportif, etc.). Temps de réponse: ~2 minutes.",
         questions=json.dumps({"questions": french_questions}),
-        status="active"
+        status="active",
+        is_default=True
     )
 
     try:
@@ -12234,14 +12728,91 @@ def list_survey_templates():
     if usage_filter == "used":
         templates = [t for t in templates if t.usage_count > 0]
 
+    is_first_time_empty = all_templates_count == 0
+    is_zero_results = len(templates) == 0 and not is_first_time_empty
+
+    current_filters = {}
+    if q:
+        current_filters['q'] = q
+    if usage_filter:
+        current_filters['usage_filter'] = usage_filter
+
+    other_tab_matches = 0
+    show_all_url = None
+    if is_zero_results and q and usage_filter == 'used':
+        other_tab_matches = SurveyTemplate.query.filter(
+            db.or_(
+                SurveyTemplate.name.ilike(f"%{q}%"),
+                SurveyTemplate.description.ilike(f"%{q}%")
+            )
+        ).count()
+        if other_tab_matches:
+            show_all_url = tab_url('list_survey_templates', current_filters, usage_filter=None)
+
+    tabs = [
+        {"label": "Used", "url": tab_url('list_survey_templates', current_filters, usage_filter='used'),
+         "count": statistics['used_templates'], "active": usage_filter == 'used'},
+        {"label": "All", "url": tab_url('list_survey_templates', current_filters, usage_filter=None),
+         "count": statistics['total_templates'], "active": usage_filter != 'used'},
+    ]
+
+    from markupsafe import escape
+
+    rows = []
+    for template in templates:
+        created_display = utc_to_local(template.created_dt) if template.created_dt else None
+        created_cell = created_display.strftime('%Y-%m-%d') if created_display else '<span class="text-muted">-</span>'
+
+        if template.usage_count > 0:
+            usage_cell = f'<span class="badge bg-blue-lt text-blue-lt-fg">{template.usage_count} surveys</span>'
+        else:
+            usage_cell = '<span class="badge bg-gray-lt text-gray-lt-fg">Not used</span>'
+
+        badges = [{"text": "Starter", "variant": "blue"}] if template.is_default else []
+        mobile_badges = list(badges)
+        mobile_badges.append({"text": f"{template.question_count} questions", "variant": "secondary"})
+        if template.usage_count > 0:
+            mobile_badges.append({"text": f"{template.usage_count} surveys", "variant": "blue"})
+
+        template_name_js = js_str(template.name)
+        actions = [
+            {"label": "Edit Template", "icon": '<i class="ti ti-edit"></i>', "url": url_for('edit_survey_template', template_id=template.id)},
+            {"label": "Duplicate", "icon": '<i class="ti ti-copy"></i>', "attrs": {
+                "onclick": f"duplicateTemplate({template.id}); return false;"
+            }},
+            {"type": "separator"},
+        ]
+        if template.is_default:
+            actions.append({"label": "Starter template — duplicate to edit freely", "attrs": {"aria-disabled": "true"}})
+        elif template.usage_count > 0:
+            actions.append({"label": "Cannot delete (in use)", "attrs": {"aria-disabled": "true"}})
+        else:
+            actions.append({"label": "Delete Template", "icon": '<i class="ti ti-trash"></i>', "attrs": {
+                "data-variant": "destructive",
+                "onclick": f"confirmDelete({template.id}, '{template_name_js}'); return false;"
+            }})
+
+        rows.append({
+            "id": template.id,
+            "avatar_name": template.name,
+            "primary": template.name,
+            "secondary": (template.description or '')[:60] + ('...' if template.description and len(template.description) > 60 else ''),
+            "badges": badges,
+            "mobile_badges": mobile_badges,
+            "cells": [str(template.question_count), usage_cell, created_cell],
+            "actions": actions,
+        })
+
     return render_template("survey_templates.html",
                          templates=templates,
+                         rows=rows,
+                         tabs=tabs,
                          statistics=statistics,
-                         current_filters={
-                             'q': q,
-                             'usage_filter': usage_filter,
-                             'show_all': "true" if show_all_param == "true" else None
-                         })
+                         is_first_time_empty=is_first_time_empty,
+                         is_zero_results=is_zero_results,
+                         other_tab_matches=other_tab_matches,
+                         show_all_url=show_all_url,
+                         current_filters=current_filters)
 
 
 @app.route("/create-survey-template", methods=["GET", "POST"])
@@ -12476,13 +13047,17 @@ def delete_survey_template(template_id):
         return redirect(url_for("login"))
     
     template = SurveyTemplate.query.get_or_404(template_id)
-    
+
+    if template.is_default:
+        flash("Starter templates can't be deleted — duplicate it first if you want to build on it.", "error")
+        return redirect(url_for("list_survey_templates"))
+
     # Check if template is being used by any surveys
     surveys_using_template = Survey.query.filter_by(template_id=template_id).count()
     if surveys_using_template > 0:
         flash(f"Cannot delete template '{template.name}' - it is being used by {surveys_using_template} surveys", "error")
         return redirect(url_for("list_survey_templates"))
-    
+
     try:
         db.session.delete(template)
         db.session.commit()
@@ -12491,6 +13066,32 @@ def delete_survey_template(template_id):
         db.session.rollback()
         flash("Error deleting survey template", "error")
     
+    return redirect(url_for("list_survey_templates"))
+
+
+@app.route("/duplicate-survey-template/<int:template_id>", methods=["POST"])
+def duplicate_survey_template(template_id):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
+    original = SurveyTemplate.query.get_or_404(template_id)
+
+    copy = SurveyTemplate(
+        name=f"{original.name} (Copy)",
+        description=original.description,
+        questions=original.questions,
+        status="active",
+        is_default=False,
+    )
+
+    try:
+        db.session.add(copy)
+        db.session.commit()
+        flash(f"Duplicated '{original.name}' — you can now edit your copy freely.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Error duplicating survey template", "error")
+
     return redirect(url_for("list_survey_templates"))
 
 

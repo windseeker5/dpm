@@ -595,7 +595,8 @@ class SurveyTemplate(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(50), default="active")  # active, archived
-    
+    is_default = db.Column(db.Boolean, default=False, nullable=False)  # starter template, seeded on first login — deletable=False, editable=True
+
     # Relationships
     surveys = db.relationship("Survey", backref="template", lazy=True)
 

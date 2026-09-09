@@ -3,7 +3,7 @@
 
 {% block content %}
 {% from 'macros/action_menu.html' import dropdown_menu, action_menu %}
-{% from 'macros/data_table.html' import table_toolbar %}
+{% from 'macros/data_table.html' import table_toolbar, preserve_filters %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 {% from 'macros/kpi_card.html' import kpi_card_desktop, kpi_card_mobile %}
 {% from 'macros/buttons.html' import button %}
@@ -330,7 +330,7 @@
         <div class="card mp-data-table">
           <div class="card-header">
             <form method="get" action="{{ url_for('dashboard') }}" style="display: contents;">
-              <input type="hidden" name="tab" value="{{ log_tab }}">
+              {{ preserve_filters(log_current_filters) }}
               {{ table_toolbar(id="history-toolbar", tabs=log_tabs, search_value=log_q, search_placeholder="Search history…") }}
             </form>
           </div>

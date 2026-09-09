@@ -3,7 +3,7 @@
 
 {% block content %}
 {% from 'macros/breadcrumb.html' import breadcrumb %}
-{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state %}
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 
 <div class="page-wrapper">
@@ -22,7 +22,7 @@
       <div class="card mp-data-table">
         <div class="card-header">
           <form method="get" action="{{ url_for('list_orders') }}" style="display: contents;">
-            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            {{ preserve_filters(current_filters) }}
             {{ table_toolbar(id="orders-toolbar", tabs=tabs, search_value=q, search_placeholder="Search orders…") }}
           </form>
         </div>

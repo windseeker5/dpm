@@ -39,6 +39,9 @@
     rows = [{
       id: <unique row id, e.g. passport.id>,
       avatar_name: <string to derive the initials avatar from>,
+      avatar_url: <optional image URL — renders via avatar_photo() instead
+               of the initials avatar when present, e.g. an activity's
+               uploaded cover photo or a product's photo>,
       primary: <bold line, e.g. user name>,
       secondary: <muted line, e.g. email> (optional),
       mobile_secondary: <muted line shown by table_mobile() instead of
@@ -48,8 +51,17 @@
                separate Activity column so `mobile_secondary` is the
                activity name> (optional — falls back to `secondary`),
       cells: [<safe-html per column, aligned with table_desktop's columns>],
-      badges: [{text, variant}] (optional — table_mobile only, variant is a
-               Tabler color name used as bg-<variant>-lt, e.g. "green"),
+      badges: [{text, variant}] (optional — shown under primary/secondary on
+               BOTH table_desktop() and table_mobile(); variant is a Tabler
+               color name used as bg-<variant>-lt, e.g. "green"),
+      mobile_badges: [{text, variant}] (optional — table_mobile() prefers
+               this over `badges` when present, same reasoning as
+               mobile_secondary/secondary above. Use this when the two views
+               want different badge sets — e.g. desktop already has Status/
+               Active/Revenue as columns so `badges` there should stay to
+               just what's NOT already a column, while table_mobile() has no
+               columns at all and needs a fuller summary) (optional — falls
+               back to `badges`),
       actions: [<action_menu() items, see macros/action_menu.html>]
     }, ...]
 
@@ -90,15 +102,20 @@
       rendered on both the <th> and each row's matching <td>. "User" and
       "Actions" are fixed columns, not part of this list.
     - rows: see shape above
+    - action_icon_only: passed straight through to action_menu()'s
+      icon_only (see that macro's own doc comment) — default True, the
+      standard three-dot trigger; pass False for the older "Action ⌄" text
+      trigger
 
   Parameters (table_mobile):
     - id: unique id (required)
     - rows: see shape above
+    - action_icon_only: same as table_desktop's
 #}
 
 {% from 'macros/filter_tabs.html' import filter_tabs %}
 {% from 'macros/action_menu.html' import action_menu %}
-{% from 'macros/avatar.html' import avatar_initials %}
+{% from 'macros/avatar.html' import avatar_initials, avatar_photo %}
 
 {% macro table_toolbar(id, tabs, search_name="q", search_value="", search_placeholder="Search…") %}
 <div class="mp-table-toolbar" id="{{ id }}">
@@ -115,7 +132,35 @@
 </div>
 {% endmacro %}
 
-{% macro table_desktop(id, columns, rows) %}
+{#
+  preserve_filters() — hidden inputs that carry the page's other active
+  filters (status, show_all, date range, etc.) through a search submit, so
+  submitting the search box doesn't silently drop the current tab/filter
+  selection. Pair with utils.py's tab_url() helper, which does the same job
+  for tab links themselves — together they're the full "search + tabs"
+  recipe: tab_url() so switching tabs keeps your search, preserve_filters()
+  so searching keeps your tab. See /style-guide's Data Table section for
+  the end-to-end write-up.
+
+  Usage — inside the same <form> that wraps table_toolbar():
+    {% from 'macros/data_table.html' import table_toolbar, preserve_filters %}
+    <form method="get" action="{{ url_for('list_activities') }}" style="display: contents;">
+      {{ preserve_filters(current_filters) }}
+      {{ table_toolbar(id="activities-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search activities…") }}
+    </form>
+
+  Parameters:
+    - current_filters: the page's already-built current_filters dict
+    - exclude: keys to skip (default ["q"] — the search box's own field,
+      which the toolbar's own <input name="q"> already submits)
+#}
+{% macro preserve_filters(current_filters, exclude=['q']) %}
+{%- for key, value in current_filters.items() if key not in exclude and value %}
+<input type="hidden" name="{{ key }}" value="{{ value }}">
+{%- endfor %}
+{% endmacro %}
+
+{% macro table_desktop(id, columns, rows, action_icon_only=True) %}
 <div class="table-responsive">
   <table class="table table-hover" id="{{ id }}">
     <thead>
@@ -130,10 +175,15 @@
       <tr>
         <td style="vertical-align: middle;">
           <div class="d-flex align-items-center gap-3">
-            {{ avatar_initials(row.avatar_name) }}
+            {% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}
             <div style="min-width: 0;">
               <div class="fw-bold">{{ row.primary }}</div>
               {% if row.secondary %}<div class="text-muted small">{{ row.secondary }}</div>{% endif %}
+              {% if row.badges %}
+              <div class="mt-1 d-flex flex-wrap gap-1">
+                {% for badge in row.badges %}<span class="badge bg-{{ badge.variant }}-lt">{{ badge.text }}</span>{% endfor %}
+              </div>
+              {% endif %}
             </div>
           </div>
         </td>
@@ -141,7 +191,7 @@
         <td class="{{ columns[loop.index0].class | default('') }}" style="vertical-align: middle;">{{ cell | safe }}</td>
         {% endfor %}
         <td class="text-center" style="vertical-align: middle;">
-          {{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions) }}
+          {{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions, icon_only=action_icon_only) }}
         </td>
       </tr>
       {% endfor %}
@@ -150,22 +200,23 @@
 </div>
 {% endmacro %}
 
-{% macro table_mobile(id, rows) %}
+{% macro table_mobile(id, rows, action_icon_only=True) %}
 <div class="mp-table-mobile-list" id="{{ id }}">
   {% for row in rows %}
   {% set mobile_secondary = row.mobile_secondary if row.mobile_secondary is defined else row.secondary %}
+  {% set mobile_badges = row.mobile_badges if row.mobile_badges is defined else row.badges %}
   <div class="mp-table-mobile-card">
-    {{ avatar_initials(row.avatar_name) }}
+    {% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}
     <div class="mp-table-mobile-card__body">
       <div class="mp-table-mobile-card__primary">{{ row.primary }}</div>
       {% if mobile_secondary %}<div class="mp-table-mobile-card__secondary">{{ mobile_secondary }}</div>{% endif %}
-      {% if row.badges %}
+      {% if mobile_badges %}
       <div class="mp-table-mobile-card__badges">
-        {% for badge in row.badges %}<span class="badge bg-{{ badge.variant }}-lt">{{ badge.text }}</span>{% endfor %}
+        {% for badge in mobile_badges %}<span class="badge bg-{{ badge.variant }}-lt">{{ badge.text }}</span>{% endfor %}
       </div>
       {% endif %}
     </div>
-    {{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions) }}
+    {{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions, icon_only=action_icon_only) }}
   </div>
   {% endfor %}
 </div>
@@ -189,20 +240,33 @@
        description="Try adjusting your search or filter criteria.",
        action_label="Clear all filters", action_url=url_for('list_passports', show_all='true')) }}
 
+  A scoped search (current tab/filter) that comes up empty can also pass
+  other_matches_count/other_matches_url when it already knows matches exist
+  outside the current tab — see /style-guide's Data Table section for the
+  full search+tabs recipe (utils.py's tab_url() + preserve_filters() above):
+    {{ table_empty_state(icon="ti-search", title='No matches for "wing" in this tab',
+       other_matches_count=1, action_label="Show all activities", action_url=show_all_url) }}
+
   Parameters:
     - icon: Tabler icon name without the "ti-" prefix's own "ti " class, e.g. "ti-ticket"
     - icon_color: CSS color for the icon, default muted gray
     - title: short heading
     - description: one-line supporting text
     - action_label / action_url: optional link shown below the description
+    - other_matches_count: optional int — when truthy, renders "N match(es)
+      found in other tabs" beneath the description (the count itself is
+      page-specific business logic to compute; this only standardizes the message)
 #}
-{% macro table_empty_state(icon="ti-inbox", icon_color="#6c757d", title="No results", description=none, action_label=none, action_url=none) %}
+{% macro table_empty_state(icon="ti-inbox", icon_color="#6c757d", title="No results", description=none, action_label=none, action_url=none, other_matches_count=none) %}
 <div class="mp-table-empty-state text-center py-5">
   <div class="mb-3">
     <i class="ti {{ icon }}" style="font-size: 48px; color: {{ icon_color }};"></i>
   </div>
   <h3 class="mb-2">{{ title }}</h3>
   {% if description %}<p class="text-muted mb-3">{{ description }}</p>{% endif %}
+  {% if other_matches_count %}
+  <p class="text-muted mb-3">{{ other_matches_count }} match{{ "es" if other_matches_count != 1 else "" }} found in other tabs.</p>
+  {% endif %}
   {% if action_label and action_url %}
   <a href="{{ action_url }}" class="btn btn-link">{{ action_label }}</a>
   {% endif %}

@@ -1,103 +1,57 @@
 {% extends "base.html" %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/input.html' import text_input %}
 {% block title %}Edit Survey Template{% endblock %}
 
 {% block head %}
 <style>
-/* Page structure - matches passports/signups */
-.page-wrapper {
-  min-height: 100vh;
-}
-
-.page-body {
-  padding: 2rem 0;
-}
-
-.dashboard-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-.page-title {
-  font-weight: 700;
-  color: #0f172a;
-  font-size: 2.25rem;
-}
-
-/* White background for all cards - NO HOVER EFFECTS */
-.card {
-  background-color: #fff !important;
-}
-
-.question-builder {
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  padding: 1rem;
+.mp-question-card {
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  padding: 1.25rem;
   margin-bottom: 1rem;
-  background-color: #f8f9fa !important;
-  position: relative;
+  background: var(--mp-background);
 }
 
-.question-builder:hover {
-  border-color: #206bc4;
-}
-
-.question-header {
-  background-color: #fff !important;
-  padding: 0.75rem;
-  border-radius: 0.375rem;
+.mp-question-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
-  border: 1px solid #e9ecef;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--mp-border);
 }
 
-.option-input {
+.mp-question-card__number {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mp-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.mp-question-card__row {
+  display: grid;
+  grid-template-columns: 1fr 200px 140px;
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .mp-question-card__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mp-option-row {
+  display: flex;
+  gap: 0.5rem;
   margin-bottom: 0.5rem;
 }
 
-.add-option-btn {
-  background: none;
-  border: 1px dashed #dee2e6;
-  color: #206bc4;
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  width: 100%;
-  transition: all 0.2s ease;
-}
-
-.add-option-btn:hover {
-  background: #f8f9fa;
-  border-color: #206bc4;
-}
-
-.remove-question-btn {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-}
-
-.remove-question-btn:hover {
-  opacity: 1;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 0 1rem;
-  }
-  .page-title {
-    font-size: 1.75rem;
-  }
+.mp-option-row .mp-input {
+  flex: 1;
 }
 </style>
 {% endblock %}
@@ -109,13 +63,10 @@
     <div class="dashboard-container">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h2 class="page-pretitle text-muted text-uppercase mb-1">Survey Templates</h2>
-          <h1 class="page-title mb-0">Edit Template</h1>
+          <h1 class="page-title">Edit Survey Template</h1>
         </div>
         <div class="col-auto ms-auto d-print-none">
-          <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-secondary">
-            <i class="ti ti-arrow-left"></i> Back
-          </a>
+          {{ button("Cancel", variant="outline", href=url_for('list_survey_templates')) }}
         </div>
       </div>
     </div>
@@ -124,60 +75,43 @@
   <!-- Page Body -->
   <div class="page-body">
     <div class="dashboard-container">
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">
-            <i class="ti ti-template me-2"></i>Template Information
-          </h3>
-        </div>
-        <form method="POST" id="templateForm">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          
-          <div class="card-body">
-            <!-- Template Name and Description -->
+      <form method="POST" id="templateForm" class="card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="card-body">
+          <div class="mp-form-content">
             <div class="row g-3 mb-4">
               <div class="col-md-6">
-                <label class="form-label">Template Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" name="name" value="{{ template.name }}" required>
+                {{ text_input(id="name", label="Template Name", value=template.name, attrs={"required": "required"}) }}
               </div>
               <div class="col-md-6">
-                <label class="form-label">Description <span class="text-muted">(optional)</span></label>
-                <input type="text" class="form-control" name="description" value="{{ template.description or '' }}">
-              </div>
-            </div>
-
-            <!-- Questions Section -->
-            <div class="mb-4">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">
-                  <i class="ti ti-help me-2"></i>Questions
-                </h4>
-                <button type="button" class="btn btn-primary" onclick="addQuestion()">
-                  <i class="ti ti-plus me-1"></i>Add Question
-                </button>
-              </div>
-              
-              <div id="questionsContainer">
-                <!-- Existing questions will be loaded here -->
-              </div>
-              
-              <div id="noQuestionsMessage" class="text-center py-4 text-muted" style="display: none;">
-                <i class="ti ti-help" style="font-size: 3rem; opacity: 0.3;"></i>
-                <p class="mt-2">No questions added yet. Click "Add Question" to get started.</p>
+                {{ text_input(id="description", label="Description", value=template.description or '', placeholder="Brief description of this template (optional)") }}
               </div>
             </div>
           </div>
 
-          <div class="card-footer d-flex justify-content-between">
-            <a href="{{ url_for('list_survey_templates') }}" class="btn btn-outline-secondary">
-              <i class="ti ti-x me-1"></i>Cancel
-            </a>
-            <button type="submit" class="btn btn-success">
-              <i class="ti ti-check me-1"></i>Update Template
-            </button>
+          <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+            <h2 class="h3 mb-0">Questions</h2>
+            {{ button("Add Question", variant="outline", icon="ti-plus", attrs={"onclick": "addQuestion()"}) }}
           </div>
-        </form>
-      </div>
+
+          <div id="questionsContainer"></div>
+
+          <div id="noQuestionsMessage" class="text-center py-5 text-muted" style="display: none;">
+            <i class="ti ti-help" style="font-size: 2.5rem; opacity: 0.35;"></i>
+            <p class="mt-2 mb-0">No questions added yet. Click "Add Question" to get started.</p>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="mp-form-content">
+            <div class="d-flex justify-content-start gap-2">
+              {{ button("Update Template", type="submit") }}
+              {{ button("Cancel", variant="outline", href=url_for('list_survey_templates')) }}
+            </div>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -192,153 +126,167 @@
 <script>
 let questionCounter = 0;
 
-function addQuestion(existingQuestion = null) {
-  questionCounter++;
-  const container = document.getElementById('questionsContainer');
-  const noQuestionsMessage = document.getElementById('noQuestionsMessage');
+function questionCardHTML(n, questionText, questionType, isRequired, options, maxLength, ratingMin, ratingMax) {
+  return `
+    <div class="mp-question-card" id="question_${n}">
+      <div class="mp-question-card__header">
+        <span class="mp-question-card__number">Question</span>
+        <button type="button" class="mp-btn" data-variant="destructive" data-size="icon-sm" aria-label="Remove question" onclick="removeQuestion(${n})">
+          <i class="ti ti-trash"></i>
+        </button>
+      </div>
 
-  // Set default values or use existing question data
-  const questionText = existingQuestion ? (existingQuestion.question || existingQuestion.text || '') : '';
-  const questionType = existingQuestion ? existingQuestion.type : 'multiple_choice';
-  const isRequired = existingQuestion ? existingQuestion.required : true;
-
-  // Handle options differently based on question type
-  let options = ['', ''];
-  if (existingQuestion) {
-    if (questionType === 'rating') {
-      // Rating questions don't have options - they have labels and min/max
-      options = [];  // Empty for rating questions
-    } else if (existingQuestion.options && Array.isArray(existingQuestion.options)) {
-      options = existingQuestion.options;
-    }
-  }
-
-  const maxLength = existingQuestion && existingQuestion.max_length ? existingQuestion.max_length : '';
-
-  const questionHtml = `
-    <div class="question-builder" id="question_${questionCounter}">
-      <button type="button" class="remove-question-btn" onclick="removeQuestion(${questionCounter})">
-        <i class="ti ti-x"></i>
-      </button>
-      
-      <div class="question-header">
-        <div class="row g-3">
-          <div class="col-md-8">
-            <label class="form-label">Question Text <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="question_${questionCounter}" 
-                   value="${questionText}" placeholder="Enter your question..." required>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">Type</label>
-            <select class="form-select" name="question_type_${questionCounter}"
-                    onchange="toggleQuestionOptions(${questionCounter})">
+      <div class="mp-question-card__row">
+        <div class="mp-field">
+          <label class="mp-label" for="question_${n}_text">Question Text</label>
+          <input type="text" id="question_${n}_text" name="question_${n}" class="mp-input"
+                 value="${questionText}" placeholder="Enter your question..." required>
+        </div>
+        <div class="mp-field">
+          <label class="mp-label" for="question_type_${n}">Type</label>
+          <div class="mp-select-wrap">
+            <select id="question_type_${n}" name="question_type_${n}" class="mp-select" onchange="toggleQuestionOptions(${n})">
               <option value="rating" ${questionType === 'rating' ? 'selected' : ''}>Rating</option>
               <option value="multiple_choice" ${questionType === 'multiple_choice' ? 'selected' : ''}>Multiple Choice</option>
               <option value="open_ended" ${questionType === 'open_ended' || questionType === 'text' ? 'selected' : ''}>Open-ended</option>
             </select>
+            <i class="ti ti-chevron-down mp-select-chevron" aria-hidden="true"></i>
           </div>
-          <div class="col-md-2">
-            <label class="form-label">Required</label>
-            <div class="form-check form-switch mt-2">
-              <input class="form-check-input" type="checkbox" name="required_${questionCounter}" 
-                     id="required_${questionCounter}" ${isRequired ? 'checked' : ''}>
-              <label class="form-check-label" for="required_${questionCounter}">Yes</label>
-            </div>
-          </div>
+        </div>
+        <div class="mp-field" data-orientation="horizontal">
+          <input type="checkbox" id="required_${n}" name="required_${n}" role="switch" class="mp-switch" ${isRequired ? 'checked' : ''}>
+          <div><label class="mp-label" for="required_${n}">Required</label></div>
         </div>
       </div>
 
-      <!-- Rating Options -->
-      <div id="rating_${questionCounter}" class="rating-container" ${questionType !== 'rating' ? 'style="display: none;"' : ''}>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Rating Scale (Read-only)</label>
-            <div class="form-control-plaintext"><strong>${existingQuestion?.min_rating || 1} to ${existingQuestion?.max_rating || 5} stars</strong></div>
-          </div>
+      <div id="rating_${n}" class="rating-container" ${questionType !== 'rating' ? 'style="display: none;"' : ''}>
+        <div class="mp-field">
+          <label class="mp-label">Rating Scale (read-only)</label>
+          <p class="mp-field__description mb-0"><strong>${ratingMin} to ${ratingMax} stars</strong></p>
         </div>
       </div>
 
-      <!-- Multiple Choice Options -->
-      <div id="options_${questionCounter}" class="options-container" ${questionType !== 'multiple_choice' ? 'style="display: none;"' : ''}>
-        <label class="form-label">Answer Options</label>
-        <div id="optionsList_${questionCounter}">
-          ${generateOptionsHTML(questionCounter, options)}
+      <div id="options_${n}" class="options-container" ${questionType !== 'multiple_choice' ? 'style="display: none;"' : ''}>
+        <label class="mp-label d-block mb-2">Answer Options</label>
+        <div id="optionsList_${n}">
+          ${generateOptionsHTML(n, options)}
         </div>
-        <button type="button" class="add-option-btn" onclick="addOption(${questionCounter})">
-          <i class="ti ti-plus me-1"></i>Add Option
+        <button type="button" class="mp-btn" data-variant="outline" style="width: 100%;" onclick="addOption(${n})">
+          <i class="ti ti-plus" aria-hidden="true"></i> Add Option
         </button>
       </div>
 
-      <!-- Open-ended Options -->
-      <div id="openended_${questionCounter}" class="openended-container" ${questionType !== 'open_ended' && questionType !== 'text' ? 'style="display: none;"' : ''}>
-        <label class="form-label">Maximum Characters <span class="text-muted">(optional)</span></label>
-        <input type="number" class="form-control" name="max_length_${questionCounter}"
-               value="${maxLength}" placeholder="e.g., 500" min="1" max="5000">
-        <div class="form-hint">Leave empty for no limit</div>
+      <div id="openended_${n}" class="openended-container" ${(questionType !== 'open_ended' && questionType !== 'text') ? 'style="display: none;"' : ''}>
+        <div class="mp-field">
+          <label class="mp-label" for="max_length_${n}">Maximum Characters</label>
+          <input type="number" id="max_length_${n}" name="max_length_${n}" class="mp-input"
+                 value="${maxLength}" placeholder="e.g., 500" min="1" max="5000">
+          <p class="mp-field__description">Leave empty for no limit</p>
+        </div>
       </div>
     </div>
   `;
-  
-  container.insertAdjacentHTML('beforeend', questionHtml);
-  noQuestionsMessage.style.display = 'none';
-  
-  // Scroll to the new question if it's manually added
-  if (!existingQuestion) {
-    setTimeout(() => {
-      document.getElementById(`question_${questionCounter}`).scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
-    }, 100);
-  }
 }
 
 function generateOptionsHTML(questionId, options) {
   let html = '';
   options.forEach((option, index) => {
     const optionNum = index + 1;
-    html += `
-      <div class="option-input">
-        ${index < 2 ? `
-          <input type="text" class="form-control" name="question_${questionId}_option_${optionNum}" 
+    if (index < 2) {
+      html += `
+        <div class="mp-option-row">
+          <input type="text" class="mp-input" name="question_${questionId}_option_${optionNum}"
                  value="${option}" placeholder="Option ${optionNum}">
-        ` : `
-          <div class="input-group">
-            <input type="text" class="form-control" name="question_${questionId}_option_${optionNum}" 
-                   value="${option}" placeholder="Option ${optionNum}">
-            <button type="button" class="btn btn-outline-danger" onclick="removeOption(this)">
-              <i class="ti ti-x"></i>
-            </button>
-          </div>
-        `}
-      </div>
-    `;
+        </div>
+      `;
+    } else {
+      html += `
+        <div class="mp-option-row">
+          <input type="text" class="mp-input" name="question_${questionId}_option_${optionNum}"
+                 value="${option}" placeholder="Option ${optionNum}">
+          <button type="button" class="mp-btn" data-variant="outline" data-size="icon" onclick="removeOption(this)" aria-label="Remove option">
+            <i class="ti ti-x"></i>
+          </button>
+        </div>
+      `;
+    }
   });
-  
-  // If there are less than 2 options, add empty ones
+  // Pad to at least 2 empty option rows
   for (let i = options.length; i < 2; i++) {
     const optionNum = i + 1;
     html += `
-      <div class="option-input">
-        <input type="text" class="form-control" name="question_${questionId}_option_${optionNum}" 
-               placeholder="Option ${optionNum}">
+      <div class="mp-option-row">
+        <input type="text" class="mp-input" name="question_${questionId}_option_${optionNum}" placeholder="Option ${optionNum}">
       </div>
     `;
   }
-  
   return html;
 }
 
+function renumberQuestions() {
+  document.querySelectorAll('#questionsContainer .mp-question-card__number').forEach((el, index) => {
+    el.textContent = `Question ${index + 1}`;
+  });
+}
+
+function scrollWithinMainContent(el) {
+  // Plain scrollIntoView() can walk up to document.body (which has
+  // overflow:hidden app-wide, no visible scrollbar) instead of the real
+  // scroll container #main-content, silently clipping the page. Scroll
+  // #main-content directly instead.
+  const container = document.getElementById('main-content');
+  if (!container) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  const containerRect = container.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const target = container.scrollTop + (elRect.top - containerRect.top) - (container.clientHeight / 2) + (elRect.height / 2);
+  container.scrollTo({ top: target, behavior: 'smooth' });
+}
+
+function addQuestion(existingQuestion = null) {
+  questionCounter++;
+  const container = document.getElementById('questionsContainer');
+  const noQuestionsMessage = document.getElementById('noQuestionsMessage');
+
+  const questionText = existingQuestion ? (existingQuestion.question || existingQuestion.text || '') : '';
+  const questionType = existingQuestion ? existingQuestion.type : 'multiple_choice';
+  const isRequired = existingQuestion ? existingQuestion.required : true;
+
+  let options = ['', ''];
+  if (existingQuestion) {
+    if (questionType === 'rating') {
+      options = [];
+    } else if (existingQuestion.options && Array.isArray(existingQuestion.options)) {
+      options = existingQuestion.options;
+    }
+  }
+
+  const maxLength = existingQuestion && existingQuestion.max_length ? existingQuestion.max_length : '';
+  const ratingMin = existingQuestion?.min_rating || 1;
+  const ratingMax = existingQuestion?.max_rating || 5;
+
+  container.insertAdjacentHTML('beforeend', questionCardHTML(questionCounter, questionText, questionType, isRequired, options, maxLength, ratingMin, ratingMax));
+  noQuestionsMessage.style.display = 'none';
+  renumberQuestions();
+
+  if (!existingQuestion) {
+    setTimeout(() => {
+      scrollWithinMainContent(document.getElementById(`question_${questionCounter}`));
+    }, 100);
+  }
+}
+
 function removeQuestion(questionId) {
-  const questionElement = document.getElementById(`question_${questionId}`);
-  questionElement.remove();
-  
-  // Show "no questions" message if no questions remain
+  document.getElementById(`question_${questionId}`).remove();
+
   const container = document.getElementById('questionsContainer');
   const noQuestionsMessage = document.getElementById('noQuestionsMessage');
   if (container.children.length === 0) {
     noQuestionsMessage.style.display = 'block';
   }
+  renumberQuestions();
 }
 
 function toggleQuestionOptions(questionId) {
@@ -347,12 +295,10 @@ function toggleQuestionOptions(questionId) {
   const optionsContainer = document.getElementById(`options_${questionId}`);
   const openendedContainer = document.getElementById(`openended_${questionId}`);
 
-  // Hide all first
   if (ratingContainer) ratingContainer.style.display = 'none';
   if (optionsContainer) optionsContainer.style.display = 'none';
   if (openendedContainer) openendedContainer.style.display = 'none';
 
-  // Show the correct one
   if (typeSelect.value === 'rating' && ratingContainer) {
     ratingContainer.style.display = 'block';
   } else if (typeSelect.value === 'multiple_choice' && optionsContainer) {
@@ -365,60 +311,54 @@ function toggleQuestionOptions(questionId) {
 function addOption(questionId) {
   const optionsList = document.getElementById(`optionsList_${questionId}`);
   const optionCount = optionsList.children.length + 1;
-  
+
   const optionHtml = `
-    <div class="option-input">
-      <div class="input-group">
-        <input type="text" class="form-control" name="question_${questionId}_option_${optionCount}" 
-               placeholder="Option ${optionCount}">
-        <button type="button" class="btn btn-outline-danger" onclick="removeOption(this)">
-          <i class="ti ti-x"></i>
-        </button>
-      </div>
+    <div class="mp-option-row">
+      <input type="text" class="mp-input" name="question_${questionId}_option_${optionCount}" placeholder="Option ${optionCount}">
+      <button type="button" class="mp-btn" data-variant="outline" data-size="icon" onclick="removeOption(this)" aria-label="Remove option">
+        <i class="ti ti-x"></i>
+      </button>
     </div>
   `;
-  
+
   optionsList.insertAdjacentHTML('beforeend', optionHtml);
 }
 
 function removeOption(button) {
-  button.closest('.option-input').remove();
+  button.closest('.mp-option-row').remove();
 }
 
-// Form validation (same as create template)
 document.getElementById('templateForm').addEventListener('submit', function(e) {
   const questionsContainer = document.getElementById('questionsContainer');
-  
+
   if (questionsContainer.children.length === 0) {
     e.preventDefault();
     alert('Please add at least one question to the template.');
     return false;
   }
-  
-  // Validate that each question has text
-  const questionInputs = document.querySelectorAll('input[name^="question_"][name$="_"]:not([name*="_option_"])');
+
+  const questionInputs = document.querySelectorAll('input[id^="question_"][id$="_text"]');
   let hasEmptyQuestions = false;
-  
+
   questionInputs.forEach(input => {
     if (!input.value.trim()) {
       hasEmptyQuestions = true;
-      input.style.borderColor = '#dc3545';
+      input.style.borderColor = 'var(--mp-destructive)';
     } else {
       input.style.borderColor = '';
     }
   });
-  
+
   if (hasEmptyQuestions) {
     e.preventDefault();
     alert('Please fill in all question texts.');
     return false;
   }
-  
-  // Validate multiple choice questions have at least 2 options (skip rating questions)
-  const multipleChoiceQuestions = document.querySelectorAll('select[name^="question_type_"]');
+
+  const typeSelects = document.querySelectorAll('select[name^="question_type_"]');
   let hasInvalidMultipleChoice = false;
 
-  multipleChoiceQuestions.forEach(select => {
+  typeSelects.forEach(select => {
     if (select.value === 'multiple_choice') {
       const questionId = select.name.replace('question_type_', '');
       const options = document.querySelectorAll(`input[name^="question_${questionId}_option_"]`);
@@ -427,17 +367,12 @@ document.getElementById('templateForm').addEventListener('submit', function(e) {
       if (filledOptions.length < 2) {
         hasInvalidMultipleChoice = true;
         options.forEach(opt => {
-          if (!opt.value.trim()) {
-            opt.style.borderColor = '#dc3545';
-          } else {
-            opt.style.borderColor = '';
-          }
+          opt.style.borderColor = opt.value.trim() ? '' : 'var(--mp-destructive)';
         });
       }
     }
-    // Rating questions don't need validation - they're read-only
   });
-  
+
   if (hasInvalidMultipleChoice) {
     e.preventDefault();
     alert('Multiple choice questions must have at least 2 options.');
@@ -445,23 +380,18 @@ document.getElementById('templateForm').addEventListener('submit', function(e) {
   }
 });
 
-// Load existing questions on page load
 document.addEventListener('DOMContentLoaded', function() {
   try {
     const existingQuestionsScript = document.getElementById('existingQuestions');
     const existingQuestions = JSON.parse(existingQuestionsScript.textContent);
-    
+
     if (existingQuestions && existingQuestions.length > 0) {
-      existingQuestions.forEach(question => {
-        addQuestion(question);
-      });
+      existingQuestions.forEach(question => addQuestion(question));
     } else {
-      // No existing questions, add a blank one
       addQuestion();
     }
   } catch (e) {
     console.error('Error loading existing questions:', e);
-    // Fallback: add a blank question
     addQuestion();
   }
 });
