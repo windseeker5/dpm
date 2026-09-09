@@ -2,6 +2,8 @@
 {% block title %}Signups Management{% endblock %}
 
 {% block content %}
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 
 <div class="page-wrapper">
   <!-- Page Header -->
@@ -19,243 +21,51 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-    <!-- Enhanced Dynamic Search -->
-    <form method="GET" action="{{ url_for('list_signups') }}" class="mb-4" id="dynamicSearchForm">
-      <div class="input-icon position-relative">
-        <span class="input-icon-addon">
-          <i class="ti ti-search fs-3"></i>
-        </span>
-        <input type="text" 
-               name="q"
-               id="enhancedSearchInput"
-               class="form-control form-control-lg shadow-sm" 
-               placeholder="Search signups…" 
-               value="{{ current_filters.q or '' }}"
-               style="padding-right: 100px; border-radius: 0.5rem;"
-               autocomplete="off"
-               data-bs-toggle="false">
-        <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
-          <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
-          <kbd id="searchKbdHint" class="text-muted d-none d-md-inline">Ctrl</kbd>
-          <kbd class="text-muted d-none d-md-inline">K</kbd>
-          <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
-            <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
-          </button>
-        </div>
-      </div>
-    </form>
-
-
-    <!-- Main Table -->
-    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+    <!-- Signups Data Table -->
+    <div class="card mp-data-table">
       <div class="card-header">
-        <div class="d-flex justify-content-center align-items-center w-100">
-          <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-            <a href="{{ url_for('list_signups', status='pending') }}"
-               class="github-filter-btn {% if current_filters.status == 'pending' and not current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.status == 'pending' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              Pending <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.pending|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('list_signups', status='approved') }}"
-               class="github-filter-btn {% if current_filters.status == 'approved' and not current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.status == 'approved' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              Approved <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.approved|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('list_signups', show_all='true') }}"
-               class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total|default(0) }})</span>
-            </a>
-          </div>
-        </div>
+        <form method="get" action="{{ url_for('list_signups') }}" style="display: contents;">
+          {{ preserve_filters(current_filters) }}
+          {{ table_toolbar(id="signups-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search signups…") }}
+        </form>
       </div>
 
       {% if is_first_time_empty %}
-        <!-- First-Time Empty State -->
-        <div class="empty-state-container text-center py-5">
-          <div class="empty-state-icon mb-3">
-            <i class="ti ti-user-check" style="font-size: 48px; color: #206bc4;"></i>
-          </div>
-          <h3 class="empty-state-title mb-2">No signups yet</h3>
-          <p class="empty-state-description text-muted mb-3">
-            Signups will appear here when users register for your activities.
-          </p>
-        </div>
+        {{ table_empty_state(icon="ti-user-check", icon_color="#206bc4",
+           title="No signups yet",
+           description="Signups will appear here when users register for your activities.") }}
 
       {% elif is_zero_results %}
-        <!-- Zero Results Empty State -->
-        <div class="empty-state-container text-center py-5">
-          <div class="empty-state-icon mb-3">
-            <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
-          </div>
-          <h3 class="empty-state-title mb-2">No signups match your filters</h3>
-          <p class="empty-state-description text-muted mb-3">
-            Try clearing your search or adjusting your filter criteria.
-          </p>
-          <a href="{{ url_for('list_signups', show_all='true') }}" class="btn btn-link">
-            Clear all filters
-          </a>
-        </div>
+        {% if other_tab_matches %}
+          {{ table_empty_state(icon="ti-search",
+             title="No matches for “%s” in this tab"|format(current_filters.q),
+             other_matches_count=other_tab_matches,
+             action_label="Show all signups", action_url=show_all_url) }}
+        {% else %}
+          {{ table_empty_state(icon="ti-search",
+             title="No signups match your filters",
+             description="Try clearing your search or adjusting your filter criteria.",
+             action_label="Clear all filters", action_url=url_for('list_signups', show_all='true')) }}
+        {% endif %}
 
       {% else %}
-        <!-- Normal Table View -->
-        <div class="table-responsive">
-          <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th class="d-none d-md-table-cell">Created</th>
-              <th class="d-none d-md-table-cell">Activity</th>
-              <th class="d-none d-lg-table-cell text-center">Status</th>
-              <th class="d-none d-md-table-cell text-center">Amount</th>
-              <th class="d-none d-md-table-cell text-center">Qty</th>
-              <th class="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for signup in signups %}
-          <tr>
-            <td style="vertical-align: middle;">
-              <div class="d-flex align-items-center">
-                <!-- Desktop: User Gravatar -->
-                <img src="https://www.gravatar.com/avatar/{{ (signup.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40"
-                     class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
-                <!-- Mobile: Activity Logo (square with rounded corners) - CLICKABLE -->
-                {% if signup.activity and (signup.activity.image_filename or signup.activity.logo_filename) %}
-                  <a href="{{ url_for('activity_dashboard', activity_id=signup.activity.id) }}" class="d-md-none">
-                    <img src="{{ url_for('static', filename='uploads/activity_images/' + (signup.activity.image_filename or signup.activity.logo_filename)) }}"
-                         class="rounded me-3 user-avatar" alt="{{ signup.activity.name }}" style="width: 40px; height: 40px; object-fit: cover;">
-                  </a>
-                {% else %}
-                  <a href="{{ url_for('activity_dashboard', activity_id=signup.activity.id) if signup.activity else '#' }}" class="d-md-none">
-                    <div class="rounded me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 12px; color: #fff; background: {{ placeholder_color(signup.activity.name if signup.activity else 'Activity') }};">
-                      {{ placeholder_letter(signup.activity.name if signup.activity else 'Activity') }}
-                    </div>
-                  </a>
-                {% endif %}
-                <div>
-                  <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
-                  <div class="text-muted small d-none d-md-block">{{ signup.user.email or 'No email' }}</div>
-                  <!-- Mobile-only signup info -->
-                  <div class="d-md-none">
-                    {% set status = signup.status or 'pending' %}
-                    {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
-                    {% if status == 'approved' %}
-                      <span class="badge bg-green-lt" style="margin-left: -6px;">Approved</span>
-                    {% elif status == 'pending' and is_payment_first %}
-                      <span class="badge bg-azure-lt" style="margin-left: -6px;">Awaiting Payment</span>
-                    {% elif status == 'pending' %}
-                      <span class="badge bg-yellow-lt" style="margin-left: -6px;">Pending</span>
-                    {% elif status == 'rejected' %}
-                      <span class="badge bg-red-lt" style="margin-left: -6px;">Rejected</span>
-                    {% endif %}
-                    {% if signup.requested_amount %}
-                      <span class="badge bg-secondary-lt ms-1">${{ "%.0f"|format(signup.requested_amount) }}</span>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-            </td>            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {% set display_date = signup.signed_up_at|utc_to_local %}
-              {% if display_date %}
-                {{ display_date.strftime('%Y-%m-%d') }}
-              {% else %}
-                <span class="text-muted">Unknown</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {{ signup.activity.name if signup.activity else 'Unknown' }}
-            </td>
-            <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
-              {% set status = signup.status or 'pending' %}
-              {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
-              {% if status == 'approved' %}
-                <span class="badge bg-green-lt text-green-lt-fg">Approved</span>
-              {% elif status == 'pending' and is_payment_first %}
-                <span class="badge bg-azure-lt text-azure-lt-fg" title="Awaiting Interac payment">Awaiting Payment</span>
-              {% elif status == 'pending' %}
-                <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending Approval</span>
-              {% elif status == 'rejected' %}
-                <span class="badge bg-red-lt text-red-lt-fg">Rejected</span>
-              {% else %}
-                <span class="badge bg-secondary-lt">{{ status.title() }}</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              {% if signup.requested_amount %}
-                ${{ "%.0f"|format(signup.requested_amount) }}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              {% if signup.passport_type_id %}
-                {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
-                {% if passport_type %}
-                  {{ signup.requested_sessions or passport_type.sessions_included }}
-                {% else %}
-                  <span class="text-muted">-</span>
-                {% endif %}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-            <td class="text-center" style="vertical-align: middle;">
-              <div class="dropdown d-inline-block">
-                <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
-                  <i class="ti ti-dots-vertical"></i>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                  {% if signup.status == 'pending' %}
-                    {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
-                    {% if is_payment_first %}
-                    <span class="dropdown-item text-muted" style="cursor: default;">
-                      <i class="ti ti-clock me-2"></i>Awaiting Payment
-                    </span>
-                    <button type="button" class="dropdown-item text-azure"
-                            data-bs-toggle="modal"
-                            data-bs-target="#approveSignupModal"
-                            data-user-name="{{ signup.user.name or 'this user' }}"
-                            data-approve-url="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
-                            data-workflow-type="payment_first">
-                      <i class="ti ti-cash me-2"></i>Mark Paid & Create Passport
-                    </button>
-                    {% else %}
-                    <button type="button" class="dropdown-item text-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#approveSignupModal"
-                            data-user-name="{{ signup.user.name or 'this user' }}"
-                            data-approve-url="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
-                            data-workflow-type="standard">
-                      <i class="ti ti-check me-2"></i>Approve & Create Passport
-                    </button>
-                    {% endif %}
-                  {% endif %}
-                  <div class="dropdown-divider"></div>
-                  <a class="dropdown-item text-danger" href="#"
-                     onclick="confirmSignupDelete({{ signup.id }}, '{{ signup.user.email or signup.user.name or 'Unknown user' }}'); return false;">
-                    <i class="ti ti-trash me-2"></i>Delete
-                  </a>
-                </div>
-              </div>
-              <!-- Hidden delete form -->
-              <form id="deleteForm{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="selected_signups" value="{{ signup.id }}">
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      </div>
-
-      <!-- Pagination -->
-      {% from 'macros/pagination.html' import render_pagination %}
-      {{ render_pagination(pagination, current_filters, signups) }}
-      </div>
+        {% set columns = [
+          {"label": "Created", "class": "d-none d-md-table-cell"},
+          {"label": "Activity", "class": "d-none d-md-table-cell"},
+          {"label": "Status", "class": "d-none d-lg-table-cell text-center"},
+          {"label": "Amount", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Qty", "class": "d-none d-md-table-cell text-center"}
+        ] %}
+        <div class="d-none d-md-block">
+          {{ table_desktop(id="signups-table", columns=columns, rows=rows) }}
+          {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+             total=pagination.total, items_count=rows|length, base_path=url_for('list_signups'), filters=current_filters) }}
+        </div>
+        <div class="d-md-none">
+          {{ table_mobile(id="signups-table-mobile", rows=rows) }}
+          {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+             total=pagination.total, items_count=rows|length, base_path=url_for('list_signups'), filters=current_filters) }}
+        </div>
       {% endif %}
     </div>
 
@@ -325,40 +135,8 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize search and filter components
-    if (window.SearchComponent) {
-        window.SearchComponent.init({
-            formId: 'dynamicSearchForm',
-            inputId: 'enhancedSearchInput',
-            preserveParams: ['status']
-        });
-    }
-
-    if (window.FilterComponent) {
-        window.FilterComponent.init({
-            filterClass: 'github-filter-btn',
-            mode: 'server',
-            preserveScrollPosition: true,
-            enableSearchPreservation: true
-        });
-    }
-
-    // Validation for debugging
-    console.log('📋 Signups page loaded');
-    console.log('🔧 Global dropdown fix available:', typeof window.dropdownFix !== 'undefined');
-    console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
-    console.log('🔍 Dropdown toggles found:', document.querySelectorAll('[data-bs-toggle="dropdown"]').length);
-
-    // Debug: Check if Bootstrap is properly loaded
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded! Dropdown functionality may not work.');
-    } else {
-        console.log('Bootstrap is loaded. Dropdown functionality should work.');
-    }
-});
-
 // Populate shared approve signup modal
 document.getElementById('approveSignupModal').addEventListener('show.bs.modal', function(event) {
   const btn = event.relatedTarget;

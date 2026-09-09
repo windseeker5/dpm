@@ -2,10 +2,10 @@
 {% block title %}Interac Inbox{% endblock %}
 
 {% block content %}
-<!-- CSS Imports -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/dropdown-fix.css') }}?v=4.1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0">
+{% from 'macros/data_table.html' import table_toolbar, table_empty_state, preserve_filters %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+{% from 'macros/action_menu.html' import action_menu %}
+{% from 'macros/buttons.html' import button %}
 
 <div class="page-wrapper">
   <div class="page-body">
@@ -15,92 +15,37 @@
       <div class="mt-4 mb-3">
         <div class="d-flex justify-content-between align-items-center">
           <h1 class="page-title mb-0">Interac Inbox</h1>
-          <a href="/admin/unified-settings?test_payment_bot=1" class="btn btn-dark btn-icon" title="Refresh" aria-label="Refresh">
-            <i class="ti ti-refresh"></i>
-          </a>
+          {{ button("", variant="outline", size="icon", href=url_for('run_payment_bot_now'), icon="ti-refresh",
+             attrs={"title": "Check for new payments now", "aria-label": "Check for new payments now"}) }}
         </div>
-        <p class="text-muted small mb-0 mt-1">
-          Interac e-transfers received by email — auto-matched to your passports.{% if stripe_configured %} Stripe payments are verified automatically — see <a href="{{ url_for('financial_report') }}">Financial</a> for full payment history.{% endif %}
-        </p>
       </div>
 
-      <!-- Enhanced Dynamic Search -->
-      <form method="GET" action="{{ url_for('payment_bot_matches') }}" class="mb-4" id="dynamicSearchForm">
-        <div class="input-icon position-relative">
-          <span class="input-icon-addon">
-            <i class="ti ti-search fs-3"></i>
-          </span>
-          <input type="text"
-                 name="q"
-                 id="enhancedSearchInput"
-                 class="form-control form-control-lg shadow-sm"
-                 placeholder="Search payments…"
-                 value="{{ current_filters.q or '' }}"
-                 style="padding-right: 100px; border-radius: 0.5rem;"
-                 autocomplete="off"
-                 data-bs-toggle="false">
-          <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
-            <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
-            <kbd id="searchKbdHint" class="text-muted d-none d-md-inline">Ctrl</kbd>
-            <kbd class="text-muted d-none d-md-inline">K</kbd>
-            <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
-              <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
-            </button>
-          </div>
-        </div>
-      </form>
-
-      <!-- Main Table -->
-      <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+      <!-- Payments Data Table -->
+      <div class="card mp-data-table">
         <div class="card-header">
-          <div class="d-flex justify-content-center align-items-center w-100">
-            <!-- Filter Buttons -->
-            <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-              <a href="{{ url_for('payment_bot_matches', status='no_match') }}"
-                 class="github-filter-btn {% if current_filters.status == 'no_match' and not current_filters.show_all %}active{% endif %}"
-                 style="{% if current_filters.status == 'no_match' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                Unmatched <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.no_match_count|default(0) }})</span>
-              </a>
-              <a href="{{ url_for('payment_bot_matches', status='matched') }}"
-                 class="github-filter-btn {% if current_filters.status == 'matched' %}active{% endif %}"
-                 style="{% if current_filters.status == 'matched' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                Matched <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.matched_count|default(0) }})</span>
-              </a>
-              <a href="{{ url_for('payment_bot_matches', show_all='true') }}"
-                 class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
-                 style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_payments|default(0) }})</span>
-              </a>
-            </div>
-          </div>
+          <form method="get" action="{{ url_for('payment_bot_matches') }}" style="display: contents;">
+            {{ preserve_filters(current_filters) }}
+            {{ table_toolbar(id="payments-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search payments…") }}
+          </form>
         </div>
 
         {% if is_first_time_empty %}
-          <!-- First-Time Empty State -->
-          <div class="empty-state-container text-center py-5">
-            <div class="empty-state-icon mb-3">
-              <i class="ti ti-mail" style="font-size: 48px; color: #20c997;"></i>
-            </div>
-            <h3 class="empty-state-title mb-2">No payment emails yet</h3>
-            <p class="empty-state-description text-muted mb-3">
-              Email notifications from Interac e-Transfer will appear here for automatic payment matching.
-            </p>
-          </div>
+          {{ table_empty_state(icon="ti-mail", icon_color="#20c997",
+             title="No payment emails yet",
+             description="Email notifications from Interac e-Transfer will appear here for automatic payment matching.") }}
 
         {% elif is_zero_results %}
-          <!-- Zero Results Empty State -->
-          <div class="empty-state-container text-center py-5">
-            <div class="empty-state-icon mb-3">
-              <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
-            </div>
-            <h3 class="empty-state-title mb-2">No payments match your filters</h3>
-            <p class="empty-state-description text-muted mb-3">
-              Try adjusting your search or filter criteria.
-            </p>
-            <a href="{{ url_for('payment_bot_matches', show_all='true') }}" class="btn btn-link">
-              Clear all filters
-            </a>
-          </div>
+          {% if other_tab_matches %}
+            {{ table_empty_state(icon="ti-search",
+               title="No matches for “%s” in this tab"|format(current_filters.q),
+               other_matches_count=other_tab_matches,
+               action_label="Show all payments", action_url=show_all_url) }}
+          {% else %}
+            {{ table_empty_state(icon="ti-search",
+               title="No payments match your filters",
+               description="Try adjusting your search or filter criteria.",
+               action_label="Clear all filters", action_url=url_for('payment_bot_matches', show_all='true')) }}
+          {% endif %}
 
         {% else %}
           <!-- Normal Table View -->
@@ -213,58 +158,7 @@
 
               <!-- Actions Column: Always visible -->
               <td class="text-center" style="vertical-align: middle;">
-                <div class="dropdown d-inline-block">
-                  <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
-                    <i class="ti ti-dots-vertical"></i>
-                  </a>
-                  <div class="dropdown-menu dropdown-menu-end">
-                    {% if payment.result == 'NO_MATCH' %}
-                      {% if payment.unpaid_count > 0 %}
-                      <a href="#" class="dropdown-item check-unpaid-btn"
-                         data-bs-toggle="modal"
-                         data-bs-target="#checkUnpaidPassportsModal"
-                         data-amount="{{ payment.bank_info_amt }}"
-                         data-payment-name="{{ payment.bank_info_name }}">
-                        <i class="ti ti-search me-2"></i>{{ payment.unpaid_count }} unpaid at ${{ "%.0f"|format(payment.bank_info_amt) }}
-                      </a>
-                      <div class="dropdown-divider"></div>
-                      {% endif %}
-                      <a href="#" class="dropdown-item create-passport-btn"
-                         data-payment-id="{{ payment.id }}"
-                         data-name="{{ payment.bank_info_name }}"
-                         data-amount="{{ payment.bank_info_amt }}"
-                         data-reply-to-email="{{ payment.reply_to_email or '' }}">
-                        <i class="ti ti-ticket me-2"></i>Create Passport
-                      </a>
-                      <a href="#" class="dropdown-item"
-                         data-bs-toggle="modal"
-                         data-bs-target="#linkPassportModal-{{ payment.id }}">
-                        <i class="ti ti-link me-2"></i>Link to Existing Passport
-                      </a>
-                      {% if pending_signups_by_amount.get(payment.bank_info_amt) %}
-                      <a href="#" class="dropdown-item"
-                         data-bs-toggle="modal"
-                         data-bs-target="#linkSignupModal-{{ payment.id }}">
-                        <i class="ti ti-link me-2"></i>Link to Pending Signup
-                      </a>
-                      {% endif %}
-                      <div class="dropdown-divider"></div>
-                      <a href="#" class="dropdown-item archive-payment-btn"
-                         data-name="{{ payment.bank_info_name }}"
-                         data-amount="{{ payment.bank_info_amt }}"
-                         data-email="{{ payment.from_email }}"
-                         data-reply-to-email="{{ payment.reply_to_email or '' }}">
-                        <i class="ti ti-archive me-2"></i>Archive Email
-                      </a>
-                    {% elif payment.result == 'MANUAL_PROCESSED' %}
-                      <span class="dropdown-item text-muted">
-                        <i class="ti ti-check me-2"></i>Archived
-                      </span>
-                    {% else %}
-                      <span class="dropdown-item text-muted">No actions</span>
-                    {% endif %}
-                  </div>
-                </div>
+                {{ action_menu(id="payment-actions-" ~ payment.id, items=payment.action_items) }}
               </td>
             </tr>
             {% endfor %}
@@ -272,9 +166,13 @@
         </table>
         </div>
 
-        <!-- Pagination -->
-        {% from 'macros/pagination.html' import render_pagination %}
-        {{ render_pagination(pagination, current_filters, payments) }}
+        <div class="d-none d-md-block">
+          {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+             total=pagination.total, items_count=payments|length, base_path=url_for('payment_bot_matches'), filters=current_filters) }}
+        </div>
+        <div class="d-md-none">
+          {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+             total=pagination.total, items_count=payments|length, base_path=url_for('payment_bot_matches'), filters=current_filters) }}
         </div>
         {% endif %}
       </div>
@@ -624,41 +522,8 @@
 {% endfor %}
 
 
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize search component
-    if (window.SearchComponent) {
-        window.SearchComponent.init({
-            formId: 'dynamicSearchForm',
-            inputId: 'enhancedSearchInput',
-            preserveParams: ['status']
-        });
-    }
-
-    // Initialize filter component
-    if (window.FilterComponent) {
-        window.FilterComponent.init({
-            filterClass: 'github-filter-btn',
-            mode: 'server',
-            preserveScrollPosition: true,
-            enableSearchPreservation: true
-        });
-    }
-
-    // Validation for debugging
-    console.log('💳 Payment Bot Matches page loaded');
-    console.log('🔧 Global dropdown fix available:', typeof window.dropdownFix !== 'undefined');
-    console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
-    console.log('🔍 Dropdown toggles found:', document.querySelectorAll('[data-bs-toggle="dropdown"]').length);
-
-    // Debug: Check if Bootstrap is properly loaded
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded! Dropdown functionality may not work.');
-    } else {
-        console.log('Bootstrap is loaded. Dropdown functionality should work.');
-    }
-});
-
 // Archive payment email functionality
 let currentArchiveData = null;
 

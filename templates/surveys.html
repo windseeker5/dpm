@@ -1,95 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Surveys{% endblock %}
 
-{% block head %}
-<!-- Note: Search component styles loaded via base.html -->
-<style>
-/* NO HOVER EFFECTS - per CLAUDE.md constraints */
-.survey-card {
-  background-color: #fff !important;
-}
-.survey-actions {
-  opacity: 1 !important;
-}
-
-/* Force dropdown menu right edge to align with button right edge */
-.page-header .dropdown {
-  position: relative;
-}
-
-.page-header .dropdown-menu-end[data-popper-placement] {
-  right: 0 !important;
-  left: auto !important;
-}
-
-
-/* White background for all cards and tables */
-.card {
-  background-color: #fff !important;
-}
-
-.table {
-  background-color: #fff !important;
-}
-
-.survey-card {
-  background-color: #fff !important;
-}
-
-.survey-table {
-  background-color: #fff !important;
-}
-
-/* Modal touch targets for mobile */
-.modal .btn {
-  min-height: 44px;
-}
-
-.modal .form-control {
-  min-height: 44px;
-}
-
-.modal .form-select {
-  min-height: 44px;
-}
-
-/* Form buttons in dropdowns should look like dropdown items */
-.dropdown-menu form {
-  margin: 0;
-}
-
-.dropdown-menu button.dropdown-item {
-  border: none;
-  background: none;
-  text-align: left;
-  width: 100%;
-  padding: 0.375rem 1rem;
-}
-
-.dropdown-menu button.dropdown-item:hover {
-  background-color: #f8f9fa;
-}
-</style>
-{% endblock %}
-
 {% block content %}
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/select.html' import select %}
+{% from 'macros/input.html' import text_input %}
+
 <div class="page-wrapper">
   <!-- Page Header -->
   <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="page-title mb-0">Surveys</h1>
-        <div class="dropdown">
-          <button type="button" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
-            <i class="ti ti-dots-vertical"></i>
-          </button>
-          <div class="dropdown-menu dropdown-menu-end">
-            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#quickSurveyModal">
-              <i class="ti ti-plus me-2"></i>Create Survey
-            </a>
-            <a class="dropdown-item" href="{{ url_for('list_survey_templates') }}">
-              <i class="ti ti-edit me-2"></i>Edit Templates
-            </a>
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title">Surveys</h1>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+          <div class="btn-list">
+            {{ button("Templates", variant="outline", href=url_for('list_survey_templates')) }}
+            {{ button("Create Survey", icon="ti-plus", attrs={"data-bs-toggle": "modal", "data-bs-target": "#quickSurveyModal"}) }}
           </div>
         </div>
       </div>
@@ -100,404 +30,109 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-    <!-- Enhanced Dynamic Search -->
-    <form method="GET" action="{{ url_for('list_surveys') }}" class="mb-4" id="dynamicSearchForm">
-      <div class="input-icon position-relative">
-        <span class="input-icon-addon">
-          <i class="ti ti-search fs-3"></i>
-        </span>
-        <input type="text" 
-               name="q"
-               id="enhancedSearchInput"
-               class="form-control form-control-lg shadow-sm" 
-               placeholder="Search surveys…" 
-               value="{{ current_filters.q or '' }}"
-               style="padding-right: 100px; border-radius: 0.5rem;"
-               autocomplete="off"
-               data-bs-toggle="false">
-        <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
-          <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
-          <kbd id="searchKbdHint" class="text-muted d-none d-md-inline">Ctrl</kbd>
-          <kbd class="text-muted d-none d-md-inline">K</kbd>
-          <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
-            <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
-          </button>
+      <div class="card mp-data-table">
+        <div class="card-header">
+          <form method="get" action="{{ url_for('list_surveys') }}" style="display: contents;">
+            {{ preserve_filters(current_filters) }}
+            {{ table_toolbar(id="surveys-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search surveys…") }}
+          </form>
         </div>
-      </div>
-    </form>
 
-    <!-- Main Table -->
-    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
-      <div class="card-header">
-        <div class="d-flex justify-content-center align-items-center w-100">
-          <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-            <a href="{{ url_for('list_surveys', status='active') }}"
-               class="github-filter-btn {% if current_filters.status == 'active' and not current_filters.show_all %}active{% endif %}">
-              Active <span class="filter-count">({{ statistics.active_surveys }})</span>
-            </a>
-            <a href="{{ url_for('list_surveys', status='closed') }}"
-               class="github-filter-btn {% if current_filters.status == 'closed' %}active{% endif %}">
-              Closed <span class="filter-count">({{ statistics.closed_surveys|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('list_surveys', show_all='true') }}"
-               class="github-filter-btn {% if current_filters.show_all %}active{% endif %}">
-              All <span class="filter-count">({{ statistics.total_surveys }})</span>
-            </a>
+        {% if is_first_time_empty %}
+          {{ table_empty_state(icon="ti-clipboard-check", icon_color="#fab005",
+             title="No surveys yet",
+             description="Create your first survey using one of your templates to start collecting feedback from participants.") }}
+
+        {% elif is_zero_results %}
+          {% if other_tab_matches %}
+            {{ table_empty_state(icon="ti-search",
+               title="No matches for “%s” in this tab"|format(current_filters.q),
+               other_matches_count=other_tab_matches,
+               action_label="Show all surveys", action_url=show_all_url) }}
+          {% else %}
+            {{ table_empty_state(icon="ti-search",
+               title="No surveys match your filters",
+               description="Try adjusting your search or filter criteria.",
+               action_label="Clear all filters", action_url=url_for('list_surveys', show_all='true')) }}
+          {% endif %}
+
+        {% else %}
+          {% set columns = [
+            {"label": "Created", "class": "d-none d-md-table-cell"},
+            {"label": "Activity", "class": "d-none d-md-table-cell"},
+            {"label": "Status", "class": "d-none d-md-table-cell"},
+            {"label": "Sent/Completed", "class": "d-none d-lg-table-cell"},
+            {"label": "Completion Rate", "class": "d-none d-lg-table-cell"}
+          ] %}
+          <div class="d-none d-md-block">
+            {{ table_desktop(id="surveys-table", columns=columns, rows=rows) }}
+            {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+               total=pagination.total, items_count=rows|length, base_path=url_for('list_surveys'), filters=current_filters) }}
           </div>
-        </div>
-      </div>
-
-      {% if is_first_time_empty %}
-        <!-- First-Time Empty State -->
-        <div class="empty-state-container text-center py-5">
-          <div class="empty-state-icon mb-3">
-            <i class="ti ti-clipboard-check" style="font-size: 48px; color: #fab005;"></i>
+          <div class="d-md-none">
+            {{ table_mobile(id="surveys-table-mobile", rows=rows) }}
+            {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+               total=pagination.total, items_count=rows|length, base_path=url_for('list_surveys'), filters=current_filters) }}
           </div>
-          <h3 class="empty-state-title mb-2">No surveys yet</h3>
-          <p class="empty-state-description text-muted mb-3">
-            Create your first survey using one of your templates to start collecting feedback from participants.
-          </p>
-        </div>
-
-      {% elif is_zero_results %}
-        <!-- Zero Results Empty State -->
-        <div class="empty-state-container text-center py-5">
-          <div class="empty-state-icon mb-3">
-            <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
-          </div>
-          <h3 class="empty-state-title mb-2">No surveys match your filters</h3>
-          <p class="empty-state-description text-muted mb-3">
-            Try adjusting your search or filter criteria to find what you're looking for.
-          </p>
-          <a href="{{ url_for('list_surveys', show_all='true') }}" class="btn btn-link">
-            Clear all filters
-          </a>
-        </div>
-
-      {% else %}
-        <!-- Normal Table View -->
-        <div class="table-responsive">
-          <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>Survey</th>
-              <th class="d-none d-md-table-cell">Created</th>
-              <th class="d-none d-md-table-cell">Activity</th>
-              <th class="d-none d-md-table-cell">Status</th>
-              <th class="d-none d-md-table-cell">Sent/Completed</th>
-              <th class="d-none d-md-table-cell">Completion Rate</th>
-              <th class="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for survey in surveys %}
-          <tr>
-            <td>
-              <div class="d-flex align-items-center">
-                {% if survey.activity and survey.activity.image_filename %}
-                <div class="avatar avatar-md me-3" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + survey.activity.image_filename) }}); background-size: cover; background-position: center; border-radius: 8px;"></div>
-                {% else %}
-                <div class="avatar avatar-md me-3 d-flex align-items-center justify-content-center" style="background: {{ placeholder_color(survey.activity.name if survey.activity else survey.name) }}; border-radius: 8px; color: #fff; font-weight: 700;">
-                  {{ placeholder_letter(survey.activity.name if survey.activity else survey.name) }}
-                </div>
-                {% endif %}
-                <div>
-                  <strong>{{ survey.name }}</strong>
-                  <div class="text-muted small">{{ survey.template.name if survey.template else 'No template' }}</div>
-                </div>
-              </div>
-            </td>
-            <td class="d-none d-md-table-cell">
-              {% set survey_display_date = survey.created_dt|utc_to_local %}
-              <div class="small">
-                {{ survey_display_date.strftime('%Y-%m-%d') if survey_display_date else '-' }}
-              </div>
-            </td>
-            <td class="d-none d-md-table-cell">
-              <strong>{{ survey.activity.name if survey.activity else '-' }}</strong>
-              {% if survey.passport_type %}
-              <br><span class="text-muted small">{{ survey.passport_type.name }} participants</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell">
-              {% if survey.status == 'active' %}
-              <span class="badge bg-green-lt text-green">Active</span>
-              {% elif survey.status == 'closed' %}
-              <span class="badge bg-red-lt text-red">Closed</span>
-              {% else %}
-              <span class="badge bg-gray-lt text-gray">{{ survey.status|title }}</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell">
-              <strong>{{ survey.invitation_count }} invited</strong>
-              {% if survey.completed_count > 0 %}
-              <br><span class="text-success small">{{ survey.completed_count }} completed</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell">
-              {% if survey.invitation_count > 0 %}
-              <strong>{{ "%.1f"|format(survey.completion_rate) }}%</strong>
-              {% else %}
-              <span class="text-muted">No invitations</span>
-              {% endif %}
-            </td>
-            <td class="text-center" style="vertical-align: middle;">
-              <div class="dropdown d-inline-block">
-                <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
-                  <i class="ti ti-dots-vertical"></i>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                  <a class="dropdown-item" href="{{ url_for('take_survey', survey_token=survey.survey_token) }}" target="_blank">
-                    <i class="ti ti-external-link me-2"></i>View Survey
-                  </a>
-                  <a class="dropdown-item" href="{{ url_for('survey_results', survey_id=survey.id) }}">
-                    <i class="ti ti-chart-bar me-2"></i>View Results
-                  </a>
-                  {% if survey.status == 'active' %}
-                  <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="dropdown-item" onclick="return confirmSendInvitations({{ survey.id }}, '{{ survey.name }}', '{{ survey.activity.name if survey.activity else 'Unknown' }}')">
-                      <i class="ti ti-mail me-2"></i>Send Invitations
-                    </button>
-                  </form>
-                  <form method="POST" action="{{ url_for('send_survey_invitations', survey_id=survey.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="resend_all" value="true">
-                    <button type="submit" class="dropdown-item" onclick="return confirmResendAll({{ survey.id }}, '{{ survey.name }}')">
-                      <i class="ti ti-refresh me-2"></i>Resend All Invitations
-                    </button>
-                  </form>
-                  <form method="POST" action="{{ url_for('close_survey', survey_id=survey.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="dropdown-item" onclick="return confirmCloseSurvey({{ survey.id }}, '{{ survey.name }}')">
-                      <i class="ti ti-pause me-2"></i>Close Survey
-                    </button>
-                  </form>
-                  {% elif survey.status == 'closed' %}
-                  <button type="button" class="dropdown-item" onclick="confirmReopenSurvey({{ survey.id }}, '{{ survey.name }}')">
-                    <i class="ti ti-play me-2"></i>Reopen Survey
-                  </button>
-                  {% endif %}
-                  {% if survey.responses %}
-                  <a class="dropdown-item" href="{{ url_for('export_survey_results', survey_id=survey.id) }}">
-                    <i class="ti ti-download me-2"></i>Export Results
-                  </a>
-                  {% endif %}
-                  <div class="dropdown-divider"></div>
-                  <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ survey.id }}, '{{ survey.name }}'); return false;">
-                    <i class="ti ti-trash me-2"></i>Delete Survey
-                  </a>
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-        </div>
-      {% endif %}
-
-      <!-- Pagination (only show when there's data) -->
-      {% if not is_first_time_empty and not is_zero_results %}
-        {% from 'macros/pagination.html' import render_pagination %}
-        {{ render_pagination(pagination, current_filters, surveys) }}
-      {% endif %}
+        {% endif %}
       </div>
-    </div>
 
     </div>
   </div>
 </div>
 
-<!-- Quick Survey Creation Modal -->
+<!-- Quick Survey Creation Modal — Step 1: Activity, Step 2: Template + Name -->
 <div class="modal modal-blur fade" id="quickSurveyModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="ti ti-zap me-2 text-success"></i>Create Quick Survey
-        </h5>
+        <h5 class="modal-title">Create Survey</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form method="POST" action="{{ url_for('create_quick_survey') }}" id="quickSurveyForm">
         <div class="modal-body">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-          <!-- Template Selection -->
-          <div class="mb-4">
-            <label class="form-label required">Select Survey Template</label>
-            <select name="template_id" class="form-select form-select-lg" required id="templateSelect">
-              <option value="">Choose a template...</option>
-              {% for template in survey_templates %}
-              <option value="{{ template.id }}"
-                      data-questions="{{ template.question_count }}"
-                      data-name="{{ template.name }}"
-                      data-description="{{ template.description }}"
-                      {% if template.name == 'Post-Activity Feedback' %}selected{% endif %}>
-                {{ template.name }} ({{ template.question_count }} questions)
-              </option>
-              {% endfor %}
-            </select>
-            <div class="form-hint" id="templateHint">Choose a template for your survey questions</div>
-          </div>
+          <!-- Step 1: Activity -->
+          {% call select(id="activitySelect", name="activity_id", label="Which activity is this survey for?", placeholder="Choose an activity...", required=true, description="The survey will be sent to participants of this activity") %}
+            {% for activity in activities %}
+            <option value="{{ activity.id }}">{{ activity.name }}</option>
+            {% endfor %}
+          {% endcall %}
 
-          <!-- Template Preview Alert -->
-          <div class="alert alert-info d-none" id="templatePreviewAlert">
-            <div class="d-flex align-items-center justify-content-between">
+          <!-- Step 2: reveals once an activity is picked -->
+          <div id="quickSurveyStep2" class="d-none">
+            <div class="mt-4">
+              {{ text_input(id="surveyNameInput", name="survey_name", label="Survey Name", placeholder="e.g., Yoga Session Feedback", attrs={"required": "required", "maxlength": "100"}) }}
+            </div>
+
+            <div class="mt-4">
+              {% call select(id="templateSelect", name="template_id", label="Template", placeholder="Choose a template...", required=true) %}
+                {% for template in survey_templates %}
+                <option value="{{ template.id }}"
+                        data-name="{{ template.name }}"
+                        data-description="{{ template.description }}"
+                        {% if template.name == 'Post-Activity Feedback' %}selected{% endif %}>
+                  {{ template.name }} ({{ template.question_count }} questions)
+                </option>
+                {% endfor %}
+              {% endcall %}
+            </div>
+
+            <div class="alert alert-info d-flex align-items-center justify-content-between mt-3" id="templatePreviewAlert">
               <div>
-                <strong id="selectedTemplateName">Post-Activity Feedback</strong>
-                <div class="text-muted small mt-1" id="selectedTemplateDescription">Standard post-activity feedback survey</div>
+                <strong id="selectedTemplateName"></strong>
+                <div class="text-muted small mt-1" id="selectedTemplateDescription"></div>
               </div>
-              <button type="button" class="btn btn-outline-info btn-sm" onclick="previewSelectedTemplate()">
-                <i class="ti ti-eye me-1"></i>Preview
-              </button>
-            </div>
-          </div>
-
-          <!-- Survey Name -->
-          <div class="mb-4">
-            <label class="form-label required">Survey Name</label>
-            <input type="text" name="survey_name" class="form-control form-control-lg"
-                   placeholder="e.g., Yoga Session Feedback"
-                   required maxlength="100" id="surveyNameInput">
-            <div class="form-hint">Give your survey a clear, descriptive name</div>
-          </div>
-
-          <!-- Activity Selection -->
-          <div class="mb-4">
-            <label class="form-label required">Select Activity</label>
-            <select name="activity_id" class="form-select form-select-lg" required id="activitySelect">
-              <option value="">Choose an activity...</option>
-              {% for activity in activities %}
-              <option value="{{ activity.id }}">{{ activity.name }}</option>
-              {% endfor %}
-            </select>
-            <div class="form-hint">The survey will be sent to participants of this activity</div>
-          </div>
-          
-          <!-- Preview Section -->
-          <div class="card d-none" id="surveyPreview">
-            <div class="card-header">
-              <h4 class="card-title">Survey Preview</h4>
-            </div>
-            <div class="card-body">
-              <div class="mb-3">
-                <strong>Survey:</strong> <span id="previewSurveyName">-</span>
-              </div>
-              <div class="mb-3">
-                <strong>Activity:</strong> <span id="previewActivityName">-</span>
-              </div>
-              <div class="mb-3">
-                <strong>Template:</strong> Post-Activity Feedback (4 questions)
-              </div>
-              <div class="alert alert-info">
-                <i class="ti ti-info-circle me-2"></i>
-                <strong>Next steps after creation:</strong>
-                <ul class="mb-0 mt-2">
-                  <li>Review survey questions</li>
-                  <li>Send invitations to participants</li>
-                  <li>Monitor responses in real-time</li>
-                  <li>Export results when complete</li>
-                </ul>
-              </div>
+              {{ button("Preview", variant="outline", size="sm", icon="ti-eye", attrs={"onclick": "previewSelectedTemplate()"}) }}
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success" id="createBtn" disabled>
-            <i class="ti ti-check me-1"></i>Create Survey
-          </button>
+          {{ button("Create Survey", type="submit", id="createBtn", attrs={"disabled": "disabled"}) }}
+          {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
         </div>
       </form>
-    </div>
-  </div>
-</div>
-
-<!-- Template Preview Modal -->
-<div class="modal modal-blur fade" id="templatePreviewModal" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="ti ti-template me-2"></i>Post-Activity Feedback Template
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-success">
-          <i class="ti ti-star me-2"></i>
-          This is our recommended template for gathering feedback after activities.
-        </div>
-        
-        <div class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex align-items-start mb-2">
-              <span class="badge bg-success me-2">1</span>
-              <div class="flex-grow-1">
-                <h6 class="card-title mb-1">How would you rate your overall experience with this activity?</h6>
-                <div class="text-muted small mb-2">Type: Multiple Choice • Required</div>
-                <div class="ms-3">
-                  <div class="text-muted small">• Excellent</div>
-                  <div class="text-muted small">• Very Good</div>
-                  <div class="text-muted small">• Good</div>
-                  <div class="text-muted small">• Fair</div>
-                  <div class="text-muted small">• Poor</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex align-items-start mb-2">
-              <span class="badge bg-success me-2">2</span>
-              <div class="flex-grow-1">
-                <h6 class="card-title mb-1">What did you enjoy most about this activity?</h6>
-                <div class="text-muted small mb-2">Type: Open-ended • Optional</div>
-                <div class="text-muted small">Maximum 500 characters</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex align-items-start mb-2">
-              <span class="badge bg-success me-2">3</span>
-              <div class="flex-grow-1">
-                <h6 class="card-title mb-1">Is there anything you would like us to improve?</h6>
-                <div class="text-muted small mb-2">Type: Open-ended • Optional</div>
-                <div class="text-muted small">Maximum 500 characters</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex align-items-start mb-2">
-              <span class="badge bg-success me-2">4</span>
-              <div class="flex-grow-1">
-                <h6 class="card-title mb-1">Would you recommend this activity to others?</h6>
-                <div class="text-muted small mb-2">Type: Multiple Choice • Required</div>
-                <div class="ms-3">
-                  <div class="text-muted small">• Definitely Yes</div>
-                  <div class="text-muted small">• Probably Yes</div>
-                  <div class="text-muted small">• Not Sure</div>
-                  <div class="text-muted small">• Probably No</div>
-                  <div class="text-muted small">• Definitely No</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
     </div>
   </div>
 </div>
@@ -585,7 +220,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="ti ti-pause me-2"></i>Close Survey</h5>
+        <h5 class="modal-title"><i class="ti ti-player-pause me-2"></i>Close Survey</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -605,7 +240,7 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <form method="POST" id="closeSurveyForm" class="d-inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-warning"><i class="ti ti-pause me-2"></i>Close Survey</button>
+          <button type="submit" class="btn btn-warning"><i class="ti ti-player-pause me-2"></i>Close Survey</button>
         </form>
       </div>
     </div>
@@ -617,7 +252,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="ti ti-play me-2"></i>Reopen Survey</h5>
+        <h5 class="modal-title"><i class="ti ti-player-play me-2"></i>Reopen Survey</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -636,7 +271,7 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <form method="POST" id="reopenSurveyForm" class="d-inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary"><i class="ti ti-play me-2"></i>Reopen Survey</button>
+          <button type="submit" class="btn btn-primary"><i class="ti ti-player-play me-2"></i>Reopen Survey</button>
         </form>
       </div>
     </div>
@@ -646,28 +281,6 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize search component
-    if (window.SearchComponent) {
-        window.SearchComponent.init({
-            formId: 'dynamicSearchForm',
-            inputId: 'enhancedSearchInput',
-            preserveParams: ['status', 'activity']
-        });
-    }
-
-    // Initialize filter component
-    if (window.FilterComponent) {
-        window.FilterComponent.init({
-            filterClass: 'github-filter-btn',
-            mode: 'server',
-            preserveScrollPosition: true,
-            enableSearchPreservation: true
-        });
-    }
-});
-
-
 // Delete confirmation
 function confirmDelete(surveyId, surveyName) {
   document.getElementById('deleteSurveyName').textContent = surveyName;
@@ -675,27 +288,10 @@ function confirmDelete(surveyId, surveyName) {
   new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 
-// Initialize tooltips and other Bootstrap components
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize tooltips
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-  
-  // Add better visual feedback for buttons
-  document.querySelectorAll('.btn').forEach(btn => {
-    btn.addEventListener('mouseenter', function() {
-      this.style.transform = 'translateY(-1px)';
-    });
-    btn.addEventListener('mouseleave', function() {
-      this.style.transform = 'translateY(0)';
-    });
-  });
-  
-  // Quick survey form validation
-  const surveyNameInput = document.getElementById('surveyNameInput');
   const activitySelect = document.getElementById('activitySelect');
+  const step2 = document.getElementById('quickSurveyStep2');
+  const surveyNameInput = document.getElementById('surveyNameInput');
   const templateSelect = document.getElementById('templateSelect');
   const createBtn = document.getElementById('createBtn');
   const templatePreviewAlert = document.getElementById('templatePreviewAlert');
@@ -703,63 +299,59 @@ document.addEventListener('DOMContentLoaded', function() {
   const selectedTemplateDescription = document.getElementById('selectedTemplateDescription');
 
   function validateQuickSurveyForm() {
-    const hasName = surveyNameInput && surveyNameInput.value.trim().length > 0;
     const hasActivity = activitySelect && activitySelect.value;
+    const hasName = surveyNameInput && surveyNameInput.value.trim().length > 0;
     const hasTemplate = templateSelect && templateSelect.value;
-    const isValid = hasName && hasActivity && hasTemplate;
-
-    if (createBtn) createBtn.disabled = !isValid;
-
-    return isValid;
+    if (createBtn) createBtn.disabled = !(hasActivity && hasName && hasTemplate);
   }
 
-  // Template selection handler
-  if (templateSelect) {
-    templateSelect.addEventListener('change', function() {
-      const selectedOption = this.options[this.selectedIndex];
+  function updateTemplatePreview() {
+    const selectedOption = templateSelect.options[templateSelect.selectedIndex];
+    if (templateSelect.value) {
+      templatePreviewAlert.classList.remove('d-none');
+      selectedTemplateName.textContent = selectedOption.dataset.name;
+      selectedTemplateDescription.textContent = selectedOption.dataset.description || 'Survey template';
+    } else {
+      templatePreviewAlert.classList.add('d-none');
+    }
+    validateQuickSurveyForm();
+  }
+
+  if (activitySelect) {
+    activitySelect.addEventListener('change', function() {
       if (this.value) {
-        // Show template preview alert
-        templatePreviewAlert.classList.remove('d-none');
-        selectedTemplateName.textContent = selectedOption.dataset.name;
-        selectedTemplateDescription.textContent = selectedOption.dataset.description || 'Survey template';
+        step2.classList.remove('d-none');
+        updateTemplatePreview();
       } else {
-        // Hide template preview alert
-        templatePreviewAlert.classList.add('d-none');
+        step2.classList.add('d-none');
       }
       validateQuickSurveyForm();
     });
-
-    // Trigger change event on load if there's a selected template
-    if (templateSelect.value) {
-      templateSelect.dispatchEvent(new Event('change'));
-    }
   }
-
+  if (templateSelect) {
+    templateSelect.addEventListener('change', updateTemplatePreview);
+  }
   if (surveyNameInput) {
     surveyNameInput.addEventListener('input', validateQuickSurveyForm);
   }
-  if (activitySelect) {
-    activitySelect.addEventListener('change', validateQuickSurveyForm);
-  }
+
+  document.getElementById('quickSurveyModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('quickSurveyForm').reset();
+    step2.classList.add('d-none');
+    templatePreviewAlert.classList.add('d-none');
+    createBtn.disabled = true;
+  });
+
+  document.getElementById('quickSurveyForm').addEventListener('submit', function(e) {
+    if (createBtn.disabled) {
+      e.preventDefault();
+      return false;
+    }
+    createBtn.disabled = true;
+    createBtn.textContent = 'Creating Survey...';
+    return true;
+  });
 });
-
-// Quick survey modal functions
-function showPreview() {
-  const surveyName = document.getElementById('surveyNameInput').value.trim();
-  const activitySelect = document.getElementById('activitySelect');
-  const templateSelect = document.getElementById('templateSelect');
-  const activityName = activitySelect.options[activitySelect.selectedIndex].text;
-  const templateName = templateSelect.options[templateSelect.selectedIndex].text;
-
-  document.getElementById('previewSurveyName').textContent = surveyName;
-  document.getElementById('previewActivityName').textContent = activityName;
-
-  const previewCard = document.getElementById('surveyPreview');
-  previewCard.classList.remove('d-none');
-
-  // Smooth scroll to preview
-  previewCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
 
 async function previewSelectedTemplate() {
   const templateSelect = document.getElementById('templateSelect');
@@ -768,10 +360,8 @@ async function previewSelectedTemplate() {
   }
 
   const templateId = templateSelect.value;
-  const templateName = templateSelect.options[templateSelect.selectedIndex].dataset.name;
 
   try {
-    // Fetch template data from API
     const response = await fetch(`/api/survey-template/${templateId}`);
     if (!response.ok) {
       throw new Error('Failed to fetch template');
@@ -779,7 +369,6 @@ async function previewSelectedTemplate() {
 
     const templateData = await response.json();
 
-    // Build preview HTML
     let previewHTML = `
       <div class="modal modal-blur fade show" style="display: block; background: rgba(0,0,0,0.5);" id="dynamicTemplatePreview">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -851,7 +440,6 @@ async function previewSelectedTemplate() {
       </div>
     `;
 
-    // Insert modal into page
     document.body.insertAdjacentHTML('beforeend', previewHTML);
 
   } catch (error) {
@@ -859,72 +447,33 @@ async function previewSelectedTemplate() {
   }
 }
 
-function showQuickPreview() {
-  new bootstrap.Modal(document.getElementById('templatePreviewModal')).show();
-}
-
-// Reset modal when closed
-document.getElementById('quickSurveyModal').addEventListener('hidden.bs.modal', function() {
-  // Reset form
-  document.getElementById('quickSurveyForm').reset();
-  document.getElementById('surveyPreview').classList.add('d-none');
-  document.getElementById('templatePreviewAlert').classList.add('d-none');
-
-  // Reset button states
-  const createBtn = document.getElementById('createBtn');
-  createBtn.disabled = true;
-  createBtn.innerHTML = '<i class="ti ti-check me-1"></i>Create Survey';
-});
-
-// NO JAVASCRIPT NEEDED - Bootstrap handles it all!
-
-// Direct form submission with loading state (no confirmation modal)
-document.getElementById('quickSurveyForm').addEventListener('submit', function(e) {
-  // Show loading state immediately
-  const createBtn = document.getElementById('createBtn');
-
-  if (createBtn.disabled) {
-    // Already submitting
-    e.preventDefault();
-    return false;
-  }
-
-  createBtn.disabled = true;
-  createBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating Survey...';
-
-  // Allow form to submit normally
-  return true;
-});
-
-// Enhanced confirmation functions using Bootstrap modals
 function confirmSendInvitations(surveyId, surveyName, activityName) {
   document.getElementById('sendInvitationsSurveyName').textContent = surveyName;
   document.getElementById('sendInvitationsActivityName').textContent = activityName;
   document.getElementById('sendInvitationsForm').action = `/send-survey-invitations/${surveyId}`;
   new bootstrap.Modal(document.getElementById('sendInvitationsModal')).show();
-  return false; // Prevent form submission
+  return false;
 }
 
 function confirmResendAll(surveyId, surveyName) {
   document.getElementById('resendAllSurveyName').textContent = surveyName;
   document.getElementById('resendAllForm').action = `/send-survey-invitations/${surveyId}`;
   new bootstrap.Modal(document.getElementById('resendAllModal')).show();
-  return false; // Prevent form submission
+  return false;
 }
 
 function confirmCloseSurvey(surveyId, surveyName) {
   document.getElementById('closeSurveyName').textContent = surveyName;
   document.getElementById('closeSurveyForm').action = `/close-survey/${surveyId}`;
   new bootstrap.Modal(document.getElementById('closeSurveyModal')).show();
-  return false; // Prevent form submission
+  return false;
 }
 
 function confirmReopenSurvey(surveyId, surveyName) {
   document.getElementById('reopenSurveyName').textContent = surveyName;
   document.getElementById('reopenSurveyForm').action = `/reopen-survey/${surveyId}`;
   new bootstrap.Modal(document.getElementById('reopenSurveyModal')).show();
-  return false; // Prevent form submission
+  return false;
 }
-
 </script>
 {% endblock %}

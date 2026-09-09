@@ -2,10 +2,8 @@
 {% block title %}Activities Management{% endblock %}
 
 {% block content %}
-<!-- CSS Imports -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/dropdown-fix.css') }}?v=4.1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0">
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 
 <div class="page-wrapper">
   <!-- Page Header -->
@@ -30,206 +28,52 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-    <!-- Enhanced Dynamic Search -->
-    <form method="GET" action="{{ url_for('list_activities') }}" class="mb-4" id="dynamicSearchForm">
-      <div class="input-icon position-relative">
-        <span class="input-icon-addon">
-          <i class="ti ti-search fs-3"></i>
-        </span>
-        <input type="text" 
-               name="q"
-               id="enhancedSearchInput"
-               class="form-control form-control-lg shadow-sm" 
-               placeholder="Search activities…" 
-               value="{{ current_filters.q or '' }}"
-               style="padding-right: 100px; border-radius: 0.5rem;"
-               autocomplete="off"
-               data-bs-toggle="false">
-        <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
-          <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
-          <kbd id="searchKbdHint" class="text-muted d-none d-md-inline">Ctrl</kbd>
-          <kbd class="text-muted d-none d-md-inline">K</kbd>
-          <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
-            <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
-          </button>
-        </div>
-      </div>
-    </form>
-
-    <!-- Main Table -->
-    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+    <!-- Activities Data Table -->
+    <div class="card mp-data-table">
       <div class="card-header">
-        <div class="d-flex justify-content-center align-items-center w-100">
-          <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-            <a href="{{ url_for('list_activities', status='active') }}"
-               class="github-filter-btn {% if current_filters.status == 'active' and not current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.status == 'active' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              Active <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.active_activities|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('list_activities', status='not_active') }}"
-               class="github-filter-btn {% if current_filters.status == 'not_active' %}active{% endif %}"
-               style="{% if current_filters.status == 'not_active' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              Archived <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.inactive_activities|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('list_activities', show_all='true') }}"
-               class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_activities|default(0) }})</span>
-            </a>
-          </div>
-        </div>
+        <form method="get" action="{{ url_for('list_activities') }}" style="display: contents;">
+          {{ preserve_filters(current_filters) }}
+          {{ table_toolbar(id="activities-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search activities…") }}
+        </form>
       </div>
 
       {% if is_first_time_empty %}
-        <!-- First-Time Empty State -->
-        <div class="empty-state-container text-center py-5">
-          <div class="empty-state-icon mb-3">
-            <i class="ti ti-activity-heartbeat" style="font-size: 48px; color: #e03131;"></i>
-          </div>
-          <h3 class="empty-state-title mb-2">No activities yet</h3>
-          <p class="empty-state-description text-muted mb-3">
-            Activities are the core of your organization. Create your first activity to start managing signups and passports.
-          </p>
-          <a href="{{ url_for('create_activity') }}" class="btn btn-dark">
-            <i class="ti ti-plus me-1"></i>Create Activity
-          </a>
-        </div>
+        {{ table_empty_state(icon="ti-activity-heartbeat", icon_color="#e03131",
+           title="No activities yet",
+           description="Activities are the core of your organization. Create your first activity to start managing signups and passports.",
+           action_label="Create Activity", action_url=url_for('create_activity')) }}
 
       {% elif is_zero_results %}
-        <!-- Zero Results Empty State -->
-        <div class="empty-state-container text-center py-5">
-          <div class="empty-state-icon mb-3">
-            <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
-          </div>
-          <h3 class="empty-state-title mb-2">No activities match your filters</h3>
-          <p class="empty-state-description text-muted mb-3">
-            Try adjusting your search or filter criteria to find what you're looking for.
-          </p>
-          <a href="{{ url_for('list_activities', show_all='true') }}" class="btn btn-link">
-            Clear all filters
-          </a>
-        </div>
+        {% if other_tab_matches %}
+          {{ table_empty_state(icon="ti-search",
+             title="No matches for “%s” in this tab"|format(current_filters.q),
+             other_matches_count=other_tab_matches,
+             action_label="Show all activities", action_url=show_all_url) }}
+        {% else %}
+          {{ table_empty_state(icon="ti-search",
+             title="No activities match your filters",
+             description="Try adjusting your search or filter criteria to find what you're looking for.",
+             action_label="Clear all filters", action_url=url_for('list_activities', show_all='true')) }}
+        {% endif %}
 
       {% else %}
-        <!-- Normal Table View -->
-        <div class="table-responsive">
-          <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>Activity Name</th>
-              <th class="d-none d-md-table-cell">Workflow</th>
-              <th class="d-none d-lg-table-cell text-center">Status</th>
-              <th class="d-none d-lg-table-cell text-center">Types</th>
-              <th class="d-none d-md-table-cell text-center">Active</th>
-              <th class="d-none d-md-table-cell text-center">Signups</th>
-              <th class="d-none d-md-table-cell text-center">Revenue</th>
-              <th class="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for activity in activities %}
-          <tr>
-            <td style="vertical-align: middle;">
-              <div class="d-flex align-items-center">
-                {% if activity.image_filename %}
-                  <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="avatar avatar-sm me-3" style="background-image: url({{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}); width: 40px; height: 40px; min-width: 40px; min-height: 40px; background-size: cover; background-position: center; cursor: pointer; text-decoration: none; flex-shrink: 0; display: inline-block;"></a>
-                {% else %}
-                  <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="avatar avatar-sm me-3" style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; cursor: pointer; text-decoration: none; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: {{ placeholder_color(activity.name) }}; color: #fff; font-weight: 700;">{{ placeholder_letter(activity.name) }}</a>
-                {% endif %}
-                <div>
-                  <div class="fw-bold">{{ activity.name }}</div>
-                  <div class="text-muted small">{{ activity.description[:50] }}{% if activity.description and activity.description|length > 50 %}...{% endif %}</div>
-                  <!-- Mobile-only metrics -->
-                  <div class="d-md-none mt-1">
-                    {% set status = activity.status or 'active' %}
-                    {% if status in ['inactive', 'archived'] %}
-                      <span class="badge bg-yellow-lt">Archived</span>
-                    {% elif status == 'draft' %}
-                      <span class="badge bg-gray-lt">Draft</span>
-                    {% endif %}
-                    {% if activity.active_passports_count %}
-                      <span class="badge bg-blue-lt ms-1"><i class="ti ti-users me-1"></i>{{ activity.active_passports_count }}</span>
-                    {% endif %}
-                    {% if activity.total_revenue %}
-                      <span class="badge bg-secondary-lt ms-1">${{ "%.0f"|format(activity.total_revenue) }}</span>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {% if activity.workflow_type == 'payment_first' %}
-                <span class="badge bg-secondary-lt">Pay First</span>
-              {% else %}
-                <span class="badge bg-secondary-lt">Review First</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
-              {% set status = activity.status or 'active' %}
-              {% if status == 'active' %}
-                <span class="badge bg-green-lt text-green-lt-fg">Active</span>
-              {% elif status in ('archived', 'inactive') %}
-                <span class="badge bg-yellow-lt text-yellow-lt-fg">Archived</span>
-              {% elif status == 'draft' %}
-                <span class="badge bg-gray-lt text-gray-lt-fg">Draft</span>
-              {% else %}
-                <span class="badge bg-secondary-lt">{{ status.title() }}</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
-              <span class="text-muted">{{ activity.passport_types_count or 0 }}</span>
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              <span class="text-muted">{{ activity.active_passports_count or 0 }}</span>
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              <span class="text-muted">{{ activity.signup_count or 0 }}</span>
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              <span class="text-muted">${{ "%.2f"|format(activity.total_revenue or 0) }}</span>
-            </td>
-            <td class="text-center" style="vertical-align: middle;">
-              <div class="dropdown d-inline-block">
-                <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
-                  <i class="ti ti-dots-vertical"></i>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                  <a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                    <i class="ti ti-pencil me-2"></i>Edit
-                  </a>
-                  <a class="dropdown-item" href="{{ url_for('activity_dashboard', activity_id=activity.id) }}">
-                    <i class="ti ti-eye me-2"></i>View
-                  </a>
-                  {% if activity.status != 'active' %}
-                  <a class="dropdown-item text-success" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                    <i class="ti ti-refresh me-2"></i>Restore
-                  </a>
-                  {% endif %}
-                  {% if activity.status == 'active' %}
-                  <a class="dropdown-item text-warning" href="#"
-                     onclick="checkAndArchiveActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
-                    <i class="ti ti-archive me-2"></i>Archive
-                  </a>
-                  {% endif %}
-                  <div class="dropdown-divider"></div>
-                  <a class="dropdown-item text-danger" href="#" 
-                     onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
-                    <i class="ti ti-trash me-2"></i>Delete
-                  </a>
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      </div>
-
-      <!-- Pagination -->
-      {% from 'macros/pagination.html' import render_pagination %}
-      {{ render_pagination(pagination, current_filters, activities) }}
-      </div>
+        {% set columns = [
+          {"label": "Status", "class": "d-none d-lg-table-cell text-center"},
+          {"label": "Active", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Signups", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Revenue", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Created", "class": "d-none d-md-table-cell text-center"}
+        ] %}
+        <div class="d-none d-md-block">
+          {{ table_desktop(id="activities-table", columns=columns, rows=rows) }}
+          {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+             total=pagination.total, items_count=rows|length, base_path=url_for('list_activities'), filters=current_filters) }}
+        </div>
+        <div class="d-md-none">
+          {{ table_mobile(id="activities-table-mobile", rows=rows) }}
+          {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+             total=pagination.total, items_count=rows|length, base_path=url_for('list_activities'), filters=current_filters) }}
+        </div>
       {% endif %}
     </div>
 
@@ -396,86 +240,8 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('enhancedSearchInput');
-    const searchClearBtn = document.getElementById('searchClearBtn');
-    const searchCharCounter = document.getElementById('searchCharCounter');
-    const kbdHint = document.getElementById('searchKbdHint');
-    const searchForm = document.getElementById('dynamicSearchForm');
-    let searchTimeout;
-
-    // Ctrl+K keyboard shortcut
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            searchInput.focus();
-
-            // Add pink glow effect
-            searchInput.classList.add('search-glow-active');
-            setTimeout(() => {
-                searchInput.classList.remove('search-glow-active');
-            }, 800);
-        }
-    });
-
-    // Auto-search functionality (search as you type)
-    searchInput.addEventListener('input', function() {
-        const length = this.value.length;
-
-        // Update UI indicators
-        if (length > 0) {
-            searchCharCounter.textContent = `${length} character${length !== 1 ? 's' : ''}`;
-            searchCharCounter.style.display = 'inline';
-            searchClearBtn.style.display = 'inline-flex';
-            if (kbdHint) kbdHint.style.display = 'none';
-        } else {
-            searchCharCounter.style.display = 'none';
-            searchClearBtn.style.display = 'none';
-            // Only show kbd hint on desktop
-            if (kbdHint && window.innerWidth >= 768) {
-                kbdHint.style.display = 'inline';
-            }
-        }
-
-        // Auto-submit search after typing (debounced)
-        clearTimeout(searchTimeout);
-        if (length >= 3 || length === 0) {
-            searchTimeout = setTimeout(() => {
-                searchForm.submit();
-            }, 500); // 500ms delay after typing stops
-        }
-    });
-
-    // Clear button
-    searchClearBtn.addEventListener('click', function() {
-        searchInput.value = '';
-        searchInput.dispatchEvent(new Event('input'));
-        searchInput.focus();
-    });
-
-    // Hide kbd hints on mobile
-    function updateKbdVisibility() {
-        if (!kbdHint) return;
-        if (window.innerWidth < 768) {
-            kbdHint.style.display = 'none';
-        } else if (searchInput.value.length === 0) {
-            kbdHint.style.display = 'inline';
-        }
-    }
-
-    window.addEventListener('resize', updateKbdVisibility);
-    updateKbdVisibility();
-
-    // Initialize UI state on page load (for pre-filled search values)
-    if (searchInput.value.length > 0) {
-        searchCharCounter.textContent = `${searchInput.value.length} character${searchInput.value.length !== 1 ? 's' : ''}`;
-        searchCharCounter.style.display = 'inline';
-        searchClearBtn.style.display = 'inline-flex';
-        if (kbdHint) kbdHint.style.display = 'none';
-    }
-});
-
 // Activity delete functionality
 function checkAndDeleteActivity(activityId, activityName) {
     fetch(`/check-activity-passports/${activityId}`)

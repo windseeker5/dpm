@@ -2,7 +2,6 @@
 {% block title %}{{ "Edit" if passport else "Create" }} Passport{% endblock %}
 
 {% block content %}
-{% from 'macros/breadcrumb.html' import breadcrumb %}
 {% from 'macros/badge.html' import badge %}
 {% from 'macros/input.html' import text_input %}
 {% from 'macros/textarea.html' import textarea %}
@@ -13,16 +12,11 @@
 {% set back_url = url_for('activity_dashboard', activity_id=selected_activity.id) if selected_activity else url_for('list_passports') %}
 
 <div class="page-wrapper">
-  <div class="page-header d-print-none">
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
-      {{ breadcrumb(items=[
-        {"label": "Dashboard", "url": url_for('dashboard')},
-        {"label": selected_activity.name if selected_activity else "Passports", "url": back_url},
-        {"label": "Update Passport" if passport else "Create Passport", "current": true}
-      ]) }}
-      <div class="row g-2 align-items-center mt-1">
+      <div class="row g-2 align-items-center">
         <div class="col">
-          <h2 class="page-title">{{ "Update Passport" if passport else "Create Passport" }}</h2>
+          <h1 class="page-title">{{ "Update Passport" if passport else "Create Passport" }}</h1>
         </div>
         {% if passport %}
           <div class="col-auto">
@@ -78,7 +72,7 @@
             {% endcall %}
           </div>
 
-          <div class="mb-3">
+          <div id="passport-type-section" class="mb-3{% if not (passport or selected_activity_id) %} d-none{% endif %}">
             {% call select(id="passport_type_select", label="Passport Type", name="passport_type_id", placeholder="-- Select Passport Type --", required=true,
                attrs={"onchange": "updatePassportTypeDetails(this)"}) %}
               {% for passport_type in passport_types %}
@@ -93,6 +87,7 @@
             {% endcall %}
           </div>
 
+          <div id="passport-final-section"{% if not (passport or single_passport_type_id) %} class="d-none"{% endif %}>
           <div class="row">
             <div class="col-12 col-sm-6 mb-3">
               {{ text_input(id="sold_amt", label="Price", name="sold_amt", type="number", placeholder="Price",
@@ -119,6 +114,7 @@
             <div id="notes-collapse" style="display: none; margin-top: 0.5rem;">
               {{ textarea(id="notes", name="notes", value=passport.notes if passport else '', rows=3) }}
             </div>
+          </div>
           </div>
           </div>
         </div>
@@ -261,6 +257,16 @@
     if (price) document.getElementById("sold_amt").value = price;
     if (sessions) document.getElementById("uses_remaining").value = sessions;
 
+    // Progressive disclosure: no activity chosen yet -> nothing downstream shows
+    const passportTypeSection = document.getElementById("passport-type-section");
+    const finalSection = document.getElementById("passport-final-section");
+    if (!select.value) {
+      passportTypeSection.classList.add("d-none");
+      finalSection.classList.add("d-none");
+      return;
+    }
+    passportTypeSection.classList.remove("d-none");
+
     // Filter passport types by activity
     const activityId = select.value;
     const passportTypeSelect = document.getElementById("passport_type_select");
@@ -282,6 +288,7 @@
 
     if (!currentTypeStillVisible) {
       passportTypeSelect.value = ""; // Reset only if current selection is no longer valid
+      finalSection.classList.add("d-none");
 
       // Auto-select if only one passport type available
       let visibleOptions = 0;
@@ -308,6 +315,9 @@
     const sessions = selected.getAttribute("data-sessions");
     if (price) document.getElementById("sold_amt").value = price;
     if (sessions) document.getElementById("uses_remaining").value = sessions;
+
+    const finalSection = document.getElementById("passport-final-section");
+    finalSection.classList.toggle("d-none", !select.value);
   }
 
   // Auto-populate activity details on page load if activity is pre-selected

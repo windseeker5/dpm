@@ -8,7 +8,7 @@
 {% from 'macros/textarea.html' import textarea %}
 {% from 'macros/checkbox.html' import checkbox %}
 {% from 'macros/buttons.html' import button %}
-{% from 'macros/data_table.html' import table_toolbar, table_empty_state %}
+{% from 'macros/data_table.html' import table_toolbar, table_empty_state, preserve_filters %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 {% from 'macros/action_menu.html' import action_menu %}
 
@@ -90,7 +90,7 @@
       <div class="card mp-data-table mt-4">
         <div class="card-header">
           <form method="get" action="{{ url_for('list_products') }}" style="display: contents;">
-            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            {{ preserve_filters(current_filters) }}
             {{ table_toolbar(id="products-toolbar", tabs=tabs, search_value=q, search_placeholder="Search products…") }}
           </form>
         </div>
