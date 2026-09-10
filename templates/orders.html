@@ -2,18 +2,23 @@
 {% block title %}Orders{% endblock %}
 
 {% block content %}
-{% from 'macros/breadcrumb.html' import breadcrumb %}
 {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+{% from 'macros/buttons.html' import button %}
 
 <div class="page-wrapper">
-  <div class="page-header d-print-none">
+  <div class="page-header d-print-none" style="padding-top: 2rem;">
     <div class="dashboard-container">
-      {{ breadcrumb(items=[
-        {"label": "Dashboard", "url": url_for('dashboard')},
-        {"label": "Orders", "current": true}
-      ]) }}
-      <h2 class="page-title mt-1">Orders</h2>
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h1 class="page-title">Orders</h1>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+          <div class="btn-list">
+            {{ button("Manage Products", variant="outline", href=url_for('list_products')) }}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -23,7 +28,7 @@
         <div class="card-header">
           <form method="get" action="{{ url_for('list_orders') }}" style="display: contents;">
             {{ preserve_filters(current_filters) }}
-            {{ table_toolbar(id="orders-toolbar", tabs=tabs, search_value=q, search_placeholder="Search orders…") }}
+            {{ table_toolbar(id="orders-toolbar", tabs=tabs, search_value=q, search_placeholder="Search orders…", total=pagination.total) }}
           </form>
         </div>
 
@@ -56,4 +61,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 {% endblock %}

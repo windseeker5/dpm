@@ -15,7 +15,7 @@
     {% set _ = buttons.append({
       "text": label,
       "href": href,
-      "variant": "secondary" if active == key else "outline",
+      "variant": "outline",
       "attrs": {"aria-current": "page"} if active == key else {}
     }) %}
   {% endfor %}

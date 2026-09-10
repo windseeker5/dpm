@@ -1,0 +1,68 @@
+{% extends "_public_base.html" %}
+{% from 'macros/select.html' import select %}
+{% from 'macros/radio.html' import radio_group %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/badge.html' import badge %}
+
+{% block title %}{{ activity.name }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('shop') }}" class="text-secondary small d-inline-flex align-items-center gap-1 mb-3">
+  <i class="ti ti-arrow-left"></i> Back to shop
+</a>
+
+<div class="card">
+  {% if activity.image_filename %}
+  <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.image_filename) }}"
+       class="card-img-top" style="height: 240px; object-fit: cover;" alt="{{ activity.name }}">
+  {% endif %}
+  <div class="card-body">
+    <h1 class="h3">{{ activity.name }}</h1>
+    {% if activity.description %}<p class="text-secondary">{{ activity.description }}</p>{% endif %}
+  </div>
+</div>
+
+{% if is_sold_out %}
+<div class="card mt-3">
+  <div class="card-body text-center py-5">
+    {{ badge("Sold out", variant="destructive") }}
+    <p class="text-secondary mt-2 mb-0">All spots for {{ activity.name }} have been taken.</p>
+  </div>
+</div>
+{% else %}
+<form method="POST" class="card mt-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-body">
+    <div class="mp-form-content">
+      {% if passport_types|length > 1 %}
+      <div class="mb-3">
+        {{ radio_group(name="passport_type_id", label="Choose a passport type", options=passport_type_options) }}
+      </div>
+      {% elif passport_types|length == 1 %}
+      <input type="hidden" name="passport_type_id" value="{{ passport_types[0].id }}">
+      <div class="mb-3">
+        <div class="fw-bold">{{ passport_types[0].name }}</div>
+        <div class="text-secondary">${{ "%.2f"|format(passport_types[0].price_per_user or 0) }}</div>
+      </div>
+      {% endif %}
+
+      {% if activity.uses_scheduling %}
+      {% set selectable_slots = available_slots | rejectattr('is_full') | list %}
+      <div class="mb-3">
+        {% call select(id="slot_id", label="Session", placeholder="Decide later — I'll pick from my passport") %}
+          {% for slot in selectable_slots %}
+          <option value="{{ slot.id }}">{{ format_slot_label(slot) }} — {{ slot.seats_left }} left</option>
+          {% endfor %}
+        {% endcall %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card-footer">
+    <div class="mp-form-content">
+      {{ button("Add to Cart", type="submit") }}
+    </div>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

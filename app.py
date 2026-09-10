@@ -58,7 +58,7 @@ from models import Activity, User, Signup, Passport, PassportType, AdminActionLo
 from models import SurveyTemplate, Survey, SurveyResponse
 from models import QueryLog
 from models import StripeTransaction
-from models import Product, Order
+from models import Product, Order, CartOrder
 
 
 # ⚙️ Config
@@ -1117,6 +1117,7 @@ def inject_globals_and_csrf():
     # Get payment email (prefer DISPLAY_PAYMENT_EMAIL, fall back to MAIL_USERNAME)
     display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
     payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
+    shop_enabled = get_setting("SHOP_ENABLED", "False") == "True"
 
     from utils import get_placeholder_css, get_placeholder_letter, get_placeholder_color
 
@@ -1143,6 +1144,7 @@ def inject_globals_and_csrf():
         'current_admin': current_admin,  # Add current admin for template personalization
         'subscription': subscription_info,  # Subscription tier info
         'payment_email': payment_email,  # For displaying payment instructions (uses display email if set)
+        'shop_enabled': shop_enabled,  # Hides the Shop sidebar nav item when the public shop is off
         'placeholder_css': get_placeholder_css,
         'placeholder_letter': get_placeholder_letter,
         'placeholder_color': get_placeholder_color,
@@ -3613,10 +3615,78 @@ def signup_thank_you(signup_id):
                           format_slot_label=format_slot_label)
 
 
+SHOP_CART_SESSION_KEY = "shop_cart"
+
+
+def _get_shop_cart():
+    return session.get(SHOP_CART_SESSION_KEY, [])
+
+
+def _save_shop_cart(cart):
+    session[SHOP_CART_SESSION_KEY] = cart
+    session.modified = True
+
+
+def _shop_cart_item_count():
+    return sum(line.get("qty", 1) if line.get("type") == "product" else 1 for line in _get_shop_cart())
+
+
+def _resolve_shop_cart_lines():
+    """Resolve the session cart against the DB for display (shop_cart.html/shop_checkout.html)
+    — fresh prices/availability every time, since a product or activity can change between
+    add-to-cart and checkout. Returns (resolved_lines, total, has_errors). A line whose
+    product/activity disappeared or went inactive since it was added gets an 'error' key
+    instead of being silently dropped, so the cart page can tell the buyer what happened."""
+    from models import ActivitySlot
+
+    cart = _get_shop_cart()
+    resolved = []
+    total = 0.0
+    for idx, line in enumerate(cart):
+        if line.get("type") == "product":
+            product = db.session.get(Product, line.get("product_id"))
+            if not product or not product.active:
+                resolved.append({"index": idx, "type": "product",
+                                  "error": "This product is no longer available."})
+                continue
+            qty = max(1, int(line.get("qty", 1)))
+            amount = round(product.price * qty, 2)
+            total += amount
+            resolved.append({
+                "index": idx, "type": "product", "product": product,
+                "qty": qty, "size": line.get("size"), "amount": amount,
+            })
+        else:
+            activity = db.session.get(Activity, line.get("activity_id"))
+            if not activity or activity.status != "active":
+                resolved.append({"index": idx, "type": "activity",
+                                  "error": "This activity is no longer available."})
+                continue
+            passport_type = (db.session.get(PassportType, line.get("passport_type_id"))
+                              if line.get("passport_type_id") else None)
+            sessions = max(1, int(line.get("sessions", 1)))
+            unit_price = passport_type.price_per_user if passport_type else 0.0
+            amount = round(unit_price * sessions, 2)
+            total += amount
+            slot = None
+            if line.get("slot_id"):
+                slot = ActivitySlot.query.filter_by(
+                    id=line["slot_id"], activity_id=activity.id, status="active"
+                ).first()
+            resolved.append({
+                "index": idx, "type": "activity", "activity": activity,
+                "passport_type": passport_type, "sessions": sessions, "slot": slot,
+                "amount": amount,
+            })
+
+    has_errors = any("error" in r for r in resolved)
+    return resolved, round(total, 2), has_errors
+
+
 @app.route("/shop")
 def shop():
-    """Public shop: selected activities (linked to the existing signup flow) plus simple
-    products. No cart, no inventory — one-item checkout only."""
+    """Public shop: browsable activities (passports) and products. Adding either to the
+    cart lets a buyer check out once for a mix of both — see /shop/cart, /shop/checkout."""
     from utils import get_setting
     if get_setting("SHOP_ENABLED", "False") != "True":
         return render_template("shop_unavailable.html"), 404
@@ -3625,11 +3695,14 @@ def shop():
     activities = Activity.query.filter_by(show_in_shop=True, status="active").order_by(Activity.name).all()
     products = Product.query.filter_by(active=True).order_by(Product.name).all()
 
-    return render_template("shop.html", settings=settings, activities=activities, products=products)
+    return render_template("shop.html", settings=settings, activities=activities, products=products,
+                            cart_count=_shop_cart_item_count())
 
 
 @app.route("/shop/product/<int:product_id>", methods=["GET", "POST"])
 def shop_product(product_id):
+    """Product detail — POST adds it to the cart (no buyer info collected here; that
+    happens once at /shop/checkout)."""
     from utils import get_setting
     if get_setting("SHOP_ENABLED", "False") != "True":
         return render_template("shop_unavailable.html"), 404
@@ -3639,101 +3712,278 @@ def shop_product(product_id):
         return render_template("shop_unavailable.html"), 404
 
     settings = {s.key: s.value for s in Setting.query.all()}
-    stripe_enabled = get_setting("STRIPE_PAYMENTS_ENABLED", "False") == "True"
 
     if request.method == "POST":
-        buyer_name = request.form.get("buyer_name", "").strip()
-        buyer_email = request.form.get("buyer_email", "").strip()
-        buyer_phone = request.form.get("buyer_phone", "").strip()
-        notes = request.form.get("notes", "").strip()
-        size = request.form.get("size", "").strip()
-
+        size = request.form.get("size", "").strip() or None
         try:
             quantity = max(1, int(request.form.get("quantity", 1)))
         except (TypeError, ValueError):
             quantity = 1
+
+        cart = _get_shop_cart()
+        for line in cart:
+            if (line.get("type") == "product" and line.get("product_id") == product.id
+                    and line.get("size") == size):
+                line["qty"] = line.get("qty", 1) + quantity
+                break
+        else:
+            cart.append({"type": "product", "product_id": product.id, "qty": quantity, "size": size})
+        _save_shop_cart(cart)
+
+        flash(f"Added {product.name} to your cart.", "success")
+        return redirect(url_for("shop_cart"))
+
+    return render_template("shop_product.html", product=product, settings=settings,
+                            cart_count=_shop_cart_item_count())
+
+
+@app.route("/shop/activity/<int:activity_id>", methods=["GET", "POST"])
+def shop_activity(activity_id):
+    """Activity-passport detail, reached from the shop (not the direct /signup/<id> link,
+    which stays a standalone one-item flow). POST adds the chosen passport type / session
+    to the cart — capacity and the actual slot hold are only checked at /shop/checkout,
+    same timing as the standalone signup flow (a slot is held at signup-creation, not
+    before), so an abandoned cart never leaves a phantom hold behind."""
+    from utils import get_setting, get_remaining_capacity, get_available_slots
+
+    if get_setting("SHOP_ENABLED", "False") != "True":
+        return render_template("shop_unavailable.html"), 404
+
+    activity = db.session.get(Activity, activity_id)
+    if not activity or activity.status != "active" or not activity.show_in_shop:
+        return render_template("shop_unavailable.html"), 404
+
+    settings = {s.key: s.value for s in Setting.query.all()}
+    passport_types = PassportType.query.filter_by(activity_id=activity.id, status='active').all()
+    remaining_capacity = get_remaining_capacity(activity.id)
+    is_sold_out = remaining_capacity is not None and remaining_capacity <= 0
+
+    available_slots = []
+    if activity.uses_scheduling:
+        available_slots = get_available_slots(activity.id)
+
+    if request.method == "POST":
+        passport_type_id = request.form.get("passport_type_id") or None
+        slot_id = request.form.get("slot_id") or None
+
+        cart = _get_shop_cart()
+        cart.append({
+            "type": "activity",
+            "activity_id": activity.id,
+            "passport_type_id": int(passport_type_id) if passport_type_id else None,
+            "sessions": 1,
+            "slot_id": int(slot_id) if slot_id else None,
+        })
+        _save_shop_cart(cart)
+
+        flash(f"Added {activity.name} to your cart.", "success")
+        return redirect(url_for("shop_cart"))
+
+    passport_type_options = [
+        {"value": str(pt.id), "label": f"{pt.name} — ${pt.price_per_user or 0:.2f}",
+         "description": f"{pt.sessions_included} session(s) included" if pt.sessions_included else None}
+        for pt in passport_types
+    ]
+
+    return render_template("shop_activity.html", activity=activity, settings=settings,
+                            passport_types=passport_types, passport_type_options=passport_type_options,
+                            remaining_capacity=remaining_capacity,
+                            is_sold_out=is_sold_out, available_slots=available_slots,
+                            format_slot_label=format_slot_label, cart_count=_shop_cart_item_count())
+
+
+@app.route("/shop/cart")
+def shop_cart():
+    from utils import get_setting
+    if get_setting("SHOP_ENABLED", "False") != "True":
+        return render_template("shop_unavailable.html"), 404
+
+    settings = {s.key: s.value for s in Setting.query.all()}
+    lines, total, has_errors = _resolve_shop_cart_lines()
+    return render_template("shop_cart.html", lines=lines, total=total, has_errors=has_errors,
+                            settings=settings, cart_count=_shop_cart_item_count(),
+                            format_slot_label=format_slot_label)
+
+
+@app.route("/shop/cart/remove", methods=["POST"])
+def shop_cart_remove():
+    try:
+        idx = int(request.form.get("index", -1))
+    except (TypeError, ValueError):
+        idx = -1
+    cart = _get_shop_cart()
+    if 0 <= idx < len(cart):
+        cart.pop(idx)
+        _save_shop_cart(cart)
+    return redirect(url_for("shop_cart"))
+
+
+@app.route("/shop/cart/update", methods=["POST"])
+def shop_cart_update():
+    try:
+        idx = int(request.form.get("index", -1))
+        qty = max(1, int(request.form.get("qty", 1)))
+    except (TypeError, ValueError):
+        return redirect(url_for("shop_cart"))
+    cart = _get_shop_cart()
+    if 0 <= idx < len(cart) and cart[idx].get("type") == "product":
+        cart[idx]["qty"] = qty
+        _save_shop_cart(cart)
+    return redirect(url_for("shop_cart"))
+
+
+@app.route("/shop/checkout", methods=["GET", "POST"])
+def shop_checkout():
+    """One buyer-info form + one payment method for every line in the cart. Creates one
+    CartOrder plus one Order/Signup row per line (via utils.create_order_line_for_cart() /
+    create_signup_line_for_cart()) in a single transaction — any line failing (sold out,
+    slot just filled, product removed) rolls back the whole checkout rather than committing
+    a partial cart, so the cart's total stays trustworthy for the Interac amount-match."""
+    from utils import (get_setting, create_order_line_for_cart, create_signup_line_for_cart,
+                        notify_cart_order_event)
+
+    if get_setting("SHOP_ENABLED", "False") != "True":
+        return render_template("shop_unavailable.html"), 404
+
+    lines, total, has_errors = _resolve_shop_cart_lines()
+    if not lines:
+        flash("Your cart is empty.", "error")
+        return redirect(url_for("shop"))
+
+    settings = {s.key: s.value for s in Setting.query.all()}
+    stripe_enabled = get_setting("STRIPE_PAYMENTS_ENABLED", "False") == "True"
+
+    if request.method == "POST":
+        if has_errors:
+            flash("Some items in your cart are no longer available. Please remove them before checking out.", "error")
+            return redirect(url_for("shop_cart"))
+
+        buyer_name = request.form.get("buyer_name", "").strip()
+        buyer_email = request.form.get("buyer_email", "").strip()
+        buyer_phone = request.form.get("buyer_phone", "").strip()
+        notes = request.form.get("notes", "").strip()
 
         payment_method = request.form.get("payment_method", "interac")
         if payment_method not in ("interac", "stripe") or (payment_method == "stripe" and not stripe_enabled):
             payment_method = "interac"
 
         if not buyer_name or not buyer_email:
-            flash("Le nom et le courriel sont requis.", "error")
-            return redirect(url_for("shop_product", product_id=product.id))
+            flash("Name and email are required.", "error")
+            return redirect(url_for("shop_checkout"))
 
-        amount = round(product.price * quantity, 2)
-
-        order = Order(
-            product_id=product.id,
-            product_name=product.name,
-            unit_price=product.price,
-            quantity=quantity,
-            amount=amount,
-            size=size or None,
-            buyer_name=buyer_name,
-            buyer_email=buyer_email,
-            buyer_phone=buyer_phone or None,
-            notes=notes or None,
-            payment_method=payment_method,
-            status="awaiting_payment",
+        cart_order = CartOrder(
+            buyer_name=buyer_name, buyer_email=buyer_email, buyer_phone=buyer_phone or None,
+            payment_method=payment_method, status="awaiting_payment",
         )
-        db.session.add(order)
+        db.session.add(cart_order)
         db.session.flush()
-        order.order_code = f"MP-ORD-{order.id:07d}"
+        cart_order.cart_code = f"MP-CART-{cart_order.id:07d}"
+
+        running_total = 0.0
+        checkout_error = None
+
+        for line in _get_shop_cart():
+            if line.get("type") == "product":
+                product = db.session.get(Product, line.get("product_id"))
+                order, err = create_order_line_for_cart(cart_order, product, line.get("qty", 1),
+                                                          size=line.get("size"), notes=notes)
+                if err:
+                    checkout_error = err
+                    break
+                running_total += order.amount
+            else:
+                activity = db.session.get(Activity, line.get("activity_id"))
+                signup_record, err = create_signup_line_for_cart(
+                    cart_order, activity, passport_type_id=line.get("passport_type_id"),
+                    requested_sessions=line.get("sessions", 1), slot_id=line.get("slot_id"), notes=notes,
+                )
+                if err:
+                    checkout_error = err
+                    break
+                running_total += signup_record.requested_amount or 0.0
+
+        if checkout_error:
+            db.session.rollback()
+            flash(checkout_error, "error")
+            return redirect(url_for("shop_cart"))
+
+        cart_order.total_amount = round(running_total, 2)
         db.session.commit()
 
         if payment_method == "stripe":
             try:
                 stripe_secret_key = get_setting('STRIPE_PAYMENTS_SECRET_KEY', '')
                 if not stripe_secret_key:
-                    flash("Le paiement par carte n'est pas configuré. Veuillez utiliser Interac.", "error")
-                    return redirect(url_for("shop_product", product_id=product.id))
+                    flash("Credit card payments are not configured. Please use Interac.", "error")
+                    return redirect(url_for("shop_checkout"))
+
+                stripe_line_items = []
+                for order in cart_order.orders:
+                    stripe_line_items.append({
+                        'price_data': {
+                            'currency': 'cad',
+                            'product_data': {'name': f"{order.product_name} x{order.quantity}"},
+                            'unit_amount': int(round(order.amount * 100)),
+                        },
+                        'quantity': 1,
+                    })
+                for signup_record in cart_order.signups:
+                    activity_name = signup_record.activity.name if signup_record.activity else "Activity Passport"
+                    stripe_line_items.append({
+                        'price_data': {
+                            'currency': 'cad',
+                            'product_data': {'name': activity_name},
+                            'unit_amount': int(round((signup_record.requested_amount or 0) * 100)),
+                        },
+                        'quantity': 1,
+                    })
 
                 checkout_session = stripe.checkout.Session.create(
                     payment_method_types=['card'],
-                    line_items=[{
-                        'price_data': {
-                            'currency': 'cad',
-                            'product_data': {'name': f"{product.name} x{quantity}"},
-                            'unit_amount': int(round(amount * 100)),
-                        },
-                        'quantity': 1,
-                    }],
+                    line_items=stripe_line_items,
                     mode='payment',
-                    success_url=url_for('shop_order_thank_you', order_id=order.id, _external=True),
-                    cancel_url=url_for('shop_product', product_id=product.id, _external=True),
-                    metadata={'order_id': str(order.id)},
+                    success_url=url_for('shop_order_thank_you', cart_code=cart_order.cart_code, _external=True),
+                    cancel_url=url_for('shop_checkout', _external=True),
+                    metadata={'cart_order_id': str(cart_order.id)},
                     customer_email=buyer_email,
                     api_key=stripe_secret_key,
                 )
-                order.stripe_checkout_session_id = checkout_session.id
+                cart_order.stripe_checkout_session_id = checkout_session.id
                 db.session.commit()
+                _save_shop_cart([])
                 return redirect(checkout_session.url, code=303)
             except Exception as e:
-                print(f"[Shop Stripe Checkout] Error creating session: {e}")
-                flash("Erreur lors de la création du paiement. Veuillez réessayer ou utiliser Interac.", "error")
-                return redirect(url_for("shop_product", product_id=product.id))
+                print(f"[Shop Cart Stripe Checkout] Error creating session: {e}")
+                flash("Error creating payment session. Please try again or use Interac.", "error")
+                return redirect(url_for("shop_checkout"))
         else:
-            from utils import notify_order_event
             try:
-                notify_order_event(app, order=order, event_type="order_placed")
+                notify_cart_order_event(app, cart_order=cart_order, event_type="cart_placed")
             except Exception as e:
-                print(f"[Shop] order_placed email failed: {e}")
+                print(f"[Shop Cart] cart_placed email failed: {e}")
 
-            return redirect(url_for("shop_order_thank_you", order_id=order.id))
+            _save_shop_cart([])
+            return redirect(url_for("shop_order_thank_you", cart_code=cart_order.cart_code))
 
-    return render_template("shop_product.html", product=product, settings=settings, stripe_enabled=stripe_enabled)
+    return render_template("shop_checkout.html", lines=lines, total=total, settings=settings,
+                            stripe_enabled=stripe_enabled, cart_count=_shop_cart_item_count())
 
 
-@app.route("/shop/order/thank-you/<int:order_id>")
-def shop_order_thank_you(order_id):
-    order = db.session.get(Order, order_id)
-    if not order:
+@app.route("/shop/order/thank-you/<cart_code>")
+def shop_order_thank_you(cart_code):
+    from utils import get_setting
+
+    cart_order = CartOrder.query.filter_by(cart_code=cart_code).first()
+    if not cart_order:
         flash("Order not found.", "error")
         return redirect(url_for("shop"))
 
     settings = {s.key: s.value for s in Setting.query.all()}
-    return render_template("shop_order_confirmation.html", order=order, settings=settings)
+    display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+    payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
+
+    return render_template("shop_order_confirmation.html", cart_order=cart_order, settings=settings,
+                            payment_email=payment_email)
 
 
 ORDER_STATUS_LABELS = {
@@ -3743,6 +3993,10 @@ ORDER_STATUS_LABELS = {
 ORDER_STATUS_COLORS = {
     "awaiting_payment": "yellow", "paid": "green", "ready": "azure",
     "picked_up": "secondary", "cancelled": "red",
+}
+ORDER_STATUS_ICONS = {
+    "awaiting_payment": "ti-clock", "paid": "ti-currency-dollar", "ready": "ti-package",
+    "picked_up": "ti-truck-delivery", "cancelled": "ti-x",
 }
 
 
@@ -3759,12 +4013,20 @@ def list_orders():
     page = request.args.get("page", 1, type=int)
     per_page = 10
 
+    show_all_param = request.args.get("show_all", "").lower()
+    show_all = show_all_param == "true"
+    # Default to the actionable "Awaiting Payment" tab, not "All" — unless All was
+    # explicitly requested or another status was explicitly picked.
+    if not status_filter and not show_all:
+        status_filter = "awaiting_payment"
+
     query = Order.query
     if q:
-        query = query.filter(db.or_(
+        query = query.outerjoin(CartOrder, Order.cart_order_id == CartOrder.id).filter(db.or_(
             Order.buyer_name.ilike(f"%{q}%"),
             Order.buyer_email.ilike(f"%{q}%"),
             Order.order_code.ilike(f"%{q}%"),
+            CartOrder.cart_code.ilike(f"%{q}%"),
         ))
     if status_filter:
         query = query.filter_by(status=status_filter)
@@ -3786,14 +4048,19 @@ def list_orders():
         current_filters["q"] = q
     if status_filter:
         current_filters["status"] = status_filter
+    if show_all:
+        current_filters["show_all"] = "true"
 
-    tabs = [{"label": "All", "url": tab_url("list_orders", current_filters, status=None),
-             "count": counts["all"], "active": status_filter == ""}]
-    for key, label in ORDER_STATUS_LABELS.items():
-        tabs.append({
-            "label": label, "url": tab_url("list_orders", current_filters, status=key),
-            "count": counts[key], "active": status_filter == key,
-        })
+    # Only the two statuses an admin actually acts on day-to-day get a tab, plus All —
+    # Paid/Picked Up/Cancelled are still filterable via ?status=, just not tabbed here.
+    tabs = [
+        {"label": "Awaiting Payment", "url": tab_url("list_orders", current_filters, status="awaiting_payment", show_all=None),
+         "count": counts["awaiting_payment"], "active": status_filter == "awaiting_payment" and not show_all},
+        {"label": "Ready", "url": tab_url("list_orders", current_filters, status="ready", show_all=None),
+         "count": counts["ready"], "active": status_filter == "ready" and not show_all, "hide_on_mobile": True},
+        {"label": "All", "url": tab_url("list_orders", current_filters, status=None, show_all="true"),
+         "count": counts["all"], "active": show_all},
+    ]
 
     csrf_value = generate_csrf()
     rows = []
@@ -3804,9 +4071,12 @@ def list_orders():
 
         other_statuses = [s for s in ORDER_STATUS_LABELS if s != order.status]
         actions = [
-            {"label": f"Mark as {ORDER_STATUS_LABELS[s]}", "attrs": {
+            {"label": f"Mark as {ORDER_STATUS_LABELS[s]}",
+             "icon": f'<i class="ti {ORDER_STATUS_ICONS[s]}"></i>',
+             "attrs": {
                 "onclick": (f"document.getElementById('order-status-input-{order.id}').value='{s}';"
-                            f"document.getElementById('order-status-form-{order.id}').submit();")
+                            f"document.getElementById('order-status-form-{order.id}').submit();"),
+                **({"data-variant": "destructive"} if s == "cancelled" else {}),
             }} for s in other_statuses
         ]
 
@@ -3820,6 +4090,13 @@ def list_orders():
             f'</form>'
         )
 
+        order_cell = f'<div class="fw-bold">{escape(order.order_code or ("#" + str(order.id)))}</div>'
+        if order.cart_order_id:
+            cart = db.session.get(CartOrder, order.cart_order_id)
+            if cart:
+                order_cell += (f'<div class="text-muted small">Part of cart '
+                               f'<a href="{url_for("list_orders", q=cart.cart_code)}">{escape(cart.cart_code or ("#" + str(cart.id)))}</a></div>')
+
         rows.append({
             "id": order.id,
             "avatar_name": order.buyer_name,
@@ -3827,7 +4104,7 @@ def list_orders():
             "secondary": order.buyer_email,
             "mobile_secondary": item_label,
             "cells": [
-                f'<div class="fw-bold">{escape(order.order_code or ("#" + str(order.id)))}</div>',
+                order_cell,
                 escape(item_label),
                 f'${order.amount:.2f}',
                 escape(order.payment_method),
@@ -3839,7 +4116,7 @@ def list_orders():
             "mobile_badges": [
                 {"text": label, "variant": color},
                 {"text": f"${order.amount:.2f}", "variant": "secondary"},
-            ],
+            ] + ([{"text": f"Cart {cart.cart_code}", "variant": "azure"}] if order.cart_order_id and cart else []),
             "actions": actions,
         })
 
@@ -3904,6 +4181,103 @@ def stripe_webhook():
         session_data = event['data']['object']
         order_id = session_data.get('metadata', {}).get('order_id')
         signup_id = session_data.get('metadata', {}).get('signup_id')
+        cart_order_id = session_data.get('metadata', {}).get('cart_order_id')
+
+        if cart_order_id:
+            try:
+                cart_order_id_int = int(cart_order_id)
+            except (ValueError, TypeError):
+                print(f"[Stripe Webhook] Invalid cart_order_id format: {cart_order_id}")
+                return jsonify({"status": "ignored"}), 200
+
+            cart_order = db.session.get(CartOrder, cart_order_id_int)
+            if not cart_order:
+                print(f"[Stripe Webhook] CartOrder {cart_order_id} not found")
+                return jsonify({"status": "ignored"}), 200
+
+            if cart_order.status == "paid":
+                print(f"[Stripe Webhook] CartOrder {cart_order_id} already paid, skipping")
+                return jsonify({"status": "already_processed"}), 200
+
+            cart_order.status = "paid"
+            cart_order.paid_at = datetime.now(timezone.utc)
+
+            for order in cart_order.orders:
+                order.status = "paid"
+                order.paid_at = cart_order.paid_at
+
+            created_passports = []
+            for signup_record in cart_order.signups:
+                if signup_record.paid:
+                    continue
+                passport = auto_create_passport_from_signup(signup_record, marked_paid_by="stripe-checkout")
+                if passport:
+                    created_passports.append((signup_record, passport))
+                    try:
+                        from utils import notify_pass_event
+                        notify_pass_event(app, event_type='payment_received', pass_data=passport,
+                                          activity=signup_record.activity)
+                    except Exception as e:
+                        print(f"[Stripe Webhook] Passport email failed for signup {signup_record.id}: {e}")
+
+            db.session.add(AdminActionLog(
+                admin_email="stripe-bot@system",
+                action=(f"Stripe Payment Received: ${cart_order.total_amount:.2f} from "
+                        f"{cart_order.buyer_name} for Cart {cart_order.cart_code}")
+            ))
+            db.session.commit()
+
+            # Clearing-account bookkeeping (Income + StripeTransaction), one row per
+            # signup line for accurate per-activity revenue. A single Stripe Checkout
+            # Session produces exactly ONE charge for the whole cart total, so the real
+            # processing fee is only known once, in total — it is booked entirely against
+            # the FIRST signup line's row (fee=0 / net=gross on every other line) rather
+            # than split, to avoid double-counting it across lines when the payout webhook
+            # reconciles by charge_id. Each activity's gross revenue is still correct;
+            # only which activity absorbs the processing-fee expense is a simplification.
+            if created_passports:
+                for i, (signup_record, passport) in enumerate(created_passports):
+                    gross = signup_record.requested_amount or 0.0
+                    fee = round((gross * 0.029) + 0.30, 2) if i == 0 else 0.0
+
+                    income = Income(
+                        activity_id    = signup_record.activity_id,
+                        amount         = gross,
+                        category       = "Passport Sales",
+                        date           = datetime.now(timezone.utc),
+                        payment_status = "pending",
+                        payment_method = "credit_card",
+                        note           = f"Stripe Checkout - Cart {cart_order.cart_code} (Session: {session_data.get('id')})",
+                        created_by     = "stripe-webhook",
+                    )
+                    db.session.add(income)
+                    db.session.flush()
+
+                    stripe_tx = StripeTransaction(
+                        # Suffixed to stay unique per line — one Checkout Session can now
+                        # cover multiple signups, but session_id is a unique column.
+                        session_id   = f"{session_data.get('id')}:{signup_record.id}",
+                        charge_id    = session_data.get("payment_intent"),
+                        gross_amount = gross,
+                        stripe_fee   = fee,
+                        net_amount   = round(gross - fee, 2),
+                        charge_date  = datetime.now(timezone.utc),
+                        status       = "pending",
+                        signup_id    = signup_record.id,
+                        passport_id  = passport.id,
+                        income_id    = income.id,
+                    )
+                    db.session.add(stripe_tx)
+                db.session.commit()
+
+            try:
+                from utils import notify_cart_order_event
+                notify_cart_order_event(app, cart_order=cart_order, event_type="cart_paid")
+            except Exception as e:
+                print(f"[Stripe Webhook] Cart confirmation email failed: {e}")
+
+            print(f"[Stripe Webhook] Cart {cart_order.cart_code} marked paid")
+            return jsonify({"status": "ok"}), 200
 
         if order_id:
             try:
@@ -4030,48 +4404,59 @@ def stripe_webhook():
                 continue
             charge_id = bt.source
 
-            stripe_tx = StripeTransaction.query.filter_by(charge_id=charge_id).first()
-            if not stripe_tx:
-                continue
-            if stripe_tx.status == "paid_out":
+            # A cart checkout can produce several StripeTransaction rows for one Stripe
+            # charge (one per activity-passport line, all sharing the same payment_intent).
+            # Order by id so which row is "first" is stable and matches how the webhook
+            # allocated the fee when the rows were created.
+            stripe_txs = [tx for tx in StripeTransaction.query.filter_by(charge_id=charge_id)
+                          .order_by(StripeTransaction.id).all() if tx.status != "paid_out"]
+            if not stripe_txs:
                 continue
 
             actual_fee = round(abs(bt.fee) / 100.0, 2)
-            net        = round(bt.net / 100.0, 2)
 
-            stripe_tx.payout_id   = payout_id
-            stripe_tx.payout_date = payout_date
-            stripe_tx.stripe_fee  = actual_fee
-            stripe_tx.net_amount  = net
-            stripe_tx.status      = "paid_out"
+            for i, stripe_tx in enumerate(stripe_txs):
+                # The whole charge's real fee is booked entirely on the first row so it's
+                # never double-counted across a cart's lines — every other row's net is
+                # simply its own gross. Sum of every row's net_amount below still equals
+                # the charge's true total net (bt.net / 100).
+                row_fee = actual_fee if i == 0 else 0.0
+                row_net = round(stripe_tx.gross_amount - row_fee, 2)
 
-            # Promote Income from pending → received
-            if stripe_tx.income_id:
-                income_rec = db.session.get(Income, stripe_tx.income_id)
-                if income_rec:
-                    income_rec.payment_status = "received"
-                    income_rec.payment_date   = payout_date
+                stripe_tx.payout_id   = payout_id
+                stripe_tx.payout_date = payout_date
+                stripe_tx.stripe_fee  = row_fee
+                stripe_tx.net_amount  = row_net
+                stripe_tx.status      = "paid_out"
 
-            # Record processing fee as Expense
-            activity_id = stripe_tx.signup.activity_id if stripe_tx.signup else None
-            expense = Expense(
-                activity_id          = activity_id,
-                amount               = actual_fee,
-                category             = "Payment Processing Fees",
-                date                 = payout_date,
-                payment_status       = "paid",
-                payment_date         = payout_date,
-                payment_method       = "stripe",
-                description          = f"Stripe fee for charge {charge_id} / payout {payout_id}",
-                created_by           = "stripe-webhook",
-                stripe_transaction_id = stripe_tx.id,
-            )
-            db.session.add(expense)
+                # Promote Income from pending → received
+                if stripe_tx.income_id:
+                    income_rec = db.session.get(Income, stripe_tx.income_id)
+                    if income_rec:
+                        income_rec.payment_status = "received"
+                        income_rec.payment_date   = payout_date
 
-            db.session.add(AdminActionLog(
-                admin_email="stripe-bot@system",
-                action=f"Stripe Payout Received: ${net:.2f} deposited to bank (gross: ${stripe_tx.gross_amount:.2f}, Stripe fee: ${actual_fee:.2f})"
-            ))
+                # Record processing fee as Expense (only the row actually carrying it)
+                if row_fee:
+                    activity_id = stripe_tx.signup.activity_id if stripe_tx.signup else None
+                    expense = Expense(
+                        activity_id          = activity_id,
+                        amount               = row_fee,
+                        category             = "Payment Processing Fees",
+                        date                 = payout_date,
+                        payment_status       = "paid",
+                        payment_date         = payout_date,
+                        payment_method       = "stripe",
+                        description          = f"Stripe fee for charge {charge_id} / payout {payout_id}",
+                        created_by           = "stripe-webhook",
+                        stripe_transaction_id = stripe_tx.id,
+                    )
+                    db.session.add(expense)
+
+                db.session.add(AdminActionLog(
+                    admin_email="stripe-bot@system",
+                    action=f"Stripe Payout Received: ${row_net:.2f} deposited to bank (gross: ${stripe_tx.gross_amount:.2f}, Stripe fee: ${row_fee:.2f})"
+                ))
 
         db.session.commit()
         print(f"[Stripe Webhook] Payout {payout_id} reconciled")
@@ -5807,12 +6192,15 @@ def setup():
         type_cell = '<span class="mp-badge" data-variant="outline">Admin</span>'
         if is_self:
             type_cell += ' <span class="mp-badge" data-variant="secondary">You</span>'
-        actions = [{"label": "Edit", "url": f"#user-edit-modal-{a.id}", "attrs": {"data-bs-toggle": "modal"}}]
+        actions = [{"label": "Edit", "icon": '<i class="ti ti-pencil"></i>',
+                    "url": f"#user-edit-modal-{a.id}", "attrs": {"data-bs-toggle": "modal"}}]
         if not is_self:
             actions += [
-                {"label": "Reset Password", "url": f"#reset-password-modal-{a.id}", "attrs": {"data-bs-toggle": "modal"}},
+                {"label": "Reset Password", "icon": '<i class="ti ti-key"></i>',
+                 "url": f"#reset-password-modal-{a.id}", "attrs": {"data-bs-toggle": "modal"}},
                 {"type": "separator"},
-                {"label": "Remove User", "url": f"#delete-admin-modal-{a.id}", "attrs": {"data-bs-toggle": "modal", "data-variant": "destructive"}},
+                {"label": "Remove User", "icon": '<i class="ti ti-trash"></i>',
+                 "url": f"#delete-admin-modal-{a.id}", "attrs": {"data-bs-toggle": "modal", "data-variant": "destructive"}},
             ]
         admin_rows.append({
             "id": a.id,
@@ -7858,6 +8246,13 @@ def list_products(product_id=None):
     page = request.args.get("page", 1, type=int)
     per_page = 10
 
+    show_all_param = request.args.get("show_all", "").lower()
+    show_all = show_all_param == "true"
+    # Default to the "Visible" tab, not "All" — unless All was explicitly requested or
+    # another status was explicitly picked.
+    if not status_filter and not show_all:
+        status_filter = "visible"
+
     query = Product.query
     if q:
         query = query.filter(Product.name.ilike(f"%{q}%"))
@@ -7880,17 +8275,46 @@ def list_products(product_id=None):
         current_filters["q"] = q
     if status_filter:
         current_filters["status"] = status_filter
+    if show_all:
+        current_filters["show_all"] = "true"
 
     tabs = [
-        {"label": "All", "url": tab_url("list_products", current_filters, status=None),
-         "count": counts["all"], "active": status_filter == ""},
-        {"label": "Visible", "url": tab_url("list_products", current_filters, status="visible"),
-         "count": counts["visible"], "active": status_filter == "visible"},
-        {"label": "Hidden", "url": tab_url("list_products", current_filters, status="hidden"),
-         "count": counts["hidden"], "active": status_filter == "hidden"},
+        {"label": "Visible", "url": tab_url("list_products", current_filters, status="visible", show_all=None),
+         "count": counts["visible"], "active": status_filter == "visible" and not show_all},
+        {"label": "Hidden", "url": tab_url("list_products", current_filters, status="hidden", show_all=None),
+         "count": counts["hidden"], "active": status_filter == "hidden" and not show_all, "hide_on_mobile": True},
+        {"label": "All", "url": tab_url("list_products", current_filters, status=None, show_all="true"),
+         "count": counts["all"], "active": show_all},
     ]
 
-    return render_template("products.html", product=product, products=products, tabs=tabs,
+    from markupsafe import escape
+    rows = []
+    for p in products:
+        photo_url = (url_for('static', filename='uploads/product_images/' + p.photo_filename)
+                     if p.photo_filename else None)
+        rows.append({
+            "id": p.id,
+            "avatar_name": p.name,
+            "avatar_url": photo_url,
+            "primary": p.name,
+            "secondary": f"${p.price:.2f}" + (f" · {p.size_label}" if p.size_label else ""),
+            "cells": [
+                f'${p.price:.2f}',
+                escape(p.size_label) if p.size_label else "-",
+                f'<span class="badge bg-{"green" if p.active else "secondary"}-lt">{"Visible" if p.active else "Hidden"}</span>',
+            ],
+            "mobile_badges": [
+                {"text": "Visible" if p.active else "Hidden", "variant": "green" if p.active else "secondary"},
+            ],
+            "actions": [
+                {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>', "url": url_for('list_products', product_id=p.id)},
+                {"type": "separator"},
+                {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive",
+                    "onclick": f"if(confirm('Delete this product?')) document.getElementById('delete-product-form-{p.id}').submit();"}},
+            ],
+        })
+
+    return render_template("products.html", product=product, products=products, rows=rows, tabs=tabs,
                             q=q, status_filter=status_filter, pagination=pagination,
                             current_filters=current_filters)
 

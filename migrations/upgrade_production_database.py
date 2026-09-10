@@ -3772,6 +3772,56 @@ def task52_add_ebank_payment_matched_order(cursor):
     return True
 
 
+def task53_add_cart_order_table(cursor):
+    """Add cart_order table (the parent record for a multi-item shop checkout — one buyer,
+    one payment, one or more Order/Signup line items) and link shop_order/signup/ebank_payment
+    to it. Matches Alembic revision 206e67970b9a."""
+    log("🛒", "TASK 53: Adding cart_order table for multi-item shop checkout", Colors.BLUE)
+
+    if not check_table_exists(cursor, 'cart_order'):
+        cursor.execute("""
+            CREATE TABLE cart_order (
+                id INTEGER NOT NULL PRIMARY KEY,
+                cart_code VARCHAR(20) UNIQUE,
+                buyer_name VARCHAR(150) NOT NULL,
+                buyer_email VARCHAR(150),
+                buyer_phone VARCHAR(20),
+                payment_method VARCHAR(20) DEFAULT 'interac',
+                stripe_checkout_session_id VARCHAR(255),
+                total_amount FLOAT NOT NULL DEFAULT 0.0,
+                status VARCHAR(20) DEFAULT 'awaiting_payment',
+                created_dt DATETIME,
+                paid_at DATETIME
+            )
+        """)
+        cursor.execute("CREATE INDEX ix_cart_order_status ON cart_order (status)")
+        log("✅", "  Created cart_order table", Colors.GREEN)
+    else:
+        log("⏭️ ", "  cart_order table already exists", Colors.YELLOW)
+
+    if check_table_exists(cursor, 'shop_order') and not check_column_exists(cursor, 'shop_order', 'cart_order_id'):
+        cursor.execute("ALTER TABLE shop_order ADD COLUMN cart_order_id INTEGER REFERENCES cart_order (id)")
+        cursor.execute("CREATE INDEX ix_shop_order_cart_order_id ON shop_order (cart_order_id)")
+        log("✅", "  Added column 'cart_order_id' to shop_order", Colors.GREEN)
+    else:
+        log("⏭️ ", "  shop_order.cart_order_id already exists (or table missing)", Colors.YELLOW)
+
+    if check_table_exists(cursor, 'signup') and not check_column_exists(cursor, 'signup', 'cart_order_id'):
+        cursor.execute("ALTER TABLE signup ADD COLUMN cart_order_id INTEGER REFERENCES cart_order (id)")
+        cursor.execute("CREATE INDEX ix_signup_cart_order_id ON signup (cart_order_id)")
+        log("✅", "  Added column 'cart_order_id' to signup", Colors.GREEN)
+    else:
+        log("⏭️ ", "  signup.cart_order_id already exists (or table missing)", Colors.YELLOW)
+
+    if check_table_exists(cursor, 'ebank_payment') and not check_column_exists(cursor, 'ebank_payment', 'matched_cart_order_id'):
+        cursor.execute("ALTER TABLE ebank_payment ADD COLUMN matched_cart_order_id INTEGER REFERENCES cart_order (id)")
+        log("✅", "  Added column 'matched_cart_order_id' to ebank_payment", Colors.GREEN)
+    else:
+        log("⏭️ ", "  ebank_payment.matched_cart_order_id already exists (or table missing)", Colors.YELLOW)
+
+    return True
+
+
 # ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
@@ -3844,6 +3894,7 @@ def main():
         ("Shop: Product Table", task50_add_product_table),
         ("Shop: Order Table", task51_add_order_table),
         ("Shop: Ebank Payment Order Matching", task52_add_ebank_payment_matched_order),
+        ("Shop: Cart Order Table", task53_add_cart_order_table),
     ]
 
     completed = 0

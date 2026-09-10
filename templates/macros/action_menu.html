@@ -8,11 +8,19 @@
   Usage:
     {% from 'macros/action_menu.html' import action_menu %}
     {{ action_menu(id="row-actions-" ~ row.id, items=[
-      {"label": "View", "url": url_for('detail_x', item_id=row.id)},
-      {"label": "Edit", "url": url_for('edit_x', item_id=row.id)},
+      {"label": "View", "icon": '<i class="ti ti-eye"></i>', "url": url_for('detail_x', item_id=row.id)},
+      {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>', "url": url_for('edit_x', item_id=row.id)},
       {"type": "separator"},
-      {"label": "Delete", "attrs": {"data-variant": "destructive", "onclick": "..."}}
+      {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive", "onclick": "..."}}
     ]) }}
+
+  RULE — every item needs an icon, no exceptions: set "icon" to pre-rendered safe
+  HTML (e.g. '<i class="ti ti-pencil"></i>') on every single item, including plain
+  View/Edit ones — never a bare label. Pick one that actually matches the verb
+  (ti-pencil/Edit, ti-eye/View, ti-trash/Delete, ti-currency-dollar/a payment action,
+  etc.), not the same icon reused everywhere. A destructive item (Delete, Remove,
+  Cancel-permanently) additionally always gets "attrs": {"data-variant": "destructive"}
+  to render red. See /style-guide's Action Menu section for the full writeup.
 
   Parameters:
     - id: unique id (required whenever more than one menu is on a page, e.g. one per table row)

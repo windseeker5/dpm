@@ -31,7 +31,7 @@
         <div class="card-header">
           <form method="get" action="{{ url_for('list_survey_templates') }}" style="display: contents;">
             {{ preserve_filters(current_filters) }}
-            {{ table_toolbar(id="survey-templates-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search templates…") }}
+            {{ table_toolbar(id="survey-templates-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search templates…", total=rows|length) }}
           </form>
         </div>
 
@@ -104,6 +104,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>
 function confirmDelete(templateId, templateName) {
   document.getElementById('deleteTemplateName').textContent = templateName;

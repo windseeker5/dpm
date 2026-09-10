@@ -25,7 +25,7 @@
         <div class="card-header">
           <form method="get" action="{{ url_for('payment_bot_matches') }}" style="display: contents;">
             {{ preserve_filters(current_filters) }}
-            {{ table_toolbar(id="payments-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search payments…") }}
+            {{ table_toolbar(id="payments-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search payments…", total=pagination.total) }}
           </form>
         </div>
 

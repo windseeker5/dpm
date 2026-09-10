@@ -34,7 +34,7 @@
         <div class="card-header">
           <form method="get" action="{{ url_for('list_surveys') }}" style="display: contents;">
             {{ preserve_filters(current_filters) }}
-            {{ table_toolbar(id="surveys-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search surveys…") }}
+            {{ table_toolbar(id="surveys-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search surveys…", total=pagination.total) }}
           </form>
         </div>
 

@@ -835,6 +835,16 @@
   flex: 0 0 auto;
 }
 
+/* Every segment uses the "outline" variant (see settings_nav.html) so the border
+   Button Group draws around the whole fused group stays one continuous gray line —
+   mixing in a borderless variant for the active tab broke that. The current section
+   is marked by permanently applying outline's own :hover fill instead, so it reads
+   as selected without ever dropping the shared border. */
+.mp-settings-nav .mp-button-group .mp-btn[aria-current="page"] {
+  background: var(--mp-muted);
+  color: var(--mp-foreground);
+}
+
 .mp-settings-tabs {
   display: flex;
   align-items: end;
@@ -1253,6 +1263,17 @@
   transform: translateY(-50%);
   display: flex;
   align-items: center;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background: var(--mp-background);
+}
+
+.mp-table-toolbar__count {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
 }
 
 .mp-table-toolbar__search-btn {
@@ -1285,13 +1306,16 @@
 
 /* Wide/desktop default: the input is always visible (no click needed) —
    the icon button only exists to become the collapse/expand toggle once
-   the @container rule below kicks in on a narrow container. */
+   the @container rule below kicks in on a narrow container. Border/
+   background/radius live on the .mp-table-toolbar__search wrapper (above)
+   instead of here, so the icon button and input render as one merged box
+   rather than the input having its own separate bordered edge next to a
+   floating icon. */
 .mp-table-toolbar__search-input {
   width: 14rem;
-  padding: 0.375rem 0.625rem;
-  border: 1px solid var(--mp-border);
-  border-radius: var(--mp-radius-md);
-  background: var(--mp-background);
+  padding: 0.375rem 0.625rem 0.375rem 0;
+  border: none;
+  background: transparent;
   font-size: 0.875rem;
   color: var(--mp-foreground);
   opacity: 1;
@@ -1301,18 +1325,26 @@
 
 .mp-table-toolbar__search-input:focus-visible {
   outline: none;
+}
+
+.mp-table-toolbar__search:focus-within {
   border-color: var(--mp-ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--mp-ring) 50%, transparent);
 }
 
 @container (max-width: 767.98px) {
   /* Narrow container: collapse to icon-only by default; [data-search-open]
-     (toggled by mp-table-toolbar.js) replaces the tabs with the input. */
+     (toggled by mp-table-toolbar.js) replaces the tabs with the input. The
+     wrapper's box (border/background) collapses along with the input, so
+     the default state reads as a plain icon button, not an empty box. */
+  .mp-table-toolbar__search {
+    border-color: transparent;
+    background: transparent;
+  }
   .mp-table-toolbar__search-input {
     width: 0;
     min-width: 0;
     padding: 0;
-    border-color: transparent;
     opacity: 0;
     pointer-events: none;
   }
@@ -1357,14 +1389,15 @@
     position: static;
     transform: none;
     width: 100%;
+    border-color: var(--mp-border);
+    background: var(--mp-background);
   }
   .mp-table-toolbar[data-search-open] .mp-table-toolbar__search-input {
     width: 100%;
     flex: 1 1 auto;
     opacity: 1;
     pointer-events: auto;
-    padding: 0.375rem 0.625rem;
-    border-color: var(--mp-border);
+    padding: 0.375rem 0.625rem 0.375rem 0;
   }
   /* Icon swap only makes sense narrow — wide always shows the input, so
      the button never needs a "close" state there. */
@@ -1373,6 +1406,11 @@
   }
   .mp-table-toolbar[data-search-open] .mp-table-toolbar__search-btn .mp-table-toolbar__icon-close {
     display: inline-flex;
+  }
+  /* Secondary info the narrow toolbar sheds, same as mobile pagination
+     already dropping its "Showing X of Y" text. */
+  .mp-table-toolbar__count {
+    display: none;
   }
 }
 
@@ -1465,6 +1503,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  /* Self-contained inset from the outer .card's own border — matches
+     Tabler's .card-body padding so no caller needs to wrap this in a
+     .card-body div to get proper breathing room around the row list. */
+  padding: var(--tblr-card-spacer-y) var(--tblr-card-spacer-x);
 }
 
 .mp-table-mobile-card {

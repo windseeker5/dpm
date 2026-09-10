@@ -1,0 +1,92 @@
+{% extends "_public_base.html" %}
+{% from 'macros/buttons.html' import button %}
+
+{% block title %}Cart{% endblock %}
+
+{% block content %}
+<h1 class="h2 mb-4">Your Cart</h1>
+
+{% if has_errors %}
+<div class="alert alert-warning" role="alert">
+  Some items below are no longer available. Remove them to continue.
+</div>
+{% endif %}
+
+{% if not lines %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="ti ti-shopping-cart-off fs-1 text-secondary mb-2 d-block"></i>
+    <p class="text-secondary mb-3">Your cart is empty.</p>
+    {{ button("Continue Shopping", href=url_for('shop'), variant="outline") }}
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for line in lines %}
+    <div class="list-group-item">
+      {% if line.error %}
+      <div class="d-flex align-items-center justify-content-between gap-3">
+        <div class="text-danger small">{{ line.error }}</div>
+        <form method="POST" action="{{ url_for('shop_cart_remove') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="index" value="{{ line.index }}">
+          {{ button("Remove", type="submit", variant="outline", size="sm") }}
+        </form>
+      </div>
+      {% elif line.type == "product" %}
+      <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <div class="flex-fill" style="min-width: 200px;">
+          <div class="fw-bold">{{ line.product.name }}</div>
+          {% if line.size %}<div class="text-secondary small">Size: {{ line.size }}</div>{% endif %}
+          <div class="text-secondary small">${{ "%.2f"|format(line.product.price) }} each</div>
+        </div>
+        <form method="POST" action="{{ url_for('shop_cart_update') }}" class="d-flex align-items-center gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="index" value="{{ line.index }}">
+          <input type="number" name="qty" value="{{ line.qty }}" min="1" class="form-control" style="width: 70px;">
+          {{ button("Update", type="submit", variant="outline", size="sm") }}
+        </form>
+        <div class="fw-bold text-end" style="min-width: 70px;">${{ "%.2f"|format(line.amount) }}</div>
+        <form method="POST" action="{{ url_for('shop_cart_remove') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="index" value="{{ line.index }}">
+          {{ button("", type="submit", variant="ghost", size="icon-sm", icon="ti-trash", attrs={"aria-label": "Remove"}) }}
+        </form>
+      </div>
+      {% else %}
+      <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <div class="flex-fill" style="min-width: 200px;">
+          <div class="fw-bold">{{ line.activity.name }}</div>
+          {% if line.passport_type %}<div class="text-secondary small">{{ line.passport_type.name }}</div>{% endif %}
+          {% if line.slot %}
+          <div class="text-secondary small">{{ format_slot_label(line.slot) if format_slot_label else line.slot.starts_at }}</div>
+          {% elif line.activity.uses_scheduling %}
+          <div class="text-secondary small">Session: decide later</div>
+          {% endif %}
+        </div>
+        <div class="fw-bold text-end" style="min-width: 70px;">${{ "%.2f"|format(line.amount) }}</div>
+        <form method="POST" action="{{ url_for('shop_cart_remove') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="index" value="{{ line.index }}">
+          {{ button("", type="submit", variant="ghost", size="icon-sm", icon="ti-trash", attrs={"aria-label": "Remove"}) }}
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="card-footer d-flex align-items-center justify-content-between">
+    <span class="text-secondary">Total</span>
+    <strong class="fs-3">${{ "%.2f"|format(total) }}</strong>
+  </div>
+</div>
+
+<div class="d-flex justify-content-start gap-2 mt-3">
+  {{ button("Continue Shopping", href=url_for('shop'), variant="outline") }}
+  {% if not has_errors %}
+  {{ button("Checkout", href=url_for('shop_checkout')) }}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

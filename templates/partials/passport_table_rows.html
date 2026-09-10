@@ -1,20 +1,19 @@
 {% from 'partials/mark_paid_modal.html' import mark_paid_modal %}
+{% from 'macros/avatar.html' import avatar_initials, avatar_photo %}
 {% for passport in passes %}
 <tr data-paid="{{ 'true' if passport.paid else 'false' }}" data-active="{{ 'true' if passport.uses_remaining > 0 else 'false' }}">
   <td style="vertical-align: middle;">
     <div class="d-flex align-items-center">
-      <!-- Desktop: User Gravatar -->
-      <img src="https://www.gravatar.com/avatar/{{ (passport.user.email or 'default@example.com')|lower|trim|encode_md5 }}?d=identicon&s=40"
-           class="rounded-circle me-3 user-avatar d-none d-md-block" alt="Avatar">
-      <!-- Mobile: Activity Logo -->
-      {% if passport.activity and (passport.activity.image_filename or passport.activity.logo_filename) %}
-        <img src="{{ url_for('static', filename='uploads/activity_images/' + (passport.activity.image_filename or passport.activity.logo_filename)) }}"
-             class="rounded-circle me-3 user-avatar d-md-none" alt="{{ passport.activity.name }}" style="width: 30px; height: 30px; object-fit: cover;">
-      {% else %}
-        <div class="rounded-circle me-3 d-md-none d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 10px; color: #fff; background: {{ placeholder_color(passport.activity.name if passport.activity else 'Activity') }};">
-          {{ placeholder_letter(passport.activity.name if passport.activity else 'Activity') }}
-        </div>
-      {% endif %}
+      <!-- Desktop: User avatar (initials) -->
+      <div class="me-3 d-none d-md-block" style="flex-shrink: 0;">{{ avatar_initials(passport.user.name or 'Anonymous') }}</div>
+      <!-- Mobile: Activity photo (or initials) -->
+      <div class="me-3 d-md-none" style="flex-shrink: 0;">
+        {% if passport.activity and (passport.activity.image_filename or passport.activity.logo_filename) %}
+          {{ avatar_photo(url_for('static', filename='uploads/activity_images/' + (passport.activity.image_filename or passport.activity.logo_filename)), alt=passport.activity.name, size="sm") }}
+        {% else %}
+          {{ avatar_initials(passport.activity.name if passport.activity else 'Activity', size="sm") }}
+        {% endif %}
+      </div>
       <div>
         <div class="fw-bold">{{ passport.user.name or 'Anonymous' }}</div>
         <div class="text-muted small d-none d-md-block">{{ passport.user.email or 'No email' }}</div>
