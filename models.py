@@ -208,6 +208,36 @@ class Product(db.Model):
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class CartOrder(db.Model):
+    """The parent record for a shop checkout: one buyer, one payment, one or more line
+    items (Order rows for products and/or Signup rows for activity passports). Every
+    /shop checkout creates exactly one of these — even a single-item purchase — so the
+    Stripe/Interac payment logic only has to reconcile one thing per checkout instead of
+    juggling Order and Signup separately. `total_amount` is what the Interac bot matches
+    the incoming e-transfer against."""
+    __tablename__ = "cart_order"
+
+    id = db.Column(db.Integer, primary_key=True)
+    cart_code = db.Column(db.String(20), unique=True, nullable=True)  # format: MP-CART-0001234
+
+    buyer_name = db.Column(db.String(150), nullable=False)
+    buyer_email = db.Column(db.String(150), nullable=True)
+    buyer_phone = db.Column(db.String(20), nullable=True)
+
+    payment_method = db.Column(db.String(20), default="interac")  # "interac" or "stripe"
+    stripe_checkout_session_id = db.Column(db.String(255), nullable=True)
+
+    total_amount = db.Column(db.Float, nullable=False, default=0.0)
+    status = db.Column(db.String(20), default="awaiting_payment")
+    # Values: "awaiting_payment", "paid", "cancelled"
+
+    created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    paid_at = db.Column(db.DateTime, nullable=True)
+
+    orders = db.relationship("Order", backref="cart_order")
+    signups = db.relationship("Signup", backref="cart_order")
+
+
 class Order(db.Model):
     """A shop purchase of a Product. Product name/price are snapshotted at order time so
     the order stays correct if the product is later edited or removed."""
@@ -217,6 +247,7 @@ class Order(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     order_code = db.Column(db.String(20), unique=True, nullable=True)  # format: MP-ORD-0001234
+    cart_order_id = db.Column(db.Integer, db.ForeignKey("cart_order.id", ondelete="SET NULL"), nullable=True)
 
     product_id = db.Column(db.Integer, db.ForeignKey("product.id", ondelete="SET NULL"), nullable=True)
     product_name = db.Column(db.String(150), nullable=False)
@@ -335,6 +366,7 @@ class Signup(db.Model):
     paid_at = db.Column(db.DateTime)
     passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"))
     status = db.Column(db.String(50), default="pending")
+    cart_order_id = db.Column(db.Integer, db.ForeignKey("cart_order.id", ondelete="SET NULL"), nullable=True)
 
     # Quantity selection for payment-first workflow
     requested_sessions = db.Column(db.Integer, default=1)    # User's chosen quantity
@@ -540,6 +572,7 @@ class EbankPayment(db.Model):
     bank_info_amt = db.Column(db.Float)
     matched_pass_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"), nullable=True)  # ✅ Fixed to reference passport table
     matched_order_id = db.Column(db.Integer, db.ForeignKey("shop_order.id", ondelete="SET NULL"), nullable=True)  # Shop order match
+    matched_cart_order_id = db.Column(db.Integer, db.ForeignKey("cart_order.id", ondelete="SET NULL"), nullable=True)  # Multi-item cart match
     matched_name = db.Column(db.String(100))
     matched_amt = db.Column(db.Float)
     name_score = db.Column(db.Integer)

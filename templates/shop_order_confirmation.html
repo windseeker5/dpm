@@ -1,55 +1,79 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Commande confirmée — {{ ORG_NAME }}</title>
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
-  <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet">
-</head>
-<body class="bg-white">
-  <div class="container py-4 py-lg-5" style="max-width: 560px;">
-    <div class="text-center mb-4">
-      <i class="ti ti-circle-check fs-1 text-success d-block mb-2"></i>
-      <h1 class="h2">Merci, {{ order.buyer_name.split(' ')[0] }}!</h1>
-      <p class="text-secondary">Commande {{ order.order_code }}</p>
-    </div>
+{% extends "_public_base.html" %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/badge.html' import badge %}
 
-    <div class="card">
-      <div class="card-body">
-        <div class="d-flex justify-content-between mb-2">
-          <span class="text-secondary">Article</span>
-          <span>{{ order.product_name }}{% if order.size %} ({{ order.size }}){% endif %} × {{ order.quantity }}</span>
-        </div>
-        <div class="d-flex justify-content-between fw-bold">
-          <span>Total</span>
-          <span>{{ "%.2f"|format(order.amount) }} $</span>
-        </div>
+{% block title %}Order Confirmation{% endblock %}
+
+{% block content %}
+<div class="text-center mb-4">
+  <span class="avatar avatar-xl bg-green-lt text-green mb-3" aria-hidden="true">
+    <i class="ti ti-check fs-1"></i>
+  </span>
+  <h1 class="h2 mb-1">Thank you!</h1>
+  <p class="text-secondary mb-0">Order {{ cart_order.cart_code }}</p>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h2 class="h4 mb-0">Order Summary</h2>
+  </div>
+  <div class="list-group list-group-flush">
+    {% for order in cart_order.orders %}
+    <div class="list-group-item d-flex align-items-center justify-content-between gap-3">
+      <div class="fw-bold">{{ order.product_name }}{% if order.size %} ({{ order.size }}){% endif %} x{{ order.quantity }}</div>
+      <div class="fw-bold">${{ "%.2f"|format(order.amount) }}</div>
+    </div>
+    {% endfor %}
+    {% for signup in cart_order.signups %}
+    <div class="list-group-item d-flex align-items-center justify-content-between gap-3">
+      <div class="fw-bold">{{ signup.activity.name if signup.activity else "Activity Passport" }}</div>
+      <div class="fw-bold">${{ "%.2f"|format(signup.requested_amount or 0) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="card-footer d-flex align-items-center justify-content-between">
+    <span class="text-secondary">Total</span>
+    <strong class="fs-3">${{ "%.2f"|format(cart_order.total_amount) }}</strong>
+  </div>
+</div>
+
+{% if cart_order.status == "paid" %}
+<div class="alert alert-success d-flex align-items-center gap-2" role="status">
+  <i class="ti ti-circle-check fs-3"></i>
+  <div>
+    <strong class="d-block">Payment received</strong>
+    <span class="small">Any products will be ready for pickup soon. Any activity passport was emailed separately with its QR code.</span>
+  </div>
+</div>
+{% elif cart_order.payment_method == "interac" %}
+<div class="card">
+  <div class="card-body">
+    <div class="text-uppercase small fw-bold text-secondary mb-2">Payment instructions</div>
+    <p class="mb-3">Send an Interac e-transfer for the amount below.</p>
+    <div class="row g-3 mb-3">
+      <div class="col-6">
+        <div class="text-secondary small">Amount</div>
+        <div class="fw-bold fs-3">${{ "%.2f"|format(cart_order.total_amount) }}</div>
       </div>
-    </div>
-
-    {% if order.status == 'paid' %}
-    <div class="alert alert-success mt-3">
-      <i class="ti ti-check me-1"></i> Paiement reçu. Nous vous aviserons quand votre commande sera prête.
-    </div>
-    {% elif order.payment_method == 'interac' %}
-    <div class="card mt-3">
-      <div class="card-body">
-        <h2 class="h4">Instructions de paiement</h2>
-        <p class="mb-1">Envoyez un virement Interac de <strong>{{ "%.2f"|format(order.amount) }} $</strong> à
-          <strong>{{ payment_email }}</strong>.</p>
-        <p class="text-secondary small mb-0">
-          Inscrivez le code <strong>{{ order.order_code }}</strong> dans le message au destinataire.
-        </p>
+      {% if payment_email %}
+      <div class="col-6">
+        <div class="text-secondary small">Send to</div>
+        <div class="fw-bold">{{ payment_email }}</div>
       </div>
+      {% endif %}
     </div>
-    {% endif %}
-
-    <div class="text-center mt-4">
-      <a href="{{ url_for('shop') }}" class="btn btn-outline-secondary">Retour à la boutique</a>
+    <div class="alert alert-warning mb-0">
+      <div class="text-uppercase small fw-bold mb-1">Reference code</div>
+      <div class="fw-bold fs-4 font-monospace">{{ cart_order.cart_code }}</div>
+      <div class="small mt-1">Enter this in the "Message to recipient" field of your transfer — not the security question.</div>
     </div>
   </div>
-</body>
-</html>
+</div>
+{% else %}
+<div class="alert alert-info" role="status">Your payment is being processed.</div>
+{% endif %}
+
+<div class="mt-3">
+  {{ button("Back to Shop", href=url_for('shop'), variant="outline") }}
+</div>
+{% endblock %}

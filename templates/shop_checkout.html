@@ -1,0 +1,68 @@
+{% extends "_public_base.html" %}
+{% from 'macros/input.html' import text_input %}
+{% from 'macros/textarea.html' import textarea %}
+{% from 'macros/radio.html' import radio_group %}
+{% from 'macros/buttons.html' import button %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<h1 class="h2 mb-4">Checkout</h1>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h2 class="h4 mb-0">Order Summary</h2>
+  </div>
+  <div class="list-group list-group-flush">
+    {% for line in lines %}
+    <div class="list-group-item d-flex align-items-center justify-content-between gap-3">
+      <div>
+        {% if line.type == "product" %}
+        <div class="fw-bold">{{ line.product.name }}{% if line.size %} ({{ line.size }}){% endif %} x{{ line.qty }}</div>
+        {% else %}
+        <div class="fw-bold">{{ line.activity.name }}{% if line.passport_type %} — {{ line.passport_type.name }}{% endif %}</div>
+        {% endif %}
+      </div>
+      <div class="fw-bold">${{ "%.2f"|format(line.amount) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="card-footer d-flex align-items-center justify-content-between">
+    <span class="text-secondary">Total</span>
+    <strong class="fs-3">${{ "%.2f"|format(total) }}</strong>
+  </div>
+</div>
+
+<form method="POST" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-body">
+    <div class="mp-form-content">
+      <h2 class="h4 mb-3">Your Information</h2>
+
+      <div class="mb-3">
+        {{ text_input(id="buyer_name", label="Full name", name="buyer_name", attrs={"required": "required", "autocomplete": "name"}) }}
+      </div>
+      <div class="mb-3">
+        {{ text_input(id="buyer_email", label="Email", name="buyer_email", type="email", attrs={"required": "required", "autocomplete": "email"}) }}
+      </div>
+      <div class="mb-3">
+        {{ text_input(id="buyer_phone", label="Phone (optional)", name="buyer_phone", type="tel", attrs={"autocomplete": "tel"}) }}
+      </div>
+      <div class="mb-3">
+        {{ textarea(id="notes", label="Notes (optional)", name="notes", rows=2) }}
+      </div>
+
+      <h2 class="h4 mb-3 mt-4">Payment</h2>
+      {% set payment_options = [
+        {"value": "interac", "label": "E-transfer (Interac)", "description": "Payment instructions will be emailed to you."}
+      ] + ([{"value": "stripe", "label": "Credit Card", "description": "Secure payment via Stripe."}] if stripe_enabled else []) %}
+      {{ radio_group(name="payment_method", label="Payment method", options=payment_options, selected="interac") }}
+    </div>
+  </div>
+  <div class="card-footer">
+    <div class="mp-form-content">
+      {{ button("Place Order", type="submit") }}
+    </div>
+  </div>
+</form>
+{% endblock %}

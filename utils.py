@@ -1562,6 +1562,124 @@ def auto_create_passport_from_signup(signup, payment_record=None, marked_paid_by
         return None
 
 
+def create_order_line_for_cart(cart_order, product, quantity, size=None, notes=""):
+    """Create an Order row for one product line of a /shop cart checkout. The caller
+    (the /shop/checkout route) is responsible for the transaction: on error here, it
+    should roll back the whole checkout rather than commit a partial cart.
+
+    Returns (order, error_message). On success order is the flushed (but uncommitted)
+    Order row and error_message is None.
+    """
+    from models import Order
+
+    if not product or not product.active:
+        return None, f"“{product.name if product else 'This product'}” is no longer available."
+
+    quantity = max(1, int(quantity or 1))
+    amount = round(product.price * quantity, 2)
+
+    order = Order(
+        cart_order_id=cart_order.id,
+        product_id=product.id,
+        product_name=product.name,
+        unit_price=product.price,
+        quantity=quantity,
+        amount=amount,
+        size=size or None,
+        buyer_name=cart_order.buyer_name,
+        buyer_email=cart_order.buyer_email,
+        buyer_phone=cart_order.buyer_phone,
+        notes=notes or None,
+        payment_method=cart_order.payment_method,
+        status="awaiting_payment",
+    )
+    db.session.add(order)
+    db.session.flush()
+    order.order_code = f"MP-ORD-{order.id:07d}"
+    return order, None
+
+
+def create_signup_line_for_cart(cart_order, activity, passport_type_id=None, requested_sessions=1,
+                                 slot_id=None, notes=""):
+    """Create a User + Signup (and, for a scheduled activity, a held SlotBooking) for one
+    activity-passport line of a /shop cart checkout. Mirrors the standalone signup() route's
+    validation/creation logic so the same rules apply whether a passport is bought alone or
+    from the cart. Does not commit and does not roll back on failure — the caller owns the
+    checkout transaction, same as create_order_line_for_cart().
+
+    Returns (signup, error_message).
+    """
+    from models import User, Signup, PassportType, ActivitySlot, SlotBooking
+    from datetime import datetime, timezone, timedelta
+
+    if not activity or activity.status != "active":
+        return None, f"“{activity.name if activity else 'This activity'}” is no longer available."
+
+    requested_sessions = max(1, int(requested_sessions or 1))
+
+    remaining_capacity = get_remaining_capacity(activity.id)
+    if remaining_capacity is not None:
+        if remaining_capacity <= 0:
+            return None, f"Sorry, “{activity.name}” is sold out."
+        if requested_sessions > remaining_capacity:
+            return None, f"Only {remaining_capacity} spot(s) remaining for “{activity.name}”."
+
+    chosen_slot = None
+    if activity.uses_scheduling:
+        # A scheduled signup books at most one session at signup time, same as the
+        # standalone flow — extra credits are booked later from the passport page.
+        requested_sessions = 1
+        if slot_id:
+            chosen_slot = ActivitySlot.query.filter_by(
+                id=slot_id, activity_id=activity.id, status="active"
+            ).first()
+            if chosen_slot is None:
+                return None, f"That session for “{activity.name}” is no longer available. Please choose another."
+            if chosen_slot.starts_at < datetime.now():
+                return None, f"That session for “{activity.name}” has already passed. Please choose another."
+
+    passport_type = db.session.get(PassportType, passport_type_id) if passport_type_id else None
+    unit_price = passport_type.price_per_user if passport_type else 0.0
+    requested_amount = round(unit_price * requested_sessions, 2)
+
+    user = User(name=cart_order.buyer_name, email=cart_order.buyer_email, phone_number=cart_order.buyer_phone)
+    db.session.add(user)
+    db.session.flush()
+
+    signup_record = Signup(
+        user_id=user.id,
+        activity_id=activity.id,
+        cart_order_id=cart_order.id,
+        passport_type_id=passport_type_id or None,
+        subject=f"Signup for {activity.name}" + (f" - {passport_type.name}" if passport_type else ""),
+        description=notes or "",
+        form_data="",
+        requested_sessions=requested_sessions,
+        requested_amount=requested_amount,
+        payment_method=cart_order.payment_method,
+        status='stripe_processing' if cart_order.payment_method == 'stripe' else 'pending',
+    )
+    db.session.add(signup_record)
+    db.session.flush()
+    signup_record.signup_code = f"MP-INS-{signup_record.id:07d}"
+
+    if chosen_slot is not None:
+        if not claim_slot_seat(chosen_slot.id):
+            return None, f"That session for “{activity.name}” was just filled. Please choose another."
+        hold_hours = (SLOT_HOLD_HOURS_STRIPE if cart_order.payment_method == "stripe"
+                      else get_slot_hold_hours())
+        db.session.add(SlotBooking(
+            slot_id=chosen_slot.id,
+            activity_id=activity.id,
+            user_id=user.id,
+            signup_id=signup_record.id,
+            status="held",
+            held_until=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=hold_hours),
+        ))
+
+    return signup_record, None
+
+
 # ✅ PHASE 3: Optimized QR Code Generation & Hosted Image System
 def get_pass_history_data(pass_code: str, fallback_admin_email=None) -> dict:
     """
@@ -2645,6 +2763,123 @@ def match_gmail_payments_to_passes():
             # Convert to float for reliable comparison
             payment_amount = float(amt)
 
+            # Multi-item cart matching: tried FIRST, before any single-item passport/
+            # signup/order matching below, since a cart's TOTAL is what actually shows up
+            # in the e-transfer amount. Purely additive — if no cart matches, everything
+            # below runs unchanged. (The individual Order/Signup rows that make up a cart
+            # are excluded from the single-item branches below via cart_order_id, so a
+            # coincidental amount match never marks just one line of an unpaid cart paid.)
+            from models import CartOrder
+            from utils import auto_create_passport_from_signup, notify_cart_order_event
+
+            pending_carts = CartOrder.query.filter_by(
+                status="awaiting_payment", payment_method="interac"
+            ).filter(CartOrder.total_amount == payment_amount).all()
+
+            if pending_carts:
+                # NOTE: not using the module-level normalize_name() here — this same
+                # function later has a `def normalize_name(...)` of its own further down
+                # this loop body, which makes the name function-local for this whole
+                # function regardless of textual order, so calling it up here (before that
+                # def has executed on this iteration) would raise UnboundLocalError.
+                def _norm(text):
+                    if not text:
+                        return ""
+                    decomposed = unicodedata.normalize('NFD', text)
+                    return ''.join(c for c in decomposed if unicodedata.category(c) != 'Mn').lower().strip()
+
+                matched_cart = None
+                cart_code_match = None
+                for pattern_src in (transfer_message, email_body):
+                    if pattern_src:
+                        code_search = re.search(r'MP-CART-(\d{7})', pattern_src)
+                        if code_search:
+                            cart_code_match = f"MP-CART-{code_search.group(1)}"
+                            break
+
+                if cart_code_match:
+                    matched_cart = next((c for c in pending_carts if c.cart_code == cart_code_match), None)
+
+                cart_best_score = 100
+                if not matched_cart:
+                    cart_scores = sorted(
+                        ((c, fuzz.ratio(_norm(name), _norm(c.buyer_name)))
+                         for c in pending_carts),
+                        key=lambda pair: pair[1], reverse=True
+                    )
+                    if cart_scores and cart_scores[0][1] >= threshold and (
+                        len(cart_scores) == 1 or (cart_scores[0][1] - cart_scores[1][1]) >= 5
+                    ):
+                        matched_cart, cart_best_score = cart_scores[0]
+
+                if matched_cart:
+                    matched_cart.status = "paid"
+                    matched_cart.paid_at = datetime.now(timezone.utc)
+
+                    for order in matched_cart.orders:
+                        order.status = "paid"
+                        order.paid_at = matched_cart.paid_at
+
+                    created_passports = []
+                    for signup_record in matched_cart.signups:
+                        if signup_record.paid:
+                            continue
+                        new_passport = auto_create_passport_from_signup(
+                            signup_record, marked_paid_by="minipass-bot@system"
+                        )
+                        if new_passport:
+                            created_passports.append((signup_record, new_passport))
+
+                    db.session.add(EbankPayment(
+                        from_email=from_email,
+                        reply_to_email=reply_to_email,
+                        subject=subject,
+                        bank_info_name=name,
+                        bank_info_amt=amt,
+                        matched_cart_order_id=matched_cart.id,
+                        matched_name=matched_cart.buyer_name,
+                        matched_amt=matched_cart.total_amount,
+                        name_score=int(cart_best_score),
+                        result="MATCHED",
+                        mark_as_paid=True,
+                        note=(f"Matched to cart order {matched_cart.cart_code} "
+                              f"({len(matched_cart.orders)} product line(s), "
+                              f"{len(matched_cart.signups)} passport line(s))."),
+                        email_received_date=email_received_date,
+                        email_uid=uid,
+                    ))
+                    db.session.commit()
+
+                    if uid:
+                        try:
+                            mail.uid("COPY", uid, processed_folder)
+                            mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
+                        except Exception as move_err:
+                            print(f"   Could not move matched cart email: {move_err}")
+
+                    for signup_record, new_passport in created_passports:
+                        try:
+                            notify_pass_event(
+                                app=current_app._get_current_object(),
+                                event_type="payment_received",
+                                pass_data=new_passport,
+                                activity=new_passport.activity,
+                                admin_email="minipass-bot@system",
+                                timestamp=datetime.now(timezone.utc),
+                            )
+                        except Exception as e:
+                            print(f"   Passport email failed for signup {signup_record.id}: {e}")
+
+                    try:
+                        notify_cart_order_event(current_app._get_current_object(), cart_order=matched_cart,
+                                                 event_type="cart_paid")
+                    except Exception as e:
+                        print(f"   Cart confirmation email failed: {e}")
+
+                    results["matched"] += 1
+                    print(f"   ✅ Matched cart order {matched_cart.cart_code} for {matched_cart.buyer_name} (${amt})")
+                    continue
+
             # Get all unpaid passports first, then filter by amount in Python
             all_unpaid = Passport.query.filter_by(paid=False).all()
             unpaid_passports = [p for p in all_unpaid if float(p.sold_amt) == payment_amount]
@@ -2740,7 +2975,10 @@ def match_gmail_payments_to_passes():
                     Signup.requested_amount == payment_amount,
                     Activity.workflow_type == "payment_first",
                     Signup.payment_method == "interac",
-                    Signup.status == "pending"
+                    Signup.status == "pending",
+                    # Excludes cart-checkout lines — those are only ever matched as a
+                    # group, on the cart's total, above.
+                    Signup.cart_order_id == None
                 ).all()
 
                 print(f"   Found {len(unmatched_signups)} unmatched payment-first signups for ${payment_amount:.2f}")
@@ -3083,7 +3321,7 @@ def match_gmail_payments_to_passes():
                 matched_order = None
                 pending_orders = Order.query.filter_by(
                     status="awaiting_payment", payment_method="interac"
-                ).filter(Order.amount == payment_amount).all()
+                ).filter(Order.amount == payment_amount, Order.cart_order_id == None).all()
 
                 if pending_orders:
                     order_code_match = None
@@ -4563,6 +4801,57 @@ def notify_order_event(app, *, order, event_type):
     }
 
     send_email_async(app, subject=subject, to_email=order.buyer_email,
+                      template_name=template_name, context=context)
+
+
+def notify_cart_order_event(app, *, cart_order, event_type):
+    """Send ONE email for an entire /shop cart checkout (product lines + activity-passport
+    lines together), instead of firing the old per-item notify_order_event()/
+    notify_signup_event() once per line. event_type: 'cart_placed' (Interac instructions,
+    sent right after checkout) or 'cart_paid' (payment confirmed for every line)."""
+    from utils import send_email_async, get_setting
+
+    if not cart_order.buyer_email:
+        return
+
+    items = []
+    for order in cart_order.orders:
+        label = order.product_name
+        if order.size:
+            label += f" ({order.size})"
+        if order.quantity and order.quantity > 1:
+            label += f" x{order.quantity}"
+        items.append({"label": label, "amount": order.amount})
+
+    for signup in cart_order.signups:
+        activity_name = signup.activity.name if signup.activity else "Activity Passport"
+        label = activity_name
+        if signup.requested_sessions and signup.requested_sessions > 1:
+            label += f" x{signup.requested_sessions}"
+        items.append({"label": label, "amount": signup.requested_amount or 0.0})
+
+    display_email = get_setting("DISPLAY_PAYMENT_EMAIL")
+    payment_email = display_email if display_email else get_setting("MAIL_USERNAME", "")
+
+    if event_type == "cart_paid":
+        subject = f"Payment received - Order {cart_order.cart_code}"
+        template_name = "email/cart_order_paid.html"
+    else:
+        subject = f"Order received - {cart_order.cart_code}"
+        template_name = "email/cart_order_placed.html"
+
+    rows = [{"label": item["label"], "value": "%.2f $" % item["amount"]} for item in items]
+    rows.append({"label": "Total", "value": "%.2f $" % cart_order.total_amount})
+
+    context = {
+        "cart_code": cart_order.cart_code,
+        "rows": rows,
+        "total_amount": cart_order.total_amount,
+        "payment_method": cart_order.payment_method,
+        "payment_email": payment_email,
+    }
+
+    send_email_async(app, subject=subject, to_email=cart_order.buyer_email,
                       template_name=template_name, context=context)
 
 

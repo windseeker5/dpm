@@ -569,13 +569,15 @@
                 {% endif %}
               </a>
             </li>
+            {% if shop_enabled %}
             <li class="nav-item">
               <a href="{{ url_for('list_orders') }}"
                  class="nav-link {{ 'active' if request.endpoint in ['list_orders', 'list_products'] }}">
                 <i class="nav-icon ti ti-shopping-bag" aria-hidden="true"></i>
-                <span class="nav-text">Shop Orders</span>
+                <span class="nav-text">My Shop</span>
               </a>
             </li>
+            {% endif %}
             {% if subscription and subscription.tier_info.activities > 1 %}
             <li class="nav-item">
               <a href="{{ url_for('list_surveys') }}"
