@@ -704,6 +704,9 @@
             <h3 class="card-title mb-0">Action Menu</h3>
             <div class="text-muted small mt-1">Compact row/card actions dropdown. Replaces loose rows of View/Edit/Delete buttons. Default trigger is a plain three-dot (kebab) icon button — the standard "more options" pattern (Gmail/Drive/Notion/Linear/Airtable, and what this app used before the mp-* redesign), adopted here after trialing it live on Activities. No chevron alongside it: a chevron means "pick a value" or "expand," the kebab already means "menu of actions" on its own, and combining them mixes two different signifiers for one control. Also gets a coarse-pointer (real touchscreen) minimum 44×44px tap target automatically, both for this trigger and for the menu's own rows once open — see <code>mp-components.css</code>'s <code>@media (pointer: coarse)</code> rules.</div>
             <div class="text-muted small mt-2">
+              <strong>Rule: every action-menu item gets an icon before its label — no bare-text items.</strong> An icon-less row next to icon'd ones reads as unfinished, and the icon is what lets a user recognize an action at a glance instead of reading every row. Pass it as pre-rendered safe HTML on the item's <code>icon</code> key: <code>"icon": '&lt;i class="ti ti-pencil"&gt;&lt;/i&gt;'</code> (see the demo below — every item, including plain View/Edit ones, carries one). Pick a Tabler icon that actually matches the verb (ti-pencil for Edit, ti-eye for View, ti-trash for Delete, ti-currency-dollar for a payment action, etc.) rather than reusing one icon everywhere.
+            </div>
+            <div class="text-muted small mt-2">
               <strong>Rule: a destructive action (Delete, Remove, Cancel-permanently, etc.) is always styled red</strong> — a near-universal convention (macOS, Windows, GitHub, Gmail, Slack, Trello, Notion all do this), paired with a distinguishing icon and a confirmation step for anything non-trivial. In <code>action_menu()</code> items, set <code>"attrs": {"data-variant": "destructive"}</code> (see the Delete item in the demo below). In any remaining old-style <code>&lt;a class="dropdown-item"&gt;</code> markup, add Bootstrap's <code>text-danger</code> class the same way. Don't leave a delete action the same color as everything else in the menu.
             </div>
           </div>
@@ -711,10 +714,10 @@
         <div class="card-body">
           <div class="sg-preview">
             {{ action_menu(id="sg-action-menu-demo", items=[
-              {"label": "View"},
-              {"label": "Edit"},
+              {"label": "View", "icon": '<i class="ti ti-eye"></i>'},
+              {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>'},
               {"type": "separator"},
-              {"label": "Delete", "attrs": {"data-variant": "destructive"}}
+              {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive"}}
             ]) }}
           </div>
           <details>
@@ -722,13 +725,14 @@
             <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/action_menu.html' import action_menu %}
 
 {{ action_menu(id="row-actions-" ~ row.id, items=[
-  {"label": "View", "url": url_for('detail_x', item_id=row.id)},
-  {"label": "Edit", "url": url_for('edit_x', item_id=row.id)},
+  {"label": "View", "icon": '<i class="ti ti-eye"></i>', "url": url_for('detail_x', item_id=row.id)},
+  {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>', "url": url_for('edit_x', item_id=row.id)},
   {"type": "separator"},
-  {"label": "Delete", "attrs": {"data-variant": "destructive", "onclick": "..."}}
+  {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive", "onclick": "..."}}
 ]) }}
-{# icon_only defaults to True (the three-dot trigger shown above).
-   Pass icon_only=False for the older "Action ⌄" text trigger instead. #}{% endraw %}</code></pre>
+{# Every item needs an "icon" key (pre-rendered safe HTML, e.g. '<i class="ti ti-pencil"></i>') —
+   never a bare label. icon_only (on action_menu() itself, not the items) defaults to True,
+   the three-dot trigger shown above; pass icon_only=False for the older "Action ⌄" text trigger. #}{% endraw %}</code></pre>
           </details>
         </div>
       </div>
@@ -913,7 +917,7 @@
                         '<span class="text-muted">Joueur Golf + Souper 2026</span>', '$25',
                         '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '1', '2026-08-27'],
               "badges": [{"text": "Paid", "variant": "green"}, {"text": "1 left", "variant": "blue"}, {"text": "$25", "variant": "secondary"}],
-              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+              "actions": [{"label": "Check In", "icon": '<i class="ti ti-login"></i>'}, {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>'}, {"type": "separator"}, {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive"}}]
             },
             {
               "id": 2, "avatar_name": "Marco Henry", "primary": "Marco Henry", "secondary": "mhenry07@hotmail.com",
@@ -922,7 +926,7 @@
                         '<span class="text-muted">Souper seulement 2026</span>', '$20',
                         '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '1', '2026-08-24'],
               "badges": [{"text": "Paid", "variant": "green"}, {"text": "1 left", "variant": "blue"}, {"text": "$20", "variant": "secondary"}],
-              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+              "actions": [{"label": "Check In", "icon": '<i class="ti ti-login"></i>'}, {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>'}, {"type": "separator"}, {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive"}}]
             },
             {
               "id": 3, "avatar_name": "GESTION RUSTY INC.", "primary": "GESTION RUSTY INC.", "secondary": "rusty1@telus.net",
@@ -931,7 +935,7 @@
                         '<span class="text-muted">Souper seulement 2026</span>', '$20',
                         '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '1', '2026-08-24'],
               "badges": [{"text": "Paid", "variant": "green"}, {"text": "1 left", "variant": "blue"}, {"text": "$20", "variant": "secondary"}],
-              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+              "actions": [{"label": "Check In", "icon": '<i class="ti ti-login"></i>'}, {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>'}, {"type": "separator"}, {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive"}}]
             },
             {
               "id": 4, "avatar_name": "Ken Dresdell", "primary": "Ken Dresdell", "secondary": "kdresdell@gmail.com",
@@ -940,7 +944,7 @@
                         '<span class="text-muted">Joueur Golf + Souper 2026</span>', '$100',
                         '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '4', '2026-08-23'],
               "badges": [{"text": "Paid", "variant": "green"}, {"text": "4 left", "variant": "blue"}, {"text": "$100", "variant": "secondary"}],
-              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+              "actions": [{"label": "Check In", "icon": '<i class="ti ti-login"></i>'}, {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>'}, {"type": "separator"}, {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive"}}]
             },
             {
               "id": 5, "avatar_name": "Jean Martin Morin", "primary": "Jean Martin Morin", "secondary": "jean-martin.morin@telus.net",
@@ -949,7 +953,7 @@
                         '<span class="text-muted">Joueur Golf + Souper 2026</span>', '$25',
                         '<span class="badge bg-green-lt text-green-lt-fg">Paid</span>', '1', '2026-08-22'],
               "badges": [{"text": "Paid", "variant": "green"}, {"text": "1 left", "variant": "blue"}, {"text": "$25", "variant": "secondary"}],
-              "actions": [{"label": "Check In"}, {"label": "Edit"}, {"type": "separator"}, {"label": "Delete", "attrs": {"data-variant": "destructive"}}]
+              "actions": [{"label": "Check In", "icon": '<i class="ti ti-login"></i>'}, {"label": "Edit", "icon": '<i class="ti ti-pencil"></i>'}, {"type": "separator"}, {"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive"}}]
             }
           ] %}
           {% set sample_columns = [
@@ -968,7 +972,7 @@
                 {"label": "Active", "url": "#", "count": 5, "active": true},
                 {"label": "Unpaid", "url": "#", "count": 1, "active": false},
                 {"label": "All", "url": "#", "count": 5, "active": false}
-              ], search_placeholder="Search passports…") }}
+              ], search_placeholder="Search", total=23) }}
             </div>
             {{ table_desktop(id="sg-table-desktop", columns=sample_columns, rows=sample_rows) }}
             {{ pagination_desktop(page=1, pages=5, per_page=5, total=23, items_count=5, base_path="#", filters={}) }}
@@ -981,11 +985,9 @@
                 {"label": "Active", "url": "#", "count": 5, "active": true},
                 {"label": "Unpaid", "url": "#", "count": 1, "active": false},
                 {"label": "All", "url": "#", "count": 5, "active": false}
-              ], search_placeholder="Search passports…") }}
+              ], search_placeholder="Search", total=23) }}
             </div>
-            <div class="card-body">
-              {{ table_mobile(id="sg-table-mobile", rows=sample_rows) }}
-            </div>
+            {{ table_mobile(id="sg-table-mobile", rows=sample_rows) }}
             {{ pagination_mobile(page=1, pages=5, per_page=5, total=23, items_count=5, base_path="#", filters={}) }}
           </div>
 
@@ -1023,7 +1025,8 @@ tabs = [
     <form method="get" action="{{ url_for('list_passports') }}" style="display: contents;">
       {{ preserve_filters(current_filters) }}
       {{ table_toolbar(id="passports-toolbar", tabs=tabs,
-         search_value=current_filters.q, search_placeholder="Search passports…") }}
+         search_value=current_filters.q, search_placeholder="Search passports…",
+         total=pagination.total) }}
     </form>
   </div>
 

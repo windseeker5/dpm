@@ -34,7 +34,7 @@
       <div class="card-header">
         <form method="get" action="{{ url_for('list_passports') }}" style="display: contents;">
           {{ preserve_filters(current_filters) }}
-          {{ table_toolbar(id="passports-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search passports…") }}
+          {{ table_toolbar(id="passports-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search passports…", total=pagination.total) }}
         </form>
       </div>
 

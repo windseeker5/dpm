@@ -331,7 +331,7 @@
           <div class="card-header">
             <form method="get" action="{{ url_for('dashboard') }}" style="display: contents;">
               {{ preserve_filters(log_current_filters) }}
-              {{ table_toolbar(id="history-toolbar", tabs=log_tabs, search_value=log_q, search_placeholder="Search history…") }}
+              {{ table_toolbar(id="history-toolbar", tabs=log_tabs, search_value=log_q, search_placeholder="Search history…", total=log_total) }}
             </form>
           </div>
 

@@ -94,6 +94,10 @@
     - search_name: form field name for the search input, default "q"
     - search_value: current search text, default ""
     - search_placeholder: default "Search…"
+    - total: optional total entry count, rendered right-aligned opposite
+      the search box (e.g. "23 entries") on wide toolbars; omitted (the
+      default, None) shows nothing. Hidden on narrow/mobile toolbars
+      regardless, same as mobile pagination dropping its own entry count.
 
   Parameters (table_desktop):
     - id: unique id (required)
@@ -117,7 +121,7 @@
 {% from 'macros/action_menu.html' import action_menu %}
 {% from 'macros/avatar.html' import avatar_initials, avatar_photo %}
 
-{% macro table_toolbar(id, tabs, search_name="q", search_value="", search_placeholder="Search…") %}
+{% macro table_toolbar(id, tabs, search_name="q", search_value="", search_placeholder="Search…", total=none) %}
 <div class="mp-table-toolbar" id="{{ id }}">
   <div class="mp-table-toolbar__search">
     <button type="button" class="mp-table-toolbar__search-btn" aria-label="Search" aria-expanded="false" aria-controls="{{ id }}-input">
@@ -129,6 +133,9 @@
            placeholder="{{ search_placeholder }}" autocomplete="off">
   </div>
   {{ filter_tabs(tabs) }}
+  {% if total is not none %}
+  <div class="mp-table-toolbar__count text-muted small">{{ total }} {{ 'entry' if total == 1 else 'entries' }}</div>
+  {% endif %}
 </div>
 {% endmacro %}
 

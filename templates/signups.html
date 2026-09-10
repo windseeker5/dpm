@@ -26,7 +26,7 @@
       <div class="card-header">
         <form method="get" action="{{ url_for('list_signups') }}" style="display: contents;">
           {{ preserve_filters(current_filters) }}
-          {{ table_toolbar(id="signups-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search signups…") }}
+          {{ table_toolbar(id="signups-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search signups…", total=pagination.total) }}
         </form>
       </div>
 
