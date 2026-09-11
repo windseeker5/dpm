@@ -200,6 +200,33 @@ Radius is deliberately small and consistent: `--mp-radius: 0.625rem` (10px) as t
 - **Disabled:** 0.5 opacity, `pointer-events: none`.
 - Every field ships with a visible label and optional description via the shared `.mp-field`/`.mp-label` shell; there is no label-less input pattern in the system.
 
+### Choice Cards
+- **Purpose:** Use for one-of-many decisions whose options need a title and supporting context; use the simpler Radio Group when labels are short.
+- **Structure:** A semantic fieldset of native radio inputs. Each complete card is one label and click/tap target; no JavaScript manages selection.
+- **Style:** Compact operational layout with the icon and title in one header row, a visible radio at the top-right, and supporting copy below. Selected cards use one Graphite border plus a faint Muted fill rather than Tenant Blue; the outer focus ring appears only for keyboard navigation.
+- **Validation:** The macro accepts an accessible inline error state and renders guidance rather than a blank fieldset when no options are available.
+- **Responsive:** Two- and three-column groups stack into one column below the tablet breakpoint.
+
+### Image Picker
+- **Structure:** A labelled 100px photo thumbnail stays visible; activating it reveals one inline drawer separated by the standard Border token.
+- **Sources:** Search and Upload share the same drawer and are selected with the standard Switch component. Search composes the standard Input and icon Button; Upload uses the standard file Input.
+- **Behavior:** `macros/image_picker.html` owns all markup and `photo-normalizer.js` adds page-specific image search, cropping, thumbnail, and removal behavior. Pages must call the macro rather than recreating the shell.
+- **Responsive:** The drawer shrinks within the available form width without horizontal page overflow; the thumbnail remains a fixed, reliable target.
+
+### Form Dialog
+- **Purpose:** Use for short create/edit work that must stay in context. It adapts Basic Form spacing to a modal without Bootstrap's divided header and gray footer bands.
+- **Structure:** One white surface with title, optional description, a vertical `.mp-form-fields` stack, and right-aligned actions. Bootstrap may own focus trapping and backdrop behavior, but `form_dialog()` owns the visual composition.
+- **Scope:** Use a full page for long, consequential, or multi-section forms; do not force them into a dialog.
+
+### Editable Collection
+- **Purpose:** Use for form-local rows—such as passport types or sessions—that can be added and edited before the parent form is saved. It is the client-editable companion to Data Table, not a competing table style.
+- **Structure:** Reuses Data Table headers, gray scale, row rhythm, empty-state language, and Action Menu. Runtime rows use `mp-editable-collection.js` helpers so pages do not recreate button or menu markup.
+- **Responsive:** Desktop renders a table. Narrow layouts turn each row into a labelled card rather than introducing horizontal scrolling or hiding important values.
+
+### Collapsible Section
+- **Purpose:** Use for a substantial optional group such as Advanced Settings; use Accordion for multiple peer FAQ-style items.
+- **Structure:** Native `<details>/<summary>` via `collapsible_section()`, with a title, optional description and standard chevron. No Bootstrap collapse JavaScript is required.
+
 ### Navigation
 - **Filter Tabs:** a segmented track (Muted background, Border edge) with a sliding-indicator active pill (inset ring, not a border) — matched deliberately to GitHub's file-view tab pattern. Scroll position across a tab click's page reload is preserved automatically.
 - **Settings Navigation:** horizontal links on desktop with a 2px Tenant Blue underline on the active tab; collapses to a labeled selector on mobile.

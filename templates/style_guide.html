@@ -80,6 +80,12 @@
 {% from 'macros/kpi_card.html' import kpi_card_desktop, kpi_card_mobile %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state %}
+{% from 'macros/form_page.html' import form_page %}
+{% from 'macros/image_picker.html' import image_picker %}
+{% from 'macros/choice_cards.html' import choice_cards %}
+{% from 'macros/form_dialog.html' import form_dialog %}
+{% from 'macros/editable_collection.html' import editable_collection %}
+{% from 'macros/collapsible_section.html' import collapsible_section %}
 <div class="page-wrapper">
   <div class="page-header d-print-none">
     <div class="dashboard-container">
@@ -181,6 +187,128 @@
   &lt;/div&gt;
 &lt;/div&gt;{% endraw %}</code></pre>
           </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="basic-form">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Basic Form</h3>
+            <div class="text-muted small mt-1">The standard create/edit form composition, ported from KDUI's <code>form_page</code> pattern: page title, card with header/fields/footer, even spacing between field groups, footer buttons right-aligned with no distinct background. Use the <code>form_page()</code> macro — don't hand-roll this markup.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="sg-preview" style="flex-direction:column; align-items:stretch; padding:1.5rem;">
+            {% call form_page(
+              title="New project",
+              description="Add the details for your project.",
+              card_title="Project details",
+              card_description="Fields marked with an asterisk are required.",
+              action="#",
+              cancel_url="#",
+              submit_label="Create project",
+              form_id="sg-basic-form"
+            ) %}
+              {{ text_input(id="sg-basic-form-name", label="Project name *", placeholder="Website redesign", description="Use a short, recognizable name.") }}
+              <div class="row">
+                <div class="col-12 col-sm-6 mb-3 mb-sm-0">
+                  {{ text_input(id="sg-basic-form-owner", label="Owner", placeholder="Alex Morgan") }}
+                </div>
+                <div class="col-12 col-sm-6">
+                  {{ text_input(id="sg-basic-form-date", label="Due date", type="date") }}
+                </div>
+              </div>
+              {{ textarea(id="sg-basic-form-notes", label="Notes", placeholder="Optional context for the team") }}
+            {% endcall %}
+          </div>
+          <details class="mt-2">
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/form_page.html' import form_page %}
+{% from 'macros/input.html' import text_input %}
+{% from 'macros/textarea.html' import textarea %}
+
+{% call form_page(
+  title="New project",
+  description="Add the details for your project.",
+  card_title="Project details",
+  card_description="Fields marked with an asterisk are required.",
+  action=url_for("projects.create"),
+  cancel_url=url_for("projects.index"),
+  submit_label="Create project"
+) %}
+  {{ text_input(id="project-name", label="Project name *", placeholder="Website redesign",
+     description="Use a short, recognizable name.") }}
+
+  &lt;div class="row"&gt;
+    &lt;div class="col-12 col-sm-6 mb-3 mb-sm-0"&gt;
+      {{ text_input(id="project-owner", label="Owner", placeholder="Alex Morgan") }}
+    &lt;/div&gt;
+    &lt;div class="col-12 col-sm-6"&gt;
+      {{ text_input(id="project-date", label="Due date", type="date") }}
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  {{ textarea(id="project-notes", label="Notes", placeholder="Optional context for the team") }}
+{% endcall %}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="form-dialog">
+        <div class="card-header"><div>
+          <h3 class="card-title mb-0">Form Dialog</h3>
+          <div class="text-muted small mt-1">The Basic Form pattern for short create/edit work in a modal. One white surface, no legacy header or footer bands.</div>
+        </div></div>
+        <div class="card-body">
+          <div class="sg-preview">
+            {{ button("Open form dialog", variant="outline", attrs={"data-bs-toggle": "modal", "data-bs-target": "#sg-form-dialog"}) }}
+          </div>
+          {% call form_dialog(id="sg-form-dialog", title="New passport type",
+             description="Create an option participants can purchase.", confirm_label="Add Type") %}
+            {{ text_input(id="sg-dialog-name", label="Type Name", placeholder="Regular") }}
+            {{ text_input(id="sg-dialog-price", label="Price ($)", type="number", value="25.00") }}
+          {% endcall %}
+        </div>
+      </div>
+
+      <div class="card mb-4" id="editable-collection">
+        <div class="card-header"><div>
+          <h3 class="card-title mb-0">Editable Collection</h3>
+          <div class="text-muted small mt-1">A form-local companion to Data Table for rows edited before the parent form is saved.</div>
+        </div></div>
+        <div class="card-body">
+          <div class="sg-preview" style="display:block;">
+            {% call editable_collection(id="sg-editable-collection", columns=[
+              {"label": "Name"}, {"label": "Price"}, {"label": "Sessions"}, {"label": "Actions", "class": "text-end"}
+            ]) %}
+              <tr data-id="weekly">
+                <td data-label="Name" data-primary><strong>Weekly pass</strong></td>
+                <td data-label="Price">$25.00</td>
+                <td data-label="Sessions">4</td>
+                <td data-label="Actions" data-actions class="text-end">{{ action_menu(id="sg-editable-actions", items=[
+                  {"label": "Edit", "icon": '<i class="ti ti-edit"></i>'|safe},
+                  {"type": "separator"},
+                  {"label": "Delete", "variant": "destructive", "icon": '<i class="ti ti-trash"></i>'|safe}
+                ]) }}</td>
+              </tr>
+            {% endcall %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="collapsible-section">
+        <div class="card-header"><div>
+          <h3 class="card-title mb-0">Collapsible Section</h3>
+          <div class="text-muted small mt-1">A native disclosure for substantial optional form settings.</div>
+        </div></div>
+        <div class="card-body">
+          {% call collapsible_section(id="sg-advanced", title="Advanced settings",
+             description="Optional behavior and integrations.", icon="ti-adjustments") %}
+            <div class="mp-form-content mp-form-fields">
+              {{ switch(id="sg-notifications", label="Enable notifications") }}
+              {{ text_input(id="sg-reference", label="Internal reference") }}
+            </div>
+          {% endcall %}
         </div>
       </div>
 
@@ -433,6 +561,55 @@
         </div>
       </div>
 
+      <div class="card mb-4" id="image-picker">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Image Picker</h3>
+            <div class="text-muted small mt-1">Compact photo field with an inline drawer. Click the thumbnail to reveal Search or Upload, then use the shared Switch to change source. The search action is the standard icon Button; pages connect it to their image-search and crop flow through <code>initPhotoNormalizer()</code>.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="border rounded p-3 p-sm-4">
+            {{ image_picker(id="sg-cover-photo", label="Cover Photo", upload_name="cover_photo") }}
+          </div>
+          <details class="mt-2">
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/image_picker.html' import image_picker %}
+
+{{ image_picker(
+  id="cover-photo",
+  label="Cover Photo",
+  upload_name="upload_image",
+  selected_name="selected_image_filename",
+  selected_value=activity.image_filename if activity else '',
+  image_src=url_for('static', filename='uploads/activity_images/' ~ activity.image_filename)
+    if activity and activity.image_filename else none,
+  image_alt=activity.name ~ ' cover photo' if activity and activity.image_filename else ''
+) }}
+
+&lt;script&gt;
+document.addEventListener('DOMContentLoaded', function () {
+  initPhotoNormalizer({
+    wrapperId: 'cover-photo-preview',
+    optionsPanelId: 'cover-photo-options',
+    sourceToggleId: 'cover-photo-source',
+    searchPanelId: 'cover-photo-search-panel',
+    searchInputId: 'cover-photo-search',
+    searchBtnId: 'cover-photo-search-button',
+    uploadPanelId: 'cover-photo-upload-panel',
+    uploadInputId: 'cover-photo-upload',
+    hiddenInputId: 'cover-photo-selected',
+    cropModalId: 'crop-modal',
+    cropImageId: 'crop-image',
+    confirmBtnId: 'crop-confirm',
+    placeholderLabel: 'Add photo'
+  });
+});
+&lt;/script&gt;{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
       <div class="card mb-4" id="switch">
         <div class="card-header">
           <div>
@@ -471,6 +648,92 @@
             <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/checkbox.html' import checkbox %}
 
 {{ checkbox(id="terms", name="terms", label="Accept terms and conditions") }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="choice-cards">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Choice Cards</h3>
+            <div class="text-muted small mt-1">Use when someone must choose one option and needs more context than a short radio label can hold. The complete card is clickable, while native radio controls provide mutual exclusion, keyboard navigation, and form submission without JavaScript. Pass <code>error</code> for accessible inline validation; an empty options list renders guidance instead of a broken group.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="border rounded p-3 p-sm-4">
+            {{ choice_cards(
+              name="sg-workflow",
+              label="Signup Workflow",
+              selected="payment_first",
+              options=[
+                {
+                  "value": "payment_first",
+                  "title": "Pay First",
+                  "icon": "ti-credit-card",
+                  "description": "Request payment automatically on signup. Deliver the passport once paid—nothing to approve.",
+                  "meta_label": "Best for:",
+                  "meta": "Open events, classes, large groups"
+                },
+                {
+                  "value": "approval_first",
+                  "title": "Review First",
+                  "icon": "ti-clipboard-check",
+                  "description": "Approve each signup before sending payment instructions.",
+                  "meta_label": "Best for:",
+                  "meta": "Tryouts, limited spots, selective groups"
+                }
+              ]
+            ) }}
+          </div>
+          <details class="mt-2" id="choice-card-states">
+            <summary class="sg-code-summary">Show Validation &amp; Empty States</summary>
+            <div class="border rounded p-3 p-sm-4 mt-2">
+              {{ choice_cards(
+                name="sg-required-workflow",
+                label="Required Choice",
+                selected=none,
+                required=true,
+                error="Choose one option to continue.",
+                columns=1,
+                options=[
+                  {"value": "standard", "title": "Standard Review", "description": "Review each request before approval."},
+                  {"value": "automatic", "title": "Automatic Approval", "description": "Approve requests immediately."}
+                ]
+              ) }}
+              <div class="mt-4">
+                {{ choice_cards(name="sg-empty-workflow", label="Unavailable Choices", options=[]) }}
+              </div>
+            </div>
+          </details>
+          <details class="mt-2">
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/choice_cards.html' import choice_cards %}
+
+{{ choice_cards(
+  name="workflow_type",
+  label="Signup Workflow",
+  selected=activity.workflow_type or "payment_first",
+  required=true,
+  error=form_errors.get("workflow_type"),
+  options=[
+    {
+      "value": "payment_first",
+      "title": "Pay First",
+      "icon": "ti-credit-card",
+      "description": "Request payment automatically on signup.",
+      "meta_label": "Best for:",
+      "meta": "Open events, classes, large groups"
+    },
+    {
+      "value": "approval_first",
+      "title": "Review First",
+      "icon": "ti-clipboard-check",
+      "description": "Approve each signup before sending payment instructions.",
+      "meta_label": "Best for:",
+      "meta": "Tryouts, limited spots, selective groups"
+    }
+  ]
+) }}{% endraw %}</code></pre>
           </details>
         </div>
       </div>
@@ -1069,6 +1332,20 @@ tabs = [
 <script src="{{ url_for('static', filename='js/mp-kpi-card.js') }}?v=1.2"></script>
 <script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    initPhotoNormalizer({
+      wrapperId: 'sg-cover-photo-preview',
+      optionsPanelId: 'sg-cover-photo-options',
+      sourceToggleId: 'sg-cover-photo-source',
+      searchPanelId: 'sg-cover-photo-search-panel',
+      searchInputId: 'sg-cover-photo-search',
+      searchBtnId: 'sg-cover-photo-search-button',
+      uploadPanelId: 'sg-cover-photo-upload-panel',
+      uploadInputId: 'sg-cover-photo-upload',
+      placeholderLabel: 'Add photo'
+    });
+  });
+
   // Demo-only: the real filter_tabs() macro renders real <a href> links whose
   // "active" state comes from the current URL's query string (server-side),
   // not from JS. This page's tabs point at "#" since there's no real filtered
