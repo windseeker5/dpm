@@ -8,6 +8,7 @@
 {% from 'macros/checkbox.html' import checkbox %}
 {% from 'macros/select.html' import select %}
 {% from 'macros/buttons.html' import button %}
+{% from 'macros/form_page.html' import form_page %}
 
 {% set back_url = url_for('activity_dashboard', activity_id=selected_activity.id) if selected_activity else url_for('list_passports') %}
 
@@ -29,105 +30,91 @@
 
   <div class="page-body">
     <div class="dashboard-container">
-      <form method="POST" class="card">
+      {% call form_page(
+        card_title="User Information",
+        action="",
+        cancel_url=back_url,
+        submit_label="Update Passport" if passport else "Create Passport",
+        form_id="passport-form"
+      ) %}
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <div class="card-body">
-          <div class="mp-form-content">
-          <h5 class="mb-3">User Information</h5>
-          <div class="mb-3 position-relative">
-            {{ text_input(id="user_name", label="Full Name", name="user_name", placeholder="Full Name",
-               value=passport.user.name if passport and passport.user else '',
-               attrs={"autocomplete": "off", "required": "required", "role": "combobox",
-                      "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "suggestions"}) }}
-            <div id="suggestions" class="list-group position-absolute w-100 shadow bg-white border rounded" role="listbox" style="top: 100%; z-index: 10;"></div>
-          </div>
+        <div class="position-relative">
+          {{ text_input(id="user_name", label="Full Name", name="user_name", placeholder="Full Name",
+             value=passport.user.name if passport and passport.user else '',
+             attrs={"autocomplete": "off", "required": "required", "role": "combobox",
+                    "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "suggestions"}) }}
+          <div id="suggestions" class="list-group position-absolute w-100 shadow bg-white border rounded" role="listbox" style="top: 100%; z-index: 10;"></div>
+        </div>
 
-          <div class="mb-3">
-            {{ text_input(id="user_email", label="Email", name="user_email", type="email", placeholder="Email",
-               value=passport.user.email if passport and passport.user else '',
-               attrs={"required": "required"}) }}
-          </div>
+        {{ text_input(id="user_email", label="Email", name="user_email", type="email", placeholder="Email",
+           value=passport.user.email if passport and passport.user else '',
+           attrs={"required": "required"}) }}
 
-          <div class="mb-4">
-            {{ text_input(id="mobile_phone", label="Phone Number", name="phone_number", type="tel", placeholder="Phone Number",
-               value=passport.user.phone_number if passport and passport.user else '') }}
-          </div>
+        {{ text_input(id="mobile_phone", label="Phone Number", name="phone_number", type="tel", placeholder="Phone Number",
+           value=passport.user.phone_number if passport and passport.user else '') }}
 
-          <hr class="my-4">
+        <hr class="my-0">
 
-          <h5 class="mb-3">Passport Details</h5>
+        <h2 class="mb-1">Passport Details</h2>
 
-          <div class="mb-3">
-            {% call select(id="activity_select", label="Activity", name="activity_id", placeholder="-- Select Activity --", required=true,
-               attrs={"onchange": "updateActivityDetails(this)"}) %}
-              {% for activity in activity_list %}
-                <option value="{{ activity.id }}"
-                  data-price="{{ activity.price_per_user }}"
-                  data-sessions="{{ activity.sessions_included }}"
-                  {% if (passport and passport.activity_id == activity.id) or (selected_activity_id and selected_activity_id == activity.id) %}selected{% endif %}>
-                  {{ activity.name }}
-                </option>
-              {% endfor %}
-            {% endcall %}
-          </div>
+        {% call select(id="activity_select", label="Activity", name="activity_id", placeholder="-- Select Activity --", required=true,
+           attrs={"onchange": "updateActivityDetails(this)"}) %}
+          {% for activity in activity_list %}
+            <option value="{{ activity.id }}"
+              data-price="{{ activity.price_per_user }}"
+              data-sessions="{{ activity.sessions_included }}"
+              {% if (passport and passport.activity_id == activity.id) or (selected_activity_id and selected_activity_id == activity.id) %}selected{% endif %}>
+              {{ activity.name }}
+            </option>
+          {% endfor %}
+        {% endcall %}
 
-          <div id="passport-type-section" class="mb-3{% if not (passport or selected_activity_id) %} d-none{% endif %}">
-            {% call select(id="passport_type_select", label="Passport Type", name="passport_type_id", placeholder="-- Select Passport Type --", required=true,
-               attrs={"onchange": "updatePassportTypeDetails(this)"}) %}
-              {% for passport_type in passport_types %}
-                <option value="{{ passport_type.id }}"
-                  data-activity="{{ passport_type.activity_id }}"
-                  data-price="{{ passport_type.price_per_user }}"
-                  data-sessions="{{ passport_type.sessions_included }}"
-                  {% if (passport and passport.passport_type_id == passport_type.id) or (single_passport_type_id and single_passport_type_id == passport_type.id) %}selected{% endif %}>
-                  {{ passport_type.name }} ({{ passport_type.type }})
-                </option>
-              {% endfor %}
-            {% endcall %}
-          </div>
+        <div id="passport-type-section"{% if not (passport or selected_activity_id) %} class="d-none"{% endif %}>
+          {% call select(id="passport_type_select", label="Passport Type", name="passport_type_id", placeholder="-- Select Passport Type --", required=true,
+             attrs={"onchange": "updatePassportTypeDetails(this)"}) %}
+            {% for passport_type in passport_types %}
+              <option value="{{ passport_type.id }}"
+                data-activity="{{ passport_type.activity_id }}"
+                data-price="{{ passport_type.price_per_user }}"
+                data-sessions="{{ passport_type.sessions_included }}"
+                {% if (passport and passport.passport_type_id == passport_type.id) or (single_passport_type_id and single_passport_type_id == passport_type.id) %}selected{% endif %}>
+                {{ passport_type.name }} ({{ passport_type.type }})
+              </option>
+            {% endfor %}
+          {% endcall %}
+        </div>
 
-          <div id="passport-final-section"{% if not (passport or single_passport_type_id) %} class="d-none"{% endif %}>
-          <div class="row">
-            <div class="col-12 col-sm-6 mb-3">
-              {{ text_input(id="sold_amt", label="Price", name="sold_amt", type="number", placeholder="Price",
-                 value=passport.sold_amt if passport else default_amt,
-                 attrs={"step": "0.01", "required": "required"}) }}
+        <div id="passport-final-section"{% if not (passport or single_passport_type_id) %} class="d-none"{% endif %}>
+          <div class="mp-form-fields">
+            <div class="row">
+              <div class="col-12 col-sm-6">
+                {{ text_input(id="sold_amt", label="Price", name="sold_amt", type="number", placeholder="Price",
+                   value=passport.sold_amt if passport else default_amt,
+                   attrs={"step": "0.01", "required": "required"}) }}
+              </div>
+              <div class="col-12 col-sm-6">
+                {{ text_input(id="uses_remaining", label="Number of Sessions", name="uses_remaining", type="number", placeholder="Number of Sessions",
+                   value=passport.uses_remaining if passport else default_qt,
+                   attrs={"required": "required"}) }}
+              </div>
             </div>
-            <div class="col-12 col-sm-6 mb-3">
-              {{ text_input(id="uses_remaining", label="Number of Sessions", name="uses_remaining", type="number", placeholder="Number of Sessions",
-                 value=passport.uses_remaining if passport else default_qt,
-                 attrs={"required": "required"}) }}
-            </div>
-          </div>
 
-          <div class="mb-4">
             {{ checkbox(id="paid_ind", name="paid_ind", label="Mark as paid",
                checked=passport.paid if passport else false) }}
-          </div>
 
-          <div class="mb-2">
-            <div class="notes-header d-flex align-items-center" onclick="toggleNotes()" style="cursor: pointer; user-select: none;">
-              <span class="mp-label mb-0">Notes</span>
-              <i id="notes-chevron" class="ti ti-chevron-down ms-2 text-muted notes-chevron"></i>
-            </div>
-            <div id="notes-collapse" style="display: none; margin-top: 0.5rem;">
-              {{ textarea(id="notes", name="notes", value=passport.notes if passport else '', rows=3) }}
-            </div>
-          </div>
-          </div>
-          </div>
-        </div>
-
-        <div class="card-footer">
-          <div class="mp-form-content">
-            <div class="d-flex justify-content-start gap-2">
-              {{ button("Update Passport" if passport else "Create Passport", type="submit") }}
-              {{ button("Cancel", variant="outline", href=back_url) }}
+            <div>
+              <div class="notes-header d-flex align-items-center" onclick="toggleNotes()" style="cursor: pointer; user-select: none;">
+                <span class="mp-label mb-0">Notes</span>
+                <i id="notes-chevron" class="ti ti-chevron-down ms-2 text-muted notes-chevron"></i>
+              </div>
+              <div id="notes-collapse" style="display: none; margin-top: 0.5rem;">
+                {{ textarea(id="notes", name="notes", value=passport.notes if passport else '', rows=3) }}
+              </div>
             </div>
           </div>
         </div>
-      </form>
+      {% endcall %}
     </div>
   </div>
 </div>

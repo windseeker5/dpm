@@ -16,97 +16,6 @@
 
 {% block head %}
 <style>
-.form-label.required::after {
-  content: " *";
-  color: #d63384;
-}
-
-/* Page header sticky styling */
-.page-header {
-  border-bottom: 1px solid rgba(98, 105, 118, 0.16);
-  margin-bottom: 0;
-}
-
-.card {
-  border: none;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  background-color: #fff !important;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: #0054a6;
-  box-shadow: 0 0 0 0.2rem rgba(0, 84, 166, 0.15);
-}
-
-.btn-primary {
-  background-color: #0054a6;
-  border-color: #0054a6;
-}
-
-.btn-primary:hover {
-  background-color: #004494;
-  border-color: #004494;
-}
-
-/* Section headers */
-.section-header {
-  font-weight: 600;
-  font-size: 1rem;
-  color: #1e293b;
-}
-
-/* Workflow card icon container */
-.form-selectgroup-boxes .avatar {
-  --tblr-avatar-size: 3.6rem;
-  --tblr-avatar-box-shadow: none;
-  background-color: rgba(var(--tblr-primary-rgb), 0.15);
-  color: var(--tblr-primary);
-}
-.form-selectgroup-boxes .avatar .ti {
-  font-size: 2.5rem;
-}
-
-/* Form hint styling */
-.form-hint {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  color: #626976;
-}
-
-/* Passport type table styling */
-#passportTypesTable td {
-  vertical-align: middle;
-}
-
-#passportTypesTable .signup-share-button {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 0;
-  color: #1d273b;
-  background: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#passportTypesTable .signup-share-button:hover,
-#passportTypesTable .signup-share-button:focus-visible {
-  color: #111827;
-  background: #f1f3f5;
-}
-
-#passportTypesTable .signup-share-button:disabled {
-  color: #9aa1ad;
-  background: transparent;
-}
-
-#passportTypesTable .signup-share-button .ti-qrcode {
-  font-size: 2rem;
-}
-
 .signup-qr-preview {
   display: block;
   width: min(100%, 340px);
@@ -123,33 +32,13 @@
   z-index: 1;
 }
 
-#signupQrModal .signup-share-actions .btn,
-#passportTypesTable .dropdown-item {
+#signupQrModal .signup-share-actions .mp-btn {
   min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#passportTypesTable .dropdown-item {
-  justify-content: flex-start;
 }
 
 /* Google Places Autocomplete dropdown fix */
 .pac-container {
   z-index: 10000 !important;
-}
-
-/* Ghost button for back */
-.btn-ghost-secondary {
-  color: #626976;
-  background: transparent;
-  border: none;
-}
-
-.btn-ghost-secondary:hover {
-  background-color: rgba(98, 105, 118, 0.1);
-  color: #1d2332;
 }
 
 /* Advanced settings: flat toggle-row list, no per-row boxes/headings */
@@ -167,38 +56,10 @@
 }
 
 @media (max-width: 768px) {
-  .card-body {
-    padding: 1rem;
-  }
-
-  .modal-dialog {
-    margin: 1rem;
-  }
-
-  .page-header .row {
-    padding: 0.75rem 0 !important;
-  }
-
-  .page-title {
-    font-size: 1rem;
-  }
-
-  .form-selectgroup {
-    flex-direction: column;
-  }
-
-  .form-selectgroup-label {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .section-divider {
-    margin-top: 1.5rem !important;
-  }
-
   /* Prevent iOS Safari auto-zoom on focus (needs 16px+ inputs) */
-  .form-control,
-  .form-select {
+  .mp-input,
+  .mp-select,
+  .mp-textarea {
     font-size: 16px;
   }
 }
@@ -206,23 +67,32 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xl">
+{% from 'macros/badge.html' import badge %}
+{% from 'macros/input.html' import text_input %}
+{% from 'macros/textarea.html' import textarea %}
+{% from 'macros/checkbox.html' import checkbox %}
+{% from 'macros/switch.html' import switch %}
+{% from 'macros/select.html' import select %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/action_menu.html' import action_menu, dropdown_menu %}
+{% from 'macros/image_picker.html' import image_picker %}
+{% from 'macros/choice_cards.html' import choice_cards %}
+{% from 'macros/form_dialog.html' import form_dialog %}
+{% from 'macros/editable_collection.html' import editable_collection %}
+{% from 'macros/collapsible_section.html' import collapsible_section %}
+
+<div class="dashboard-container">
   <form method="POST" enctype="multipart/form-data" id="activityForm" data-activity-id="{{ activity.id if activity else '' }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <div class="row justify-content-center">
-      <div class="col-12 col-lg-10">
-
-        <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center py-3 px-3">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center py-3">
           <h2 class="page-title mb-0">
             {{ "Edit Activity" if activity else "New Activity" }}
           </h2>
           <div>
-            <a href="{{ url_for('dashboard') }}" class="btn me-2 d-none d-md-inline-flex">Cancel</a>
-            <button type="submit" class="btn btn-success">
-              <i class="ti ti-check me-1"></i>Save
-            </button>
+            {{ button("Cancel", variant="ghost", href=url_for('dashboard'), attrs={"class": "me-2 d-none d-md-inline-flex"}) }}
+            {{ button("Save", type="submit") }}
           </div>
         </div>
 
@@ -232,125 +102,67 @@
             <!-- ============================================ -->
             <!-- BASIC INFORMATION SECTION (Always Expanded)  -->
             <!-- ============================================ -->
-            <div class="mb-4">
+            <div class="mp-form-content mp-form-fields">
               <!-- Active / Archived Status (Own Row - First) -->
-              <div class="mb-3 d-flex align-items-center">
-                {% set current_status = activity.status if activity else 'active' %}
-                <span class="me-2" id="statusLabel">{{ 'Active' if current_status == 'active' else 'Archived' }}</span>
-                <label class="form-check form-switch mb-0">
-                  <input class="form-check-input" type="checkbox" id="statusToggle"
-                         {{ 'checked' if current_status == 'active' else '' }}
-                         onchange="updateStatusValue()">
-                </label>
-                <input type="hidden" name="status" id="statusValue" value="{{ current_status }}">
-                <input type="hidden" name="passport_action" id="passportActionValue" value="">
-              </div>
+              {% set current_status = activity.status if activity else 'active' %}
+              {{ switch(id="statusToggle", label=('<span id="statusLabel">' ~ ('Active' if current_status == 'active' else 'Archived') ~ '</span>')|safe,
+                 checked=(current_status == 'active'), attrs={"onchange": "updateStatusValue()"}) }}
+              <input type="hidden" name="status" id="statusValue" value="{{ current_status }}">
+              <input type="hidden" name="passport_action" id="passportActionValue" value="">
 
               <!-- Activity Name (Own Row - Second) -->
-              <div class="mb-3">
-                <label class="form-label required">Name</label>
-                <input type="text" class="form-control" name="name"
-                       value="{{ activity.name if activity else '' }}"
-                       placeholder="Enter activity name (e.g., Hockey Training, Yoga Classes)"
-                       required>
-              </div>
+              {{ text_input(id="activity_name", label="Name", name="name",
+                 value=activity.name if activity else '',
+                 placeholder="Enter activity name (e.g., Hockey Training, Yoga Classes)",
+                 attrs={"required": "required"}) }}
 
               <!-- Description -->
-              <div class="mb-3">
-                <label class="form-label">Description</label>
-                <textarea class="form-control" name="description" rows="3" placeholder="What? Where? When? Describe your activity...">{{ activity.description if activity else '' }}</textarea>
-              </div>
+              {{ textarea(id="activity_description", label="Description", name="description", rows=3,
+                 value=activity.description if activity else '',
+                 placeholder="What? Where? When? Describe your activity...") }}
 
               <!-- Cover Photo -->
-              <div class="mb-3">
-                <label class="form-label">Cover Photo</label>
-
-                <div class="d-flex align-items-stretch rounded bg-secondary-lt overflow-hidden"
-                     style="border: 1px solid rgba(98,105,118,0.2); width: fit-content; max-width: 100%;">
-
-                  <!-- Left: Thumbnail — always visible -->
-                  <div class="position-relative flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
-                       style="width: 100px; min-height: 100px; cursor: pointer;" id="coverPhotoWrapper">
-                  </div>
-
-                  <!-- Right: Panel — border-left as divider, no extra inner wrapper -->
-                  <div id="imageOptions" class="flex-grow-1 p-2"
-                       style="display: none; border-left: 1px solid rgba(98,105,118,0.2);">
-                    <!-- Source toggle: Search ↔ Upload -->
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                      <small class="text-muted fw-medium">
-                        <i class="ti ti-world-search" style="font-size:13px;"></i> Search
-                      </small>
-                      <label class="form-check form-switch mb-0">
-                        <input class="form-check-input" type="checkbox" id="sourceToggle" role="switch">
-                      </label>
-                      <small class="text-muted">
-                        <i class="ti ti-upload" style="font-size:13px;"></i> Upload
-                      </small>
-                    </div>
-
-                    <!-- Search Web Content -->
-                    <div id="searchWebContent">
-                      <div class="input-group">
-                        <input type="text" id="imageDescription" class="form-control" placeholder="e.g., Hockey, Yoga">
-                        <button type="button" id="searchImagesBtn" class="btn btn-primary">
-                          <i class="ti ti-search"></i>
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Upload Content -->
-                    <div id="uploadContent" style="display: none;">
-                      <input type="file" name="upload_image" class="form-control" id="uploadInput">
-                    </div>
-                  </div>
-
-                </div>
-
-                <input type="hidden" name="selected_image_filename" id="selectedImageFilename" value="{{ activity.image_filename if activity else '' }}">
-              </div>
+              {{ image_picker(
+                id="cover-photo",
+                label="Cover Photo",
+                upload_name="upload_image",
+                selected_name="selected_image_filename",
+                selected_value=activity.image_filename if activity else '',
+                image_src=url_for('static', filename='uploads/activity_images/' ~ activity.image_filename)
+                  if activity and activity.image_filename else none,
+                image_alt=activity.name ~ ' cover photo' if activity and activity.image_filename else ''
+              ) }}
 
               <!-- Location -->
-              <div class="mb-3">
-                <label class="form-label">Location (Optional)</label>
-                <div class="input-group">
-                  <input type="text"
-                         id="locationAutocomplete"
-                         class="form-control"
-                         placeholder="Enter address (e.g., 821 rue des sables rimouski)"
-                         autocomplete="off"
-                         value="{{ activity.location_address_raw if activity and activity.location_address_raw else '' }}">
-                  <button type="button" id="lookupLocationBtn" class="btn btn-primary">
-                    <i class="ti ti-search me-1"></i>Lookup
-                  </button>
+              <div class="mp-field">
+                <label class="mp-label" for="locationAutocomplete">Location (Optional)</label>
+                <div class="mp-input-action" id="locationEntry">
+                  {{ text_input(id="locationAutocomplete",
+                     placeholder="Enter an address",
+                     value=activity.location_address_raw if activity and activity.location_address_raw else '',
+                     attrs={"autocomplete": "street-address", "aria-describedby": "locationHint"}) }}
+                  {{ button("Lookup", variant="outline", id="lookupLocationBtn") }}
                 </div>
-                <small id="locationHint" class="form-hint">
-                  Where will this activity take place?
-                </small>
+                <p id="locationHint" class="mp-field__description">Where will this activity take place?</p>
 
-                <!-- Loading indicator -->
-                <div id="locationLoading" class="mt-2" style="display: none;">
-                  <span class="spinner-border spinner-border-sm me-2"></span>Looking up address...
+                <div id="locationLoading" class="mp-location-status" role="status" hidden>
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  <span>Looking up address…</span>
                 </div>
 
-                <!-- Error display -->
-                <div id="locationError" class="alert alert-warning mt-2" style="display: none;">
-                  <i class="ti ti-alert-circle me-1"></i><span id="locationErrorText"></span>
+                <div id="locationError" class="mp-location-status" data-tone="error" role="alert" hidden>
+                  <i class="ti ti-alert-circle" aria-hidden="true"></i><span id="locationErrorText"></span>
                 </div>
 
-                <!-- Multiple results selection list -->
-                <div id="locationResults" class="list-group mt-2" style="display: none;"></div>
+                <div id="locationResults" class="mp-location-results" aria-label="Address suggestions" hidden></div>
 
-                <!-- Confirmed location display -->
-                <div id="locationConfirmed" class="align-items-center border rounded p-3 mt-2" style="display: none;">
-                  <a id="viewMapLink" href="#" target="_blank" class="text-reset text-decoration-none">
-                    <i class="ti ti-map-pin me-2 text-muted"></i>
+                <div id="locationConfirmed" class="mp-location-confirmed" hidden>
+                  <a id="viewMapLink" href="#" target="_blank" rel="noopener" class="mp-location-confirmed__link">
+                    <i class="ti ti-map-pin" aria-hidden="true"></i>
                     <span id="confirmedAddressText"></span>
                   </a>
-                  <span class="ms-auto text-secondary" style="cursor: pointer;"
-                        id="clearLocationBtn">
-                    <i class="ti ti-x" style="font-size: 18px;"></i>
-                  </span>
+                  {{ button("", variant="ghost", size="icon", id="clearLocationBtn", icon="ti-x",
+                     attrs={"aria-label": "Clear location"}) }}
                 </div>
 
                 <!-- Hidden fields to store location data -->
@@ -366,35 +178,28 @@
             <!-- ============================================ -->
             <!-- PASSPORT TYPES SECTION (Always Visible)      -->
             <!-- ============================================ -->
-            <div class="mb-4">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="mb-0">Passport Types</h3>
-                <button type="button" class="btn btn-primary" id="addPassportTypeBtn" data-bs-toggle="modal" data-bs-target="#addPassportTypeModal">
-                  <i class="ti ti-plus me-1"></i>Type
-                </button>
+            <section class="mt-5" aria-labelledby="passport-types-heading">
+              <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                <h3 class="mb-0" id="passport-types-heading">Passport Types</h3>
+                {{ button("Add Type", id="addPassportTypeBtn", attrs={"data-bs-toggle": "modal", "data-bs-target": "#addPassportTypeModal"}) }}
               </div>
-              <p class="text-muted mb-2">A passport type defines what you are selling for this activity. Each passport type automatically generates a sign-up form.</p>
-              <div class="card">
-                <div class="table-responsive">
-                  <table class="table table-vcenter card-table" id="passportTypesTable" style="display: none;">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th class="d-none d-md-table-cell">Price</th>
-                        <th class="d-none d-md-table-cell">Sessions</th>
-                        <th class="d-none d-md-table-cell">Signup &amp; QR</th>
-                        <th class="w-1">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="passportTypesContainer">
-                      <!-- Passport types will be dynamically added here -->
-                    </tbody>
-                  </table>
-                </div>
-
-                <div id="noPassportTypes"></div>
-              </div>
-            </div>
+              <p class="mp-text-body mb-3">Define what participants can purchase. Each passport type receives its own signup form.</p>
+              {% call editable_collection(
+                id="passport-types-collection",
+                body_id="passportTypesContainer",
+                empty_id="noPassportTypes",
+                columns=[
+                  {"label": "Name"},
+                  {"label": "Price"},
+                  {"label": "Sessions"},
+                  {"label": "Signup & QR"},
+                  {"label": "Actions", "class": "text-end"}
+                ],
+                empty_icon="ti-ticket",
+                empty_title="No passport types yet",
+                empty_description="Add a passport type to define what participants can purchase."
+              ) %}{% endcall %}
+            </section>
 
           </div>
         </div>
@@ -406,92 +211,50 @@
         <!-- spaced apart, no divider — per whitespace-    -->
         <!-- balance / visual-hierarchy guidance.          -->
         <!-- ============================================ -->
-        <div class="card mt-4">
-                <button class="btn btn-link w-100 text-start p-3 text-decoration-none text-dark d-flex justify-content-between align-items-center"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#collapseActivityAdvanced"
-                        aria-expanded="{{ 'true' if advanced_expanded else 'false' }}"
-                        aria-controls="collapseActivityAdvanced">
-                  <span class="fw-medium">
-                    <i class="ti ti-adjustments me-2"></i>
-                    Activity Advanced Settings
-                  </span>
-                  <i class="ti ti-chevron-down" id="activity-advanced-chevron"></i>
-                </button>
-                <div id="collapseActivityAdvanced" class="collapse {{ 'show' if advanced_expanded else '' }}">
-                  <div class="border-top p-3">
+        {% call collapsible_section(
+          id="activity-advanced-settings",
+          title="Activity Advanced Settings",
+          description="Signup workflow, capacity, scheduling, integrations, and passport inheritance.",
+          icon="ti-adjustments",
+          open=advanced_expanded,
+          class_="mt-4"
+        ) %}
+          <div class="mp-form-content">
 
                     <!-- ============================================ -->
                     <!-- SIGNUP WORKFLOW                              -->
                     <!-- ============================================ -->
-                    <div class="mb-4 form-selectgroup form-selectgroup-boxes">
-
-                      <!-- Pay First Card -->
-                      <label class="form-selectgroup-item w-100 mb-3">
-                        <input type="checkbox" name="workflow_type" value="payment_first" class="form-selectgroup-input"
-                               {{ 'checked' if not activity or not activity.workflow_type or activity.workflow_type == 'payment_first' else '' }}>
-                        <div class="form-selectgroup-label w-100 p-3">
-                          <span class="form-selectgroup-check form-selectgroup-check-floated"></span>
-                          <div class="d-flex align-items-center">
-                            <div class="me-3">
-                              <span class="avatar border-0">
-                                <i class="ti ti-credit-card"></i>
-                              </span>
-                            </div>
-                            <div class="flex-fill">
-                              <strong>Pay First</strong>
-                              <div class="text-secondary mt-1">
-                                Payment is requested automatically on signup. Passport delivered once paid — nothing to approve.
-                                <br><em><strong class="text-dark">Best for:</strong> Open events, classes, large groups</em>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-
-                      <!-- Review First Card -->
-                      <label class="form-selectgroup-item w-100">
-                        <input type="checkbox" name="workflow_type" value="approval_first" class="form-selectgroup-input"
-                               {{ 'checked' if activity and activity.workflow_type == 'approval_first' else '' }}>
-                        <div class="form-selectgroup-label w-100 p-3">
-                          <span class="form-selectgroup-check form-selectgroup-check-floated"></span>
-                          <div class="d-flex align-items-center">
-                            <div class="me-3">
-                              <span class="avatar border-0">
-                                <i class="ti ti-clipboard-check"></i>
-                              </span>
-                            </div>
-                            <div class="flex-fill">
-                              <strong>Review First</strong>
-                              <div class="text-secondary mt-1">
-                                You approve who gets in. Accepted signups receive payment instructions.
-                                <br><em><strong class="text-dark">Best for:</strong> Tryouts, limited spots, selective groups</em>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-
+                    <div class="mb-4">
+                      {{ choice_cards(
+                        name="workflow_type",
+                        label="Signup Workflow",
+                        selected=activity.workflow_type if activity and activity.workflow_type else "payment_first",
+                        options=[
+                          {
+                            "value": "payment_first",
+                            "title": "Pay First",
+                            "icon": "ti-credit-card",
+                            "description": "Request payment automatically on signup. Deliver the passport once paid—nothing to approve.",
+                            "meta_label": "Best for:",
+                            "meta": "Open events, classes, large groups"
+                          },
+                          {
+                            "value": "approval_first",
+                            "title": "Review First",
+                            "icon": "ti-clipboard-check",
+                            "description": "Approve each signup before sending payment instructions.",
+                            "meta_label": "Best for:",
+                            "meta": "Tryouts, limited spots, selective groups"
+                          }
+                        ]
+                      ) }}
                     </div>
 
                     <!-- Target Revenue -->
-                    <div class="mb-3">
-                      <label class="form-label">Target Revenue (Optional)</label>
-                      <div class="input-group" style="max-width: 300px;">
-                        <span class="input-group-text">$</span>
-                        <input type="number"
-                               class="form-control"
-                               name="goal_revenue"
-                               step="0.01"
-                               min="0"
-                               placeholder="0.00"
-                               value="{{ '%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else '' }}">
-                      </div>
-                      <small class="form-hint">
-                        Set a revenue goal to track progress on your activity dashboard
-                      </small>
-                    </div>
+                    {{ text_input(id="goal_revenue", label="Target Revenue (Optional)", name="goal_revenue", type="number",
+                       value=('%.2f'|format(activity.goal_revenue) if activity and activity.goal_revenue else None),
+                       placeholder="0.00", description="Set a revenue goal to track progress on your activity dashboard",
+                       attrs={"step": "0.01", "min": "0"}) }}
 
                     <div class="section-divider mt-4 mb-3"></div>
 
@@ -502,303 +265,211 @@
 
                       <!-- Capacity Options -->
                       <div class="setting-row">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" name="is_quantity_limited" id="isQuantityLimited"
-                                 {{ 'checked' if activity and activity.is_quantity_limited else '' }}
-                                 onchange="toggleCapacityFields()">
-                          <span class="form-check-label">Limit capacity</span>
-                        </label>
-                        <div class="mt-2" id="maxSessionsField" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
-                          <label class="form-label">Maximum spots</label>
-                          <input type="number" class="form-control" name="max_sessions" min="1"
-                                 value="{{ activity.max_sessions if activity and activity.max_sessions else '' }}"
-                                 placeholder="e.g., 80" style="max-width: 150px;">
-                          <small class="form-hint">Signups are blocked when all spots are taken</small>
+                        {{ switch(id="isQuantityLimited", name="is_quantity_limited", label="Limit capacity",
+                           checked=activity.is_quantity_limited if activity else False,
+                           attrs={"onchange": "toggleCapacityFields()"}) }}
+                        <div class="mp-progressive-section" id="maxSessionsField"{% if not activity or not activity.is_quantity_limited %} hidden{% endif %}>
+                          {{ text_input(id="max_sessions", label="Maximum spots", name="max_sessions", type="number",
+                             value=activity.max_sessions if activity and activity.max_sessions else '',
+                             placeholder="e.g., 80", description="Signups are blocked when all spots are taken",
+                             attrs={"min": "1"}, class_="") }}
                         </div>
-                        <div id="showRemainingField" class="mt-2" style="{{ 'display: block;' if activity and activity.is_quantity_limited else 'display: none;' }}">
-                          <label class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" name="show_remaining_quantity"
-                                   {{ 'checked' if activity and activity.show_remaining_quantity else '' }}>
-                            <span class="form-check-label">Show remaining spots on signup form</span>
-                          </label>
+                        <div id="showRemainingField" class="mp-progressive-section"{% if not activity or not activity.is_quantity_limited %} hidden{% endif %}>
+                          {{ switch(id="show_remaining_quantity", label="Show remaining spots on signup form",
+                             checked=activity.show_remaining_quantity if activity else False) }}
                         </div>
                       </div>
 
                       <!-- Additional Options -->
                       <div class="setting-row">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" name="allow_quantity_selection" id="allowQuantitySelection"
-                                 {{ 'checked' if activity and activity.allow_quantity_selection else '' }}>
-                          <span class="form-check-label">Allow multiple passports per signup</span>
-                        </label>
+                        {{ switch(id="allowQuantitySelection", name="allow_quantity_selection", label="Allow multiple passports per signup",
+                           checked=activity.allow_quantity_selection if activity else False) }}
                       </div>
 
                       <div class="setting-row">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" name="offer_passport_renewal"
-                                 {{ 'checked' if activity and activity.offer_passport_renewal else '' }}>
-                          <span class="form-check-label">Prompt renewal when passport runs out</span>
-                        </label>
+                        {{ switch(id="offer_passport_renewal", label="Prompt renewal when passport runs out",
+                           checked=activity.offer_passport_renewal if activity else False) }}
                       </div>
 
                       <div class="setting-row">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" name="show_in_shop"
-                                 {{ 'checked' if activity and activity.show_in_shop else '' }}>
-                          <span class="form-check-label">Show in shop</span>
-                        </label>
+                        {{ switch(id="show_in_shop", label="Show in shop",
+                           checked=activity.show_in_shop if activity else False) }}
                       </div>
 
                       {% if stripe_configured %}
                       <div class="setting-row">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" name="accept_credit_card"
-                                 {{ 'checked' if activity and activity.accept_credit_card else '' }}>
-                          <span class="form-check-label">Accept credit card via Stripe</span>
-                        </label>
+                        {{ switch(id="accept_credit_card", label="Accept credit card via Stripe",
+                           checked=activity.accept_credit_card if activity else False) }}
                       </div>
                       {% endif %}
 
                       <!-- Schedule Dates -->
                       {% set has_schedule_dates = activity and (activity.start_date or activity.end_date) %}
                       <div class="setting-row">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" id="usesScheduleDates"
-                                 aria-controls="scheduleDatesFields"
-                                 {{ 'checked' if has_schedule_dates else '' }}
-                                 onchange="toggleScheduleDatesFields()">
-                          <span class="form-check-label">
-                            <span class="d-block fw-semibold">Set season dates</span>
-                            <span class="d-block text-secondary small">Add a start and end date for this activity.</span>
-                          </span>
-                        </label>
-                        <div id="scheduleDatesFields" class="row mt-2" style="{{ 'display: flex;' if has_schedule_dates else 'display: none;' }}">
+                        {{ switch(id="usesScheduleDates", label="Set season dates",
+                           description="Add a start and end date for this activity.",
+                           checked=has_schedule_dates,
+                           attrs={"aria-controls": "scheduleDatesFields", "onchange": "toggleScheduleDatesFields()"}) }}
+                        <div id="scheduleDatesFields" class="row g-3 mt-2"{% if not has_schedule_dates %} hidden{% endif %}>
                           <div class="col-md-6 mb-2">
-                            <label class="form-label">Start Date</label>
-                            <input type="datetime-local" name="start_date" class="form-control"
-                                   value="{{ activity.start_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.start_date else '' }}"
-                                   {{ '' if has_schedule_dates else 'disabled' }}>
+                            {{ text_input(id="start_date", label="Start Date", name="start_date", type="datetime-local",
+                               value=activity.start_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.start_date else '',
+                               disabled=(not has_schedule_dates)) }}
                           </div>
                           <div class="col-md-6 mb-2">
-                            <label class="form-label">End Date</label>
-                            <input type="datetime-local" name="end_date" class="form-control"
-                                   value="{{ activity.end_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.end_date else '' }}"
-                                   {{ '' if has_schedule_dates else 'disabled' }}>
+                            {{ text_input(id="end_date", label="End Date", name="end_date", type="datetime-local",
+                               value=activity.end_date.strftime('%Y-%m-%dT%H:%M') if activity and activity.end_date else '',
+                               disabled=(not has_schedule_dates)) }}
                           </div>
                         </div>
                       </div>
 
                       <!-- Session Booking -->
-                      <div class="setting-row" aria-labelledby="sessionBookingHeading">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" name="uses_scheduling" id="usesScheduling"
-                                 aria-controls="schedulingFields"
-                                 aria-expanded="{{ 'true' if activity and activity.uses_scheduling else 'false' }}"
-                                 {{ 'checked' if activity and activity.uses_scheduling else '' }}
-                                 onchange="toggleSchedulingFields()">
-                          <span class="form-check-label" id="sessionBookingHeading">
-                            <span class="d-block fw-semibold">Enable session booking</span>
-                            <span class="d-block text-secondary small">Each participant chooses an available session.</span>
-                          </span>
-                        </label>
+                      <div class="setting-row">
+                        {{ switch(id="usesScheduling", name="uses_scheduling", label="Enable session booking",
+                           description="Each participant chooses an available session.",
+                           checked=activity.uses_scheduling if activity else False,
+                           attrs={"aria-controls": "schedulingFields",
+                                  "aria-expanded": ('true' if activity and activity.uses_scheduling else 'false'),
+                                  "onchange": "toggleSchedulingFields()"}) }}
 
-                      <div id="schedulingFields" class="mt-3 {{ 'd-none' if not activity or not activity.uses_scheduling else '' }}">
-                        <div class="alert alert-info" role="note">
-                          <div class="d-flex">
-                            <i class="ti ti-info-circle me-2 mt-1" aria-hidden="true"></i>
-                            <div>
-                              <strong>Capacity is managed per session.</strong>
-                              The activity-level capacity setting is ignored while session booking is enabled.
+                        <div id="schedulingFields" class="mp-progressive-section {{ 'd-none' if not activity or not activity.uses_scheduling else '' }}">
+                          <div class="mp-inline-note" role="note">
+                            <i class="ti ti-info-circle" aria-hidden="true"></i>
+                            <span><strong>Capacity is managed per session.</strong> Activity-level capacity is ignored while session booking is enabled.</span>
+                          </div>
+
+                          <section class="mp-form-subsection" aria-labelledby="add-session-heading">
+                            <div class="mp-form-subsection__heading">
+                              <h4 id="add-session-heading">Add a session</h4>
+                              <p>Choose a date, time, and number of available spots.</p>
                             </div>
-                          </div>
-                        </div>
-
-                        <!-- Primary flow: add one exact session -->
-                        <div class="border rounded mb-3">
-                          <div class="p-3 border-bottom">
-                            <h4 class="mb-1">Add a session</h4>
-                            <p class="text-secondary mb-0">Choose the exact date, time, and number of available spots.</p>
-                          </div>
-                          <div class="p-3">
-                            <div class="row g-3 align-items-end">
-                              <div class="col-md-4">
-                                <label class="form-label" for="singleSlotDateInput">Date</label>
-                                <input type="date" class="form-control" id="singleSlotDateInput">
+                            <div class="row g-2 align-items-end">
+                              <div class="col-12 col-sm-5">
+                                {{ text_input(id="singleSlotDateInput", label="Date", type="date") }}
                               </div>
-                              <div class="col-md-3">
-                                <label class="form-label" for="singleSlotTimeInput">Time</label>
-                                <select class="form-select" id="singleSlotTimeInput" aria-describedby="singleSlotMsg">
+                              <div class="col-7 col-sm-4">
+                                {% call select(id="singleSlotTimeInput", label="Time", attrs={"aria-describedby": "singleSlotMsg"}) %}
                                   {{ session_time_options() }}
-                                </select>
+                                {% endcall %}
                               </div>
-                              <div class="col-md-2">
-                                <label class="form-label" for="singleSlotCapacityInput">Capacity</label>
-                                <input type="number" class="form-control" id="singleSlotCapacityInput" min="1" value="6" inputmode="numeric">
+                              <div class="col-5 col-sm-3">
+                                {{ text_input(id="singleSlotCapacityInput", label="Capacity", type="number", value="6",
+                                   attrs={"min": "1", "inputmode": "numeric"}) }}
                               </div>
-                              <div class="col-md-3 d-grid">
-                                <button type="button" class="btn btn-primary" id="addSingleSlotBtn" disabled>
-                                  <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Add session
-                                </button>
+                              <div class="col-12 d-grid d-sm-block">
+                                {{ button("Add session", id="addSingleSlotBtn", attrs={"disabled": "disabled"}) }}
                               </div>
                             </div>
-                            <div id="singleSlotMsg" class="form-hint mt-2" role="status" aria-live="polite">
+                            <div id="singleSlotMsg" class="mp-field__description" role="status" aria-live="polite">
                               Choose a date and time to add a session.
                             </div>
 
-                            <!-- Secondary flow: bulk combinations for advanced use -->
-                            <details class="mt-4">
-                              <summary class="fw-semibold text-primary">Add multiple sessions at once</summary>
-                              <div class="border rounded p-3 mt-3">
-                                <p class="text-secondary mb-3">
-                                  Select several dates and times. Every date-and-time combination will become a session.
-                                </p>
+                            <details class="mp-subtle-disclosure">
+                              <summary>Add multiple sessions at once</summary>
+                              <div class="mp-subtle-disclosure__content">
+                                <p class="mp-text-body mb-0">Select dates and times. Every combination becomes a session.</p>
                                 <div class="row g-3">
-                                  <div class="col-md-5">
-                                    <label class="form-label" for="slotDateInput">Dates</label>
-                                    <div class="input-group">
-                                      <input type="date" class="form-control" id="slotDateInput">
-                                      <button type="button" class="btn btn-outline-primary" id="addSlotDateBtn">
-                                        <i class="ti ti-plus me-1" aria-hidden="true"></i>Add
-                                      </button>
+                                  <div class="col-md-6">
+                                    <label class="mp-label" for="slotDateInput">Dates</label>
+                                    <div class="mp-input-action">
+                                      {{ text_input(id="slotDateInput", type="date") }}
+                                      {{ button("Add", variant="outline", id="addSlotDateBtn") }}
                                     </div>
                                     <div id="slotDateChips" class="d-flex flex-wrap gap-2 mt-2" role="list" aria-live="polite"></div>
                                   </div>
-                                  <div class="col-md-4">
-                                    <label class="form-label" for="slotTimeInput">Times</label>
-                                    <div class="input-group">
-                                      <select class="form-select" id="slotTimeInput">
-                                        {{ session_time_options() }}
-                                      </select>
-                                      <button type="button" class="btn btn-outline-primary" id="addSlotTimeBtn">
-                                        <i class="ti ti-plus me-1" aria-hidden="true"></i>Add
-                                      </button>
+                                  <div class="col-md-6">
+                                    <label class="mp-label" for="slotTimeInput">Times</label>
+                                    <div class="mp-input-action">
+                                      {% call select(id="slotTimeInput") %}{{ session_time_options() }}{% endcall %}
+                                      {{ button("Add", variant="outline", id="addSlotTimeBtn") }}
                                     </div>
                                     <div id="slotTimeChips" class="d-flex flex-wrap gap-2 mt-2" role="list" aria-live="polite"></div>
                                   </div>
-                                  <div class="col-md-3">
-                                    <label class="form-label" for="slotCapacityInput">Capacity</label>
-                                    <input type="number" class="form-control" id="slotCapacityInput" min="1" value="6" inputmode="numeric">
-                                    <small class="form-hint">Spots in each session</small>
-                                  </div>
                                 </div>
-
-                                <div id="slotPreviewMsg" class="alert alert-secondary mt-3 mb-0" role="status" aria-live="polite"></div>
-                                <div class="d-grid d-sm-block mt-3">
-                                  <button type="button" class="btn btn-outline-primary" id="generateSlotsBtn" disabled>
-                                    <i class="ti ti-calendar-plus me-1" aria-hidden="true"></i>Add multiple sessions
-                                  </button>
-                                </div>
+                                {{ text_input(id="slotCapacityInput", label="Capacity per session", type="number", value="6",
+                                   attrs={"min": "1", "inputmode": "numeric"}) }}
+                                <div id="slotPreviewMsg" class="mp-inline-note" role="status" aria-live="polite"></div>
+                                {{ button("Add multiple sessions", variant="outline", id="generateSlotsBtn", attrs={"disabled": "disabled"}) }}
                               </div>
                             </details>
+                          </section>
 
-                            <div class="border-top mt-4 pt-3 text-secondary small">
-                              Sessions are saved when you select <strong>Save</strong> at the top of the page.
+                          <section class="mp-form-subsection" aria-labelledby="scheduled-sessions-heading">
+                            <div class="mp-form-subsection__heading">
+                              <h4 id="scheduled-sessions-heading">Scheduled sessions</h4>
+                              <p id="slotCountSummary">Review capacity and bookings before saving.</p>
                             </div>
-                          </div>
-                        </div>
-
-                        <!-- Existing and newly generated sessions -->
-                        <div class="border rounded overflow-hidden">
-                          <div class="p-3 border-bottom">
-                            <h4 class="mb-1">Scheduled sessions</h4>
-                            <p class="text-secondary mb-0" id="slotCountSummary">Review capacity and bookings before saving.</p>
-                          </div>
-                          <div id="slotsContainer" class="list-group list-group-flush d-none"></div>
-                          <div id="noSlots" class="empty py-5">
-                            <div class="empty-icon">
-                              <i class="ti ti-calendar-off" aria-hidden="true"></i>
-                            </div>
-                            <p class="empty-title">No sessions scheduled</p>
-                            <p class="empty-subtitle text-secondary">
-                              Choose a date and time above, then select <strong>Add session</strong>.
-                            </p>
-                          </div>
+                            {% call editable_collection(
+                              id="sessions-collection",
+                              body_id="slotsContainer",
+                              empty_id="noSlots",
+                              columns=[
+                                {"label": "Session"},
+                                {"label": "Capacity"},
+                                {"label": "Available"},
+                                {"label": "Actions", "class": "text-end"}
+                              ],
+                              empty_icon="ti-calendar-off",
+                              empty_title="No sessions scheduled",
+                              empty_description="Choose a date and time above, then add the session."
+                            ) %}{% endcall %}
+                            <p class="mp-field__description">Sessions are saved with the activity.</p>
+                          </section>
                         </div>
                       </div>
-                    </div>
 
                       <!-- Discord Integration -->
                       <div class="setting-row">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" id="discordToggle"
-                                 onchange="toggleDiscordSection()"
-                                 {{ 'checked' if activity and activity.discord_webhook_url else '' }}>
-                          <span class="form-check-label">
-                            <i class="ti ti-brand-discord me-1"></i>
-                            This activity has a Discord server
-                          </span>
-                        </label>
-                        <div id="discordSection" class="mt-2" style="display:{{ 'block' if activity and activity.discord_webhook_url else 'none' }};">
-                          <div class="mb-3">
-                            <label class="form-label">Webhook URL</label>
-                            <div class="input-group">
-                              <input type="url" class="form-control" name="discord_webhook_url"
-                                     id="discordWebhookUrl"
-                                     placeholder="https://discord.com/api/webhooks/..."
-                                     value="{{ activity.discord_webhook_url if activity and activity.discord_webhook_url else '' }}">
-                              <button type="button" class="btn btn-outline-secondary" id="discordTestBtn"
-                                      onclick="testDiscordWebhook()">
-                                <i class="ti ti-brand-discord me-1"></i>Test
-                              </button>
+                        {{ switch(id="discordToggle", label="This activity has a Discord server",
+                           checked=(activity and activity.discord_webhook_url),
+                           attrs={"aria-controls": "discordSection", "onchange": "toggleDiscordSection()"}) }}
+                        <div id="discordSection" class="mp-progressive-section"{% if not activity or not activity.discord_webhook_url %} hidden{% endif %}>
+                          <div class="mp-field">
+                            <label class="mp-label" for="discordWebhookUrl">Webhook URL</label>
+                            <div class="mp-input-action">
+                              {{ text_input(id="discordWebhookUrl", name="discord_webhook_url",
+                                 placeholder="https://discord.com/api/webhooks/…",
+                                 value=activity.discord_webhook_url if activity and activity.discord_webhook_url else '') }}
+                              {{ button("Test", variant="outline", id="discordTestBtn", attrs={"onclick": "testDiscordWebhook()"}) }}
                             </div>
-                            <small class="form-hint">
-                              Discord server → Settings → Integrations → Webhooks → New Webhook → Copy URL.
-                            </small>
+                            <p class="mp-field__description">Copy this from Discord Server Settings → Integrations → Webhooks.</p>
                           </div>
-                          <div class="mb-0">
-                            <label class="form-label">Discord invite link <span class="text-muted">(optional)</span></label>
-                            <input type="url" class="form-control" name="discord_invite_url"
-                                   id="discordInviteUrl"
-                                   placeholder="https://discord.gg/..."
-                                   value="{{ activity.discord_invite_url if activity and activity.discord_invite_url else '' }}">
-                            <small class="form-hint">
-                              Invite link for participants to join your Discord server. Discord server → Invite People → Copy Link.
-                            </small>
-                          </div>
+                          {{ text_input(id="discordInviteUrl", name="discord_invite_url", label="Discord invite link (optional)",
+                             placeholder="https://discord.gg/…",
+                             value=activity.discord_invite_url if activity and activity.discord_invite_url else '',
+                             description="Participants use this link to join the server.") }}
                         </div>
                       </div>
 
                       <!-- Passport Inheritance -->
                       {% set inherited_ids = activity.get_inherited_activity_ids() if activity else [] %}
                       <div class="setting-row">
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" id="inheritPassportsToggle"
-                                 onchange="toggleInheritedActivitiesSection()"
-                                 {{ 'checked' if inherited_ids else '' }}>
-                          <span class="form-check-label">
-                            <span class="d-block fw-semibold">Inherit passports from other activities</span>
-                            <span class="d-block text-secondary small">Manage passports from other activities here too, like last season.</span>
-                          </span>
-                        </label>
-                        <div id="inheritedActivitiesSection" class="mt-2" style="display:{{ 'block' if inherited_ids else 'none' }};">
+                        {{ switch(id="inheritPassportsToggle", label="Inherit passports from other activities",
+                           description="Manage passports from another activity here too, such as last season.",
+                           checked=(inherited_ids|length > 0),
+                           attrs={"aria-controls": "inheritedActivitiesSection", "onchange": "toggleInheritedActivitiesSection()"}) }}
+                        <div id="inheritedActivitiesSection" class="mp-progressive-section"{% if not inherited_ids %} hidden{% endif %}>
                           {% if other_activities %}
-                          <div id="inheritedActivitiesList" style="max-height: 260px; overflow-y: auto;">
+                          <div id="inheritedActivitiesList" class="mp-check-list">
                             {% for other in other_activities %}
-                            <div class="rounded mb-1 {{ 'bg-blue-lt' if other.id in inherited_ids else '' }}">
-                              <label class="form-check d-flex align-items-center py-2 px-3 mb-0" style="cursor: pointer;">
-                                <input class="form-check-input m-0" type="checkbox"
-                                       name="inherited_activity_ids" value="{{ other.id }}"
-                                       {{ 'checked' if other.id in inherited_ids else '' }}
-                                       onchange="this.closest('.rounded').classList.toggle('bg-blue-lt', this.checked)">
-                                <span class="form-check-label ms-2 min-w-0">
-                                  {{ other.name }}
-                                  {% if other.status in ['inactive', 'archived'] %}<span class="badge bg-secondary-lt ms-1">Archived</span>{% endif %}
-                                </span>
-                              </label>
+                            {% set inherited_label %}<span>{{ other.name }} {% if other.status in ['inactive', 'archived'] %}{{ badge("Archived", variant="secondary") }}{% endif %}</span>{% endset %}
+                            <div class="mp-check-list__item">
+                              {{ checkbox(id="inherited_activity_" ~ other.id, name="inherited_activity_ids",
+                                 label=inherited_label, checked=(other.id in inherited_ids), attrs={"value": other.id}) }}
                             </div>
                             {% endfor %}
                           </div>
                           {% else %}
-                          <p class="text-muted mb-0">No other activities exist yet.</p>
+                          <p class="mp-text-body mb-0">No other activities exist yet.</p>
                           {% endif %}
                         </div>
                       </div>
 
                     </div>
 
-                  </div>
-                </div>
-        </div>
+          </div>
+        {% endcall %}
 
         <!-- ============================================ -->
         <!-- FINANCIAL MANAGEMENT SECTION (Edit Only)      -->
@@ -809,35 +480,24 @@
           <div class="card-body" id="finances">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <h3 class="mb-0">Finances</h3>
-                <div class="dropdown">
-                  <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    Actions
-                  </button>
-                  <div class="dropdown-menu">
-                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
-                      <i class="ti ti-plus me-2"></i>Add Income
-                    </a>
-                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                      <i class="ti ti-plus me-2"></i>Add Expense
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="{{ url_for('financial_report') }}?activity_id={{ activity.id }}" target="_blank">
-                      <i class="ti ti-edit me-2"></i>Edit Financial
-                    </a>
-                  </div>
-                </div>
+                {{ action_menu(id="finances-actions-menu", label="Actions", icon_only=False, items=[
+                  {"label": "Add Income", "icon": '<i class="ti ti-plus"></i>'|safe, "attrs": {"data-bs-toggle": "modal", "data-bs-target": "#addIncomeModal"}},
+                  {"label": "Add Expense", "icon": '<i class="ti ti-plus"></i>'|safe, "attrs": {"data-bs-toggle": "modal", "data-bs-target": "#addExpenseModal"}},
+                  {"type": "separator"},
+                  {"label": "Edit Financial", "icon": '<i class="ti ti-edit"></i>'|safe, "url": url_for('financial_report') ~ '?activity_id=' ~ activity.id, "attrs": {"target": "_blank"}}
+                ]) }}
               </div>
               <div class="d-flex align-items-center gap-2 mb-3">
                 <span class="text-muted small">{{ period_display }}</span>
-                <div class="dropdown">
-                  <button class="btn btn-sm btn-link text-muted dropdown-toggle p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="ti ti-filter"></i>
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item {% if current_period == 'fy' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='fy') }}#finances">Fiscal Year</a></li>
-                    <li><a class="dropdown-item {% if current_period == 'all' %}active{% endif %}" href="{{ url_for('edit_activity', activity_id=activity.id, period='all') }}#finances">All Time</a></li>
-                  </ul>
-                </div>
+                {{ dropdown_menu(
+                  id="finances-period-menu",
+                  trigger='<i class="ti ti-filter" aria-hidden="true"></i>'|safe,
+                  trigger_attrs={"class": "mp-btn", "data-variant": "ghost", "data-size": "icon-sm", "aria-label": "Filter period"},
+                  items=[
+                    {"label": "Fiscal Year", "url": url_for('edit_activity', activity_id=activity.id, period='fy') ~ '#finances', "attrs": ({"class": "active"} if current_period == 'fy' else {})},
+                    {"label": "All Time", "url": url_for('edit_activity', activity_id=activity.id, period='all') ~ '#finances', "attrs": ({"class": "active"} if current_period == 'all' else {})}
+                  ]
+                ) }}
               </div>
 
               <!-- Income Statement (Profit & Loss) -->
@@ -907,14 +567,10 @@
         </div>
         {% endif %}
 
-        <!-- Bottom Save Button -->
-        <div class="d-flex justify-content-end gap-2 mt-4 px-3">
-          <a href="{{ url_for('dashboard') }}" class="btn">Cancel</a>
-          <button type="submit" class="btn btn-success">
-            <i class="ti ti-check me-1"></i>Save
-          </button>
-        </div>
-      </div>
+    <!-- Bottom Save Button -->
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      {{ button("Cancel", variant="ghost", href=url_for('dashboard')) }}
+      {{ button("Save", type="submit") }}
     </div>
   </form>
 </div>
@@ -944,12 +600,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-          <i class="ti ti-x me-1"></i>Cancel
-        </button>
-        <button type="button" class="btn btn-primary" id="cropConfirmBtn">
-          <i class="ti ti-check me-1"></i>Use Photo
-        </button>
+        {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+        {{ button("Use Photo", id="cropConfirmBtn") }}
       </div>
     </div>
   </div>
@@ -966,99 +618,54 @@
       <div class="modal-body">
         <div id="unsplashImages" class="row g-3"></div>
         <div id="unsplashPagination" class="d-flex justify-content-between align-items-center pt-3" style="display: none;">
-          <button class="btn btn-outline-secondary" id="prevPageBtn">Previous</button>
+          {{ button("Previous", variant="outline", id="prevPageBtn") }}
           <span id="pageIndicator" class="text-muted small">Page 1</span>
-          <button class="btn btn-outline-primary" id="nextPageBtn">Next</button>
+          {{ button("Next", variant="outline", id="nextPageBtn") }}
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        {{ button("Close", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
       </div>
     </div>
   </div>
 </div>
 
 
-<!-- Add Passport Type Modal -->
-<div class="modal modal-blur fade" id="addPassportTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="ti ti-plus me-2"></i>New Passport Type
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row g-3">
-          <div class="col-12">
-            <label class="form-label required">Type Name</label>
-            <input type="text" class="form-control" id="newPassportTypeName"
-                   placeholder="e.g., Regular, Premium, Student" required>
-            <div class="form-hint">This will be visible to users during signup</div>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label required">Price ($)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="newPassportTypePrice"
-                   value="0.00" required>
-            <div class="form-hint">Amount each user pays for this passport type</div>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label required">Sessions Included</label>
-            <input type="number" min="1" class="form-control" id="newPassportTypeSessions"
-                   value="1" required>
-            <div class="form-hint">Number of sessions included in this price</div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="saveNewPassportType">
-Add Type
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Add Passport Type Dialog -->
+{% call form_dialog(
+  id="addPassportTypeModal",
+  title="New Passport Type",
+  description="Create an option participants can purchase during signup.",
+  confirm_label="Add Type",
+  confirm_id="saveNewPassportType"
+) %}
+  {{ text_input(id="newPassportTypeName", label="Type Name", placeholder="e.g., Regular, Premium, Student",
+     description="This will be visible to users during signup", attrs={"required": "required"}) }}
+  {{ text_input(id="newPassportTypePrice", label="Price ($)", type="number", value="0.00",
+     description="Amount each user pays for this passport type",
+     attrs={"step": "0.01", "min": "0", "required": "required"}) }}
+  {{ text_input(id="newPassportTypeSessions", label="Sessions Included", type="number", value="1",
+     description="Number of sessions included in this price",
+     attrs={"min": "1", "required": "required"}) }}
+{% endcall %}
 
-<!-- Edit Passport Type Modal -->
-<div class="modal modal-blur fade" id="editPassportTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="ti ti-edit me-2"></i>Edit Passport Type
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row g-3">
-          <div class="col-12">
-            <label class="form-label required">Passport Type Name</label>
-            <input type="text" class="form-control" id="editPassportTypeName" required>
-            <div class="form-hint">This will be visible to users during signup</div>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label required">Price ($)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="editPassportTypePrice" required>
-            <div class="form-hint">Amount each user pays for this passport type</div>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label required">Sessions Included</label>
-            <input type="number" min="1" class="form-control" id="editPassportTypeSessions" required>
-            <div class="form-hint">Number of sessions included in this price</div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="saveEditPassportType">
-          <i class="ti ti-check me-2"></i>Save Changes
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Edit Passport Type Dialog -->
+{% call form_dialog(
+  id="editPassportTypeModal",
+  title="Edit Passport Type",
+  description="Update the option shown to participants during signup.",
+  confirm_label="Save Changes",
+  confirm_id="saveEditPassportType"
+) %}
+  {{ text_input(id="editPassportTypeName", label="Passport Type Name",
+     description="This will be visible to users during signup", attrs={"required": "required"}) }}
+  {{ text_input(id="editPassportTypePrice", label="Price ($)", type="number",
+     description="Amount each user pays for this passport type",
+     attrs={"step": "0.01", "min": "0", "required": "required"}) }}
+  {{ text_input(id="editPassportTypeSessions", label="Sessions Included", type="number",
+     description="Number of sessions included in this price",
+     attrs={"min": "1", "required": "required"}) }}
+{% endcall %}
 
 <!-- Add Income Modal -->
 <div class="modal modal-blur fade" id="addIncomeModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -1077,8 +684,7 @@ Add Type
 
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label required">Category</label>
-              <select name="category" class="form-select" required>
+              {% call select(id="income_category", label="Category", name="category", required=true) %}
                 <option value="Ticket Sales">Ticket Sales</option>
                 <option value="Sponsorship">Sponsorship</option>
                 <option value="Donations">Donations</option>
@@ -1086,36 +692,34 @@ Add Type
                 <option value="Service Income">Service Income</option>
                 <option value="Merchandise Sales">Merchandise Sales</option>
                 <option value="Other">Other</option>
-              </select>
+              {% endcall %}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label required">Amount ($)</label>
-              <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
+              {{ text_input(id="income_amount", label="Amount ($)", name="amount", type="number",
+                 attrs={"step": "0.01", "min": "0", "required": "required"}) }}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label required">Date</label>
-              <input type="date" name="date" class="form-control" required>
+              {{ text_input(id="income_date", label="Date", name="date", type="date",
+                 attrs={"required": "required"}) }}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Upload Receipt (optional)</label>
-              <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
+              {{ text_input(id="income_receipt", label="Upload Receipt (optional)", name="receipt", type="file",
+                 attrs={"accept": "image/*", "capture": "environment"}) }}
             </div>
 
             <div class="col-12">
-              <label class="form-label">Note (optional)</label>
-              <textarea name="note" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
+              {{ textarea(id="income_note", label="Note (optional)", name="note", rows=2,
+                 placeholder="Add any additional notes...") }}
             </div>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="saveIncomeBtn">
-          <i class="ti ti-check me-2"></i>Add Income
-        </button>
+        {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+        {{ button("Add Income", id="saveIncomeBtn") }}
       </div>
     </div>
   </div>
@@ -1138,8 +742,7 @@ Add Type
 
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label required">Category</label>
-              <select name="category" class="form-select" required>
+              {% call select(id="expense_category", label="Category", name="category", required=true) %}
                 <option value="Cost of Goods Sold">Cost of Goods Sold</option>
                 <option value="Staff">Staff</option>
                 <option value="Venue">Venue</option>
@@ -1149,36 +752,34 @@ Add Type
                 <option value="Travel">Travel</option>
                 <option value="Supplies">Supplies</option>
                 <option value="Other">Other</option>
-              </select>
+              {% endcall %}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label required">Amount ($)</label>
-              <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
+              {{ text_input(id="expense_amount", label="Amount ($)", name="amount", type="number",
+                 attrs={"step": "0.01", "min": "0", "required": "required"}) }}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label required">Date</label>
-              <input type="date" name="date" class="form-control" required>
+              {{ text_input(id="expense_date", label="Date", name="date", type="date",
+                 attrs={"required": "required"}) }}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Upload Receipt (optional)</label>
-              <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
+              {{ text_input(id="expense_receipt", label="Upload Receipt (optional)", name="receipt", type="file",
+                 attrs={"accept": "image/*", "capture": "environment"}) }}
             </div>
 
             <div class="col-12">
-              <label class="form-label">Description (optional)</label>
-              <textarea name="description" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
+              {{ textarea(id="expense_description", label="Description (optional)", name="description", rows=2,
+                 placeholder="Add any additional notes...") }}
             </div>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="saveExpenseBtn">
-          <i class="ti ti-check me-2"></i>Add Expense
-        </button>
+        {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+        {{ button("Add Expense", variant="destructive", id="saveExpenseBtn") }}
       </div>
     </div>
   </div>
@@ -1202,8 +803,7 @@ Add Type
 
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label required">Category</label>
-              <select name="category" id="editExpenseCategory" class="form-select" required>
+              {% call select(id="editExpenseCategory", label="Category", name="category", required=true) %}
                 <option value="Cost of Goods Sold">Cost of Goods Sold</option>
                 <option value="Staff">Staff</option>
                 <option value="Venue">Venue</option>
@@ -1213,36 +813,34 @@ Add Type
                 <option value="Travel">Travel</option>
                 <option value="Supplies">Supplies</option>
                 <option value="Other">Other</option>
-              </select>
+              {% endcall %}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label required">Amount ($)</label>
-              <input type="number" name="amount" id="editExpenseAmount" step="0.01" min="0" class="form-control" required>
+              {{ text_input(id="editExpenseAmount", label="Amount ($)", name="amount", type="number",
+                 attrs={"step": "0.01", "min": "0", "required": "required"}) }}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label required">Date</label>
-              <input type="date" name="date" id="editExpenseDate" class="form-control" required>
+              {{ text_input(id="editExpenseDate", label="Date", name="date", type="date",
+                 attrs={"required": "required"}) }}
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Upload Receipt (optional)</label>
-              <input type="file" name="receipt" accept="image/*" capture="environment" class="form-control">
+              {{ text_input(id="editExpenseReceipt", label="Upload Receipt (optional)", name="receipt", type="file",
+                 attrs={"accept": "image/*", "capture": "environment"}) }}
             </div>
 
             <div class="col-12">
-              <label class="form-label">Description (optional)</label>
-              <textarea name="description" id="editExpenseDescription" class="form-control" rows="2" placeholder="Add any additional notes..."></textarea>
+              {{ textarea(id="editExpenseDescription", label="Description (optional)", name="description", rows=2,
+                 placeholder="Add any additional notes...") }}
             </div>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="updateExpenseBtn">
-          <i class="ti ti-check me-2"></i>Update Expense
-        </button>
+        {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+        {{ button("Update Expense", variant="destructive", id="updateExpenseBtn") }}
       </div>
     </div>
   </div>
@@ -1257,10 +855,8 @@ Add Type
         <div>Are you sure you want to delete the <strong id="deleteIncomeCategory"></strong> income entry? This action cannot be undone.</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteIncome">
-          <i class="ti ti-trash me-2"></i>Delete
-        </button>
+        {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+        {{ button("Delete", variant="destructive", id="confirmDeleteIncome") }}
       </div>
     </div>
   </div>
@@ -1275,10 +871,8 @@ Add Type
         <div>Are you sure you want to delete the <strong id="deleteExpenseCategory"></strong> expense entry? This action cannot be undone.</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteExpense">
-          <i class="ti ti-trash me-2"></i>Delete
-        </button>
+        {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+        {{ button("Delete", variant="destructive", id="confirmDeleteExpense") }}
       </div>
     </div>
   </div>
@@ -1295,8 +889,8 @@ Add Type
         <div class="text-muted" id="cancelSlotMessage"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Keep session</button>
-        <button type="button" class="btn btn-danger w-100" id="confirmCancelSlotBtn">Yes, cancel</button>
+        {{ button("Keep session", variant="ghost", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
+        {{ button("Yes, cancel", variant="destructive", id="confirmCancelSlotBtn", attrs={"class": "w-100"}) }}
       </div>
     </div>
   </div>
@@ -1314,20 +908,14 @@ Add Type
       <div class="signup-share-actions p-3 pt-0">
         <div class="row g-2">
           <div class="col-6 d-grid">
-            <button type="button" class="btn" id="copySignupQrLinkBtn">
-              <i class="ti ti-copy me-1" aria-hidden="true"></i>Copy link
-            </button>
+            {{ button("Copy link", variant="outline", id="copySignupQrLinkBtn") }}
           </div>
           <div class="col-6 d-grid">
-            <a class="btn" id="openSignupQrBtn" href="#" target="_blank" rel="noopener">
-              <i class="ti ti-external-link me-1" aria-hidden="true"></i>Open signup
-            </a>
+            {{ button("Open signup", variant="outline", id="openSignupQrBtn", href="#", attrs={"target": "_blank", "rel": "noopener"}) }}
           </div>
         </div>
-        <a class="btn btn-primary w-100 mt-2" id="downloadSignupQrBtn" href="#" download>
-          <i class="ti ti-download me-1" aria-hidden="true"></i>Download card
-        </a>
-        <div class="form-hint text-center mt-2" id="signupQrStatus" role="status" aria-live="polite"></div>
+        {{ button("Download card", id="downloadSignupQrBtn", href="#", attrs={"class": "w-100 mt-2", "download": "download"}) }}
+        <div class="mp-field__description text-center mt-2" id="signupQrStatus" role="status" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -1342,10 +930,8 @@ Add Type
         <div>Are you sure you want to delete "<span id="deletePassportTypeName"></span>"? This action cannot be undone.</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeletePassportType">
-          <i class="ti ti-trash me-2"></i>Delete
-        </button>
+        {{ button("Cancel", variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+        {{ button("Delete", variant="destructive", id="confirmDeletePassportType") }}
       </div>
     </div>
   </div>
@@ -1367,44 +953,29 @@ Add Type
             unused sessions. Choose how to handle them:
           </div>
         </div>
-        <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column gap-2">
-          <label class="form-selectgroup-item flex-fill">
-            <input type="radio" name="modal_passport_action" value="close_and_archive"
-              class="form-selectgroup-input" checked>
-            <div class="form-selectgroup-label d-flex align-items-center p-3">
-              <div class="me-3">
-                <span class="form-selectgroup-check"></span>
-              </div>
-              <div>
-                <strong>Archive and check in every active passport</strong>
-                <div class="text-secondary small">
-                  Checks in every passport as fully used, same as a normal QR check-in —
-                  each participant gets the usual check-in email.
-                </div>
-              </div>
-            </div>
-          </label>
-          <label class="form-selectgroup-item flex-fill">
-            <input type="radio" name="modal_passport_action" value="archive_only"
-              class="form-selectgroup-input">
-            <div class="form-selectgroup-label d-flex align-items-center p-3">
-              <div class="me-3">
-                <span class="form-selectgroup-check"></span>
-              </div>
-              <div>
-                <strong>Archive silently</strong>
-                <div class="text-secondary small">
-                  Passports keep their remaining uses and no email is sent. Use this when
-                  another activity (like next season) still inherits these passports.
-                </div>
-              </div>
-            </div>
-          </label>
-        </div>
+        {{ choice_cards(
+          name="modal_passport_action",
+          label="Passport Handling",
+          show_label=false,
+          columns=1,
+          selected="close_and_archive",
+          options=[
+            {
+              "value": "close_and_archive",
+              "title": "Archive & Check In Active Passports",
+              "description": "Mark every active passport as fully used and send each participant the usual check-in email."
+            },
+            {
+              "value": "archive_only",
+              "title": "Archive Silently",
+              "description": "Keep remaining uses and send no email. Choose this when another activity still inherits these passports."
+            }
+          ]
+        ) }}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link w-100" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-warning w-100" id="confirmArchiveOptions">Archive activity</button>
+        {{ button("Cancel", variant="ghost", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
+        {{ button("Archive activity", id="confirmArchiveOptions", attrs={"class": "w-100"}) }}
       </div>
     </div>
   </div>
@@ -1483,8 +1054,8 @@ Add Type
   // Toggle capacity limit fields visibility
   function toggleCapacityFields() {
     const isLimited = document.getElementById('isQuantityLimited').checked;
-    document.getElementById('maxSessionsField').style.display = isLimited ? 'block' : 'none';
-    document.getElementById('showRemainingField').style.display = isLimited ? 'block' : 'none';
+    document.getElementById('maxSessionsField').hidden = !isLimited;
+    document.getElementById('showRemainingField').hidden = !isLimited;
   }
 
   // Toggle season Start/End Date fields. Disabling them when off (not just
@@ -1492,7 +1063,7 @@ Add Type
   function toggleScheduleDatesFields() {
     const on = document.getElementById('usesScheduleDates').checked;
     const fields = document.getElementById('scheduleDatesFields');
-    fields.style.display = on ? 'flex' : 'none';
+    fields.hidden = !on;
     fields.querySelectorAll('input').forEach(function (el) { el.disabled = !on; });
   }
 
@@ -1508,11 +1079,11 @@ Add Type
     const capacityToggle = document.getElementById('isQuantityLimited');
     if (capacityToggle) {
       capacityToggle.disabled = on;
-      const capacityBlock = capacityToggle.closest('.mb-3');
+      const capacityBlock = capacityToggle.closest('.setting-row');
       if (capacityBlock) capacityBlock.classList.toggle('opacity-50', on);
       if (on) {
-        document.getElementById('maxSessionsField').style.display = 'none';
-        document.getElementById('showRemainingField').style.display = 'none';
+        document.getElementById('maxSessionsField').hidden = true;
+        document.getElementById('showRemainingField').hidden = true;
       } else {
         toggleCapacityFields();
       }
@@ -1557,42 +1128,30 @@ Add Type
 
   // Set location as confirmed
   function setLocationConfirmed(rawAddress, formattedAddress, coordinates) {
-    const input = document.getElementById('locationAutocomplete');
-    const inputGroup = input.closest('.input-group');
-
-    // Populate hidden fields
     document.getElementById('locationAddressRaw').value = rawAddress;
     document.getElementById('locationAddressFormatted').value = formattedAddress;
     document.getElementById('locationCoordinates').value = coordinates;
-
-    // Show confirmation, hide input group and hint
     document.getElementById('confirmedAddressText').textContent = formattedAddress;
     document.getElementById('viewMapLink').href = 'https://www.google.com/maps?q=' + coordinates;
-    document.getElementById('locationConfirmed').style.display = 'flex';
-    document.getElementById('locationError').style.display = 'none';
-    document.getElementById('locationHint').style.display = 'none';
-
-    // Hide input and lookup button when confirmed
-    inputGroup.style.display = 'none';
+    document.getElementById('locationEntry').hidden = true;
+    document.getElementById('locationConfirmed').hidden = false;
+    document.getElementById('locationError').hidden = true;
+    document.getElementById('locationResults').hidden = true;
+    document.getElementById('locationHint').hidden = true;
   }
 
   // Clear location and show input again
   function clearLocation() {
     const input = document.getElementById('locationAutocomplete');
-    const inputGroup = input.closest('.input-group');
-
-    // Clear values
     input.value = '';
     document.getElementById('locationAddressRaw').value = '';
     document.getElementById('locationAddressFormatted').value = '';
     document.getElementById('locationCoordinates').value = '';
-
-    // Hide confirmation, results, and errors - show input and hint
-    document.getElementById('locationConfirmed').style.display = 'none';
-    document.getElementById('locationError').style.display = 'none';
-    document.getElementById('locationResults').style.display = 'none';
-    document.getElementById('locationHint').style.display = 'block';
-    inputGroup.style.display = 'flex';
+    document.getElementById('locationConfirmed').hidden = true;
+    document.getElementById('locationError').hidden = true;
+    document.getElementById('locationResults').hidden = true;
+    document.getElementById('locationHint').hidden = false;
+    document.getElementById('locationEntry').hidden = false;
     input.focus();
   }
 
@@ -1602,13 +1161,15 @@ Add Type
     const address = input.value.trim();
 
     if (!address) {
-      alert('Please enter an address first');
+      document.getElementById('locationErrorText').textContent = 'Enter an address to look it up.';
+      document.getElementById('locationError').hidden = false;
+      input.focus();
       return;
     }
 
-    document.getElementById('locationLoading').style.display = 'block';
-    document.getElementById('locationError').style.display = 'none';
-    document.getElementById('locationResults').style.display = 'none';
+    document.getElementById('locationLoading').hidden = false;
+    document.getElementById('locationError').hidden = true;
+    document.getElementById('locationResults').hidden = true;
 
     fetch('/api/places/autocomplete', {
       method: 'POST',
@@ -1617,43 +1178,43 @@ Add Type
     })
     .then(r => r.json())
     .then(data => {
-      document.getElementById('locationLoading').style.display = 'none';
+      document.getElementById('locationLoading').hidden = true;
       if (data.success && data.results && data.results.length > 0) {
         showLocationResults(address, data.results);
       } else {
         document.getElementById('locationErrorText').textContent = data.error || 'No addresses found. Try a more specific address.';
-        document.getElementById('locationError').style.display = 'block';
+        document.getElementById('locationError').hidden = false;
       }
     })
     .catch(err => {
-      document.getElementById('locationLoading').style.display = 'none';
+      document.getElementById('locationLoading').hidden = true;
       document.getElementById('locationErrorText').textContent = 'Error looking up address. Please try again.';
-      document.getElementById('locationError').style.display = 'block';
+      document.getElementById('locationError').hidden = false;
     });
   }
 
   // Display location results for user selection
   function showLocationResults(rawAddress, results) {
     const container = document.getElementById('locationResults');
-    container.innerHTML = '<div class="list-group-item list-group-item-secondary py-2"><small><strong>Select the correct address:</strong></small></div>';
+    container.replaceChildren();
     results.forEach(function(result) {
-      const item = document.createElement('a');
-      item.href = '#';
-      item.className = 'list-group-item list-group-item-action py-2';
-      item.innerHTML = '<i class="ti ti-map-pin me-2 text-muted"></i>' + result.description;
-      item.onclick = function(e) {
-        e.preventDefault();
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'mp-location-result';
+      item.innerHTML = '<i class="ti ti-map-pin" aria-hidden="true"></i><span></span>';
+      item.querySelector('span').textContent = result.description;
+      item.addEventListener('click', function() {
         selectPlaceResult(rawAddress, result.place_id, result.description);
-      };
+      });
       container.appendChild(item);
     });
-    container.style.display = 'block';
+    container.hidden = false;
   }
 
   // Get full details for selected place and confirm
   function selectPlaceResult(rawAddress, placeId, description) {
-    document.getElementById('locationResults').style.display = 'none';
-    document.getElementById('locationLoading').style.display = 'block';
+    document.getElementById('locationResults').hidden = true;
+    document.getElementById('locationLoading').hidden = false;
 
     fetch('/api/places/details', {
       method: 'POST',
@@ -1662,28 +1223,22 @@ Add Type
     })
     .then(r => r.json())
     .then(data => {
-      document.getElementById('locationLoading').style.display = 'none';
+      document.getElementById('locationLoading').hidden = true;
       if (data.success) {
         setLocationConfirmed(rawAddress, data.formatted_address, data.coordinates);
       } else {
         document.getElementById('locationErrorText').textContent = data.error || 'Could not get address details.';
-        document.getElementById('locationError').style.display = 'block';
+        document.getElementById('locationError').hidden = false;
       }
     })
     .catch(err => {
-      document.getElementById('locationLoading').style.display = 'none';
+      document.getElementById('locationLoading').hidden = true;
       document.getElementById('locationErrorText').textContent = 'Error getting address details.';
-      document.getElementById('locationError').style.display = 'block';
+      document.getElementById('locationError').hidden = false;
     });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    // Image handling variables
-    const coverPhotoWrapper = document.getElementById('coverPhotoWrapper');
-    const selectedImageFilename = document.getElementById('selectedImageFilename');
-    const uploadInput = document.getElementById('uploadInput');
-    const imageOptionsCollapse = document.getElementById('imageOptions');
-
     // Passport type variables
     const addPassportTypeBtn = document.getElementById('addPassportTypeBtn');
     const passportTypesContainer = document.getElementById('passportTypesContainer');
@@ -1693,37 +1248,27 @@ Add Type
     let passportTypeCounter = 0;
     let passportTypes = [];
 
-    // Chevron rotation for Advanced settings
-    const collapseActivityAdvanced = document.getElementById('collapseActivityAdvanced');
-    const activityAdvancedChevron = document.getElementById('activity-advanced-chevron');
-    if (collapseActivityAdvanced && activityAdvancedChevron) {
-      collapseActivityAdvanced.addEventListener('show.bs.collapse', () => activityAdvancedChevron.style.transform = 'rotate(180deg)');
-      collapseActivityAdvanced.addEventListener('hide.bs.collapse', () => activityAdvancedChevron.style.transform = 'rotate(0deg)');
-      if (collapseActivityAdvanced.classList.contains('show')) {
-        activityAdvancedChevron.style.transform = 'rotate(180deg)';
-      }
-    }
-
     // Photo Normalization Tool — cover photo (see docs/DESIGN.md)
     var coverPhotoNormalizer = initPhotoNormalizer({
-      wrapperId:      'coverPhotoWrapper',
-      uploadInputId:  'uploadInput',
+      wrapperId:      'cover-photo-preview',
+      uploadInputId:  'cover-photo-upload',
       cropModalId:    'cropModal',
       cropImageId:    'cropImage',
       confirmBtnId:   'cropConfirmBtn',
-      optionsPanelId: 'imageOptions',
-      hiddenInputId:  'selectedImageFilename',
-      sourceToggleId: 'sourceToggle',
-      searchPanelId:  'searchWebContent',
-      uploadPanelId:  'uploadContent',
+      optionsPanelId: 'cover-photo-options',
+      hiddenInputId:  'cover-photo-selected',
+      sourceToggleId: 'cover-photo-source',
+      searchPanelId:  'cover-photo-search-panel',
+      uploadPanelId:  'cover-photo-upload-panel',
       aspectRatio:    16 / 9,
       maxWidth:       1200,
       maxHeight:      675,
       objectFit:      'cover',
       placeholderLabel: 'Add photo',
+      imageAlt: {{ ((activity.name ~ ' cover photo') if activity else '')|tojson }},
       src: {% if activity and activity.image_filename %}'{{ url_for("static", filename="uploads/activity_images/" + activity.image_filename) }}'{% else %}null{% endif %},
-      searchInputId:    'imageDescription',
-      searchBtnId:      'searchImagesBtn',
+      searchInputId:    'cover-photo-search',
+      searchBtnId:      'cover-photo-search-button',
       unsplashModalId:  'unsplashModal',
       unsplashImagesId: 'unsplashImages',
       prevPageBtnId:    'prevPageBtn',
@@ -1733,67 +1278,42 @@ Add Type
     // Passport Type Management Functions
     function createPassportTypeTableRow(passportType) {
       const id = passportType.id || `new_${passportTypeCounter++}`;
-
+      const safeId = window.mpEditableCollection.escape(id);
+      const safeName = window.mpEditableCollection.escape(passportType.name || 'New Passport Type');
+      const safePrice = window.mpEditableCollection.escape(passportType.price_per_user || '0.00');
+      const safeSessions = window.mpEditableCollection.escape(passportType.sessions_included || '1');
       const isExisting = id && !id.toString().startsWith('new_');
-      let signupUrl = '[Available after saving]';
-      let signupButtonsDisabled = true;
-
-      if (isExisting && '{{ activity.id if activity }}') {
-        signupUrl = `{{ url_for('signup', activity_id=activity.id, _external=True) if activity }}?passport_type_id=${id}`;
-        signupButtonsDisabled = false;
-      }
-      const signupQrEnabled = !signupButtonsDisabled && {{ (activity and activity.status == 'active')|tojson }};
-      const signupShareControls = signupQrEnabled
-        ? `<button class="signup-share-button" type="button"
-                   onclick="openSignupQr('${id}', '${signupUrl}')"
-                   title="View signup QR code" aria-label="View signup QR code">
-             <i class="ti ti-qrcode" aria-hidden="true"></i>
-           </button>`
-        : (!isExisting
-          ? `<button class="signup-share-button" type="button" disabled
-                     title="Available after saving" aria-label="Signup QR code available after saving">
-               <i class="ti ti-qrcode" aria-hidden="true"></i>
-             </button>`
-          : '');
+      const signupUrl = isExisting && '{{ activity.id if activity }}'
+        ? `{{ url_for('signup', activity_id=activity.id, _external=True) if activity }}?passport_type_id=${id}` : '';
+      const signupQrEnabled = Boolean(signupUrl) && {{ (activity and activity.status == 'active')|tojson }};
+      const signupShareControl = signupQrEnabled
+        ? window.mpEditableCollection.button({
+            variant: 'ghost', size: 'icon', icon: 'ti-qrcode',
+            attributes: {'data-signup-qr': safeId, 'data-signup-url': signupUrl, 'aria-label': 'View signup QR code'}
+          })
+        : (!isExisting ? window.mpEditableCollection.button({
+            variant: 'ghost', size: 'icon', icon: 'ti-qrcode',
+            attributes: {disabled: true, title: 'Available after saving', 'aria-label': 'Signup QR code available after saving'}
+          }) : '<span class="text-muted small">Unavailable</span>');
+      const actions = window.mpEditableCollection.actionMenu(`passport-type-actions-${safeId}`, [
+        {label: 'Edit', icon: 'ti-edit', attributes: {'data-edit-passport-type': safeId}},
+        {type: 'separator'},
+        {label: 'Delete', icon: 'ti-trash', variant: 'destructive', attributes: {'data-delete-passport-type': safeId}}
+      ]);
 
       return `
-        <tr data-id="${id}">
-          <td>
-            <div class="fw-bold">${passportType.name || 'New Passport Type'}</div>
-            <div class="d-md-none text-muted small">$${passportType.price_per_user || '0.00'} &middot; ${passportType.sessions_included || '1'} sessions</div>
-            ${signupShareControls ? `<div class="d-md-none d-flex align-items-center gap-2 mt-2">${signupShareControls}</div>` : ''}
+        <tr data-id="${safeId}">
+          <td data-label="Name" data-primary>
+            <div class="fw-semibold">${safeName}</div>
+            <input type="hidden" name="passport_types[${safeId}][name]" value="${safeName}">
+            <input type="hidden" name="passport_types[${safeId}][price_per_user]" value="${safePrice}">
+            <input type="hidden" name="passport_types[${safeId}][sessions_included]" value="${safeSessions}">
           </td>
-          <td class="d-none d-md-table-cell">
-            <span class="fw-bold text-muted">$${passportType.price_per_user || '0.00'}</span>
-          </td>
-          <td class="d-none d-md-table-cell">
-            <span class="text-muted">${passportType.sessions_included || '1'} sessions</span>
-          </td>
-          <td class="d-none d-md-table-cell">
-            ${signupShareControls ? `<div class="d-flex align-items-center gap-2">${signupShareControls}</div>` : ''}
-          </td>
-          <td>
-            <div class="dropdown">
-              <a href="#" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                Actions
-              </a>
-              <div class="dropdown-menu">
-                <a class="dropdown-item" href="#" onclick="editPassportType('${id}')">
-                  <i class="ti ti-edit me-2"></i> Edit
-                </a>
-                <div class="dropdown-divider"></div>
-                <a class="dropdown-item text-danger" href="#" onclick="confirmDeletePassportType('${id}', '${passportType.name || 'New Passport Type'}')">
-                  <i class="ti ti-trash me-2"></i> Delete
-                </a>
-              </div>
-            </div>
-          </td>
-          <!-- Hidden form inputs for server submission -->
-          <input type="hidden" name="passport_types[${id}][name]" value="${passportType.name || ''}">
-          <input type="hidden" name="passport_types[${id}][price_per_user]" value="${passportType.price_per_user || '0.00'}">
-          <input type="hidden" name="passport_types[${id}][sessions_included]" value="${passportType.sessions_included || '1'}">
-        </tr>
-      `;
+          <td data-label="Price"><span class="text-muted">$${safePrice}</span></td>
+          <td data-label="Sessions"><span class="text-muted">${safeSessions}</span></td>
+          <td data-label="Signup &amp; QR">${signupShareControl}</td>
+          <td data-label="Actions" data-actions class="text-end">${actions}</td>
+        </tr>`;
     }
 
     // Modal Management Functions
@@ -1957,11 +1477,9 @@ Add Type
                 '</div>' +
               '</div>' +
               '<div class="modal-footer">' +
-                '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' +
-                  '<i class="ti ti-x me-2"></i>Cancel' +
-                '</button>' +
-                '<button type="button" class="btn btn-warning" onclick="archivePassportType(' + id + ', \'' + name.replace(/'/g, "\\'") + '\')">' +
-                  '<i class="ti ti-archive me-2"></i>Archive This Type' +
+                '<button type="button" class="mp-btn" data-variant="outline" data-bs-dismiss="modal">Cancel</button>' +
+                '<button type="button" class="mp-btn" onclick="archivePassportType(' + id + ', \'' + name.replace(/'/g, "\\'") + '\')">' +
+                  'Archive This Type' +
                 '</button>' +
               '</div>' +
             '</div>' +
@@ -2126,16 +1644,7 @@ Add Type
     }
 
     function updateVisibility() {
-      const hasPassportTypes = passportTypesContainer.children.length > 0;
-      const passportTypesTable = document.getElementById('passportTypesTable');
-
-      if (hasPassportTypes) {
-        noPassportTypes.style.display = 'none';
-        passportTypesTable.style.display = 'table';
-      } else {
-        noPassportTypes.style.display = 'block';
-        passportTypesTable.style.display = 'none';
-      }
+      window.mpEditableCollection.sync('passport-types-collection');
     }
 
     function updateSignupLinks() {
@@ -2260,9 +1769,25 @@ Add Type
     document.getElementById('saveEditPassportType').addEventListener('click', saveEditPassportType);
     document.getElementById('confirmDeletePassportType').addEventListener('click', deletePassportType);
 
-    // Make functions global for onclick handlers
-    window.editPassportType = editPassportType;
-    window.confirmDeletePassportType = confirmDeletePassportType;
+    passportTypesContainer.addEventListener('click', function (event) {
+      const qrButton = event.target.closest('[data-signup-qr]');
+      if (qrButton) {
+        openSignupQr(qrButton.dataset.signupQr, qrButton.dataset.signupUrl);
+        return;
+      }
+      const editButton = event.target.closest('[data-edit-passport-type]');
+      if (editButton) {
+        editPassportType(editButton.dataset.editPassportType);
+        return;
+      }
+      const deleteButton = event.target.closest('[data-delete-passport-type]');
+      if (deleteButton) {
+        const id = deleteButton.dataset.deletePassportType;
+        const passportType = passportTypes.find(pt => String(pt.id) === String(id)) || getPassportTypeFromRow(id);
+        confirmDeletePassportType(id, passportType?.name || 'New Passport Type');
+      }
+    });
+
     window.archivePassportType = archivePassportType;
 
     // Income Management Functions
@@ -2365,12 +1890,11 @@ Add Type
 
     // Show confirmed location if data exists
     {% if activity and activity.location_address_formatted %}
-    const inputGroup = document.getElementById('locationAutocomplete').closest('.input-group');
-    inputGroup.style.display = 'none';
-    document.getElementById('locationHint').style.display = 'none';
-    document.getElementById('confirmedAddressText').textContent = '{{ activity.location_address_formatted }}';
-    document.getElementById('viewMapLink').href = 'https://www.google.com/maps?q={{ activity.location_coordinates }}';
-    document.getElementById('locationConfirmed').style.display = 'flex';
+    setLocationConfirmed(
+      {{ (activity.location_address_raw or '')|tojson }},
+      {{ activity.location_address_formatted|tojson }},
+      {{ (activity.location_coordinates or '')|tojson }}
+    );
     {% endif %}
 
     // Load existing passport types
@@ -2449,9 +1973,11 @@ Add Type
       if (!values.length) { box.innerHTML = ''; return; }
       box.innerHTML = values.map((value, index) => {
         const label = formatChipLabel(value, type);
-        return `<span class="badge bg-blue-lt text-blue p-2" role="listitem">${label}` +
-          `<button type="button" class="btn-close ms-2" data-idx="${index}" ` +
-          `data-remove="${type}" aria-label="Remove ${label}"></button></span>`;
+        const remove = window.mpEditableCollection.button({
+          variant: 'ghost', size: 'icon-xs', icon: 'ti-x',
+          attributes: {'data-idx': index, 'data-remove': type, 'aria-label': `Remove ${label}`}
+        });
+        return `<span class="mp-badge" data-variant="secondary" role="listitem">${label}${remove}</span>`;
       }).join('');
     }
 
@@ -2546,50 +2072,41 @@ Add Type
 
     function createSlotRow(slot) {
       const id = slot.id || `new_${slotCounter++}`;
+      const safeId = window.mpEditableCollection.escape(id);
       const booked = parseInt(slot.seats_taken || 0, 10);
       const capacity = parseInt(slot.capacity || 1, 10);
       const available = Math.max(0, capacity - booked);
       const label = formatSlotLabel(slot.starts_at);
-      // Removing a session that already has people in it cancels their bookings and
-      // refunds credits on save, so the action must say exactly what will happen.
+      const safeLabel = window.mpEditableCollection.escape(label);
+      const safeStart = window.mpEditableCollection.escape(slot.starts_at);
       const removeLabel = booked > 0 ? 'Cancel session' : 'Remove session';
+      const actions = window.mpEditableCollection.actionMenu(`session-actions-${safeId}`, [
+        {label: removeLabel, icon: 'ti-trash', variant: 'destructive', attributes: {
+          'data-remove-slot': safeId, 'data-booked': booked, 'aria-label': `${removeLabel}: ${label}`
+        }}
+      ]);
 
       return `
-        <div class="list-group-item p-3" data-id="${id}">
-          <div class="row g-3 align-items-center">
-            <div class="col-12 col-md">
-              <div class="fw-semibold">${label}</div>
-              <span class="badge bg-blue-lt text-blue mt-1" data-slot-booking-summary>
-                ${booked} of ${capacity} booked
-              </span>
-            </div>
-            <div class="col-6 col-md-auto">
-              <label class="form-label small mb-1" for="slot-capacity-${id}">Capacity</label>
-              <input type="number" class="form-control slot-capacity-input"
-                     id="slot-capacity-${id}" min="${Math.max(1, booked)}" required inputmode="numeric"
-                     value="${capacity}" data-for="${id}" data-booked="${booked}"
-                     aria-label="Capacity for ${label}">
-            </div>
-            <div class="col-6 col-md-auto">
-              <div class="form-label small mb-1">Available</div>
-              <div class="fw-semibold" data-slot-available>${available}</div>
-            </div>
-            <div class="col-12 col-md-auto">
-              <div class="d-grid">
-                <button type="button" class="btn btn-outline-danger"
-                        data-remove-slot="${id}" data-booked="${booked}"
-                        aria-label="${removeLabel}: ${label}">${removeLabel}</button>
-              </div>
-            </div>
-          </div>
-          <input type="hidden" name="slots[${id}][starts_at]" value="${slot.starts_at}">
-          <input type="hidden" name="slots[${id}][capacity]" value="${capacity}">
-        </div>
-      `;
+        <tr data-id="${safeId}">
+          <td data-label="Session" data-primary>
+            <div class="fw-semibold">${safeLabel}</div>
+            <span class="mp-badge mt-1" data-variant="secondary" data-slot-booking-summary>${booked} of ${capacity} booked</span>
+            <input type="hidden" name="slots[${safeId}][starts_at]" value="${safeStart}">
+            <input type="hidden" name="slots[${safeId}][capacity]" value="${capacity}">
+          </td>
+          <td data-label="Capacity">
+            <input type="number" class="mp-input mp-editable-collection__capacity slot-capacity-input"
+                   id="slot-capacity-${safeId}" min="${Math.max(1, booked)}" required inputmode="numeric"
+                   value="${capacity}" data-for="${safeId}" data-booked="${booked}"
+                   aria-label="Capacity for ${safeLabel}">
+          </td>
+          <td data-label="Available"><span class="fw-semibold" data-slot-available>${available}</span></td>
+          <td data-label="Actions" data-actions class="text-end">${actions}</td>
+        </tr>`;
     }
 
     function setSingleSlotMessage(message, tone = '') {
-      singleSlotMsg.className = `form-hint mt-2 ${tone}`;
+      singleSlotMsg.className = `mp-field__description ${tone}`;
       singleSlotMsg.textContent = message;
     }
 
@@ -2640,10 +2157,8 @@ Add Type
 
     function updateSlotsVisibility() {
       const count = slotsContainer.children.length;
-      const hasSessions = count > 0;
-      noSlots.classList.toggle('d-none', hasSessions);
-      slotsContainer.classList.toggle('d-none', !hasSessions);
-      slotCountSummary.textContent = hasSessions
+      window.mpEditableCollection.sync('sessions-collection');
+      slotCountSummary.textContent = count
         ? `${count} session${count > 1 ? 's' : ''}. Review capacity and bookings before saving.`
         : 'Review capacity and bookings before saving.';
     }
@@ -2759,27 +2274,13 @@ Add Type
     updateSlotPreview();
     toggleSchedulingFields();
 
-
-    // Workflow type checkbox mutual exclusion
-    document.querySelectorAll('input[name="workflow_type"]').forEach(function(cb) {
-      cb.addEventListener('change', function() {
-        if (this.checked) {
-          document.querySelectorAll('input[name="workflow_type"]').forEach(function(other) {
-            if (other !== cb) other.checked = false;
-          });
-        }
-      });
-    });
-
   });
 
   function toggleDiscordSection() {
     var toggle = document.getElementById('discordToggle');
     var section = document.getElementById('discordSection');
-    if (toggle.checked) {
-      section.style.display = 'block';
-    } else {
-      section.style.display = 'none';
+    section.hidden = !toggle.checked;
+    if (!toggle.checked) {
       document.getElementById('discordWebhookUrl').value = '';
       document.getElementById('discordInviteUrl').value = '';
     }
@@ -2788,7 +2289,7 @@ Add Type
   function toggleInheritedActivitiesSection() {
     var toggle = document.getElementById('inheritPassportsToggle');
     var section = document.getElementById('inheritedActivitiesSection');
-    section.style.display = toggle.checked ? 'block' : 'none';
+    section.hidden = !toggle.checked;
     if (!toggle.checked) {
       document.querySelectorAll('#inheritedActivitiesList input[type=checkbox]').forEach(function(cb) {
         cb.checked = false;

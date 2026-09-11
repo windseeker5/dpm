@@ -11,6 +11,7 @@ Start with `../AGENTS.md` for the agent-level rules, or `../README.md` to set up
 | `DESIGN.md` | Page-by-page UI/UX workflow and quality rules | Before any template/CSS work |
 | `EMAIL.md` | Email system, design language, and how to test all 7 templates | Before touching email templates or sending |
 | `CHANGELOG.md` | Shipped features, improvements, and fixes by date | To see what changed and when |
+| `discord-guide/GUIDE_FR.md` / `GUIDE_EN.md` | End-user, screenshot-driven guide to setting up a Discord webhook for Minipass announcements | When publishing user-facing Discord setup help |
 
 Testing rules live in `../AGENTS.md` (hard rules 4–7) and `../README.md`. Email-specific testing is in `EMAIL.md`.
 

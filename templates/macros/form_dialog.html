@@ -1,0 +1,45 @@
+{#
+  Form Dialog — the shared Basic Form composition for short create/edit
+  workflows shown inside a Bootstrap modal. The body and actions share one
+  white surface; there are no legacy header/footer divider bands.
+
+  Usage:
+    {% from 'macros/form_dialog.html' import form_dialog %}
+    {% call form_dialog(id="new-item-dialog", title="New item",
+         confirm_label="Add item", confirm_id="add-item") %}
+      {{ text_input(id="item-name", label="Name") }}
+    {% endcall %}
+#}
+
+{% from 'macros/buttons.html' import button %}
+
+{% macro form_dialog(id, title, confirm_label="Save", confirm_id=None,
+                     description=None, cancel_label="Cancel", size=None,
+                     class_="", attrs={}) %}
+<div class="modal modal-blur fade mp-form-dialog{% if class_ %} {{ class_ }}{% endif %}"
+     id="{{ id }}" tabindex="-1" role="dialog" aria-modal="true"
+     aria-labelledby="{{ id }}-title" aria-hidden="true"
+     {% for key, value in attrs.items() %}{{ key }}="{{ value }}"{% endfor %}>
+  <div class="modal-dialog modal-dialog-centered{% if size == 'lg' %} modal-lg{% endif %}" role="document">
+    <div class="modal-content">
+      <div class="mp-form-dialog__content">
+        <div class="mp-form-dialog__header">
+          <div>
+            <h2 id="{{ id }}-title" class="mb-0">{{ title }}</h2>
+            {% if description %}<p class="mp-text-body mt-1 mb-0">{{ description }}</p>{% endif %}
+          </div>
+          {{ button("", variant="ghost", size="icon-sm", icon="ti-x",
+                    attrs={"data-bs-dismiss": "modal", "aria-label": "Close"}) }}
+        </div>
+        <div class="mp-form-fields mp-form-dialog__fields">
+          {{ caller() }}
+        </div>
+        <div class="mp-form-dialog__actions">
+          {{ button(cancel_label, variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
+          {{ button(confirm_label, id=confirm_id) }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}

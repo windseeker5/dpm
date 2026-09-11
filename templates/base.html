@@ -37,7 +37,7 @@
   <!-- Reusable Components -->
   <link href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=3.9" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=3.16" rel="stylesheet">
   
   <!-- Enhanced Flash Alert Overlay Styles -->
   <style>
@@ -893,6 +893,7 @@
   <script src="{{ url_for('static', filename='js/search-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/filter-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/mp-action-menu.js') }}?v=1.0"></script>
+  <script src="{{ url_for('static', filename='js/mp-editable-collection.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/mp-filter-tabs.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/mp-scroll-restore.js') }}?v=1.1"></script>
   <script src="{{ url_for('static', filename='js/mp-settings-nav.js') }}?v=1.0"></script>
@@ -933,7 +934,7 @@
   <!-- Photo Normalization Tool (Cropper.js + shared utility) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
   <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
-  <script src="{{ url_for('static', filename='js/photo-normalizer.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/photo-normalizer.js') }}?v=2.2"></script>
 
   {% block scripts %}{% endblock %}
 </body>

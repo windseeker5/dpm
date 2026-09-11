@@ -1,0 +1,56 @@
+{#
+  Reusable create/edit form composition, ported from KDUI (flask-shadcn-starter)
+  form_page pattern — page title, card with header/fields/footer, footer
+  buttons right-aligned with no distinct background.
+
+  Usage:
+    {% from 'macros/form_page.html' import form_page %}
+    {% call form_page(
+      title="New project",
+      card_title="Project details",
+      action=url_for("projects.create"),
+      cancel_url=url_for("projects.index"),
+      submit_label="Create project"
+    ) %}
+      {{ text_input(id="project-name", label="Project name *") }}
+    {% endcall %}
+
+  Parameters:
+    - title: optional page/section title (h1) — omit when the page already has
+      its own page-header title (e.g. a real page using .page-header/.page-title)
+    - card_title: card header title (h2)
+    - action: form action URL (pass "" to submit to the current URL)
+    - cancel_url: href for the Cancel button
+    - submit_label: submit button text (default "Save changes")
+    - description: optional text under the title
+    - card_description: optional text under the card title
+    - method: form method (default "post")
+    - form_id: form element id
+    - class_: outer wrapper class (default "mp-form-content")
+#}
+
+{% macro form_page(card_title, action, cancel_url, title=None, submit_label="Save changes", description=None, card_description=None, method="post", form_id="mp-form", class_="mp-form-content") %}
+<div class="{{ class_ }}">
+  {% if title %}
+  <div class="mb-4">
+    <h1 class="mb-1">{{ title }}</h1>
+    {% if description %}<div class="text-muted">{{ description }}</div>{% endif %}
+  </div>
+  {% endif %}
+  <form id="{{ form_id }}" method="{{ method }}" action="{{ action }}" class="card mb-0">
+    <div class="card-body mp-form-card-body">
+      <div>
+        <h2 class="mb-1">{{ card_title }}</h2>
+        {% if card_description %}<div class="text-muted small">{{ card_description }}</div>{% endif %}
+      </div>
+      <div class="mp-form-fields">
+        {{ caller() }}
+      </div>
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{{ cancel_url }}" class="mp-btn" data-variant="outline">Cancel</a>
+        <button type="submit" class="mp-btn">{{ submit_label }}</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endmacro %}

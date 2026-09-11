@@ -33,6 +33,7 @@ function initPhotoNormalizer(config) {
     outputFormat:     config.outputFormat      || 'image/jpeg',
     objectFit:        config.objectFit         || 'cover',
     placeholderLabel: config.placeholderLabel  || 'Add photo',
+    imageAlt:         config.imageAlt          || '',
     fallbackHtml:     config.fallbackHtml      || null,
     onConfirm:        config.onConfirm         || null,
     onDelete:         config.onDelete          || null,
@@ -52,35 +53,75 @@ function initPhotoNormalizer(config) {
     return document.getElementById(opts.wrapperId);
   }
 
+  function usesImagePickerStyles() {
+    var wrapper = getWrapper();
+    return wrapper && wrapper.classList.contains('mp-image-picker__trigger');
+  }
+
   function placeholderHtml() {
     if (opts.fallbackHtml) return opts.fallbackHtml;
-    return '<div class="d-flex flex-column align-items-center justify-content-center"' +
-           ' style="width:100%;height:100%;">' +
-           '<i class="ti ti-photo text-muted fs-2"></i>' +
-           '<small class="text-muted">' + opts.placeholderLabel + '</small>' +
-           '</div>';
+    if (!usesImagePickerStyles()) {
+      return '<div class="d-flex flex-column align-items-center justify-content-center"' +
+             ' style="width:100%;height:100%;">' +
+             '<i class="ti ti-photo text-muted fs-2"></i>' +
+             '<small class="text-muted">' + opts.placeholderLabel + '</small>' +
+             '</div>';
+    }
+    return '<span class="mp-image-picker__placeholder">' +
+           '<i class="ti ti-photo" aria-hidden="true"></i>' +
+           '<span>' + opts.placeholderLabel + '</span>' +
+           '</span>';
   }
 
   function thumbnailHtml(src) {
-    return '<img src="' + src + '" class="rounded"' +
-           ' style="width:100%;height:100%;object-fit:' + opts.objectFit + ';">' +
-           '<span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-1"' +
-           ' style="cursor:pointer;" data-pnt-delete>' +
-           '<i class="ti ti-x text-white" style="font-size:12px;"></i></span>';
+    if (!usesImagePickerStyles()) {
+      return '<img src="' + src + '" class="rounded"' +
+             ' style="width:100%;height:100%;object-fit:' + opts.objectFit + ';">' +
+             '<span class="position-absolute top-0 end-0 badge bg-danger rounded-circle p-1"' +
+             ' style="cursor:pointer;" data-pnt-delete>' +
+             '<i class="ti ti-x text-white" style="font-size:12px;"></i></span>';
+    }
+    return '<img src="' + src + '" class="mp-image-picker__image" alt="' + opts.imageAlt + '"' +
+           ' width="100" height="100" style="object-fit:' + opts.objectFit + ';">';
+  }
+
+  function removeButtonHtml() {
+    return '<button type="button" class="mp-btn mp-image-picker__remove" data-variant="destructive"' +
+           ' data-size="icon-xs" aria-label="Remove photo" data-pnt-delete>' +
+           '<i class="ti ti-x" aria-hidden="true"></i></button>';
+  }
+
+  function setOptionsPanelVisible(visible) {
+    if (!optionsPanel) return;
+    optionsPanel.hidden = !visible;
+    optionsPanel.style.removeProperty('display');
+    var trigger = getWrapper();
+    if (trigger) trigger.setAttribute('aria-expanded', visible ? 'true' : 'false');
   }
 
   function setThumbnail(src) {
     var w = getWrapper();
     if (!w) return;
     w.innerHTML = thumbnailHtml(src);
-    if (optionsPanel) optionsPanel.style.display = 'none';
+    w.setAttribute('aria-label', 'Change photo');
+    if (usesImagePickerStyles()) {
+      var oldRemove = w.parentElement.querySelector('[data-pnt-delete]');
+      if (oldRemove) oldRemove.remove();
+      w.insertAdjacentHTML('afterend', removeButtonHtml());
+    }
+    setOptionsPanelVisible(false);
   }
 
   function setPlaceholder() {
     var w = getWrapper();
     if (!w) return;
     w.innerHTML = placeholderHtml();
-    if (optionsPanel) optionsPanel.style.display = 'none';
+    w.setAttribute('aria-label', opts.placeholderLabel);
+    if (usesImagePickerStyles()) {
+      var removeButton = w.parentElement.querySelector('[data-pnt-delete]');
+      if (removeButton) removeButton.remove();
+    }
+    setOptionsPanelVisible(false);
     if (hiddenInput) hiddenInput.value = '';
     if (uploadInput) uploadInput.value = '';
     if (opts.onDelete) opts.onDelete();
@@ -88,11 +129,16 @@ function initPhotoNormalizer(config) {
 
   // ── Event delegation — one listener covers dynamic innerHTML ────────────
   document.addEventListener('click', function(e) {
+    var deleteButton = e.target.closest('[data-pnt-delete]');
     var wrapper = e.target.closest('#' + opts.wrapperId);
+    if (!wrapper && deleteButton) {
+      var preview = deleteButton.closest('.mp-image-picker__preview');
+      if (preview) wrapper = preview.querySelector('#' + opts.wrapperId);
+    }
     if (!wrapper) return;
 
-    // Delete badge clicked
-    if (e.target.closest('[data-pnt-delete]')) {
+    // Delete button clicked
+    if (deleteButton) {
       e.stopPropagation();
       setPlaceholder();
       return;
@@ -100,7 +146,8 @@ function initPhotoNormalizer(config) {
 
     // Wrapper body clicked — toggle options panel
     if (optionsPanel) {
-      optionsPanel.style.display = (optionsPanel.style.display === 'none') ? 'block' : 'none';
+      var isHidden = optionsPanel.hidden || window.getComputedStyle(optionsPanel).display === 'none';
+      setOptionsPanelVisible(isHidden);
     }
   });
 
@@ -110,10 +157,18 @@ function initPhotoNormalizer(config) {
     var searchPanel   = opts.searchPanelId ? document.getElementById(opts.searchPanelId) : null;
     var uploadPanel   = opts.uploadPanelId ? document.getElementById(opts.uploadPanelId) : null;
     if (sourceToggle) {
-      sourceToggle.addEventListener('change', function() {
-        if (searchPanel) searchPanel.style.display = this.checked ? 'none' : 'block';
-        if (uploadPanel) uploadPanel.style.display  = this.checked ? 'block' : 'none';
-      });
+      function showSelectedSource() {
+        if (searchPanel) {
+          searchPanel.hidden = sourceToggle.checked;
+          searchPanel.style.removeProperty('display');
+        }
+        if (uploadPanel) {
+          uploadPanel.hidden = !sourceToggle.checked;
+          uploadPanel.style.removeProperty('display');
+        }
+      }
+      sourceToggle.addEventListener('change', showSelectedSource);
+      showSelectedSource();
     }
   }
 

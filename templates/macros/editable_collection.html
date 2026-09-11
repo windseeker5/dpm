@@ -1,0 +1,38 @@
+{#
+  Editable Collection — a form-local, client-editable companion to Data Table.
+  It shares the Data Table visual language while allowing unsaved rows to be
+  inserted and edited before the parent form is submitted.
+
+  Page JavaScript adds rows to `body_id` and calls
+  window.mpEditableCollection.sync(id). On narrow screens each row becomes a
+  compact card using its cells' data-label attributes.
+#}
+
+{% macro editable_collection(id, columns, body_id=None, empty_id=None,
+                             empty_title="No items yet", empty_description=None,
+                             empty_icon="ti-inbox", class_="") %}
+{% set rows_id = body_id or id ~ '-rows' %}
+{% set blank_id = empty_id or id ~ '-empty' %}
+<div class="mp-editable-collection mp-data-table{% if class_ %} {{ class_ }}{% endif %}"
+     id="{{ id }}" data-rows-id="{{ rows_id }}" data-empty-id="{{ blank_id }}">
+  <div class="mp-editable-collection__table" data-collection-table hidden>
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            {% for column in columns %}<th{% if column.class %} class="{{ column.class }}"{% endif %}>{{ column.label }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody id="{{ rows_id }}">{{ caller() }}</tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mp-editable-collection__empty" id="{{ blank_id }}" data-collection-empty>
+    <i class="ti {{ empty_icon }}" aria-hidden="true"></i>
+    <div>
+      <h4>{{ empty_title }}</h4>
+      {% if empty_description %}<p>{{ empty_description }}</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% endmacro %}

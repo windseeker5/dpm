@@ -1,0 +1,85 @@
+{#
+  Choice Cards — a semantic radio group for choosing one clearly described
+  option. The entire card is the label; native radio behavior provides mutual
+  exclusion and keyboard navigation without JavaScript.
+
+  Usage:
+    {% from 'macros/choice_cards.html' import choice_cards %}
+    {{ choice_cards(
+      name="workflow_type",
+      label="Signup Workflow",
+      selected="payment_first",
+      options=[
+        {"value": "payment_first", "title": "Pay First", "icon": "ti-credit-card",
+         "description": "Request payment automatically when someone signs up.",
+         "meta_label": "Best for:", "meta": "Open events, classes, large groups"},
+        {"value": "approval_first", "title": "Review First", "icon": "ti-clipboard-check",
+         "description": "Approve each signup before sending payment instructions.",
+         "meta_label": "Best for:", "meta": "Tryouts, limited spots, selective groups"}
+      ]
+    ) }}
+
+  Parameters:
+    - name: submitted radio-group name
+    - options: list of value, title, optional description/icon/meta/meta_label/disabled
+    - selected: selected option value
+    - label: accessible group label
+    - show_label: display the label above the cards (default True)
+    - columns: 1, 2 or 3 on desktop (default 2; always stacks on mobile)
+    - required: require one choice
+    - error: optional inline validation message
+    - empty_text: message shown when options is empty
+    - class_: extra class for the fieldset
+#}
+
+{% macro choice_cards(name, options=[], selected=None, label=None, show_label=True,
+                      columns=2, required=False, error=None,
+                      empty_text="No options available.", class_='') %}
+{% set error_id = name ~ '-error' if error else none %}
+<fieldset class="mp-choice-cards{% if error %} is-invalid{% endif %}{% if class_ %} {{ class_ }}{% endif %}"
+          data-columns="{{ columns }}"{% if error_id %} aria-describedby="{{ error_id }}"{% endif %}>
+  <legend class="mp-choice-cards__legend{% if not show_label %} visually-hidden{% endif %}">
+    {{ label or name }}
+  </legend>
+  {% if options %}
+  <div class="mp-choice-cards__grid">
+    {% for option in options %}
+      {% set option_id = name ~ '-' ~ option.value %}
+      {% set description_id = option_id ~ '-description' if option.description else none %}
+      <label class="mp-choice-card{% if option.disabled %} is-disabled{% endif %}" for="{{ option_id }}">
+        <input type="radio" class="mp-radio mp-choice-card__control"
+               id="{{ option_id }}" name="{{ name }}" value="{{ option.value }}"
+               {% if selected == option.value %}checked{% endif %}
+               {% if option.disabled %}disabled{% endif %}
+               {% if required %}required{% endif %}
+               {% if error %}aria-invalid="true"{% endif %}
+               {% if description_id or error_id %}aria-describedby="{% if description_id %}{{ description_id }}{% endif %}{% if description_id and error_id %} {% endif %}{% if error_id %}{{ error_id }}{% endif %}"{% endif %}>
+        <span class="mp-choice-card__header">
+          {% if option.icon %}
+            <span class="mp-choice-card__icon" aria-hidden="true">
+              <i class="ti {{ option.icon }}"></i>
+            </span>
+          {% endif %}
+          <span class="mp-choice-card__title">{{ option.title }}</span>
+        </span>
+        <span class="mp-choice-card__content">
+          {% if option.description %}
+            <span class="mp-choice-card__description" id="{{ description_id }}">{{ option.description }}</span>
+          {% endif %}
+          {% if option.meta %}
+            <span class="mp-choice-card__meta">
+              {% if option.meta_label %}<span class="mp-choice-card__meta-label">{{ option.meta_label }}</span> {% endif %}{{ option.meta }}
+            </span>
+          {% endif %}
+        </span>
+      </label>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="mp-choice-cards__empty">{{ empty_text }}</p>
+  {% endif %}
+  {% if error %}
+    <p class="mp-choice-cards__error" id="{{ error_id }}" role="alert">{{ error }}</p>
+  {% endif %}
+</fieldset>
+{% endmacro %}

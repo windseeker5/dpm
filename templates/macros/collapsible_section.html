@@ -1,0 +1,29 @@
+{#
+  Collapsible Section — a native details/summary disclosure for a substantial
+  optional form section. It requires no JavaScript and preserves keyboard and
+  screen-reader behavior.
+
+  Usage:
+    {% from 'macros/collapsible_section.html' import collapsible_section %}
+    {% call collapsible_section(id="advanced", title="Advanced settings") %}
+      ...fields...
+    {% endcall %}
+#}
+
+{% macro collapsible_section(id, title, description=None, icon=None, open=False, class_="") %}
+<details id="{{ id }}" class="mp-collapsible-section{% if class_ %} {{ class_ }}{% endif %}"{% if open %} open{% endif %}>
+  <summary class="mp-collapsible-section__summary">
+    <span class="mp-collapsible-section__heading">
+      {% if icon %}<i class="ti {{ icon }}" aria-hidden="true"></i>{% endif %}
+      <span>
+        <span class="mp-collapsible-section__title">{{ title }}</span>
+        {% if description %}<span class="mp-collapsible-section__description">{{ description }}</span>{% endif %}
+      </span>
+    </span>
+    <i class="ti ti-chevron-down mp-collapsible-section__chevron" aria-hidden="true"></i>
+  </summary>
+  <div class="mp-collapsible-section__content">
+    {{ caller() }}
+  </div>
+</details>
+{% endmacro %}
