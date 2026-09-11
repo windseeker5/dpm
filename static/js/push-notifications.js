@@ -11,6 +11,11 @@ const MinipassPush = {
     return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
   },
 
+  getCSRFToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+  },
+
   async subscribe() {
     if (!this.isSupported()) throw new Error('Push not supported');
 
@@ -29,7 +34,7 @@ const MinipassPush = {
 
     const response = await fetch('/api/push/subscribe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
       body: JSON.stringify({ subscription: subscription.toJSON() })
     });
     if (!response.ok) throw new Error('Failed to save subscription');
@@ -44,7 +49,7 @@ const MinipassPush = {
       await subscription.unsubscribe();
       await fetch('/api/push/unsubscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
         body: JSON.stringify({ endpoint: subscription.endpoint })
       });
     }

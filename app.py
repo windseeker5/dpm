@@ -45,7 +45,6 @@ from flask_migrate import Migrate
 from flask_wtf import CSRFProtect
 
 
-
 # 🧱 SQLAlchemy Extras
 from sqlalchemy import extract, func, case, desc, text
 
@@ -114,11 +113,8 @@ REMOVED_FIELD_DEFAULTS = {
 }
 
 
-
-
 db_path = os.path.join("instance", "minipass.db")
 print(f"Using database → {db_path}")
-
 
 
 app = Flask(__name__)
@@ -158,8 +154,6 @@ def request_entity_too_large(error):
     return redirect(request.referrer or url_for('dashboard')), 413
 
 
-
-
 migrate = Migrate(app, db)
 
 
@@ -178,9 +172,15 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 logger = logging.getLogger(__name__)
 
 csrf = CSRFProtect(app)
-# CRITICAL: Load SECRET_KEY from environment variable for security
-# Fallback generates new key on each restart (sessions will be invalidated)
-app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", os.urandom(32).hex())
+# SECRET_KEY must come from the environment: a silent random fallback would give each
+# gunicorn worker a different key, invalidating sessions/CSRF tokens unpredictably.
+_secret_key = os.getenv("FLASK_SECRET_KEY")
+if not _secret_key:
+    raise RuntimeError(
+        "FLASK_SECRET_KEY environment variable is not set. Refusing to start with a "
+        "random per-process key (this would break sessions/CSRF across workers)."
+    )
+app.config["SECRET_KEY"] = _secret_key
 
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour
 
@@ -206,9 +206,6 @@ except Exception as e:
 @app.template_filter("hashlib_md5")
 def hashlib_md5(s):
     return hashlib.md5(s.encode()).hexdigest()
-
-
-
 
 
 # ✅ Load settings only if the database is ready
@@ -242,7 +239,6 @@ with app.app_context():
             print("[STRIPE_HEALTH] STRIPE_SECRET_KEY is missing from .env!")
     except Exception:
         pass
-
 
 
 # ================================
@@ -1013,9 +1009,6 @@ def initialize_background_tasks():
     init_scheduler(app)
 
 
-
-
-
 def get_git_version():
     """Get git version from version.txt file (created during deployment) or git command (dev)"""
     # Try version.txt first (production Docker)
@@ -1039,8 +1032,22 @@ def get_git_version():
     except:
         return 'unknown'
 
+_sidebar_counts_cache = {}
+_SIDEBAR_COUNTS_CACHE_TTL = 45  # seconds
+
 def _get_sidebar_counts(admin_email):
-    """Return sidebar badge counts and admin data. Fresh query every request."""
+    """Return sidebar badge counts and admin data.
+
+    Cached per-admin for _SIDEBAR_COUNTS_CACHE_TTL seconds (bypassed in debug mode, so
+    local dev always sees live counts). This runs on every template render for every
+    logged-in request via inject_globals_and_csrf, so avoiding a fresh set of queries
+    on every single page view matters at scale.
+    """
+    if not app.debug:
+        cached = _sidebar_counts_cache.get(admin_email)
+        if cached and (time.time() - cached[0]) < _SIDEBAR_COUNTS_CACHE_TTL:
+            return cached[1]
+
     try:
         admin_obj = Admin.query.filter_by(email=admin_email).first()
         pending = Signup.query.filter_by(status='pending').count()
@@ -1052,7 +1059,7 @@ def _get_sidebar_counts(admin_email):
             )
         ).count()
         failed = EmailLog.query.filter_by(result="FAILED").count()
-        return {
+        result = {
             'pending_signups_count': pending,
             'active_passport_count': get_active_passports_query().count(),
             'unmatched_payment_count': unmatched,
@@ -1065,6 +1072,9 @@ def _get_sidebar_counts(admin_email):
                 'email': admin_obj.email,
             } if admin_obj else None,
         }
+        if not app.debug:
+            _sidebar_counts_cache[admin_email] = (time.time(), result)
+        return result
     except Exception:
         return {
             'pending_signups_count': 0,
@@ -1158,7 +1168,6 @@ def encode_md5(s):
     return hashlib.md5(s.strip().lower().encode('utf-8')).hexdigest()
 
 
-
 @app.template_filter("datetimeformat")
 def datetimeformat(value, format="%Y-%m-%d %H:%M"):
     return value.strftime(format) if value else ""
@@ -1179,15 +1188,11 @@ def check_first_run():
         return redirect(url_for('setup'))
 
 
-
 @app.template_filter("trim_email")
 def trim_email(email):
     if not email:
         return "-"
     return email.split("@")[0]
-
-
-
 
 
 ##
@@ -1338,8 +1343,6 @@ def dismiss_email(log_id):
     return redirect(request.referrer or url_for("activity_log"))
 
 
-
-
 ##
 ## - = - = - = - = - = - = - = - = - = - = - = - = - =
 ##
@@ -1347,7 +1350,6 @@ def dismiss_email(log_id):
 ##
 ## - = - = - = - = - = - = - = - = - = - = - = - = - =
 ##
-
 
 
 # 🔵 Unsplash Search API
@@ -1532,7 +1534,6 @@ def _save_logo_image(file_stream, dest_folder, prefix="logo", max_size=(400, 400
 ##
 
 
-
 @app.route("/")
 def home():
     return dashboard()
@@ -1591,11 +1592,6 @@ def components():
     return render_template("components.html")
 
 
-
-
-
-
-
 @app.route("/dashboard")
 def dashboard():
     if "admin" not in session:
@@ -1622,32 +1618,40 @@ def dashboard():
     # Always generate fiscal year data for mobile view (CSS d-md-none handles visibility)
     mobile_kpi_data = get_kpi_data(activity_id=None, period='fy')
     activities = db.session.query(Activity).filter_by(status='active').all()
+    activity_ids = [a.id for a in activities]
     activity_cards = []
 
+    # One aggregate query per table instead of 3 queries per activity (was 3N queries for N activities).
+    from sqlalchemy import case as sql_case
+
+    signup_agg_rows = db.session.query(
+        Signup.activity_id,
+        func.count(Signup.id).label('total'),
+        func.sum(sql_case((Signup.status == 'pending', 1), else_=0)).label('pending'),
+    ).filter(Signup.activity_id.in_(activity_ids)).group_by(Signup.activity_id).all() if activity_ids else []
+    signup_agg = {row.activity_id: row for row in signup_agg_rows}
+
+    passport_agg_rows = db.session.query(
+        Passport.activity_id,
+        func.count(Passport.id).label('total'),
+        func.sum(sql_case((Passport.paid.is_(True), 1), else_=0)).label('paid'),
+        func.sum(sql_case((Passport.paid.is_(False), 1), else_=0)).label('unpaid'),
+        func.sum(sql_case((Passport.uses_remaining > 0, 1), else_=0)).label('active'),
+        func.sum(sql_case((Passport.paid.is_(True), Passport.sold_amt), else_=0.0)).label('paid_amount'),
+        func.sum(sql_case((Passport.paid.is_(False), Passport.sold_amt), else_=0.0)).label('unpaid_amount'),
+    ).filter(Passport.activity_id.in_(activity_ids)).group_by(Passport.activity_id).all() if activity_ids else []
+    passport_agg = {row.activity_id: row for row in passport_agg_rows}
+
+    all_passport_types = PassportType.query.filter(PassportType.activity_id.in_(activity_ids)).all() if activity_ids else []
+    passport_types_by_activity = {}
+    for pt in all_passport_types:
+        passport_types_by_activity.setdefault(pt.activity_id, []).append(pt)
+
     for a in activities:
-        # Signups
-        all_signups = Signup.query.filter_by(activity_id=a.id).all()
-        pending_signups = [s for s in all_signups if s.status == 'pending']
-
-        # Passports
-        all_passports = Passport.query.filter_by(activity_id=a.id).all()
-        paid_passports = [p for p in all_passports if p.paid]
-        unpaid_passports = [p for p in all_passports if not p.paid]
-        active_passports = [p for p in all_passports if p.uses_remaining > 0]
-
-        # Revenue
-        paid_amount = round(sum(p.sold_amt for p in paid_passports), 2)
-        unpaid_amount = round(sum(p.sold_amt for p in unpaid_passports), 2)
-
-        # Optional: Days left
-        if a.end_date:
-            days_left = max((a.end_date - datetime.now()).days, 0)
-        else:
-            days_left = "N/A"
-
-        # Get passport type information for this activity
-        passport_types = PassportType.query.filter_by(activity_id=a.id).all()
-        total_sessions = sum(pt.sessions_included or 0 for pt in passport_types) if passport_types else 0
+        sa = signup_agg.get(a.id)
+        pa = passport_agg.get(a.id)
+        passport_types = passport_types_by_activity.get(a.id, [])
+        total_sessions = sum(pt.sessions_included or 0 for pt in passport_types)
 
         activity_cards.append({
             "id": a.id,
@@ -1655,44 +1659,61 @@ def dashboard():
             "passport_types": [{"id": pt.id, "name": pt.name} for pt in passport_types],
             "passport_types_count": len(passport_types),
             "total_sessions": total_sessions,
-            "signups": len(all_signups),
-            "pending_signups": len(pending_signups),
-            "passports": len(all_passports),
-            "active_passports": len(active_passports),
-            "unpaid_passports": len(unpaid_passports),
-            "paid_passports": len(paid_passports),
-            "paid_amount": paid_amount,
-            "unpaid_amount": unpaid_amount,
+            "signups": sa.total if sa else 0,
+            "pending_signups": (sa.pending or 0) if sa else 0,
+            "passports": pa.total if pa else 0,
+            "active_passports": (pa.active or 0) if pa else 0,
+            "unpaid_passports": (pa.unpaid or 0) if pa else 0,
+            "paid_passports": (pa.paid or 0) if pa else 0,
+            "paid_amount": round(pa.paid_amount or 0.0, 2) if pa else 0.0,
+            "unpaid_amount": round(pa.unpaid_amount or 0.0, 2) if pa else 0.0,
             "goal_revenue": a.goal_revenue or 0.0,
             "image_filename": a.image_filename,
-            "days_left": days_left,
+            "days_left": max((a.end_date - datetime.now()).days, 0) if a.end_date else "N/A",
             "workflow_type": a.workflow_type or "approval_first"
         })
 
-    # ✅ Calculate global passport statistics
-    all_passports = Passport.query.all()
+    # Calculate cutoff date for recent signups (7 days ago). signed_up_at is stored naive-UTC.
+    seven_days_ago_naive = datetime.utcnow() - timedelta(days=7)
+
+    # Global passport/signup statistics, computed with SQL aggregates instead of loading
+    # every row into memory (previously: two full-table Passport.query.all()/Signup.query.all()).
+    passport_totals = db.session.query(
+        func.count(Passport.id),
+        func.sum(sql_case((Passport.paid.is_(True), 1), else_=0)),
+        func.sum(sql_case((Passport.paid.is_(False), 1), else_=0)),
+        func.sum(sql_case((Passport.paid.is_(True), Passport.sold_amt), else_=0.0)),
+        func.sum(sql_case((Passport.paid.is_(False), Passport.sold_amt), else_=0.0)),
+    ).one()
+    total_passports, paid_passport_count, unpaid_passport_count, total_revenue, pending_revenue = passport_totals
+
     passport_stats = {
-        'total_passports': len(all_passports),
-        'paid_passports': len([p for p in all_passports if p.paid]),
-        'unpaid_passports': len([p for p in all_passports if not p.paid]),
+        'total_passports': total_passports or 0,
+        'paid_passports': paid_passport_count or 0,
+        'unpaid_passports': unpaid_passport_count or 0,
         'active_passports': get_active_passports_query().count(),
-        'total_revenue': sum(p.sold_amt for p in all_passports if p.paid),
-        'pending_revenue': sum(p.sold_amt for p in all_passports if not p.paid),
+        'total_revenue': total_revenue or 0.0,
+        'pending_revenue': pending_revenue or 0.0,
     }
 
-    # ✅ Calculate global signup statistics
-    all_signups = Signup.query.all()
-    
-    # Calculate cutoff date for recent signups (7 days ago)
-    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    
+    signup_totals = db.session.query(
+        func.count(Signup.id),
+        func.sum(sql_case((Signup.paid.is_(True), 1), else_=0)),
+        func.sum(sql_case((Signup.paid.is_(False), 1), else_=0)),
+        func.sum(sql_case((Signup.status == 'pending', 1), else_=0)),
+        func.sum(sql_case((Signup.status == 'approved', 1), else_=0)),
+        func.sum(sql_case((Signup.signed_up_at >= seven_days_ago_naive, 1), else_=0)),
+    ).one()
+    (total_signups, paid_signup_count, unpaid_signup_count,
+     pending_signup_count, approved_signup_count, recent_signup_count) = signup_totals
+
     signup_stats = {
-        'total_signups': len(all_signups),
-        'paid_signups': len([s for s in all_signups if s.paid]),
-        'unpaid_signups': len([s for s in all_signups if not s.paid]),
-        'pending_signups': len([s for s in all_signups if s.status == 'pending']),
-        'approved_signups': len([s for s in all_signups if s.status == 'approved']),
-        'recent_signups': len([s for s in all_signups if s.signed_up_at and s.signed_up_at.replace(tzinfo=timezone.utc) >= seven_days_ago]),
+        'total_signups': total_signups or 0,
+        'paid_signups': paid_signup_count or 0,
+        'unpaid_signups': unpaid_signup_count or 0,
+        'pending_signups': pending_signup_count or 0,
+        'approved_signups': approved_signup_count or 0,
+        'recent_signups': recent_signup_count or 0,
     }
 
     # ✅ Use working helper function - Get all logs for pagination
@@ -1837,32 +1858,6 @@ def dashboard():
         log_per_page=LOG_PER_PAGE,
         view_full_log_url=view_full_log_url,
     )
-
-
-
-
-@app.route("/admin/signup/mark-paid/<int:signup_id>", methods=["POST"])
-def mark_signup_paid(signup_id):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    signup = db.session.get(Signup, signup_id)
-    if not signup:
-        flash("Signup not found.", "error")
-        return redirect(url_for("list_signups"))
-
-    signup.paid = True
-    signup.paid_at = datetime.now(timezone.utc)
-    db.session.commit()
-    
-    # Emit SSE notification for signup payment
-    # SSE notifications removed for leaner performance
-
-    flash(f"Marked {signup.user.name}'s signup as paid.", "success")
-    return redirect(url_for("list_signups"))
-
-
-
 
 
 @app.route("/signups")
@@ -2289,179 +2284,6 @@ def bulk_signup_action():
     return redirect(url_for("list_signups"))
 
 
-@app.route("/signups/export")
-def export_signups():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    from models import Signup, User, Activity
-    import csv
-    from io import StringIO
-    
-    # Apply the same filters as the main list
-    q = request.args.get('q', '').strip()
-    activity_id = request.args.get('activity_id')
-    payment_status = request.args.get('payment_status')
-    signup_status = request.args.get('status')
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    
-    # Build the same query as list_signups
-    query = Signup.query.options(
-        db.joinedload(Signup.user),
-        db.joinedload(Signup.activity)
-    ).order_by(Signup.signed_up_at.desc())
-    
-    # Apply filters (same logic as list_signups)
-    if q:
-        # Escape special characters for LIKE queries to prevent issues
-        escaped_q = q.replace('%', '\\%').replace('_', '\\_')
-        search_filter = db.or_(
-            User.name.ilike(f'%{escaped_q}%', escape='\\'),
-            User.email.ilike(f'%{escaped_q}%', escape='\\'),
-            Signup.subject.ilike(f'%{escaped_q}%', escape='\\'),
-            Signup.description.ilike(f'%{escaped_q}%', escape='\\'),
-            Signup.form_data.ilike(f'%{escaped_q}%', escape='\\'),
-            Activity.name.ilike(f'%{escaped_q}%', escape='\\')
-        )
-        query = query.join(User).join(Activity).filter(search_filter)
-    else:
-        query = query.join(User).join(Activity)
-    
-    if activity_id:
-        try:
-            activity_id = int(activity_id)
-            query = query.filter(Signup.activity_id == activity_id)
-        except ValueError:
-            pass
-    
-    if payment_status == 'paid':
-        query = query.filter(Signup.paid == True)
-    elif payment_status == 'unpaid':
-        query = query.filter(Signup.paid == False)
-    
-    if signup_status:
-        query = query.filter(Signup.status == signup_status)
-    
-    if start_date:
-        try:
-            start = datetime.strptime(start_date, '%Y-%m-%d')
-            query = query.filter(Signup.signed_up_at >= start)
-        except ValueError:
-            pass
-    
-    if end_date:
-        try:
-            end = datetime.strptime(end_date, '%Y-%m-%d')
-            end = end.replace(hour=23, minute=59, second=59)
-            query = query.filter(Signup.signed_up_at <= end)
-        except ValueError:
-            pass
-    
-    signups = query.all()
-    
-    # Create CSV content
-    output = StringIO()
-    writer = csv.writer(output)
-    
-    # Write headers
-    writer.writerow([
-        'ID',
-        'User Name',
-        'User Email',
-        'Activity',
-        'Subject',
-        'Description',
-        'Status',
-        'Paid',
-        'Signup Date',
-        'Payment Date',
-        'Form Data'
-    ])
-    
-    # Write data rows
-    for signup in signups:
-        writer.writerow([
-            signup.id,
-            signup.user.name if signup.user else '',
-            signup.user.email if signup.user else '',
-            signup.activity.name if signup.activity else '',
-            signup.subject or '',
-            signup.description or '',
-            signup.status or '',
-            'Yes' if signup.paid else 'No',
-            signup.signed_up_at.strftime('%Y-%m-%d %H:%M') if signup.signed_up_at else '',
-            signup.paid_at.strftime('%Y-%m-%d %H:%M') if signup.paid_at else '',
-            signup.form_data or ''
-        ])
-    
-    # Log admin action
-    admin_email = session.get("admin", "unknown")
-    db.session.add(AdminActionLog(
-        admin_email=admin_email,
-        action=f"Exported {len(signups)} signups to CSV"
-    ))
-    db.session.commit()
-    
-    # Create response
-    output.seek(0)
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f'signups_export_{timestamp}.csv'
-    
-    response = make_response(output.getvalue())
-    response.headers['Content-Type'] = 'text/csv'
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
-    
-    return response
-
-
-
-@app.route("/admin/signup/create-pass/<int:signup_id>")
-def create_pass_from_signup(signup_id):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    signup = db.session.get(Signup, signup_id)
-    if not signup:
-        flash("Signup not found.", "error")
-        return redirect(url_for("list_signups"))
-
-    from models import Passport
-
-    # Check if a passport already exists
-    existing_passport = Passport.query.filter_by(user_id=signup.user_id, activity_id=signup.activity_id).first()
-    if existing_passport:
-        flash("A passport for this user and activity already exists.", "warning")
-        return redirect(url_for("list_signups"))
-
-    # Get passport type from signup or fallback to first one for this activity
-    passport_type = None
-    if signup.passport_type_id:
-        passport_type = db.session.get(PassportType, signup.passport_type_id)
-    else:
-        passport_type = PassportType.query.filter_by(activity_id=signup.activity_id).first()
-    
-    # Create new passport
-    new_passport = Passport(
-        pass_code=f"MP{datetime.now().timestamp():.0f}",
-        user_id=signup.user_id,
-        activity_id=signup.activity_id,
-        passport_type_id=passport_type.id if passport_type else None,
-        passport_type_name=passport_type.name if passport_type else None,  # Preserve type name
-        sold_amt=passport_type.price_per_user if passport_type else 0.0,
-        uses_remaining=passport_type.sessions_included if passport_type else 1,
-        created_dt=datetime.now(timezone.utc),
-        paid=signup.paid,
-        notes=f"Created from signup {signup.id}"
-    )
-    db.session.add(new_passport)
-    db.session.commit()
-
-    flash("Passport created from signup!", "success")
-    return redirect(url_for("list_signups"))
-
-
-
 @app.route("/admin/signup/edit/<int:signup_id>", methods=["GET", "POST"])
 def edit_signup(signup_id):
     if "admin" not in session:
@@ -2480,48 +2302,6 @@ def edit_signup(signup_id):
         return redirect(url_for("list_signups"))
 
     return render_template("edit_signup.html", signup=signup)
-
-
-
-@app.route("/signup/status/<int:signup_id>", methods=["POST"])
-def update_signup_status(signup_id):
-    if "admin" not in session:
-        return redirect(url_for("login"))
-
-    signup = db.session.get(Signup, signup_id)
-    if not signup:
-        flash("Signup not found.", "error")
-        return redirect(url_for("list_signups"))
-
-    status = request.form.get("status")
-
-    if status in ["rejected", "cancelled"]:
-        signup.status = status
-
-        # Session scheduling: a rejected signup must give its held seat back immediately
-        # rather than waiting for the hold to lapse.
-        if signup.slot_booking and signup.slot_booking.status in ("held", "confirmed"):
-            from utils import release_slot_booking
-            release_slot_booking(signup.slot_booking.id, f"signup_{status}", refund_credit=True)
-
-        db.session.commit()
-
-        from utils import log_admin_action
-
-        user_name = signup.user.name if signup.user else "-"
-        activity_name = signup.activity.name if signup.activity else "-"
-
-        log_admin_action(
-            f"Signup ID {signup.id}, {user_name}, for Activity '{activity_name}' was marked as {status}"
-        )
-
-        flash(f"Signup marked as {status}.", "success")
-    else:
-        flash("Invalid status.", "error")
-
-    return redirect(url_for("list_signups"))
-
-
 
 
 @app.route("/signup/approve-create-pass/<int:signup_id>")
@@ -2632,8 +2412,6 @@ def approve_and_create_pass(signup_id):
 
     flash("Signup approved and passport created! Confirmation email queued for delivery.", "success")
     return redirect(url_for("activity_dashboard", activity_id=signup.activity_id))
-
-
 
 
 # NOTE: a "same email already booked this session" guard used to live here. It was removed
@@ -3359,7 +3137,6 @@ def edit_activity(activity_id):
                           payment_email=payment_email,
                           stripe_configured=stripe_configured,
                           other_activities=other_activities)
-
 
 
 def _passport_type_signup_url(passport_type):
@@ -4710,17 +4487,9 @@ def api_payment_bot_test_email():
 
 
 @app.route("/api/payment-bot/check-emails", methods=["POST"])
-@csrf.exempt
 def api_payment_bot_check_emails():
     """Manually trigger email payment bot to check for new payments"""
-    print(f"🔍 Payment bot API called. Session keys: {list(session.keys())}")
-    print(f"🔍 Session admin value: {session.get('admin', 'None')}")
-    
-    # Bypass authentication for testing - REMOVE THIS AFTER DEBUGGING
-    if True:  # Temporary bypass
-        print("🔧 BYPASSING AUTH FOR DEBUG")
-    elif "admin" not in session:
-        print("Unauthorized - no admin in session")
+    if "admin" not in session:
         return jsonify({"error": "Unauthorized"}), 401
     
     from utils import match_gmail_payments_to_passes, get_setting, log_admin_action, cleanup_duplicate_payment_logs_auto
@@ -4774,7 +4543,6 @@ def api_payment_bot_check_emails():
 
 
 @app.route("/api/move-payment-email", methods=["POST"])
-@csrf.exempt
 def api_move_payment_email():
     """Manually move a payment email to the manually_processed folder"""
     if "admin" not in session:
@@ -4820,7 +4588,6 @@ def api_move_payment_email():
 
 
 @app.route("/api/cleanup-duplicate-logs", methods=["POST"])
-@csrf.exempt
 def api_cleanup_duplicate_logs():
     """Clean up duplicate NO_MATCH payment logs, keeping only the latest for each unique payment"""
     if "admin" not in session:
@@ -4903,7 +4670,6 @@ def api_get_passport_types(activity_id):
 
 
 @app.route("/api/create-passport-from-payment", methods=["POST"])
-@csrf.exempt
 def api_create_passport_from_payment():
     """Create a passport directly from an unmatched payment, bypassing signup flow"""
     if "admin" not in session:
@@ -5462,162 +5228,6 @@ def link_payment_to_signup_form():
     return redirect(url_for("payment_bot_matches", status="no_match"))
 
 
-@app.route("/api/link-payment-to-passport", methods=["POST"])
-@csrf.exempt
-def api_link_payment_to_passport():
-    """Manually link a NO_MATCH Interac payment to an existing unpaid passport (e.g. parent paying for child)"""
-    if "admin" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        from models import User, Passport, Activity, EbankPayment, AdminActionLog
-        from utils import notify_pass_event
-
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-
-        payment_id = data.get("payment_id")
-        passport_id = data.get("passport_id")
-        reason = (data.get("reason") or "").strip()
-
-        if not payment_id:
-            return jsonify({"error": "Payment ID is required"}), 400
-        if not passport_id:
-            return jsonify({"error": "Passport ID is required"}), 400
-        if not reason:
-            return jsonify({"error": "Reason is required"}), 400
-
-        payment = db.session.get(EbankPayment, payment_id)
-        if not payment:
-            return jsonify({"error": "Payment not found"}), 404
-        if payment.result != "NO_MATCH":
-            return jsonify({"error": "Payment is not in NO_MATCH status"}), 400
-
-        passport = db.session.get(Passport, passport_id)
-        if not passport:
-            return jsonify({"error": "Passport not found"}), 404
-        if passport.paid:
-            return jsonify({"error": "Passport is already paid"}), 400
-
-        admin_email = session.get("admin", "unknown")
-        now_utc = datetime.now(timezone.utc)
-        date_str = now_utc.strftime("%Y-%m-%d")
-
-        user = db.session.get(User, passport.user_id)
-        holder_name = user.name if user else "Unknown"
-
-        payer_name = payment.bank_info_name or "Unknown"
-        payer_amt = payment.bank_info_amt or 0
-
-        # Mark passport as paid
-        passport.paid = True
-        passport.paid_date = now_utc
-        passport.marked_paid_by = admin_email
-        passport.payment_method = "interac"
-        passport_note = (
-            f"Interac manual match — Payer: {payer_name} (${payer_amt:.2f})."
-            f" Note: {reason}."
-            f" Matched on {date_str}."
-        )
-        passport.notes = passport_note
-
-        # Update EbankPayment
-        payment.result = "MATCHED"
-        payment.matched_pass_id = passport.id
-        payment.matched_name = holder_name
-        payment.matched_amt = passport.sold_amt
-        payment.name_score = 0  # 0 = manual match (auto-match scores are 85–100)
-        payment.mark_as_paid = True
-        payment.note = (
-            f"Manually linked by {admin_email} on {date_str}."
-            f" Payer: {payer_name} (${payer_amt:.2f})."
-            f" Passport holder: {holder_name}."
-            f" Reason: {reason}."
-        )
-
-        # Log audit trail — text contains "marked as PAID (interac)" so get_all_activity_logs()
-        # classifies it correctly as "Marked Paid (Interac)" in the activity log view
-        pass_code = passport.pass_code or f"#{passport.id}"
-        db.session.add(AdminActionLog(
-            admin_email=admin_email,
-            action=(
-                f"Passport for {holder_name} ({pass_code}) marked as PAID (interac) by {admin_email}."
-                f" Manual Interac match — Payer: {payer_name} (${payer_amt:.2f})."
-                f" Note: {reason}."
-            )
-        ))
-
-        db.session.commit()
-        db.session.expire_all()
-
-        # Move payment email to processed folder
-        email_moved = False
-        try:
-            from utils import get_setting
-            import imaplib
-
-            mail_user = get_setting("IMAP_USERNAME") or get_setting("MAIL_USERNAME")
-            mail_pwd = get_setting("IMAP_PASSWORD") or get_setting("MAIL_PASSWORD")
-            processed_folder = get_setting("GMAIL_LABEL_FOLDER_PROCESSED", "PaymentProcessed")
-
-            if mail_user and mail_pwd and payment.email_uid:
-                imap_server = get_setting("IMAP_SERVER") or get_setting("MAIL_SERVER") or "imap.gmail.com"
-
-                try:
-                    mail = imaplib.IMAP4_SSL(imap_server)
-                except Exception:
-                    mail = imaplib.IMAP4(imap_server, 143)
-                    mail.starttls()
-
-                mail.login(mail_user, mail_pwd)
-                mail.select("inbox")
-
-                uid = payment.email_uid
-                folder_status, _ = mail.select(processed_folder)
-                if folder_status != 'OK':
-                    try:
-                        mail.create(processed_folder)
-                    except Exception:
-                        pass
-
-                mail.select("inbox")
-                copy_result = mail.uid("COPY", uid, processed_folder)
-                if copy_result[0] == 'OK':
-                    mail.uid("STORE", uid, "+FLAGS", "(\\Deleted)")
-                    email_moved = True
-                mail.expunge()
-                mail.logout()
-
-        except Exception as e:
-            print(f"Could not move payment email (non-critical): {e}")
-
-        # Send confirmation email via notify_pass_event
-        activity = db.session.get(Activity, passport.activity_id)
-        notify_pass_event(
-            app=current_app._get_current_object(),
-            event_type="payment_received",
-            pass_data=passport,
-            activity=activity,
-            admin_email=admin_email,
-            timestamp=now_utc
-        )
-
-        msg = f"Payment linked to passport for {holder_name} ({pass_code})."
-        if not email_moved:
-            msg += " Warning: payment email could not be moved from inbox."
-        flash(msg, "success" if email_moved else "warning")
-
-        return jsonify({"success": True, "message": msg}), 200
-
-    except Exception as e:
-        import traceback
-        print(f"Error linking payment to passport: {e}")
-        print(f"Traceback: {traceback.format_exc()}")
-        db.session.rollback()
-        return jsonify({"error": f"Failed to link payment: {str(e)}"}), 500
-
-
 @app.route("/api/unpaid-passports-by-amount/<float:amount>")
 def api_get_unpaid_passports_by_amount(amount):
     """Get list of unpaid passports at a specific amount for the Check Unpaid Passports modal"""
@@ -5675,48 +5285,6 @@ def api_update_passport_name(passport_id):
 
     return jsonify({'success': True, 'old_name': old_name, 'new_name': new_name})
 
-
-@app.route("/api/payment-notification-html/<notification_id>", methods=["POST"])
-@csrf.exempt
-def api_payment_notification_html(notification_id):
-    """Render HTML for payment notification"""
-    if "admin" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    try:
-        # Get notification data from request
-        notification_data = request.get_json()
-        if not notification_data:
-            return jsonify({"error": "No notification data provided"}), 400
-        
-        # Render the notification template
-        html = render_template('partials/event_notification.html', data=notification_data)
-        return html, 200, {'Content-Type': 'text/html'}
-        
-    except Exception as e:
-        current_app.logger.error(f"Error rendering payment notification HTML: {e}")
-        return jsonify({"error": "Failed to render notification"}), 500
-
-@app.route("/api/signup-notification-html/<notification_id>", methods=["POST"])
-@csrf.exempt
-def api_signup_notification_html(notification_id):
-    """Render HTML for signup notification"""
-    if "admin" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    try:
-        # Get notification data from request
-        notification_data = request.get_json()
-        if not notification_data:
-            return jsonify({"error": "No notification data provided"}), 400
-        
-        # Render the notification template
-        html = render_template('partials/event_notification.html', data=notification_data)
-        return html, 200, {'Content-Type': 'text/html'}
-        
-    except Exception as e:
-        current_app.logger.error(f"Error rendering signup notification HTML: {e}")
-        return jsonify({"error": "Failed to render notification"}), 500
 
 @app.route("/api/payment-bot/logs", methods=["GET"])
 def api_payment_bot_logs():
@@ -5818,7 +5386,6 @@ def get_vapid_public_key():
         return jsonify({"error": "Failed to get VAPID keys"}), 500
 
 
-@csrf.exempt
 @app.route("/api/push/subscribe", methods=["POST"])
 def push_subscribe():
     """Save a push notification subscription for the current admin"""
@@ -5869,7 +5436,6 @@ def push_subscribe():
     return jsonify({"success": True, "message": "Subscription saved"})
 
 
-@csrf.exempt
 @app.route("/api/push/unsubscribe", methods=["POST"])
 def push_unsubscribe():
     """Remove a push notification subscription"""
@@ -5901,69 +5467,6 @@ def push_unsubscribe():
     log_admin_action(f"Push notifications disabled by {session.get('admin')}")
 
     return jsonify({"success": True, "message": "Unsubscribed"})
-
-
-@app.route("/api/push/status", methods=["GET"])
-def push_status():
-    """Check if current admin has active push subscriptions"""
-    if "admin" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    admin = Admin.query.filter_by(email=session.get("admin")).first()
-    if not admin:
-        return jsonify({"subscribed": False})
-
-    from models import PushSubscription
-    count = PushSubscription.query.filter_by(admin_id=admin.id).count()
-    return jsonify({
-        "subscribed": count > 0,
-        "subscription_count": count
-    })
-
-
-@csrf.exempt
-@app.route("/api/push/test", methods=["POST"])
-def push_test():
-    """Send a test push notification to the current admin"""
-    if "admin" not in session:
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-
-    admin = Admin.query.filter_by(email=session.get("admin")).first()
-    if not admin:
-        return jsonify({"success": False, "error": "Admin not found"}), 404
-
-    from models import PushSubscription
-    subscriptions = PushSubscription.query.filter_by(admin_id=admin.id).all()
-
-    if not subscriptions:
-        return jsonify({
-            "success": False,
-            "error": "No push subscriptions found. Please enable push notifications first.",
-            "subscription_count": 0
-        })
-
-    from utils import send_push_notification_to_admin
-    try:
-        sent_count = send_push_notification_to_admin(
-            admin_id=admin.id,
-            title="Test Notification",
-            body="If you see this, push notifications are working!",
-            url="/unified_settings",
-            tag="test-notification"
-        )
-        return jsonify({
-            "success": True,
-            "message": f"Test notification sent to {sent_count} device(s)",
-            "sent_count": sent_count,
-            "subscription_count": len(subscriptions)
-        })
-    except Exception as e:
-        current_app.logger.error(f"Push test error: {e}")
-        return jsonify({
-            "success": False,
-            "error": str(e),
-            "subscription_count": len(subscriptions)
-        }), 500
 
 
 @app.route("/setup", methods=["GET", "POST"])
@@ -6545,13 +6048,6 @@ def unified_settings():
                            current_section=current_section)
 
 
-# Alternative route name to match template url_for reference
-@app.route("/admin/save-unified-settings", methods=["POST"])
-def save_unified_settings():
-    """Alternative endpoint name to match template url_for reference"""
-    return unified_settings()
-
-
 @app.route("/current-plan/proration-preview", methods=['GET'])
 def proration_preview():
     """Return the prorated amount for a plan change before committing it."""
@@ -6994,7 +6490,6 @@ def erase_app_data():
     return redirect(url_for("setup"))
 
 
-
 @app.route("/generate-backup")
 def generate_backup():
     if "admin" not in session:
@@ -7284,11 +6779,6 @@ def api_search_users():
     ])
 
 
-
-
-
-
-
 # ================================
 # Helper Functions
 # ================================
@@ -7416,35 +6906,40 @@ def login():
         email = request.form["email"].strip().lower()
         password = request.form["password"]
 
-        print(f"📨 Login attempt for: {email}")
-        print(f"🔑 Password entered: {password}")
+        from decorators import rate_limit_store
+        rate_key = f"login:{request.remote_addr}:{email}"
+        window_start = datetime.now(timezone.utc) - timedelta(seconds=300)
+        rate_limit_store[rate_key] = [t for t in rate_limit_store[rate_key] if t > window_start]
+
+        if len(rate_limit_store[rate_key]) >= 5:
+            flash("Too many login attempts. Please try again in a few minutes.", "error")
+            return render_template("login_standalone.html",
+                                 email=email,
+                                 org_logo=org_logo,
+                                 org_name=org_name,
+                                 placeholder_color=get_placeholder_color,
+                                 placeholder_letter=get_placeholder_letter)
+
+        rate_limit_store[rate_key].append(datetime.now(timezone.utc))
 
         with app.app_context():
             admin = Admin.query.filter_by(email=email).first()
 
-        if not admin:
-            print("No admin found with that email.")
-        else:
-            print(f"Admin found: {admin.email}")
-            print(f"🔐 Stored hash (type): {type(admin.password_hash)}")
-            print(f"🔐 Stored hash (value): {admin.password_hash}")
-
+        if admin:
             try:
                 stored_hash = admin.password_hash
                 if isinstance(stored_hash, bytes):
                     stored_hash = stored_hash.decode()
 
                 if bcrypt.checkpw(password.encode(), stored_hash.encode()):
-                    print("Password matched.")
                     session["admin"] = email
+                    rate_limit_store.pop(rate_key, None)
                     if SurveyTemplate.query.count() == 0:
                         create_default_survey_template()
                         create_french_simple_survey_template()
                     return redirect(url_for("dashboard"))
-                else:
-                    print("Password does NOT match.")
             except Exception as e:
-                print("💥 Exception during bcrypt check:", e)
+                logger.error(f"Exception during login for {email}: {e}")
 
         flash("Invalid login!", "error")
         return render_template("login_standalone.html",
@@ -7460,9 +6955,6 @@ def login():
                          org_name=org_name,
                          placeholder_color=get_placeholder_color,
                          placeholder_letter=get_placeholder_letter)
-
-
-
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -7943,10 +7435,6 @@ def redeem_passport_qr(pass_code):
     return redirect(url_for("activity_dashboard", activity_id=return_activity_id))
 
 
-
-
-
-
 @app.route("/edit-passport/<int:passport_id>", methods=["GET", "POST"])
 def edit_passport(passport_id):
     if "admin" not in session:
@@ -8019,8 +7507,6 @@ def edit_passport(passport_id):
     )
 
 
-
-
 @app.route("/scan-qr")
 def scan_qr():
     from models import Activity
@@ -8029,13 +7515,10 @@ def scan_qr():
     return render_template("scan_qr.html", activity_id=activity_id, activities=activities)
 
 
-
-
 @app.route("/logout")
 def logout():
     session.pop("admin", None)
     return redirect(url_for("login"))
-
 
 
  
@@ -8111,8 +7594,6 @@ def activity_log():
     current_filters = {'q': request.args.get('q', ''), 'type': request.args.get('type', '')}
 
     return render_template("activity_log.html", logs=logs, pagination=pagination, current_filters=current_filters)
-
-
 
 
 @app.route("/tier-limit-exceeded")
@@ -8926,16 +8407,18 @@ def list_passports():
     # Get activities for filter dropdown
     activities = Activity.query.filter_by(status='active').order_by(Activity.name).all()
 
-    # Get all passports for statistics (unfiltered counts)
-    all_passports = Passport.query.all()
-
-    # Calculate statistics using ALL passports (not filtered results)
-    paid_passports = len([p for p in all_passports if p.paid])
-    unpaid_passports = len([p for p in all_passports if not p.paid])
+    # Statistics using ALL passports (not filtered results), via SQL aggregates instead of
+    # loading every row into memory.
+    from sqlalchemy import case as sql_case
+    passport_totals = db.session.query(
+        func.sum(sql_case((Passport.paid.is_(True), 1), else_=0)),
+        func.sum(sql_case((Passport.paid.is_(False), 1), else_=0)),
+        func.sum(sql_case((Passport.paid.is_(True), Passport.sold_amt), else_=0.0)),
+        func.sum(sql_case((Passport.paid.is_(False), Passport.sold_amt), else_=0.0)),
+    ).one()
+    paid_passports, unpaid_passports, total_revenue, pending_revenue = (v or 0 for v in passport_totals)
     # Active = has remaining uses AND belongs to a non-archived activity
     active_passports = get_active_passports_query().count()
-    total_revenue = sum(p.sold_amt for p in all_passports if p.paid)
-    pending_revenue = sum(p.sold_amt for p in all_passports if not p.paid)
 
     statistics = {
         'total_passports': all_passports_count,
@@ -9906,27 +9389,27 @@ def passports_bulk_action():
         flash(f"Marked {count} passports as paid.", "success")
     
     elif action == "send_reminders":
-        count = 0
-        for passport in passports:
-            if not passport.paid:
-                # Send payment reminder email
-                notify_pass_event(
-                    app=current_app._get_current_object(),
-                    event_type="payment_late",
-                    pass_data=passport,
-                    activity=passport.activity,
-                    admin_email=session.get("admin"),
-                    timestamp=datetime.now(timezone.utc)
-                )
-                count += 1
-        
+        # Sent from a single background thread, one at a time (notify_pass_event_bulk),
+        # instead of one SMTP thread per passport — a large selection used to open one
+        # concurrent SMTP connection per unpaid passport.
+        unpaid_passports = [p for p in passports if not p.paid]
+        count = len(unpaid_passports)
+        if unpaid_passports:
+            from utils import notify_pass_event_bulk
+            notify_pass_event_bulk(
+                app=current_app._get_current_object(),
+                event_type="payment_late",
+                passports=unpaid_passports,
+                admin_email=session.get("admin"),
+            )
+
         # Log admin action
         db.session.add(AdminActionLog(
             admin_email=session.get("admin", "unknown"),
             action=f"Sent payment reminders to {count} unpaid passports by {session.get('admin', 'unknown')}"
         ))
         db.session.commit()
-        
+
         flash(f"Sent payment reminders to {count} unpaid passports.", "success")
     
     elif action == "delete":
@@ -9967,108 +9450,12 @@ def passports_bulk_action():
     return redirect(url_for("list_passports"))
 
 
-@app.route("/passports/export")
-def export_passports():
-    if "admin" not in session:
-        return redirect(url_for("login"))
-    
-    import csv
-    import io
-    from flask import make_response
-    
-    # Get all filters from current session
-    q = request.args.get("q", "").strip()
-    activity_id = request.args.get("activity", "")
-    payment_status = request.args.get("payment_status", "")
-    start_date = request.args.get("start_date", "")
-    end_date = request.args.get("end_date", "")
-    
-    # Build the same query as the main passports page
-    query = Passport.query.options(
-        db.joinedload(Passport.user),
-        db.joinedload(Passport.activity),
-        db.joinedload(Passport.passport_type)
-    ).order_by(Passport.created_dt.desc())
-    
-    # Apply the same filters
-    if q:
-        query = query.join(User).filter(
-            db.or_(
-                User.name.ilike(f"%{q}%"),
-                User.email.ilike(f"%{q}%"),
-                Passport.pass_code.ilike(f"%{q}%")
-            )
-        )
-    
-    if activity_id:
-        query = query.filter(Passport.activity_id == activity_id)
-    
-    if payment_status == "paid":
-        query = query.filter(Passport.paid == True)
-    elif payment_status == "unpaid":
-        query = query.filter(Passport.paid == False)
-    
-    if start_date:
-        try:
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-            query = query.filter(Passport.created_dt >= start_dt)
-        except ValueError:
-            pass
-    
-    if end_date:
-        try:
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-            query = query.filter(Passport.created_dt <= end_dt)
-        except ValueError:
-            pass
-    
-    passports = query.all()
-    
-    # Create CSV data
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # Header row
-    writer.writerow([
-        'Passport Code', 'User Name', 'User Email', 'Activity', 'Passport Type',
-        'Amount', 'Payment Status', 'Uses Remaining', 'Created Date', 'Paid Date', 'Notes'
-    ])
-    
-    # Data rows
-    for passport in passports:
-        writer.writerow([
-            passport.pass_code,
-            passport.user.name if passport.user else '-',
-            passport.user.email if passport.user else '-',
-            passport.activity.name if passport.activity else '-',
-            passport.passport_type.name if passport.passport_type else '-',
-            passport.sold_amt,
-            'Paid' if passport.paid else 'Unpaid',
-            passport.uses_remaining,
-            passport.created_dt.strftime('%Y-%m-%d %H:%M') if passport.created_dt else '-',
-            passport.paid_date.strftime('%Y-%m-%d %H:%M') if passport.paid_date else '-',
-            passport.notes or ''
-        ])
-    
-    # Create response
-    output.seek(0)
-    response = make_response(output.getvalue())
-    response.headers['Content-Type'] = 'text/csv'
-    response.headers['Content-Disposition'] = f'attachment; filename=passports_export_{datetime.now().strftime("%Y%m%d_%H%M")}.csv'
-    
-    # Log admin action
-    db.session.add(AdminActionLog(
-        admin_email=session.get("admin", "unknown"),
-        action=f"Exported {len(passports)} passports to CSV by {session.get('admin', 'unknown')}"
-    ))
-    db.session.commit()
-    
-    return response
-
-
 @app.route("/admin/activity-income/<int:activity_id>", methods=["GET", "POST"])
 @app.route("/admin/activity-income/<int:activity_id>/edit/<int:income_id>", methods=["GET", "POST"])
 def activity_income(activity_id, income_id=None):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
     activity = Activity.query.get_or_404(activity_id)
     income = db.session.get(Income, income_id) if income_id else None
 
@@ -10189,14 +9576,12 @@ def activity_income(activity_id, income_id=None):
     )
 
 
-
-
-
-
-
 @app.route("/admin/activity-expenses/<int:activity_id>", methods=["GET", "POST"])
 @app.route("/admin/activity-expenses/<int:activity_id>/edit/<int:expense_id>", methods=["GET", "POST"])
 def activity_expenses(activity_id, expense_id=None):
+    if "admin" not in session:
+        return redirect(url_for("login"))
+
     activity = Activity.query.get_or_404(activity_id)
     expense = db.session.get(Expense, expense_id) if expense_id else None
 
@@ -10325,9 +9710,6 @@ def activity_expenses(activity_id, expense_id=None):
         summary=summary,
         now=dt.now
     )
-
-
-
 
 
 @app.route("/admin/delete-income/<int:income_id>", methods=["POST"])
@@ -10577,12 +9959,6 @@ def activity_form(activity_id=None):
                            payment_email=payment_email,
                            advanced_expanded=advanced_expanded,
                            other_activities=other_activities)
-
-
-
-
-
-
 
 
 @app.route("/delete-activity/<int:activity_id>", methods=["POST"])
@@ -12046,8 +11422,6 @@ def log_type_color(log_type):
     return colors.get(log_type, 'gray')
 
 
-
-
 ##
 ## - = - = - = - = - = - = - = - = - = - = - = - = - =
 ##
@@ -12055,7 +11429,6 @@ def log_type_color(log_type):
 ##
 ## - = - = - = - = - = - = - = - = - = - = - = - = - =
 ##
-
 
 
 @app.route("/create-passport", methods=["GET", "POST"])
@@ -12191,8 +11564,6 @@ def create_passport():
         selected_activity=selected_activity,
         single_passport_type_id=single_passport_type_id
     )
-
-
 
 
 # Store recent redemptions to prevent duplicate scans
@@ -12498,6 +11869,7 @@ def send_passport_reminder(passport_id):
 
 
 @app.route("/api/passport-type-dependencies/<int:passport_type_id>", methods=["GET"])
+@admin_required
 def check_passport_type_dependencies(passport_type_id):
     """Check if a passport type has dependencies (existing passports) that prevent deletion"""
     try:
@@ -12528,7 +11900,7 @@ def check_passport_type_dependencies(passport_type_id):
 
 
 @app.route("/api/passport-type-archive/<int:passport_type_id>", methods=["POST"])
-@csrf.exempt
+@admin_required
 def archive_passport_type(passport_type_id):
     """Archive a passport type instead of deleting it"""
     try:
@@ -15691,9 +15063,10 @@ def unsubscribe():
     import hashlib
     
     if request.method == 'GET':
-        email = request.args.get('email', '')
-        token = request.args.get('token', '')
-        
+        from markupsafe import escape
+        email = escape(request.args.get('email', ''))
+        token = escape(request.args.get('token', ''))
+
         # Simple unsubscribe form
         return f'''
         <!DOCTYPE html>
@@ -15836,5 +15209,8 @@ def privacy():
 
 if __name__ == "__main__":
     port = 5000
+    # Production always runs via gunicorn (see dockerfile); this entrypoint is local-dev only.
+    # Safety valve: FLASK_ENV=production or FLASK_DEBUG=0 disables the debugger even here.
+    debug_mode = os.getenv("FLASK_ENV") != "production" and os.getenv("FLASK_DEBUG", "1") != "0"
     print(f"🚀 Running on port {port}")
-    app.run(host='0.0.0.0', debug=True, port=port)
+    app.run(host='0.0.0.0', debug=debug_mode, port=port)

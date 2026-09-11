@@ -4983,16 +4983,18 @@ def notify_signup_event(app, *, signup, activity, timestamp=None):
         print(f"⚠️ Push notification error (signup): {e}")
 
 
-def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None, timestamp=None):
-    from utils import send_email_async, get_pass_history_data, generate_qr_code_image, get_email_context, get_setting
-    from flask import render_template, render_template_string, url_for
+def _build_pass_event_email(event_type, pass_data, activity, admin_email=None, timestamp=None):
+    """Build the (subject, template_name, context, inline_images, to_email) for one
+    pass-event notification, with no I/O. Pulled out of notify_pass_event() so a bulk
+    sender can call it in a loop without spawning a thread per recipient — see
+    notify_pass_event_bulk().
+    """
+    from utils import get_pass_history_data, generate_qr_code_image, get_email_context, get_setting
     from datetime import datetime, timezone
-    import json
-    import base64
     import os
 
     timestamp = timestamp or datetime.now(timezone.utc)
-    
+
     # Map event types to template keys used in activity.email_templates
     event_type_mapping = {
         'pass_created': 'newPass',
@@ -5001,20 +5003,13 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
         'payment_late': 'latePayment',
         'pass_redeemed': 'redeemPass'
     }
-    
+
     template_type = event_type_mapping.get(event_type, 'newPass')
-    
+
     # Check if activity has custom template for this event type
     has_custom_template = (activity.email_templates and
                           template_type in activity.email_templates and
                           activity.email_templates[template_type])
-
-    # DEBUG: Log the template state
-    print(f"🔍 DEBUG notify_pass_event: template_type={template_type}")
-    print(f"🔍 DEBUG: activity.email_templates = {activity.email_templates}")
-    print(f"🔍 DEBUG: has_custom_template = {has_custom_template}")
-    if activity.email_templates and template_type in activity.email_templates:
-        print(f"🔍 DEBUG: show_qr_code in templates = {activity.email_templates[template_type].get('show_qr_code', 'NOT SET')}")
 
     # One path for every activity.
     #
@@ -5081,18 +5076,134 @@ def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None,
     if show_qr_code:
         inline_images["qr_code"] = generate_qr_code_image(pass_data.pass_code, box_size=EMAIL_QR_BOX_SIZE)
 
+    return {
+        "subject": context.get('subject', 'Notification'),
+        "to_email": pass_data.user.email if pass_data.user else None,
+        "template_name": template_type,
+        "context": context,
+        "timestamp_override": timestamp,
+        "inline_images": inline_images,
+    }
+
+
+def notify_pass_event(app, *, event_type, pass_data, activity, admin_email=None, timestamp=None):
+    from utils import send_email_async
+
+    email = _build_pass_event_email(event_type, pass_data, activity, admin_email, timestamp)
+
     send_email_async(
         app=app,
         user=pass_data.user,
         activity=activity,
-        subject=context.get('subject', 'Notification'),
-        to_email=pass_data.user.email if pass_data.user else None,
-        template_name=template_type,
-        context=context,
-        timestamp_override=timestamp,
-        inline_images=inline_images,
+        subject=email["subject"],
+        to_email=email["to_email"],
+        template_name=email["template_name"],
+        context=email["context"],
+        timestamp_override=email["timestamp_override"],
+        inline_images=email["inline_images"],
         use_hosted_images=True
     )
+
+
+def notify_pass_event_bulk(app, *, event_type, passports, admin_email=None, delay=0.3):
+    """Send the same pass-event notification (e.g. a payment reminder) to many passports
+    from a single background thread, sequentially — instead of notify_pass_event()'s one
+    thread per passport, which floods the SMTP server when a bulk action selects a large
+    batch (e.g. 200 unpaid passports = 200 concurrent SMTP connections). Mirrors the
+    sequential-send pattern already used by send_bulk_sequential() for announcements.
+    """
+    import threading
+    import time
+
+    # Extract pass_codes *before* the thread starts, in the caller's still-live session.
+    # Touching passport.pass_code lazily from inside the thread breaks partway through a
+    # batch: the caller's request handler commits (e.g. the AdminActionLog write) before
+    # this thread runs, which by default expires every attribute on every object in that
+    # session — so the first loop iteration's attribute access can still succeed on
+    # leftover state, but a later one raises DetachedInstanceError once the request's
+    # session is fully torn down, silently killing the whole thread with no EmailLog
+    # written for the remaining passports (same reasoning as send_email_async's
+    # _reload_pass_code, just applied to every item instead of one).
+    pass_codes = [p.pass_code for p in passports]
+
+    def _run():
+        with app.app_context():
+            from utils import send_email, get_pass_history_data
+            from models import EmailLog, Passport
+            import json
+            from datetime import datetime, timezone
+
+            sent = 0
+            failed = 0
+
+            for pass_code in pass_codes:
+                fresh_passport = Passport.query.filter_by(pass_code=pass_code).first()
+                if not fresh_passport or not fresh_passport.user or not fresh_passport.user.email:
+                    failed += 1
+                    continue
+
+                try:
+                    email = _build_pass_event_email(
+                        event_type, fresh_passport, fresh_passport.activity, admin_email
+                    )
+                    result = send_email(
+                        subject=email["subject"],
+                        to_email=email["to_email"],
+                        template_name=email["template_name"],
+                        context=email["context"],
+                        inline_images=email["inline_images"],
+                        timestamp_override=email["timestamp_override"],
+                        user=fresh_passport.user,
+                        activity=fresh_passport.activity,
+                        use_hosted_images=True,
+                    )
+
+                    db.session.add(EmailLog(
+                        to_email=email["to_email"],
+                        subject=email["subject"],
+                        pass_code=fresh_passport.pass_code,
+                        template_name=email["template_name"] or "",
+                        context_json=json.dumps({
+                            "user_name": fresh_passport.user.name if fresh_passport.user else None,
+                            "activity_name": fresh_passport.activity.name if fresh_passport.activity else None,
+                            "template_type": email["template_name"],
+                        }),
+                        result="SENT" if result else "FAILED",
+                        error_message=None if result else "send_email() returned False",
+                        timestamp=datetime.now(timezone.utc),
+                    ))
+                    db.session.commit()
+
+                    if result:
+                        sent += 1
+                    else:
+                        failed += 1
+
+                except Exception as e:
+                    failed += 1
+                    logging.exception(f"❌ notify_pass_event_bulk failed for {fresh_passport.pass_code}: {e}")
+                    db.session.rollback()
+                    try:
+                        db.session.add(EmailLog(
+                            to_email=fresh_passport.user.email if fresh_passport.user else None,
+                            subject="",
+                            pass_code=fresh_passport.pass_code,
+                            template_name="",
+                            result="FAILED",
+                            error_message=str(e),
+                            timestamp=datetime.now(timezone.utc),
+                        ))
+                        db.session.commit()
+                    except Exception:
+                        pass
+
+                if delay > 0:
+                    time.sleep(delay)
+
+            logging.info(f"✅ notify_pass_event_bulk complete — {sent} sent, {failed} failed (event_type: {event_type})")
+
+    thread = threading.Thread(target=_run)
+    thread.start()
 
 
 def close_out_passport(app, passport, admin_email):

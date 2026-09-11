@@ -3823,6 +3823,29 @@ def task53_add_cart_order_table(cursor):
 
 
 # ============================================================================
+# TASK 54: Add Remaining Performance Indexes
+# ============================================================================
+def task54_add_more_performance_indexes(cursor):
+    """Add indexes on columns filtered on every request (sidebar counts, dashboard,
+    passport list) that task31 didn't cover: Passport.paid/uses_remaining and
+    EbankPayment.result/EmailLog.result, both filtered with no index on every page load."""
+    log("⚡", "TASK 54: Adding remaining performance indexes", Colors.BLUE)
+
+    indexes = [
+        ("ix_passport_paid",           "CREATE INDEX IF NOT EXISTS ix_passport_paid ON passport (paid)"),
+        ("ix_passport_uses_remaining", "CREATE INDEX IF NOT EXISTS ix_passport_uses_remaining ON passport (uses_remaining)"),
+        ("ix_ebank_payment_result",    "CREATE INDEX IF NOT EXISTS ix_ebank_payment_result ON ebank_payment (result)"),
+        ("ix_email_log_result",        "CREATE INDEX IF NOT EXISTS ix_email_log_result ON email_log (result)"),
+    ]
+
+    for name, sql in indexes:
+        cursor.execute(sql)
+        log("✅", f"  Index {name} created (or already existed)", Colors.GREEN)
+
+    return True
+
+
+# ============================================================================
 # MAIN UPGRADE FUNCTION
 # ============================================================================
 def main():
@@ -3895,6 +3918,7 @@ def main():
         ("Shop: Order Table", task51_add_order_table),
         ("Shop: Ebank Payment Order Matching", task52_add_ebank_payment_matched_order),
         ("Shop: Cart Order Table", task53_add_cart_order_table),
+        ("Additional Performance Indexes", task54_add_more_performance_indexes),
     ]
 
     completed = 0

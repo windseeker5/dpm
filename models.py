@@ -355,7 +355,7 @@ class StripeTransaction(db.Model):
 class Signup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False, index=True)
     passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id", ondelete="SET NULL"), nullable=True)  # Added for passport type tracking
     subject = db.Column(db.String(200))
     description = db.Column(db.Text)
@@ -365,7 +365,7 @@ class Signup(db.Model):
     paid = db.Column(db.Boolean, default=False)
     paid_at = db.Column(db.DateTime)
     passport_id = db.Column(db.Integer, db.ForeignKey("passport.id", ondelete="SET NULL"))
-    status = db.Column(db.String(50), default="pending")
+    status = db.Column(db.String(50), default="pending", index=True)
     cart_order_id = db.Column(db.Integer, db.ForeignKey("cart_order.id", ondelete="SET NULL"), nullable=True)
 
     # Quantity selection for payment-first workflow
@@ -389,14 +389,14 @@ class Passport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pass_code = db.Column(db.String(16), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False)
+    activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"), nullable=False, index=True)
     passport_type_id = db.Column(db.Integer, db.ForeignKey("passport_type.id", ondelete="SET NULL"), nullable=True)  # New field
     passport_type_name = db.Column(db.String(100), nullable=True)  # Preserved type name for historical display
     sold_amt = db.Column(db.Float, default=0.0)
-    uses_remaining = db.Column(db.Integer, default=0)
+    uses_remaining = db.Column(db.Integer, default=0, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_dt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    paid = db.Column(db.Boolean, default=False)
+    paid = db.Column(db.Boolean, default=False, index=True)
     paid_date = db.Column(db.DateTime)
     marked_paid_by = db.Column(db.String(120))
     notes = db.Column(db.Text)
@@ -576,7 +576,7 @@ class EbankPayment(db.Model):
     matched_name = db.Column(db.String(100))
     matched_amt = db.Column(db.Float)
     name_score = db.Column(db.Integer)
-    result = db.Column(db.String(50))
+    result = db.Column(db.String(50), index=True)
     mark_as_paid = db.Column(db.Boolean, default=False)
     note = db.Column(db.Text, nullable=True)
     email_received_date = db.Column(db.DateTime, nullable=True)  # When payment email was actually received
@@ -597,7 +597,7 @@ class EmailLog(db.Model):
     pass_code = db.Column(db.String(16), nullable=True)
     template_name = db.Column(db.String(100), nullable=True)
     context_json = db.Column(db.Text)
-    result = db.Column(db.String(50))  # SENT or FAILED
+    result = db.Column(db.String(50), index=True)  # SENT or FAILED
     error_message = db.Column(db.Text, nullable=True)
 
 
