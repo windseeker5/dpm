@@ -75,13 +75,19 @@
     }
 
     .brand-panel::before {
-      display: none;
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.22);
+      pointer-events: none;
+      z-index: 1;
     }
 
     .brand-shapes {
       position: absolute;
       inset: 0;
       pointer-events: none;
+      z-index: 2;
     }
 
     .brand-shape {
@@ -162,7 +168,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: stretch;
+      align-items: center;
       justify-content: center;
       padding: 2rem;
       background: #fff;
@@ -171,6 +177,7 @@
     .form-container {
       width: 100%;
       max-width: 400px;
+      margin: 0 auto;
     }
 
     .org-header {
@@ -242,6 +249,25 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      border: 1px solid transparent;
+    }
+
+    .alert-danger {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    .alert-success {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #166534;
+    }
+
+    .alert-warning {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #92400e;
     }
 
     .login-form .form-label {
@@ -265,10 +291,33 @@
       box-shadow: 0 0 0 3px var(--mp-green-focus);
     }
 
+    .login-form .form-control:-webkit-autofill,
+    .login-form .form-control:-webkit-autofill:hover,
+    .login-form .form-control:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 1000px #fff inset;
+      -webkit-text-fill-color: var(--text-primary);
+      caret-color: var(--text-primary);
+      transition: background-color 5000s ease-in-out 0s;
+    }
+
     .input-group .form-control {
       border-right: none;
       border-top-right-radius: 0;
       border-bottom-right-radius: 0;
+    }
+
+    .input-group .form-control:focus {
+      box-shadow: none;
+    }
+
+    .input-group:focus-within {
+      border-radius: 0.625rem;
+      box-shadow: 0 0 0 3px var(--mp-green-focus);
+    }
+
+    .input-group:focus-within .form-control,
+    .input-group:focus-within .toggle-password {
+      border-color: var(--mp-green);
     }
 
     .input-group-text.toggle-password {
@@ -309,16 +358,16 @@
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
-      transition: transform 0.1s ease, box-shadow 0.15s ease;
+      transition: background 0.15s ease, transform 0.1s ease;
     }
 
     .btn-login:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 171, 102, 0.35);
+      color: #fff;
+      background: var(--mp-green-dark);
     }
 
     .btn-login:active {
-      transform: translateY(0);
+      transform: translateY(1px);
     }
 
     .btn-login:focus-visible {
@@ -457,14 +506,20 @@
       .mobile-logo-wrap .org-placeholder {
         position: relative;
         z-index: 1;
-        display: block;
         width: 112px;
         height: 112px;
         margin: 0;
         box-shadow: none;
       }
 
+      .mobile-logo-wrap .org-logo {
+        display: block;
+      }
+
       .mobile-logo-wrap .org-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-size: 2.8rem;
       }
 
@@ -557,7 +612,7 @@
 
         <!-- Mobile page title -->
         <div class="d-md-none mb-3">
-          <h1 class="page-title">Sign in</h1>
+          <h1 class="page-title">Sign in to {{ org_name }}</h1>
           <p class="page-subtitle">Enter your admin credentials.</p>
         </div>
 

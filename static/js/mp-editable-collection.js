@@ -20,8 +20,8 @@
         `${item.icon ? `<i class="ti ${esc(item.icon)}" aria-hidden="true"></i>` : ''}${esc(item.label)}</button>`;
     }).join('');
     return `<div class="mp-action-menu">` +
-      `<button type="button" class="mp-btn" data-variant="ghost" data-size="icon-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="${esc(id)}-menu" aria-label="Actions">` +
-      `<i class="ti ti-dots" aria-hidden="true"></i></button>` +
+      `<button type="button" class="mp-btn" data-variant="outline" data-size="icon-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="${esc(id)}-menu" aria-label="Actions">` +
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></svg></button>` +
       `<div data-popover aria-hidden="true" data-align="end"><div role="menu" id="${esc(id)}-menu" aria-orientation="vertical">${menuItems}</div></div></div>`;
   };
 

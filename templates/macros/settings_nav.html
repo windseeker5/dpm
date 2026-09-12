@@ -1,12 +1,19 @@
-{# Shared Settings navigation, rendered with the canonical Button Group. #}
+{#
+  Shared Settings navigation. Desktop/tablet renders the canonical Button
+  Group; narrow screens swap it for a single <select> (macros/select.html)
+  so switching sections is one tap instead of scrolling past seven stacked
+  full-width buttons — see mp-components.css's ".mp-settings-select-wrap"
+  breakpoint rule.
+#}
 {% from 'macros/button_group.html' import button_group %}
+{% from 'macros/select.html' import select %}
 {% macro settings_nav(active) %}
   {% set items = [
     ('general', 'General', url_for('unified_settings', section='general')),
     ('team', 'User', url_for('setup', section='team')),
     ('email', 'Email & Alerts', url_for('unified_settings', section='email')),
     ('payments', 'Payments', url_for('unified_settings', section='payments')),
-    ('shop', 'Shop', url_for('unified_settings', section='shop')),
+    ('shop', 'My Shop', url_for('unified_settings', section='shop')),
     ('data', 'Data', url_for('setup', section='data')),
     ('plan', 'Plan & Billing', url_for('current_plan'))
   ] %}
@@ -21,5 +28,13 @@
   {% endfor %}
   <nav class="mp-settings-nav" aria-label="Settings sections">
     {{ button_group(buttons=buttons, aria_label="Settings sections") }}
+    <div class="mp-settings-select-wrap">
+      {% call select(id="settings-section-select", name="settings_section_nav",
+                      attrs={"aria-label": "Settings sections", "onchange": "if (this.value) window.location.href = this.value;"}) %}
+        {% for key, label, href in items %}
+          <option value="{{ href }}"{% if active == key %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      {% endcall %}
+    </div>
   </nav>
 {% endmacro %}

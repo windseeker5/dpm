@@ -333,6 +333,17 @@
   line-height: 1.25rem;
   color: inherit;
   text-decoration: none;
+  /* Menu items are usually <a>/<div> (no default browser chrome), but some
+     callers render real <button> elements instead (e.g. mp-editable-collection.js's
+     actionMenu(), for rows added client-side with no server round trip) — reset
+     button user-agent styling so both look identical. */
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  margin: 0;
 }
 
 /* Touch-target size (WCAG 2.5.5/2.5.8, Apple HIG 44x44pt, Material 48x48dp):
@@ -900,151 +911,6 @@
   display: none;
 }
 
-.mp-settings-surface {
-  max-width: 880px;
-  overflow: hidden;
-  border: 1px solid var(--mp-border);
-  border-radius: var(--mp-radius-md);
-  background: var(--mp-background);
-  box-shadow: var(--minipass-shadow-sm, 0 1px 2px rgb(0 0 0 / 0.05));
-}
-
-/* Transitional shell for the Team/Data pages while their existing server
-   behaviour remains intact. It gives both tabs the same visual boundary as
-   General, Email, and Payments without introducing a second card system. */
-.mp-settings-legacy-surface {
-  max-width: 880px;
-}
-
-.mp-settings-legacy-surface > .card-body {
-  padding: 0;
-}
-
-.mp-settings-legacy-surface .tab-pane > .mp-settings-section > .row {
-  margin: 0;
-}
-
-.mp-settings-legacy-surface .tab-pane > .mp-settings-section > .row > [class*="col-"] {
-  width: 100%;
-  padding: 0;
-}
-
-.mp-settings-legacy-surface .admin-block,
-.mp-settings-legacy-surface .tab-pane > .mp-settings-section > .row .card {
-  border-right: 0;
-  border-bottom: 0;
-  border-left: 0;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.mp-settings-legacy-surface .admin-block:first-child,
-.mp-settings-legacy-surface .tab-pane > .mp-settings-section > .row .card:first-child {
-  border-top: 0;
-}
-
-.mp-settings-heading,
-.mp-settings-section,
-.mp-settings-actions {
-  padding: 1.5rem;
-}
-
-.mp-settings-heading {
-  padding-bottom: 1.25rem;
-}
-
-.mp-settings-section {
-  border-top: 1px solid var(--mp-border);
-}
-
-.mp-settings-section-title {
-  margin-bottom: 0.25rem;
-}
-
-.mp-settings-fields {
-  display: grid;
-  max-width: 40rem;
-  margin-top: 1.25rem;
-  gap: 1rem;
-}
-
-.mp-settings-fields > .mb-3 {
-  margin-bottom: 0 !important;
-}
-
-.mp-settings-actions {
-  display: flex;
-  justify-content: flex-start;
-  border-top: 1px solid var(--mp-border);
-  background: var(--mp-muted);
-}
-
-.mp-settings-advanced {
-  margin-top: 1rem;
-  border-top: 1px solid var(--mp-border);
-}
-
-.mp-settings-advanced > summary {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0.75rem 0;
-  color: var(--mp-foreground);
-  font-weight: 500;
-  cursor: pointer;
-  list-style: none;
-}
-
-.mp-settings-advanced > summary::-webkit-details-marker {
-  display: none;
-}
-
-.mp-settings-advanced > summary > .ti {
-  margin-left: auto;
-  color: var(--mp-muted-foreground);
-  transition: transform 150ms ease-out;
-}
-
-.mp-settings-advanced[open] > summary > .ti {
-  transform: rotate(180deg);
-}
-
-.mp-settings-advanced > summary:hover {
-  color: var(--mp-brand-primary, var(--mp-primary));
-}
-
-.mp-settings-advanced > summary:focus-visible {
-  border-radius: var(--mp-radius-sm);
-  outline: 2px solid var(--mp-ring);
-  outline-offset: 2px;
-}
-
-.mp-settings-advanced[open] {
-  padding-bottom: 1rem;
-  background: var(--mp-muted);
-  border-radius: var(--mp-radius-md);
-  border-top-color: transparent;
-}
-
-.mp-settings-advanced[open] > summary,
-.mp-settings-advanced[open] > .mp-settings-fields {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-.mp-settings-status-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.mp-settings-status-copy {
-  min-width: 0;
-  max-width: 65ch;
-}
-
-
 .mp-brand-color-input {
   width: 3rem;
   min-width: 3rem;
@@ -1078,7 +944,6 @@
   margin: 0 !important;
   padding: 1rem 1.5rem;
   border: 0;
-  border-top: 1px solid var(--mp-border);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -1098,35 +963,9 @@
     border-bottom: 0;
   }
 
-  /* Keep the canonical Button Group on small screens without requiring a
-     horizontal scroll target: the same controls become one touch-friendly
-     vertical group. */
+  /* Seven stacked full-width buttons ate the top of the screen on mobile;
+     swap the Button Group for a single <select> instead (settings_nav.html). */
   .mp-settings-nav .mp-button-group {
-    display: flex;
-    overflow: visible;
-    padding-bottom: 0;
-    flex-direction: column;
-  }
-
-  .mp-settings-nav .mp-button-group .mp-btn {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .mp-settings-nav .mp-button-group .mp-btn:not(:first-child) {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-bottom-left-radius: var(--mp-radius-md);
-    border-bottom-right-radius: var(--mp-radius-md);
-    margin-top: -1px;
-  }
-
-  .mp-settings-nav .mp-button-group .mp-btn:not(:last-child) {
-    border-bottom-right-radius: 0;
-    border-bottom-left-radius: 0;
-  }
-
-  .mp-settings-tabs {
     display: none;
   }
 
@@ -1134,28 +973,10 @@
     display: block;
   }
 
-  .mp-settings-heading,
-  .mp-settings-section,
-  .mp-settings-actions {
-    padding: 1.25rem;
-  }
-
-  .mp-settings-status-row {
-    flex-direction: column;
-  }
-
   /* The app shell has a fixed mobile navigation bar. Reserve its height so
      the final Save action never ends beneath it at the end of a long form. */
-  .mp-settings-surface {
+  .mp-form-content {
     margin-bottom: 5.5rem;
-  }
-
-  .mp-settings-actions .mp-btn {
-    width: 100%;
-  }
-
-  .mp-settings-fields {
-    max-width: none;
   }
 }
 
@@ -1467,6 +1288,20 @@
   internal variables happens to be wired to which rule in a given
   version — it just wins.
 */
+.mp-data-table .table thead th:first-child,
+.mp-data-table .table tbody td:first-child {
+  /* Match the card-header/card-footer's own 1.25rem side padding — without
+     this, table cells only carry Bootstrap's default 0.75rem cell padding,
+     so row text sits ~9px further left than the card title above it,
+     reading as flush against the card border. */
+  padding-left: 1.25rem;
+}
+
+.mp-data-table .table thead th:last-child,
+.mp-data-table .table tbody td:last-child {
+  padding-right: 1.25rem;
+}
+
 .mp-data-table .table thead th {
   /* Tabler's own .table thead th rule also sets a background
      (--tblr-bg-surface-tertiary, a very pale blue-tinted near-white) —
@@ -1507,6 +1342,17 @@
      Tabler's .card-body padding so no caller needs to wrap this in a
      .card-body div to get proper breathing room around the row list. */
   padding: var(--tblr-card-spacer-y) var(--tblr-card-spacer-x);
+}
+
+/* When table_mobile() is nested inside a container that already has its own
+   padding (e.g. form_page()'s card body), its self-contained inset above
+   doubles up with the parent's — don't wrap it in a second .card to fix
+   that (a nested card is a worse bug, visible as a card-inside-a-card).
+   Zero the self-padding here instead so the rows sit flush at the same
+   level as their sibling content. */
+.mp-form-fields > .mp-table-mobile-list,
+.mp-form-fields > div > .mp-table-mobile-list {
+  padding: 0;
 }
 
 .mp-table-mobile-card {
@@ -1551,6 +1397,13 @@
   flex-wrap: wrap;
   gap: 0.375rem;
   margin-top: 0.5rem;
+}
+
+.mp-table-mobile-card__detail {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--mp-foreground);
+  white-space: normal;
 }
 
 /*
@@ -1726,6 +1579,29 @@ a.mp-page-btn:hover {
 }
 
 /*
+  .mp-badge-wrap — opt-in wrapper for a group of .mp-badge pills whose text
+  is arbitrary/long (e.g. activity names), unlike the short fixed labels
+  .mp-badge is normally used for (Paid, Draft, Active…). Each pill keeps
+  .mp-badge's own white-space: nowrap, but is capped to max-width and
+  ellipsis-truncated instead of overflowing its flex container — pair with
+  a title="" attribute on the pill for the full text on hover. Switches
+  display to inline-block: text-overflow: ellipsis does not render on a
+  flex container (.mp-badge's own default is inline-flex, for its icon+gap
+  layout) — it silently clips with no "…" glyph instead. These pills carry
+  plain text only, so losing flex here costs nothing. Lighter weight than
+  .mp-badge's own 500 reads better at this pill count/density. Use on the
+  wrapping flex div, not on .mp-badge itself.
+*/
+.mp-badge-wrap .mp-badge {
+  display: inline-block;
+  font-weight: 400;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/*
   Progress — port of KDUI's progress(). Percent width is computed
   server-side in the macro and set as an inline style — no JS.
 */
@@ -1878,6 +1754,16 @@ a.mp-page-btn:hover {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* Card-level header (form_page's card_title/card_description) — a border
+   separates it from the first field group below. Without this, the header's
+   bold title + muted description sits directly above the first subsection's
+   own bold title + muted description with identical spacing, so the two
+   read as one duplicated block instead of "section summary, then details". */
+.mp-form-card-header {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--mp-border);
 }
 
 /*
@@ -2168,6 +2054,7 @@ a.mp-page-btn:hover {
   height: 2rem;
   padding: 0;
   border: 2px solid var(--mp-background);
+  border-radius: 50%;
   background: var(--mp-destructive);
   color: var(--mp-primary-foreground);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.28);
@@ -2863,9 +2750,13 @@ a.mp-page-btn:hover {
   gap: 0.625rem;
 }
 
-.mp-collapsible-section__title,
-.mp-collapsible-section__description {
-  display: block;
+/* The icon sits beside the whole title+description stack, not just the
+   title line — it reads as the anchor for the disclosure, and neither
+   line goes "orphaned" under it when the description wraps on mobile. */
+.mp-collapsible-section__text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
 }
 
 .mp-collapsible-section__title {
@@ -2874,14 +2765,21 @@ a.mp-page-btn:hover {
 }
 
 .mp-collapsible-section__description {
+  display: block;
   margin-top: 0.125rem;
   color: var(--mp-muted-foreground);
   font-size: 0.8125rem;
 }
 
+.mp-collapsible-section__icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: var(--mp-muted-foreground);
+}
+
 .mp-collapsible-section__chevron {
   flex-shrink: 0;
-  transition: transform 150ms ease;
+  transition: transform 200ms ease;
 }
 
 .mp-collapsible-section[open] .mp-collapsible-section__chevron {
@@ -2889,7 +2787,25 @@ a.mp-page-btn:hover {
 }
 
 .mp-collapsible-section__content {
-  padding: 0.25rem 1.25rem 1.25rem;
+  padding: 1.25rem;
+  border-top: 1px solid var(--mp-border);
+}
+
+/* Progressive-enhancement reveal: browsers that support ::details-content ease
+   the panel open/closed instead of the native instant show/hide. Browsers
+   without support simply keep today's snap — no JS, no regression either way. */
+@media (prefers-reduced-motion: no-preference) {
+  .mp-collapsible-section::details-content {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 220ms ease, opacity 160ms ease, content-visibility 220ms allow-discrete;
+  }
+
+  .mp-collapsible-section[open]::details-content {
+    max-height: 40rem;
+    opacity: 1;
+  }
 }
 
 /*
@@ -2993,6 +2909,7 @@ a.mp-page-btn:hover {
 
 .mp-location-confirmed {
   display: flex;
+  min-width: 0;
   min-height: 2.75rem;
   align-items: center;
   gap: 0.5rem;
@@ -3012,6 +2929,7 @@ a.mp-page-btn:hover {
 }
 
 .mp-location-confirmed__link span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3125,6 +3043,16 @@ a.mp-page-btn:hover {
     overflow: visible;
   }
 
+  /* Each row already becomes its own bordered card below — keeping this
+     wrapper's card border too nests a card inside a card inside a card.
+     Only drop it once there are rows to show; the empty state still needs
+     it as its own visual boundary. */
+  .mp-editable-collection:has([data-collection-table]:not([hidden])) {
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
   .mp-editable-collection table,
   .mp-editable-collection tbody,
   .mp-editable-collection tr,
@@ -3141,18 +3069,26 @@ a.mp-page-btn:hover {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding: 0.75rem;
   }
 
+  /* Grid, not the old position:absolute actions button, so the name and
+     the actions trigger are true siblings on row 1 — they can never
+     visually overlap the fields stacked below them regardless of how
+     tall the name text or the row gets. */
   .mp-editable-collection tr {
-    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 0 0.75rem;
     padding: 0.875rem;
     border: 1px solid var(--mp-border);
     border-radius: var(--mp-radius-md);
+    background: var(--mp-background);
   }
 
   .mp-editable-collection .table > tbody > tr > td {
     display: flex;
+    grid-column: 1 / -1;
     min-height: 2rem;
     align-items: center;
     justify-content: space-between;
@@ -3172,7 +3108,9 @@ a.mp-page-btn:hover {
 
   .mp-editable-collection td[data-primary] {
     display: block !important;
-    padding: 0 2.5rem 0.625rem !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    padding: 0 !important;
   }
 
   .mp-editable-collection td[data-primary]::before,
@@ -3181,9 +3119,8 @@ a.mp-page-btn:hover {
   }
 
   .mp-editable-collection td[data-actions] {
-    position: absolute;
-    top: 0.625rem;
-    right: 0.625rem;
+    grid-column: 2 !important;
+    grid-row: 1 !important;
     width: auto;
     min-height: 0;
     padding: 0;
@@ -3196,4 +3133,121 @@ a.mp-page-btn:hover {
   .mp-input-action {
     align-items: stretch;
   }
+}
+
+/* Payment Method Cards
+   Radio-group cards for choosing a payment method (signup form, etc.)
+   Built on top of the standard .mp-radio control from the choice-cards pattern.
+*/
+.mp-payment-methods {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.mp-payment-methods legend {
+  float: left;
+  width: 100%;
+}
+
+.mp-payment-method-card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--mp-radius);
+  cursor: pointer;
+}
+
+.mp-payment-method-card__body {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  width: 100%;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius);
+  background: var(--mp-background);
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mp-payment-method-card:hover .mp-payment-method-card__body {
+  background: var(--mp-muted);
+}
+
+.mp-payment-method-card:has(.mp-payment-method-card__control:checked) .mp-payment-method-card__body {
+  border-color: var(--mp-primary);
+  background: var(--mp-muted);
+  box-shadow: 0 0 0 1px var(--mp-primary);
+}
+
+.mp-payment-method-card__control {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.mp-payment-method-card__control:focus-visible + .mp-payment-method-card__body {
+  outline: 2px solid var(--mp-ring);
+  outline-offset: 2px;
+}
+
+.mp-payment-method-card__media {
+  display: flex;
+  width: 3.5rem;
+  height: 2.25rem;
+  flex: 0 0 3.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.mp-payment-method-card__icon {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--mp-radius-sm);
+}
+
+.mp-payment-method-card__images {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+}
+
+.mp-payment-method-card__images img {
+  width: auto;
+  max-width: 1.375rem;
+  height: auto;
+  max-height: 0.875rem;
+  object-fit: contain;
+}
+
+.mp-payment-method-card__image[src=""],
+.mp-payment-method-card__image:not([src]) {
+  display: none;
+}
+
+.mp-payment-method-card__text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.4;
+}
+
+.mp-payment-method-card__image {
+  width: auto;
+  height: auto;
+  max-width: 3.5rem;
+  max-height: 2.25rem;
+  object-fit: contain;
+  border-radius: var(--mp-radius-sm);
 }

@@ -18,10 +18,14 @@
     - description: optional helper text below the input
     - disabled: default False
     - class_: extra classes for the wrapper (or input, if no label/description)
+    - input_class: extra classes appended directly to the <input> even when a
+      label/description is present (e.g. a JS hook class) — class_ only reaches
+      the wrapper in that case, so use this instead of attrs={"class": ...},
+      which would emit a second, ignored class attribute.
     - attrs: dict of extra attributes for the input
 #}
 
-{% macro text_input(id, label=None, type="text", name=None, placeholder=None, value=None, description=None, disabled=False, class_='', attrs={}) %}
+{% macro text_input(id, label=None, type="text", name=None, placeholder=None, value=None, description=None, disabled=False, class_='', input_class='', attrs={}) %}
 {% set input_name = name or id %}
 {% if label or description %}
 <div class="mp-field{% if class_ %} {{ class_ }}{% endif %}">
@@ -30,7 +34,7 @@
     type="{{ type }}"
     id="{{ id }}"
     name="{{ input_name }}"
-    class="mp-input"
+    class="mp-input{% if input_class %} {{ input_class }}{% endif %}"
     {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
     {% if value is not none %}value="{{ value }}"{% endif %}
     {% if disabled %}disabled{% endif %}

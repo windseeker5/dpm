@@ -1288,11 +1288,11 @@
       const signupQrEnabled = Boolean(signupUrl) && {{ (activity and activity.status == 'active')|tojson }};
       const signupShareControl = signupQrEnabled
         ? window.mpEditableCollection.button({
-            variant: 'ghost', size: 'icon', icon: 'ti-qrcode',
+            variant: 'outline', size: 'icon', icon: 'ti-qrcode',
             attributes: {'data-signup-qr': safeId, 'data-signup-url': signupUrl, 'aria-label': 'View signup QR code'}
           })
         : (!isExisting ? window.mpEditableCollection.button({
-            variant: 'ghost', size: 'icon', icon: 'ti-qrcode',
+            variant: 'outline', size: 'icon', icon: 'ti-qrcode',
             attributes: {disabled: true, title: 'Available after saving', 'aria-label': 'Signup QR code available after saving'}
           }) : '<span class="text-muted small">Unavailable</span>');
       const actions = window.mpEditableCollection.actionMenu(`passport-type-actions-${safeId}`, [
@@ -1731,7 +1731,7 @@
       const row = passportTypesContainer.querySelector(`tr[data-id="${id}"]`);
       if (!row) return;
 
-      const passportTypeName = row.querySelector('td .fw-bold').textContent.trim();
+      const passportTypeName = row.querySelector('td .fw-semibold').textContent.trim();
       const cardUrl = signupQrUrl(signupQrCardUrlTemplate, id);
       const preview = document.createElement('img');
       preview.id = 'signupQrPreview';

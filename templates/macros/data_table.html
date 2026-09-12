@@ -62,6 +62,12 @@
                just what's NOT already a column, while table_mobile() has no
                columns at all and needs a fuller summary) (optional — falls
                back to `badges`),
+      mobile_detail: <safe-html body text shown by table_mobile() only,
+               below secondary/badges — the mobile equivalent of a desktop
+               `cells` column that holds free-form content rather than a
+               short label, e.g. Activity Log's log message. table_desktop()
+               already has `cells` for this; table_mobile() has no column
+               equivalent, so use this field instead> (optional),
       actions: [<action_menu() items, see macros/action_menu.html>]
     }, ...]
 
@@ -110,11 +116,23 @@
       icon_only (see that macro's own doc comment) — default True, the
       standard three-dot trigger; pass False for the older "Action ⌄" text
       trigger
+    - show_user / show_actions: default True. Pass show_user=False,
+      show_actions=False together for a "plain list" page whose rows have
+      no natural person/entity identity and no per-row action menu — e.g.
+      Activity Log, where a row is just a timestamp/type/message and any
+      inline action (a tiny resend/dismiss icon) belongs inside a `cells`
+      entry instead. Put everything the User column would have shown into
+      a `cells` entry (desktop) — `cells` already accepts arbitrary
+      safe-html, e.g. an icon + label for a "Type" column.
 
   Parameters (table_mobile):
     - id: unique id (required)
     - rows: see shape above
     - action_icon_only: same as table_desktop's
+    - show_user / show_actions: same as table_desktop's — with
+      show_user=False there's no avatar/primary/secondary/badges block, so
+      compose everything (icon+label, timestamp, message, inline actions)
+      into `row.mobile_detail`'s safe-html instead.
 #}
 
 {% from 'macros/filter_tabs.html' import filter_tabs %}
@@ -167,19 +185,20 @@
 {%- endfor %}
 {% endmacro %}
 
-{% macro table_desktop(id, columns, rows, action_icon_only=True) %}
+{% macro table_desktop(id, columns, rows, action_icon_only=True, show_user=True, show_actions=True) %}
 <div class="table-responsive">
   <table class="table table-hover" id="{{ id }}">
     <thead>
       <tr>
-        <th>User</th>
+        {% if show_user %}<th>User</th>{% endif %}
         {% for col in columns %}<th class="{{ col.class | default('') }}">{{ col.label }}</th>{% endfor %}
-        <th class="text-center">Actions</th>
+        {% if show_actions %}<th class="text-center">Actions</th>{% endif %}
       </tr>
     </thead>
     <tbody>
       {% for row in rows %}
       <tr>
+        {% if show_user %}
         <td style="vertical-align: middle;">
           <div class="d-flex align-items-center gap-3">
             {% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}
@@ -194,12 +213,15 @@
             </div>
           </div>
         </td>
+        {% endif %}
         {% for cell in row.cells %}
         <td class="{{ columns[loop.index0].class | default('') }}" style="vertical-align: middle;">{{ cell | safe }}</td>
         {% endfor %}
+        {% if show_actions %}
         <td class="text-center" style="vertical-align: middle;">
           {{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions, icon_only=action_icon_only) }}
         </td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>
@@ -207,14 +229,15 @@
 </div>
 {% endmacro %}
 
-{% macro table_mobile(id, rows, action_icon_only=True) %}
+{% macro table_mobile(id, rows, action_icon_only=True, show_user=True, show_actions=True) %}
 <div class="mp-table-mobile-list" id="{{ id }}">
   {% for row in rows %}
   {% set mobile_secondary = row.mobile_secondary if row.mobile_secondary is defined else row.secondary %}
   {% set mobile_badges = row.mobile_badges if row.mobile_badges is defined else row.badges %}
   <div class="mp-table-mobile-card">
-    {% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}
+    {% if show_user %}{% if row.avatar_url %}{{ avatar_photo(row.avatar_url, alt=row.primary) }}{% else %}{{ avatar_initials(row.avatar_name) }}{% endif %}{% endif %}
     <div class="mp-table-mobile-card__body">
+      {% if show_user %}
       <div class="mp-table-mobile-card__primary">{{ row.primary }}</div>
       {% if mobile_secondary %}<div class="mp-table-mobile-card__secondary">{{ mobile_secondary }}</div>{% endif %}
       {% if mobile_badges %}
@@ -222,8 +245,10 @@
         {% for badge in mobile_badges %}<span class="badge bg-{{ badge.variant }}-lt">{{ badge.text }}</span>{% endfor %}
       </div>
       {% endif %}
+      {% endif %}
+      {% if row.mobile_detail %}<div class="mp-table-mobile-card__detail">{{ row.mobile_detail | safe }}</div>{% endif %}
     </div>
-    {{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions, icon_only=action_icon_only) }}
+    {% if show_actions %}{{ action_menu(id=id ~ "-actions-" ~ row.id, items=row.actions, icon_only=action_icon_only) }}{% endif %}
   </div>
   {% endfor %}
 </div>

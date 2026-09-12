@@ -15,7 +15,7 @@
 
 {% macro form_dialog(id, title, confirm_label="Save", confirm_id=None,
                      description=None, cancel_label="Cancel", size=None,
-                     class_="", attrs={}) %}
+                     class_="", attrs={}, confirm_variant="primary", confirm_attrs={}) %}
 <div class="modal modal-blur fade mp-form-dialog{% if class_ %} {{ class_ }}{% endif %}"
      id="{{ id }}" tabindex="-1" role="dialog" aria-modal="true"
      aria-labelledby="{{ id }}-title" aria-hidden="true"
@@ -36,7 +36,7 @@
         </div>
         <div class="mp-form-dialog__actions">
           {{ button(cancel_label, variant="outline", attrs={"data-bs-dismiss": "modal"}) }}
-          {{ button(confirm_label, id=confirm_id) }}
+          {{ button(confirm_label, id=confirm_id, variant=confirm_variant, attrs=confirm_attrs) }}
         </div>
       </div>
     </div>

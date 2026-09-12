@@ -37,7 +37,7 @@
   <!-- Reusable Components -->
   <link href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=3.16" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=3.30" rel="stylesheet">
   
   <!-- Enhanced Flash Alert Overlay Styles -->
   <style>
@@ -417,7 +417,7 @@
   
   {% block head %}{% endblock %}
 </head>
-<body class="antialiased" style="--mp-brand-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary-foreground: {{ PRIMARY_BRAND_FOREGROUND }};" {% if session.get('admin') %}data-admin-user="true"{% endif %}>
+<body class="antialiased" style="--mp-brand-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary-foreground: {{ PRIMARY_BRAND_FOREGROUND }};{% if HAS_CUSTOM_BRAND_COLOR %} --mp-chart-1: {{ PRIMARY_BRAND_COLOR }};{% endif %}" {% if session.get('admin') %}data-admin-user="true"{% endif %}>
 
   <!-- Skip Navigation for Accessibility -->
   <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
@@ -893,7 +893,7 @@
   <script src="{{ url_for('static', filename='js/search-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/filter-component.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/mp-action-menu.js') }}?v=1.0"></script>
-  <script src="{{ url_for('static', filename='js/mp-editable-collection.js') }}?v=1.0"></script>
+  <script src="{{ url_for('static', filename='js/mp-editable-collection.js') }}?v=1.1"></script>
   <script src="{{ url_for('static', filename='js/mp-filter-tabs.js') }}?v=1.0"></script>
   <script src="{{ url_for('static', filename='js/mp-scroll-restore.js') }}?v=1.1"></script>
   <script src="{{ url_for('static', filename='js/mp-settings-nav.js') }}?v=1.0"></script>

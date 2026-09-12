@@ -605,23 +605,31 @@ def _utc_naive_now():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def format_slot_label(slot, include_weekday=True):
-    """Human label for a slot, e.g. 'samedi 14 juillet à 11 h 00'.
+def format_local_datetime_label(dt, include_year=False, include_weekday=True):
+    """Human French label for a naive local datetime.
 
-    Built by hand because there are no locale helpers in this app and babel/locale is not
-    configured — relying on system locale would produce English on some hosts.
+    Built by hand because Babel/system locale is not configured consistently across hosts.
     """
+    if dt is None:
+        return ""
+    parts = []
+    if include_weekday:
+        parts.append(_FR_DAYS.get(dt.weekday(), ""))
+    date_label = f"{dt.day} {_FR_MONTHS.get(dt.month, '')}"
+    if include_year:
+        date_label += f" {dt.year}"
+    parts.append(date_label)
+    label = " ".join(p for p in parts if p).strip()
+    return f"{label} à {dt.hour} h {dt.minute:02d}"
+
+
+def format_slot_label(slot, include_weekday=True):
+    """Human label for a slot, e.g. 'samedi 14 juillet à 11 h 00'."""
     if slot is None or slot.starts_at is None:
         return ""
     if slot.label:
         return slot.label
-    dt = slot.starts_at
-    parts = []
-    if include_weekday:
-        parts.append(_FR_DAYS.get(dt.weekday(), ""))
-    parts.append(f"{dt.day} {_FR_MONTHS.get(dt.month, '')}")
-    label = " ".join(p for p in parts if p).strip()
-    return f"{label} à {dt.hour} h {dt.minute:02d}"
+    return format_local_datetime_label(slot.starts_at, include_weekday=include_weekday)
 
 
 def get_slot_hold_hours():
@@ -6246,7 +6254,7 @@ def get_user_contact_report(search_query="", status_filter="", show_all=False):
             'phone': user.phone_number or '',
             'passport_count': user.passport_count,
             'total_revenue': float(user.total_revenue),
-            'activities': ', '.join(user_activities) if user_activities else 'None',
+            'activities': user_activities,
             'last_activity_date': user.last_activity_date.strftime('%Y-%m-%d') if user.last_activity_date else 'N/A',
             'email_opt_out': user.email_opt_out
         })
@@ -6313,7 +6321,7 @@ def export_user_contacts_csv(user_data):
             user['phone'],
             user['passport_count'],
             f"{user['total_revenue']:.2f}",
-            user['activities'],
+            ', '.join(user['activities']) if user['activities'] else 'None',
             user['last_activity_date'],
             'Yes' if user['email_opt_out'] else 'No'
         ])

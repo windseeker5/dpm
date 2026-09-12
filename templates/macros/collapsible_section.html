@@ -14,8 +14,8 @@
 <details id="{{ id }}" class="mp-collapsible-section{% if class_ %} {{ class_ }}{% endif %}"{% if open %} open{% endif %}>
   <summary class="mp-collapsible-section__summary">
     <span class="mp-collapsible-section__heading">
-      {% if icon %}<i class="ti {{ icon }}" aria-hidden="true"></i>{% endif %}
-      <span>
+      {% if icon %}<i class="ti {{ icon }} mp-collapsible-section__icon" aria-hidden="true"></i>{% endif %}
+      <span class="mp-collapsible-section__text">
         <span class="mp-collapsible-section__title">{{ title }}</span>
         {% if description %}<span class="mp-collapsible-section__description">{{ description }}</span>{% endif %}
       </span>

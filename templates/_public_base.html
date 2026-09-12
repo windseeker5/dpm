@@ -36,7 +36,7 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body>
+<body style="--mp-brand-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary-foreground: {{ PRIMARY_BRAND_FOREGROUND }};{% if HAS_CUSTOM_BRAND_COLOR %} --mp-chart-1: {{ PRIMARY_BRAND_COLOR }};{% endif %}">
   <div class="mp-shop-shell">
     {% from 'macros/avatar.html' import avatar_initials %}
     <header class="mp-shop-header">

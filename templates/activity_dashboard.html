@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% from 'partials/mark_paid_modal.html' import mark_paid_modal, mark_paid_modal_shared %}
-{% from 'macros/avatar.html' import avatar_initials, avatar_photo %}
+{% from 'macros/kpi_card.html' import kpi_card_desktop, kpi_card_mobile %}
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+{% from 'macros/buttons.html' import button %}
+{% from 'macros/action_menu.html' import action_menu, dropdown_menu %}
+{% from 'macros/badge.html' import badge %}
+{% from 'macros/filter_tabs.html' import filter_tabs %}
+{% from 'macros/progress.html' import progress %}
 
 {% block title %}Activity Dashboard - {{ activity.name }}{% endblock %}
 
@@ -97,459 +104,6 @@ div.dropdown-divider {
 }
 
 
-/* Modern Activity Header Styles */
-.activity-header-modern {
-  background: #ffffff;
-  border: 1px solid rgba(98, 105, 118, 0.16);
-  border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-.activity-header-modern::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #206bc4 0%, #ed2988 100%);
-}
-
-.breadcrumb-modern {
-  background: transparent;
-  padding: 0;
-  margin-bottom: 1.5rem;
-  margin-top: 0.5rem;
-}
-
-.breadcrumb-modern .breadcrumb-item {
-  color: #626976;
-  font-size: 0.875rem;
-}
-
-.breadcrumb-modern .breadcrumb-item.active {
-  color: #2d3436;
-  font-weight: 500;
-}
-
-.breadcrumb-modern .breadcrumb-item + .breadcrumb-item::before {
-  color: #98a0ac;
-  content: ">";
-  padding: 0 0.5rem;
-}
-
-.activity-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 100px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  margin-right: 0.75rem;
-}
-
-.activity-status-badge.status-active {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-.activity-status-badge.status-upcoming {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-}
-
-.activity-status-badge.status-completed {
-  background: rgba(156, 163, 175, 0.1);
-  color: #6b7280;
-  border: 1px solid rgba(156, 163, 175, 0.2);
-}
-
-.pulse-indicator {
-  width: 8px;
-  height: 8px;
-  background: #22c55e;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-  }
-}
-
-.activity-quick-stats {
-  display: flex;
-  gap: 2rem;
-  margin-top: 1rem;
-  flex-wrap: wrap;
-}
-
-.quick-stat-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #626976;
-  font-size: 0.875rem;
-}
-
-.quick-stat-item i {
-  font-size: 1.125rem;
-  color: #206bc4;
-}
-
-.activity-title-modern {
-  color: #2d3436;
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  line-height: 1.2;
-}
-
-.activity-meta-modern {
-  color: #626976;
-  font-size: 1rem;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-}
-
-.activity-actions-modern {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.avatar-stack {
-  display: flex;
-  margin-right: 0.75rem;
-}
-
-.avatar-stack .avatar {
-  width: 36px;
-  height: 36px;
-  border: 2px solid white;
-  margin-left: -0.75rem;
-  transition: transform 0.2s;
-}
-
-.avatar-stack .avatar:first-child {
-  margin-left: 0;
-}
-
-.avatar-stack .avatar:hover {
-  transform: translateY(-2px);
-  z-index: 10;
-}
-
-.participant-count {
-  color: #626976;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.activity-image-modern {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  height: 320px;
-  background: #f8f9fa;
-  box-shadow: 0 0.375rem 1.5rem rgba(0, 0, 0, 0.08);
-}
-
-.activity-image-modern img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.activity-image-modern:hover img {
-  transform: scale(1.02);
-}
-
-.image-overlay-modern {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 1.5rem;
-  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.activity-image-modern:hover .image-overlay-modern {
-  opacity: 1;
-}
-
-.participant-avatars-overlay {
-  position: absolute;
-  bottom: 1rem;
-  left: 1rem;
-  z-index: 15;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0.5rem;
-  border-radius: 50px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15);
-}
-
-.floating-action-menu {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 10;
-}
-
-.progress-indicator {
-  background: #f1f3f5;
-  border-radius: 100px;
-  height: 6px;
-  overflow: hidden;
-  margin-top: 0.5rem;
-}
-
-.progress-bar-modern {
-  height: 100%;
-  background: linear-gradient(90deg, #206bc4 0%, #ed2988 100%);
-  border-radius: 100px;
-  transition: width 0.3s ease;
-}
-
-.next-session-banner {
-  background: #f8f9fa;
-  border: 1px solid rgba(98, 105, 118, 0.16);
-  border-radius: 8px;
-  padding: 0.875rem 1.25rem;
-  margin-top: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.next-session-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  color: #2d3436;
-}
-
-.next-session-info i {
-  font-size: 1.25rem;
-  color: #206bc4;
-}
-
-.session-time {
-  font-weight: 600;
-  font-size: 0.9375rem;
-  color: #2d3436;
-}
-
-.session-countdown {
-  font-size: 0.875rem;
-  color: #626976;
-}
-
-@media (max-width: 991.98px) {
-  .activity-header-modern {
-    padding: 1.5rem;
-  }
-  
-  .activity-title-modern {
-    font-size: 1.5rem;
-  }
-  
-  .activity-quick-stats {
-    gap: 1rem;
-  }
-  
-  .activity-image-modern {
-    height: 200px;
-  }
-}
-
-@media (max-width: 575.98px) {
-  .activity-quick-stats {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .activity-actions-modern {
-    width: 100%;
-  }
-  
-  .activity-actions-modern .btn {
-    flex: 1;
-    justify-content: center;
-  }
-  
-  .next-session-banner {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-}
-
-.share-button {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 10;
-}
-
-.share-button .btn-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: white;
-  border: 1px solid rgba(98, 105, 118, 0.16);
-  border-radius: 8px;
-  color: #626976;
-  transition: all 0.2s;
-}
-
-.share-button .btn-icon:hover {
-  background: #206bc4;
-  color: white;
-  border-color: #206bc4;
-  transform: translateY(-2px);
-  box-shadow: 0 0.25rem 0.75rem rgba(32, 107, 196, 0.2);
-}
-
-/* Enhanced Search Bar Styles from signups.html */
-/* Pink glow effect for Ctrl+K - subtle and elegant */
-#enhancedSearchInput.search-glow-active {
-  animation: pinkGlowPulse 0.8s ease-out !important;
-  border-color: #ff69b4 !important;
-  box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3), 
-              0 0 8px rgba(255, 105, 180, 0.35),
-              0 0 15px rgba(255, 105, 180, 0.15) !important;
-  transform: scale(1.005) !important;
-  background-image: none !important;
-  z-index: 1000;
-  position: relative;
-}
-
-@keyframes pinkGlowPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4),
-                0 0 0 0 rgba(255, 105, 180, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
-                0 0 10px rgba(255, 105, 180, 0.35),
-                0 0 18px rgba(255, 105, 180, 0.15);
-  }
-  100% {
-    box-shadow: 0 0 0 0.15rem rgba(255, 105, 180, 0.3),
-                0 0 8px rgba(255, 105, 180, 0.35),
-                0 0 15px rgba(255, 105, 180, 0.15);
-  }
-}
-
-/* Disable Bootstrap validation styling completely */
-#enhancedSearchInput.is-valid,
-#enhancedSearchInput.is-invalid {
-  border-color: #ced4da !important;
-  background-image: none !important;
-  padding-right: 100px !important;
-}
-
-#enhancedSearchInput.is-valid:focus,
-#enhancedSearchInput.is-invalid:focus {
-  border-color: #86b7fe !important;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
-  background-image: none !important;
-}
-
-/* Force remove validation feedback icons */
-#enhancedSearchInput {
-  background-image: none !important;
-}
-
-/* Clear button styling */
-#searchClearBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-#searchClearBtn:hover {
-  opacity: 1;
-  transform: rotate(90deg);
-}
-
-#searchClearBtn:active {
-  transform: rotate(90deg) scale(0.9);
-}
-
-/* Smooth transitions for kbd hint and clear button */
-#searchKbdHint, #searchClearBtn {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-#searchCharCounter {
-  transition: all 0.2s ease;
-  font-weight: 500;
-  min-width: 80px;
-  text-align: right;
-  font-size: 0.75rem;
-}
-
-#searchCharCounter.fw-bold {
-  font-weight: 600;
-}
-
-/* Enhanced loading animation */
-.searching-pulse {
-  animation: blueSearchPulse 1.5s ease-in-out infinite;
-  border-color: #0d6efd !important;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
-              0 0 15px rgba(13, 110, 253, 0.4) !important;
-}
-
-@keyframes blueSearchPulse {
-  0%, 100% { 
-    opacity: 1;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.3),
-                0 0 15px rgba(13, 110, 253, 0.4);
-  }
-  50% { 
-    opacity: 0.85;
-    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.2),
-                0 0 25px rgba(13, 110, 253, 0.5);
-  }
-}
-
-/* Subtle glow on regular focus */
-#enhancedSearchInput.search-focus-glow {
-  box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.2),
-              0 0 15px rgba(255, 105, 180, 0.15);
-}
-
-/* Filter component styles are loaded via filter-component.css in base.html */
-
 /* Mobile KPI Styles (DEAD SIMPLE) */
 @media (max-width: 767.98px) {
   .mobile-kpi-container {
@@ -601,163 +155,107 @@ div.dropdown-divider {
 
   <div class="page-body">
     <div class="dashboard-container">
-      <!-- Clean Activity Header Card -->
+      <!-- Activity Identity Card: photo bleeds to the card's edges and dissolves into white,
+           title/description/stats/actions sit over the faded-out part of the photo -->
       <div class="card activity-header-card">
-        <div class="card-body">
-          <!-- Header Top Section -->
-          <div class="activity-header-top">
-            <!-- Activity Image Section (40% - Integrated with gradient) -->
-            <div class="activity-image-section">
-              {% if activity.image_filename %}
-              <div class="activity-image-background" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' ~ activity.image_filename) }}');"></div>
-              {% else %}
-              <div class="activity-image-background" style="background: {{ placeholder_css(activity.name) }}; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 5rem; font-weight: 700; color: rgba(255,255,255,0.9);">{{ placeholder_letter(activity.name) }}</span>
-              </div>
-              {% endif %}
-            </div>
+        {% set activity_menu_items = [
+          {"label": "Scan", "icon": '<i class="ti ti-scan"></i>', "url": url_for('scan_qr', activity_id=activity.id)},
+          {"label": "Edit Activity", "icon": '<i class="ti ti-edit"></i>', "url": url_for('edit_activity', activity_id=activity.id)},
+          {"label": "Email Templates", "icon": '<i class="ti ti-mail"></i>', "url": url_for('email_template_customization', activity_id=activity.id)},
+          {"label": "Send Announcement", "icon": '<i class="ti ti-speakerphone"></i>', "attrs": {"data-bs-toggle": "modal", "data-bs-target": "#announcementModal"}},
+          {"type": "separator"},
+          {"label": "Delete Activity", "icon": '<i class="ti ti-trash"></i>', "attrs": {"data-variant": "destructive", "onclick": "checkAndDeleteActivity(" ~ activity.id ~ ", '" ~ activity.name|replace("'", "\\'") ~ "'); return false;"}}
+        ] %}
 
-            <!-- Content Section (60% - White background) -->
-            <div class="activity-content-section">
-              <h2 class="activity-title">{{ activity.name }}</h2>
-              {% if activity.workflow_type == 'payment_first' %}
-              <span class="badge bg-blue-lt mb-2" style="align-self: flex-start;">Pay First</span>
-              {% else %}
-              <span class="badge bg-azure-lt mb-2" style="align-self: flex-start;">Review First</span>
-              {% endif %}
-              <p class="activity-description text-muted">
-                {{ activity.description or "Transform your game with professional coaching and structured training sessions." }}
-              </p>
+        <!-- Hero photo - bleeds to the card edges, masked to dissolve into white where the content sits -->
+        <div class="activity-hero-photo">
+          {% if activity.image_filename %}
+          <div class="activity-hero-photo-image" style="background-image: url('{{ url_for('static', filename='uploads/activity_images/' ~ activity.image_filename) }}');"></div>
+          {% else %}
+          <div class="activity-hero-photo-image activity-hero-photo-placeholder" style="background: {{ placeholder_css(activity.name) }};"></div>
+          {% endif %}
+        </div>
 
-              <!-- Stats Row - Minimal design: gray icon + black number -->
-              <div class="activity-stats-minimal">
-            <!-- Total Sessions Consumed -->
-            <div class="stat-minimal" title="Total sessions consumed">
-              <i class="ti ti-check"></i>
-              <span>{{ passport_statistics.total_redemptions|default(0) }}</span>
-            </div>
+        <div class="activity-hero-content">
+          <div class="activity-title-row">
+            <h2 class="activity-title">{{ activity.name }}</h2>
+            {% if activity.workflow_type == 'payment_first' %}
+            {{ badge("Pay First", variant="secondary") }}
+            {% else %}
+            {{ badge("Review First", variant="outline") }}
+            {% endif %}
+          </div>
 
+          {% if activity.description %}
+          <p class="activity-description">{{ activity.description }}</p>
+          {% endif %}
+
+          <!-- Stats Row - metadata, styled lighter than the title -->
+          <div class="activity-stats-minimal">
             <!-- Location - Only show if set, clickable to copy -->
             {% if activity.location_address_formatted or activity.location_address_raw %}
             {% set location = activity.location_address_formatted or activity.location_address_raw %}
             <div class="stat-minimal stat-clickable" onclick="copyLocationToClipboard(event, '{{ location }}')" title="Click to copy location">
               <i class="ti ti-map-pin"></i>
-              <span>1</span>
+              <span>Location</span>
             </div>
             {% endif %}
 
-            <!-- Passport Types - Clickable dropdown -->
-            <div class="stat-minimal stat-dropdown">
-              <i class="ti ti-link"></i>
-              <span>{{ passport_types|length }}</span>
-              <div class="stat-dropdown-menu" style="display: none;">
-                {% for pt in passport_types %}
-                <a href="#" class="stat-dropdown-link"
-                   data-url="{{ url_for('signup', activity_id=activity.id, passport_type_id=pt.id, _external=True) }}"
-                   onclick="copyToClipboard(event, this)">
-                  {{ pt.name }}
-                </a>
-                {% endfor %}
-              </div>
+            <!-- Passport Types - shared Action Menu popover, same component as "Manage" below -->
+            <div class="stat-minimal stat-menu">
+              {% set pt_items = [] %}
+              {% for pt in passport_types %}
+                {% set _ = pt_items.append({
+                  "label": pt.name,
+                  "icon": '<i class="ti ti-copy"></i>',
+                  "url": "#",
+                  "attrs": {"data-url": url_for('signup', activity_id=activity.id, passport_type_id=pt.id, _external=True), "onclick": "copyPassportTypeLink(event, this)"}
+                }) %}
+              {% endfor %}
+              {{ dropdown_menu(
+                id="passport-types-menu",
+                trigger='<i class="ti ti-link"></i><span>' ~ passport_types|length ~ ' passport type' ~ ('s' if passport_types|length != 1 else '') ~ '</span><i class="ti ti-chevron-down"></i>',
+                trigger_attrs={"class": "stat-trigger"},
+                popover_attrs={"data-align": "end"},
+                items=pt_items
+              ) }}
             </div>
 
             <!-- Survey Rating - Only show if survey responses exist -->
             {% if survey_rating is not none %}
-            <div class="stat-minimal" title="Average survey rating from {{ survey_count }} response{{ 's' if survey_count != 1 else '' }}">
+            <div class="stat-minimal">
               <i class="ti ti-star-filled"></i>
-              <span>{{ survey_rating }}<span style="font-size: 0.85em; color: #9ca3af;">({{ survey_count }})</span></span>
+              <span>{{ survey_rating }} rating <span class="stat-sub">({{ survey_count }})</span></span>
             </div>
             {% endif %}
 
             <!-- Discord Invite Link - Only show if configured -->
             {% if activity.discord_invite_url %}
             <div class="stat-minimal stat-clickable"
-                 onclick="copyDiscordInvite(event, '{{ activity.discord_invite_url }}')"
-                 title="Click to copy Discord invite link">
+                 onclick="copyDiscordInvite(event, '{{ activity.discord_invite_url }}')">
               <i class="ti ti-brand-discord"></i>
+              <span>Discord</span>
             </div>
             {% endif %}
-              </div>
+          </div>
 
-              <!-- Revenue Progress Bar - Simple thin bar only -->
-              {% if activity.goal_revenue and activity.goal_revenue > 0 %}
-              <div class="revenue-progress-minimal" title="Revenue: ${{ '%.2f'|format(total_paid_revenue) }} collected / ${{ '%.2f'|format(activity.goal_revenue) }} goal ({{ revenue_progress_pct }}%)">
-                <div class="progress progress-minimal">
-                  <div class="progress-bar" role="progressbar" style="width: {{ revenue_progress_pct }}%"
-                       aria-valuenow="{{ revenue_progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-              </div>
-              {% endif %}
+          <!-- Revenue Progress Bar - shared mp-progress component, value shown as text -->
+          {% if activity.goal_revenue and activity.goal_revenue > 0 %}
+          <div class="revenue-progress-minimal">
+            {{ progress(value=total_paid_revenue, max=activity.goal_revenue, show_value=true) }}
+          </div>
+          {% endif %}
 
-              <!-- Desktop Action Buttons -->
-              <div class="activity-actions d-none d-md-flex">
-                <!-- Standalone Scan Button -->
-                <a href="{{ url_for('scan_qr', activity_id=activity.id) }}" class="btn btn-sm btn-dark">
-                  <i class="ti ti-scan"></i> Scan
-                </a>
-
-                <!-- Standalone Passport Button -->
-                <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-sm btn-dark">
-                  <i class="ti ti-plus"></i> Passport
-                </a>
-
-                <!-- Actions Dropdown -->
-                <div class="dropdown">
-                  <button class="btn btn-sm btn-outline-secondary btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
-                    <i class="ti ti-dots-vertical"></i>
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                      <i class="ti ti-edit me-2"></i>Edit Activity
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('email_template_customization', activity_id=activity.id) }}">
-                      <i class="ti ti-mail me-2"></i>Email Templates
-                    </a></li>
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#announcementModal">
-                      <i class="ti ti-speakerphone me-2"></i>Send Announcement
-                    </a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
-                      <i class="ti ti-trash me-2"></i>Delete Activity
-                    </a></li>
-                  </ul>
-                </div>
-              </div>
-
-              <!-- Mobile Action Buttons -->
-              <div class="activity-actions-mobile-bottom d-md-none">
-                <!-- Create Passport Button -->
-                <a href="{{ url_for('create_passport', activity_id=activity.id) }}" class="btn btn-dark">
-                  <i class="ti ti-plus"></i> Passport
-                </a>
-                <!-- Actions Dropdown -->
-                <div class="dropdown">
-                  <button class="btn btn-outline-secondary btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
-                    <i class="ti ti-dots-vertical"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{{ url_for('scan_qr', activity_id=activity.id) }}">
-                      <i class="ti ti-scan me-2"></i>Scan QR
-                    </a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="{{ url_for('edit_activity', activity_id=activity.id) }}">
-                      <i class="ti ti-edit me-2"></i>Edit Activity
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('email_template_customization', activity_id=activity.id) }}">
-                      <i class="ti ti-mail me-2"></i>Email Templates
-                    </a></li>
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#announcementModal">
-                      <i class="ti ti-speakerphone me-2"></i>Send Announcement
-                    </a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" onclick="checkAndDeleteActivity({{ activity.id }}, '{{ activity.name }}'); return false;">
-                      <i class="ti ti-trash me-2"></i>Delete Activity
-                    </a></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
+          <!-- Action Buttons - Passport -> Manage (Scan lives inside Manage), same row on every breakpoint -->
+          <div class="activity-hero-actions">
+            {{ button("Passport", href=url_for('create_passport', activity_id=activity.id), variant="outline", icon="ti-plus") }}
+            {{ dropdown_menu(
+              id="activity-header-actions",
+              trigger='<span>Manage</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+              trigger_attrs={"class": "mp-btn", "data-variant": "primary"},
+              popover_attrs={"data-align": "end"},
+              items=activity_menu_items
+            ) }}
           </div>
         </div>
       </div>
@@ -788,283 +286,51 @@ div.dropdown-divider {
 
 
 
-      <!-- New KPI Cards Section - Clean ApexCharts Implementation -->
-      
-      <!-- Desktop Version (unchanged) -->
-      <div class="row mb-4 d-none d-md-flex">
-        <!-- Include ApexCharts -->
-        <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
-        <!-- Revenue Card (Line Chart) -->
-        <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="revenue" data-kpi-id="{{ revenue_card.id if revenue_card else 'revenue-default' }}">
-            <div class="card-body">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">REVENUE</div>
-                <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="revenue">
-                    Last 7 days
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="revenue">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="revenue">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="revenue">Last 90 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="fy" data-card-type="revenue">Fiscal Year</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="revenue">All time</a></li>
-                  </ul>
-                </div>
-              </div>
-              
-              <div class="h2 mb-1" id="revenue-value">${{ "{:,.0f}".format(kpi_data['revenue']['current']) }}</div>
-              
-              <div class="d-flex align-items-center mb-2">
-                {% set change = kpi_data['revenue']['change'] %}
-                {% if change is not none %}
-                  {% if change > 0 %}
-                    <div class="text-success me-2" id="revenue-trend">{{ change|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif change < 0 %}
-                    <div class="text-danger me-2" id="revenue-trend">{{ change|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
-                  {% else %}
-                    <div class="text-muted me-2" id="revenue-trend">0% <i class="ti ti-minus"></i></div>
-                  {% endif %}
-                {% else %}
-                  <div class="text-muted me-2" id="revenue-trend">-- <i class="ti ti-minus"></i></div>
-                {% endif %}
-              </div>
-              
-              <div id="revenue-chart" style="height: 40px; margin: 0; padding: 0;"></div>
-            </div>
-          </div>
-        </div>
+      <!-- KPI Cards Section - style-guide kpi_card_desktop / kpi_card_mobile -->
+      <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
 
-        <!-- Active Passports Card -->
-        <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="active_passports" data-kpi-id="{{ active_passports_card.id if active_passports_card else 'active-passports-default' }}">
-            <div class="card-body">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">ACTIVE PASSES</div>
-                <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="active_passports">
-                    Last 7 days
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="active_passports">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="active_passports">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="active_passports">Last 90 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="fy" data-card-type="active_passports">Fiscal Year</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="active_passports">All time</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="h2 mb-1" id="active-passports-value">
-                {% if kpi_data and kpi_data['active_users'] %}
-                  {{ "{:,.0f}".format(kpi_data['active_users']['current']) }}
-                {% else %}
-                  {{ passport_stats['active_passports'] if passport_stats else '0' }}
-                {% endif %}
-              </div>
-              <div class="d-flex align-items-center mb-3">
-                {% if active_passports_card and active_passports_card.data %}
-                  {% if active_passports_card.data.trend_percentage > 0 %}
-                    <div class="text-success me-2" id="active-passports-trend">{{ active_passports_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif active_passports_card.data.trend_percentage < 0 %}
-                    <div class="text-danger me-2" id="active-passports-trend">{{ active_passports_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
-                  {% else %}
-                    <div class="text-muted me-2" id="active-passports-trend">0% <i class="ti ti-minus"></i></div>
-                  {% endif %}
-                {% elif kpi_data and kpi_data['active_users'] and kpi_data['active_users']['change'] is not none %}
-                  {% if kpi_data['active_users']['change'] > 0 %}
-                    <div class="text-success me-2" id="active-passports-trend">{{ kpi_data['active_users']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif kpi_data['active_users']['change'] < 0 %}
-                    <div class="text-danger me-2" id="active-passports-trend">{{ kpi_data['active_users']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
-                  {% else %}
-                    <div class="text-muted me-2" id="active-passports-trend">0% <i class="ti ti-minus"></i></div>
-                  {% endif %}
-                {% else %}
-                  <div class="text-muted me-2" id="active-passports-trend">-- <i class="ti ti-minus"></i></div>
-                {% endif %}
-              </div>
-              <div id="active-passports-chart" style="height: 40px;"></div>
-            </div>
-          </div>
+      <!-- Desktop Version -->
+      <div class="row row-cols-md-2 row-cols-xl-4 mb-4 d-none d-md-flex">
+        <div class="col mb-3">
+          {{ kpi_card_desktop(id="kpi-revenue", label="Revenue", value=kpi_data['revenue']['current'], format="currency",
+             change=kpi_data['revenue']['change'], trend_data=kpi_data['revenue']['trend_data'], chart_type="area") }}
         </div>
-
-        <!-- Passports Redeemed Card (Replaces Passports Created) -->
-        <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="passports_redeemed" data-kpi-id="passports-redeemed-default">
-            <div class="card-body">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">CHECK-INS</div>
-                <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="passports_redeemed">
-                    Last 7 days
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="passports_redeemed">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="passports_redeemed">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="passports_redeemed">Last 90 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="fy" data-card-type="passports_redeemed">Fiscal Year</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="passports_redeemed">All time</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="h2 mb-1" id="passports-redeemed-value">
-                {% if kpi_data and kpi_data['passports_redeemed'] %}
-                  {{ "{:,.0f}".format(kpi_data['passports_redeemed']['current']) }}
-                {% else %}
-                  0
-                {% endif %}
-              </div>
-              <div class="d-flex align-items-center mb-3">
-                {% if kpi_data and kpi_data['passports_redeemed'] and kpi_data['passports_redeemed']['change'] is not none %}
-                  {% if kpi_data['passports_redeemed']['change'] > 0 %}
-                    <div class="text-success me-2" id="passports-redeemed-trend">{{ kpi_data['passports_redeemed']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif kpi_data['passports_redeemed']['change'] < 0 %}
-                    <div class="text-danger me-2" id="passports-redeemed-trend">{{ kpi_data['passports_redeemed']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
-                  {% else %}
-                    <div class="text-muted me-2" id="passports-redeemed-trend">0% <i class="ti ti-minus"></i></div>
-                  {% endif %}
-                {% else %}
-                  <div class="text-muted me-2" id="passports-redeemed-trend">-- <i class="ti ti-minus"></i></div>
-                {% endif %}
-              </div>
-              <div id="passports-redeemed-chart" style="height: 40px;"></div>
-            </div>
-          </div>
+        <div class="col mb-3">
+          {{ kpi_card_desktop(id="kpi-active-passes", label="Active Passes", value=kpi_data['active_users']['current'],
+             change=kpi_data['active_users']['change'], trend_data=kpi_data['active_users']['trend_data'], chart_type="bar") }}
         </div>
-
-        <!-- Unpaid Passports Card -->
-        <div class="col-md-3 mb-3">
-          <div class="card" style="border-radius: 12px; position: relative;" data-kpi-card="pending_signups" data-kpi-id="{{ pending_signups_card.id if pending_signups_card else 'pending-signups-default' }}">
-            <div class="card-body">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="text-muted small text-uppercase">UNPAID</div>
-                <div class="dropdown">
-                  <button class="btn btn-sm text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown" data-kpi-period-button="pending_signups">
-                    Last 7 days
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="7d" data-card-type="pending_signups">Last 7 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="30d" data-card-type="pending_signups">Last 30 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="90d" data-card-type="pending_signups">Last 90 days</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="fy" data-card-type="pending_signups">Fiscal Year</a></li>
-                    <li><a class="dropdown-item kpi-period-btn" href="#" data-period="all" data-card-type="pending_signups">All time</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="h2 mb-1" id="pending-signups-value">
-                {% if kpi_data and kpi_data['unpaid_passports'] %}
-                  {{ "{:,.0f}".format(kpi_data['unpaid_passports']['current']) }}
-                {% else %}
-                  0
-                {% endif %}
-              </div>
-              <div class="d-flex align-items-center mb-3">
-                {% if pending_signups_card and pending_signups_card.data %}
-                  {% if pending_signups_card.data.trend_percentage > 0 %}
-                    <div class="text-success me-2" id="pending-signups-trend">{{ pending_signups_card.data.trend_percentage }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif pending_signups_card.data.trend_percentage < 0 %}
-                    <div class="text-danger me-2" id="pending-signups-trend">{{ pending_signups_card.data.trend_percentage }}% <i class="ti ti-trending-down"></i></div>
-                  {% else %}
-                    <div class="text-muted me-2" id="pending-signups-trend">0% <i class="ti ti-minus"></i></div>
-                  {% endif %}
-                {% elif kpi_data and kpi_data['unpaid_passports'] and kpi_data['unpaid_passports']['change'] is not none %}
-                  {% if kpi_data['unpaid_passports']['change'] > 0 %}
-                    <div class="text-success me-2" id="pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|round|int }}% <i class="ti ti-trending-up"></i></div>
-                  {% elif kpi_data['unpaid_passports']['change'] < 0 %}
-                    <div class="text-danger me-2" id="pending-signups-trend">{{ kpi_data['unpaid_passports']['change']|abs|round|int }}% <i class="ti ti-trending-down"></i></div>
-                  {% else %}
-                    <div class="text-muted me-2" id="pending-signups-trend">0% <i class="ti ti-minus"></i></div>
-                  {% endif %}
-                {% else %}
-                  <div class="text-muted me-2" id="pending-signups-trend">-- <i class="ti ti-minus"></i></div>
-                {% endif %}
-              </div>
-              <div id="pending-signups-chart" style="height: 40px;"></div>
-            </div>
-          </div>
+        <div class="col mb-3">
+          {{ kpi_card_desktop(id="kpi-redeemed", label="Check-ins", value=kpi_data['passports_redeemed']['current'],
+             change=kpi_data['passports_redeemed']['change'], trend_data=kpi_data['passports_redeemed']['trend_data'], chart_type="bar") }}
+        </div>
+        <div class="col mb-3">
+          {{ kpi_card_desktop(id="kpi-unpaid", label="Unpaid", value=kpi_data['unpaid_passports']['current'],
+             change=kpi_data['unpaid_passports']['change'], trend_data=kpi_data['unpaid_passports']['trend_data'], chart_type="bar") }}
         </div>
       </div>
-      
-      <!-- Mobile Version (DEAD SIMPLE) -->
+
+      <!-- Mobile Version -->
+      {% if mobile_kpi_data %}
       <div class="mobile-kpi-container d-md-none mb-4">
         <div class="mobile-kpi-scroll">
-          <!-- Revenue Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 130px;">
-              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">REVENUE</div>
-                <div class="h1 mb-2" id="mobile-revenue-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
-                  {% if mobile_kpi_data and mobile_kpi_data['revenue'] %}
-                    ${{ "{:,.0f}".format(mobile_kpi_data['revenue']['current']) }}
-                  {% else %}
-                    $0
-                  {% endif %}
-                </div>
-                <div class="text-muted small">
-                  <i class="ti ti-calendar me-1"></i>Fiscal Year
-                </div>
-              </div>
-            </div>
+            {{ kpi_card_mobile(id="kpi-revenue-m", label="Revenue", value=mobile_kpi_data['revenue']['current'], format="currency",
+               change=mobile_kpi_data['revenue']['change']) }}
           </div>
-          
-          <!-- Active Passports Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 130px;">
-              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">ACTIVE PASSES</div>
-                <div class="h1 mb-2" id="mobile-active-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
-                  {% if mobile_kpi_data and mobile_kpi_data['active_users'] %}
-                    {{ "{:,.0f}".format(mobile_kpi_data['active_users']['current']) }}
-                  {% else %}
-                    0
-                  {% endif %}
-                </div>
-                <div class="text-muted small">
-                  <i class="ti ti-calendar me-1"></i>Fiscal Year
-                </div>
-              </div>
-            </div>
+            {{ kpi_card_mobile(id="kpi-active-passes-m", label="Active Passes", value=mobile_kpi_data['active_users']['current'],
+               change=mobile_kpi_data['active_users']['change']) }}
           </div>
-          
-          <!-- Passports Redeemed Card (Replaces Passports Created) -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 130px;">
-              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">CHECK-INS</div>
-                <div class="h1 mb-2" id="mobile-redeemed-value" style="font-size: 2.5rem; font-weight: 700; color: #0f172a;">
-                  {% if mobile_kpi_data and mobile_kpi_data['passports_redeemed'] %}
-                    {{ "{:,.0f}".format(mobile_kpi_data['passports_redeemed']['current']) }}
-                  {% else %}
-                    0
-                  {% endif %}
-                </div>
-                <div class="text-muted small">
-                  <i class="ti ti-calendar me-1"></i>Fiscal Year
-                </div>
-              </div>
-            </div>
+            {{ kpi_card_mobile(id="kpi-redeemed-m", label="Check-ins", value=mobile_kpi_data['passports_redeemed']['current'] if mobile_kpi_data['passports_redeemed'] else 0,
+               change=mobile_kpi_data['passports_redeemed']['change'] if mobile_kpi_data['passports_redeemed'] else none) }}
           </div>
-
-          <!-- Unpaid Passports Card -->
           <div class="mobile-kpi-card">
-            <div class="card" style="border-radius: 12px; min-height: 130px;">
-              <div class="card-body text-center" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="text-muted small text-uppercase mb-2">UNPAID</div>
-                <div class="h1 mb-2" id="mobile-pending-value" style="font-size: 2.5rem; font-weight: 700; color: #dc2626;">
-                  {% if mobile_kpi_data and mobile_kpi_data['unpaid_passports'] %}
-                    {{ "{:,.0f}".format(mobile_kpi_data['unpaid_passports']['current']) }}
-                  {% else %}
-                    0
-                  {% endif %}
-                </div>
-                <div class="text-muted small">
-                  <i class="ti ti-calendar me-1"></i>Fiscal Year
-                </div>
-              </div>
-            </div>
+            {{ kpi_card_mobile(id="kpi-unpaid-m", label="Unpaid", value=mobile_kpi_data['unpaid_passports']['current'],
+               change=mobile_kpi_data['unpaid_passports']['change']) }}
           </div>
         </div>
-        
+
         <!-- Dots Navigation -->
         <div class="mobile-kpi-dots">
           <div class="mobile-dot active" data-index="0"></div>
@@ -1073,44 +339,9 @@ div.dropdown-divider {
           <div class="mobile-dot" data-index="3"></div>
         </div>
       </div>
+      {% endif %}
 
-      <!-- Passport List Title -->
-
-
-      <!-- Passport List Title -->
-
-
-      <!-- Passport List Title -->
       <h2 class="mt-4 mb-3">Activity Passport</h2>
-
-      <!-- Enhanced Dynamic Search -->
-      <form method="GET" action="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="mb-4" id="dynamicSearchForm">
-        <div class="input-icon position-relative">
-          <span class="input-icon-addon">
-            <i class="ti ti-search fs-3"></i>
-          </span>
-          <input type="text"
-                 name="q"
-                 id="enhancedSearchInput"
-                 class="form-control form-control-lg shadow-sm"
-                 placeholder="Start typing to search"
-                 value="{{ request.args.get('q', '') }}"
-                 style="padding-right: 100px; border-radius: 0.5rem;"
-                 autocomplete="off"
-                 data-bs-toggle="false">
-          <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
-            <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
-            <kbd id="searchKbdHint" class="text-muted d-none d-md-inline">Ctrl</kbd>
-            <kbd class="text-muted d-none d-md-inline">K</kbd>
-            <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
-              <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
-            </button>
-          </div>
-        </div>
-      </form>
-
-
-
 
     <!-- Archived activity: bulk-close callout -->
     {% if activity.status in ('archived', 'inactive') %}
@@ -1122,202 +353,51 @@ div.dropdown-divider {
             <div class="text-secondary">This activity is archived. Close all passports to remove them from active KPIs.</div>
           </div>
           <div class="ms-auto">
-            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#bulkClosePassportsModal">
-              Close all passports
-            </button>
+            {{ button("Close all passports", variant="secondary", attrs={"data-bs-toggle": "modal", "data-bs-target": "#bulkClosePassportsModal"}) }}
           </div>
         </div>
       </div>
       {% endif %}
     {% endif %}
 
-    <!-- Main Table -->
     <!-- Anchor for scroll position preservation -->
     <div id="passport-filters" class="scroll-anchor"></div>
-    <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+    <div class="card mp-data-table" style="margin-top: 1.5rem !important;">
       <div class="card-header">
-        <div class="d-flex justify-content-center align-items-center w-100">
-          <!-- Filter Buttons -->
-          <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='active') }}"
-               class="github-filter-btn {% if current_filters.passport_filter == 'active' and not current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.passport_filter == 'active' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              Active <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.active_passports|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, passport_filter='unpaid') }}"
-               class="github-filter-btn {% if current_filters.passport_filter == 'unpaid' %}active{% endif %}"
-               style="{% if current_filters.passport_filter == 'unpaid' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              Unpaid <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.unpaid_passports|default(0) }})</span>
-            </a>
-            <a href="{{ url_for('activity_dashboard', activity_id=activity.id, show_all='true') }}"
-               class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
-               style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-              All <span style="opacity: 0.6; margin-left: 4px;">({{ passport_statistics.total_passports|default(0) }})</span>
-            </a>
-          </div>
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-hover">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th class="d-md-none text-center">#</th>
-            <th class="d-none d-md-table-cell">Activity</th>
-            <th class="d-none d-lg-table-cell">Passport Type</th>
-            <th class="d-none d-md-table-cell text-center">Amount</th>
-            <th class="d-none d-lg-table-cell text-center">Status</th>
-            <th class="d-none d-md-table-cell text-center">Uses Remaining</th>
-            <th class="d-none d-md-table-cell">Created</th>
-            <th class="text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if passes %}
-          {% for passport in passes %}
-          <tr data-paid="{{ 'true' if passport.paid else 'false' }}" data-active="{{ 'true' if passport.uses_remaining > 0 else 'false' }}">
-            <td style="vertical-align: middle;">
-              <div class="d-flex align-items-center">
-                <!-- Desktop: User avatar (initials) -->
-                <div class="me-3 d-none d-md-block" style="flex-shrink: 0;">{{ avatar_initials(passport.user.name or 'Anonymous') }}</div>
-                <!-- Mobile: Activity photo (or initials) -->
-                <div class="me-3 d-md-none" style="flex-shrink: 0;">
-                  {% if activity and (activity.image_filename or activity.logo_filename) %}
-                    {{ avatar_photo(url_for('static', filename='uploads/activity_images/' + (activity.image_filename or activity.logo_filename)), alt=activity.name, size="sm") }}
-                  {% else %}
-                    {{ avatar_initials(activity.name if activity else 'Activity', size="sm") }}
-                  {% endif %}
-                </div>
-                <div>
-                  <div class="fw-bold">{{ passport.user.name or 'Anonymous' }}</div>
-                  <div class="text-muted small d-none d-md-block">{{ passport.user.email or 'No email' }}</div>
-                </div>
-              </div>
-            </td>
-            <td class="d-md-none text-center" style="vertical-align: middle;">
-              {% if passport.paid %}
-                <span class="badge bg-green-lt text-green-lt-fg">{{ passport.uses_remaining or 0 }}</span>
-              {% else %}
-                <span class="badge bg-yellow-lt text-yellow-lt-fg">{{ passport.uses_remaining or 0 }}</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              <div>
-                <div class="fw-bold">
-                  {{ passport.activity.name if passport.activity else activity.name }}
-                  {% if passport.activity_id != activity.id %}
-                  <span class="badge bg-blue-lt" title="Inherited from another activity">Inherited</span>
-                  {% endif %}
-                </div>
-                <div class="text-muted small">{{ passport.pass_code or 'No code' }}</div>
-              </div>
-            </td>
-            <td class="d-none d-lg-table-cell" style="vertical-align: middle;">
-              <span style="color: #6c757d;">{{ passport.passport_type.name if passport.passport_type else 'Standard' }}</span>
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              {% if passport.sold_amt %}
-                ${{ "%.0f"|format(passport.sold_amt) }}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
-              {% if passport.paid %}
-                <span class="badge bg-green-lt text-green-lt-fg">Paid</span>
-              {% else %}
-                <span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>
-              {% endif %}
-            </td>
-            <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-              <span style="color: #6c757d;">
-                {{ passport.uses_remaining or 0 }}
-              </span>
-            </td>
-            <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-              {% set passport_display_date = passport.created_dt|utc_to_local %}
-              {% if passport_display_date %}
-                {{ passport_display_date.strftime('%Y-%m-%d') }}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-            <td class="text-center" style="vertical-align: middle;">
-              <div class="dropdown d-inline-block">
-                <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
-                  <i class="ti ti-dots-vertical"></i>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                  {% if passport.uses_remaining > 0 %}
-                  <button type="button" class="dropdown-item text-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#redeem-modal"
-                          data-user-name="{{ passport.user.name if passport.user else 'Unknown' }}"
-                          data-redeem-url="{{ url_for('redeem_passport', pass_code=passport.pass_code) }}">
-                    <i class="ti ti-login me-2"></i>Check In
-                  </button>
-                  {% endif %}
-                  <a class="dropdown-item" href="{{ url_for('edit_passport', passport_id=passport.id) }}">
-                    <i class="ti ti-pencil me-2"></i>Edit
-                  </a>
-                  {% if not passport.paid %}
-                  <button type="button" class="dropdown-item text-success"
-                          data-bs-toggle="modal"
-                          data-bs-target="#mark-paid-modal"
-                          data-user-name="{{ passport.user.name if passport.user else 'Unknown' }}"
-                          data-mark-paid-url="{{ url_for('mark_passport_paid', passport_id=passport.id) }}">
-                    <i class="ti ti-currency-dollar me-2"></i>Mark as Paid
-                  </button>
-                  {% endif %}
-                  <a class="dropdown-item" href="{{ url_for('show_pass', pass_code=passport.pass_code) }}">
-                    <i class="ti ti-qrcode me-2"></i>View
-                  </a>
-                  {% if not passport.paid %}
-                  <button type="button" class="dropdown-item text-warning"
-                          data-bs-toggle="modal"
-                          data-bs-target="#send-reminder-modal"
-                          data-user-name="{{ passport.user.name if passport.user else 'Unknown' }}"
-                          data-reminder-url="{{ url_for('send_passport_reminder', passport_id=passport.id) }}">
-                    <i class="ti ti-mail me-2"></i>Send Reminder
-                  </button>
-                  {% endif %}
-                  <a class="dropdown-item text-danger" href="#" 
-                     onclick="confirmPassportDelete({{ passport.id }}, '{{ passport.user.name or 'Anonymous' }}', {{ passport.uses_remaining or 0 }}); return false;">
-                    <i class="ti ti-trash me-2"></i>Delete
-                  </a>
-                </div>
-              </div>
-              <!-- Hidden delete form -->
-              <form id="deleteForm{{ passport.id }}" method="POST" action="{{ url_for('passports_bulk_action') }}" style="display: none;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="selected_passports" value="{{ passport.id }}">
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-          {% else %}
-          <tr>
-            <td colspan="8" class="text-center py-4 text-muted">
-              <i class="ti ti-search mb-2" style="font-size: 2rem; opacity: 0.5;"></i>
-              <div>No passports found</div>
-              {% if request.args.get('q') %}
-              <small>Try adjusting your search terms or <a href="{{ url_for('activity_dashboard', activity_id=activity.id) }}" class="text-primary">clear the search</a></small>
-              {% else %}
-              <small>No passports have been created for this activity yet</small>
-              {% endif %}
-            </td>
-          </tr>
-          {% endif %}
-        </tbody>
-      </table>
+        <form method="GET" action="{{ url_for('activity_dashboard', activity_id=activity.id) }}" style="display: contents;">
+          {{ preserve_filters(current_filters, exclude=['q', 'passport_filter', 'show_all']) }}
+          {{ table_toolbar(id="passports-toolbar", tabs=passport_tabs, search_value=current_filters.q, search_placeholder="Search passports…", total=passport_pagination.total) }}
+        </form>
       </div>
 
-      <!-- Pagination -->
-      {% from 'macros/pagination.html' import render_pagination %}
-      {% set passport_filters = current_filters.copy() %}
-      {% set _ = passport_filters.update({'signup_page': request.args.get('signup_page', 1)}) %}
-      {{ render_pagination(passport_pagination, passport_filters, passes, page_param='passport_page') }}
+      {% if not passport_rows %}
+        {{ table_empty_state(icon="ti-search",
+           title="No passports found",
+           description=("Try adjusting your search terms." if current_filters.q else "No passports have been created for this activity yet.")) }}
+      {% else %}
+        {% set passport_columns = [
+          {"label": "Activity", "class": "d-none d-md-table-cell"},
+          {"label": "Passport Type", "class": "d-none d-lg-table-cell"},
+          {"label": "Amount", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Status", "class": "d-none d-lg-table-cell text-center"},
+          {"label": "Uses Remaining", "class": "d-none d-md-table-cell text-center"},
+          {"label": "Created", "class": "d-none d-md-table-cell"}
+        ] %}
+        {% set passport_filters = current_filters.copy() %}
+        {% set _ = passport_filters.update({'signup_page': request.args.get('signup_page', 1)}) %}
+        <div class="d-none d-md-block">
+          {{ table_desktop(id="passports-table", columns=passport_columns, rows=passport_rows) }}
+          {{ pagination_desktop(page=passport_pagination.page, pages=passport_pagination.pages, per_page=passport_pagination.per_page,
+             total=passport_pagination.total, items_count=passport_rows|length, base_path=url_for('activity_dashboard', activity_id=activity.id),
+             filters=passport_filters, page_param='passport_page') }}
+        </div>
+        <div class="d-md-none">
+          {{ table_mobile(id="passports-table-mobile", rows=passport_rows) }}
+          {{ pagination_mobile(page=passport_pagination.page, pages=passport_pagination.pages, per_page=passport_pagination.per_page,
+             total=passport_pagination.total, items_count=passport_rows|length, base_path=url_for('activity_dashboard', activity_id=activity.id),
+             filters=passport_filters, page_param='passport_page') }}
+        </div>
+      {% endif %}
       </div>
 
       <!-- Shared modal dialogs for passport actions (outside main-table-card so search doesn't destroy them) -->
@@ -1358,7 +438,7 @@ div.dropdown-divider {
               <form method="POST" id="redeem-modal-form" action="" class="w-100">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="return_activity_id" value="{{ activity.id }}">
-                <button type="submit" class="btn btn-primary w-100">Yes, Check In</button>
+                {{ button("Yes, Check In", type="submit", attrs={"class": "w-100"}) }}
               </form>
             </div>
           </div>
@@ -1498,195 +578,43 @@ div.dropdown-divider {
       {% if has_pending_signups %}
       <h2 class="mt-5 mb-3">Signups</h2>
 
-
-      <!-- Main Signups Table -->
       <!-- Anchor for scroll position preservation -->
       <div id="signup-filters" class="scroll-anchor"></div>
-      <div class="card main-table-card" style="margin-top: 1.5rem !important;">
+      <div class="card mp-data-table" style="margin-top: 1.5rem !important;">
         <div class="card-header">
           <div class="d-flex justify-content-center align-items-center w-100">
-            <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-              <a href="#" onclick="filterSignups('pending'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter') == 'pending' %}active{% endif %}" id="signup-filter-pending"
-                 style="{% if request.args.get('signup_filter') == 'pending' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                Pending <span style="opacity: 0.6; margin-left: 4px;">({{ activity_pending_signups_count }})</span>
-              </a>
-              <a href="#" onclick="filterSignups('approved'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter') == 'approved' %}active{% endif %}" id="signup-filter-approved"
-                 style="{% if request.args.get('signup_filter') == 'approved' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                Approved <span style="opacity: 0.6; margin-left: 4px;">({{ activity_approved_signups_count }})</span>
-              </a>
-              <a href="#" onclick="filterSignups('all'); return false;"
-                 class="github-filter-btn {% if request.args.get('signup_filter', 'pending') == 'all' %}active{% endif %}" id="signup-filter-all"
-                 style="{% if request.args.get('signup_filter', 'pending') == 'all' %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                All <span style="opacity: 0.6; margin-left: 4px;">({{ all_signups|length }})</span>
-              </a>
-            </div>
+            {{ filter_tabs(tabs=signup_tabs) }}
           </div>
         </div>
-        <div class="table-responsive">
-          <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th class="d-none d-md-table-cell">Created</th>
-              <th class="d-none d-md-table-cell">Activity</th>
-              <th class="d-none d-lg-table-cell text-center">Status</th>
-              <th class="d-none d-md-table-cell text-center">Amount</th>
-              <th class="d-none d-md-table-cell text-center">Remain</th>
-              <th class="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for signup in signups %}
-            <tr data-paid="{{ 'true' if signup.paid else 'false' }}" data-status="{{ signup.status or 'pending' }}">
-              <td style="vertical-align: middle;">
-                <div class="d-flex align-items-center">
-                  <!-- Desktop: User avatar (initials) -->
-                  <div class="me-3 d-none d-md-block" style="flex-shrink: 0;">{{ avatar_initials(signup.user.name or 'Anonymous') }}</div>
-                  <!-- Mobile: Activity photo (or initials) -->
-                  <div class="me-3 d-md-none" style="flex-shrink: 0;">
-                    {% if signup.activity and (signup.activity.image_filename or signup.activity.logo_filename) %}
-                      {{ avatar_photo(url_for('static', filename='uploads/activity_images/' + (signup.activity.image_filename or signup.activity.logo_filename)), alt=signup.activity.name) }}
-                    {% else %}
-                      {{ avatar_initials(signup.activity.name if signup.activity else 'Activity') }}
-                    {% endif %}
-                  </div>
-                  <div>
-                    <div class="fw-bold">{{ signup.user.name or 'Anonymous' }}</div>
-                    <div class="text-muted small d-none d-md-block">{{ signup.user.email or 'No email' }}</div>
-                    <!-- Mobile-only signup info -->
-                    <div class="d-md-none">
-                      {% set status = signup.status or 'pending' %}
-                      {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
-                      {% if status == 'approved' %}
-                        <span class="badge bg-green-lt" style="margin-left: -6px;">Approved</span>
-                      {% elif status == 'pending' and is_payment_first %}
-                        <span class="badge bg-azure-lt" style="margin-left: -6px;">Awaiting Payment</span>
-                      {% elif status == 'pending' %}
-                        <span class="badge bg-yellow-lt" style="margin-left: -6px;">Pending</span>
-                      {% elif status == 'rejected' %}
-                        <span class="badge bg-red-lt" style="margin-left: -6px;">Rejected</span>
-                      {% endif %}
-                      {% if signup.requested_amount %}
-                        <span class="badge bg-secondary-lt ms-1">${{ "%.0f"|format(signup.requested_amount) }}</span>
-                      {% endif %}
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-                {% set signup_display_date = signup.signed_up_at|utc_to_local %}
-                {% if signup_display_date %}
-                  {{ signup_display_date.strftime('%Y-%m-%d') }}
-                {% else %}
-                  <span class="text-muted">Unknown</span>
-                {% endif %}
-              </td>
-              <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-                {{ signup.activity.name if signup.activity else 'Unknown' }}
-              </td>
-              <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
-                {% set status = signup.status or 'pending' %}
-                {% set is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first' %}
-                {% if status == 'approved' %}
-                  <span class="badge bg-green-lt text-green-lt-fg">Approved</span>
-                {% elif status == 'pending' and is_payment_first %}
-                  <span class="badge bg-azure-lt text-azure-lt-fg">Awaiting Payment</span>
-                {% elif status == 'pending' %}
-                  <span class="badge bg-yellow-lt text-yellow-lt-fg">Pending Approval</span>
-                {% elif status == 'rejected' %}
-                  <span class="badge bg-red-lt text-red-lt-fg">Rejected</span>
-                {% else %}
-                  <span class="badge bg-secondary-lt">{{ status.title() }}</span>
-                {% endif %}
-              </td>
-              <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-                {% if signup.requested_amount %}
-                  ${{ "%.0f"|format(signup.requested_amount) }}
-                {% else %}
-                  <span class="text-muted">-</span>
-                {% endif %}
-              </td>
-              <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-                {% if signup.passport_type_id %}
-                  {% set passport_type = passport_types|selectattr('id', 'equalto', signup.passport_type_id)|first %}
-                  {% if passport_type %}
-                    {{ signup.requested_sessions or passport_type.sessions_included }}
-                  {% else %}
-                    <span class="text-muted">-</span>
-                  {% endif %}
-                {% else %}
-                  <span class="text-muted">-</span>
-                {% endif %}
-              </td>
-              <td class="text-center" style="vertical-align: middle;">
-                <div class="dropdown d-inline-block">
-                  <a href="#" class="btn btn-outline-secondary btn-icon" data-bs-toggle="dropdown" aria-label="Actions">
-                    <i class="ti ti-dots-vertical"></i>
-                  </a>
-                  <div class="dropdown-menu dropdown-menu-end">
-                    {% if signup.status == 'pending' %}
-                      {% if is_payment_first %}
-                      <button type="button" class="dropdown-item text-azure"
-                              data-bs-toggle="modal"
-                              data-bs-target="#approveSignupModal"
-                              data-user-name="{{ signup.user.name or 'this user' }}"
-                              data-approve-url="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
-                              data-workflow-type="payment_first">
-                        <i class="ti ti-cash me-2"></i>Mark Paid & Create Passport
-                      </button>
-                      {% else %}
-                      <button type="button" class="dropdown-item text-primary"
-                              data-bs-toggle="modal"
-                              data-bs-target="#approveSignupModal"
-                              data-user-name="{{ signup.user.name or 'this user' }}"
-                              data-approve-url="{{ url_for('approve_and_create_pass', signup_id=signup.id) }}"
-                              data-workflow-type="standard">
-                        <i class="ti ti-check me-2"></i>Approve & Create Passport
-                      </button>
-                      {% endif %}
-                    {% endif %}
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-danger" href="#"
-                       onclick="confirmSignupDelete({{ signup.id }}, '{{ signup.user.email or signup.user.name or 'Unknown user' }}'); return false;">
-                      <i class="ti ti-trash me-2"></i>Delete
-                    </a>
-                  </div>
-                </div>
-                <!-- Hidden delete form -->
-                <form id="deleteForm{{ signup.id }}" method="POST" action="{{ url_for('bulk_signup_action') }}" style="display: none;">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="action" value="delete">
-                  <input type="hidden" name="selected_signups" value="{{ signup.id }}">
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        </div>
-        
-        <!-- Pagination -->
-        {% set signup_filters = current_filters.copy() %}
-        {% set _ = signup_filters.update({'passport_page': request.args.get('passport_page', 1)}) %}
-        {{ render_pagination(signup_pagination, signup_filters, signups, page_param='signup_page') }}
-      </div>
 
-      <!-- Empty State - Only show when there are NO signups at all for this activity -->
-      {% if signups|length == 0 %}
-      <div class="card">
-        <div class="empty">
-          <div class="empty-icon">
-            <i class="ti ti-users-off"></i>
+        {% if not signup_rows %}
+          {{ table_empty_state(icon="ti-users-off",
+             title="No signups found",
+             description="Signups will appear here when users register for this activity.") }}
+        {% else %}
+          {% set signup_columns = [
+            {"label": "Created", "class": "d-none d-md-table-cell"},
+            {"label": "Activity", "class": "d-none d-md-table-cell"},
+            {"label": "Status", "class": "d-none d-lg-table-cell text-center"},
+            {"label": "Amount", "class": "d-none d-md-table-cell text-center"},
+            {"label": "Remain", "class": "d-none d-md-table-cell text-center"}
+          ] %}
+          {% set signup_filters = current_filters.copy() %}
+          {% set _ = signup_filters.update({'passport_page': request.args.get('passport_page', 1)}) %}
+          <div class="d-none d-md-block">
+            {{ table_desktop(id="signups-table", columns=signup_columns, rows=signup_rows) }}
+            {{ pagination_desktop(page=signup_pagination.page, pages=signup_pagination.pages, per_page=signup_pagination.per_page,
+               total=signup_pagination.total, items_count=signup_rows|length, base_path=url_for('activity_dashboard', activity_id=activity.id),
+               filters=signup_filters, page_param='signup_page') }}
           </div>
-          <p class="empty-title">No signups found</p>
-          <p class="empty-subtitle">
-            Signups will appear here when users register for this activity
-          </p>
-        </div>
+          <div class="d-md-none">
+            {{ table_mobile(id="signups-table-mobile", rows=signup_rows) }}
+            {{ pagination_mobile(page=signup_pagination.page, pages=signup_pagination.pages, per_page=signup_pagination.per_page,
+               total=signup_pagination.total, items_count=signup_rows|length, base_path=url_for('activity_dashboard', activity_id=activity.id),
+               filters=signup_filters, page_param='signup_page') }}
+          </div>
+        {% endif %}
       </div>
-      {% endif %}
       {% endif %}
 
 
@@ -1701,6 +629,36 @@ div.dropdown-divider {
 
 
 <script>
+function showNotification(type, message) {
+  const notification = document.createElement('div');
+  const typeClass = type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'info' ? 'info' : 'danger';
+  const icon = type === 'success' ? 'check' : type === 'warning' ? 'alert-triangle' : type === 'info' ? 'info-circle' : 'alert-circle';
+  const title = type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : type === 'info' ? 'Info' : 'Error!';
+
+  notification.className = `alert alert-${typeClass} alert-dismissible position-fixed top-0 end-0 m-3`;
+  notification.style.zIndex = '9999';
+  notification.style.minWidth = '300px';
+  notification.innerHTML = `
+    <div class="d-flex">
+      <div>
+        <i class="ti ti-${icon} alert-icon"></i>
+      </div>
+      <div>
+        <h4 class="alert-title">${title}</h4>
+        <div class="text-muted">${message}</div>
+      </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+
+  document.body.appendChild(notification);
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 5000);
+}
+
 // Copy location to clipboard with feedback
 function copyLocationToClipboard(event, location) {
   event.preventDefault();
@@ -1723,659 +681,12 @@ function copyDiscordInvite(event, url) {
   });
 }
 
-// Toggle dropdown for passport types
-document.addEventListener('click', function(e) {
-  const dropdownStat = e.target.closest('.stat-dropdown');
-  if (dropdownStat) {
-    const menu = dropdownStat.querySelector('.stat-dropdown-menu');
-    if (menu) {
-      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-    }
-  } else {
-    document.querySelectorAll('.stat-dropdown-menu').forEach(m => m.style.display = 'none');
-  }
-});
-
-// Store KPI data from backend as global variable
-window.kpiData = {{ kpi_data | tojson | safe }};
-const kpiData = window.kpiData;
-console.log('KPI Data loaded:', kpiData);
-
-// Store logs data for pagination
-const allLogs = {{ logs | tojson | safe }};
-let currentPeriod = '7d';
-
-// Function to generate interactive line chart with hover points
-function generateInteractiveLineChart(data, width = 300, height = 40, chartId = '') {
-  if (!data || data.length === 0) return { path: '', points: [] };
-  
-  // Find min and max for scaling
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  
-  // Generate path coordinates and hover points
-  const coordinates = [];
-  const hoverPoints = [];
-  
-  data.forEach((value, index) => {
-    const x = (index / (data.length - 1)) * width;
-    const y = height - ((value - min) / range) * (height - 10) - 5;
-    
-    coordinates.push(`${index === 0 ? 'M' : 'L'} ${x},${y}`);
-    hoverPoints.push({ x, y, value, index });
-  });
-  
-  return {
-    path: coordinates.join(' '),
-    points: hoverPoints
-  };
-}
-
-// Legacy function for backward compatibility
-function generateLineChart(data, width = 300, height = 40) {
-  const result = generateInteractiveLineChart(data, width, height);
-  return result.path;
-}
-
-// Tooltip management functions
-function createTooltip() {
-  let tooltip = document.getElementById('chart-tooltip');
-  if (!tooltip) {
-    tooltip = document.createElement('div');
-    tooltip.id = 'chart-tooltip';
-    tooltip.className = 'chart-tooltip';
-    tooltip.style.cssText = `
-      position: absolute;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      pointer-events: none;
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      white-space: nowrap;
-    `;
-    document.body.appendChild(tooltip);
-  }
-  return tooltip;
-}
-
-function showTooltip(x, y, value, period, index) {
-  const tooltip = createTooltip();
-  const formattedValue = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value);
-  
-  // Calculate the date based on period and index
-  const daysAgo = parseInt(period) - index - 1;
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  const formattedDate = date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric'
-  });
-  
-  tooltip.innerHTML = `${formattedValue}<br><small>${formattedDate}</small>`;
-  tooltip.style.left = `${x}px`;
-  tooltip.style.top = `${y - 10}px`;
-  tooltip.style.opacity = '1';
-}
-
-function hideTooltip() {
-  const tooltip = document.getElementById('chart-tooltip');
-  if (tooltip) {
-    tooltip.style.opacity = '0';
-  }
-}
-
-// Function to generate bar chart SVG rectangles
-function generateBarChart(data, width = 300, height = 40) {
-  if (!data || data.length === 0) return '';
-  
-  const max = Math.max(...data) || 1;
-  const barWidth = (width - (data.length - 1) * 2) / data.length;
-  
-  let svg = '';
-  data.forEach((value, index) => {
-    const barHeight = (value / max) * (height - 5);
-    const x = index * (barWidth + 2);
-    const y = height - barHeight;
-    svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#206bc4" opacity="0.8" />`;
-  });
-  
-  return svg;
-}
-
-// Handle period dropdown clicks with smooth transitions
-function attachDropdownHandlers() {
-  // Find all dropdown items in KPI cards
-  document.querySelectorAll('.kpi-period-btn').forEach(item => {
-    item.addEventListener('click', function(e) {
-      e.preventDefault();
-      
-      // Prevent multiple rapid clicks
-      if (this.classList.contains('loading')) return;
-      this.classList.add('loading');
-      
-      // Get period from data attribute
-      const period = this.getAttribute('data-period');
-      const text = this.textContent.trim();
-      
-      // Find the specific KPI card this dropdown belongs to
-      const cardElement = this.closest('.card');
-      
-      // Add null check to prevent TypeError
-      if (!cardElement) {
-        console.error('Could not find card element for KPI dropdown');
-        this.classList.remove('loading');
-        return;
-      }
-      
-      const kpiType = this.getAttribute('data-card-type') || determineKPIType(cardElement);
-      
-      // Update button text with loading state
-      const button = this.closest('.dropdown')?.querySelector('.dropdown-toggle');
-      if (button) {
-        button.style.opacity = '0.7';
-        button.textContent = text + ' ...';
-      }
-      
-      // Update ONLY this specific KPI card by fetching new data
-      updateKPICard(period, kpiType, cardElement);
-      
-      // Reset loading state and button text
-      setTimeout(() => {
-        this.classList.remove('loading');
-        if (button) {
-          button.style.opacity = '1';
-          button.textContent = text;
-        }
-      }, 300);
-    });
-  });
-}
-
-function showKPILoadingForCard(cardElement) {
-  // Add null check to prevent errors
-  if (!cardElement) {
-    console.error('showKPILoadingForCard called with null cardElement');
-    return;
-  }
-  
-  // Show loading for specific card only
-  const valueEl = cardElement.querySelector('.h2');
-  // Find trend element using ID-based selectors
-  const trendEl = cardElement.querySelector('[id*="-trend"]');
-  const chartEl = cardElement.querySelector('[id*="-chart"]');
-  
-  if (valueEl) valueEl.style.opacity = '0.6';
-  if (trendEl) trendEl.style.opacity = '0.6';
-  if (chartEl) chartEl.style.opacity = '0.3';
-}
-
-function hideKPILoadingForCard(cardElement) {
-  // Add null check to prevent errors
-  if (!cardElement) {
-    console.error('hideKPILoadingForCard called with null cardElement');
-    return;
-  }
-  
-  // Hide loading for specific card only
-  const valueEl = cardElement.querySelector('.h2');
-  // Find trend element using ID-based selectors
-  const trendEl = cardElement.querySelector('[id*="-trend"]');
-  const chartEl = cardElement.querySelector('[id*="-chart"]');
-  
-  if (valueEl) valueEl.style.opacity = '1';
-  if (trendEl) trendEl.style.opacity = '1';
-  if (chartEl) chartEl.style.opacity = '1';
-}
-
-// CRITICAL: This function ensures individual card updates without cross-contamination
-// It identifies which specific KPI card was clicked to enable targeted updates
-function determineKPIType(cardElement) {
-  // Add null check to prevent errors
-  if (!cardElement) {
-    console.error('determineKPIType called with null cardElement');
-    return 'revenue'; // fallback
-  }
-  
-  // Prefer data-kpi-card attribute (reliable, rename-proof)
-  const dataAttr = cardElement.getAttribute('data-kpi-card');
-  if (dataAttr) return dataAttr;
-  // Fallback to text matching
-  const cardText = cardElement.textContent.toLowerCase();
-  if (cardText.includes('revenue')) return 'revenue';
-  if (cardText.includes('active')) return 'active_passports';
-  if (cardText.includes('redeemed')) return 'passports_redeemed';
-  if (cardText.includes('created')) return 'passports_created';
-  if (cardText.includes('unpaid') || cardText.includes('pending')) return 'pending_signups';
-  return 'revenue'; // fallback
-}
-
-// Function to update a specific KPI card with new data from API
-async function updateKPICard(period, kpiType, cardElement) {
-  console.log(`🔄 updateKPICard called - Period: ${period}, Type: ${kpiType}`);
-  try {
-    showKPILoadingForCard(cardElement);
-    
-    // Get activity_id if we're on activity dashboard
-    const activityId = window.location.pathname.includes('activity-dashboard') 
-      ? window.location.pathname.split('/').pop() 
-      : null;
-    
-    // Build API URL
-    let apiUrl = `/api/kpi-data?period=${period}`;
-    if (activityId) {
-      apiUrl += `&activity_id=${activityId}`;
-    }
-    
-    // Fetch new KPI data
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      throw new Error(`API call failed: ${response.status}`);
-    }
-    
-    const result = await response.json();
-    console.log('📦 API Response:', result);
-    if (!result.success) {
-      throw new Error(result.error || 'API returned error');
-    }
-    
-    // Map frontend card types to API data keys
-    const apiKeyMapping = {
-      'revenue': 'revenue',
-      'active_passports': 'active_users',
-      'passports_created': 'passports_created',
-      'passports_redeemed': 'passports_redeemed',
-      'pending_signups': 'unpaid_passports'
-    };
-    
-    const apiKey = apiKeyMapping[kpiType] || kpiType;
-    const kpiData = result.kpi_data[apiKey];
-    console.log(`📈 KPI Data for ${kpiType} (API key: ${apiKey}):`, kpiData);
-    if (!kpiData) {
-      throw new Error(`No data found for KPI type: ${kpiType} (API key: ${apiKey})`);
-    }
-    
-    // Update card value with specific ID selectors
-    let valueElement = null;
-    if (kpiType === 'revenue') {
-      valueElement = cardElement.querySelector('#revenue-value');
-    } else if (kpiType === 'active_passports') {
-      valueElement = cardElement.querySelector('#active-passports-value');
-    } else if (kpiType === 'passports_created') {
-      valueElement = cardElement.querySelector('#passports-created-value');
-    } else if (kpiType === 'passports_redeemed') {
-      valueElement = cardElement.querySelector('#passports-redeemed-value');
-    } else if (kpiType === 'pending_signups') {
-      valueElement = cardElement.querySelector('#pending-signups-value');
-    }
-    
-    if (valueElement) {
-      let formattedValue = kpiData.current;
-      if (kpiType === 'revenue') {
-        formattedValue = `$${Math.round(kpiData.current).toLocaleString()}`;
-      } else {
-        formattedValue = Math.round(kpiData.current).toLocaleString();
-      }
-      valueElement.textContent = formattedValue;
-    }
-    
-    // Also update mobile card values
-    let mobileValueElement = null;
-    if (kpiType === 'revenue') {
-      mobileValueElement = document.querySelector('#mobile-revenue-value');
-    } else if (kpiType === 'active_passports') {
-      mobileValueElement = document.querySelector('#mobile-active-value');
-    } else if (kpiType === 'passports_created') {
-      mobileValueElement = document.querySelector('#mobile-created-value');
-    } else if (kpiType === 'passports_redeemed') {
-      mobileValueElement = document.querySelector('#mobile-redeemed-value');
-    } else if (kpiType === 'pending_signups') {
-      mobileValueElement = document.querySelector('#mobile-pending-value');
-    }
-    
-    if (mobileValueElement) {
-      let formattedValue = kpiData.current;
-      if (kpiType === 'revenue') {
-        formattedValue = `$${Math.round(kpiData.current).toLocaleString()}`;
-      } else {
-        formattedValue = Math.round(kpiData.current).toLocaleString();
-      }
-      mobileValueElement.textContent = formattedValue;
-    }
-    
-    // Update performance indicator with proper color and arrow
-    // Use specific ID-based selectors to avoid overwriting title elements
-    let trendElement = null;
-    if (kpiType === 'revenue') {
-      trendElement = cardElement.querySelector('#revenue-trend');
-    } else if (kpiType === 'active_passports') {
-      trendElement = cardElement.querySelector('#active-passports-trend');
-    } else if (kpiType === 'passports_created') {
-      trendElement = cardElement.querySelector('#passports-created-trend');
-    } else if (kpiType === 'passports_redeemed') {
-      trendElement = cardElement.querySelector('#passports-redeemed-trend');
-    } else if (kpiType === 'pending_signups') {
-      trendElement = cardElement.querySelector('#pending-signups-trend');
-    }
-    
-    if (trendElement && kpiData.change !== null && kpiData.change !== undefined) {
-      let trendClass = 'text-muted me-2';
-      let icon = 'ti-minus';
-      let changeText = '--';
-
-      if (kpiData.change > 0) {
-        trendClass = 'text-success me-2';
-        icon = 'ti-trending-up';
-        changeText = `${Math.round(Math.abs(kpiData.change))}%`;
-      } else if (kpiData.change < 0) {
-        trendClass = 'text-danger me-2';
-        icon = 'ti-trending-down';
-        changeText = `${Math.round(Math.abs(kpiData.change))}%`;
-      } else if (kpiData.change === 0) {
-        changeText = '0%';
-      }
-
-      trendElement.style.visibility = 'visible';
-      trendElement.className = trendClass;
-      trendElement.innerHTML = `${changeText} <i class="ti ${icon}"></i>`;
-    } else if (trendElement) {
-      trendElement.style.visibility = 'hidden';
-    }
-
-    // Update chart with new trend data
-    updateSingleChart(cardElement, kpiData, kpiType);
-    
-    // Update dropdown button text
-    const dropdownButton = cardElement.querySelector('.dropdown-toggle');
-    if (dropdownButton) {
-      const periodTexts = {
-        '7d': 'Last 7 days',
-        '30d': 'Last 30 days', 
-        '90d': 'Last 90 days',
-        'all': 'All time'
-      };
-      dropdownButton.textContent = periodTexts[period] || period;
-    }
-    
-    // Also update mobile period labels
-    let mobilePeriodElement = null;
-    if (kpiType === 'revenue') {
-      mobilePeriodElement = document.querySelector('#mobile-revenue-period');
-    } else if (kpiType === 'active_passports') {
-      mobilePeriodElement = document.querySelector('#mobile-active-period');
-    } else if (kpiType === 'passports_created') {
-      mobilePeriodElement = document.querySelector('#mobile-created-period');
-    } else if (kpiType === 'passports_redeemed') {
-      mobilePeriodElement = document.querySelector('#mobile-redeemed-period');
-    } else if (kpiType === 'pending_signups') {
-      mobilePeriodElement = document.querySelector('#mobile-pending-period');
-    }
-    
-    if (mobilePeriodElement) {
-      const periodTexts = {
-        '7d': 'Last 7 days',
-        '30d': 'Last 30 days',
-        '90d': 'Last 90 days',
-        'all': 'All time'
-      };
-      mobilePeriodElement.textContent = periodTexts[period] || period;
-    }
-    
-    hideKPILoadingForCard(cardElement);
-    
-  } catch (error) {
-    console.error('Error updating KPI card:', error);
-    hideKPILoadingForCard(cardElement);
-    
-    // Show error state
-    const trendElement = cardElement.querySelector('.d-flex .text-success, .d-flex .text-danger, .d-flex .text-muted');
-    if (trendElement) {
-      trendElement.className = 'text-danger me-2';
-      trendElement.innerHTML = 'Error <i class="ti ti-alert-circle"></i>';
-    }
-  }
-}
-
-// Function to update a single chart in a KPI card
-function updateSingleChart(cardElement, kpiData, kpiType) {
-  const chartElement = cardElement.querySelector('[id*="-chart"]');
-  if (!chartElement || !kpiData.trend_data || kpiData.trend_data.length === 0) {
-    return;
-  }
-  
-  // Clear existing chart
-  chartElement.innerHTML = '';
-  
-  if (kpiType === 'revenue') {
-    // Line chart for revenue
-    const options = {
-      series: [{ 
-        name: 'Revenue',
-        data: kpiData.trend_data 
-      }],
-      chart: { 
-        type: 'area', 
-        height: 40, 
-        sparkline: { enabled: true },
-        toolbar: { show: false },
-        parentHeightOffset: 0,
-        offsetX: 0,
-        offsetY: 0
-      },
-      stroke: {
-        width: 1.5,
-        curve: 'smooth'
-      },
-      colors: ['#206bc4'],
-      tooltip: {
-        enabled: true,
-        y: {
-          formatter: (val) => `$${Math.round(val).toLocaleString()}`
-        }
-      },
-      grid: {
-        show: false,
-        padding: {
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0
-        }
-      },
-      markers: {
-        size: 0
-      },
-      dataLabels: {
-        enabled: false
-      }
-    };
-    
-    const chart = new ApexCharts(chartElement, options);
-    chart.render();
-  } else {
-    // Bar chart for other KPIs
-    const options = {
-      series: [{ 
-        name: kpiType === 'pending_signups' ? 'Unpaid Passports' : kpiType.replace('_', ' '),
-        data: kpiData.trend_data 
-      }],
-      chart: { 
-        type: 'bar', 
-        height: 40, 
-        sparkline: { enabled: true },
-        toolbar: { show: false },
-        parentHeightOffset: 0,
-        offsetX: 0,
-        offsetY: 0
-      },
-      plotOptions: {
-        bar: {
-          borderRadius: 2,
-          columnWidth: '60%'
-        }
-      },
-      colors: ['#206bc4'],
-      tooltip: {
-        enabled: true,
-        y: {
-          formatter: (val) => (val || 0).toString()
-        }
-      },
-      grid: {
-        show: false,
-        padding: {
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0
-        }
-      },
-      dataLabels: {
-        enabled: false
-      }
-    };
-    
-    const chart = new ApexCharts(chartElement, options);
-    chart.render();
-  }
-}
-
-// Initialize ApexCharts on page load - Fixed with debugging
-function initializeApexCharts() {
-  console.log('🔍 Debugging KPI Data Structure:');
-  console.log('Full kpiData:', JSON.stringify(window.kpiData, null, 2));
-  
-  if (!window.kpiData || typeof ApexCharts === 'undefined') {
-    console.error('❌ Missing kpiData or ApexCharts library');
-    return;
-  }
-  
-  // Ensure charts render even with empty/null data
-  ['revenue', 'active_users', 'passports_created', 'passports_redeemed', 'unpaid_passports'].forEach(key => {
-    const chartId = key === 'revenue' ? '#revenue-chart' :
-                    key === 'active_users' ? '#active-passports-chart' :
-                    key === 'passports_created' ? '#passports-created-chart' :
-                    key === 'passports_redeemed' ? '#passports-redeemed-chart' : '#pending-signups-chart';
-    const el = document.querySelector(chartId);
-    console.log(`Chart ${key}: element=${el ? 'found' : 'missing'}, data=${kpiData[key] ? 'exists' : 'null'}`);
-    
-    if (el) {
-      const kpiItem = kpiData[key];
-      const data = (kpiItem && kpiItem.trend_data && kpiItem.trend_data.length > 0) ? kpiItem.trend_data : [0];
-      console.log(`  Rendering ${key} with data:`, data);
-      
-      new ApexCharts(el, {
-        series: [{data: data}], 
-        chart: {type: key === 'revenue' ? 'area' : 'bar', height: 40, sparkline: {enabled: true}}, 
-        colors: ['#206bc4']
-      }).render();
-    }
-  });
-}
-
-// Simple mobile carousel - swipe handling only (< 20 lines)
-function initializeMobileCarousel() {
-  const carousel = document.querySelector('.mobile-kpi-scroll');
-  const dots = document.querySelectorAll('.mobile-dot');
-  if (carousel && window.innerWidth < 768) {
-    carousel.addEventListener('scroll', () => {
-      const cardWidth = carousel.querySelector('.mobile-kpi-card').offsetWidth + 16;
-      const index = Math.min(dots.length - 1, Math.round(carousel.scrollLeft / cardWidth));
-      dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
-    });
-  }
-}
-
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('ActivityDashboard: DOM ready, initializing...');
-  
-  // Initialize KPI charts and handlers
-  console.log('Initializing KPI charts...');
-  initializeApexCharts();
-  attachDropdownHandlers();
-  initializeMobileCarousel();
-  
-  try {
-    // Initialize dashboard with standard components
-    initializeActivityDashboard();
-    console.log('ActivityDashboard: Main dashboard initialized');
-  } catch (error) {
-    console.error('ActivityDashboard: Failed to initialize main dashboard:', error);
-  }
-  
-  
-  try {
-    // Initialize modern header features
-    initializeModernHeader();
-    console.log('ActivityDashboard: Modern header initialized');
-  } catch (error) {
-    console.error('ActivityDashboard: Failed to initialize modern header:', error);
-  }
-
-  // Initialize search component with filter preservation
-  if (window.SearchComponent) {
-    try {
-      window.SearchComponent.init({
-        formId: 'dynamicSearchForm',
-        inputId: 'enhancedSearchInput',
-        preserveParams: ['passport_filter', 'signup_filter']
-      });
-      console.log('ActivityDashboard: SearchComponent initialized with filter preservation');
-    } catch (error) {
-      console.error('ActivityDashboard: Failed to initialize SearchComponent:', error);
-    }
-  } else {
-    console.warn('ActivityDashboard: SearchComponent not available');
-  }
-
-  // Initialize filter component for server-side filtering
-  if (window.FilterComponent) {
-    try {
-      window.FilterComponent.init({
-        filterClass: 'github-filter-btn',
-        mode: 'server',
-        preserveScrollPosition: true,
-        enableSearchPreservation: true
-      });
-      console.log('ActivityDashboard: FilterComponent initialized in server mode');
-    } catch (error) {
-      console.error('ActivityDashboard: Failed to initialize FilterComponent:', error);
-    }
-  } else {
-    console.warn('ActivityDashboard: FilterComponent not available');
-  }
-
-  console.log('ActivityDashboard: All initialization complete');
-  
-  // Test Ctrl+K functionality after initialization
-  setTimeout(() => {
-    console.log('ActivityDashboard: Testing Ctrl+K shortcut registration...');
-    const searchInput = document.getElementById('enhancedSearchInput');
-    if (searchInput) {
-      console.log('ActivityDashboard: Search input found, Ctrl+K should work');
-    } else {
-      console.error('ActivityDashboard: Search input not found!');
-    }
-  }, 1000);
-});
-
-
-// Initialize modern header features
-function initializeModernHeader() {
   // Initialize Bootstrap tooltips for participant avatars
   const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
+  tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+    new bootstrap.Tooltip(tooltipTriggerEl);
   });
 
   // Countdown timer for next session
@@ -2385,34 +696,9 @@ function initializeModernHeader() {
     setInterval(updateCountdown, 60000); // Update every minute
   }
 
-  // Smooth scroll for progress indicator
+  // Smooth scroll-in for progress indicator
   animateProgressBar();
-}
-
-// Share activity function
-function shareActivity() {
-  const activityId = {{ activity.id }};
-  const signupUrl = window.location.origin + '/signup/' + activityId;
-  
-  navigator.clipboard.writeText(signupUrl).then(function() {
-    showNotification('success', 'Signup link copied to clipboard!');
-  }).catch(function(err) {
-    // Fallback for older browsers
-    const textArea = document.createElement('textarea');
-    textArea.value = signupUrl;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      showNotification('success', 'Signup link copied to clipboard!');
-    } catch (err) {
-      showNotification('error', 'Failed to copy link');
-    }
-    document.body.removeChild(textArea);
-  });
-}
+});
 
 // Update countdown timer
 function updateCountdown() {
@@ -2461,860 +747,10 @@ function animateProgressBar() {
   }
 }
 
-function initializeActivityDashboard() {
-  // FOR ACTIVITY DASHBOARD: Use custom AJAX search instead of SearchComponent
-  // to avoid page reloads and integrate with filter system
-  console.log('ActivityDashboard: Setting up custom AJAX search');
-  
-  const searchInput = document.getElementById('enhancedSearchInput');
-  const searchForm = document.getElementById('dynamicSearchForm');
-  
-  // Initialize sound effect for Ctrl+K
-  let searchSound = null;
-  try {
-    searchSound = new Audio('/static/beep.wav');
-    searchSound.volume = 0.3;
-    console.log('ActivityDashboard: Sound effect initialized');
-  } catch (err) {
-    console.warn('ActivityDashboard: Audio not available');
-  }
-  
-  if (searchInput) {
-    // Set up Ctrl+K keyboard shortcut manually
-    document.addEventListener('keydown', function(e) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        console.log('ActivityDashboard: Ctrl+K pressed - focusing search');
-        searchInput.focus();
-        searchInput.select();
-        
-        // Play sound effect (matching other pages)
-        if (searchSound) {
-          try {
-            searchSound.currentTime = 0;
-            searchSound.play().catch(() => {
-              // Silently fail if audio can't play
-              console.log('ActivityDashboard: Could not play sound (browser may block autoplay)');
-            });
-          } catch (err) {
-            // Ignore audio errors
-          }
-        }
-        
-        // Add glow effect
-        searchInput.classList.add('search-glow-active');
-        setTimeout(() => {
-          searchInput.classList.remove('search-glow-active');
-        }, 800);
-      }
-    });
-    
-    // Set up search input handling
-    let searchTimeout;
-    searchInput.addEventListener('input', function(e) {
-      const query = e.target.value.trim();
-      
-      // Clear previous timeout
-      clearTimeout(searchTimeout);
-      
-      // Update UI feedback
-      updateSearchUI(query);
-      
-      // Debounce search
-      if (query.length === 0) {
-        // Clear search immediately
-        searchTimeout = setTimeout(() => performActivitySearch(''), 150);
-      } else if (query.length >= 3) {
-        // Search after delay
-        searchTimeout = setTimeout(() => performActivitySearch(query), 250);
-      }
-    });
-    
-    // Handle Enter key
-    searchInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        clearTimeout(searchTimeout);
-        const query = e.target.value.trim();
-        if (query.length >= 3 || query.length === 0) {
-          performActivitySearch(query);
-        }
-      }
-    });
-    
-    // Handle clear button
-    const clearBtn = document.getElementById('searchClearBtn');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        searchInput.value = '';
-        searchInput.focus();
-        updateSearchUI('');
-        
-        // Add glow effect
-        searchInput.classList.add('search-glow-active');
-        setTimeout(() => {
-          searchInput.classList.remove('search-glow-active');
-        }, 800);
-        
-        performActivitySearch('');
-      });
-    }
-    
-    // Prevent form submission
-    if (searchForm) {
-      searchForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const query = searchInput.value.trim();
-        if (query.length >= 3 || query.length === 0) {
-          performActivitySearch(query);
-        }
-      });
-    }
-    
-    console.log('ActivityDashboard: Custom search initialized successfully');
-  } else {
-    console.warn('ActivityDashboard: Search input not found');
-  }
-  
-  // FilterComponent initialization moved to bottom of page
-  
-  // Initialize filter tabs (if any)
-  const filterTabs = document.querySelectorAll('.filter-pills .nav-link');
-  if (filterTabs.length > 0) {
-    filterTabs.forEach(tab => {
-      tab.addEventListener('click', handleFilterChange);
-    });
-  }
-  
-  // Add click handlers for specific client-side actions
-  document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
-    item.addEventListener('click', handleUserAction);
-  });
-}
-
-// AJAX filter functions for activity dashboard
-// NOTE: filterPassports() removed - now using server-side filtering with FilterComponent
-// Old AJAX-based filtering replaced with direct URL navigation for better reliability
-// See FilterComponent.init() in DOMContentLoaded for new implementation
-
-function filterSignups(filterType) {
-  console.log('Filtering signups:', filterType);
-  
-  // Update active filter button
-  document.querySelectorAll('#signup-filter-all, #signup-filter-pending, #signup-filter-approved').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  document.getElementById('signup-filter-' + filterType).classList.add('active');
-  
-  loadFilteredData('signup', filterType);
-}
-
-function loadFilteredData(category, filterType) {
-  // NOTE: Passport filtering now uses server-side (FilterComponent), this function only handles signups
-  if (category === 'passport') {
-    console.warn('loadFilteredData called for passports - should use server-side filtering now');
-    return;
-  }
-
-  // Show loading state on the appropriate table section
-  let tableContainer;
-  // Find the signup table container (second .card.main-table-card or search by signup context)
-  const allCards = document.querySelectorAll('div.card.main-table-card');
-  const signupCard = allCards.length > 1 ? allCards[1] :
-                     document.querySelector('h2:contains("Signups") + .card');
-  tableContainer = signupCard ? signupCard.querySelector('.table-responsive') : null;
-  
-  if (tableContainer) {
-    tableContainer.style.opacity = '0.6';
-    tableContainer.style.pointerEvents = 'none';
-  }
-
-  // Get current search query if any
-  const searchInput = document.getElementById('enhancedSearchInput');
-  const searchQuery = searchInput ? searchInput.value.trim() : '';
-  
-  // Get current URL params
-  const currentParams = new URLSearchParams(window.location.search);
-  
-  // Build new params for signup filtering
-  const params = new URLSearchParams();
-
-  params.set('signup_filter', filterType);
-  // Preserve passport filter
-  if (currentParams.has('passport_filter')) {
-    params.set('passport_filter', currentParams.get('passport_filter'));
-  }
-  
-  // Add search query if present
-  if (searchQuery && searchQuery.length >= 3) {
-    params.set('q', searchQuery);
-  }
-  
-  // Make AJAX request to get filtered data
-  const activityId = {{ activity.id }};
-  const url = `/api/activity-dashboard-data/${activityId}?${params.toString()}`;
-  
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Update signup table (passports now use server-side filtering)
-        const allCards = document.querySelectorAll('div.card.main-table-card');
-        const signupCard = allCards.length > 1 ? allCards[1] : null;
-        const signupTableBody = signupCard ? signupCard.querySelector('tbody') : null;
-        if (signupTableBody && data.signup_html) {
-          signupTableBody.innerHTML = data.signup_html;
-        }
-
-        // Update signup filter counts
-        if (data.signup_counts) {
-          updateFilterCounts('signup', data.signup_counts);
-        }
-
-        // Update URL without page reload
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.set('signup_filter', filterType);
-        if (searchQuery && searchQuery.length >= 3) {
-          newUrl.searchParams.set('q', searchQuery);
-        } else {
-          newUrl.searchParams.delete('q');
-        }
-        
-        // Update browser history
-        window.history.pushState({ category, filterType }, '', newUrl.toString());
-        
-      } else {
-        console.error('Filter request failed:', data.error);
-        // Show error message to user
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'alert alert-danger alert-dismissible fade show';
-        errorDiv.innerHTML = `
-          <strong>Filter Error:</strong> ${data.error}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        document.querySelector('.page-body').prepend(errorDiv);
-      }
-    })
-    .catch(error => {
-      console.error('Filter request error:', error);
-      // Show error message to user
-      const errorDiv = document.createElement('div');
-      errorDiv.className = 'alert alert-danger alert-dismissible fade show';
-      errorDiv.innerHTML = `
-        <strong>Network Error:</strong> Unable to apply filter. Please try again.
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      `;
-      document.querySelector('.page-body').prepend(errorDiv);
-    })
-    .finally(() => {
-      // Remove loading state
-      if (tableContainer) {
-        tableContainer.style.opacity = '1';
-        tableContainer.style.pointerEvents = 'auto';
-      }
-    });
-}
-
-function updateFilterCounts(category, counts) {
-  // Update filter button counts
-  Object.keys(counts).forEach(filterType => {
-    const count = counts[filterType];
-    const buttonId = category === 'passport' ? `filter-${filterType}` : `${category}-filter-${filterType}`;
-    const button = document.getElementById(buttonId);
-    if (button) {
-      const countSpan = button.querySelector('.filter-count');
-      if (countSpan) {
-        countSpan.textContent = `(${count})`;
-      }
-    }
-  });
-}
-
-// AJAX search function for activity dashboard
-function performActivitySearch(query) {
-  console.log('ActivityDashboard: Performing search:', query);
-  
-  // Get current filter states
-  const currentParams = new URLSearchParams(window.location.search);
-  const passportFilter = currentParams.get('passport_filter') || 'all';
-  const signupFilter = currentParams.get('signup_filter') || 'all';
-  
-  // Build search params
-  const params = new URLSearchParams();
-  params.set('passport_filter', passportFilter);
-  params.set('signup_filter', signupFilter);
-  
-  if (query && query.length >= 3) {
-    params.set('q', query);
-  }
-  
-  // Show loading state
-  const tableContainers = document.querySelectorAll('.table-responsive');
-  tableContainers.forEach(container => {
-    container.style.opacity = '0.6';
-    container.style.pointerEvents = 'none';
-  });
-  
-  // Make AJAX request
-  const activityId = {{ activity.id }};
-  const url = `/api/activity-dashboard-data/${activityId}?${params.toString()}`;
-  
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Update both tables
-        const passportCard = document.querySelector('div.card.main-table-card');
-        const passportTableBody = passportCard ? passportCard.querySelector('tbody') : null;
-        if (passportTableBody && data.passport_html) {
-          passportTableBody.innerHTML = data.passport_html;
-        }
-        
-        const allCards = document.querySelectorAll('div.card.main-table-card');
-        const signupCard = allCards.length > 1 ? allCards[1] : null;
-        const signupTableBody = signupCard ? signupCard.querySelector('tbody') : null;
-        if (signupTableBody && data.signup_html) {
-          signupTableBody.innerHTML = data.signup_html;
-        }
-        
-        // Update filter counts
-        if (data.passport_counts) {
-          updateFilterCounts('passport', data.passport_counts);
-        }
-        if (data.signup_counts) {
-          updateFilterCounts('signup', data.signup_counts);
-        }
-        
-        // Update URL
-        const newUrl = new URL(window.location);
-        if (query && query.length >= 3) {
-          newUrl.searchParams.set('q', query);
-        } else {
-          newUrl.searchParams.delete('q');
-        }
-        window.history.pushState({ search: query }, '', newUrl.toString());
-      } else {
-        console.error('Search request failed:', data.error);
-      }
-    })
-    .catch(error => {
-      console.error('Search request error:', error);
-    })
-    .finally(() => {
-      // Remove loading state
-      tableContainers.forEach(container => {
-        container.style.opacity = '1';
-        container.style.pointerEvents = 'auto';
-      });
-    });
-}
-
-function updateSearchUI(query) {
-  const charCounter = document.getElementById('searchCharCounter');
-  const kbdHint = document.getElementById('searchKbdHint');
-  const clearBtn = document.getElementById('searchClearBtn');
-  const searchInput = document.getElementById('enhancedSearchInput');
-  
-  const length = query.length;
-  
-  if (length === 0) {
-    if (charCounter) charCounter.style.display = 'none';
-    if (searchInput) searchInput.classList.remove('is-valid', 'is-invalid');
-    if (kbdHint) kbdHint.style.display = 'inline-block';
-    if (clearBtn) clearBtn.style.display = 'none';
-  } else {
-    if (kbdHint) kbdHint.style.display = 'none';
-    if (clearBtn) clearBtn.style.display = 'inline-flex';
-    
-    if (length < 3) {
-      if (charCounter) {
-        charCounter.style.display = 'inline';
-        const remaining = 3 - length;
-        charCounter.textContent = `${remaining} more char${remaining === 1 ? '' : 's'}`;
-        charCounter.className = 'text-muted';
-      }
-      if (searchInput) searchInput.classList.remove('is-valid', 'is-invalid');
-    } else {
-      if (charCounter) charCounter.style.display = 'none';
-      if (searchInput) searchInput.classList.remove('is-valid', 'is-invalid');
-    }
-  }
-}
-
-// Handle browser back/forward navigation
-window.addEventListener('popstate', function(event) {
-  if (event.state && event.state.category && event.state.filterType) {
-    // Re-apply the filter without adding to history
-    const { category, filterType } = event.state;
-    loadFilteredData(category, filterType);
-  } else if (event.state && event.state.search !== undefined) {
-    // Handle search state
-    const searchInput = document.getElementById('enhancedSearchInput');
-    if (searchInput) {
-      searchInput.value = event.state.search || '';
-      performActivitySearch(event.state.search || '');
-    }
-  } else {
-    // Full page reload for complex state changes
-    window.location.reload();
-  }
-});
-
-function updateURL(params) {
-  const url = new URL(window.location);
-  Object.keys(params).forEach(key => {
-    if (params[key] === 'all') {
-      url.searchParams.delete(key);
-    } else {
-      url.searchParams.set(key, params[key]);
-    }
-  });
-  
-  // Update URL without page reload using History API
-  history.replaceState(null, '', url.toString());
-}
-
-function showFilterError(type) {
-  // Show a subtle error message
-  const message = `Error loading ${type}. Please try again.`;
-  
-  // Create toast notification (if Tabler toast is available)
-  if (typeof Tabler !== 'undefined' && Tabler.toast) {
-    Tabler.toast(message, { type: 'danger', duration: 3000 });
-  } else {
-    // Fallback to console and could add banner
-    console.error(message);
-    // Show temporary error message in the table area
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'alert alert-danger';
-    errorDiv.innerHTML = `<i class="ti ti-alert-circle me-2"></i>${message}`;
-    errorDiv.style.position = 'fixed';
-    errorDiv.style.top = '20px';
-    errorDiv.style.right = '20px';
-    errorDiv.style.zIndex = '9999';
-    document.body.appendChild(errorDiv);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-      if (errorDiv.parentNode) {
-        errorDiv.parentNode.removeChild(errorDiv);
-      }
-    }, 3000);
-  }
-}
-
-// Filter handling
-function handleFilterChange(e) {
-  e.preventDefault();
-  
-  // Update active state
-  document.querySelectorAll('.filter-pills .nav-link').forEach(link => {
-    link.classList.remove('active');
-  });
-  e.target.classList.add('active');
-  
-  const filter = e.target.dataset.filter;
-  applyFilter(filter);
-}
-
-function applyFilter(filter) {
-  const rows = document.querySelectorAll('tbody tr');
-  
-  rows.forEach(row => {
-    const passportStatus = row.querySelector('td:nth-child(3) .badge')?.textContent.trim();
-    const paymentStatus = row.querySelector('td:nth-child(5) .badge')?.textContent.trim();
-    
-    let shouldShow = false;
-    
-    switch(filter) {
-      case 'all':
-        shouldShow = true;
-        break;
-      case 'active':
-        shouldShow = passportStatus === 'Active';
-        break;
-      case 'unpaid':
-        shouldShow = paymentStatus === 'Overdue' || passportStatus === 'Pending';
-        break;
-      case 'completed':
-        shouldShow = row.querySelector('.sessions-progress-bar')?.style.width === '0%';
-        break;
-      default:
-        shouldShow = true;
-    }
-    
-    row.style.display = shouldShow ? '' : 'none';
-  });
-  
-  updateResultCount();
-}
-
-
-// Update result count - unified approach for both mobile and desktop
-function updateResultCount() {
-  // Only update passport table count (first main-table-card)
-  const passportTable = document.querySelector('.main-table-card');
-  if (!passportTable) return;
-  
-  const visibleRows = passportTable.querySelectorAll('tbody tr:not([style*="display: none"])');
-  const totalRows = passportTable.querySelectorAll('tbody tr');
-  const visibleCount = visibleRows.length;
-  const totalCount = totalRows.length;
-  
-  const footerText = passportTable.querySelector('.card-footer .text-muted');
-  if (footerText) {
-    footerText.textContent = `Showing ${visibleCount} of ${totalCount} entries`;
-  }
-}
-
-// Enhanced search functionality migrated to SearchComponent
-
-// User actions - now handled by individual links with proper URLs
-function handleUserAction(e) {
-  const action = e.target.textContent.trim();
-  const userName = e.target.closest('tr')?.querySelector('.fw-bold')?.textContent || 'User';
-  
-  // Most actions now use direct links to Flask routes
-  // Only handle client-side actions here
-  switch(action) {
-    case 'Send Reminder':
-      showNotification('info', `Reminder request sent for ${userName}`);
-      break;
-    case 'Remove User':
-      // This would be handled by a DELETE request to the backend
-      showNotification('info', `Remove action triggered for ${userName}`);
-      break;
-  }
-}
-
-
-// Utility functions
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
-
-function showNotification(type, message) {
-  // Create notification element
-  const notification = document.createElement('div');
-  const typeClass = type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'info' ? 'info' : 'danger';
-  const icon = type === 'success' ? 'check' : type === 'warning' ? 'alert-triangle' : type === 'info' ? 'info-circle' : 'alert-circle';
-  const title = type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : type === 'info' ? 'Info' : 'Error!';
-  
-  notification.className = `alert alert-${typeClass} alert-dismissible position-fixed top-0 end-0 m-3`;
-  notification.style.zIndex = '9999';
-  notification.style.minWidth = '300px';
-  notification.innerHTML = `
-    <div class="d-flex">
-      <div>
-        <i class="ti ti-${icon} alert-icon"></i>
-      </div>
-      <div>
-        <h4 class="alert-title">${title}</h4>
-        <div class="text-muted">${message}</div>
-      </div>
-    </div>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  `;
-  
-  document.body.appendChild(notification);
-  
-  // Auto-remove after 5 seconds
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
-  }, 5000);
-}
-
-// Enhanced search with URL updates and better filtering
-function enhancedSearch(query) {
-  const rows = document.querySelectorAll('tbody tr');
-  let visibleCount = 0;
-  
-  rows.forEach(row => {
-    const userName = row.querySelector('.fw-bold')?.textContent.toLowerCase() || '';
-    const userEmail = row.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
-    const activityName = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
-    
-    const searchText = query.toLowerCase();
-    const isVisible = userName.includes(searchText) || 
-                     userEmail.includes(searchText) || 
-                     activityName.includes(searchText);
-    
-    row.style.display = isVisible ? '' : 'none';
-    if (isVisible) visibleCount++;
-  });
-  
-  // Update result count display
-  const resultInfo = document.querySelector('.card-footer .text-muted');
-  if (resultInfo) {
-    const totalRows = rows.length;
-    resultInfo.textContent = `Showing ${visibleCount} of ${totalRows} entries`;
-  }
-  
-  // Update URL without page reload for better UX
-  if (history.pushState) {
-    const url = new URL(window.location);
-    if (query) {
-      url.searchParams.set('search', query);
-    } else {
-      url.searchParams.delete('search');
-    }
-    history.pushState(null, '', url);
-  }
-  
-  return visibleCount;
-}
-
-// Function to generate interactive line chart with hover points
-function generateInteractiveLineChart(data, width = 300, height = 40, chartId = '') {
-  if (!data || data.length === 0) {
-    return { path: '', points: [] };
-  }
-  
-  // Ensure data is properly formatted and clean
-  const cleanData = data.map(val => {
-    const num = parseFloat(val);
-    return isNaN(num) ? 0 : num;
-  });
-  
-  if (cleanData.length === 0) {
-    return { path: '', points: [] };
-  }
-  
-  // Find min and max for scaling
-  const max = Math.max(...cleanData);
-  const min = Math.min(...cleanData);
-  const range = max - min || 1;
-  
-  // Generate path coordinates and hover points
-  const coordinates = [];
-  const hoverPoints = [];
-  
-  cleanData.forEach((value, index) => {
-    const x = cleanData.length === 1 ? width / 2 : (index / (cleanData.length - 1)) * width;
-    const y = height - ((value - min) / range) * (height - 10) - 5;
-    
-    // Ensure coordinates are valid numbers
-    const cleanX = isNaN(x) ? 0 : Math.round(x * 100) / 100;
-    const cleanY = isNaN(y) ? height / 2 : Math.round(y * 100) / 100;
-    
-    coordinates.push(`${index === 0 ? 'M' : 'L'} ${cleanX},${cleanY}`);
-    hoverPoints.push({ 
-      x: cleanX, 
-      y: cleanY, 
-      value: value, 
-      index: index 
-    });
-  });
-  
-  return {
-    path: coordinates.join(' '),
-    points: hoverPoints
-  };
-}
-
-
-function generateBarChart(data, width = 300, height = 40) {
-  if (!data || data.length === 0) return '';
-  
-  // Ensure data is properly formatted
-  const cleanData = data.map(val => parseFloat(val) || 0);
-  const max = Math.max(...cleanData) || 1;
-  const barWidth = Math.max(8, (width - (cleanData.length - 1) * 2) / cleanData.length);
-  
-  let svg = '';
-  cleanData.forEach((value, index) => {
-    const barHeight = Math.max(1, (value / max) * (height - 5));
-    const x = index * (barWidth + 2);
-    const y = height - barHeight;
-    svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#206bc4" opacity="0.8" />`;
-  });
-  
-  return svg;
-}
-
-function generateUnpaidBarChart(data, width = 300, height = 40) {
-  if (!data || data.length === 0) return '';
-  
-  // Ensure data is properly formatted
-  const cleanData = data.map(val => parseFloat(val) || 0);
-  const max = Math.max(...cleanData) || 1;
-  const barWidth = Math.max(8, (width - (cleanData.length - 1) * 2) / cleanData.length);
-  
-  let svg = '';
-  cleanData.forEach((value, index) => {
-    const barHeight = Math.max(1, (value / max) * (height - 5));
-    const x = index * (barWidth + 2);
-    const y = height - barHeight;
-    svg += `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="#f76707" opacity="0.8" />`;
-  });
-  
-  return svg;
-}
-
-// Tooltip management functions
-function createTooltip() {
-  let tooltip = document.getElementById('chart-tooltip');
-  if (!tooltip) {
-    tooltip = document.createElement('div');
-    tooltip.id = 'chart-tooltip';
-    tooltip.className = 'chart-tooltip';
-    tooltip.style.cssText = `
-      position: absolute;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      pointer-events: none;
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      white-space: nowrap;
-    `;
-    document.body.appendChild(tooltip);
-  }
-  return tooltip;
-}
-
-function showTooltip(x, y, value, period, index, chartType = 'revenue') {
-  const tooltip = createTooltip();
-  
-  // Format value based on chart type
-  let formattedValue;
-  if (chartType === 'revenue' || chartType === 'profit') {
-    formattedValue = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  } else {
-    formattedValue = Math.round(value).toString();
-  }
-  
-  // Calculate the date based on period and index
-  const daysAgo = parseInt(period) - index - 1;
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  const formattedDate = date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric'
-  });
-  
-  tooltip.innerHTML = `${formattedValue}<br><small>${formattedDate}</small>`;
-  tooltip.style.left = `${x}px`;
-  tooltip.style.top = `${y - 10}px`;
-  tooltip.style.opacity = '1';
-}
-
-function hideTooltip() {
-  const tooltip = document.getElementById('chart-tooltip');
-  if (tooltip) {
-    tooltip.style.opacity = '0';
-  }
-}
-
-
-
-
-
 </script>
 
 <!-- Scroll Preservation Script - DISABLED to prevent conflicts -->
 <!-- <script src="{{ url_for('static', filename='js/scroll-preservation.js') }}"></script> -->
-
-<script>
-// Initialize FilterComponent with enhanced scroll preservation
-// No anchor hash conflicts since we removed #passport-filters and #signup-filters
-if (window.FilterComponent) {
-  window.FilterComponent.init({
-    filterClass: 'github-filter-btn',
-    mode: 'ajax', // CHANGED TO AJAX MODE FOR INSTANT FILTERING
-    preserveScrollPosition: false, // Disabled for AJAX mode
-    enableSearchPreservation: true
-  });
-}
-
-// CRITICAL FIX: Force scroll restoration after page load when filter parameters are present
-// This ensures users stay at the filter button position instead of being "resurrected at the top"
-(function() {
-  // Check if we have filter parameters in the URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const hasFilterParam = urlParams.has('passport_filter') || urlParams.has('signup_filter');
-  
-  if (hasFilterParam) {
-    // Multiple restoration strategies for maximum reliability
-    const restoreScrollPosition = () => {
-      const savedPosition = sessionStorage.getItem('filterScrollPosition');
-      if (savedPosition) {
-        const targetY = parseInt(savedPosition);
-        
-        // Try multiple scroll methods
-        window.scrollTo(0, targetY);
-        document.documentElement.scrollTop = targetY;
-        document.body.scrollTop = targetY;
-        
-        console.log('Restored scroll to:', targetY);
-        
-        // Verify after a short delay
-        setTimeout(() => {
-          const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
-          if (Math.abs(currentY - targetY) > 50) {
-            // Try once more if initial attempt failed
-            window.scrollTo(0, targetY);
-            console.log('Second scroll attempt to:', targetY);
-          }
-        }, 100);
-      } else {
-        // Fallback: scroll to filter section if no saved position
-        const filterGroup = document.querySelector('.github-filter-group');
-        if (filterGroup) {
-          setTimeout(() => {
-            filterGroup.scrollIntoView({ behavior: 'instant', block: 'center' });
-            console.log('Scrolled to filter section (fallback)');
-          }, 100);
-        }
-      }
-    };
-    
-    // Execute restoration at multiple points to ensure it works
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(restoreScrollPosition, 100);
-      });
-    } else {
-      setTimeout(restoreScrollPosition, 100);
-    }
-    
-    // Also try on window load as a safety net
-    window.addEventListener('load', () => {
-      setTimeout(restoreScrollPosition, 200);
-    });
-  }
-})();
-
-// Save scroll position before leaving the page
-window.addEventListener('beforeunload', () => {
-  const scrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-  if (scrollY > 100) { // Only save if user has scrolled down
-    sessionStorage.setItem('filterScrollPosition', scrollY);
-    console.log('Saved scroll position on unload:', scrollY);
-  }
-});
-</script>
 
 
 <script>
@@ -3509,9 +945,7 @@ function confirmSignupDelete(signupId, signupUser) {
       </div>
       <div class="modal-footer" id="ann-footer">
         <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="announcementSendBtn" onclick="sendAnnouncement({{ activity.id }})">
-          <i class="ti ti-send me-1"></i>Send
-        </button>
+        {{ button("Send", id="announcementSendBtn", icon="ti-send", attrs={"onclick": "sendAnnouncement(" ~ activity.id ~ ")"}) }}
       </div>
     </div>
   </div>
@@ -3579,7 +1013,7 @@ function confirmSignupDelete(signupId, signupUser) {
       </div>
       <div class="modal-footer">
         <div class="w-100">
-          <button class="btn btn-primary w-100" data-bs-dismiss="modal">Understood</button>
+          {{ button("Understood", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
         </div>
       </div>
     </div>
@@ -3619,28 +1053,18 @@ function checkAndDeleteActivity(activityId, activityName) {
         });
 }
 
-// Share signup links functionality
-function copyToClipboard(event, element) {
+// Copy a passport-type signup link from the header's Action Menu popover
+function copyPassportTypeLink(event, element) {
   event.preventDefault();
-  event.stopPropagation();
   const url = element.dataset.url;
-  const dropdownMenu = element.closest('.stat-dropdown-menu');
 
   navigator.clipboard.writeText(url).then(() => {
-    // Close dropdown
-    if (dropdownMenu) dropdownMenu.style.display = 'none';
-
-    // Green check on the stat icon
-    const statEl = element.closest('.stat-dropdown');
-    const statIcon = statEl ? statEl.querySelector(':scope > i') : null;
-    if (statIcon) {
-      const originalClass = statIcon.className;
-      statIcon.className = 'ti ti-check';
-      statIcon.style.color = '#2fb344';
-      setTimeout(() => {
-        statIcon.className = originalClass;
-        statIcon.style.color = '';
-      }, 2000);
+    const menu = element.closest('.mp-action-menu');
+    const trigger = menu ? menu.querySelector(':scope > button') : null;
+    if (trigger) {
+      const originalHTML = trigger.innerHTML;
+      trigger.innerHTML = '<i class="ti ti-check"></i><span>Copied!</span>';
+      setTimeout(() => { trigger.innerHTML = originalHTML; }, 2000);
     }
   });
 }
@@ -3713,6 +1137,81 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/mp-kpi-card.js') }}?v=1.0"></script>
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
+<script>
+// Wire each kpi_card_desktop's period dropdown to the live /api/kpi-data
+// endpoint, scoped to this activity (see templates/dashboard.html for the
+// same pattern without activity_id).
+document.addEventListener('DOMContentLoaded', () => {
+  const KPI_API_KEYS = {
+    'kpi-revenue': 'revenue',
+    'kpi-active-passes': 'active_users',
+    'kpi-redeemed': 'passports_redeemed',
+    'kpi-unpaid': 'unpaid_passports',
+  };
+  const ACTIVITY_ID = {{ activity.id }};
+
+  Object.keys(KPI_API_KEYS).forEach((cardId) => {
+    const root = document.getElementById(cardId);
+    if (!root) return;
+    const apiKey = KPI_API_KEYS[cardId];
+
+    root.onPeriodChange = async (period) => {
+      try {
+        const response = await fetch(`/api/kpi-data?period=${period}&activity_id=${ACTIVITY_ID}`);
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'API error');
+        const data = result.kpi_data[apiKey];
+        if (!data) return;
+
+        const isCurrency = root.dataset.kpiFormat === 'currency';
+        const valueEl = document.getElementById(cardId + '-value');
+        if (valueEl) {
+          valueEl.textContent = isCurrency
+            ? '$' + Math.round(data.current).toLocaleString()
+            : Math.round(data.current).toLocaleString();
+        }
+
+        const trendEl = document.getElementById(cardId + '-trend');
+        if (trendEl) {
+          if (data.change === null || data.change === undefined) {
+            trendEl.style.visibility = 'hidden';
+            trendEl.innerHTML = '&nbsp;';
+          } else {
+            trendEl.style.visibility = '';
+            const cls = data.change > 0 ? 'is-up' : (data.change < 0 ? 'is-down' : 'is-flat');
+            const arrow = data.change > 0
+              ? '<path d="M3 17 9 11 13 15 21 7"/><path d="M15 7h6v6"/>'
+              : (data.change < 0
+                ? '<path d="M3 7 9 13 13 9 21 17"/><path d="M15 17h6v-6"/>'
+                : '<path d="M4 12h16"/>');
+            trendEl.className = 'mp-kpi-card__trend ' + cls;
+            trendEl.innerHTML = `${Math.round(Math.abs(data.change))}% <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${arrow}</svg>`;
+          }
+        }
+
+        if (typeof root.refreshChart === 'function') root.refreshChart(data.trend_data || []);
+      } catch (error) {
+        console.error('KPI period switch failed for', cardId, error);
+      }
+    };
+  });
+});
+
+// Mobile KPI dot navigation
+document.addEventListener('DOMContentLoaded', function() {
+  const scroll = document.querySelector('.mobile-kpi-scroll');
+  const dots = document.querySelectorAll('.mobile-dot');
+  if (scroll && dots.length > 0) {
+    scroll.addEventListener('scroll', () => {
+      const cardWidth = scroll.querySelector('.mobile-kpi-card').offsetWidth + 16;
+      const index = Math.min(dots.length - 1, Math.round(scroll.scrollLeft / cardWidth));
+      dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+    });
+  }
+});
+</script>
 <script>
 function showFlash(category, message) {
   var iconMap = { success: 'ti-circle-check', error: 'ti-alert-circle', warning: 'ti-alert-triangle' };

@@ -18,6 +18,9 @@
 
   The generated IDs are: <id>-preview, -options, -source, -search-panel,
   -search, -search-button, -upload-panel, -upload and -selected.
+
+  - description: optional helper text below the label (same mp-field__description
+    pattern as input.html/checkbox.html/switch.html).
 #}
 
 {% from 'macros/buttons.html' import button %}
@@ -26,9 +29,10 @@
 
 {% macro image_picker(id, label="Cover Photo", upload_name="image", selected_name=None,
                       selected_value="", image_src=None, image_alt="", placeholder_label="Add photo",
-                      search_placeholder="e.g., Hockey, Yoga…", accept="image/*", mode="search") %}
+                      search_placeholder="e.g., Hockey, Yoga…", accept="image/*", mode="search", description=None) %}
 <div class="mp-field mp-image-picker-field">
   <span class="mp-label" id="{{ id }}-label">{{ label }}</span>
+  {% if description %}<p class="mp-field__description">{{ description }}</p>{% endif %}
   <div class="mp-image-picker" role="group" aria-labelledby="{{ id }}-label">
     <div class="mp-image-picker__preview">
       <button type="button" class="mp-image-picker__trigger" id="{{ id }}-preview"

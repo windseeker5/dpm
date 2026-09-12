@@ -111,10 +111,7 @@
          
               </div>
               <div>
-                <a href="{{ url_for('create_activity') }}" class="btn btn-dark">
-                  <i class="ti ti-plus"></i>
-                  Add
-                </a>
+                {{ button("Add", href=url_for('create_activity'), icon="ti-plus") }}
               </div>
             </div>
           </div>
@@ -374,7 +371,7 @@
             <div class="mb-3"><i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i></div>
             <h3 class="mb-2">No history matches your filters</h3>
             <p class="text-muted mb-3">Try adjusting your search or filter selection.</p>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-link">Clear all filters</a>
+            {{ button("Clear all filters", variant="link", href=url_for('dashboard')) }}
           </div>
           {% endif %}
         </div>
@@ -388,6 +385,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% from 'macros/buttons.html' import button %}
 <style>
 /* Mobile KPI Styles (DEAD SIMPLE) */
 @media (max-width: 767.98px) {
@@ -559,12 +557,10 @@ function cleanDuplicateLogs() {
         <div class="w-100">
           <div class="row">
             <div class="col">
-              <button class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+              {{ button("Cancel", variant="outline", type="button", attrs={"class": "w-100", "data-bs-dismiss": "modal"}) }}
             </div>
             <div class="col">
-              <button type="button" class="btn btn-danger w-100" id="confirmCleanupLogs">
-                <i class="ti ti-trash me-1"></i>Clean Logs
-              </button>
+              {{ button("Clean Logs", variant="destructive", icon="ti-trash", id="confirmCleanupLogs", attrs={"class": "w-100"}) }}
             </div>
           </div>
         </div>
