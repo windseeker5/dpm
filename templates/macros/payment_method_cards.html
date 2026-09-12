@@ -1,0 +1,74 @@
+{#
+  Payment Method Cards — radio-group cards for selecting a payment option.
+
+  Usage:
+    {% from 'macros/payment_method_cards.html' import payment_method_cards %}
+    {{ payment_method_cards(
+      name="payment_method",
+      selected="interac",
+      options=[
+        {
+          "value": "interac",
+          "title": "Virement Interac",
+          "description": "Les instructions vous seront envoyées par courriel.",
+          "image": url_for('static', filename='images/interac-logo.jpg'),
+          "image_alt": ""
+        },
+        {
+          "value": "stripe",
+          "title": "Carte de crédit",
+          "description": "Paiement sécurisé avec Stripe.",
+          "icon": "ti-credit-card",
+          "icon_bg": "bg-orange-lt",
+          "icon_text": "text-orange"
+        }
+      ]
+    ) }}
+
+  Parameters:
+    - name: submitted radio-group name
+    - options: list of {value, title, description, image?, image_alt?, icon?, icon_bg?, icon_text?}
+    - selected: selected option value
+    - label: accessible group label (default: "Mode de paiement")
+    - class_: extra class for the fieldset
+#}
+
+{% macro payment_method_cards(name, options=[], selected=None, label="Mode de paiement", class_='') %}
+<fieldset class="mp-payment-methods{% if class_ %} {{ class_ }}{% endif %}">
+  <legend class="h3 mb-3">{{ label }}</legend>
+  <div class="d-flex flex-column gap-2">
+    {% for option in options %}
+    {% set option_id = name ~ '-' ~ option.value %}
+    <label class="mp-payment-method-card" for="{{ option_id }}">
+      <input type="radio"
+             class="mp-radio mp-payment-method-card__control"
+             id="{{ option_id }}"
+             name="{{ name }}"
+             value="{{ option.value }}"
+             {% if selected == option.value %}checked{% endif %}>
+      <span class="mp-payment-method-card__body">
+        <span class="mp-payment-method-card__media">
+          {% if option.images %}
+            <span class="mp-payment-method-card__images" aria-hidden="true">
+              {% for img in option.images %}
+                <img src="{{ img.src }}" alt="{{ img.alt | default('') }}" width="36" height="24">
+              {% endfor %}
+            </span>
+          {% elif option.image %}
+            <img src="{{ option.image }}" alt="{{ option.image_alt | default('') }}" width="36" height="36" class="mp-payment-method-card__image">
+          {% elif option.icon %}
+            <span class="mp-payment-method-card__icon {{ option.icon_bg | default('bg-secondary-lt') }} {{ option.icon_text | default('text-secondary') }}" aria-hidden="true">
+              <i class="ti {{ option.icon }} fs-2"></i>
+            </span>
+          {% endif %}
+        </span>
+        <span class="mp-payment-method-card__text">
+          <strong class="d-block">{{ option.title }}</strong>
+          <span class="text-secondary small">{{ option.description }}</span>
+        </span>
+      </span>
+    </label>
+    {% endfor %}
+  </div>
+</fieldset>
+{% endmacro %}

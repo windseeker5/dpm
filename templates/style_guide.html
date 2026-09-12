@@ -288,7 +288,7 @@
                 <td data-label="Actions" data-actions class="text-end">{{ action_menu(id="sg-editable-actions", items=[
                   {"label": "Edit", "icon": '<i class="ti ti-edit"></i>'|safe},
                   {"type": "separator"},
-                  {"label": "Delete", "variant": "destructive", "icon": '<i class="ti ti-trash"></i>'|safe}
+                  {"label": "Delete", "icon": '<i class="ti ti-trash"></i>'|safe, "attrs": {"data-variant": "destructive"}}
                 ]) }}</td>
               </tr>
             {% endcall %}
@@ -738,6 +738,67 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
       </div>
 
+      <div class="card mb-4" id="payment-method-cards">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-0">Payment Method Cards</h3>
+            <div class="text-muted small mt-1">Radio-group cards for selecting a payment method. Supports an image (e.g. Interac logo) or an icon fallback. The whole card is clickable; native radio controls provide mutual exclusion and keyboard navigation. Pass the list of options as a list of dicts matching the macro’s parameters.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="border rounded p-3 p-sm-4">
+            {% from 'macros/payment_method_cards.html' import payment_method_cards %}
+            {{ payment_method_cards(
+              name="sg-payment-method",
+              selected="interac",
+              label="Mode de paiement",
+              options=[
+                {
+                  "value": "interac",
+                  "title": "Virement Interac",
+                  "description": "Les instructions vous seront envoyées par courriel.",
+                  "image": url_for('static', filename='images/interac-logo.jpg'),
+                  "image_alt": ""
+                },
+                {
+                  "value": "stripe",
+                  "title": "Carte de crédit",
+                  "description": "Paiement sécurisé avec Stripe.",
+                  "image": url_for('static', filename='tabler/img/payments/mastercard.svg'),
+                  "image_alt": "Mastercard"
+                }
+              ]
+            ) }}
+          </div>
+          <details class="mt-2">
+            <summary class="sg-code-summary">Show Jinja usage</summary>
+            <pre class="sg-code mt-2"><code>{% raw %}{% from 'macros/payment_method_cards.html' import payment_method_cards %}
+
+{{ payment_method_cards(
+  name="payment_method",
+  selected="interac",
+  label="Mode de paiement",
+  options=[
+    {
+      "value": "interac",
+      "title": "Virement Interac",
+      "description": "Les instructions vous seront envoyées par courriel.",
+      "image": url_for('static', filename='images/interac-logo.jpg'),
+      "image_alt": ""
+    },
+    {
+      "value": "stripe",
+      "title": "Carte de crédit",
+      "description": "Paiement sécurisé avec Stripe.",
+      "image": url_for('static', filename='tabler/img/payments/mastercard.svg'),
+      "image_alt": "Mastercard"
+    }
+  ]
+) }}{% endraw %}</code></pre>
+          </details>
+        </div>
+      </div>
+
       <div class="card mb-4" id="radio-group">
         <div class="card-header">
           <div>
@@ -1165,6 +1226,9 @@ document.addEventListener('DOMContentLoaded', function () {
             <h3 class="card-title mb-0">Data Table</h3>
             <div class="text-muted small mt-1">
               The shared shape behind the Orders/Products/Dashboard-history/Activities/Passports/Sign-ups/Interac Inbox/Surveys list pages: a toolbar (filter tabs centered, search icon collapsed to the left — expands inline on desktop, replaces the tabs entirely on mobile), <code>table_desktop()</code>/<code>table_mobile()</code> for the row list, and <code>table_empty_state()</code> for when there's nothing to show. <strong>Any new list/table page should adopt the recipe below rather than hand-rolling its own.</strong> Wrap the toolbar in a real <code>&lt;form method="get"&gt;</code> and scroll position across a filter/search reload is preserved automatically — see Filter Tabs above.
+            </div>
+            <div class="text-muted small mt-2">
+              <strong>Plain lists with no identity/action column</strong> — e.g. Activity Log, a pure timestamp/type/message log — pass <code>show_user=False, show_actions=False</code> to both <code>table_desktop()</code>/<code>table_mobile()</code> to drop the fixed "User" and "Actions" columns entirely. Put an icon+label (or any other arbitrary content) straight into a <code>cells</code> entry on desktop; on mobile, since there's no avatar/primary/secondary block left, compose the whole card (icon+label, timestamp, message, small inline action icons) into <code>mobile_detail</code>'s safe-html instead.
             </div>
             <div class="text-muted small mt-2">
               <strong>The full search + tabs recipe</strong> — this is what made Activities' search silently reset to its default tab until it was fixed; don't hand-roll this part again: build <code>tabs</code> with <code>utils.py</code>'s <code>tab_url(endpoint, current_filters, **overrides)</code> instead of calling <code>url_for()</code> directly, so every tab link carries the current search/filters forward automatically. Then wrap the toolbar's <code>&lt;form&gt;</code> with <code>{{ '{{ preserve_filters(current_filters) }}' }}</code> so submitting a search carries the current tab forward too. If a scoped search comes up empty but matches exist on another tab, pass <code>other_matches_count</code>/compute a <code>tab_url(..., status=None, show_all='true')</code> link into <code>table_empty_state()</code> instead of leaving a dead end.

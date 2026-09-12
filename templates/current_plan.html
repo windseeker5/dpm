@@ -30,8 +30,8 @@
       {% set expired = subscription_details and subscription_details.status == 'canceled' %}
 
       <!-- Subscription Card -->
-      <div class="mp-settings-surface mp-plan-summary">
-        <div class="card-body">
+      <div class="mp-form-content mp-plan-summary">
+        <div class="card mb-0"><div class="card-body">
 
           <!-- Plan -->
           <div class="row mb-2 align-items-center">
@@ -154,7 +154,7 @@
           <!-- Not a paid subscriber -->
           {% if is_beta %}
           <div class="alert alert-info mt-2 mb-0 mp-plan-message" role="alert">
-            <h4 class="alert-title">Thank you for being a Beta Tester!</h4>
+            <h4 class="alert-title">Thank you for being a Beta Tester! 🎉</h4>
             <div class="text-secondary">You have full Enterprise access as our thank you. Contact us if you'd like to subscribe after the beta period.</div>
           </div>
           {% else %}
@@ -168,8 +168,8 @@
           {% endif %}
           {% endif %}
 
-        </div><!-- /card-body -->
-      </div><!-- /card -->
+        </div></div><!-- /card-body, /card -->
+      </div><!-- /mp-form-content -->
 
     </div>
   </div>

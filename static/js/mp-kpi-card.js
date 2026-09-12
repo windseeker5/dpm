@@ -36,7 +36,7 @@
   // brand color only needs to override --mp-chart-1 (e.g. inline on
   // <body>) with no JS changes.
   const getChartColor = () =>
-    getComputedStyle(document.documentElement).getPropertyValue('--mp-chart-1').trim() || '#206bc4';
+    getComputedStyle(document.body).getPropertyValue('--mp-chart-1').trim() || '#206bc4';
 
   const buildChartOptions = (root, trendData) => {
     const chartType = root.dataset.kpiChartType === 'bar' ? 'bar' : 'area';

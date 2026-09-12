@@ -4,6 +4,7 @@
 {% block content %}
 {% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
 {% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+{% from 'macros/buttons.html' import button %}
 
 <div class="page-wrapper">
   <!-- Page Header -->
@@ -15,9 +16,7 @@
         </div>
         <div class="col-auto ms-auto d-print-none">
           <div class="btn-list">
-            <a href="{{ url_for('create_activity') }}" class="btn btn-dark shadow-sm">
-              <i class="ti ti-plus me-2"></i> Add
-            </a>
+            {{ button("Add", href=url_for('create_activity'), icon="ti-plus") }}
           </div>
         </div>
       </div>

@@ -1,13 +1,10 @@
 {% extends "base.html" %}
-{% from 'macros/avatar.html' import avatar_initials %}
+{% from 'macros/buttons.html' import button %}
 {% block title %}User Contacts{% endblock %}
 
 {% block content %}
-
-<!-- CSS Files (Design System Required) -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/dropdown-fix.css') }}?v=4.1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/search-component.css') }}?v=1.0">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/filter-component.css') }}?v=1.0">
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
 
 <div class="page-wrapper">
   <!-- Page Header -->
@@ -19,10 +16,7 @@
         </div>
         <div class="col-auto ms-auto d-print-none">
           <div class="btn-list">
-            <a href="{{ url_for('user_contacts_export', q=current_filters.q, status=current_filters.status, show_all='true' if current_filters.show_all else '') }}"
-               class="btn btn-dark shadow-sm">
-              Export
-            </a>
+            {{ button("Export", href=url_for('user_contacts_export', q=current_filters.q, status=current_filters.status, show_all='true' if current_filters.show_all else ''), variant="secondary") }}
           </div>
         </div>
       </div>
@@ -33,175 +27,42 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-      <!-- Enhanced Dynamic Search -->
-      <form method="GET" action="{{ url_for('user_contacts_report') }}" class="mb-4" id="dynamicSearchForm">
-        <div class="input-icon position-relative">
-          <span class="input-icon-addon">
-            <i class="ti ti-search fs-3"></i>
-          </span>
-          <input type="text"
-                 name="q"
-                 id="enhancedSearchInput"
-                 class="form-control form-control-lg shadow-sm"
-                 placeholder="Search contacts…"
-                 value="{{ current_filters.q or '' }}"
-                 style="padding-right: 100px; border-radius: 0.5rem;"
-                 autocomplete="off"
-                 data-bs-toggle="false">
-          <div class="position-absolute end-0 top-50 translate-middle-y me-3 d-flex align-items-center gap-2">
-            <small id="searchCharCounter" class="text-muted" style="font-size: 0.75rem; display: none;"></small>
-            <kbd id="searchKbdHint" class="text-muted d-none d-md-inline">Ctrl</kbd>
-            <kbd class="text-muted d-none d-md-inline">K</kbd>
-            <button id="searchClearBtn" type="button" class="btn btn-link p-0 border-0" style="display: none; width: 24px; height: 24px;" aria-label="Clear search">
-              <i class="ti ti-x" style="font-size: 18px; color: #6c757d;"></i>
-            </button>
-          </div>
-        </div>
-      </form>
-
-      <!-- Main Table -->
-      <div id="user-contacts-filters" class="scroll-anchor"></div>
-      <div class="card main-table-card" style="margin-top: 1.5rem !important; background-color: #fff !important;">
+      <!-- Contacts Data Table -->
+      <div class="card mp-data-table">
         <div class="card-header">
-          <div class="d-flex justify-content-center align-items-center w-100">
-            <!-- GitHub-Style Filter Buttons -->
-            <div class="github-filter-group" role="group" aria-label="Filter buttons" style="display: inline-flex; align-items: center; background: #f6f8fa; border: 1px solid #d1d5da; border-radius: 6px; padding: 0;">
-              <a href="{{ url_for('user_contacts_report', status='active') }}"
-                 class="github-filter-btn {% if current_filters.status == 'active' and not current_filters.show_all %}active{% endif %}"
-                 style="{% if current_filters.status == 'active' and not current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                Active <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.active_users|default(0) }})</span>
-              </a>
-              <a href="{{ url_for('user_contacts_report', show_all='true') }}"
-                 class="github-filter-btn {% if current_filters.show_all %}active{% endif %}"
-                 style="{% if current_filters.show_all %}background: #ffffff; color: #24292e; font-weight: 600; border: 1px solid #d1d5da; margin: -1px; z-index: 1; border-radius: 6px; box-shadow: 0 1px 0 rgba(27,31,35,0.04);{% else %}background: rgba(0, 0, 0, 0.03); color: #586069; margin: 0; border-right: 1px solid transparent; background-clip: padding-box; background-image: linear-gradient(to right, transparent 0%, transparent 100%), linear-gradient(180deg, transparent 20%, #d1d5da 20%, #d1d5da 80%, transparent 80%); background-size: 100% 100%, 1px 100%; background-position: center, right center; background-repeat: no-repeat;{% endif %} padding: 5px 12px; font-size: 14px; line-height: 20px; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; position: relative;">
-                All <span style="opacity: 0.6; margin-left: 4px;">({{ statistics.total_users|default(0) }})</span>
-              </a>
-            </div>
-          </div>
+          <form method="get" action="{{ url_for('user_contacts_report') }}" style="display: contents;">
+            {{ preserve_filters(current_filters) }}
+            {{ table_toolbar(id="contacts-toolbar", tabs=tabs, search_value=current_filters.q, search_placeholder="Search contacts…", total=pagination.total) }}
+          </form>
         </div>
 
         {% if is_first_time_empty %}
-          <!-- First-Time Empty State -->
-          <div class="empty-state-container text-center py-5">
-            <div class="empty-state-icon mb-3">
-              <i class="ti ti-users" style="font-size: 48px; color: #fab005;"></i>
-            </div>
-            <h3 class="empty-state-title mb-2">No contacts yet</h3>
-            <p class="empty-state-description text-muted mb-3">
-              Contacts are automatically created when users sign up for activities. They'll appear here once you have signups.
-            </p>
-          </div>
+          {{ table_empty_state(icon="ti-users", title="No contacts yet",
+             description="Contacts are automatically created when users sign up for activities. They'll appear here once you have signups.") }}
 
         {% elif is_zero_results %}
-          <!-- Zero Results Empty State -->
-          <div class="empty-state-container text-center py-5">
-            <div class="empty-state-icon mb-3">
-              <i class="ti ti-search" style="font-size: 48px; color: #6c757d;"></i>
-            </div>
-            <h3 class="empty-state-title mb-2">No contacts match your search</h3>
-            <p class="empty-state-description text-muted mb-3">
-              Try a different search term or clear your filters.
-            </p>
-            <a href="{{ url_for('user_contacts_report', show_all='true') }}" class="btn btn-link">
-              Clear all filters
-            </a>
-          </div>
+          {{ table_empty_state(icon="ti-search", title="No contacts match your search",
+             description="Try a different search term or clear your filters.",
+             action_label="Clear all filters", action_url=url_for('user_contacts_report', show_all='true')) }}
 
         {% else %}
-          <!-- Normal Table View -->
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th class="d-md-none text-end">Revenue</th>
-                  <th class="d-none d-md-table-cell">Email</th>
-                  <th class="d-none d-lg-table-cell">Phone</th>
-                  <th class="d-none d-md-table-cell text-center">Passports</th>
-                  <th class="d-none d-md-table-cell text-end">Revenue</th>
-                  <th class="d-none d-lg-table-cell">Activities</th>
-                  <th class="d-none d-md-table-cell">Last Activity</th>
-                  <th class="d-none d-lg-table-cell text-center">Opt-Out</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for user in users %}
-              <tr>
-                <!-- User Column: Always visible -->
-                <td style="vertical-align: middle;">
-                  <div class="d-flex align-items-center">
-                    <!-- User avatar (initials) -->
-                    <div class="me-3" style="flex-shrink: 0;">{{ avatar_initials(user.name or 'Anonymous') }}</div>
-                    <div>
-                      <div class="fw-bold" style="color: #000;">{{ user.name or 'Anonymous' }}</div>
-                      <div class="text-muted small d-none d-md-block">{{ user.email or 'No email' }}</div>
-                      <div class="text-muted small d-md-none" style="color: #6c757d;">{{ user.email or 'No email' }}</div>
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Mobile: Revenue + Passport Count Column -->
-                <td class="d-md-none text-end" style="vertical-align: middle;">
-                  <div class="fw-bold">${{ "%.2f"|format(user.total_revenue) }}</div>
-                  <div class="text-muted small">({{ user.passport_count }})</div>
-                </td>
-
-                <!-- Desktop: Email -->
-                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-                  {% if user.email %}
-                    <a href="mailto:{{ user.email }}" class="text-reset">{{ user.email }}</a>
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </td>
-
-                <!-- Desktop: Phone -->
-                <td class="d-none d-lg-table-cell" style="vertical-align: middle;">
-                  {% if user.phone %}
-                    {{ user.phone }}
-                  {% endif %}
-                </td>
-
-                <!-- Desktop: Passport Count -->
-                <td class="d-none d-md-table-cell text-center" style="vertical-align: middle;">
-                  <span class="badge bg-blue-lt">{{ user.passport_count }}</span>
-                </td>
-
-                <!-- Desktop: Revenue (NO COLOR - plain text like Passport Amount column) -->
-                <td class="d-none d-md-table-cell text-end" style="vertical-align: middle;">
-                  ${{ "%.2f"|format(user.total_revenue) }}
-                </td>
-
-                <!-- Desktop: Activities -->
-                <td class="d-none d-lg-table-cell" style="vertical-align: middle;">
-                  <span class="text-muted small">{{ user.activities }}</span>
-                </td>
-
-                <!-- Desktop: Last Activity -->
-                <td class="d-none d-md-table-cell" style="vertical-align: middle;">
-                  {{ user.last_activity_date }}
-                </td>
-
-                <!-- Desktop: Opt-Out -->
-                <td class="d-none d-lg-table-cell text-center" style="vertical-align: middle;">
-                  {% if user.email_opt_out %}
-                    <span class="badge bg-red-lt text-red-lt-fg">Yes</span>
-                  {% else %}
-                    <span class="badge bg-green-lt text-green-lt-fg">No</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-              </tbody>
-            </table>
+          {% set columns = [
+            {"label": "Phone", "class": "d-none d-lg-table-cell"},
+            {"label": "Passports", "class": "d-none d-md-table-cell text-center"},
+            {"label": "Revenue", "class": "d-none d-md-table-cell text-end"},
+            {"label": "Activities", "class": "d-none d-lg-table-cell"},
+            {"label": "Last Activity", "class": "d-none d-md-table-cell"}
+          ] %}
+          <div class="d-none d-md-block">
+            {{ table_desktop(id="contacts-table", columns=columns, rows=rows, show_actions=False) }}
+            {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+               total=pagination.total, items_count=rows|length, base_path=url_for('user_contacts_report'), filters=current_filters) }}
           </div>
-          {% if users|length > 0 %}
-          <div class="card-footer">
-            <div class="text-muted">
-              Showing {{ users|length }} user{{ 's' if users|length != 1 else '' }}
-            </div>
+          <div class="d-md-none">
+            {{ table_mobile(id="contacts-table-mobile", rows=rows, show_actions=False) }}
+            {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page,
+               total=pagination.total, items_count=rows|length, base_path=url_for('user_contacts_report'), filters=current_filters) }}
           </div>
-          {% endif %}
         {% endif %}
       </div>
 
@@ -209,32 +70,5 @@
   </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize search component
-    if (window.SearchComponent) {
-        window.SearchComponent.init({
-            formId: 'dynamicSearchForm',
-            inputId: 'enhancedSearchInput',
-            preserveParams: ['status', 'show_all']
-        });
-    }
-
-    // Initialize filter component
-    if (window.FilterComponent) {
-        window.FilterComponent.init({
-            filterClass: 'github-filter-btn',
-            mode: 'server',
-            preserveScrollPosition: true,
-            enableSearchPreservation: true
-        });
-    }
-
-    // Validation for debugging
-    console.log('👥 User Contacts page loaded');
-    console.log('🔧 Global dropdown fix available:', typeof window.dropdownFix !== 'undefined');
-    console.log('📊 Bootstrap available:', typeof bootstrap !== 'undefined');
-});
-</script>
-
+<script src="{{ url_for('static', filename='js/mp-table-toolbar.js') }}?v=1.0"></script>
 {% endblock %}

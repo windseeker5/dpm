@@ -20,6 +20,7 @@
   <!-- Tabler Core CSS -->
   <link href="{{ url_for('static', filename='tabler/css/tabler.min.css') }}" rel="stylesheet"/>
   <link href="{{ url_for('static', filename='tabler/icons/tabler-icons.min.css') }}" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='css/mp-components.css') }}?v=3.22" rel="stylesheet"/>
 
   <!-- Flash Alert System -->
   <style>
@@ -86,7 +87,7 @@
 
   {% block head %}{% endblock %}
 </head>
-<body class="antialiased" style="background-color: #f8f9fa; font-family: 'Inter', sans-serif;">
+<body class="antialiased" style="background-color: #f8f9fa; font-family: 'Inter', sans-serif; --mp-brand-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary: {{ PRIMARY_BRAND_COLOR }}; --mp-primary-foreground: {{ PRIMARY_BRAND_FOREGROUND }};{% if HAS_CUSTOM_BRAND_COLOR %} --mp-chart-1: {{ PRIMARY_BRAND_COLOR }};{% endif %}">
 
   <!-- Flash Alert Overlay -->
   {% with messages = get_flashed_messages(with_categories=true) %}

@@ -45,11 +45,6 @@
   text-decoration: underline;
 }
 
-/* Add Admin Button - Solid blue, no hover effects */
-#add-admin-btn {
-  /* Button is now using btn-primary class, no additional styling needed */
-}
-
 /* Form fieldset styling */
 .form-fieldset {
   background: white;
@@ -76,22 +71,11 @@
     font-size: 24px;
   }
   
-  /* Full width remove button on mobile */
-  .admin-block .btn-outline-danger {
-    width: 100%;
-    margin-top: 1rem;
-  }
-  
   /* Center avatar section on mobile */
   .admin-block .col-md-2.text-center {
     margin-bottom: 1rem;
   }
-  
-  /* Full width add admin button on mobile */
-  #add-admin-btn {
-    width: 100%;
-  }
-  
+
   /* Adjust alert text size on mobile */
   .alert-info .alert-title {
     font-size: 1rem;
@@ -153,15 +137,9 @@
 .avatar-upload-section {
   margin-top: 1rem;
   padding: 1rem;
-  border: 2px dashed #dee2e6;
-  border-radius: 0.5rem;
-  background-color: #f8f9fa;
-}
-
-.avatar-upload-section.has-file {
-  border-style: solid;
-  border-color: #206bc4;
-  background-color: #e7f3ff;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-radius-md);
+  background-color: var(--mp-muted);
 }
 
 .avatar-preview img {

@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Activity Log{% endblock %}
 
+{% from 'macros/data_table.html' import table_toolbar, table_desktop, table_mobile, table_empty_state, preserve_filters %}
+{% from 'macros/pagination.html' import pagination_desktop, pagination_mobile %}
+{% from 'macros/select.html' import select %}
+{% from 'macros/buttons.html' import button %}
+
 {% block content %}
 
 <div class="page-wrapper">
   <!-- Page Header -->
-  <div class="page-header d-print-none" style="padding-top: 2rem;">
+  <div class="page-header d-print-none">
     <div class="dashboard-container">
       <h1 class="page-title mb-0">Activity Log</h1>
     </div>
@@ -15,175 +20,73 @@
   <div class="page-body">
     <div class="dashboard-container">
 
-    <!-- 🔹 Search + Filter Controls -->
+    <!-- Filter + Search -->
     <div class="card mb-3">
-    <div class="card-body">
-      <form method="get" action="{{ url_for('activity_log') }}">
-        <div class="row g-2 align-items-center">
-          <!-- Dropdown Filter -->
-          <div class="col-md-3">
-            <select name="type" class="form-select" onchange="this.form.submit()">
-              <option value="">All Types</option>
-              <option value="Passport Created" {% if current_filters.type == 'Passport Created' %}selected{% endif %}>Passport Created</option>
-              <option value="Passport Redeemed" {% if current_filters.type == 'Passport Redeemed' %}selected{% endif %}>Passport Redeemed</option>
-              <option value="Email Sent" {% if current_filters.type == 'Email Sent' %}selected{% endif %}>Email Sent</option>
-              <option value="Email Failed" {% if current_filters.type == 'Email Failed' %}selected{% endif %}>Email Failed</option>
-              <option value="Email Dismissed" {% if current_filters.type == 'Email Dismissed' %}selected{% endif %}>Email Dismissed</option>
-              <option value="Interac Payment Matched" {% if current_filters.type == 'Interac Payment Matched' %}selected{% endif %}>Interac Payment Matched</option>
-              <option value="Stripe Payment Received" {% if current_filters.type == 'Stripe Payment Received' %}selected{% endif %}>Stripe Payment Received</option>
-              <option value="Stripe Payout Received" {% if current_filters.type == 'Stripe Payout Received' %}selected{% endif %}>Stripe Payout Received</option>
-              <option value="Marked Paid" {% if current_filters.type == 'Marked Paid' %}selected{% endif %}>Marked Paid</option>
-              <option value="Marked Paid (Cash)" {% if current_filters.type == 'Marked Paid (Cash)' %}selected{% endif %}>Marked Paid — Cash</option>
-              <option value="Marked Paid (POS/TPV)" {% if current_filters.type == 'Marked Paid (POS/TPV)' %}selected{% endif %}>Marked Paid — POS/TPV</option>
-              <option value="Marked Paid (Cheque)" {% if current_filters.type == 'Marked Paid (Cheque)' %}selected{% endif %}>Marked Paid — Cheque</option>
-              <option value="Reminder Sent" {% if current_filters.type == 'Reminder Sent' %}selected{% endif %}>Reminder Sent</option>
-              <option value="Signup Submitted" {% if current_filters.type == 'Signup Submitted' %}selected{% endif %}>Signup Submitted</option>
-              <option value="Signup Approved" {% if current_filters.type == 'Signup Approved' %}selected{% endif %}>Signup Approved</option>
-              <option value="Signup Rejected" {% if current_filters.type == 'Signup Rejected' %}selected{% endif %}>Signup Rejected</option>
-              <option value="Activity Created" {% if current_filters.type == 'Activity Created' %}selected{% endif %}>Activity Created</option>
-              <option value="Admin Action" {% if current_filters.type == 'Admin Action' %}selected{% endif %}>Admin Action</option>
-            </select>
-          </div>
-
-          <!-- Search Input -->
-          <div class="col-md">
-            <div class="input-icon">
-              <span class="input-icon-addon">
-                <i class="ti ti-search"></i>
-              </span>
-              <input type="text" name="q" class="form-control" placeholder="Search logs…" value="{{ current_filters.q }}">
+      <div class="card-body">
+        <form method="get" action="{{ url_for('activity_log') }}">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              {% call select(id="type", label="Type", placeholder="All Types", attrs={"onchange": "this.form.submit()"}) %}
+                <option value="Passport Created" {% if current_filters.type == 'Passport Created' %}selected{% endif %}>Passport Created</option>
+                <option value="Passport Redeemed" {% if current_filters.type == 'Passport Redeemed' %}selected{% endif %}>Passport Redeemed</option>
+                <option value="Email Sent" {% if current_filters.type == 'Email Sent' %}selected{% endif %}>Email Sent</option>
+                <option value="Email Failed" {% if current_filters.type == 'Email Failed' %}selected{% endif %}>Email Failed</option>
+                <option value="Email Dismissed" {% if current_filters.type == 'Email Dismissed' %}selected{% endif %}>Email Dismissed</option>
+                <option value="Interac Payment Matched" {% if current_filters.type == 'Interac Payment Matched' %}selected{% endif %}>Interac Payment Matched</option>
+                <option value="Stripe Payment Received" {% if current_filters.type == 'Stripe Payment Received' %}selected{% endif %}>Stripe Payment Received</option>
+                <option value="Stripe Payout Received" {% if current_filters.type == 'Stripe Payout Received' %}selected{% endif %}>Stripe Payout Received</option>
+                <option value="Marked Paid" {% if current_filters.type == 'Marked Paid' %}selected{% endif %}>Marked Paid</option>
+                <option value="Marked Paid (Cash)" {% if current_filters.type == 'Marked Paid (Cash)' %}selected{% endif %}>Marked Paid — Cash</option>
+                <option value="Marked Paid (POS/TPV)" {% if current_filters.type == 'Marked Paid (POS/TPV)' %}selected{% endif %}>Marked Paid — POS/TPV</option>
+                <option value="Marked Paid (Cheque)" {% if current_filters.type == 'Marked Paid (Cheque)' %}selected{% endif %}>Marked Paid — Cheque</option>
+                <option value="Reminder Sent" {% if current_filters.type == 'Reminder Sent' %}selected{% endif %}>Reminder Sent</option>
+                <option value="Signup Submitted" {% if current_filters.type == 'Signup Submitted' %}selected{% endif %}>Signup Submitted</option>
+                <option value="Signup Approved" {% if current_filters.type == 'Signup Approved' %}selected{% endif %}>Signup Approved</option>
+                <option value="Signup Rejected" {% if current_filters.type == 'Signup Rejected' %}selected{% endif %}>Signup Rejected</option>
+                <option value="Activity Created" {% if current_filters.type == 'Activity Created' %}selected{% endif %}>Activity Created</option>
+                <option value="Admin Action" {% if current_filters.type == 'Admin Action' %}selected{% endif %}>Admin Action</option>
+              {% endcall %}
+            </div>
+            <div class="col-md">
+              <div class="mp-field">
+                <label class="mp-label" for="q">Search</label>
+                <input type="text" id="q" name="q" class="mp-input" placeholder="Search logs…" value="{{ current_filters.q }}">
+              </div>
+            </div>
+            <div class="col-md-auto d-flex gap-2">
+              {{ button("Search", type="submit") }}
+              {% if current_filters.q or current_filters.type %}
+              {{ button("Clear", variant="link", href=url_for('activity_log')) }}
+              {% endif %}
             </div>
           </div>
-
-          <!-- Search Button -->
-          <div class="col-md-auto">
-            <button type="submit" class="btn btn-dark">
-              <i class="ti ti-search me-1"></i> Search
-            </button>
-            {% if current_filters.q or current_filters.type %}
-            <a href="{{ url_for('activity_log') }}" class="btn btn-link">Clear</a>
-            {% endif %}
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-
-    <!-- 🔹 Table / Cards Container -->
-    <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">Last Transactions</h3>
-    </div>
-
-    <!-- Desktop Table View (hidden on mobile) -->
-    <div class="d-none d-md-block">
-      <div class="table-responsive">
-        <table class="table card-table table-vcenter" id="logTable">
-          <thead>
-            <tr>
-              <th scope="col" class="text-muted">Date/Time</th>
-              <th scope="col" class="text-muted">Type</th>
-              <th scope="col" class="text-muted">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in logs %}
-            <tr data-type="{{ log.type }}">
-              <td>{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d %H:%M') }}</td>
-              <td>
-                {% if log.type == 'Passport Redeemed' %}
-                  <i class="ti ti-ticket text-danger"></i>
-                {% elif log.type == 'Email Sent' %}
-                  <i class="ti ti-mail text-info"></i>
-                {% elif log.type == 'Email Failed' %}
-                  <i class="ti ti-mail-x text-danger"></i>
-                {% elif log.type == 'Email Dismissed' %}
-                  <i class="ti ti-mail-off text-muted"></i>
-                {% elif log.type == 'Passport Created' %}
-                  <i class="ti ti-id text-lime"></i>
-                {% elif log.type == 'Interact Payment' %}
-                  <i class="ti ti-currency-dollar text-success"></i>
-                {% elif log.type == 'Marked Paid' %}
-                  <i class="ti ti-check text-green"></i>
-                {% elif log.type == 'Reminder Sent' %}
-                  <i class="ti ti-bell text-purple"></i>
-                {% elif log.type == 'Signup Submitted' %}
-                  <i class="ti ti-user-plus text-success"></i>
-                {% elif log.type == 'Signup Approved' %}
-                  <i class="ti ti-user-check text-green"></i>
-                {% elif log.type == 'Signup Rejected' %}
-                  <i class="ti ti-user-x text-danger"></i>
-                {% elif log.type == 'Signup Cancelled' %}
-                  <i class="ti ti-user-x text-danger"></i>
-                {% elif log.type == 'Activity Created' %}
-                  <i class="ti ti-target text-orange"></i>
-                {% elif log.type == 'Admin Action' %}
-                  <i class="ti ti-settings text-muted"></i>
-                {% else %}
-                  <i class="ti ti-activity text-muted"></i>
-                {% endif %}
-                {{ log.type }}
-              </td>
-              <td class="log-description">
-                {{ log.details }}
-                {% if log.type in ('Email Sent', 'Email Failed') and log.email_log_id %}
-                <form method="POST" action="{{ url_for('resend_email', log_id=log.email_log_id) }}" style="display:inline">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn-sm btn-ghost-secondary ms-2" title="Resend this email">
-                    <i class="ti ti-send"></i>
-                  </button>
-                </form>
-                {% endif %}
-                {% if log.type == 'Email Failed' and log.email_log_id %}
-                <form method="POST" action="{{ url_for('dismiss_email', log_id=log.email_log_id) }}" style="display:inline">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn-sm btn-ghost-danger ms-1" title="Clear this failure (no resend)">
-                    <i class="ti ti-x"></i>
-                  </button>
-                </form>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        </form>
       </div>
     </div>
 
-    <!-- Mobile Card View (hidden on desktop) -->
-    <div class="d-md-none" id="mobileLogCards">
-      {% for log in logs %}
-      <div class="log-card-mobile" data-type="{{ log.type }}">
-        <div class="log-card-badges mb-2">
-          <span class="badge badge-sm bg-gray-lt me-2">{{ log.timestamp | utc_to_local | datetimeformat('%Y-%m-%d') }}</span>
-          <span class="badge badge-sm bg-{{ log.type | log_type_color }}-lt">{{ log.type }}</span>
-        </div>
-        <div class="log-card-description">
-          {{ log.details }}
-          {% if log.type in ('Email Sent', 'Email Failed') and log.email_log_id %}
-          <form method="POST" action="{{ url_for('resend_email', log_id=log.email_log_id) }}" style="display:inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-ghost-secondary ms-2" title="Resend this email">
-              <i class="ti ti-send"></i>
-            </button>
-          </form>
-          {% endif %}
-          {% if log.type == 'Email Failed' and log.email_log_id %}
-          <form method="POST" action="{{ url_for('dismiss_email', log_id=log.email_log_id) }}" style="display:inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-ghost-danger ms-1" title="Clear this failure (no resend)">
-              <i class="ti ti-x"></i>
-            </button>
-          </form>
-          {% endif %}
-        </div>
+    <!-- Data Table -->
+    <div class="card mp-data-table">
+      <div class="card-header">
+        <h3 class="card-title mb-0">Last Transactions</h3>
       </div>
-      {% endfor %}
-    </div>
 
-    <!-- Pagination -->
-    {% from 'macros/pagination.html' import render_pagination %}
-    {{ render_pagination(pagination, current_filters, logs) }}
+      {% if not rows %}
+        {{ table_empty_state(icon="ti-history", title="No activity yet", description="Activity from passports, signups, payments, and emails will show up here.") }}
+      {% else %}
+        {% set columns = [
+          {"label": "Date/Time", "class": "d-none d-md-table-cell small text-muted text-nowrap"},
+          {"label": "Type", "class": ""},
+          {"label": "Description", "class": ""}
+        ] %}
+        <div class="d-none d-md-block">
+          {{ table_desktop(id="activity-log-table", columns=columns, rows=rows, show_user=False, show_actions=False) }}
+          {{ pagination_desktop(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page, total=pagination.total, items_count=rows|length, base_path=url_for('activity_log'), filters=current_filters) }}
+        </div>
+        <div class="d-md-none">
+          {{ table_mobile(id="activity-log-table-mobile", rows=rows, show_user=False, show_actions=False) }}
+          {{ pagination_mobile(page=pagination.page, pages=pagination.pages, per_page=pagination.per_page, total=pagination.total, items_count=rows|length, base_path=url_for('activity_log'), filters=current_filters) }}
+        </div>
+      {% endif %}
     </div>
 
     </div>

@@ -80,6 +80,11 @@ docs/.archive/
 test_backup_*.py
 test_restore_*.py
 
+# UAT tool code/catalog are tracked; credentials and generated run artifacts are not.
+uattool/.env
+uattool/reports/*
+!uattool/reports/.gitkeep
+
 # SQL exports
 SQL/
 static/uploads/

@@ -90,6 +90,7 @@ from utils import (
     generate_survey_token,
     generate_response_token,
     format_slot_label,          # Session scheduling: French label for a dated slot
+    format_local_datetime_label,
     tab_url,                    # Filter-tab URL builder that carries current_filters forward
     js_str                      # Safe single-quoted JS string literal for onclick="..." attrs
 )
@@ -1131,9 +1132,9 @@ def inject_globals_and_csrf():
 
     from utils import get_placeholder_css, get_placeholder_letter, get_placeholder_color
 
-    brand_primary = get_setting("PRIMARY_BRAND_COLOR", "#066fd1")
-    if not re.fullmatch(r"#[0-9a-fA-F]{6}", brand_primary or ""):
-        brand_primary = "#066fd1"
+    raw_brand_primary = get_setting("PRIMARY_BRAND_COLOR", "")
+    has_custom_brand_color = bool(re.fullmatch(r"#[0-9a-fA-F]{6}", raw_brand_primary or ""))
+    brand_primary = raw_brand_primary if has_custom_brand_color else "#171717"
     rgb = tuple(int(brand_primary[index:index + 2], 16) / 255 for index in (1, 3, 5))
     linear_rgb = tuple(value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4 for value in rgb)
     luminance = 0.2126 * linear_rgb[0] + 0.7152 * linear_rgb[1] + 0.0722 * linear_rgb[2]
@@ -1144,6 +1145,7 @@ def inject_globals_and_csrf():
         'ORG_NAME': get_setting("ORG_NAME", "Your Organization"),
         'PRIMARY_BRAND_COLOR': brand_primary,
         'PRIMARY_BRAND_FOREGROUND': brand_primary_foreground,
+        'HAS_CUSTOM_BRAND_COLOR': has_custom_brand_color,
         'git_version': get_git_version(),
         'csrf_token': generate_csrf,  # returns the raw CSRF token
         'pending_signups_count': pending_signups_count,
@@ -3371,7 +3373,8 @@ def signup(activity_id):
     return render_template("signup_form.html", activity=activity, settings=settings,
                          passport_types=passport_types, selected_passport_type=selected_passport_type,
                          remaining_capacity=remaining_capacity, is_sold_out=is_sold_out,
-                         available_slots=available_slots, format_slot_label=format_slot_label)
+                         available_slots=available_slots, format_slot_label=format_slot_label,
+                         format_local_datetime_label=format_local_datetime_label)
 
 
 @app.route("/signup/thank-you/<int:signup_id>")
@@ -5529,6 +5532,12 @@ def setup():
                         if os.path.exists(old_avatar):
                             os.remove(old_avatar)
                     existing.avatar_filename = avatar_filename
+                elif request.form.get(f"admin_avatar_remove_{i+1}") == "1" and existing.avatar_filename:
+                    # Remove the custom avatar (falls back to Gravatar/initials)
+                    old_avatar = os.path.join(avatar_dir, existing.avatar_filename)
+                    if os.path.exists(old_avatar):
+                        os.remove(old_avatar)
+                    existing.avatar_filename = None
             else:
                 # Create new admin
                 if password and password != "********":
@@ -5705,9 +5714,25 @@ def setup():
                 {"label": "Remove User", "icon": '<i class="ti ti-trash"></i>',
                  "url": f"#delete-admin-modal-{a.id}", "attrs": {"data-bs-toggle": "modal", "data-variant": "destructive"}},
             ]
+        if a.avatar_filename:
+            avatar_url = url_for('static', filename='uploads/avatars/' + a.avatar_filename)
+        else:
+            # Only show a real registered Gravatar — never the auto-generated
+            # identicon pattern. Matches the Edit-User modal's own check (and
+            # the avatar_initials() convention used everywhere else): no real
+            # photo means colored initials, not a random Gravatar pattern.
+            avatar_url = None
+            gravatar_url = f"https://www.gravatar.com/avatar/{encode_md5(a.email)}?d=404"
+            try:
+                resp = requests.head(gravatar_url, timeout=1.5)
+                if resp.status_code == 200:
+                    avatar_url = gravatar_url
+            except requests.RequestException:
+                pass
         admin_rows.append({
             "id": a.id,
             "avatar_name": a.full_name,
+            "avatar_url": avatar_url,
             "primary": a.email,
             "secondary": (f"{a.first_name or ''} {a.last_name or ''}".strip() or None),
             "cells": [type_cell],
@@ -5876,9 +5901,9 @@ def unified_settings():
                     "EMAIL_INFO_TEXT": REMOVED_FIELD_DEFAULTS['email_info_text'],
                     "EMAIL_FOOTER_TEXT": REMOVED_FIELD_DEFAULTS['email_footer_text'],
                 }
-                brand_color = request.form.get("PRIMARY_BRAND_COLOR", "#066fd1").strip()
-                if not re.fullmatch(r"#[0-9a-fA-F]{6}", brand_color):
-                    flash("Choose a valid 6-digit brand color, such as #066FD1.", "error")
+                brand_color = request.form.get("PRIMARY_BRAND_COLOR", "").strip()
+                if brand_color and not re.fullmatch(r"#[0-9a-fA-F]{6}", brand_color):
+                    flash("Choose a valid 6-digit brand color, such as #171717.", "error")
                     return redirect(url_for("unified_settings", section="general"))
                 org_settings["PRIMARY_BRAND_COLOR"] = brand_color.lower()
 
@@ -6487,7 +6512,7 @@ def erase_app_data():
         print(f"Error erasing data: {e}")
         flash("An error occurred while erasing data.", "error")
 
-    return redirect(url_for("setup"))
+    return redirect(url_for("setup", section="data"))
 
 
 @app.route("/generate-backup")
@@ -6572,7 +6597,7 @@ def generate_backup():
         print("Backup failed:", str(e))
         flash("Backup failed. Check logs.", "danger")
 
-    return redirect(url_for("setup", backup_file=zip_filename) + "#tab-data")
+    return redirect(url_for("setup", section="data", backup_file=zip_filename))
 
 
 @app.route("/delete-backup/<filename>", methods=["POST"])
@@ -6584,7 +6609,7 @@ def delete_backup(filename):
         # Security: Only allow .zip files and prevent path traversal
         if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
             flash("Invalid backup filename.", "danger")
-            return redirect(url_for("setup") + "#tab-data")
+            return redirect(url_for("setup", section="data"))
 
         backup_path = os.path.join("static", "backups", filename)
         if os.path.exists(backup_path):
@@ -6597,7 +6622,7 @@ def delete_backup(filename):
         print("Delete backup failed:", str(e))
         flash("Failed to delete backup. Check logs.", "danger")
 
-    return redirect(url_for("setup") + "#tab-data")
+    return redirect(url_for("setup", section="data"))
 
 
 @app.route("/restore-backup/<filename>", methods=["POST"])
@@ -6609,12 +6634,12 @@ def restore_backup(filename):
         # Security: Only allow .zip files and prevent path traversal
         if not filename.endswith(".zip") or "/" in filename or "\\" in filename:
             flash("Invalid backup filename.", "danger")
-            return redirect(url_for("setup") + "#tab-data")
+            return redirect(url_for("setup", section="data"))
 
         backup_path = os.path.join("static", "backups", filename)
         if not os.path.exists(backup_path):
             flash("Backup file not found.", "danger")
-            return redirect(url_for("setup") + "#tab-data")
+            return redirect(url_for("setup", section="data"))
 
         # Import restore functions directly
         from api.backup import restore_database, restore_uploads, restore_templates, create_restore_point
@@ -6645,7 +6670,7 @@ def restore_backup(filename):
         print("Restore backup failed:", str(e))
         flash("Failed to restore backup. Check logs.", "danger")
 
-    return redirect(url_for("setup") + "#tab-data")
+    return redirect(url_for("setup", section="data"))
 
 
 @app.route("/upload-and-restore-backup", methods=["POST"])
@@ -6657,17 +6682,17 @@ def upload_and_restore_backup():
         # Check if file was uploaded
         if 'backup_file' not in request.files:
             flash("No backup file selected.", "danger")
-            return redirect(url_for("setup") + "#tab-data")
+            return redirect(url_for("setup", section="data"))
 
         file = request.files['backup_file']
         if file.filename == '':
             flash("No backup file selected.", "danger")
-            return redirect(url_for("setup") + "#tab-data")
+            return redirect(url_for("setup", section="data"))
 
         # Validate file extension
         if not file.filename.endswith('.zip'):
             flash("Only ZIP backup files are supported.", "danger")
-            return redirect(url_for("setup") + "#tab-data")
+            return redirect(url_for("setup", section="data"))
 
         # Save uploaded file temporarily
         import tempfile
@@ -6729,7 +6754,7 @@ def upload_and_restore_backup():
         print("Upload and restore failed:", str(e))
         flash("Failed to upload and restore backup. Check logs.", "danger")
 
-    return redirect(url_for("setup") + "#tab-data")
+    return redirect(url_for("setup", section="data"))
 
 
 @app.route("/api/users/search")
@@ -7529,6 +7554,8 @@ def activity_log():
         return redirect(url_for("login"))
 
     from utils import get_all_activity_logs
+    from markupsafe import escape
+    from flask_wtf.csrf import generate_csrf
 
     # Get pagination and filter parameters
     page = request.args.get('page', 1, type=int)
@@ -7593,7 +7620,48 @@ def activity_log():
     pagination = SimplePagination(logs, page, per_page, total)
     current_filters = {'q': request.args.get('q', ''), 'type': request.args.get('type', '')}
 
-    return render_template("activity_log.html", logs=logs, pagination=pagination, current_filters=current_filters)
+    rows = []
+    for idx, log in enumerate(logs):
+        log_type = log.get('type', '')
+        timestamp = log.get('timestamp')
+        timestamp_str = utc_to_local(timestamp).strftime('%Y-%m-%d %H:%M') if timestamp else ''
+        details_html = escape(log.get('details', ''))
+        email_log_id = log.get('email_log_id')
+        icon = log_type_icon(log_type)
+        color = log_type_color(log_type)
+
+        inline_actions = ''
+        if log_type in ('Email Sent', 'Email Failed') and email_log_id:
+            form_id = f"resend-form-{start + idx}"
+            inline_actions += (
+                f'<form id="{form_id}" method="POST" action="{url_for("resend_email", log_id=email_log_id)}" style="display:none">'
+                f'<input type="hidden" name="csrf_token" value="{generate_csrf()}"></form>'
+                f'<button type="button" class="mp-btn" data-variant="ghost" data-size="icon-xs" title="Resend this email" '
+                f'onclick="document.getElementById(\'{form_id}\').submit()"><i class="ti ti-send"></i></button>'
+            )
+        if log_type == 'Email Failed' and email_log_id:
+            form_id = f"dismiss-form-{start + idx}"
+            inline_actions += (
+                f'<form id="{form_id}" method="POST" action="{url_for("dismiss_email", log_id=email_log_id)}" style="display:none">'
+                f'<input type="hidden" name="csrf_token" value="{generate_csrf()}"></form>'
+                f'<button type="button" class="mp-btn" data-variant="destructive" data-size="icon-xs" title="Clear this failure (no resend)" '
+                f'onclick="document.getElementById(\'{form_id}\').submit()"><i class="ti ti-x"></i></button>'
+            )
+
+        type_cell = f'<i class="ti {icon} text-{color} me-1"></i>{escape(log_type)}'
+        description_cell = f'{details_html} {inline_actions}' if inline_actions else str(details_html)
+
+        rows.append({
+            "id": f"log-{start + idx}",
+            "cells": [timestamp_str, type_cell, description_cell],
+            "mobile_detail": (
+                f'<div>{type_cell}</div>'
+                f'<div class="text-muted small">{timestamp_str}</div>'
+                f'<div class="mt-1">{description_cell}</div>'
+            ),
+        })
+
+    return render_template("activity_log.html", rows=rows, pagination=pagination, current_filters=current_filters)
 
 
 @app.route("/tier-limit-exceeded")
@@ -8993,8 +9061,11 @@ def user_contacts_report():
         return redirect(url_for("login"))
 
     from utils import get_user_contact_report
+    from markupsafe import escape
 
-    # Get filter parameters
+    # Get pagination and filter parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 25
     q = request.args.get("q", "").strip()
     status_filter = request.args.get("status", "")
     show_all_param = request.args.get("show_all", "").lower()
@@ -9023,16 +9094,75 @@ def user_contacts_report():
     is_first_time_empty = statistics['total_users'] == 0
     is_zero_results = len(user_data['users']) == 0 and not is_first_time_empty
 
+    # Paginate the already-filtered list (get_user_contact_report aggregates
+    # in Python, not SQL, so there's no query to call .paginate() on)
+    total = len(user_data['users'])
+    pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, pages))
+    start = (page - 1) * per_page
+    page_users = user_data['users'][start:start + per_page]
+    pagination = {'page': page, 'pages': pages, 'per_page': per_page, 'total': total}
+
     # Current filter state
-    current_filters = {
-        'q': q,
-        'status': status_filter,
-        'show_all': "true" if show_all_param == "true" else None
-    }
+    current_filters = {}
+    if q:
+        current_filters['q'] = q
+    if status_filter:
+        current_filters['status'] = status_filter
+    if show_all_param == "true":
+        current_filters['show_all'] = "true"
+
+    tabs = [
+        {
+            "label": "Active",
+            "url": url_for('user_contacts_report', status='active'),
+            "count": statistics['active_users'],
+            "active": status_filter == 'active' and show_all_param != 'true',
+        },
+        {
+            "label": "All",
+            "url": url_for('user_contacts_report', show_all='true'),
+            "count": statistics['total_users'],
+            "active": show_all_param == 'true',
+        },
+    ]
+
+    rows = []
+    for idx, user in enumerate(page_users):
+        name = user['name'] or 'Anonymous'
+        activity_pills = ''.join(
+            f'<span class="mp-badge" data-variant="secondary" title="{escape(activity)}">{escape(activity)}</span>'
+            for activity in user['activities']
+        ) if user['activities'] else '<span class="text-muted small">None</span>'
+        activities_cell = f'<div class="mp-badge-wrap d-flex flex-wrap gap-1">{activity_pills}</div>'
+
+        rows.append({
+            "id": f"contact-{idx}",
+            "avatar_name": name,
+            "primary": name,
+            "secondary": user['email'] or 'No email',
+            "cells": [
+                f'<span class="small text-nowrap">{escape(user["phone"] or "")}</span>',
+                f'<span class="badge bg-blue-lt">{user["passport_count"]}</span>',
+                f'${user["total_revenue"]:.2f}',
+                activities_cell,
+                f'<span class="small text-nowrap">{escape(user["last_activity_date"])}</span>',
+            ],
+            "mobile_detail": (
+                f'<div class="d-flex justify-content-between">'
+                f'<span class="badge bg-blue-lt">{user["passport_count"]} passport{"s" if user["passport_count"] != 1 else ""}</span>'
+                f'<span class="fw-bold">${user["total_revenue"]:.2f}</span>'
+                f'</div>'
+                f'<div class="text-muted small mt-1">Last activity: {user["last_activity_date"]}</div>'
+                f'<div class="mt-2">{activities_cell}</div>'
+            ),
+        })
 
     return render_template("user_contacts_report.html",
-                         users=user_data['users'],
+                         rows=rows,
+                         tabs=tabs,
                          statistics=statistics,
+                         pagination=pagination,
                          is_first_time_empty=is_first_time_empty,
                          is_zero_results=is_zero_results,
                          current_filters=current_filters)
@@ -10325,6 +10455,176 @@ def activity_dashboard(activity_id):
     # Calculate survey rating for activity header
     survey_rating, survey_count = calculate_activity_survey_rating(activity_id)
 
+    # current_filters used by tab_url()/preserve_filters() (style-guide Data Table)
+    current_filters = {
+        'activity_id': activity_id,
+        'q': q,
+        'passport_filter': passport_filter,
+        'signup_filter': signup_filter,
+        'show_all': "true" if show_all_param == "true" else None,
+    }
+    current_filters = {k: v for k, v in current_filters.items() if v}
+
+    from markupsafe import escape
+
+    # --- Passport rows (style-guide Data Table, mirrors list_passports()) ---
+    passport_tabs = [
+        {"label": "Active", "url": tab_url('activity_dashboard', current_filters, passport_filter='active', show_all=None),
+         "count": passport_statistics['active_passports'], "active": passport_filter == 'active' and show_all_param != "true"},
+        {"label": "Unpaid", "url": tab_url('activity_dashboard', current_filters, passport_filter='unpaid', show_all=None),
+         "count": passport_statistics['unpaid_passports'], "active": passport_filter == 'unpaid', "hide_on_mobile": True},
+        {"label": "All", "url": tab_url('activity_dashboard', current_filters, passport_filter=None, show_all='true'),
+         "count": passport_statistics['total_passports'], "active": show_all_param == "true"},
+    ]
+
+    passport_rows = []
+    for passport in passports:
+        p_user_name = passport.user.name if passport.user else 'Anonymous'
+        p_uses_remaining = passport.uses_remaining or 0
+        passport_activity_name = passport.activity.name if passport.activity else activity.name
+        activity_cell = f'<div><div class="fw-bold">{escape(passport_activity_name)}'
+        if passport.activity_id != activity_id:
+            activity_cell += ' <span class="badge bg-blue-lt" title="Inherited from another activity">Inherited</span>'
+        activity_cell += f'</div><div class="text-muted small">{escape(passport.pass_code or "No code")}</div></div>'
+
+        passport_type_cell = escape(passport.passport_type.name) if passport.passport_type else 'Standard'
+        amount_cell = f'${passport.sold_amt:.0f}' if passport.sold_amt else '<span class="text-muted">-</span>'
+        status_cell = ('<span class="badge bg-green-lt text-green-lt-fg">Paid</span>' if passport.paid
+                        else '<span class="badge bg-yellow-lt text-yellow-lt-fg">Unpaid</span>')
+        uses_cell = str(p_uses_remaining)
+
+        p_display_date = utc_to_local(passport.created_dt) if passport.created_dt else None
+        created_cell = p_display_date.strftime('%Y-%m-%d') if p_display_date else '<span class="text-muted">-</span>'
+
+        mobile_badges = [
+            {"text": "Paid" if passport.paid else "Unpaid", "variant": "green" if passport.paid else "yellow"},
+            {"text": f"{p_uses_remaining} left", "variant": "blue"},
+        ]
+        if passport.sold_amt:
+            mobile_badges.append({"text": f"${passport.sold_amt:.0f}", "variant": "secondary"})
+
+        p_user_name_esc = escape(p_user_name or 'this user')
+
+        actions = []
+        if p_uses_remaining > 0:
+            actions.append({"label": "Check In", "icon": '<i class="ti ti-login"></i>', "attrs": {
+                "data-bs-toggle": "modal", "data-bs-target": "#redeem-modal",
+                "data-user-name": p_user_name_esc,
+                "data-redeem-url": url_for('redeem_passport', pass_code=passport.pass_code),
+            }})
+        actions.append({"label": "Edit", "icon": '<i class="ti ti-pencil"></i>', "url": url_for('edit_passport', passport_id=passport.id)})
+        if not passport.paid:
+            actions.append({"label": "Mark as Paid", "icon": '<i class="ti ti-currency-dollar"></i>', "attrs": {
+                "data-bs-toggle": "modal", "data-bs-target": "#mark-paid-modal",
+                "data-user-name": p_user_name_esc,
+                "data-mark-paid-url": url_for('mark_passport_paid', passport_id=passport.id),
+            }})
+        actions.append({"label": "View", "icon": '<i class="ti ti-qrcode"></i>', "url": url_for('show_pass', pass_code=passport.pass_code)})
+        if not passport.paid:
+            actions.append({"label": "Send Reminder", "icon": '<i class="ti ti-mail"></i>', "attrs": {
+                "data-bs-toggle": "modal", "data-bs-target": "#send-reminder-modal",
+                "data-user-name": p_user_name_esc,
+                "data-reminder-url": url_for('send_passport_reminder', passport_id=passport.id),
+            }})
+        actions.append({"type": "separator"})
+        p_delete_name = escape(p_user_name or 'Anonymous')
+        actions.append({"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {
+            "data-variant": "destructive",
+            "onclick": f"confirmPassportDelete({passport.id}, '{p_delete_name}', {p_uses_remaining}); return false;"
+        }})
+
+        passport_rows.append({
+            "id": passport.id,
+            "avatar_name": p_user_name or 'Anonymous',
+            "primary": p_user_name or 'Anonymous',
+            "secondary": passport.user.email if passport.user else 'No email',
+            "mobile_secondary": passport_activity_name,
+            "mobile_badges": mobile_badges,
+            "cells": [activity_cell, passport_type_cell, amount_cell, status_cell, uses_cell, created_cell],
+            "actions": actions,
+        })
+
+    # --- Signup rows (style-guide Data Table, mirrors list_signups()) ---
+    signup_tabs = [
+        {"label": "Pending", "url": tab_url('activity_dashboard', current_filters, signup_filter='pending'),
+         "count": activity_pending_signups_count, "active": signup_filter == 'pending'},
+        {"label": "Approved", "url": tab_url('activity_dashboard', current_filters, signup_filter='approved'),
+         "count": activity_approved_signups_count, "active": signup_filter == 'approved', "hide_on_mobile": True},
+        {"label": "All", "url": tab_url('activity_dashboard', current_filters, signup_filter=None),
+         "count": len(all_signups), "active": signup_filter not in ('pending', 'approved')},
+    ]
+
+    signup_rows = []
+    for signup in signups:
+        s_status = signup.status or 'pending'
+        is_payment_first = signup.activity and signup.activity.workflow_type == 'payment_first'
+
+        if s_status == 'approved':
+            status_cell = '<span class="badge bg-green-lt text-green-lt-fg">Approved</span>'
+            status_badge = {"text": "Approved", "variant": "green"}
+        elif s_status == 'pending' and is_payment_first:
+            status_cell = '<span class="badge bg-azure-lt text-azure-lt-fg">Awaiting Payment</span>'
+            status_badge = {"text": "Awaiting Payment", "variant": "azure"}
+        elif s_status == 'pending':
+            status_cell = '<span class="badge bg-yellow-lt text-yellow-lt-fg">Pending Approval</span>'
+            status_badge = {"text": "Pending", "variant": "yellow"}
+        elif s_status == 'rejected':
+            status_cell = '<span class="badge bg-red-lt text-red-lt-fg">Rejected</span>'
+            status_badge = {"text": "Rejected", "variant": "red"}
+        else:
+            status_cell = f'<span class="badge bg-secondary-lt">{escape(s_status.title())}</span>'
+            status_badge = {"text": s_status.title(), "variant": "secondary"}
+
+        s_display_date = utc_to_local(signup.signed_up_at) if signup.signed_up_at else None
+        created_cell = s_display_date.strftime('%Y-%m-%d') if s_display_date else '<span class="text-muted">Unknown</span>'
+        signup_activity_name = signup.activity.name if signup.activity else 'Unknown'
+        activity_cell = escape(signup_activity_name)
+        amount_cell = f'${signup.requested_amount:.0f}' if signup.requested_amount else '<span class="text-muted">-</span>'
+
+        remain_cell = '<span class="text-muted">-</span>'
+        if signup.passport_type_id:
+            s_passport_type = next((pt for pt in passport_types if pt.id == signup.passport_type_id), None)
+            if s_passport_type:
+                remain_cell = str(signup.requested_sessions or s_passport_type.sessions_included)
+
+        mobile_badges = [status_badge]
+        if signup.requested_amount:
+            mobile_badges.append({"text": f"${signup.requested_amount:.0f}", "variant": "secondary"})
+
+        actions = []
+        if s_status == 'pending':
+            s_user_name = escape(signup.user.name if signup.user else 'this user')
+            approve_url = url_for('approve_and_create_pass', signup_id=signup.id)
+            if is_payment_first:
+                actions.append({"label": "Mark Paid & Create Passport", "icon": '<i class="ti ti-cash"></i>', "attrs": {
+                    "data-bs-toggle": "modal", "data-bs-target": "#approveSignupModal",
+                    "data-user-name": s_user_name, "data-approve-url": approve_url,
+                    "data-workflow-type": "payment_first",
+                }})
+            else:
+                actions.append({"label": "Approve & Create Passport", "icon": '<i class="ti ti-check"></i>', "attrs": {
+                    "data-bs-toggle": "modal", "data-bs-target": "#approveSignupModal",
+                    "data-user-name": s_user_name, "data-approve-url": approve_url,
+                    "data-workflow-type": "standard",
+                }})
+            actions.append({"type": "separator"})
+        s_delete_name = escape((signup.user.email if signup.user else None) or (signup.user.name if signup.user else None) or 'Unknown user')
+        actions.append({"label": "Delete", "icon": '<i class="ti ti-trash"></i>', "attrs": {
+            "data-variant": "destructive",
+            "onclick": f"confirmSignupDelete({signup.id}, '{s_delete_name}'); return false;"
+        }})
+
+        signup_rows.append({
+            "id": signup.id,
+            "avatar_name": signup.user.name if signup.user else 'Anonymous',
+            "primary": signup.user.name if signup.user else 'Anonymous',
+            "secondary": signup.user.email if signup.user else 'No email',
+            "mobile_secondary": signup_activity_name,
+            "mobile_badges": mobile_badges,
+            "cells": [created_cell, activity_cell, status_cell, amount_cell, remain_cell],
+            "actions": actions,
+        })
+
     # Render KPI cards with activity filter
     revenue_card = render_revenue_card(activity_id=activity_id)
     active_users_card = render_active_users_card(activity_id=activity_id)  
@@ -10371,13 +10671,11 @@ def activity_dashboard(activity_id):
         total_sold_revenue=total_sold_revenue,
         # Add filter-related data for server-side filtering (like Passports page)
         passport_statistics=passport_statistics,
-        current_filters={
-            'activity_id': activity_id,
-            'q': q,
-            'passport_filter': passport_filter,
-            'signup_filter': signup_filter,
-            'show_all': "true" if show_all_param == "true" else None
-        },
+        current_filters=current_filters,
+        passport_tabs=passport_tabs,
+        passport_rows=passport_rows,
+        signup_tabs=signup_tabs,
+        signup_rows=signup_rows,
         # Add pagination objects
         passport_pagination=passport_pagination,
         signup_pagination=signup_pagination,
@@ -11420,6 +11718,32 @@ def log_type_color(log_type):
         'Reminder Sent': 'purple',
     }
     return colors.get(log_type, 'gray')
+
+
+def log_type_icon(log_type):
+    """Return a Tabler icon name (no 'ti-' text prefix needed) for an activity log type."""
+    icons = {
+        'Passport Redeemed': 'ti-ticket',
+        'Passport Created': 'ti-id',
+        'Email Sent': 'ti-mail',
+        'Email Failed': 'ti-mail-x',
+        'Email Dismissed': 'ti-mail-off',
+        'Interac Payment Matched': 'ti-currency-dollar',
+        'Stripe Payment Received': 'ti-credit-card',
+        'Stripe Payout Received': 'ti-credit-card',
+        'Marked Paid': 'ti-check',
+        'Marked Paid (Cash)': 'ti-check',
+        'Marked Paid (POS/TPV)': 'ti-check',
+        'Marked Paid (Cheque)': 'ti-check',
+        'Reminder Sent': 'ti-bell',
+        'Signup Submitted': 'ti-user-plus',
+        'Signup Approved': 'ti-user-check',
+        'Signup Rejected': 'ti-user-x',
+        'Signup Cancelled': 'ti-user-x',
+        'Activity Created': 'ti-target',
+        'Admin Action': 'ti-settings',
+    }
+    return icons.get(log_type, 'ti-activity')
 
 
 ##

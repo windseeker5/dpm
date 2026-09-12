@@ -27,9 +27,10 @@
     - method: form method (default "post")
     - form_id: form element id
     - class_: outer wrapper class (default "mp-form-content")
+    - enctype: optional form enctype (e.g. "multipart/form-data" for file uploads)
 #}
 
-{% macro form_page(card_title, action, cancel_url, title=None, submit_label="Save changes", description=None, card_description=None, method="post", form_id="mp-form", class_="mp-form-content") %}
+{% macro form_page(action, cancel_url, card_title=None, title=None, submit_label="Save changes", description=None, card_description=None, method="post", form_id="mp-form", class_="mp-form-content", enctype=None) %}
 <div class="{{ class_ }}">
   {% if title %}
   <div class="mb-4">
@@ -37,12 +38,14 @@
     {% if description %}<div class="text-muted">{{ description }}</div>{% endif %}
   </div>
   {% endif %}
-  <form id="{{ form_id }}" method="{{ method }}" action="{{ action }}" class="card mb-0">
+  <form id="{{ form_id }}" method="{{ method }}" action="{{ action }}"{% if enctype %} enctype="{{ enctype }}"{% endif %} class="card mb-0">
     <div class="card-body mp-form-card-body">
-      <div>
+      {% if card_title %}
+      <div class="mp-form-card-header">
         <h2 class="mb-1">{{ card_title }}</h2>
         {% if card_description %}<div class="text-muted small">{{ card_description }}</div>{% endif %}
       </div>
+      {% endif %}
       <div class="mp-form-fields">
         {{ caller() }}
       </div>
