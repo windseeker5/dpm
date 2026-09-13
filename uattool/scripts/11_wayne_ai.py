@@ -61,7 +61,10 @@ def _ask(page, ctx, question, timeout_ms=30000):
         arg={"sel": ".wayne-message-wayne", "before": before_count},
         timeout=timeout_ms,
     )
-    page.wait_for_selector("#wayne-typing[hidden]", timeout=timeout_ms)
+    # wait_for_selector defaults to state="visible", but "#wayne-typing[hidden]" describes
+    # an element that is by definition NOT visible, so the default can never be satisfied.
+    # state="attached" is the right check: the indicator exists and carries [hidden].
+    page.wait_for_selector("#wayne-typing[hidden]", state="attached", timeout=timeout_ms)
 
     bubble = page.locator(".wayne-message-wayne").last
     is_error = "wayne-message-error" in (bubble.get_attribute("class") or "")

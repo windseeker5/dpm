@@ -1,6 +1,6 @@
 """Shared configuration for the UAT tool.
 
-Everything in this suite runs against Ken's own kdc.minipass.me demo tenant
+Everything in this suite runs against Ken's own demo.minipass.me tenant
 (never a customer's), using the same admin credentials as local dev. See
 uattool/CATALOG.md and the plan this tool was built from for why.
 """
@@ -16,10 +16,10 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
 # Override with UAT_BASE_URL=... if ever needed, but the default target for
-# this suite is deliberately the real kdc.minipass.me tenant, not localhost —
+# this suite is deliberately the real demo.minipass.me tenant, not localhost —
 # local email rendering is missing images, which defeats the point of a
 # release-wide visual/email check.
-BASE_URL = os.environ.get("UAT_BASE_URL", "https://kdc.minipass.me").rstrip("/")
+BASE_URL = os.environ.get("UAT_BASE_URL", "https://demo.minipass.me").rstrip("/")
 
 ADMIN_EMAIL = "kdresdell@gmail.com"
 

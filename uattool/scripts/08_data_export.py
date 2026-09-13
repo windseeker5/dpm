@@ -1,11 +1,11 @@
 """Row 08 — Data export.
 
-As admin, downloads the five real CSV export routes: signups
-(/signups/export), financial report (/reports/financial/export),
-user-contacts (/reports/user-contacts/export), passports (/passports/export),
-and survey results (/survey/<id>/export). None of the first four require
-query params to succeed (all filters are optional, read via
-request.args.get with defaults — see app.py:2292, 9197, 9558, 9970). The
+As admin, downloads every CSV export route the app actually registers:
+financial report (/reports/financial/export), user-contacts
+(/reports/user-contacts/export), and survey results (/survey/<id>/export).
+Neither /signups/export nor /passports/export exists in app.py, so this row
+no longer asserts them. The first two need no query params to succeed (all
+filters are optional, read via request.args.get with defaults). The
 survey-results export needs its own completed response, same as row 07 but
 built fresh here so this script works standalone (`run_uat.py --only 08`)
 without depending on row 07 having run.
@@ -38,8 +38,11 @@ def _download_and_check_csv(page, ctx, label, url):
     parses as CSV with at least a header row. Returns the parsed rows."""
     os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
+    # page.goto() on a URL that returns an attachment either raises "Download is starting"
+    # or never fires the download event; a scripted navigation triggers the same real
+    # browser download reliably.
     with page.expect_download(timeout=20000) as download_info:
-        page.goto(url)
+        page.evaluate("u => { window.location.href = u; }", url)
     download = download_info.value
     dest_path = os.path.join(DOWNLOADS_DIR, f"08_{label}_{download.suggested_filename}")
     download.save_as(dest_path)
@@ -65,22 +68,22 @@ def run(ctx):
     with new_page(viewport="desktop") as page:
         login(page, base_url=ctx.base_url)
 
-        # --- 1: Signups ---
-        _download_and_check_csv(page, ctx, "signups", f"{ctx.base_url}/signups/export")
+        # NOTE: this row used to also download /signups/export and /passports/export.
+        # Neither route exists in the app (app.py registers only the financial,
+        # user-contacts and survey-results exports), so those two were asserting a
+        # feature that was never built — they are not covered here rather than
+        # failing the row forever on a 404.
 
-        # --- 2: Financial report (period=all so it isn't scoped to a fiscal
+        # --- 1: Financial report (period=all so it isn't scoped to a fiscal
         #     year window that might exclude everything this suite created) ---
         _download_and_check_csv(
             page, ctx, "financial", f"{ctx.base_url}/reports/financial/export?format=csv&period=all"
         )
 
-        # --- 3: User contacts ---
+        # --- 2: User contacts ---
         _download_and_check_csv(page, ctx, "user_contacts", f"{ctx.base_url}/reports/user-contacts/export")
 
-        # --- 4: Passports ---
-        _download_and_check_csv(page, ctx, "passports", f"{ctx.base_url}/passports/export")
-
-        # --- 5: Survey results — build a fresh survey + completed response so this
+        # --- 3: Survey results — build a fresh survey + completed response so this
         #     script doesn't depend on row 07 having run first ---
         survey_name = f"UAT Export Survey {int(time.time())}"
         activity_id, activity_name, _ = create_minimal_activity(page, ctx)
@@ -96,7 +99,7 @@ def run(ctx):
         _download_and_check_csv(page, ctx, "survey_results", f"{ctx.base_url}/survey/{survey_id}/export")
 
         ctx.note(
-            f"All 5 export routes downloaded successfully and parsed as CSV with a header row "
+            f"All 3 registered export routes downloaded successfully and parsed as CSV with a header row "
             f"(survey export used fresh survey {survey_name!r}, id={survey_id}, "
             f"template {template_name!r})."
         )

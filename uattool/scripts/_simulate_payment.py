@@ -19,7 +19,7 @@ WHAT IT DOES NOT SIMULATE
     The matching itself — reading the bank notification email and fuzzy-matching payer name and
     amount to a cart. That logic is inline inside match_gmail_payments_to_passes(), reads a live
     IMAP inbox, and cannot be invoked in isolation. It stays unproven until row 91 runs for real
-    on kdc. This covers the money LANDING, not the FINDING of the cart.
+    on demo. This covers the money LANDING, not the FINDING of the cart.
 
 USAGE
     cd uattool && source ../venv/bin/activate

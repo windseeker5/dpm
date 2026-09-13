@@ -107,16 +107,19 @@ def run(ctx):
                 "the same one surfaced by inheritance."
             )
 
-        # --- secondary signal: exactly one "Passport created" log line ever mentions this
-        # pass_code (inheritance must not have triggered a second Passport row creation) ---
-        page.goto(f"{ctx.base_url}/activity-log?q={quote(pass_code_a)}")
+        # --- secondary signal: exactly one "Passport created" log line for activity A
+        # (inheritance must not have triggered a second Passport row creation) ---
+        # Searched by activity name, not pass_code: create_passport() logs
+        # "Passport created for {user} for activity '{name}' by {admin}" (app.py ~11881),
+        # which carries no pass_code, so a ?q=<pass_code> search can never match it.
+        page.goto(f"{ctx.base_url}/activity-log?q={quote(activity_a_name)}")
         page.wait_for_load_state("networkidle", timeout=10000)
         log_text = page.locator("body").inner_text().lower()
         creation_mentions = log_text.count("passport created for")
         if creation_mentions != 1:
             raise AssertionError(
-                f"Expected exactly one 'Passport created' log entry mentioning pass_code "
-                f"{pass_code_a}, found {creation_mentions} — possible duplicate Passport row."
+                f"Expected exactly one 'Passport created' log entry for activity A "
+                f"({activity_a_name!r}), found {creation_mentions} — possible duplicate Passport row."
             )
 
         ctx.note(

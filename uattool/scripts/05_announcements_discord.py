@@ -27,6 +27,7 @@ from lib.fixtures import (
     WING_FOIL_SESSIONS,
     create_admin_passport,
     create_minimal_activity,
+    expand_collapsible_sections,
     scenario_name,
 )
 
@@ -37,20 +38,39 @@ def _open_announcement_modal(page):
     """Open the Actions dropdown and click Send Announcement — works for
     whichever of the desktop/mobile duplicated dropdown triggers is
     currently visible at the page's viewport."""
-    page.locator('[data-bs-toggle="dropdown"][aria-label="Actions"]:visible').first.click()
+    # The activity dashboard's "Manage" menu is dropdown_menu(id="activity-header-actions")
+    # (activity_dashboard.html ~line 242), so its trigger is #activity-header-actions-trigger
+    # and its entries render as [role="menuitem"] — the old Bootstrap
+    # data-bs-toggle="dropdown" trigger and .dropdown-item entries no longer exist.
+    page.locator("#activity-header-actions-trigger").click()
     page.wait_for_timeout(300)
-    page.locator('.dropdown-item[data-bs-target="#announcementModal"]:visible').first.click()
+    page.locator('[role="menuitem"][data-bs-target="#announcementModal"]').first.click()
     page.wait_for_selector("#announcementModal.show", timeout=5000)
+    # tinymce.init() is async and registers the editor before it finishes wiring up, so
+    # waiting only for tinymce.get() to return an object lets setContent() run against a
+    # half-built editor whose content is then wiped when init completes. Wait for the
+    # editor to report itself initialized instead.
     page.wait_for_function(
-        "() => typeof tinymce !== 'undefined' && !!tinymce.get('announcementMessage')",
-        timeout=5000,
+        """() => {
+            if (typeof tinymce === 'undefined') return false;
+            const editor = tinymce.get('announcementMessage');
+            return !!editor && editor.initialized === true;
+        }""",
+        timeout=10000,
     )
 
 
 def _fill_announcement(page, subject):
     page.fill("#announcementSubject", subject)
+    # setContent() only updates TinyMCE's own iframe; the underlying <textarea> stays
+    # empty until the editor is saved back to it, so the form's own validation would
+    # reject this as "Please fill in both subject and message."
     page.evaluate(
-        "html => tinymce.get('announcementMessage').setContent(html)",
+        """html => {
+            const editor = tinymce.get('announcementMessage');
+            editor.setContent(html);
+            editor.save();
+        }""",
         ANNOUNCEMENT_MESSAGE_HTML,
     )
 
@@ -92,11 +112,9 @@ def run(ctx):
         if webhook_url:
             page.goto(f"{ctx.base_url}/edit-activity/{activity_id}")
 
-            advanced_toggle = page.locator("#activity-advanced-chevron")
-            if advanced_toggle.count():
-                advanced_toggle.scroll_into_view_if_needed()
-                page.locator('[data-bs-target="#collapseActivityAdvanced"], a:has(#activity-advanced-chevron)').first.click()
-                page.wait_for_timeout(500)
+            # Settings moved into <details class="mp-collapsible-section"> in the style-guide
+            # redesign; the old #activity-advanced-chevron collapse matches nothing now.
+            expand_collapsible_sections(page, ctx)
 
             page.check("#discordToggle")
             page.wait_for_timeout(300)

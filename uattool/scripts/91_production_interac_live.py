@@ -13,7 +13,7 @@ correctly. Passport money must land on the activity, product money must land on 
 neither may contaminate the other. A view that attributed product revenue to an activity would
 still show the right grand total, so only the split reveals it.
 
-The assertions are deltas, never absolute totals: kdc holds real money and its starting figures
+The assertions are deltas, never absolute totals: demo holds real money and its starting figures
 change between runs.
 
 An unpaid mixed cart does NOT put its whole value in receivables, and that surprised the author
@@ -30,7 +30,7 @@ So the unpaid cart shows AR +1.00, and payment produces cash +3.00 with AR -1.00
 correct: a signup is not a sale until a passport exists. Asserting AR +3.00 here would fail
 against working code.
 
-Deliberately runs LAST in the catalog, and only against kdc.minipass.me — see CATALOG.md and the
+Deliberately runs LAST in the catalog, and only against demo.minipass.me — see CATALOG.md and the
 plan this tool was built from.
 """
 

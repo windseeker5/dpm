@@ -12,6 +12,115 @@ from . import config
 FIXTURE_IMAGE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fixtures", "test_cover_photo.jpg")
 
 
+def archive_uat_activities(page, ctx, keep_newest=0, name_marker="UAT"):
+    """Archive leftover UAT fixture activities so the suite can keep creating them.
+
+    Every activity-creating row leaves its fixture behind, but the tenant's plan
+    caps how many activities can be ACTIVE at once (the Club plan allows 15).
+    Once that cap is reached, /create-activity stops rendering the form and
+    redirects to /activities with a "you've reached your plan limit" warning, so
+    every later row fails on a missing `input[name="name"]` — the suite poisons
+    its own tenant and stays broken until someone archives by hand.
+
+    Archiving (not deleting) mirrors what an admin would do and keeps the data
+    around for inspection; archived activities don't count against the cap.
+
+    Only touches activities whose name carries `name_marker`, so a real activity
+    on the tenant is never archived by the test suite.
+
+    Returns the number archived.
+    """
+    page.goto(f"{ctx.base_url}/activities")
+    page.wait_for_load_state("networkidle", timeout=15000)
+
+    token = page.locator('input[name="csrf_token"]').first.get_attribute("value")
+    if not token:
+        raise AssertionError("Could not read a CSRF token from /activities to archive UAT fixtures.")
+
+    # Rows are newest-first, so skipping the first `keep_newest` leaves the most
+    # recent fixtures intact for anyone eyeballing the tenant after a run.
+    ids = page.evaluate(
+        """
+        marker => Array.from(document.querySelectorAll('tr'))
+            .filter(tr => tr.innerText.includes(marker))
+            .map(tr => {
+                const a = tr.querySelector('a[href*="/activity-dashboard/"]');
+                if (!a) return null;
+                const m = a.getAttribute('href').match(/activity-dashboard\\/(\\d+)/);
+                return m ? m[1] : null;
+            })
+            .filter(Boolean)
+        """,
+        name_marker,
+    )
+    targets = ids[keep_newest:] if keep_newest else ids
+
+    archived = 0
+    for activity_id in targets:
+        response = page.request.post(
+            f"{ctx.base_url}/execute-archive-activity/{activity_id}",
+            form={
+                "csrf_token": token,
+                "passport_action": "close_and_archive",
+                "next_page": "list_activities",
+            },
+        )
+        if response.ok:
+            archived += 1
+
+    if archived and ctx:
+        ctx.note(f"Archived {archived} leftover {name_marker} fixture activity(ies) to stay under the plan's active-activity cap.")
+    return archived
+
+
+def open_create_activity_form(page, ctx):
+    """Navigate to /create-activity, clearing the plan's activity cap if it blocks us.
+
+    The tenant's plan limits ACTIVE activities (15 on Club). At the cap,
+    /create-activity doesn't render the form at all — it redirects to
+    /activities with a "you've reached your plan limit" warning, so every
+    caller dies on a missing `input[name="name"]` with nothing explaining why.
+
+    Since every activity-creating row adds a fixture, the suite reaches that cap
+    on its own. Preflight sweeps leftovers, but rows must also work when run
+    alone via `--only`, so recover here too: archive old UAT fixtures and retry
+    once. Only ever archives activities carrying the UAT marker.
+    """
+    page.goto(f"{ctx.base_url}/create-activity")
+    page.wait_for_load_state("networkidle", timeout=15000)
+    if page.locator('input[name="name"]').count():
+        return
+
+    archived = archive_uat_activities(page, ctx)
+    if not archived:
+        raise AssertionError(
+            "/create-activity did not render the form and no UAT fixture activities could be "
+            f"archived to make room (landed on {page.url}). If the tenant is at its plan's "
+            "active-activity cap, archive a real activity by hand or upgrade the plan."
+        )
+
+    page.goto(f"{ctx.base_url}/create-activity")
+    page.wait_for_load_state("networkidle", timeout=15000)
+    if not page.locator('input[name="name"]').count():
+        raise AssertionError(
+            f"/create-activity still did not render the form after archiving {archived} UAT "
+            f"fixture activity(ies) (landed on {page.url})."
+        )
+
+
+def open_cover_photo_picker(page):
+    """Click the cover-photo thumbnail/placeholder to reveal its options panel.
+
+    templates/activity_form.html's cover-photo field starts collapsed
+    (#cover-photo-options is hidden until #cover-photo-preview is clicked —
+    see static/js/photo-normalizer.js setOptionsPanelVisible()). Every field
+    inside it (#cover-photo-search, #cover-photo-upload, #cover-photo-source)
+    is not interactable until this runs.
+    """
+    page.click("#cover-photo-preview")
+    page.wait_for_selector("#cover-photo-options:not([hidden])", timeout=5000)
+
+
 # Recognizable, real-world scenarios supplied for this suite. A timestamp is
 # appended to activity/product names so every catalog row remains independently
 # repeatable on the shared production UAT tenant.
@@ -84,7 +193,9 @@ def create_product(page, ctx, name, price, with_photo=False, sizes=None):
 
 
 def expand_collapsible_sections(page, ctx=None):
-    """Open every collapsed <details> section on the current form.
+    """Open every collapsed <details> section on the current form, including
+    nested ones (e.g. a capacity sub-section closed inside the outer
+    "Activity Advanced Settings" section).
 
     The style-guide redesign moved settings like show_in_shop and accept_credit_card inside
     `mp-collapsible-section` <details> elements that start closed. A closed <details> has
@@ -92,18 +203,35 @@ def expand_collapsible_sections(page, ctx=None):
     inside as not visible and check()/click() time out — even though getComputedStyle still
     says display:block. Clicking the <summary> is what a real admin does to reach them.
 
+    Clicks one summary at a time via `.first`, re-querying `details:not([open])
+    > summary` after each click, instead of snapshotting a count/index up
+    front: opening an outer section changes which elements match
+    `:not([open])`, so a fixed index silently skips whatever shifts into that
+    slot — including a still-closed inner section nested inside the one just
+    opened.
+
     Returns the number of sections opened.
     """
-    summaries = page.locator("details:not([open]) > summary")
+    summaries = page.locator("details:not([open]):not([data-uat-skip]) > summary")
     opened = 0
-    for i in range(summaries.count()):
+    max_iterations = 20  # guard against an unexpected section that never opens
+    for _ in range(max_iterations):
+        if summaries.count() == 0:
+            break
+        target = summaries.first
         try:
-            summaries.nth(i).click(timeout=5000)
+            target.click(timeout=5000)
             opened += 1
         except Exception:
-            # A section that refuses to open is only a problem if a later field is missing,
-            # and that assertion belongs to the caller, not here.
-            pass
+            # A section that refuses to open (e.g. covered by an unrelated open
+            # modal) shouldn't block the rest — mark it so the re-queried
+            # locator skips it next iteration instead of retrying it forever,
+            # and keep going. Whether that missing section is a real problem
+            # belongs to the caller's own assertion, not here.
+            try:
+                target.locator("xpath=..").evaluate("el => el.setAttribute('data-uat-skip', '1')")
+            except Exception:
+                break
     if opened:
         page.wait_for_timeout(200)  # let the disclosure settle before fields are touched
         if ctx:
@@ -125,14 +253,16 @@ def create_minimal_activity(page, ctx, name=None, workflow_type="payment_first",
     """
     name = name or f"UAT Fixture Activity {time.time_ns()}"
 
-    page.goto(f"{ctx.base_url}/create-activity")
+    open_create_activity_form(page, ctx)
     page.fill('input[name="name"]', name)
     if description is not None:
-        page.fill('textarea[name="description"]', description)
+        page.fill("#activity_description", description)
 
-    # The latest activity form uses visible choice-card radios. The live kdc tenant may
-    # run an older hidden-checkbox build, but forcing the visible radio click is the
-    # forward-compatible path for the upcoming upgraded tenant.
+    # The workflow radios live inside the collapsed "Activity Advanced Settings" section,
+    # so it has to be opened first. check() silently no-ops on an already-selected radio
+    # (payment_first is the default), which is why only a non-default workflow_type such
+    # as approval_first surfaced this as a timeout.
+    expand_collapsible_sections(page, ctx)
     page.locator(f'input[name="workflow_type"][value="{workflow_type}"]').first.check()
 
     page.click("#addPassportTypeBtn")
@@ -146,6 +276,8 @@ def create_minimal_activity(page, ctx, name=None, workflow_type="payment_first",
     # Add the cover photo after the passport type so the upload/crop process has time to
     # settle before the form is submitted, and so it doesn't intercept the passport modal.
     if cover_image:
+        open_cover_photo_picker(page)
+        page.check("#cover-photo-source")
         page.set_input_files("#cover-photo-upload", cover_image)
         # The photo normalizer opens a crop modal on file selection; confirm it so the
         # cropped image is written to the hidden field and the modal is dismissed.
@@ -164,15 +296,26 @@ def create_minimal_activity(page, ctx, name=None, workflow_type="payment_first",
 
     # create_activity() redirects to the dashboard on success, so the activity id is no
     # longer in the URL. Resolve it from the activities list by the exact fixture name.
-    page.goto(f"{ctx.base_url}/activities")
+    # /activities paginates at 10 per page (app.py list_activities), so a freshly created
+    # fixture is often not on page 1 — filter by name with the page's own ?q= search.
+    page.goto(f"{ctx.base_url}/activities?q={quote(name)}")
     page.wait_for_load_state("networkidle", timeout=15000)
-    row = page.locator(f'tr:has-text("{name}")')
-    row.wait_for(timeout=5000)
-    link = row.locator('a[href*="/activity-dashboard/"]').first
-    href = link.get_attribute("href")
-    activity_id = next((p for p in href.rstrip("/").split("/") if p.isdigit()), None)
+    # Read the id straight out of the filtered page's dashboard links rather than off a
+    # table row: /activities swaps the table for cards at mobile widths (and renders the
+    # same activity into several tab panes), so any `tr`-based lookup — visible or not —
+    # works on desktop and fails on mobile. ?q= has already narrowed this to one activity.
+    href = page.evaluate(
+        """() => {
+            const a = document.querySelector('a[href*="/activity-dashboard/"]');
+            return a ? a.getAttribute('href') : null;
+        }"""
+    )
+    activity_id = next((p for p in href.rstrip("/").split("/") if p.isdigit()), None) if href else None
     if not activity_id:
-        raise AssertionError(f"create_minimal_activity: couldn't parse activity id from href {href!r}")
+        raise AssertionError(
+            f"create_minimal_activity: no /activity-dashboard/ link found for {name!r} on "
+            f"{page.url} (href={href!r}) — the activity may not have been created."
+        )
 
     ctx.note(f"Fixture activity created: {name!r} (id={activity_id}, workflow={workflow_type}).")
     return activity_id, name, passport_type_name
@@ -216,7 +359,7 @@ def create_admin_passport(page, ctx, activity_id, name=None, email=None, sold_am
     if uses_remaining is not None:
         page.fill("#uses_remaining", str(uses_remaining))
 
-    page.locator('.card-footer button[type="submit"]').first.click()
+    page.locator('#passport-form button[type="submit"]').first.click()
     page.wait_for_load_state("networkidle", timeout=15000)
 
     if "create-passport" in page.url and page.locator(".alert-danger, .invalid-feedback").count():
@@ -227,12 +370,20 @@ def create_admin_passport(page, ctx, activity_id, name=None, email=None, sold_am
     # scoped to this activity's passports) and read pass_code off its "View" link.
     page.goto(f"{ctx.base_url}/activity-dashboard/{activity_id}?q={email}")
     page.wait_for_load_state("networkidle", timeout=15000)
-    row = page.locator(f'tr:has-text("{email}")').first
-    row.wait_for(timeout=5000)
-    view_link = row.locator('a.dropdown-item:has-text("View")')
-    href = view_link.get_attribute("href")
+    # Read the pass_code straight off the /pass/ link in the DOM rather than walking a
+    # table row: the dashboard swaps its table for cards at mobile widths, so a
+    # `tr`-based lookup passes on desktop and times out on mobile (row 04 runs mobile
+    # first). ?q= has already scoped this page to the one passport just created.
+    href = page.evaluate(
+        """() => {
+            const a = document.querySelector('a[href*="/pass/"]');
+            return a ? a.getAttribute('href') : null;
+        }"""
+    )
     if not href:
-        raise AssertionError(f"Could not find the 'View' link for the passport just created for {email!r}.")
+        raise AssertionError(
+            f"No /pass/ link found on {page.url} for the passport just created for {email!r}."
+        )
     pass_code = href.rstrip("/").split("/")[-1]
 
     ctx.note(f"Admin-created passport for {name!r} <{email}> on activity {activity_id} (pass_code={pass_code}).")
@@ -261,7 +412,15 @@ def fill_public_signup_form(page, ctx, activity_id, name=None, email=None, payme
 
     page.fill("#signup-name", name)
     page.fill("#signup-email", email)
-    if page.locator("#signup-phone").count():
+
+    # Phone is optional and lives inside the collapsed "Ajouter une note ou un téléphone"
+    # disclosure (#notes-section starts hidden), so it has to be opened the way a real
+    # customer would before the field is fillable.
+    notes_toggle = page.locator("#notes-toggle")
+    if notes_toggle.count():
+        notes_toggle.click()
+        page.wait_for_selector("#notes-section:not([hidden])", timeout=5000)
+    if page.locator("#signup-phone").is_visible():
         page.fill("#signup-phone", "5145550000")
 
     method_radio = page.locator(f'input[name="payment_method"][value="{payment_method}"]:visible')

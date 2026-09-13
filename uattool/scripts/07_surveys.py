@@ -102,8 +102,11 @@ def run(ctx):
         # --- export results ---
         os.makedirs(DOWNLOADS_DIR, exist_ok=True)
         export_url = f"{ctx.base_url}/survey/{survey_id}/export"
+        # page.goto() on a URL that returns an attachment raises "Download is starting"
+        # before the download can be captured; a scripted navigation triggers the same
+        # real browser download without that error.
         with page.expect_download(timeout=20000) as download_info:
-            page.goto(export_url)
+            page.evaluate("url => { window.location.href = url; }", export_url)
         download = download_info.value
         dest_path = os.path.join(DOWNLOADS_DIR, f"07_survey_{survey_id}_{download.suggested_filename}")
         download.save_as(dest_path)

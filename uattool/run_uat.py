@@ -8,7 +8,7 @@ Usage:
   python run_uat.py --confirm-money       # also run rows 90/91 (real Stripe + Interac charges)
   python run_uat.py --replay 2026-09-13_142211   # reopen a past run's dashboard
 
-Target is always kdc.minipass.me (override with UAT_BASE_URL env var). See
+Target is always demo.minipass.me (override with UAT_BASE_URL env var). See
 CATALOG.md for the full row-by-row description of what each script does.
 
 Runs headless by default and opens a live dashboard in your browser: the whole
@@ -33,15 +33,38 @@ from lib.runner import run_all
 
 
 def _serve(bus, run_dir, port, open_browser):
-    try:
-        server, url = dashboard.start(bus, run_dir, port)
-    except OSError as exc:
-        print(f"Dashboard could not start on port {port} ({exc}). Continuing without it.")
-        return None, None
-    print(f"Dashboard: {url}")
-    if open_browser:
-        webbrowser.open(url)
-    return server, url
+    """Start the dashboard, falling forward to the next free port if needed.
+
+    A dashboard left running from an earlier run (or a --replay you forgot to
+    Ctrl-C) keeps holding the default port. Binding then fails, and silently
+    continuing without a dashboard is worse than useless: the browser keeps
+    polling the STALE server and happily shows the previous run's rows, which
+    reads as "the new run produced nothing". Take the next free port instead,
+    and say loudly which one won.
+    """
+    for attempt in range(10):
+        candidate = port + attempt
+        try:
+            server, url = dashboard.start(bus, run_dir, candidate)
+        except OSError:
+            continue
+        if attempt:
+            print(
+                f"Port {port} was already in use (something else is still serving a dashboard there "
+                f"— an older run or a --replay still open). Using port {candidate} instead.",
+                flush=True,
+            )
+        print(f"Dashboard: {url}", flush=True)
+        if open_browser:
+            webbrowser.open(url)
+        return server, url
+
+    print(
+        f"Dashboard could not start: ports {port}-{port + 9} are all in use. Continuing without it. "
+        f"Free one up (e.g. quit an older `run_uat.py --replay`) or pass --port.",
+        flush=True,
+    )
+    return None, None
 
 
 def _replay(run_id, port):
@@ -91,8 +114,9 @@ def main():
     bus = EventBus(jsonl_path=os.path.join(run_dir, "events.jsonl"))
 
     server = None
+    dashboard_url = None
     if not args.no_dashboard:
-        server, _ = _serve(bus, run_dir, args.port, open_browser=True)
+        server, dashboard_url = _serve(bus, run_dir, args.port, open_browser=True)
 
     results, manual_reminders, run_id = run_all(
         only=only, money_confirmed=args.confirm_money, bus=bus,
@@ -121,7 +145,7 @@ def main():
             print(f"  - {reminder}")
 
     if server:
-        print(f"\nDashboard still up at http://127.0.0.1:{args.port} — Ctrl-C to quit.")
+        print(f"\nDashboard still up at {dashboard_url} — Ctrl-C to quit.")
         try:
             while True:
                 time.sleep(3600)

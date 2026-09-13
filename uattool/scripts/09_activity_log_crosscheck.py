@@ -86,7 +86,12 @@ def _log_type_present(page, ctx, base_url, log_type):
     url = f"{base_url}/activity-log?type={quote(log_type)}"
     page.goto(url)
     page.wait_for_load_state("networkidle", timeout=10000)
-    count = page.locator("#logTable tbody tr").count()
+    # activity_log.html renders through macros/data_table.html as #activity-log-table
+    # (desktop) plus #activity-log-table-mobile (narrow widths); the old #logTable id
+    # predates that macro and matches nothing, so every type read as "absent".
+    count = page.locator("#activity-log-table tbody tr").count()
+    if count == 0:
+        count = page.locator("#activity-log-table-mobile tbody tr").count()
     return count > 0, count
 
 

@@ -10,6 +10,8 @@ a $200 one-session "Cours de 2h", Sunday September 27 at 11am and 2pm,
 and coaches Ken and Jerome. Then edits and archives the activity.
 """
 
+from urllib.parse import quote
+
 import os
 from datetime import date
 
@@ -21,6 +23,9 @@ from lib.fixtures import (
     WING_FOIL_PASSPORT_TYPE,
     WING_FOIL_PRICE,
     WING_FOIL_SESSIONS,
+    expand_collapsible_sections,
+    open_cover_photo_picker,
+    open_create_activity_form,
     scenario_name,
 )
 
@@ -43,11 +48,11 @@ def run(ctx):
 
     with new_page(viewport="desktop") as page:
         login(page, base_url=ctx.base_url)
-        page.goto(f"{ctx.base_url}/create-activity")
+        open_create_activity_form(page, ctx)
 
         page.fill('input[name="name"]', activity_name)
         page.fill(
-            'textarea[name="description"]',
+            '#activity_description',
             f"Two-hour Wing Foil course coached by {WING_FOIL_COACHES[0]} and "
             f"{WING_FOIL_COACHES[1]}. Created by the UAT tool — safe to delete.",
         )
@@ -61,32 +66,42 @@ def run(ctx):
         page.wait_for_timeout(300)
 
         # --- exercise the web-search picker mode first (no external result required to pass) ---
+        open_cover_photo_picker(page)
         page.fill("#cover-photo-search", "Hockey")
         page.click("#cover-photo-search-button")
-        page.wait_for_timeout(2500)
+        page.wait_for_selector(
+            "#unsplashImages .card-img-top, #unsplashImages .alert-warning", timeout=15000
+        )
         ctx.screenshot(page, "photo_picker_search_results")
         ctx.note("Exercised the web-search image picker (search term submitted, results panel captured).")
 
-        # --- switch to upload mode and use a fixture image for a deterministic result ---
+        # --- close the results modal before touching fields behind it, then switch to upload mode ---
+        page.click("#unsplashModal .btn-close")
+        page.wait_for_selector("#unsplashModal", state="hidden", timeout=10000)
         page.check("#cover-photo-source")
         page.set_input_files("#cover-photo-upload", FIXTURE_IMAGE)
-        page.wait_for_timeout(1000)
+        # File selection opens a crop modal (see photo-normalizer.js); confirm it so the
+        # cropped image is written to the hidden field and the modal is dismissed, rather
+        # than leaving it open to block every subsequent click on the page.
+        page.wait_for_selector("#cropModal.show", timeout=5000)
+        page.click("#cropConfirmBtn")
+        page.wait_for_selector("#cropModal", state="hidden", timeout=5000)
         ctx.screenshot(page, "photo_picker_upload_set")
 
-        # --- workflow: payment-first ---
-        page.check('input[name="workflow_type"][value="payment_first"]')
+        # --- open Advanced section: workflow, capacity, scheduling, stripe/shop toggles all live there ---
+        expand_collapsible_sections(page, ctx)
 
-        # --- open Advanced section for capacity / scheduling / stripe / shop toggles ---
-        advanced_toggle = page.locator("#activity-advanced-chevron")
-        if advanced_toggle.count():
-            advanced_toggle.scroll_into_view_if_needed()
-            page.locator('[data-bs-target="#collapseActivityAdvanced"], a:has(#activity-advanced-chevron)').first.click()
-            page.wait_for_timeout(500)
+        page.check('input[name="workflow_type"][value="payment_first"]')
 
         page.check("#isQuantityLimited")
         page.fill('input[name="max_sessions"]', "20")
 
-        page.check('input[name="accept_credit_card"]')
+        stripe_toggle = page.locator('input[name="accept_credit_card"]')
+        if stripe_toggle.count():
+            stripe_toggle.check()
+            ctx.note("Enabled Stripe (accept_credit_card).")
+        else:
+            ctx.note("Skipped Stripe toggle — Stripe is not configured on this tenant, so the field doesn't render.")
         page.check('input[name="show_in_shop"]')
 
         # --- supplied scheduling scenario: Sunday Sep 27 at 11am and 2pm ---
@@ -123,18 +138,25 @@ def run(ctx):
         created_url = page.url
         ctx.note(f"Created activity {activity_name!r}, landed on {created_url}")
 
-        activity_id = next(
-            (part for part in created_url.rstrip("/").split("/") if part.isdigit()), None
-        )
+        # create_activity() redirects to /dashboard on success (no id in the URL) — resolve
+        # the new activity's id from /activities by its exact fixture name instead, same
+        # approach as lib.fixtures.create_minimal_activity().
+        page.goto(f"{ctx.base_url}/activities?q={quote(activity_name)}")
+        page.wait_for_load_state("networkidle", timeout=15000)
+        row = page.locator(f'tr:visible:has-text("{activity_name}")').first
+        row.wait_for(timeout=5000)
+        link = row.locator('a[href*="/activity-dashboard/"]').first
+        href = link.get_attribute("href")
+        activity_id = next((part for part in href.rstrip("/").split("/") if part.isdigit()), None) if href else None
         if activity_id is None:
-            raise AssertionError(f"Could not determine activity id from URL {created_url!r}")
+            raise AssertionError(f"Could not determine activity id for {activity_name!r} (href={href!r}).")
 
         assert_log_contains(page, "Activity Created", base_url=ctx.base_url)
         assert_log_contains(page, activity_name, base_url=ctx.base_url)
 
         # --- confirm scenario fields persisted, then edit it ---
         page.goto(f"{ctx.base_url}/edit-activity/{activity_id}")
-        saved_description = page.locator('textarea[name="description"]').input_value()
+        saved_description = page.locator('#activity_description').input_value()
         for coach in WING_FOIL_COACHES:
             if coach not in saved_description:
                 raise AssertionError(f"Expected coach {coach!r} in the saved Wing Foil description.")
@@ -148,7 +170,7 @@ def run(ctx):
         ctx.note("Confirmed the Wing Foil passport, coaches, and both sessions persisted after save.")
 
         page.fill(
-            'textarea[name="description"]',
+            '#activity_description',
             saved_description + " Edited by the UAT tool.",
         )
         page.locator('#activityForm button[type="submit"]').first.click()
