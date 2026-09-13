@@ -29,7 +29,7 @@ TEMPLATES_DIR = os.path.join(APP_ROOT, "templates")
 # Matches any quoted https://minipass.me or https://www.minipass.me URL,
 # whether it's a plain <a href="..."> or a JS string (e.g. a redirect).
 # Deliberately anchored to the root domain so it does NOT match tenant
-# subdomains like https://kdc.minipass.me or https://lhgi.minipass.me.
+# subdomains like https://demo.minipass.me or https://lhgi.minipass.me.
 LINK_RE = re.compile(r'["\'](https://(?:www\.)?minipass\.me(?:/[^"\']*)?)["\']')
 
 # Live admin pages worth crawling for outbound links, beyond the one already

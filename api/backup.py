@@ -20,6 +20,51 @@ logger = logging.getLogger(__name__)
 
 backup_api = Blueprint('backup_api', __name__, url_prefix='/api/v1/backup')
 
+
+def resolve_db_path():
+    """Absolute path of the live SQLite file, taken from the app's own DB config.
+
+    The old `config.get('DATABASE_PATH', 'instance/minipass.db')` default is
+    relative to the process CWD and DATABASE_PATH is never set anywhere, so a
+    backup or restore run from any other directory silently read/wrote the
+    wrong file.
+    """
+    configured = current_app.config.get('DATABASE_PATH')
+    if configured:
+        return os.path.abspath(configured)
+
+    uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if uri.startswith('sqlite:///'):
+        path = uri[len('sqlite:///'):]
+        if not os.path.isabs(path):
+            path = os.path.join(current_app.root_path, path)
+        return os.path.abspath(path)
+
+    return os.path.abspath(os.path.join(current_app.root_path, 'instance', 'minipass.db'))
+
+
+def snapshot_database(destination_path):
+    """Write a consistent copy of the live database to destination_path.
+
+    The database runs in WAL mode, where a commit lands in the `-wal` sidecar
+    and only later gets folded into the main `.db`. Copying the `.db` alone —
+    which is what this module used to do — therefore captures a snapshot that
+    is missing every recent commit, so freshly created activities, signups and
+    passports were absent from the backup they were supposed to be in.
+
+    sqlite3's own backup API reads through the WAL and produces a single
+    self-contained file, and it is safe to run while the app is serving.
+    """
+    source = sqlite3.connect(resolve_db_path())
+    try:
+        dest = sqlite3.connect(destination_path)
+        try:
+            source.backup(dest)
+        finally:
+            dest.close()
+    finally:
+        source.close()
+
 # ============================================================================
 # BACKUP OPERATIONS
 # ============================================================================
@@ -41,10 +86,13 @@ def create_backup():
             backup_path = os.path.join(temp_dir, backup_filename)
             
             with ZipFile(backup_path, 'w') as zipf:
-                # Always include database
-                db_path = current_app.config.get('DATABASE_PATH', 'instance/minipass.db')
+                # Always include database — via a WAL-aware snapshot, not a raw file
+                # copy, so commits still living in the -wal sidecar are included.
+                db_path = resolve_db_path()
                 if os.path.exists(db_path):
-                    zipf.write(db_path, 'database/minipass.db')
+                    snapshot_path = os.path.join(temp_dir, 'minipass_snapshot.db')
+                    snapshot_database(snapshot_path)
+                    zipf.write(snapshot_path, 'database/minipass.db')
                 
                 # Include settings export
                 settings_data = export_settings()
@@ -270,13 +318,16 @@ def restore_backup():
                 with open(metadata_file, 'r') as f:
                     metadata = json.load(f)
 
-            # Restore based on type
-            if restore_type in ['full', 'settings']:
-                restore_settings(temp_dir)
-
+            # Restore the database BEFORE settings: restore_database() replaces the
+            # whole file, so any setting written through the ORM first was thrown
+            # away by the swap. Applying settings.json afterwards also lets it act
+            # as an override layer on top of the restored database.
             if restore_type in ['full', 'data']:
                 restore_database(temp_dir)
                 restore_uploads(temp_dir)
+
+            if restore_type in ['full', 'settings']:
+                restore_settings(temp_dir)
 
             if restore_type == 'full':
                 restore_templates(temp_dir)
@@ -423,16 +474,30 @@ def restore_database(temp_dir):
     if not os.path.exists(db_backup_path):
         return
     
-    # Get current database path
-    db_path = current_app.config.get('DATABASE_PATH', 'instance/minipass.db')
-    
+    db_path = resolve_db_path()
+
     # Create backup of current database
     if os.path.exists(db_path):
         backup_current_path = f"{db_path}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         shutil.copy2(db_path, backup_current_path)
-    
-    # Restore database
+
+    # Drop every pooled connection before the file is swapped. SQLAlchemy keeps
+    # SQLite handles open, and a handle held across the copy still owns the old
+    # WAL and its page cache — writes through it land on top of the file we just
+    # restored and undo it.
+    db.session.remove()
+    db.engine.dispose()
+
     shutil.copy2(db_backup_path, db_path)
+
+    # The -wal/-shm sidecars still describe the PREVIOUS database. Left in place,
+    # SQLite replays that stale WAL over the restored file on the next open and
+    # silently reverts the restore — which is why restoring appeared to do
+    # nothing at all. The snapshot in the backup is self-contained, so dropping
+    # them is safe.
+    for sidecar in (f"{db_path}-wal", f"{db_path}-shm"):
+        if os.path.exists(sidecar):
+            os.remove(sidecar)
 
 def restore_uploads(temp_dir):
     """Restore uploaded files from backup - handles busy directories"""
@@ -629,10 +694,13 @@ def create_restore_point():
             backup_path = os.path.join(temp_dir, restore_point_name)
             
             with ZipFile(backup_path, 'w') as zipf:
-                # Include database
-                db_path = current_app.config.get('DATABASE_PATH', 'instance/minipass.db')
+                # Include database — same WAL-aware snapshot as create_backup(), so the
+                # safety net taken before a restore isn't itself missing recent commits.
+                db_path = resolve_db_path()
                 if os.path.exists(db_path):
-                    zipf.write(db_path, 'database/minipass.db')
+                    snapshot_path = os.path.join(temp_dir, 'minipass_snapshot.db')
+                    snapshot_database(snapshot_path)
+                    zipf.write(snapshot_path, 'database/minipass.db')
                 
                 # Include settings
                 settings_data = export_settings()

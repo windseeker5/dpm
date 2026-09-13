@@ -27,7 +27,7 @@ The expense side is read and reported but never asserted: the Stripe processing
 fee may or may not be booked yet depending on payout timing, so failing on it
 would make this row flaky for a reason that is not a defect.
 
-Deliberately runs LAST in the catalog, and only against kdc.minipass.me — see
+Deliberately runs LAST in the catalog, and only against demo.minipass.me — see
 CATALOG.md and the plan this tool was built from.
 """
 

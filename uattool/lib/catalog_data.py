@@ -22,7 +22,7 @@ Fields:
 CATALOG = [
     dict(
         order="00", script="00_preflight.py", area="Preflight",
-        description="Log in as admin once per viewport (desktop, then mobile), confirm kdc.minipass.me is reachable and answers as expected, and confirm the browser logged no JS console error or uncaught exception during login/dashboard load; refuses to let any money-tier script run unless --confirm-money was passed.",
+        description="Log in as admin once per viewport (desktop, then mobile), confirm demo.minipass.me is reachable and answers as expected, and confirm the browser logged no JS console error or uncaught exception during login/dashboard load; refuses to let any money-tier script run unless --confirm-money was passed.",
         credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var)", email="n/a", viewport="desktop+mobile",
         verifies="Successful redirect to /dashboard after login at both viewports, with a screenshot per viewport; no JS console errors or uncaught exceptions logged during the process.",
         money=False, manual=False,
@@ -39,6 +39,13 @@ CATALOG = [
         description="Create an activity with NO cover photo (approval-first workflow this time), confirm the app falls back to its default image everywhere instead of a broken image tag.",
         credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var)", email="n/a", viewport="desktop+mobile",
         verifies="Activity Log shows 'Activity Created'; no broken <img> on the activity page or dashboard card.",
+        money=False, manual=False,
+    ),
+    dict(
+        order="01c", script="01c_activity_surf_ai_photo_location.py", area="Activity lifecycle",
+        description="Create a 'Cours de Surf' activity that DEPENDS on two external-provider features working, unlike row 01: search the AI/stock photo picker for 'surf' and select a real result (no upload fallback), and look up 'Rimouski' through the location field's manual Lookup button (Google Places autocomplete/details). Fails loudly if either provider call errors or returns nothing.",
+        credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var)", email="n/a", viewport="desktop",
+        verifies="AI photo search returns results and the selected photo persists after save; location lookup returns suggestions for Rimouski and the confirmed address/coordinates persist after save; Activity Log shows 'Activity Created'.",
         money=False, manual=False,
     ),
     dict(
@@ -197,14 +204,14 @@ CATALOG = [
     ),
     dict(
         order="91", script="91_production_interac_live.py", area="[REAL MONEY] Interac payment",
-        description="Buy ONE mixed cart — a $2.00 activity passport plus a $1.00 shop product, $3.00 total — then PAUSE for Ken to send himself a single real e-transfer for that amount to the inbox kdc.minipass.me monitors. Triggers the matcher behind /test-payment-bot-now and verifies the payment splits correctly across the books.",
+        description="Buy ONE mixed cart — a $2.00 activity passport plus a $1.00 shop product, $3.00 total — then PAUSE for Ken to send himself a single real e-transfer for that amount to the inbox demo.minipass.me monitors. Triggers the matcher behind /test-payment-bot-now and verifies the payment splits correctly across the books.",
         credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var) (+ one real $3.00 e-transfer, sent by hand)", email="kdresdell@gmail.com", viewport="desktop",
         verifies="EbankPayment result = MATCHED; Activity Log shows the cart code. Before payment the $3.00 sits in ACCOUNTS RECEIVABLE with cash untouched; after payment it MOVES to CASH RECEIVED with the total unchanged (catching double-counting). The split is checked: the activity row gets exactly $2.00 and the product's $1.00 goes to 'Boutique', never to the activity. Product line present in both the report page and the CSV export; report page and CSV agree on every bucket.",
         money=True, manual=False,
     ),
     dict(
         order="92", script=None, area="[MANUAL] Backup / restore",
-        description="Generate a backup and, separately, restore one — done by hand by Ken on kdc.minipass.me. Never scripted: restoring overwrites the tenant's real database in place.",
+        description="Generate a backup and, separately, restore one — done by hand by Ken on demo.minipass.me. Never scripted: restoring overwrites the tenant's real database in place.",
         credentials="kdresdell@gmail.com (password via UAT_ADMIN_PASSWORD env var)", email="n/a", viewport="n/a",
         verifies="Manual — no automated check.",
         money=False, manual=True,

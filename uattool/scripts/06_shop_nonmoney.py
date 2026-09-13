@@ -9,6 +9,8 @@ the mat, XL leggings, and the Yoga passport and confirms the $320 total. Never t
 any payment step, since this script must not move money.
 """
 
+import re
+
 from lib.browser import login, new_page
 from lib.fixtures import (
     YOGA_ACTIVITY_NAME,
@@ -82,7 +84,7 @@ def run(ctx):
         page.locator(f'a.card:has-text("{mat_name}")').first.click()
         page.wait_for_load_state("networkidle", timeout=15000)
         page.fill("#quantity", "1")
-        page.locator('form button[type="submit"]:has-text("Add to Cart")').first.click()
+        page.locator('form[method="POST"] button[type="submit"]').first.click()
         page.wait_for_load_state("networkidle", timeout=15000)
         ctx.note(f"Added product {mat_name!r} to cart.")
 
@@ -95,14 +97,14 @@ def run(ctx):
             raise AssertionError(f"Expected legging sizes {expected_sizes!r}, got {actual_sizes!r}.")
         page.select_option("#size", "XL")
         page.fill("#quantity", "1")
-        page.locator('form button[type="submit"]:has-text("Add to Cart")').first.click()
+        page.locator('form[method="POST"] button[type="submit"]').first.click()
         page.wait_for_load_state("networkidle", timeout=15000)
         ctx.note(f"Confirmed sizes S/M/L/XL and added {leggings_name!r} in XL to cart.")
 
         page.goto(f"{ctx.base_url}/shop")
         page.locator(f'a.card:has-text("{activity_name}")').first.click()
         page.wait_for_load_state("networkidle", timeout=15000)
-        page.locator('form button[type="submit"]:has-text("Add to Cart")').first.click()
+        page.locator('form[method="POST"] button[type="submit"]').first.click()
         page.wait_for_load_state("networkidle", timeout=15000)
         ctx.note(f"Added activity {activity_name!r} signup to the same cart (mixed cart).")
 
@@ -119,8 +121,14 @@ def run(ctx):
             raise AssertionError("Expected selected legging size 'XL' to appear in /shop/cart.")
 
         expected_total = round(YOGA_MAT_PRICE + YOGA_LEGGINGS_PRICE + float(YOGA_PRICE), 2)
-        total_text = page.locator(".card-footer strong").last.inner_text().strip()
-        actual_total = float(total_text.replace("$", "").replace(",", ""))
+        # The cart total is rendered by shop_cart.html as .mp-shop-total__amount; the old
+        # ".card-footer strong" predates that markup and matches nothing.
+        total_text = page.locator(".mp-shop-total__amount").last.inner_text().strip()
+        # The tenant renders money fr-CA ("320,00 $" — comma decimal, non-breaking space,
+        # trailing sign), so strip everything but digits/separators and treat a comma as
+        # the decimal mark rather than assuming en-US "$320.00".
+        cleaned = re.sub(r"[^\d,.]", "", total_text).replace(",", ".")
+        actual_total = float(cleaned)
         if abs(actual_total - expected_total) > 0.001:
             raise AssertionError(
                 f"Cart total mismatch: expected ${expected_total:.2f}, got {total_text!r} "
@@ -129,7 +137,7 @@ def run(ctx):
             )
         ctx.note(f"Mixed cart total confirmed correct: ${actual_total:.2f}.")
 
-        if page.locator('a:has-text("Checkout"), button:has-text("Checkout")').count():
+        if page.locator('a[href*="/shop/checkout"], a:has-text("Checkout"), button:has-text("Checkout")').count():
             ctx.note("Checkout button is present but was NOT clicked — this script never touches money.")
 
     # --- mobile pass: confirm /shop browsing and the cart view render correctly on a phone ---

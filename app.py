@@ -6616,8 +6616,15 @@ def generate_backup():
         zip_path = os.path.join(tmp_dir, zip_filename)
 
         with ZipFile(zip_path, "w") as zipf:
-            # Add database in expected folder structure
-            zipf.write(db_path, arcname=f"database/{db_filename}")
+            # Add database in expected folder structure. The database runs in WAL mode,
+            # where a commit lands in the `-wal` sidecar and is only folded into the .db
+            # at an unpredictable checkpoint — so zipping the .db directly captured a
+            # stale snapshot that was missing every recent activity, signup and passport.
+            # snapshot_database() reads through the WAL via sqlite3's own backup API.
+            from api.backup import snapshot_database
+            snapshot_path = os.path.join(tmp_dir, "minipass_snapshot.db")
+            snapshot_database(snapshot_path)
+            zipf.write(snapshot_path, arcname=f"database/{db_filename}")
             
             # Add metadata
             metadata = {

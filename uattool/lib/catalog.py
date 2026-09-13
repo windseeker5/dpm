@@ -47,7 +47,7 @@ def render_catalog_md(status_by_order=None, run_timestamp=None):
         "`lib/catalog_data.py` (and the matching script), then re-run",
         "`python run_uat.py` or `python -c \"from lib.catalog import write_catalog_md; write_catalog_md()\"`.",
         "",
-        "Everything runs against `kdc.minipass.me` as `kdresdell@gmail.com` (password via the",
+        "Everything runs against `demo.minipass.me` as `kdresdell@gmail.com` (password via the",
         "`UAT_ADMIN_PASSWORD` env var — never hardcoded here, see lib/config.py)",
         "unless marked **[MANUAL]**. Rows 90/91 move real money and only run with `--confirm-money`.",
         "",

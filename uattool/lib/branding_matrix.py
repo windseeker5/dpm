@@ -44,7 +44,10 @@ def _snapshot_org_logo(page, ctx):
     selected = (selected_el.first.get_attribute("value") or "").strip()
     if not selected:
         return None
-    preview_img = page.locator("#orgLogoWrapper img")
+    # The settings page renders the logo through the shared image_picker macro
+    # (id="orgLogo"), so the thumbnail lives in #orgLogo-preview — the old
+    # #orgLogoWrapper id predates that macro and matches nothing.
+    preview_img = page.locator("#orgLogo-preview img")
     if not preview_img.count():
         raise AssertionError("Settings says an organization logo exists, but its preview has no image.")
     src = preview_img.first.get_attribute("src")
@@ -203,8 +206,12 @@ def _submit_signup(page, ctx):
 def _check_thank_you(page, ctx, url, has_org_logo, viewport):
     page.goto(url)
     page.wait_for_load_state("networkidle", timeout=15000)
-    actual_logo = page.locator("img.organization-logo").count() > 0
-    actual_fallback = page.locator(".organization-logo-fallback").count() > 0
+    # Organization identity on public pages is the shared header in _public_base.html:
+    # .mp-shop-header__brand renders an <img> when LOGO_FILENAME is set, otherwise the
+    # avatar_initials() macro's .mp-avatar-initials. The old img.organization-logo /
+    # .organization-logo-fallback classes don't exist in any template.
+    actual_logo = page.locator(".mp-shop-header__brand img").count() > 0
+    actual_fallback = page.locator(".mp-shop-header__brand .mp-avatar-initials").count() > 0
     if actual_logo != has_org_logo or actual_fallback == has_org_logo:
         raise AssertionError(
             f"[{viewport}] Signup confirmation organization fallback is wrong "
@@ -219,7 +226,11 @@ def _find_pass_code(page, ctx, activity_id):
     page.wait_for_load_state("networkidle", timeout=15000)
     row = page.locator(f'tr:has-text("{config.TEST_EMAIL}")').first
     row.wait_for(timeout=5000)
-    href = row.locator('a.dropdown-item:has-text("View")').get_attribute("href")
+    # Row actions render as a[role="menuitem"] via macros/action_menu.html and only
+    # populate once the trigger is clicked (a.dropdown-item predates that macro).
+    row.locator('button[aria-label="Actions"]').first.click()
+    page.wait_for_timeout(300)
+    href = row.locator('[role="menuitem"]:has-text("View")').first.get_attribute("href")
     if not href:
         raise AssertionError("Approved signup has no passport View link.")
     return href.rstrip("/").split("/")[-1]
