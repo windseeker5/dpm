@@ -201,8 +201,7 @@ try:
     csrf.exempt(geocode_api)
     print("Geocode API exempted from CSRF")
 except Exception as e:
-    print(f"Wayne registration failed: {e}")
-    traceback.print_exc()
+    app.logger.error(f"Wayne registration failed: {e}", exc_info=True)
 
 @app.template_filter("hashlib_md5")
 def hashlib_md5(s):

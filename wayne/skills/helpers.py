@@ -1,5 +1,7 @@
 """Formatting and filtering helpers shared by Wayne skills."""
 
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 from typing import Any
 
