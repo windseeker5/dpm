@@ -327,7 +327,7 @@
                class="pass-hero-photo" alt="" width="800" height="200">
           {% elif activity and activity.logo_filename %}
           <div class="pass-hero-contained">
-            <img src="{{ url_for('static', filename='uploads/activity_images/' + activity.logo_filename) }}"
+            <img src="{{ url_for('static', filename='uploads/logos/' + activity.logo_filename) }}"
                  alt="" width="120" height="120">
           </div>
           {% else %}
