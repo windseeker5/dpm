@@ -1,5 +1,7 @@
 """Bilingual local-first router for Wayne's trusted skills."""
 
+from __future__ import annotations
+
 import json
 import re
 import unicodedata
